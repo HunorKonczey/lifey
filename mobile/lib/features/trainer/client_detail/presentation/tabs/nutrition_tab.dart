@@ -4,10 +4,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/app_snackbar.dart';
 import '../../../../nutrition/domain/meal.dart' show MealType;
 import '../../application/client_detail_providers.dart';
 import '../../domain/client_data.dart';
 import '../widgets/client_tab_body.dart';
+import '../widgets/nutrition_goals_sheet.dart';
 import '../widgets/read_only_badge.dart';
 
 const _mealIcons = {
@@ -17,8 +19,12 @@ const _mealIcons = {
   MealType.snack: Icons.icecream_outlined,
 };
 
-/// One day of the client's food log, against their goals — the read half of
-/// the nutrition tab. Setting those goals is a write, and belongs to T7.
+/// One day of the client's food log, against their goals.
+///
+/// The log itself is the client's and stays read-only — the badge sits on
+/// *it*, not on the whole tab, because since T7 the goals above it are the
+/// trainer's to set. A badge promising "read-only" over an editable card
+/// would be the kind of small lie the rest of this surface avoids.
 class ClientNutritionTab extends ConsumerStatefulWidget {
   const ClientNutritionTab({
     super.key,
@@ -70,20 +76,31 @@ class _ClientNutritionTabState extends ConsumerState<ClientNutritionTab> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           children: [
+            _DayNavigator(
+              day: _day,
+              isToday: _isToday,
+              onChange: (day) => setState(() => _day = day),
+            ),
+            const SizedBox(height: 12),
+            _TotalsCard(
+              meals: dayMeals,
+              goals: dayGoals,
+              clientId: widget.clientId,
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _DayNavigator(
-                  day: _day,
-                  isToday: _isToday,
-                  onChange: (day) => setState(() => _day = day),
-                )),
-                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.trainerMealLogTitle,
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
                 const ReadOnlyBadge(),
               ],
             ),
-            const SizedBox(height: 12),
-            _TotalsCard(meals: dayMeals, goals: dayGoals),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             for (final type in MealType.values) ...[
               _MealGroup(
                 type: type,
@@ -183,14 +200,37 @@ class _DayNavigator extends StatelessWidget {
 // Totals against goals
 // ---------------------------------------------------------------------------
 
-class _TotalsCard extends StatelessWidget {
-  const _TotalsCard({required this.meals, required this.goals});
+class _TotalsCard extends ConsumerWidget {
+  const _TotalsCard({
+    required this.meals,
+    required this.goals,
+    required this.clientId,
+  });
 
   final List<ClientMeal> meals;
   final ClientNutritionGoals goals;
+  final int clientId;
+
+  Future<void> _editGoals(BuildContext context, AppLocalizations l10n) async {
+    final outcome = await NutritionGoalsSheet.show(
+      context,
+      clientId: clientId,
+      goals: goals,
+    );
+    if (outcome == null || !context.mounted) return;
+    // The "they were told" line only where a push actually went out: the
+    // backend notifies on a change, not on every save (docs/32).
+    AppSnackbar.showSuccess(
+      context,
+      title: switch (outcome) {
+        GoalsSaveOutcome.changed => l10n.trainerGoalsSavedNotifiedMessage,
+        GoalsSaveOutcome.unchanged => l10n.trainerGoalsSavedMessage,
+      },
+    );
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final metrics = context.metricColors;
@@ -203,7 +243,7 @@ class _TotalsCard extends StatelessWidget {
     final fat = meals.fold<double>(0, (sum, m) => sum + m.fat);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer,
         borderRadius: AppRadius.lgAll,
@@ -211,6 +251,25 @@ class _TotalsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.trainerDailyGoalsTitle,
+                  style: theme.textTheme.labelLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _editGoals(context, l10n),
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: Text(goals.isEmpty
+                    ? l10n.trainerSetGoalsAction
+                    : l10n.trainerEditGoalsAction),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
           _GoalRow(
             label: l10n.caloriesLabel,
             value: calories,

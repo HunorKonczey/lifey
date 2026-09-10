@@ -57,6 +57,14 @@ class TrainerClientsScreen extends ConsumerWidget {
                                 icon: Icons.group_outlined,
                                 title: l10n.trainerClientsEmptyTitle,
                                 subtitle: l10n.trainerClientsEmptyMessage,
+                                // T1 could only point at the web here; T7
+                                // brought the invite flow onto the phone.
+                                action: FilledButton.tonalIcon(
+                                  onPressed: () =>
+                                      context.push(trainerInvitesLocation),
+                                  icon: const Icon(Icons.mail_outline, size: 18),
+                                  label: Text(l10n.trainerSendInviteButton),
+                                ),
                               )
                             : _ClientList(clients: clients, contentTop: contentTop),
                         loading: () => const Center(child: CircularProgressIndicator()),
@@ -74,6 +82,11 @@ class TrainerClientsScreen extends ConsumerWidget {
                 actions: [
                   // Same entry point as the client side, same badge — the
                   // chat is one feature both roles share (40-es terv).
+                  AdaptiveAppBarAction(
+                    icon: Icons.person_add_alt,
+                    tooltip: l10n.trainerInvitesTitle,
+                    onPressed: () => context.push(trainerInvitesLocation),
+                  ),
                   AdaptiveAppBarAction(
                     icon: Icons.chat_bubble_outline,
                     tooltip: l10n.chatOpenTooltip,

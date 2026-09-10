@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _lastViewIsTrainerKey = 'trainer.lastViewIsTrainer';
+const _introSeenKey = 'trainer.introSeen';
 
 /// Device-local memory of which of the two shells the user last stood in
 /// (docs/chat/41-trainer-mobile-v2-plan.md §2.1: "az utolsó választás
@@ -21,12 +22,24 @@ class TrainerViewPreference {
     await prefs.setBool(_lastViewIsTrainerKey, value);
   }
 
+  /// Whether the one-off "this is your trainer view" card has been shown.
+  Future<bool> hasSeenIntro() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_introSeenKey) ?? false;
+  }
+
+  Future<void> setIntroSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_introSeenKey, true);
+  }
+
   /// Fresh start for whoever logs into this device next — the same
   /// "per-account, not per-device" policy `AuthController.logout()` applies
   /// to the other device-local preferences.
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_lastViewIsTrainerKey);
+    await prefs.remove(_introSeenKey);
   }
 }
 

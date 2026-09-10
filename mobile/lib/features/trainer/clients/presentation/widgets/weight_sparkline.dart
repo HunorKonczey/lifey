@@ -18,13 +18,17 @@ class WeightSparkline extends StatelessWidget {
   Widget build(BuildContext context) {
     if (points.length < 2) return const SizedBox.shrink();
 
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _SparklinePainter(
-          points: points,
-          color: Theme.of(context).colorScheme.tertiary,
+    // Decorative: the numbers it hints at are on the weight tab, and a
+    // screen reader has nothing useful to say about a 22-pixel trend line.
+    return ExcludeSemantics(
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: CustomPaint(
+          painter: _SparklinePainter(
+            points: points,
+            color: Theme.of(context).colorScheme.tertiary,
+          ),
         ),
       ),
     );

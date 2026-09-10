@@ -5742,5 +5742,139 @@
   "trainerProgramRunCancelledMessage": "Program stopped.",
   "@trainerProgramRunCancelledMessage": {
     "description": "Confirmation after stopping a client's program run"
+  },
+  "trainerInvitesTitle": "Invites",
+  "@trainerInvitesTitle": {
+    "description": "Title of the trainer's invite screen, reachable from the client list and the trainer settings (docs/chat/41 T7)"
+  },
+  "trainerInvitesSettingsSubtitle": "Invite a client, or take back an invite",
+  "@trainerInvitesSettingsSubtitle": {
+    "description": "Subtitle of the invites row in trainer settings"
+  },
+  "trainerInviteEmailLabel": "Client's email address",
+  "@trainerInviteEmailLabel": {
+    "description": "Field label for the address an invite is sent to"
+  },
+  "trainerInviteEmailHelper": "They get an email with a link. The invite expires after 24 hours.",
+  "@trainerInviteEmailHelper": {
+    "description": "Helper text under the invite email field, saying what happens and for how long"
+  },
+  "trainerInviteEmailInvalidMessage": "That does not look like an email address.",
+  "@trainerInviteEmailInvalidMessage": {
+    "description": "Validation message for a malformed invite address. The backend matches the address exactly, so a typo invites nobody"
+  },
+  "trainerSendInviteButton": "Send invite",
+  "@trainerSendInviteButton": {
+    "description": "Submits the invite form; also the call to action on the client list's empty state"
+  },
+  "trainerInviteSentMessage": "Invite sent.",
+  "@trainerInviteSentMessage": {
+    "description": "Confirmation after an invite goes out"
+  },
+  "trainerPendingInvitesTitle": "Waiting on",
+  "@trainerPendingInvitesTitle": {
+    "description": "Heading of the list of invites nobody has answered yet"
+  },
+  "trainerNoPendingInvitesMessage": "No invites are waiting for an answer.",
+  "@trainerNoPendingInvitesMessage": {
+    "description": "Shown when the trainer has no pending invites"
+  },
+  "trainerInviteExpiresInLabel": "{hours, plural, =0{Expires within the hour} one{Expires in 1 hour} other{Expires in {hours} hours}}",
+  "@trainerInviteExpiresInLabel": {
+    "description": "How long an invitee still has to accept",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerInviteExpiredLabel": "Expired",
+  "@trainerInviteExpiredLabel": {
+    "description": "Shown on an invite whose time has run out. The server stops listing those, so this only appears on a briefly stale list"
+  },
+  "trainerCancelInviteTooltip": "Take back invite",
+  "@trainerCancelInviteTooltip": {
+    "description": "Tooltip of the button that cancels a pending invite"
+  },
+  "trainerCancelInviteConfirmTitle": "Take back this invite?",
+  "@trainerCancelInviteConfirmTitle": {
+    "description": "Title of the confirmation before cancelling a pending invite"
+  },
+  "trainerCancelInviteConfirmMessage": "{email} will no longer be able to accept it.",
+  "@trainerCancelInviteConfirmMessage": {
+    "description": "Body of the cancel-invite confirmation",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerInviteCancelledMessage": "Invite taken back.",
+  "@trainerInviteCancelledMessage": {
+    "description": "Confirmation after cancelling a pending invite"
+  },
+  "trainerSettingsTitle": "Trainer settings",
+  "@trainerSettingsTitle": {
+    "description": "Title of the trainer view's own settings screen, and the menu item that opens it. Separate from the client-side Settings: this is about being someone's coach"
+  },
+  "trainerWeeklyReportToggleLabel": "Weekly report email",
+  "@trainerWeeklyReportToggleLabel": {
+    "description": "Switch label for the trainer's weekly digest email (docs/33)"
+  },
+  "trainerWeeklyReportToggleSubtitle": "A Monday summary of every client's week, by email. There is no in-app version — your client list already shows this live.",
+  "@trainerWeeklyReportToggleSubtitle": {
+    "description": "Subtitle of the weekly report switch. Says plainly that the report stays an email and why that is not a gap: the same figures are on the client list and client screens, live"
+  },
+  "trainerSettingsFootnote": "Your own account settings — theme, language, units — are under your own log.",
+  "@trainerSettingsFootnote": {
+    "description": "Footnote on the trainer settings screen, pointing at where the client-side settings live so the short list does not read as missing something"
+  },
+  "trainerIntroTitle": "This is your trainer view",
+  "@trainerIntroTitle": {
+    "description": "Title of the one-off card shown the first time a trainer enters the trainer shell (frame A3)"
+  },
+  "trainerIntroMessage": "Your clients, their calendar and what you have given them live here. Your own workout log is still one tap away — it is in the avatar menu, top right.",
+  "@trainerIntroMessage": {
+    "description": "Body of the first-entry card. The one thing worth saying is where their own log went, since that is the only question this switch can leave them with"
+  },
+  "trainerIntroDismissButton": "Got it",
+  "@trainerIntroDismissButton": {
+    "description": "Dismisses the first-entry card"
+  },
+  "trainerDailyGoalsTitle": "Daily goals",
+  "@trainerDailyGoalsTitle": {
+    "description": "Heading of the goals card on a client's nutrition tab"
+  },
+  "trainerMealLogTitle": "What they ate",
+  "@trainerMealLogTitle": {
+    "description": "Heading above the client's meals on the nutrition tab. The log is theirs and stays read-only, which is why the badge sits here rather than on the whole tab"
+  },
+  "trainerSetGoalsAction": "Set",
+  "@trainerSetGoalsAction": {
+    "description": "Opens the goals editor for a client who has no goals yet"
+  },
+  "trainerEditGoalsAction": "Edit",
+  "@trainerEditGoalsAction": {
+    "description": "Opens the goals editor for a client who already has goals"
+  },
+  "trainerNutritionGoalsTitle": "Daily goals",
+  "@trainerNutritionGoalsTitle": {
+    "description": "Title of the sheet that sets a client's macro targets (docs/32)"
+  },
+  "trainerNutritionGoalsSubtitle": "Your client sees these as their own targets.",
+  "@trainerNutritionGoalsSubtitle": {
+    "description": "Subtitle of the goals editor, saying whose numbers these become"
+  },
+  "trainerNutritionGoalsBlankHint": "Leave a field empty to set no goal for it.",
+  "@trainerNutritionGoalsBlankHint": {
+    "description": "Hint in the goals editor. Empty means no goal, which is not the same as zero — a zero calorie target would read as 100% over on the first bite"
+  },
+  "trainerGoalsSavedNotifiedMessage": "Goals saved — your client was notified.",
+  "@trainerGoalsSavedNotifiedMessage": {
+    "description": "Confirmation after changing a client's goals. The backend notifies them on a change (docs/32), so this is only said when something changed"
+  },
+  "trainerGoalsSavedMessage": "Goals saved.",
+  "@trainerGoalsSavedMessage": {
+    "description": "Confirmation after saving goals that turned out identical. Nothing was notified, so nothing is claimed"
   }
 }

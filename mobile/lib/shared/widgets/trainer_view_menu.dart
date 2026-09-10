@@ -16,6 +16,11 @@ const String trainerCalendarLocation = '/trainer/calendar';
 const String trainerAssignmentsLocation = '/trainer/assignments';
 const String trainerProgramsLocation = '/trainer/programs';
 
+/// Pushed over the shell rather than being a branch of it: both are things a
+/// trainer visits and leaves, not places they work from.
+const String trainerInvitesLocation = '/trainer/invites';
+const String trainerSettingsLocation = '/trainer/settings';
+
 /// The avatar menu that moves a trainer between their two homes:
 /// "Trainer view" from the client side, "My own log" from the trainer side
 /// (docs/chat/41-trainer-mobile-v2-plan.md §2.1).
@@ -58,14 +63,32 @@ class TrainerViewMenu extends ConsumerWidget {
                 color: scheme.onSurfaceVariant,
               ),
               const SizedBox(width: 12),
-              Text(
-                inTrainerView
-                    ? l10n.trainerViewSwitchToClientLabel
-                    : l10n.trainerViewSwitchToTrainerLabel,
+              // Flexible, not bare: a popup menu is as wide as its widest
+              // item and no wider, so a long label in either language has to
+              // be allowed to wrap rather than overflow the row.
+              Flexible(
+                child: Text(
+                  inTrainerView
+                      ? l10n.trainerViewSwitchToClientLabel
+                      : l10n.trainerViewSwitchToTrainerLabel,
+                ),
               ),
             ],
           ),
         ),
+        // Only from inside the trainer view: on the client side this menu is
+        // a door, and a door does not need a settings drawer.
+        if (inTrainerView)
+          PopupMenuItem<void>(
+            onTap: () => context.push(trainerSettingsLocation),
+            child: Row(
+              children: [
+                Icon(Icons.tune, size: 20, color: scheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Flexible(child: Text(l10n.trainerSettingsTitle)),
+              ],
+            ),
+          ),
       ],
     );
   }

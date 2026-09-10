@@ -83,6 +83,12 @@ class ApiEndpoints {
   static String trainerProgramAssignment(int assignmentId) =>
       '/trainer/program-assignments/$assignmentId';
 
+  // Trainer-side invites (the client-side accept lives under
+  // /trainer-invites, above) and the trainer's own preferences.
+  static const trainerInvites = '/trainer/invites';
+  static String trainerInvite(int inviteId) => '/trainer/invites/$inviteId';
+  static const trainerPreferences = '/trainer/preferences';
+
   // Chat (docs/chat/40-trainer-chat-plan.md §4). Under `/chat`, not
   // `/trainer`, because both sides of a conversation call these.
   static const chatConversations = '/chat/conversations';

@@ -83,6 +83,28 @@ class ClientDetailRepository {
     return ClientNutritionGoals.fromJson(response.data ?? const {});
   }
 
+  /// Replaces all four goals at once — the endpoint is a full overwrite, and
+  /// a null field clears that goal rather than leaving it alone.
+  ///
+  /// The backend pushes the client a notification only when a value actually
+  /// changed (docs/32), which is why the editor compares before and after
+  /// instead of announcing a notification on every save.
+  Future<ClientNutritionGoals> updateNutritionGoals(
+    int clientId,
+    ClientNutritionGoals goals,
+  ) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      ApiEndpoints.trainerClientNutritionGoals(clientId),
+      data: {
+        'dailyCalorieGoal': goals.dailyCalorieGoal?.round(),
+        'dailyProteinGoal': goals.dailyProteinGoal?.round(),
+        'dailyCarbsGoal': goals.dailyCarbsGoal?.round(),
+        'dailyFatGoal': goals.dailyFatGoal?.round(),
+      },
+    );
+    return ClientNutritionGoals.fromJson(response.data ?? const {});
+  }
+
   /// One page of the client's finished sessions, newest first — the order the
   /// backend already sorts by, so no `sort` parameter is sent.
   Future<ClientSessionPage> fetchWorkoutSessions(

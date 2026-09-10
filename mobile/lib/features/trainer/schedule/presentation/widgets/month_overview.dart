@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_tokens.dart';
+import '../../../../../l10n/app_localizations.dart';
 import '../../domain/schedule.dart';
 import 'occurrence_status_chip.dart';
 
@@ -123,40 +124,49 @@ class _DayCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
 
-    return Material(
-      color: sessions.isEmpty ? Colors.transparent : scheme.surfaceContainer,
-      borderRadius: AppRadius.smAll,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => onTap(date),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: isToday
-              ? BoxDecoration(
-                  borderRadius: AppRadius.smAll,
-                  border: Border.all(color: scheme.tertiary, width: 1.5),
-                )
-              : null,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${date.day}',
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
+    return Semantics(
+      button: true,
+      // The dots carry the density visually; spoken, the day needs its date
+      // and a count, or it is just a number with nothing attached.
+      label: '${DateFormat.MMMd(locale).format(date)}, '
+          '${l10n.trainerProgramSessionCountLabel(sessions.length)}',
+      child: Material(
+        color: sessions.isEmpty ? Colors.transparent : scheme.surfaceContainer,
+        borderRadius: AppRadius.smAll,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => onTap(date),
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: isToday
+                ? BoxDecoration(
+                    borderRadius: AppRadius.smAll,
+                    border: Border.all(color: scheme.tertiary, width: 1.5),
+                  )
+                : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Expanded(
-                child: wide
-                    ? _Names(sessions: sessions)
-                    : _Dots(sessions: sessions),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Expanded(
+                  child: wide
+                      ? _Names(sessions: sessions)
+                      : _Dots(sessions: sessions),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -18,21 +18,25 @@ class ClientAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        shape: BoxShape.circle,
-      ),
-      child: Text(
-        client.monogram,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: size * 0.36,
-          fontWeight: FontWeight.w800,
-          color: scheme.onTertiaryContainer,
+    // The initials stand in for a photo; the name itself is always next to
+    // this, so announcing "A K" as well is just noise.
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: scheme.tertiaryContainer,
+          shape: BoxShape.circle,
+        ),
+        child: Text(
+          client.monogram,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: size * 0.36,
+            fontWeight: FontWeight.w800,
+            color: scheme.onTertiaryContainer,
+          ),
         ),
       ),
     );

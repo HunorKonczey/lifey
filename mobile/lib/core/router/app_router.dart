@@ -22,6 +22,8 @@ import '../../features/trainer/application/trainer_view_preference.dart';
 import '../../features/trainer/assignments/presentation/assignments_screen.dart';
 import '../../features/trainer/client_detail/presentation/client_detail_screen.dart';
 import '../../features/trainer/clients/presentation/trainer_clients_screen.dart';
+import '../../features/trainer/invites/presentation/trainer_invites_screen.dart';
+import '../../features/trainer/settings/trainer_settings_screen.dart';
 import '../../features/trainer/programs/presentation/program_detail_screen.dart';
 import '../../features/trainer/programs/presentation/programs_screen.dart';
 import '../../features/trainer/schedule/presentation/calendar_screen.dart';
@@ -162,6 +164,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ChatSearchScreen(
           conversationId: int.parse(state.pathParameters['conversationId']!),
         ),
+      ),
+      // Outside the trainer shell, like /settings on the client side: both
+      // are visited and left, not worked from. The role guard in `redirect`
+      // covers them by their /trainer prefix.
+      GoRoute(
+        path: trainerInvitesLocation,
+        builder: (context, state) => const TrainerInvitesScreen(),
+      ),
+      GoRoute(
+        path: trainerSettingsLocation,
+        builder: (context, state) => const TrainerSettingsScreen(),
       ),
       GoRoute(path: '/recap', builder: (context, state) => const WeeklyRecapScreen()),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),

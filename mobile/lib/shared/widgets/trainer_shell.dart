@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/trainer/application/trainer_view_preference.dart';
 import '../../l10n/app_localizations.dart';
 import 'adaptive_bottom_nav.dart';
 import 'nav_collapse_controller.dart';
@@ -29,6 +30,64 @@ class TrainerShell extends ConsumerStatefulWidget {
 
 class _TrainerShellState extends ConsumerState<TrainerShell> {
   final _collapseController = NavCollapseController();
+
+  @override
+  void initState() {
+    super.initState();
+    // One card, once, on the first arrival — not a multi-step tour (frame A3).
+    // The thing worth saying is where their own log went, because that is the
+    // only question a trainer can be left with here.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowIntro());
+  }
+
+  Future<void> _maybeShowIntro() async {
+    final preference = ref.read(trainerViewPreferenceProvider);
+    if (await preference.hasSeenIntro()) return;
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          bottom: MediaQuery.paddingOf(context).bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.trainerIntroTitle,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.trainerIntroMessage,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 18),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(l10n.trainerIntroDismissButton),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    // Marked seen on dismissal either way: a card the trainer swiped away is a
+    // card they have read, and showing it again would be nagging.
+    await preference.setIntroSeen();
+  }
 
   @override
   void dispose() {
