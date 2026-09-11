@@ -274,8 +274,33 @@ drag&droppal**, ami telefonon nem használható változtatás nélkül.
   „szerkesztés a weben” hivatkozásra. Ezt a döntést a T6 közepén, prototípus után
   hozzuk meg — a terv mindkét kimenetelt elfogadja.
 
+> ✅ **Döntés (T6 leszállítva): a szerkesztés marad a weben.** A terv második
+> kimenetele érvényesült, három okból — egyik sem a ráfordítás:
+>
+> 1. Egy program 12 hét × 7 nap. Összeállítani telefonon tucatnyi alsó-lap
+>    körbejárás; asztali munka, egyszer, aztán újrahasznosítva.
+> 2. A `PUT /trainer/programs/{id}` a **teljes rácsot** felülírja. Mobilos
+>    szerkesztés azt jelentené, hogy mind a 84 cellát kézben tartjuk és
+>    visszaküldjük — egy félbehagyott állapot felülírja az éleset.
+> 3. A design saját javaslata (hosszan nyomásos sorrendezés) **nem illik az
+>    adatmodellre**. Egy slot a 3. hét hétfőjén *van*, nem a lista második
+>    eleme; elhúzni valahová új napot kellene hozzá találni.
+>
+> Amire telefonon valóban szükség van — elolvasni egy programot és ráállítani
+> valakit —, az megvan. A részletezőn és a lista alján ezért **nem szégyenlős
+> átirányító sáv** áll (`EditOnWebNotice`), ami kimondja, hol készülnek a
+> programok, és átvisz oda.
+
 Tesztek: a `program.ts` üzleti logika Dart-portjának unit tesztjei (a webes
 `program.test.ts` eseteivel); sorrendezés; hozzárendelés kezdődátum-számítása.
+
+> A `program.ts`-ből a **dátum-aritmetika és a `slotsPerWeek`** van portolva
+> (`programs/domain/program_dates.dart`), a webes esetekkel együtt. A
+> rács-mutáló felét (`setSlot`, `duplicateWeek`, `copyWeekToAll`,
+> `validateProgram`, `dropOverflowWeeks`) nem portoltuk: a szerkesztőé, és
+> mobilon nincs szerkesztő — portolva tesztelhetetlen súly lenne egy olyan
+> ígérettel, amit az app nem tart be. A „sorrendezés” teszt ugyanezért marad
+> el: nincs sorrend, amit rendezni lehetne.
 
 **Kész, ha:** az edző mobilról hozzárendel egy programot; és vagy szerkeszteni is tud,
 vagy egyértelmű útmutatást kap a webre.
@@ -388,8 +413,10 @@ rendezni — mindegyik **additív**, egyik sem töri a webet:
 
 ## 8. Nyitott kérdések
 
-1. **A T6 program-szerkesztő teljes legyen-e mobilon?** Döntés prototípus után, a T6
-   közepén. Javaslat: olvasás + hozzárendelés kötelező, szerkesztés opcionális.
+1. ~~**A T6 program-szerkesztő teljes legyen-e mobilon?** Döntés prototípus után, a T6
+   közepén. Javaslat: olvasás + hozzárendelés kötelező, szerkesztés opcionális.~~
+   **Megválaszolva a T6-ban: nem.** Olvasás + hozzárendelés mobilon, szerkesztés a
+   weben — az indoklás a T6 szakaszban.
 2. **Kell-e tablet-elrendezés?** A naptár hónapnézete és a program-rács tableten
    *működne*. Ha az edzők jelentős része iPaden dolgozik, az érv erős — ehhez használati
    adat kell, nem tervezői megérzés.

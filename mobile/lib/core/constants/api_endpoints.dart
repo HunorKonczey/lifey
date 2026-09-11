@@ -21,9 +21,73 @@ class ApiEndpoints {
   /// `docs/landing_page/64-billing-backend-plan.md` §6.1.
   static const storePurchase = '/billing/store-purchase';
 
-  /// The trainer's own client list — used by the chat "new conversation"
-  /// picker. Requires ROLE_TRAINER, unlike everything under `/chat`.
+  /// The trainer's own client list — the trainer view's entry point, and the
+  /// chat "new conversation" picker. Requires ROLE_TRAINER, unlike everything
+  /// under `/chat`.
   static const trainerClients = '/trainer/clients';
+
+  // One client's data, read-only, for the client detail screen
+  // (docs/chat/41-trainer-mobile-v2-plan.md T2). Every one of these is
+  // guarded server-side by an active trainer-client relationship.
+  static String trainerClientStatistics(int clientId, String period) =>
+      '/trainer/clients/$clientId/statistics/$period';
+  static String trainerClientSteps(int clientId) => '/trainer/clients/$clientId/steps';
+  static String trainerClientWeights(int clientId) => '/trainer/clients/$clientId/weights';
+  static String trainerClientMeals(int clientId) => '/trainer/clients/$clientId/meals';
+  static String trainerClientNutritionGoals(int clientId) =>
+      '/trainer/clients/$clientId/nutrition-goals';
+  static String trainerClientWorkoutSessions(int clientId) =>
+      '/trainer/clients/$clientId/workout-sessions';
+
+  /// The trainer's one editable comment on a client's session — PUT upserts
+  /// it, DELETE clears it (docs/31-session-feedback-loop-plan.md B2).
+  static String trainerClientSessionComment(int clientId, int sessionId) =>
+      '/trainer/clients/$clientId/workout-sessions/$sessionId/comment';
+
+  // Content assignments (docs/35-bulk-assignment-plan.md). POST takes a list
+  // of client ids and is one all-or-nothing transaction.
+  static const trainerAssignments = '/trainer/assignments';
+  static String trainerClientAssignments(int clientId) =>
+      '/trainer/clients/$clientId/assignments';
+  static String trainerAssignment(int assignmentId) =>
+      '/trainer/assignments/$assignmentId';
+
+  /// Which clients already hold a given template/recipe — lets the picker
+  /// lock those rows instead of letting the trainer assign a duplicate.
+  static const trainerAssignmentClients = '/trainer/assignments/clients';
+
+  // Scheduling (docs/personal_trainer/09..12). Creating a schedule
+  // materializes every occurrence at once; the calendar reads them back by
+  // date range, capped server-side at 62 days.
+  static const trainerSchedules = '/trainer/schedules';
+  static String trainerSchedule(int scheduleId) => '/trainer/schedules/$scheduleId';
+  static String trainerClientSchedules(int clientId) =>
+      '/trainer/clients/$clientId/schedules';
+  static String trainerClientScheduledSessions(int clientId) =>
+      '/trainer/clients/$clientId/scheduled-sessions';
+
+  /// Every active client's occurrences in a range — the trainer calendar.
+  static const trainerScheduledSessions = '/trainer/scheduled-sessions';
+  static String trainerScheduledSession(int sessionId) =>
+      '/trainer/scheduled-sessions/$sessionId';
+
+  // Multi-week programs (docs/34-multi-week-program-plan.md). PUT is a full
+  // overwrite of the grid, which is part of why authoring stays on the web
+  // (docs/chat/41 T6).
+  static const trainerPrograms = '/trainer/programs';
+  static String trainerProgram(int programId) => '/trainer/programs/$programId';
+  static String trainerProgramAssignments(int programId) =>
+      '/trainer/programs/$programId/assignments';
+  static String trainerClientProgramAssignments(int clientId) =>
+      '/trainer/clients/$clientId/program-assignments';
+  static String trainerProgramAssignment(int assignmentId) =>
+      '/trainer/program-assignments/$assignmentId';
+
+  // Trainer-side invites (the client-side accept lives under
+  // /trainer-invites, above) and the trainer's own preferences.
+  static const trainerInvites = '/trainer/invites';
+  static String trainerInvite(int inviteId) => '/trainer/invites/$inviteId';
+  static const trainerPreferences = '/trainer/preferences';
 
   // Chat (docs/chat/40-trainer-chat-plan.md §4). Under `/chat`, not
   // `/trainer`, because both sides of a conversation call these.

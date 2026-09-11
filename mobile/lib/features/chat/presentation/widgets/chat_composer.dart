@@ -23,7 +23,15 @@ class ChatComposer extends StatefulWidget {
     this.maxAttachmentBytes = 8 * 1024 * 1024,
     this.onTyping,
     this.peerTypingName,
+    this.initialText,
   });
+
+  /// Text the composer opens with, for a thread entered with something
+  /// already to say — the trainer's "message them too" about a session
+  /// (docs/chat/41 T3, frame D4). Read once, on first build: after that the
+  /// field belongs to whoever is typing in it.
+
+  final String? initialText;
 
   /// Called on every keystroke; the reporter behind it does the throttling.
   final VoidCallback? onTyping;
@@ -58,6 +66,11 @@ class _ChatComposerState extends State<ChatComposer> {
   @override
   void initState() {
     super.initState();
+    final initialText = widget.initialText;
+    if (initialText != null && initialText.isNotEmpty) {
+      _controller.text = initialText;
+      _hasText = initialText.trim().isNotEmpty;
+    }
     _controller.addListener(() {
       final hasText = _controller.text.trim().isNotEmpty;
       if (hasText != _hasText) setState(() => _hasText = hasText);

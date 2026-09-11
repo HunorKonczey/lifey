@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../trainer/clients/data/trainer_clients_repository.dart';
+import '../../trainer/clients/domain/trainer_client.dart';
 import '../data/chat_repository.dart';
-import '../data/trainer_clients_repository.dart';
-import '../domain/trainer_client_option.dart';
 import 'conversation_list_controller.dart';
 
 /// Clients the trainer has no thread with yet — the only thing the "new
@@ -12,9 +12,9 @@ import 'conversation_list_controller.dart';
 /// Trainer-only by construction: `/trainer/clients` requires ROLE_TRAINER, so
 /// this is never built for a plain client (the sheet that reads it is only
 /// reachable from a button the role gate hides).
-class NewConversationController extends AsyncNotifier<List<TrainerClientOption>> {
+class NewConversationController extends AsyncNotifier<List<TrainerClient>> {
   @override
-  Future<List<TrainerClientOption>> build() async {
+  Future<List<TrainerClient>> build() async {
     final clients = await ref.read(trainerClientsRepositoryProvider).fetchActiveClients();
     final existingPeers = (await ref.watch(conversationListControllerProvider.future))
         .map((conversation) => conversation.peer.userId)
@@ -35,6 +35,6 @@ class NewConversationController extends AsyncNotifier<List<TrainerClientOption>>
 }
 
 final newConversationControllerProvider =
-    AsyncNotifierProvider<NewConversationController, List<TrainerClientOption>>(
+    AsyncNotifierProvider<NewConversationController, List<TrainerClient>>(
   NewConversationController.new,
 );

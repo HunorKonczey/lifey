@@ -15,6 +15,12 @@ abstract final class WebLinks {
   /// will not be one (`63` D-M1).
   static const adminBilling = '$_baseUrl/admin/billing';
 
+  /// Where a program's week x day grid is built and edited. The mobile app
+  /// reads programs and starts clients on them, but authoring one stays on a
+  /// desk (docs/chat/41-trainer-mobile-v2-plan.md T6).
+  static const adminPrograms = '$_baseUrl/admin/programs';
+  static String adminProgram(int programId) => '$_baseUrl/admin/programs/$programId';
+
   /// Only `hu`/`en` exist on the web app; anything else falls back to `hu`,
   /// the site's default locale (`65` D-W1).
   static String _locale(String languageCode) => languageCode == 'en' ? 'en' : 'hu';

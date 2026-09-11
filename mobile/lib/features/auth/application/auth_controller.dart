@@ -7,6 +7,9 @@ import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_preferences.dart';
 import '../../../core/local_db/database_provider.dart';
 import '../../../core/location/location_permission_preferences.dart';
+import '../../trainer/application/trainer_view_preference.dart';
+import '../../trainer/client_detail/application/client_detail_tab_preference.dart';
+import '../../trainer/clients/application/trainer_clients_controller.dart';
 import '../../../core/music/music_controller.dart';
 import '../../../core/music/music_preferences.dart';
 import '../../../core/network/session_events.dart';
@@ -150,6 +153,12 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // inherit the previous account having already dismissed it
     // (docs/cardio/54-cardio-gps-route-plan.md §3.1, C4a.2).
     await ref.read(locationPermissionPreferencesProvider).clear();
+    // Same policy again: the next account to sign in on this device should
+    // land on their own home, not inherit a trainer's remembered view — and
+    // most of them have no trainer view to land in at all (docs/chat/41 §2.1).
+    await ref.read(trainerViewPreferenceProvider).clear();
+    // Per-client keys, so this one sweeps rather than removing a single name.
+    await ref.read(clientDetailTabPreferenceProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
     await ref.read(recipeImageRepositoryProvider).clearCache();
     // Chat pictures and anything still queued to upload — same reasoning, and
@@ -163,6 +172,10 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     ref.invalidate(avatarControllerProvider);
     ref.invalidate(myTrainersControllerProvider);
     ref.invalidate(trainerInviteControllerProvider);
+    ref.invalidate(lastViewIsTrainerProvider);
+    // The trainer's client list is other people's data held in memory — it
+    // must not outlive the session that was allowed to see it.
+    ref.invalidate(trainerClientsControllerProvider);
     ref.invalidate(healthControllerProvider);
     ref.invalidate(musicControllerProvider);
     state = const AsyncValue.data(null);

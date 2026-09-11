@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/error_message.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../trainer/clients/domain/trainer_client.dart';
 import '../application/new_conversation_controller.dart';
-import '../domain/trainer_client_option.dart';
 import 'widgets/chat_avatar.dart';
 
 /// Opens the trainer's client picker. Resolves to the id of the thread to
@@ -44,7 +44,7 @@ class _NewConversationSheetState extends ConsumerState<_NewConversationSheet> {
     super.dispose();
   }
 
-  List<TrainerClientOption> _filter(List<TrainerClientOption> clients) {
+  List<TrainerClient> _filter(List<TrainerClient> clients) {
     if (_query.trim().isEmpty) return clients;
     final needle = _query.toLowerCase();
     return clients
@@ -54,7 +54,7 @@ class _NewConversationSheetState extends ConsumerState<_NewConversationSheet> {
         .toList();
   }
 
-  Future<void> _start(TrainerClientOption client) async {
+  Future<void> _start(TrainerClient client) async {
     if (_starting) return;
     setState(() => _starting = true);
     try {

@@ -4739,5 +4739,1142 @@
   "bannerRemoveAdsTooltip": "Remove ads",
   "@bannerRemoveAdsTooltip": {
     "description": "Tooltip/semantics label for the small affix on BannerAdSlot that opens the paywall with the adRemoval trigger (67 §5.2)"
+  },
+  "trainerViewBadgeLabel": "TRAINER",
+  "@trainerViewBadgeLabel": {
+    "description": "Compact chip next to the app-bar title while the trainer shell is showing - the \"you are not looking at your own data\" marker (docs/chat/43-trainer-mobile-v2-design-prompt.md frame A1, mirroring the web admin's EDZO chip). Uppercase on purpose; keep it to one short word"
+  },
+  "trainerViewSwitchTooltip": "Switch view",
+  "@trainerViewSwitchTooltip": {
+    "description": "Tooltip/semantics label of the avatar button in the app bar that opens the trainer/client view switch menu (docs/chat/41 T1). Only shown to ROLE_TRAINER users"
+  },
+  "trainerViewSwitchToTrainerLabel": "Trainer view",
+  "@trainerViewSwitchToTrainerLabel": {
+    "description": "Menu item in the client-side app bar that takes a trainer to their trainer shell (docs/chat/41 2.1). It is navigation, not a mode toggle - word it as a place, not as a switch"
+  },
+  "trainerViewSwitchToClientLabel": "My own log",
+  "@trainerViewSwitchToClientLabel": {
+    "description": "Menu item in the trainer app bar that takes the trainer back to their own client-side dashboard (docs/chat/41 2.1)"
+  },
+  "trainerClientsTitle": "My clients",
+  "@trainerClientsTitle": {
+    "description": "Title of the trainer shell's client list screen, and the label of its bottom-nav branch (docs/chat/41 T1)"
+  },
+  "trainerClientsNeedsAttentionTitle": "Needs attention",
+  "@trainerClientsNeedsAttentionTitle": {
+    "description": "Heading of the highlighted block at the top of the trainer's client list holding clients with at least one compliance flag (docs/29-compliance-overview-plan.md). The whole block is hidden when nobody is flagged"
+  },
+  "trainerClientsAllClientsTitle": "All clients",
+  "@trainerClientsAllClientsTitle": {
+    "description": "Heading of the rest of the trainer's client list, below the \"needs attention\" block. Only shown when that block is present"
+  },
+  "trainerClientsSortRecentLabel": "Recent activity",
+  "@trainerClientsSortRecentLabel": {
+    "description": "Sort chip: keeps the backend order, newest relationship first (docs/chat/41 T1; matches the web's \"recent\" option)"
+  },
+  "trainerClientsSortLeastActiveLabel": "Least active",
+  "@trainerClientsSortLeastActiveLabel": {
+    "description": "Sort chip: clients who have logged nothing for the longest come first"
+  },
+  "trainerClientsSortMostMissedLabel": "Most missed",
+  "@trainerClientsSortMostMissedLabel": {
+    "description": "Sort chip: clients with the most missed scheduled workouts come first"
+  },
+  "trainerClientsSortWeightOverdueLabel": "Weigh-in due",
+  "@trainerClientsSortWeightOverdueLabel": {
+    "description": "Sort chip: clients whose last weight entry is oldest come first"
+  },
+  "trainerClientsEmptyTitle": "No clients yet",
+  "@trainerClientsEmptyTitle": {
+    "description": "Empty state of the trainer's client list, shown when the trainer has no active client relationships (docs/chat/41 T1)"
+  },
+  "trainerClientsEmptyMessage": "Send an invite from the web trainer area and your client will show up here.",
+  "@trainerClientsEmptyMessage": {
+    "description": "Body of the client-list empty state. Points at the web until the mobile invite screen ships in T7 (docs/chat/41 T1/T7)"
+  },
+  "trainerOfflineTitle": "No connection",
+  "@trainerOfflineTitle": {
+    "description": "Title of the full-screen offline state in the trainer view (docs/chat/41 2.2: the trainer surface is online-first, so offline is a first-class state here, not an edge case)"
+  },
+  "trainerOfflineMessage": "The trainer view works with live data, so it needs a connection to show your clients.",
+  "@trainerOfflineMessage": {
+    "description": "Body of the trainer view's full-screen offline state. Explains why, unlike the rest of the app, this screen cannot fall back to a local copy"
+  },
+  "trainerClientActiveTodayLabel": "Active today",
+  "@trainerClientActiveTodayLabel": {
+    "description": "Client card subtitle when the client logged something today"
+  },
+  "trainerClientActiveDaysAgoLabel": "{days, plural, one{Active 1 day ago} other{Active {days} days ago}}",
+  "@trainerClientActiveDaysAgoLabel": {
+    "description": "Client card subtitle giving how long ago the client last logged anything (meal, water, workout or weight)",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerClientNoActivityLabel": "No activity yet",
+  "@trainerClientNoActivityLabel": {
+    "description": "Client card subtitle for a client who has never logged anything since accepting the invite"
+  },
+  "trainerComplianceDaysShortLabel": "{days}d",
+  "@trainerComplianceDaysShortLabel": {
+    "description": "Very short text inside a compliance badge on the client card, next to the icon that says which kind of gap it is (no logging, or no weigh-in). Keep it short - the icon carries the meaning and the full sentence is on the badge's semantics label (frame B1)",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerComplianceMissedShortLabel": "{count}x",
+  "@trainerComplianceMissedShortLabel": {
+    "description": "Very short text inside the missed-workouts compliance badge on the client card, next to the dumbbell icon (frame B1)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerComplianceInactiveSemanticsLabel": "{days, plural, one{No log for 1 day} other{No log for {days} days}}",
+  "@trainerComplianceInactiveSemanticsLabel": {
+    "description": "Screen-reader label of the inactivity compliance badge, spelling out what its icon and short number mean",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerComplianceWeightStaleSemanticsLabel": "{days, plural, one{No weigh-in for 1 day} other{No weigh-in for {days} days}}",
+  "@trainerComplianceWeightStaleSemanticsLabel": {
+    "description": "Screen-reader label of the stale-weight compliance badge",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerComplianceMissedSemanticsLabel": "{count, plural, one{1 missed workout} other{{count} missed workouts}}",
+  "@trainerComplianceMissedSemanticsLabel": {
+    "description": "Screen-reader label of the missed-workouts compliance badge",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerReadOnlyLabel": "Read-only",
+  "@trainerReadOnlyLabel": {
+    "description": "Badge at the top of the trainer's pure data tabs for a client (statistics, steps, weight, nutrition), naming the deliberate absence of any edit control (docs/chat/43 frame C2, mirroring the web admin)"
+  },
+  "trainerClientActionsTooltip": "More actions",
+  "@trainerClientActionsTooltip": {
+    "description": "Tooltip of the overflow (...) button in the client detail header, which opens the actions menu (frame C1)"
+  },
+  "trainerMessageClientAction": "Send a message",
+  "@trainerMessageClientAction": {
+    "description": "Menu item in the client detail header that opens the chat thread with this client, creating it if there isn't one yet (frame C1)"
+  },
+  "trainerClientSinceLabel": "Client since {date}",
+  "@trainerClientSinceLabel": {
+    "description": "Line under the client's name in the detail header, giving when the coaching relationship started. {date} is already formatted for the locale",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerClientNotFoundTitle": "Not your client",
+  "@trainerClientNotFoundTitle": {
+    "description": "Shown when the client detail screen is opened for someone who isn't on the trainer's active client list — typically an old notification or link after the relationship ended (docs/chat/41 T2)"
+  },
+  "trainerClientNotFoundMessage": "The coaching relationship may have ended. Your current clients are on the client list.",
+  "@trainerClientNotFoundMessage": {
+    "description": "Body of the 'not your client' state. Says why without implying something went wrong"
+  },
+  "trainerTabOverviewLabel": "Overview",
+  "@trainerTabOverviewLabel": {
+    "description": "Client detail tab: the at-a-glance metric cards (frame C3)"
+  },
+  "trainerTabStatisticsLabel": "Statistics",
+  "@trainerTabStatisticsLabel": {
+    "description": "Client detail tab: totals for a chosen period plus the weight trend"
+  },
+  "trainerTabStepsLabel": "Steps",
+  "@trainerTabStepsLabel": {
+    "description": "Client detail tab: the client's daily step history"
+  },
+  "trainerTabWeightLabel": "Weight",
+  "@trainerTabWeightLabel": {
+    "description": "Client detail tab: the client's weigh-in history"
+  },
+  "trainerTabNutritionLabel": "Nutrition",
+  "@trainerTabNutritionLabel": {
+    "description": "Client detail tab: one day of the client's food log against their goals"
+  },
+  "trainerMetricAvgCaloriesLabel": "Avg. daily calories",
+  "@trainerMetricAvgCaloriesLabel": {
+    "description": "Overview metric card: the client's average calorie intake per day over the last week (frame C3)"
+  },
+  "trainerMetricCurrentWeightLabel": "Current weight",
+  "@trainerMetricCurrentWeightLabel": {
+    "description": "Overview metric card: the client's most recent weigh-in"
+  },
+  "trainerMetricWorkoutsThisWeekLabel": "Workouts this week",
+  "@trainerMetricWorkoutsThisWeekLabel": {
+    "description": "Overview metric card: how many sessions the client logged in the last 7 days"
+  },
+  "trainerMetricAvgStepsLabel": "Avg. daily steps",
+  "@trainerMetricAvgStepsLabel": {
+    "description": "Overview metric card: the client's average step count per day over the last week"
+  },
+  "trainerOverviewPeriodHint": "Figures cover the last 7 days.",
+  "@trainerOverviewPeriodHint": {
+    "description": "Footnote under the overview metric cards, naming the window they are calculated over so the numbers can't be misread as all-time"
+  },
+  "trainerPeriodDailyLabel": "Today",
+  "@trainerPeriodDailyLabel": {
+    "description": "Statistics tab period chip: today's totals only"
+  },
+  "trainerPeriodWeeklyLabel": "7 days",
+  "@trainerPeriodWeeklyLabel": {
+    "description": "Statistics tab period chip: totals over the last 7 days"
+  },
+  "trainerPeriodMonthlyLabel": "30 days",
+  "@trainerPeriodMonthlyLabel": {
+    "description": "Statistics tab period chip: totals over the last 30 days"
+  },
+  "trainerWeightTrendTitle": "Weight trend",
+  "@trainerWeightTrendTitle": {
+    "description": "Title of the weight chart card on the client's statistics tab"
+  },
+  "trainerNoWeightEntriesMessage": "No weigh-ins yet",
+  "@trainerNoWeightEntriesMessage": {
+    "description": "Shown in place of the weight chart when the client logged no weight in the selected window"
+  },
+  "trainerNoWeightEntriesHint": "Your client hasn't logged their weight in this period.",
+  "@trainerNoWeightEntriesHint": {
+    "description": "Body of the weight tab's empty state"
+  },
+  "trainerNotEnoughDataForTrendMessage": "One reading so far — not enough for a trend.",
+  "@trainerNotEnoughDataForTrendMessage": {
+    "description": "Shown instead of a chart when there is exactly one data point. Drawing a line through a single reading would suggest a trend that isn't there (frame C4)"
+  },
+  "trainerNoStepsTitle": "No steps recorded",
+  "@trainerNoStepsTitle": {
+    "description": "Empty state title on the client's steps tab"
+  },
+  "trainerNoStepsMessage": "Your client hasn't synced step data for this period.",
+  "@trainerNoStepsMessage": {
+    "description": "Empty state body on the client's steps tab — the data comes from their phone's health source, so 'not synced' is the accurate reason"
+  },
+  "trainerLast30DaysTitle": "Last 30 days",
+  "@trainerLast30DaysTitle": {
+    "description": "Title of the step chart card on the client's steps tab"
+  },
+  "trainerLast90DaysTitle": "Last 90 days",
+  "@trainerLast90DaysTitle": {
+    "description": "Title of the weight chart card on the client's weight tab"
+  },
+  "trainerHistoryTitle": "History",
+  "@trainerHistoryTitle": {
+    "description": "Title of the dated reading list under the chart on the client's steps and weight tabs"
+  },
+  "trainerPreviousDayTooltip": "Previous day",
+  "@trainerPreviousDayTooltip": {
+    "description": "Tooltip of the back arrow in the nutrition tab's day navigator"
+  },
+  "trainerNextDayTooltip": "Next day",
+  "@trainerNextDayTooltip": {
+    "description": "Tooltip of the forward arrow in the nutrition tab's day navigator; disabled on today"
+  },
+  "trainerNoMealsLoggedMessage": "Nothing logged on this day.",
+  "@trainerNoMealsLoggedMessage": {
+    "description": "Shown at the bottom of the client's nutrition tab when they logged no meals for the selected day"
+  },
+  "trainerNothingLoggedLabel": "Nothing logged",
+  "@trainerNothingLoggedLabel": {
+    "description": "Placeholder under one meal group (breakfast/lunch/dinner/snack) that the client left empty on the selected day"
+  },
+  "trainerDayTotalLabel": "Day total: {total}",
+  "@trainerDayTotalLabel": {
+    "description": "Footnote under the client's meals for the selected day. {total} is an already-formatted calorie figure",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerNoNutritionGoalsMessage": "No daily goals set for this client yet.",
+  "@trainerNoNutritionGoalsMessage": {
+    "description": "Note under the nutrition totals when the client has no macro targets. Setting them is a trainer action that ships later (docs/chat/41 T7)"
+  },
+  "trainerKcalValue": "{value} kcal",
+  "@trainerKcalValue": {
+    "description": "A calorie figure with its unit. {value} is already formatted for the locale",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerKgValue": "{value} kg",
+  "@trainerKgValue": {
+    "description": "A body-weight figure with its unit. {value} is already formatted",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerKgDeltaValue": "{delta} kg",
+  "@trainerKgDeltaValue": {
+    "description": "The change since the previous weigh-in, on the overview card. {delta} already carries its sign (e.g. '+0.3', '-1.2')",
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerGramsValue": "{value} g",
+  "@trainerGramsValue": {
+    "description": "A macro or portion figure in grams. {value} is already formatted",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerViewClientDataAction": "View their data",
+  "@trainerViewClientDataAction": {
+    "description": "Tooltip of the chat thread action that takes a trainer from a conversation to that client's detail screen (docs/chat/41 T2). Only shown to a trainer viewing a client's thread"
+  },
+  "trainerTabWorkoutsLabel": "Workouts",
+  "@trainerTabWorkoutsLabel": {
+    "description": "Client detail tab: the client's session history, and the only tab where the trainer writes anything (docs/chat/41 T3)"
+  },
+  "trainerNoSessionsTitle": "No workouts yet",
+  "@trainerNoSessionsTitle": {
+    "description": "Empty state title on the client's workouts tab"
+  },
+  "trainerNoSessionsMessage": "Your client hasn't finished a workout yet. Sessions show up here as soon as they do.",
+  "@trainerNoSessionsMessage": {
+    "description": "Empty state body on the client's workouts tab"
+  },
+  "trainerFreeWorkoutLabel": "Free workout",
+  "@trainerFreeWorkoutLabel": {
+    "description": "Title of a strength session the client logged without picking a template"
+  },
+  "trainerNoSessionDetailsLabel": "No details recorded",
+  "@trainerNoSessionDetailsLabel": {
+    "description": "Shown in place of a session's summary line, or its exercise list, when nothing was logged beyond the session itself"
+  },
+  "trainerNoSetsLoggedLabel": "No sets logged",
+  "@trainerNoSetsLoggedLabel": {
+    "description": "Shown under an exercise the client planned but recorded no sets for"
+  },
+  "trainerExerciseCountLabel": "{count, plural, one{1 exercise} other{{count} exercises}}",
+  "@trainerExerciseCountLabel": {
+    "description": "Part of a session's summary line: how many distinct exercises it covered",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerSetCountLabel": "{count, plural, one{1 set} other{{count} sets}}",
+  "@trainerSetCountLabel": {
+    "description": "Part of a session's summary line: how many sets were logged in total",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerDurationMinutesLabel": "{minutes} min",
+  "@trainerDurationMinutesLabel": {
+    "description": "A session length under an hour",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerDurationHoursMinutesLabel": "{hours} h {minutes} min",
+  "@trainerDurationHoursMinutesLabel": {
+    "description": "A session length of an hour or more",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerKmValue": "{value} km",
+  "@trainerKmValue": {
+    "description": "A cardio distance with its unit. {value} is already formatted",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerSetLabel": "{reps} × {weight} kg",
+  "@trainerSetLabel": {
+    "description": "One logged set in the session detail: repetitions and the weight used. Weight is in kilograms, as everywhere else in the app's strength logging",
+    "placeholders": {
+      "reps": {
+        "type": "int"
+      },
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerRpeShortLabel": "RPE {rpe}",
+  "@trainerRpeShortLabel": {
+    "description": "Compact chip on a session card carrying the client's own difficulty rating (1-10)",
+    "placeholders": {
+      "rpe": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerRpeLabel": "Difficulty: {rpe}/10",
+  "@trainerRpeLabel": {
+    "description": "The client's difficulty rating, spelled out in the session detail",
+    "placeholders": {
+      "rpe": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerClientNoteLabel": "Note",
+  "@trainerClientNoteLabel": {
+    "description": "Chip on a session card meaning the client wrote a note about this workout"
+  },
+  "trainerClientFeedbackTitle": "What your client said",
+  "@trainerClientFeedbackTitle": {
+    "description": "Heading of the block in the session detail holding the client's own rating and note (docs/31: this is the half the trainer is answering)"
+  },
+  "trainerYourCommentLabel": "Your comment",
+  "@trainerYourCommentLabel": {
+    "description": "Chip on a session card, and heading of the comment block in the session detail, for the trainer's own comment on that session"
+  },
+  "trainerNoCommentYetMessage": "You haven't commented on this workout.",
+  "@trainerNoCommentYetMessage": {
+    "description": "Shown in the session detail's comment block before the trainer has written anything"
+  },
+  "trainerAddCommentTitle": "Add comment",
+  "@trainerAddCommentTitle": {
+    "description": "Button that opens the comment editor for a session with no comment yet, and that sheet's title"
+  },
+  "trainerEditCommentTitle": "Edit comment",
+  "@trainerEditCommentTitle": {
+    "description": "Button that opens the comment editor for a session that already has one, and that sheet's title"
+  },
+  "trainerCommentSheetSubtitle": "Your client sees this on the workout itself.",
+  "@trainerCommentSheetSubtitle": {
+    "description": "Subtitle of the comment editor, saying where the comment ends up. Deliberately does not promise a notification — that only goes out for a brand-new comment (docs/31 B3)"
+  },
+  "trainerCommentHint": "How did this session go?",
+  "@trainerCommentHint": {
+    "description": "Placeholder in the comment editor's text field"
+  },
+  "trainerCommentSavedNotifiedMessage": "Comment saved — your client was notified.",
+  "@trainerCommentSavedNotifiedMessage": {
+    "description": "Confirmation after writing a comment where there was none. The push is real (docs/31 B3), and the trainer should know another person's phone just rang"
+  },
+  "trainerCommentSavedMessage": "Comment saved.",
+  "@trainerCommentSavedMessage": {
+    "description": "Confirmation after editing an existing comment. No notification is sent for an edit, so none is claimed"
+  },
+  "trainerCommentDeletedMessage": "Comment removed.",
+  "@trainerCommentDeletedMessage": {
+    "description": "Confirmation after clearing a comment from a session"
+  },
+  "trainerMessageThemTooAction": "Message them too",
+  "@trainerMessageThemTooAction": {
+    "description": "Button in the session detail that opens the chat thread with this client, with a draft already naming the session (docs/chat/41 T3, frame D4)"
+  },
+  "trainerSessionChatDraft": "About your workout on {date}: ",
+  "@trainerSessionChatDraft": {
+    "description": "The text the chat composer opens with after \"message them too\". Ends with a space so the trainer keeps typing where it left off; {date} is already formatted for the locale",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerAssignmentsTitle": "Assigned",
+  "@trainerAssignmentsTitle": {
+    "description": "Title of the trainer shell's assignments screen, and the label of its bottom-nav branch (docs/chat/41 T4)"
+  },
+  "trainerNoAssignmentsTitle": "Nothing assigned yet",
+  "@trainerNoAssignmentsTitle": {
+    "description": "Empty state title on the assignments screen, when this trainer has given no content to any client"
+  },
+  "trainerNoAssignmentsMessage": "Hand a template or a recipe to a client and it shows up here.",
+  "@trainerNoAssignmentsMessage": {
+    "description": "Empty state body on the assignments screen"
+  },
+  "trainerNoAssignmentsForFilterMessage": "Nothing matches these filters.",
+  "@trainerNoAssignmentsForFilterMessage": {
+    "description": "Shown when the trainer has assignments but the chosen client/type filters hide all of them. Distinct from the empty state: the fix is to change a filter, not to assign something"
+  },
+  "trainerFilterAllTypesLabel": "All types",
+  "@trainerFilterAllTypesLabel": {
+    "description": "Filter chip on the assignments screen: show both templates and recipes"
+  },
+  "trainerFilterAllClientsLabel": "All clients",
+  "@trainerFilterAllClientsLabel": {
+    "description": "Filter chip on the assignments screen: show every client's assignments"
+  },
+  "trainerContentTypeTemplateLabel": "Workout template",
+  "@trainerContentTypeTemplateLabel": {
+    "description": "Names the kind of content in the picker and the type filter"
+  },
+  "trainerContentTypeRecipeLabel": "Recipe",
+  "@trainerContentTypeRecipeLabel": {
+    "description": "Names the kind of content in the picker and the type filter"
+  },
+  "trainerDeletedContentLabel": "Deleted content",
+  "@trainerDeletedContentLabel": {
+    "description": "Stands in for an assignment whose source template/recipe the trainer has since deleted. The row stays, because the client still has their copy and the trainer can still revoke it"
+  },
+  "trainerAssignButton": "Assign",
+  "@trainerAssignButton": {
+    "description": "The button that opens the assign sheet, and the one that submits it"
+  },
+  "trainerAssignPickContentTitle": "What are you assigning?",
+  "@trainerAssignPickContentTitle": {
+    "description": "Title of the assign sheet's first step, the content picker (frame E2)"
+  },
+  "trainerAssignPickClientsTitle": "Who gets {content}?",
+  "@trainerAssignPickClientsTitle": {
+    "description": "Title of the assign sheet's second step, the client picker. {content} is the template or recipe chosen in the first step",
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerAssignSearchHint": "Search your templates and recipes",
+  "@trainerAssignSearchHint": {
+    "description": "Placeholder in the assign sheet's content search field"
+  },
+  "trainerNoAssignableContentMessage": "You have no templates or recipes to assign yet. Create one first — and if you just made one, it becomes assignable once it has synced.",
+  "@trainerNoAssignableContentMessage": {
+    "description": "Shown in the assign sheet when the trainer has nothing to hand out. The sync half matters: content that has not reached the server yet cannot be assigned, because the API addresses it by server id"
+  },
+  "trainerAlreadyHasItLabel": "Already has it",
+  "@trainerAlreadyHasItLabel": {
+    "description": "Shown under a client in the assign sheet who already holds the chosen content. Their row is locked rather than hidden, so the trainer can see they are covered"
+  },
+  "trainerSelectedClientsCount": "{count, plural, =0{No one selected} one{1 client selected} other{{count} clients selected}}",
+  "@trainerSelectedClientsCount": {
+    "description": "Running count at the bottom of the assign sheet's client step (frame E2)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerAssignResultTitle": "{assigned} of {total} assigned",
+  "@trainerAssignResultTitle": {
+    "description": "Headline of the assign result sheet (frame E3). Both numbers count clients",
+    "placeholders": {
+      "assigned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerAssignSkippedTitle": "{count, plural, one{1 client was skipped} other{{count} clients were skipped}}",
+  "@trainerAssignSkippedTitle": {
+    "description": "Heading of the skipped list on the assign result sheet",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerAssignSkippedExplanation": "They already had this content, so nothing was changed for them.",
+  "@trainerAssignSkippedExplanation": {
+    "description": "Explains the skipped list. A skip is a result, not a failure — the backend runs the whole batch as one transaction and reports duplicates this way (docs/35)"
+  },
+  "trainerUnassignTooltip": "Remove assignment",
+  "@trainerUnassignTooltip": {
+    "description": "Tooltip of the revoke button on an assignment row"
+  },
+  "trainerUnassignConfirmTitle": "Remove this assignment?",
+  "@trainerUnassignConfirmTitle": {
+    "description": "Title of the confirmation asked before revoking an assignment"
+  },
+  "trainerUnassignConfirmMessage": "{content} will be removed from {client}'s account too.",
+  "@trainerUnassignConfirmMessage": {
+    "description": "Body of the unassign confirmation. Says the second consequence out loud: revoking does not only untie the row, it deletes the client's own copy",
+    "placeholders": {
+      "content": {
+        "type": "String"
+      },
+      "client": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerUnassignedMessage": "Assignment removed.",
+  "@trainerUnassignedMessage": {
+    "description": "Confirmation after revoking an assignment"
+  },
+  "trainerCalendarTitle": "Calendar",
+  "@trainerCalendarTitle": {
+    "description": "Title of the trainer calendar screen and the label of its bottom-nav branch (docs/chat/41 T5)"
+  },
+  "trainerTabScheduleLabel": "Schedule",
+  "@trainerTabScheduleLabel": {
+    "description": "Client detail tab holding that client's schedules and what is coming up for them"
+  },
+  "trainerOccurrenceUpcomingLabel": "Upcoming",
+  "@trainerOccurrenceUpcomingLabel": {
+    "description": "Status of a scheduled session that has not happened yet"
+  },
+  "trainerOccurrenceDoneLabel": "Done",
+  "@trainerOccurrenceDoneLabel": {
+    "description": "Status of a scheduled session the client completed"
+  },
+  "trainerOccurrenceMissedLabel": "Missed",
+  "@trainerOccurrenceMissedLabel": {
+    "description": "Status of a scheduled session whose day passed without the client doing it"
+  },
+  "trainerOccurrenceCancelledLabel": "Cancelled",
+  "@trainerOccurrenceCancelledLabel": {
+    "description": "Status of a scheduled session that was called off"
+  },
+  "trainerNoSessionsThisWeekTitle": "Nothing scheduled",
+  "@trainerNoSessionsThisWeekTitle": {
+    "description": "Empty state on the calendar agenda when the shown week has no sessions"
+  },
+  "trainerNoSessionsThisWeekMessage": "No sessions this week. Swipe the week strip to look further ahead.",
+  "@trainerNoSessionsThisWeekMessage": {
+    "description": "Body of the calendar's empty week state, pointing at how to move between weeks"
+  },
+  "trainerDuringTheDayLabel": "During the day",
+  "@trainerDuringTheDayLabel": {
+    "description": "Quiet divider above the occurrences of a day that carry no time of day. They sort last, rather than being given a time they do not have (frame F1)"
+  },
+  "trainerUnknownClientLabel": "Unknown client",
+  "@trainerUnknownClientLabel": {
+    "description": "Stands in for the name of a client the calendar knows only by id — e.g. an occurrence left by someone no longer on the roster"
+  },
+  "trainerFromProgramLabel": "From a program",
+  "@trainerFromProgramLabel": {
+    "description": "Marks a calendar occurrence that came from a multi-week program assignment rather than from a schedule"
+  },
+  "trainerMonthViewTooltip": "Month view",
+  "@trainerMonthViewTooltip": {
+    "description": "Tooltip of the calendar's view switch when the agenda is showing"
+  },
+  "trainerAgendaViewTooltip": "Agenda view",
+  "@trainerAgendaViewTooltip": {
+    "description": "Tooltip of the calendar's view switch when the month is showing. The agenda is the default: a month grid of 30-odd cells with several sessions each does not fit a phone (frame F2)"
+  },
+  "trainerCalendarFilterTooltip": "Filter by client",
+  "@trainerCalendarFilterTooltip": {
+    "description": "Tooltip of the calendar's client-filter button"
+  },
+  "trainerCalendarFilterTitle": "Show which clients?",
+  "@trainerCalendarFilterTitle": {
+    "description": "Title of the calendar's client filter sheet"
+  },
+  "trainerCalendarFilterClearAction": "Show all",
+  "@trainerCalendarFilterClearAction": {
+    "description": "Clears the calendar's client filter"
+  },
+  "trainerCalendarFilterChipLabel": "{count, plural, one{1 client} other{{count} clients}}",
+  "@trainerCalendarFilterChipLabel": {
+    "description": "Chip in the calendar header showing how many clients the filter narrows to. Tapping it clears the filter (frame F5)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerOpenClientAction": "Open client",
+  "@trainerOpenClientAction": {
+    "description": "Action in the occurrence peek sheet that opens that client's detail screen"
+  },
+  "trainerCancelOccurrenceAction": "Cancel this session",
+  "@trainerCancelOccurrenceAction": {
+    "description": "Action in the occurrence peek sheet that calls off this one occurrence, leaving the rest of the series running"
+  },
+  "trainerCancelOccurrenceConfirmTitle": "Cancel this session?",
+  "@trainerCancelOccurrenceConfirmTitle": {
+    "description": "Title of the confirmation before calling off one occurrence"
+  },
+  "trainerCancelOccurrenceConfirmMessage": "Only this one session is cancelled. The rest of the schedule stays.",
+  "@trainerCancelOccurrenceConfirmMessage": {
+    "description": "Body of the single-occurrence cancel confirmation. Says the boundary out loud, because the series-level cancel sits one screen away and does something else"
+  },
+  "trainerNoSchedulesTitle": "Nothing scheduled yet",
+  "@trainerNoSchedulesTitle": {
+    "description": "Empty state on a client's schedule tab"
+  },
+  "trainerNoSchedulesMessage": "Book them in for a workout and it shows up here and on your calendar.",
+  "@trainerNoSchedulesMessage": {
+    "description": "Body of the client schedule tab's empty state"
+  },
+  "trainerSchedulesSectionTitle": "Schedules",
+  "@trainerSchedulesSectionTitle": {
+    "description": "Heading of the series list on the client's schedule tab"
+  },
+  "trainerUpcomingSectionTitle": "Coming up",
+  "@trainerUpcomingSectionTitle": {
+    "description": "Heading of the upcoming-occurrences list on the client's schedule tab"
+  },
+  "trainerScheduleCountsLabel": "{done} done · {missed} missed · {remaining} to go",
+  "@trainerScheduleCountsLabel": {
+    "description": "Progress line under a schedule: how its occurrences have gone so far",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "missed": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerCancelScheduleTooltip": "Cancel schedule",
+  "@trainerCancelScheduleTooltip": {
+    "description": "Tooltip of the button that calls off a whole series"
+  },
+  "trainerCancelScheduleConfirmTitle": "Cancel this schedule?",
+  "@trainerCancelScheduleConfirmTitle": {
+    "description": "Title of the confirmation before calling off a whole series"
+  },
+  "trainerCancelScheduleConfirmMessage": "{count, plural, one{The 1 session still to come is cancelled. What already happened stays.} other{The {count} sessions still to come are cancelled. What already happened stays.}}",
+  "@trainerCancelScheduleConfirmMessage": {
+    "description": "Body of the series cancel confirmation. Names the boundary: only future occurrences go, past ones remain on the record",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerScheduleCancelledMessage": "Schedule cancelled.",
+  "@trainerScheduleCancelledMessage": {
+    "description": "Confirmation after calling off a series"
+  },
+  "trainerScheduleWorkoutAction": "Schedule",
+  "@trainerScheduleWorkoutAction": {
+    "description": "Button on the client's schedule tab that opens the create-schedule form"
+  },
+  "trainerScheduleWorkoutTitle": "Schedule a workout",
+  "@trainerScheduleWorkoutTitle": {
+    "description": "Title of the create-schedule sheet (frame F4)"
+  },
+  "trainerScheduleTemplateLabel": "Workout template",
+  "@trainerScheduleTemplateLabel": {
+    "description": "Field label for the template being scheduled"
+  },
+  "trainerNoTemplatesToScheduleMessage": "You have no workout templates yet. Create one first — and if you just made one, it becomes schedulable once it has synced.",
+  "@trainerNoTemplatesToScheduleMessage": {
+    "description": "Shown in the create-schedule sheet when the trainer has no templates. The sync half matters: the API refers to a template by its server id"
+  },
+  "trainerScheduleRepeatLabel": "Repeat",
+  "@trainerScheduleRepeatLabel": {
+    "description": "Label above the recurrence chips in the create-schedule sheet"
+  },
+  "trainerScheduleStartsLabel": "Starts",
+  "@trainerScheduleStartsLabel": {
+    "description": "Field label for a schedule's first date"
+  },
+  "trainerScheduleUntilLabel": "Until",
+  "@trainerScheduleUntilLabel": {
+    "description": "Field label for a recurring schedule's last date"
+  },
+  "trainerScheduleTimeLabel": "Time",
+  "@trainerScheduleTimeLabel": {
+    "description": "Field label for a schedule's optional time of day"
+  },
+  "trainerScheduleNoTimeLabel": "No set time",
+  "@trainerScheduleNoTimeLabel": {
+    "description": "Value shown for a schedule with no time of day. Those sessions sort to the end of their day in the agenda"
+  },
+  "trainerScheduleCreateButton": "Create schedule",
+  "@trainerScheduleCreateButton": {
+    "description": "Submit button of the create-schedule sheet"
+  },
+  "trainerRecurrenceOnceLabel": "Once",
+  "@trainerRecurrenceOnceLabel": {
+    "description": "Recurrence option: a single session on one date"
+  },
+  "trainerRecurrenceDailyLabel": "Every day",
+  "@trainerRecurrenceDailyLabel": {
+    "description": "Recurrence option: one session every day of the range"
+  },
+  "trainerRecurrenceWeeklyLabel": "Weekly",
+  "@trainerRecurrenceWeeklyLabel": {
+    "description": "Recurrence option: sessions on chosen weekdays"
+  },
+  "trainerRecurrenceOnDaysLabel": "Every {days}",
+  "@trainerRecurrenceOnDaysLabel": {
+    "description": "How a weekly recurrence reads once days are chosen. {days} is an already-joined list of short weekday names, e.g. \"Mon, Thu\"",
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerDateRangeLabel": "{from} – {to}",
+  "@trainerDateRangeLabel": {
+    "description": "A date range in a recurrence summary. Both dates are already formatted",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerOccurrenceCountSummary": "This creates {count} sessions, {from} – {to}",
+  "@trainerOccurrenceCountSummary": {
+    "description": "The create-schedule form's answer to \"how many sessions is this\", shown before anything is sent (frame F4). Dates are already formatted",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerOneOccurrenceSummary": "This creates one session on {date}",
+  "@trainerOneOccurrenceSummary": {
+    "description": "The single-session variant of the create-schedule summary",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerPickAtLeastOneDayMessage": "Pick at least one day of the week.",
+  "@trainerPickAtLeastOneDayMessage": {
+    "description": "Shown in place of the create-schedule summary when a weekly recurrence has no weekday selected"
+  },
+  "trainerNoOccurrencesInRangeMessage": "No sessions fall in this range. Try different days or a later end date.",
+  "@trainerNoOccurrencesInRangeMessage": {
+    "description": "Shown when the chosen recurrence matches no date between the start and end dates"
+  },
+  "trainerTooManyOccurrencesMessage": "That would create {count} sessions — more than the {max} allowed. Shorten the range.",
+  "@trainerTooManyOccurrencesMessage": {
+    "description": "Shown when the recurrence would exceed the backend's occurrence cap. Stopping here is friendlier than a rejected request",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramsTitle": "Programs",
+  "@trainerProgramsTitle": {
+    "description": "Title of the trainer's program library and the label of its bottom-nav branch (docs/chat/41 T6)"
+  },
+  "trainerNoProgramsTitle": "No programs yet",
+  "@trainerNoProgramsTitle": {
+    "description": "Empty state title on the program library"
+  },
+  "trainerNoProgramsMessage": "A program is a multi-week plan you can start clients on. They are built on the web.",
+  "@trainerNoProgramsMessage": {
+    "description": "Empty state body on the program library, saying what a program is and where it comes from"
+  },
+  "trainerProgramWeeksLabel": "{count, plural, one{1 week} other{{count} weeks}}",
+  "@trainerProgramWeeksLabel": {
+    "description": "How long a program is",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramPerWeekLabel": "{count, plural, =0{no sessions a week} one{1 session a week} other{{count} sessions a week}}",
+  "@trainerProgramPerWeekLabel": {
+    "description": "How many distinct days of the week a program uses — \"how often\" at a glance",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramActiveCountLabel": "{count, plural, one{1 running} other{{count} running}}",
+  "@trainerProgramActiveCountLabel": {
+    "description": "Badge on a program card: how many clients are currently on it",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramWeekLabel": "Week {number}",
+  "@trainerProgramWeekLabel": {
+    "description": "Header of one collapsible week section in a program (frame G2)",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramSessionCountLabel": "{count, plural, one{1 session} other{{count} sessions}}",
+  "@trainerProgramSessionCountLabel": {
+    "description": "Subtitle of a week section: how many sessions that week holds",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramRestWeekLabel": "Rest week",
+  "@trainerProgramRestWeekLabel": {
+    "description": "Subtitle of a week section with no sessions in it. A deliberate rest week is a real answer, not missing data"
+  },
+  "trainerProgramRestWeekMessage": "Nothing planned this week.",
+  "@trainerProgramRestWeekMessage": {
+    "description": "Body shown inside an opened week section that holds no sessions"
+  },
+  "trainerProgramsEditOnWebTitle": "Programs are built on the web",
+  "@trainerProgramsEditOnWebTitle": {
+    "description": "Heading of the notice explaining where program authoring lives (frame G4). Stated plainly, not apologetically"
+  },
+  "trainerProgramsEditOnWebMessage": "A twelve-week grid needs a bigger screen than this. Here you can read a program and start a client on it — building and editing one happens on a computer.",
+  "@trainerProgramsEditOnWebMessage": {
+    "description": "Body of the edit-on-web notice. Says what the phone is for and what the desk is for, without treating the phone as a lesser version"
+  },
+  "trainerOpenOnWebAction": "Open on the web",
+  "@trainerOpenOnWebAction": {
+    "description": "Link in the edit-on-web notice that opens the program (or the library) in a browser"
+  },
+  "trainerAssignProgramTitle": "Start someone on {program}",
+  "@trainerAssignProgramTitle": {
+    "description": "Title of the sheet that puts a client on a program (frame G3)",
+    "placeholders": {
+      "program": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerProgramStartsLabel": "Starts on",
+  "@trainerProgramStartsLabel": {
+    "description": "Field label for a program run's first day. Only Mondays are offered — a program's weeks are Monday-anchored"
+  },
+  "trainerProgramRunSummary": "{weeks, plural, one{Runs {from} to {to}, one week} other{Runs {from} to {to}, {weeks} weeks}}",
+  "@trainerProgramRunSummary": {
+    "description": "The sentence under the start-date field saying what the run will cover. Dates are already formatted",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerStartProgramButton": "Start program",
+  "@trainerStartProgramButton": {
+    "description": "Button that opens the assign sheet on a program, and the one that submits it"
+  },
+  "trainerProgramStartedMessage": "{count, plural, one{1 session added to their calendar} other{{count} sessions added to their calendar}}",
+  "@trainerProgramStartedMessage": {
+    "description": "Confirmation after starting a client on a program. Says what was actually written — sessions in another person's calendar",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramsSectionTitle": "Programs",
+  "@trainerProgramsSectionTitle": {
+    "description": "Heading of the program-runs list on a client's schedule tab"
+  },
+  "trainerProgramWeekOfLabel": "Week {current} of {total}",
+  "@trainerProgramWeekOfLabel": {
+    "description": "Where a client currently is in their program run",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerCancelProgramRunTooltip": "Stop program",
+  "@trainerCancelProgramRunTooltip": {
+    "description": "Tooltip of the button that stops a client's program run"
+  },
+  "trainerCancelProgramRunConfirmTitle": "Stop this program?",
+  "@trainerCancelProgramRunConfirmTitle": {
+    "description": "Title of the confirmation before stopping a client's program run"
+  },
+  "trainerCancelProgramRunConfirmMessage": "{count, plural, one{The 1 session still to come is cancelled. What already happened stays.} other{The {count} sessions still to come are cancelled. What already happened stays.}}",
+  "@trainerCancelProgramRunConfirmMessage": {
+    "description": "Body of the program-run stop confirmation. Same boundary as cancelling a schedule: only future sessions go",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramRunCancelledMessage": "Program stopped.",
+  "@trainerProgramRunCancelledMessage": {
+    "description": "Confirmation after stopping a client's program run"
+  },
+  "trainerInvitesTitle": "Invites",
+  "@trainerInvitesTitle": {
+    "description": "Title of the trainer's invite screen, reachable from the client list and the trainer settings (docs/chat/41 T7)"
+  },
+  "trainerInvitesSettingsSubtitle": "Invite a client, or take back an invite",
+  "@trainerInvitesSettingsSubtitle": {
+    "description": "Subtitle of the invites row in trainer settings"
+  },
+  "trainerInviteEmailLabel": "Client's email address",
+  "@trainerInviteEmailLabel": {
+    "description": "Field label for the address an invite is sent to"
+  },
+  "trainerInviteEmailHelper": "They get an email with a link. The invite expires after 24 hours.",
+  "@trainerInviteEmailHelper": {
+    "description": "Helper text under the invite email field, saying what happens and for how long"
+  },
+  "trainerInviteEmailInvalidMessage": "That does not look like an email address.",
+  "@trainerInviteEmailInvalidMessage": {
+    "description": "Validation message for a malformed invite address. The backend matches the address exactly, so a typo invites nobody"
+  },
+  "trainerSendInviteButton": "Send invite",
+  "@trainerSendInviteButton": {
+    "description": "Submits the invite form; also the call to action on the client list's empty state"
+  },
+  "trainerInviteSentMessage": "Invite sent.",
+  "@trainerInviteSentMessage": {
+    "description": "Confirmation after an invite goes out"
+  },
+  "trainerPendingInvitesTitle": "Waiting on",
+  "@trainerPendingInvitesTitle": {
+    "description": "Heading of the list of invites nobody has answered yet"
+  },
+  "trainerNoPendingInvitesMessage": "No invites are waiting for an answer.",
+  "@trainerNoPendingInvitesMessage": {
+    "description": "Shown when the trainer has no pending invites"
+  },
+  "trainerInviteExpiresInLabel": "{hours, plural, =0{Expires within the hour} one{Expires in 1 hour} other{Expires in {hours} hours}}",
+  "@trainerInviteExpiresInLabel": {
+    "description": "How long an invitee still has to accept",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerInviteExpiredLabel": "Expired",
+  "@trainerInviteExpiredLabel": {
+    "description": "Shown on an invite whose time has run out. The server stops listing those, so this only appears on a briefly stale list"
+  },
+  "trainerCancelInviteTooltip": "Take back invite",
+  "@trainerCancelInviteTooltip": {
+    "description": "Tooltip of the button that cancels a pending invite"
+  },
+  "trainerCancelInviteConfirmTitle": "Take back this invite?",
+  "@trainerCancelInviteConfirmTitle": {
+    "description": "Title of the confirmation before cancelling a pending invite"
+  },
+  "trainerCancelInviteConfirmMessage": "{email} will no longer be able to accept it.",
+  "@trainerCancelInviteConfirmMessage": {
+    "description": "Body of the cancel-invite confirmation",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerInviteCancelledMessage": "Invite taken back.",
+  "@trainerInviteCancelledMessage": {
+    "description": "Confirmation after cancelling a pending invite"
+  },
+  "trainerSettingsTitle": "Trainer settings",
+  "@trainerSettingsTitle": {
+    "description": "Title of the trainer view's own settings screen, and the menu item that opens it. Separate from the client-side Settings: this is about being someone's coach"
+  },
+  "trainerWeeklyReportToggleLabel": "Weekly report email",
+  "@trainerWeeklyReportToggleLabel": {
+    "description": "Switch label for the trainer's weekly digest email (docs/33)"
+  },
+  "trainerWeeklyReportToggleSubtitle": "A Monday summary of every client's week, by email. There is no in-app version — your client list already shows this live.",
+  "@trainerWeeklyReportToggleSubtitle": {
+    "description": "Subtitle of the weekly report switch. Says plainly that the report stays an email and why that is not a gap: the same figures are on the client list and client screens, live"
+  },
+  "trainerSettingsFootnote": "Your own account settings — theme, language, units — are under your own log.",
+  "@trainerSettingsFootnote": {
+    "description": "Footnote on the trainer settings screen, pointing at where the client-side settings live so the short list does not read as missing something"
+  },
+  "trainerIntroTitle": "This is your trainer view",
+  "@trainerIntroTitle": {
+    "description": "Title of the one-off card shown the first time a trainer enters the trainer shell (frame A3)"
+  },
+  "trainerIntroMessage": "Your clients, their calendar and what you have given them live here. Your own workout log is still one tap away — it is in the avatar menu, top right.",
+  "@trainerIntroMessage": {
+    "description": "Body of the first-entry card. The one thing worth saying is where their own log went, since that is the only question this switch can leave them with"
+  },
+  "trainerIntroDismissButton": "Got it",
+  "@trainerIntroDismissButton": {
+    "description": "Dismisses the first-entry card"
+  },
+  "trainerDailyGoalsTitle": "Daily goals",
+  "@trainerDailyGoalsTitle": {
+    "description": "Heading of the goals card on a client's nutrition tab"
+  },
+  "trainerMealLogTitle": "What they ate",
+  "@trainerMealLogTitle": {
+    "description": "Heading above the client's meals on the nutrition tab. The log is theirs and stays read-only, which is why the badge sits here rather than on the whole tab"
+  },
+  "trainerSetGoalsAction": "Set",
+  "@trainerSetGoalsAction": {
+    "description": "Opens the goals editor for a client who has no goals yet"
+  },
+  "trainerEditGoalsAction": "Edit",
+  "@trainerEditGoalsAction": {
+    "description": "Opens the goals editor for a client who already has goals"
+  },
+  "trainerNutritionGoalsTitle": "Daily goals",
+  "@trainerNutritionGoalsTitle": {
+    "description": "Title of the sheet that sets a client's macro targets (docs/32)"
+  },
+  "trainerNutritionGoalsSubtitle": "Your client sees these as their own targets.",
+  "@trainerNutritionGoalsSubtitle": {
+    "description": "Subtitle of the goals editor, saying whose numbers these become"
+  },
+  "trainerNutritionGoalsBlankHint": "Leave a field empty to set no goal for it.",
+  "@trainerNutritionGoalsBlankHint": {
+    "description": "Hint in the goals editor. Empty means no goal, which is not the same as zero — a zero calorie target would read as 100% over on the first bite"
+  },
+  "trainerGoalsSavedNotifiedMessage": "Goals saved — your client was notified.",
+  "@trainerGoalsSavedNotifiedMessage": {
+    "description": "Confirmation after changing a client's goals. The backend notifies them on a change (docs/32), so this is only said when something changed"
+  },
+  "trainerGoalsSavedMessage": "Goals saved.",
+  "@trainerGoalsSavedMessage": {
+    "description": "Confirmation after saving goals that turned out identical. Nothing was notified, so nothing is claimed"
   }
 }
