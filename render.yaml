@@ -42,8 +42,12 @@ services:
       # must leave room for thread stacks, code cache and other native memory.
       # Metaspace gets the larger share because the Firebase Admin SDK loads a
       # lot of classes — see the Dockerfile comment for the full reasoning.
+      # The native-side flags (SerialGC, C1-only JIT, smaller stacks) are what
+      # keep total RSS under the limit — see the Dockerfile for why.
       - key: JAVA_OPTS
-        value: -Xms64m -Xmx192m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m
+        value: -Xms64m -Xmx176m -XX:MaxMetaspaceSize=176m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError
+      - key: MALLOC_ARENA_MAX
+        value: "2"
       # Set in the dashboard (Environment tab). Values never live in git.
       - key: SPRING_DATASOURCE_URL
         sync: false
