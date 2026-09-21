@@ -36,7 +36,21 @@ EXPOSE 8080
 # `OutOfMemoryError: Metaspace` mid-startup. Give metaspace the larger share
 # and keep the heap modest — this app's biggest transient allocation is a
 # decoded upload image (multipart is capped at 10MB), not steady-state data.
-ENV JAVA_OPTS="-Xms64m -Xmx192m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m"
+#
+# The caps above add up to ~464 MB before thread stacks, GC bookkeeping, JIT
+# compiler arenas and malloc arenas — which is how the instance kept getting
+# OOM-killed at 512 MB once the billing SDKs grew the class count. So the
+# native side is trimmed too:
+#  - SerialGC: the smallest GC footprint; G1's remembered sets cost real MB
+#    and buy nothing for a single-CPU, low-traffic instance.
+#  - TieredStopAtLevel=1: C1 only. C2's compiler arenas spike by tens of MB
+#    while optimising hot methods; the peak throughput it buys isn't needed.
+#  - Xss512k: half the default per-thread stack reservation.
+#  - ExitOnOutOfMemoryError: a clean restart instead of a half-dead JVM.
+ENV JAVA_OPTS="-Xms64m -Xmx176m -XX:MaxMetaspaceSize=176m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError"
+# glibc gives each thread that mallocs its own 64 MB arena (up to 8 x CPUs);
+# the fragmentation shows up as RSS that creeps up and never comes back.
+ENV MALLOC_ARENA_MAX=2
 # Neither Render nor Railway has a secret-file mount, so push credentials are
 # supplied as base64-encoded env vars and decoded to a file here on startup.
 # Each block is a no-op when its *_B64 var is unset, so a deploy with push

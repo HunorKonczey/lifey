@@ -36,6 +36,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # Default 2048 cached HQL/SQL plans — far more distinct queries than
+        # this app has, and each entry is heap the capped JVM can't spare.
+        query:
+          plan_cache_max_size: 256
   servlet:
     multipart:
       # Profile picture and recipe photo uploads (docs/22-profile-picture-plan.md)
@@ -63,7 +67,7 @@ server:
       # Default max is 200 — each thread reserves its own stack, which adds
       # up fast against a capped heap. 200 concurrent requests is far more
       # than this deployment needs anyway.
-      max: 50
+      max: 20
 
 springdoc:
   swagger-ui:
