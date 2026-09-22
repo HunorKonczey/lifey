@@ -1,7 +1,8 @@
 # AI Nutrition Plan — Calorie Estimation (Phase 1) + Recipe Generation (Phase 2)
 
-Status: **Phase 1 done — backend (steps 1–2), the live prompt pass (step 3) and mobile (steps
-4–5)**; see the "As built" and "Live prompt pass" sections at the end. Phase 2 not started.
+Status: **Phase 1 done** — backend (steps 1–2), the live prompt pass (step 3) and mobile (steps
+4–5). **Phase 2 backend done (step 6–7)**; its mobile wizard (steps 8–9) is next. See the "As
+built" sections at the end.
 
 Two roadmap-V3 features on a shared AI foundation (`01-product-vision.md`, `07-roadmap.md`):
 
@@ -546,3 +547,50 @@ Revisit it if real users' corrections cluster on portions rather than names.
 **Open, from this pass:** both models under-estimate portion weight for a large single dish, and
 neither was tested against *weighed* food — every number above is judged by eye. A proper check
 needs a handful of photos of meals whose real weight is known.
+
+---
+
+## As built — Phase 2 backend (2026-09-22)
+
+`POST /api/v1/recipes/generate` in `com.lifey.nutrition.recipe.generation` (controller · `service/`
+· `client/` · `dto/` · `exception/`), on the same `com.lifey.ai` client and gate as Phase 1.
+Nothing is persisted: the response is a proposal the client edits and saves through the ordinary
+recipe endpoints.
+
+Where it differs from the plan above, and why:
+
+| Plan said | Built | Why |
+|---|---|---|
+| Permissive gate, no user limit | `AiFeatureGate.checkRecipeGeneration` = the same monthly allowance as Phase 1, and a successful generation spends one credit | billing shipped before this did; a credit is a credit whichever feature spent it (`63` D-M5). Free 3 / Pro 100 per month |
+| Ingredient union: `existingFoodId` **or** `newFood` in the model's own schema | the model answers with a flat `existingFoodId` where **0 means "new food"**, plus per-100 g fields | a derived, all-fields-required JSON schema expresses a union badly. The service turns the sentinel back into the plan's explicit two-shape DTO, so the API contract is unchanged |
+| Model returns `perServing` | the backend computes it from the ingredients and the serving count | it is arithmetic over values the client is about to save; the preview must not disagree with the saved recipe. It also saves output tokens |
+| — | catalog snapshot capped at 300 foods, alphabetical | a user with thousands of foods would otherwise pay for the prompt every time |
+| — | 400 `InvalidGenerationRequestException` for meat type + vegetarian/vegan | rejected rather than ignored, so a client bug surfaces |
+
+**Guards on the model's answer** (`RecipeGenerationServiceImpl.toResponse`): an `existingFoodId`
+is believed only when it is one of *this* user's visible foods — a model-emitted id is input, not
+authority; a proposed new food whose name the user already has (case-insensitive) becomes a
+reference to that food instead; ingredients with no name, no weight, or an unknown id *and* no
+values of their own are dropped; quantities cap at 3 000 g, per-100 g energy at 900 kcal, macros at
+100 g, servings at 12, and the description at the column's 2 000 characters. An answer with nothing
+usable left is a 502, not an empty recipe — and costs no credit.
+
+### Live pass — what the model actually does
+
+Five real calls (`ClaudeRecipeGeneratorLiveTest`, env-gated like Phase 1's).
+
+- **The diet rule holds.** Asked for a vegan lunch against a catalog containing chicken, Greek
+  yoghurt and cheddar, `claude-haiku-4-5` used the lentils, rice, spinach and olive oil from the
+  catalog by id and proposed only vegan new foods. The reuse instruction never beat the diet rule.
+- **A new user works.** With an empty catalog every ingredient came back as a new food with
+  plausible values.
+- **The calorie band was the weak point**, so the prompt now makes the model add its own numbers up
+  and adjust the quantities or the serving count until the per-serving figure is inside the band.
+- **Haiku still mixes up per-100 g values for new foods** — one run gave canned tomatoes 149
+  kcal/100 g and garlic 5, exactly swapped. `claude-sonnet-5` on the same request had garlic at
+  149, tomato at 18 and cumin at 446, and hit the band by choosing 5 servings.
+
+The default stays `claude-haiku-4-5` for both features, but **recipe generation is where the
+Sonnet gap is widest**: a wrong number here is copied into the user's food catalog, not just into
+one meal. If one model for both ever stops being the right trade, the cheapest fix is a second
+property beside `lifey.ai.model` rather than a code change.

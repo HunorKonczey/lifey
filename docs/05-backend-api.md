@@ -43,6 +43,22 @@ PUT /api/v1/recipes/{id}
 
 DELETE /api/v1/recipes/{id}
 
+## Recipes — AI generation
+
+POST /api/v1/recipes/generate
+* Generates a recipe proposal from the wizard's answers
+  (docs/23-ai-calorie-estimation-plan.md Phase 2). JSON body: `dietType`
+  (VEGETARIAN/VEGAN/MEAT/FISH/ANYTHING), `mealType`, `calorieBand` (per
+  serving), optional `meatType`, optional `extraRequest` (≤ 500 chars).
+  Nothing is stored — the client saves the edited proposal via POST /recipes.
+* 200 `{ name, description, servings, ingredients: [{ existingFoodId, newFood,
+  name, quantityInGrams }], perServing: { calories, proteinGrams, carbsGrams,
+  fatGrams } }` — exactly one of `existingFoodId` (one of the caller's own
+  foods) and `newFood` (to be created on save) is set per ingredient.
+* 400 contradicting answers (meat type with a vegetarian/vegan diet) or invalid
+  enum · 402 `AI_CREDITS_EXHAUSTED` · 502 `AI_UNAVAILABLE` (no credit used) ·
+  503 `AI_NOT_CONFIGURED`.
+
 ## Meals
 
 GET /api/v1/meals
