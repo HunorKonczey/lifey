@@ -1363,6 +1363,59 @@
     "description": "Shown in the AI credit chip once credits are exhausted, naming the calendar-month refill date (69 DV-11); {date} is already formatted (e.g. \"September 1\")",
     "placeholders": {"date": {"type": "String"}}
   },
+  "estimateFromPhotoButton": "Estimate from a photo",
+  "@estimateFromPhotoButton": {
+    "description": "Log meal screen: button that photographs a meal and lets AI estimate its foods, calories and macros (docs/23-ai-calorie-estimation-plan.md); the AI credit chip sits beside it"
+  },
+  "mealEstimateOfflineMessage": "You're offline — photo estimates need a connection.",
+  "@mealEstimateOfflineMessage": {
+    "description": "Snackbar / sheet message when an AI meal-photo estimate is attempted without connectivity (docs/23)"
+  },
+  "mealEstimateLoadingMessage": "Looking at your meal…",
+  "@mealEstimateLoadingMessage": {
+    "description": "Shown under the photo while the AI meal estimate is running (docs/23)"
+  },
+  "mealEstimateFailedMessage": "The estimate didn't work this time. No credit was used.",
+  "@mealEstimateFailedMessage": {
+    "description": "Shown when the AI meal estimate failed on the server side; the user can retry and was not charged an AI credit (docs/23)"
+  },
+  "mealEstimateNoFoodMessage": "No food recognized in this photo. Try again closer up, in good light.",
+  "@mealEstimateNoFoodMessage": {
+    "description": "Shown when the AI meal estimate found no food in the photo (docs/23)"
+  },
+  "mealEstimateAllRemovedMessage": "All items removed. Close this to go back to your meal.",
+  "@mealEstimateAllRemovedMessage": {
+    "description": "Shown in the AI estimate review sheet after the user removed every recognized item (docs/23)"
+  },
+  "mealEstimateSheetTitle": "From your photo",
+  "@mealEstimateSheetTitle": {
+    "description": "Title of the sheet reviewing the AI-estimated foods of a meal photo (docs/23)"
+  },
+  "mealEstimateReviewHint": "These are estimates — check the portions before adding.",
+  "@mealEstimateReviewHint": {
+    "description": "Subtitle of the AI estimate review sheet (docs/23)"
+  },
+  "mealEstimateConfidenceHigh": "Confident",
+  "@mealEstimateConfidenceHigh": {
+    "description": "Badge on an AI-estimated food: the model is confident about it (docs/23)"
+  },
+  "mealEstimateConfidenceMedium": "Probably right",
+  "@mealEstimateConfidenceMedium": {
+    "description": "Badge on an AI-estimated food: the model is moderately sure (docs/23)"
+  },
+  "mealEstimateConfidenceLow": "Rough guess",
+  "@mealEstimateConfidenceLow": {
+    "description": "Badge on an AI-estimated food: the model is unsure, the user should check it (docs/23)"
+  },
+  "mealEstimateRemoveItemTooltip": "Remove item",
+  "@mealEstimateRemoveItemTooltip": {
+    "description": "Tooltip of the close button removing one AI-estimated food from the review sheet (docs/23)"
+  },
+  "mealEstimateAddItemsButton": "{count, plural, one{Add 1 item} other{Add {count} items}}",
+  "@mealEstimateAddItemsButton": {
+    "description": "Confirm button of the AI estimate review sheet; adds the reviewed foods to the meal (docs/23)",
+    "placeholders": {"count": {"type": "int"}}
+  },
   "paywallCloseTooltip": "Close",
   "@paywallCloseTooltip": {
     "description": "Accessibility tooltip for the paywall's top-left close button (69 §3.1)"

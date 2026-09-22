@@ -213,7 +213,7 @@ the first paying customer · **S3** = correctness of the record, or polish.
 | M4 | ✅ **Fixed (Prompt 9).** 200 % text-scale adaptation not implemented | measured; see D-F5 | S2 |
 | M5 | ✅ **Fixed (Prompt 8).** Locked range rows drew their label at 0.6 opacity | `_RangeMenuRow`; contradicted commit `1c252fd`'s app-wide rule | S2 |
 | M6 | ✅ **Fixed (Prompt 8).** Plan cards were not semantic radios | `_PlanCard` drew the icons but carried no `Semantics(inMutuallyExclusiveGroup:, checked:)`; `69` §8 asks for "a single semantic radio" | S2 |
-| M7 | `AiCreditChip` / `requireAiCredits` are built, tested and mounted nowhere | recorded deliberately in `gated_surfaces_test.dart`; blocked on `docs/23` | S3 |
+| M7 | ✅ **Mounted (2026-09-22)** on the Log meal screen's "Estimate from a photo" row (`docs/23` mobile). Originally: `AiCreditChip` / `requireAiCredits` were built, tested and mounted nowhere | recorded deliberately in `gated_surfaces_test.dart`; blocked on `docs/23` | S3 |
 | M8 | `PaywallTrigger.onboarding` is unreachable | see D-F7 — a decision once recorded, not a defect | S3 |
 | M9 | ⏸ **Written up, not run (Prompt 13).** `67` §11's manual row still needs two physical devices and both store sandboxes; it is now a 15-row matrix in [`73`](73-billing-verification-runbook.md) §2 rather than a one-line reminder | needs devices + store sandboxes | S1 |
 | M10 | Chat-attachment tests fail on Windows — 2 to 4 per run, not a fixed 3: it is a file-lock race (`PathAccessException`), so the count varies | pre-existing, unrelated, documented in `67` §11 | S3 |

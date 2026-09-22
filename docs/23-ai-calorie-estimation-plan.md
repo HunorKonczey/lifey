@@ -1,9 +1,9 @@
 # AI Nutrition Plan — Calorie Estimation (Phase 1) + Recipe Generation (Phase 2)
 
-Status: **Phase 1 backend done (steps 1–2)** — `POST /api/v1/meals/estimate`, with the real
-credit gate (not the permissive one), see "As built" at the end. Not yet run against the live
-API (no key in the dev environment): step 3's smoke test is next — on the default `claude-haiku-4-5`, then mobile (steps 4–5).
-Phase 2 not started.
+Status: **Phase 1 built — backend (steps 1–2) and mobile (steps 4–5)**, see the two "As built"
+sections at the end. **Step 3 is still owed:** nothing has run against the live API yet (no key in
+the dev environment), so the prompt and the default `claude-haiku-4-5` are unverified on real
+photos. Phase 2 not started.
 
 Two roadmap-V3 features on a shared AI foundation (`01-product-vision.md`, `07-roadmap.md`):
 
@@ -467,3 +467,41 @@ Tests: `ClaudeMealPhotoAnalyzerTest` (request shape incl. schema generation, sto
 mapping), `MealEstimationServiceImplTest` (gate → call → count ordering, no credit on any
 failure, downscaling, clamping), `EntitlementAiFeatureGateTest`, `MealEstimationControllerTest`
 (multipart, 400/402/502/503). Full suite: 1015 tests green.
+
+---
+
+## As built — Phase 1 mobile (2026-09-22)
+
+**Entry point:** an "Estimate from a photo" row on the Log meal screen, under the dashed "Add
+food" button, with `AiCreditChip` at its end (closes `72` M7). Not in the Foods tab / barcode
+flow as the plan suggested: the estimate produces meal entries, so it belongs where meals are
+built. Tap → offline? snackbar, stop → `requireAiCredits` (0 credits → paywall) → camera or
+gallery → `ImagePicker` bounded to 1024 px, JPEG 85 → `MealEstimateSheet`.
+
+| Piece | File |
+|---|---|
+| `MealEstimate`, `EstimatedItem`, `EstimateConfidence` | `features/nutrition/domain/meal_estimate.dart` |
+| `MealEstimationRepository` — multipart `POST /meals/estimate`, 75 s receive timeout (the client default is 10 s) | `features/nutrition/data/meal_estimation_repository.dart` |
+| `MealEstimationController` — idle / loading / done / creditsExhausted (402) / offline / failed; refreshes the entitlement after a success so the chip updates | `features/nutrition/application/meal_estimation_controller.dart` |
+| `MealEstimateSheet` — review and edit, then save | `features/nutrition/presentation/widgets/meal_estimate_sheet.dart` |
+
+**Review sheet.** Each item: name, portion (g), kcal, protein, carbs, fat, all editable, plus a
+confidence line ("Confident" / "Probably right" / "Rough guess") and a remove button. **Changing
+the portion rescales kcal and macros proportionally** — the model's per-gram ratio is what it is
+best at; the portion is what users correct. The model's `notes` show in italics.
+
+**Saving** follows `AddMacrosSheet`: each item becomes a **hidden** `Food` with per-100 g values
+back-calculated from the reviewed portion (value × 100 / grams), and the sheet pops one
+`MealEntryDraft` per item into the meal, which auto-saves through the normal offline-first path.
+
+**States.** Loading shows the photo and a spinner. No food → a friendly message plus the model's
+note, nothing to add. 502/503/other → "didn't work, no credit was used" + Retry. Connection lost →
+the offline message + Retry. 402 → the sheet closes and the screen opens the paywall
+(`PaywallTrigger.aiCredits`).
+
+**Not built:** the 403 upsell (the backend never returns it, see above).
+
+Strings: 13 new keys, `estimateFromPhotoButton` and `mealEstimate*`, EN + HU. Tests:
+`meal_estimation_controller_test.dart`, `meal_estimate_sheet_test.dart`,
+`log_meal_screen_estimate_test.dart`, and `gated_surfaces_test.dart` now pins the Log meal screen
+as the one `requireAiCredits` call site.

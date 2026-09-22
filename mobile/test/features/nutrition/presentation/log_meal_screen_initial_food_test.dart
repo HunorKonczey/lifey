@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/ads/interstitial_manager.dart';
+import 'package:lifey/core/entitlements/entitlement_providers.dart';
+import 'package:lifey/core/sync/connectivity_status_provider.dart';
 import 'package:lifey/features/nutrition/application/food_controller.dart';
 import 'package:lifey/features/nutrition/application/food_usage_provider.dart';
 import 'package:lifey/features/nutrition/application/meal_controller.dart';
@@ -62,6 +64,9 @@ void main() {
         overrides: [
           mealControllerProvider.overrideWith(() => meals),
           interstitialManagerProvider.overrideWith(_NoAds.new),
+          // The "Estimate from a photo" button's offline state and credit chip.
+          isOfflineProvider.overrideWith((ref) => Stream.value(false)),
+          aiCreditsProvider.overrideWithValue(null),
           remainingBudgetProvider
               .overrideWithValue(const AsyncValue<RemainingBudget>.loading()),
           foodSearchProvider.overrideWith((ref) => Stream.value(const [_chicken])),

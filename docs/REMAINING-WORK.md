@@ -16,14 +16,13 @@ a hozzá tartozó számozott tervbe írd.
 
 ### 1.1 AI-bekötés — [`23`](23-ai-calorie-estimation-plan.md)
 
-**Backend 1. fázis kész (2026-09-22):** `POST /api/v1/meals/estimate`, valódi kredit-gate-tel
-(Free 3 / Pro 100 havonta) — részletek a `23` „As built” szakaszában. Hátravan:
+**1. fázis kész (2026-09-22), backend + mobil:** `POST /api/v1/meals/estimate` valódi
+kredit-gate-tel (Free 3 / Pro 100 havonta), a mobilon a Log meal képernyő „Becslés fotóról”
+gombja — részletek a `23` két „As built” szakaszában. Hátravan:
 
 - **Élő próba** valódi fotókon (`ANTHROPIC_API_KEY` kell hozzá) — a prompt és a modellválasztás
   finomhangolása (`23` 3. lépés). Alapértelmezett modell: `claude-haiku-4-5` (~0,003 $/becslés);
   ha valódi fotókon gyengén becsül, a `claude-sonnet-5` a következő lépcső (`23` „Usable models”).
-- **Mobil** (`23` 4–5. lépés): fotózás → eredmény-lap → mentés meal-ként; itt kerül képernyőre
-  az `AiCreditChip` és a `requireAiCredits`.
 - **2. fázis:** receptgeneráló varázsló.
 
 Az eredeti állapot, amiből indult:
@@ -36,8 +35,7 @@ A monetizáció elvarratlan szálai:
 
 - ✅ `72` B1 — a számláló most már növekszik, a 402 / `AI_CREDITS_EXHAUSTED` gate él.
 - ✅ `72` B4 — a Pro havi 100-as fair-use limitjét az `EntitlementAiFeatureGate` ellenőrzi.
-- ⏳ `72` M7 — `AiCreditChip` és `requireAiCredits` még egyik képernyőre sincs kitéve; a mobil
-  résszel együtt kerül be.
+- ✅ `72` M7 — `AiCreditChip` és `requireAiCredits` a Log meal képernyőn.
 
 
 ### 1.2 Edzői nézet tableten — [`chat/41`](chat/41-trainer-mobile-v2-plan.md) §8.2
@@ -121,7 +119,7 @@ Nincs integráció. A HealthKit és a Health Connect kész.
 
 ## Javasolt sorrend
 
-1. AI kalóriabecslés (1.1, 1. fázis) — backend kész; élő próba, majd mobil.
+1. AI kalóriabecslés (1.1, 1. fázis) — backend + mobil kész; élő próba valódi fotókon.
 2. Progress fotók + testméretek (1.3), mellé a súlytrend (1.4) mint gyors nyerés.
 3. AI receptgenerálás (1.1, 2. fázis).
 4. Tablet-elrendezés (1.2) — ha van rá igény az edzők részéről.

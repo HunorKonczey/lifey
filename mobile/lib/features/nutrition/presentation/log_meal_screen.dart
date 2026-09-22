@@ -4,13 +4,20 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/ads/interstitial_manager.dart';
+import '../../../core/entitlements/ai_credit_gate.dart';
+import '../../../core/entitlements/paywall_navigation.dart';
+import '../../../core/entitlements/paywall_trigger.dart';
+import '../../../core/network/error_message.dart';
+import '../../../core/sync/connectivity_status_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../application/meal_controller.dart';
+import '../application/meal_estimation_controller.dart';
 import '../application/remaining_budget_provider.dart';
 import '../data/meal_repository.dart';
 import '../domain/food.dart';
@@ -18,6 +25,8 @@ import '../domain/meal.dart';
 import '../domain/remaining_budget.dart';
 import 'widgets/add_macros_sheet.dart';
 import 'widgets/add_meal_entry_sheet.dart';
+import 'widgets/ai_credit_chip.dart';
+import 'widgets/meal_estimate_sheet.dart';
 
 /// Full-screen form for logging a meal, or editing one when [meal] is provided.
 ///
@@ -155,6 +164,71 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (draft != null) {
       setState(() => _entries.add((food: draft.food, grams: draft.grams)));
       _autoSave();
+    }
+  }
+
+  /// AI estimate from a meal photo (docs/23-ai-calorie-estimation-plan.md).
+  /// The estimate needs the network; the confirmed items are saved like any
+  /// other entry. The credit check here is a courtesy — the server's 402 is
+  /// authoritative, and lands on the same paywall.
+  Future<void> _estimateFromPhoto() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (ref.read(isOfflineProvider).value ?? false) {
+      AppSnackbar.showError(context, title: l10n.mealEstimateOfflineMessage);
+      return;
+    }
+    if (!requireAiCredits(context, ref)) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(l10n.takePhotoAction),
+              onTap: () => Navigator.of(sheetCtx).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.chooseFromGalleryAction),
+              onTap: () => Navigator.of(sheetCtx).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    final XFile? picked;
+    try {
+      // Downscaled on the device too: the server bounds the photo to 1024 px
+      // anyway, so anything larger is only upload time on mobile data.
+      picked = await ImagePicker()
+          .pickImage(source: source, maxWidth: 1024, maxHeight: 1024, imageQuality: 85);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+      return;
+    }
+    if (picked == null || !mounted) return;
+    final imagePath = picked.path;
+
+    final drafts = await showModalBottomSheet<List<MealEntryDraft>>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => MealEstimateSheet(imagePath: imagePath),
+    );
+    if (!mounted) return;
+    if (drafts != null && drafts.isNotEmpty) {
+      setState(() => _entries.addAll(drafts.map((d) => (food: d.food, grams: d.grams))));
+      _autoSave();
+    } else if (ref.read(mealEstimationControllerProvider) is MealEstimationCreditsExhausted) {
+      openPaywall(context, PaywallTrigger.aiCredits);
     }
   }
 
@@ -323,6 +397,12 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
               _AddAnotherFoodButton(
                 label: l10n.addFoodButton,
                 onTap: _addEntry,
+              ),
+              const SizedBox(height: 8),
+              _EstimateFromPhotoButton(
+                label: l10n.estimateFromPhotoButton,
+                offline: ref.watch(isOfflineProvider).value ?? false,
+                onTap: _estimateFromPhoto,
               ),
 
               // ── Meal total ──────────────────────────────────────────────
@@ -745,6 +825,59 @@ class _AddAnotherFoodButton extends StatelessWidget {
                   color: scheme.onSurfaceVariant,
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// "Estimate from a photo" — the AI entry point, with its credit chip
+// ---------------------------------------------------------------------------
+
+class _EstimateFromPhotoButton extends StatelessWidget {
+  const _EstimateFromPhotoButton({
+    required this.label,
+    required this.offline,
+    required this.onTap,
+  });
+
+  final String label;
+
+  /// Dimmed, not disabled: tapping it offline explains why it can't run.
+  final bool offline;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final color = offline ? scheme.onSurfaceVariant : scheme.primary;
+
+    return Material(
+      color: scheme.primaryContainer.withValues(alpha: offline ? 0.2 : 0.45),
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 21, color: color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ),
+              const AiCreditChip(),
             ],
           ),
         ),
