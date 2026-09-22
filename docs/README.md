@@ -5,7 +5,7 @@ the code cites those plans by section — migrations, entity javadoc and Dart
 comments all refer back to them.
 
 **Numbering.** Root docs and most topic folders share one global sequence
-(currently up to `71`, in `landing_page/`). Take the next free number, never reuse a
+(currently up to `75`). Take the next free number, never reuse a
 gap, and keep the `NN-<kebab-topic>-plan.md` shape. Two exceptions exist for
 historical reasons: `web/` runs its own `01–09` series, and a few early numbers
 are duplicated at the root (`05`, `06`, `15`, `16`).
@@ -90,8 +90,9 @@ iterations.
 | 37 | [Streaks and weekly recap (roadmap #7)](37-streaks-weekly-recap-plan.md) | |
 | 38 | [Personal records (roadmap #3)](38-personal-records-plan.md) | |
 | 39 | [Rest timer](39-rest-timer-plan.md) | done |
+| 75 | [Log a food from the Foods tab](75-log-food-from-foods-tab-plan.md) | mobile done, web in review |
 
-Plans 40–71 live in the topic folders above.
+Plans 40–74 live in the topic folders above.
 
 A blank status means the doc does not state one. When you finish work described
 by a plan, set its `Status:` line — a plan that still reads "proposed" after
