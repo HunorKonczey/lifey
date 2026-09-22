@@ -20,9 +20,9 @@ a hozzá tartozó számozott tervbe írd.
 kredit-gate-tel (Free 3 / Pro 100 havonta), a mobilon a Log meal képernyő „Becslés fotóról”
 gombja — részletek a `23` két „As built” szakaszában. Hátravan:
 
-- **Élő próba** valódi fotókon (`ANTHROPIC_API_KEY` kell hozzá) — a prompt és a modellválasztás
-  finomhangolása (`23` 3. lépés). Alapértelmezett modell: `claude-haiku-4-5` (~0,003 $/becslés);
-  ha valódi fotókon gyengén becsül, a `claude-sonnet-5` a következő lépcső (`23` „Usable models”).
+- **Lemért ételek próbája:** az élő pass (`23` „Live prompt pass”) szemre ítélt fotókon futott.
+  Néhány fotó olyan ételről, aminek ismert a valódi tömege, megmondaná, mennyit téved az adagoknál
+  (mindkét modell alábecsül). Ez dönthetné el a `claude-haiku-4-5` → `claude-sonnet-5` váltást is.
 - **2. fázis:** receptgeneráló varázsló.
 
 Az eredeti állapot, amiből indult:
@@ -119,7 +119,7 @@ Nincs integráció. A HealthKit és a Health Connect kész.
 
 ## Javasolt sorrend
 
-1. AI kalóriabecslés (1.1, 1. fázis) — backend + mobil kész; élő próba valódi fotókon.
+1. AI kalóriabecslés (1.1, 1. fázis) — kész; hátra a lemért ételes ellenőrzés.
 2. Progress fotók + testméretek (1.3), mellé a súlytrend (1.4) mint gyors nyerés.
 3. AI receptgenerálás (1.1, 2. fázis).
 4. Tablet-elrendezés (1.2) — ha van rá igény az edzők részéről.

@@ -57,6 +57,15 @@ public class ClaudeMealPhotoAnalyzer implements MealPhotoAnalyzer {
             ambiguous, estimate conservatively and lower the confidence. Account for visible cooking \
             fat, sauces and dressings, which often carry much of a meal's energy.
 
+            Check every item before you answer:
+            - Calories must match the macros: protein and carbohydrate are 4 kcal per gram, fat is 9. \
+            Recompute if they disagree.
+            - Calories per gram must fit the food. Raw vegetables and most fruit are 0.2-0.6, cooked \
+            vegetables and soups 0.3-1, milk and yoghurt 0.4-1, cooked pasta, rice and potatoes 1-1.6, \
+            bread 2.5-3, lean cooked meat and fish 1-2, fatty meat and cheese 3-4, pizza 2.4-2.9, \
+            fried food 2.5-4, nuts, butter and oil 6-9. An item outside its range is wrong.
+            - No macro can weigh more than the portion itself.
+
             If the photo contains no food, return an empty items list and say so briefly in notes. \
             Otherwise keep notes to one short sentence, or leave it empty.""";
 

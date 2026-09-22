@@ -1,9 +1,7 @@
 # AI Nutrition Plan — Calorie Estimation (Phase 1) + Recipe Generation (Phase 2)
 
-Status: **Phase 1 built — backend (steps 1–2) and mobile (steps 4–5)**, see the two "As built"
-sections at the end. **Step 3 is still owed:** nothing has run against the live API yet (no key in
-the dev environment), so the prompt and the default `claude-haiku-4-5` are unverified on real
-photos. Phase 2 not started.
+Status: **Phase 1 done — backend (steps 1–2), the live prompt pass (step 3) and mobile (steps
+4–5)**; see the "As built" and "Live prompt pass" sections at the end. Phase 2 not started.
 
 Two roadmap-V3 features on a shared AI foundation (`01-product-vision.md`, `07-roadmap.md`):
 
@@ -505,3 +503,46 @@ Strings: 13 new keys, `estimateFromPhotoButton` and `mealEstimate*`, EN + HU. Te
 `meal_estimation_controller_test.dart`, `meal_estimate_sheet_test.dart`,
 `log_meal_screen_estimate_test.dart`, and `gated_surfaces_test.dart` now pins the Log meal screen
 as the one `requireAiCredits` call site.
+
+---
+
+## Live prompt pass (step 3) — 2026-09-22
+
+Eleven real API calls over three photos: a whole margherita pizza, a ham-and-eggs plate, and a
+styled display of ~20 raw foods. Run through `ClaudeMealPhotoAnalyzerLiveTest`, which stays in the
+repo for the next round: it is skipped unless `ANTHROPIC_API_KEY` is set, takes photo paths in
+`LIFEY_AI_TEST_IMAGES` and a model in `LIFEY_AI_MODEL`, and prints each item.
+
+**What the first run exposed.** `claude-haiku-4-5` got the items right but the *numbers* badly
+wrong: 2 480 kcal and 308 g of carbohydrate for a 570 g pizza (4.4 kcal/g, roughly double), 110
+kcal for 80 g of radishes (7× too much), 80 kcal for 100 g of asparagus (4×). The macros were
+internally consistent with the calories — it wasn't arithmetic, it was energy density. Portions
+were reasonable; the per-gram values were not. `claude-sonnet-5` on the same photos was much
+closer (850 kcal for the pizza, radishes at 20 kcal/100 g) and it noticed that the bread under the
+ham was not clearly visible and said so in `notes` instead of inventing it.
+
+**The fix was the prompt, not the model.** The system prompt now ends with three checks: calories
+must match the macros at 4/4/9, calories per gram must fall inside a listed range for that kind of
+food (11 ranges, from raw vegetables at 0.2–0.6 to oil at 6–9), and no macro may outweigh the
+portion. With that, Haiku's densities landed inside their ranges — the pizza came back 280 g /
+650 kcal (2.3 kcal/g), the ham-and-eggs plate 370 kcal.
+
+**Default stays `claude-haiku-4-5`** at ~$0.003 per estimate. What it is still weaker at, and what
+to weigh if this is revisited:
+
+| | Haiku 4.5 | Sonnet 5 |
+|---|---|---|
+| Cost / estimate | ~$0.003 | ~$0.008 |
+| Latency (1024 px photo) | 2.7–4.7 s | 4.6–15 s |
+| Energy density after the prompt fix | inside range | inside range |
+| Portion size | tends low (280 g for a ~450 g pizza) | closer (330 g), still low |
+| Odd foods (raw radish, milk) | still overshoots some | mostly right |
+| Honesty about what it can't see | invented the hidden bread | said it couldn't tell |
+
+Since the user reviews and edits every value before saving, and the switch is one env var
+(`LIFEY_AI_MODEL=claude-sonnet-5`, no release), the cheap default is the right starting point.
+Revisit it if real users' corrections cluster on portions rather than names.
+
+**Open, from this pass:** both models under-estimate portion weight for a large single dish, and
+neither was tested against *weighed* food — every number above is judged by eye. A proper check
+needs a handful of photos of meals whose real weight is known.
