@@ -16,10 +16,13 @@ interface FoodEditorProps {
   prefill?: Partial<FoodFormValues> & { barcode?: string };
   onSaved: () => void;
   onCancel: () => void;
+  /** Log the (saved) food in a new meal — only offered for an existing food (docs/75 §2.9). */
+  onAddToMeal?: (food: FoodResponse) => void;
 }
 
-export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps) {
+export function FoodEditor({ food, prefill, onSaved, onCancel, onAddToMeal }: FoodEditorProps) {
   const t = useTranslations("nutrition.foodEditor");
+  const fv = useTranslations("nutrition.foodsView");
   const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -158,6 +161,17 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
           />
         </span>
       </button>
+
+      {food && onAddToMeal && (
+        <button
+          type="button"
+          onClick={() => onAddToMeal(food)}
+          className="flex items-center justify-center gap-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-colors"
+          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}
+        >
+          <span className="material-symbols-rounded text-lg">add_circle</span> {fv("addToMeal")}
+        </button>
+      )}
 
       <div className="flex gap-2 mt-1">
         <button
