@@ -222,10 +222,10 @@ the first paying customer · **S3** = correctness of the record, or polish.
 
 | # | Finding | Evidence | Sev |
 |---|---|---|---|
-| B1 | ⏸ **Specified, still unbuilt (Prompt 14).** The gate half has no AI call path to sit in; `docs/23` now carries the exact call site, transaction boundary and status code it must use when that feature lands | `docs/23` §"The credit counter already exists" | S2 |
+| B1 | ✅ **Built with `docs/23`'s backend (2026-09-22).** `EntitlementAiFeatureGate` checks before the call, `MealEstimationServiceImpl` increments after a successful one, 402 `AI_CREDITS_EXHAUSTED`. Originally: the gate half had no AI call path to sit in; `docs/23` now carries the exact call site, transaction boundary and status code it must use when that feature lands | `docs/23` §"The credit counter already exists" | S2 |
 | B2 | ✅ **Fixed (Prompt 14).** Free AI allowance config default was 5 while the strategy and the paywall design both say 3 | `application.yml`; now pinned end to end by `EntitlementControllerIntegrationTest` against the real config file | S2 |
 | B3 | ⚠️ **Half closed (Prompt 12).** Every Checkout/Portal call is now validated against Stripe's own API schema via `stripe-mock` — no account needed, runs in CI. The half that needs a real test-mode account (do our price ids exist, does the consent checkbox render, a real cancellation) is a 12-step runbook in [`73`](73-billing-verification-runbook.md) §1 | `StripeBillingServiceStripeMockIntegrationTest`; `64` Prompt 4 and `66` §11's manual rows | S1 |
-| B4 | Pro's 100/month fair-use ceiling (`63` D-M5 note 2) is enforced nowhere | deliberate — belongs to `AiFeatureGate`; tracked here so it is not forgotten | S3 |
+| B4 | ✅ **Enforced by `EntitlementAiFeatureGate` (2026-09-22)** via `lifey.billing.pro-ai-fair-use-per-month`. Originally: Pro's 100/month fair-use ceiling (`63` D-M5 note 2) was enforced nowhere | deliberate — belongs to `AiFeatureGate`; tracked here so it is not forgotten | S3 |
 | B5 | No runbook for `BillingReconciliationJob` corrections | `64` §15 asks for one. [`73`](73-billing-verification-runbook.md) covers the verification passes, not this — it is still open | S2 |
 
 ### 3.4 Design canvases (`68`, `69`)

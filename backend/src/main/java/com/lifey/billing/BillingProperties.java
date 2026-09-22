@@ -17,6 +17,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * subscription} rows {@code BillingReconciliationJob} re-checks against the
  * provider per run (§7) — a large account base must not blow Stripe/Apple/
  * Google's rate limits every night.
+ *
+ * <p>{@code proAiFairUsePerMonth} is Pro's AI fair-use ceiling (63 D-M5 note
+ * 2). The entitlement deliberately keeps reporting Pro's credits as {@code
+ * null} (unlimited); only {@code AiFeatureGate} reads this.
  */
 @ConfigurationProperties(prefix = "lifey.billing")
 public record BillingProperties(
@@ -24,6 +28,7 @@ public record BillingProperties(
         int freeHistoryDays,
         int freeAiCreditsPerMonth,
         int offlineGraceDays,
-        int reconciliationBatchSize
+        int reconciliationBatchSize,
+        int proAiFairUsePerMonth
 ) {
 }

@@ -51,7 +51,10 @@ Ordered by value per hour, roughly.
 
 ### 2.1 The AI meal-estimation feature (`docs/23`)
 
-The biggest one, and it unblocks three separate loose ends at once:
+**Backend landed 2026-09-22** (`POST /api/v1/meals/estimate`, `EntitlementAiFeatureGate`): B1
+and B4 below are closed — the counter is incremented after each successful call and the gate
+enforces Free 3 / Pro 100 per month. **M7 stays open until the mobile screen exists.** The list
+below is the state this started from:
 
 - `72` B1 — the 402/`AI_CREDITS_EXHAUSTED` gate has no AI call path to sit in. The counter, the
   config, the entitlement field and the mobile chip are all built and tested; nothing increments

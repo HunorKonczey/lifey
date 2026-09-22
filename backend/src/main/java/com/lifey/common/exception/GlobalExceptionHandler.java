@@ -1,5 +1,8 @@
 package com.lifey.common.exception;
 
+import com.lifey.ai.exception.AiCreditsExhaustedException;
+import com.lifey.ai.exception.AiNotConfiguredException;
+import com.lifey.ai.exception.AiUnavailableException;
 import com.lifey.auth.exception.*;
 import com.lifey.billing.exception.InvalidReceiptException;
 import com.lifey.billing.exception.SeatLimitExceededException;
@@ -36,6 +39,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
@@ -114,6 +118,30 @@ public class GlobalExceptionHandler {
                                                          HttpServletRequest request) {
         return build(HttpStatus.CONTENT_TOO_LARGE,
                 "Uploaded file exceeds the maximum allowed size", request, List.of(), ex);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiError> handleMissingPart(MissingServletRequestPartException ex,
+                                                      HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Missing multipart part: " + ex.getRequestPartName(),
+                request, List.of(), ex);
+    }
+
+    /** docs/23, 64 §3.4 — the plan includes AI, this month's allowance is used up; the app opens the paywall. */
+    @ExceptionHandler(AiCreditsExhaustedException.class)
+    public ResponseEntity<ApiError> handleAiCreditsExhausted(AiCreditsExhaustedException ex, HttpServletRequest request) {
+        return build(HttpStatus.PAYMENT_REQUIRED, AiCreditsExhaustedException.CODE, request, List.of(), ex);
+    }
+
+    /** docs/23 — the model call failed; the cause stays in the server log, the client only gets the code. */
+    @ExceptionHandler(AiUnavailableException.class)
+    public ResponseEntity<ApiError> handleAiUnavailable(AiUnavailableException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_GATEWAY, AiUnavailableException.CODE, request, List.of(), ex);
+    }
+
+    @ExceptionHandler(AiNotConfiguredException.class)
+    public ResponseEntity<ApiError> handleAiNotConfigured(AiNotConfiguredException ex, HttpServletRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, AiNotConfiguredException.CODE, request, List.of(), ex);
     }
 
     @ExceptionHandler({InviteNotFoundException.class, UserNotFoundForInviteException.class})

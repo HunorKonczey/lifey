@@ -35,8 +35,8 @@ import static org.mockito.Mockito.when;
 class SeatLimitServiceImplTest {
 
     private static final Long TRAINER_ID = 1L;
-    private static final BillingProperties ENABLED = new BillingProperties(true, 30, 5, 7, 200);
-    private static final BillingProperties DISABLED = new BillingProperties(false, 30, 5, 7, 200);
+    private static final BillingProperties ENABLED = new BillingProperties(true, 30, 5, 7, 200, 100);
+    private static final BillingProperties DISABLED = new BillingProperties(false, 30, 5, 7, 200, 100);
 
     @Mock
     SubscriptionRepository subscriptionRepository;
