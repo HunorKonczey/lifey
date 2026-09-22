@@ -165,6 +165,7 @@ source database.
 | `MAIL_ENABLED`, `RESEND_API_KEY`, `MAIL_FROM` | Email | [email-sender.md](email-sender.md) |
 | `PUSH_APNS_*` | iOS push | [push-notifications-ios.md](push-notifications-ios.md) |
 | `PUSH_FCM_*` | Android push | [push-notifications-android.md](push-notifications-android.md) |
+| `ANTHROPIC_API_KEY`, `LIFEY_AI_MODEL`, `LIFEY_AI_TIMEOUT` | AI meal-photo estimation. An Anthropic Console API key (not a claude.ai subscription); without it the app still starts and `/meals/estimate` answers 503. Model defaults to `claude-haiku-4-5` (the cheapest); the alternatives and their per-estimate cost are listed in docs/23 "Usable models". | [docs/23](../docs/23-ai-calorie-estimation-plan.md) |
 | `OAUTH_GOOGLE_CLIENT_IDS` | Google Sign-In (comma-separated Android/iOS/Web client IDs) | — |
 | `TRAINER_INVITE_EMAIL_ENABLED`, `TRAINER_INVITE_PUBLIC_BASE_URL` | Email trainer invites — the base URL must point at the **Render** domain, or the accept/decline links in sent invites are dead. | — |
 

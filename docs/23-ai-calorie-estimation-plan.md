@@ -1,5 +1,8 @@
 # AI Nutrition Plan — Calorie Estimation (Phase 1) + Recipe Generation (Phase 2)
 
+Status: **Phase 1 done — backend (steps 1–2), the live prompt pass (step 3) and mobile (steps
+4–5)**; see the "As built" and "Live prompt pass" sections at the end. Phase 2 not started.
+
 Two roadmap-V3 features on a shared AI foundation (`01-product-vision.md`, `07-roadmap.md`):
 
 - **Phase 1 — AI calorie estimation:** take a photo of a meal, send it to the backend, get back a
@@ -40,24 +43,45 @@ claude.ai apps and Claude Code, but a product backend needs an **API key from th
 Console** (platform.claude.com) with its own pay-as-you-go credits. For testing, a small credit
 top-up ($5) covers hundreds of estimates.
 
-Per-estimate cost (image resized to 1024px ≈ ~1,300–1,600 input tokens, plus prompt; ~300 output
-tokens):
+### Usable models
 
-| Model | Input $/MTok | Output $/MTok | ~cost / estimate |
-|---|---|---|---|
-| `claude-opus-4-8` (default) | $5.00 | $25.00 | ~$0.02 |
-| `claude-sonnet-5` | $3.00 ($2.00 intro) | $15.00 ($10.00 intro) | ~$0.01 |
-| `claude-haiku-4-5` | $1.00 | $5.00 | ~$0.004 |
+**Default: `claude-haiku-4-5`, the cheapest.** The model is config (`LIFEY_AI_MODEL` →
+`lifey.ai.model`), so switching is an env-var change and a restart, no release.
 
-Default to `claude-opus-4-8`; the model is a config property (`lifey.ai.model`) so it can be
-swapped to Haiku/Sonnet after comparing estimate quality on real meal photos — worth an A/B during
-testing since this is a bounded vision+extraction task where the smaller models may be sufficient.
+A model is usable here only if it reads **images** and supports **structured outputs**
+(`output_config.format`); the endpoint depends on both. Every model below does. Prices are
+Anthropic first-party API list prices per million tokens (checked 2026-09).
+
+Per-estimate cost assumes a photo bounded to 1024 px (~1,000–1,600 input tokens), plus the
+system prompt and the output schema (~600), and ~300 output tokens for the JSON answer. The
+models marked *thinks* run adaptive thinking by default (we don't switch it off), which adds
+output tokens, so their figure is a range.
+
+| Model id | Input $/MTok | Output $/MTok | ~cost / estimate | Notes |
+|---|---|---|---|---|
+| **`claude-haiku-4-5`** (default) | $1 | $5 | ~$0.003 | Fastest and cheapest, no thinking. Start here; move up only if real photos show it misjudging portions |
+| `claude-sonnet-5` | $2 | $10 | ~$0.006–0.015 | *Thinks.* The mid step: better portion reasoning on mixed plates at ~2–5× Haiku's cost |
+| `claude-sonnet-4-6` | $3 | $15 | ~$0.008–0.02 | Previous Sonnet; more expensive than Sonnet 5 for no gain. Listed only because it works |
+| `claude-opus-5` | $5 | $25 | ~$0.02–0.05 | *Thinks.* Most capable Opus; overkill for a photo estimate unless quality is the complaint |
+| `claude-opus-4-8` | $5 | $25 | ~$0.02–0.04 | Previous Opus, same price as Opus 5 — no reason to pick it |
+
+Not listed on purpose: `claude-fable-5` / `claude-fable-5-1` ($10 / $50 per MTok, 10–15× Haiku
+for a task that doesn't need it), and anything older than the models above.
+
+What the per-estimate figures mean for the plan limits: a Free user's 3 monthly credits cost
+~$0.01 on Haiku; a Pro user maxing out the 100-call fair-use ceiling costs ~$0.30 on Haiku,
+~$0.60–1.50 on Sonnet 5, ~$2–5 on Opus 5.
+
+**How to choose:** run the same ~20 real meal photos (mixed plates, packaged food, a drink, a
+non-food photo) through Haiku and Sonnet 5 and compare the grams and kcal against what the
+food actually weighed. Switch up only if Haiku is clearly worse; the cost difference is
+roughly 2–5×.
 
 Config (all via env vars, following `OpenFoodFactsProperties` precedent):
 
 ```properties
 lifey.ai.api-key=${ANTHROPIC_API_KEY}
-lifey.ai.model=${LIFEY_AI_MODEL:claude-opus-4-8}
+lifey.ai.model=${LIFEY_AI_MODEL:claude-haiku-4-5}
 lifey.ai.timeout-seconds=${LIFEY_AI_TIMEOUT:60}
 ```
 
@@ -399,3 +423,126 @@ optional daily quota.
 - Fuzzy/semantic food matching beyond the model-side matching + exact-name guard.
 - Rate limiting / quotas (arrives with the subscription model).
 - Multi-photo or barcode+photo combined flows; generating recipe photos.
+
+---
+
+## As built — Phase 1 backend (2026-09-22)
+
+Where the code differs from the plan above, and why:
+
+| Plan said | Built | Why |
+|---|---|---|
+| Default model `claude-opus-4-8` | `claude-haiku-4-5` (`LIFEY_AI_MODEL`) | cheapest model with vision and structured outputs, ~$0.003 per estimate; alternatives in "Usable models". `max_tokens` is 16 000 rather than 2 048 so the larger models, which think by default, can be switched in without a code change (only generated tokens are billed) |
+| `PermissiveAiFeatureGate` | `EntitlementAiFeatureGate` | billing (`64`) landed first, so the gate went straight to its real form: Free = `freeAiCreditsPerMonth` (3), Pro = new `lifey.billing.pro-ai-fair-use-per-month` (100, `63` D-M5 note 2). With billing disabled everyone is Pro, so only the ceiling applies. Closes `72` B1 and B4 |
+| 403 `AI_FEATURE_REQUIRES_SUBSCRIPTION` | not built | no plan excludes AI entirely (Free has 3 credits), so nothing would throw it |
+| `resizedJpeg(source, 1024)` | `boundedJpeg(source, 1024)` | `resizedJpeg` upscales small photos, which adds tokens and no detail |
+| `com.lifey.nutrition.estimation` service calls the SDK | + `client/MealPhotoAnalyzer` seam (`ClaudeMealPhotoAnalyzer`) | same split as `openfoodfacts/client`; the service tests don't mock SDK internals |
+| — | 503 `AI_NOT_CONFIGURED` | with no `ANTHROPIC_API_KEY` no SDK client bean is built (the SDK would otherwise go looking for credentials on its own); the app still starts |
+| — | stop reason `refusal` / `max_tokens` → 502 | no usable answer; no credit used |
+
+Error codes travel in `ApiError.message` (the payload has no separate code field): `402
+AI_CREDITS_EXHAUSTED`, `502 AI_UNAVAILABLE`, `503 AI_NOT_CONFIGURED`.
+
+Decisions made while building, open to revisit:
+
+- **A successful call that finds no food still uses a credit.** It cost the same to answer, and
+  not charging would make the Pro ceiling bypassable with non-food photos. If free users
+  complain about a wasted credit on a blurry photo, this is the line to change
+  (`MealEstimationServiceImpl.estimate`).
+- **If the counter write fails after a successful call, the user still gets the estimate**; the
+  failure is logged. One uncounted call is better than throwing away a paid answer.
+- **Check-then-act race:** concurrent requests on the last credit can each pass the gate. The
+  overshoot is bounded by concurrency; a row lock per AI call wasn't worth it.
+- **Refusal fallbacks are not enabled.** Opus 5 supports a server-side `fallbacks` parameter on
+  the beta Messages endpoint; a food photo is an unlikely refusal, and a refusal already maps to
+  502 without using a credit. Worth adding if refusals show up in the logs.
+- **Item names are English**, as planned. Passing the user's language to the prompt is a
+  one-line change once the mobile side exists.
+- **Clamping:** grams ≤ 3000 per item, kcal ≤ 9.5 × grams, each macro ≤ grams, negatives and
+  NaN → 0, at most 20 items; items with no name or no weight are dropped; values rounded to 0.1.
+
+Tests: `ClaudeMealPhotoAnalyzerTest` (request shape incl. schema generation, stop reasons, error
+mapping), `MealEstimationServiceImplTest` (gate → call → count ordering, no credit on any
+failure, downscaling, clamping), `EntitlementAiFeatureGateTest`, `MealEstimationControllerTest`
+(multipart, 400/402/502/503). Full suite: 1015 tests green.
+
+---
+
+## As built — Phase 1 mobile (2026-09-22)
+
+**Entry point:** an "Estimate from a photo" row on the Log meal screen, under the dashed "Add
+food" button, with `AiCreditChip` at its end (closes `72` M7). Not in the Foods tab / barcode
+flow as the plan suggested: the estimate produces meal entries, so it belongs where meals are
+built. Tap → offline? snackbar, stop → `requireAiCredits` (0 credits → paywall) → camera or
+gallery → `ImagePicker` bounded to 1024 px, JPEG 85 → `MealEstimateSheet`.
+
+| Piece | File |
+|---|---|
+| `MealEstimate`, `EstimatedItem`, `EstimateConfidence` | `features/nutrition/domain/meal_estimate.dart` |
+| `MealEstimationRepository` — multipart `POST /meals/estimate`, 75 s receive timeout (the client default is 10 s) | `features/nutrition/data/meal_estimation_repository.dart` |
+| `MealEstimationController` — idle / loading / done / creditsExhausted (402) / offline / failed; refreshes the entitlement after a success so the chip updates | `features/nutrition/application/meal_estimation_controller.dart` |
+| `MealEstimateSheet` — review and edit, then save | `features/nutrition/presentation/widgets/meal_estimate_sheet.dart` |
+
+**Review sheet.** Each item: name, portion (g), kcal, protein, carbs, fat, all editable, plus a
+confidence line ("Confident" / "Probably right" / "Rough guess") and a remove button. **Changing
+the portion rescales kcal and macros proportionally** — the model's per-gram ratio is what it is
+best at; the portion is what users correct. The model's `notes` show in italics.
+
+**Saving** follows `AddMacrosSheet`: each item becomes a **hidden** `Food` with per-100 g values
+back-calculated from the reviewed portion (value × 100 / grams), and the sheet pops one
+`MealEntryDraft` per item into the meal, which auto-saves through the normal offline-first path.
+
+**States.** Loading shows the photo and a spinner. No food → a friendly message plus the model's
+note, nothing to add. 502/503/other → "didn't work, no credit was used" + Retry. Connection lost →
+the offline message + Retry. 402 → the sheet closes and the screen opens the paywall
+(`PaywallTrigger.aiCredits`).
+
+**Not built:** the 403 upsell (the backend never returns it, see above).
+
+Strings: 13 new keys, `estimateFromPhotoButton` and `mealEstimate*`, EN + HU. Tests:
+`meal_estimation_controller_test.dart`, `meal_estimate_sheet_test.dart`,
+`log_meal_screen_estimate_test.dart`, and `gated_surfaces_test.dart` now pins the Log meal screen
+as the one `requireAiCredits` call site.
+
+---
+
+## Live prompt pass (step 3) — 2026-09-22
+
+Eleven real API calls over three photos: a whole margherita pizza, a ham-and-eggs plate, and a
+styled display of ~20 raw foods. Run through `ClaudeMealPhotoAnalyzerLiveTest`, which stays in the
+repo for the next round: it is skipped unless `ANTHROPIC_API_KEY` is set, takes photo paths in
+`LIFEY_AI_TEST_IMAGES` and a model in `LIFEY_AI_MODEL`, and prints each item.
+
+**What the first run exposed.** `claude-haiku-4-5` got the items right but the *numbers* badly
+wrong: 2 480 kcal and 308 g of carbohydrate for a 570 g pizza (4.4 kcal/g, roughly double), 110
+kcal for 80 g of radishes (7× too much), 80 kcal for 100 g of asparagus (4×). The macros were
+internally consistent with the calories — it wasn't arithmetic, it was energy density. Portions
+were reasonable; the per-gram values were not. `claude-sonnet-5` on the same photos was much
+closer (850 kcal for the pizza, radishes at 20 kcal/100 g) and it noticed that the bread under the
+ham was not clearly visible and said so in `notes` instead of inventing it.
+
+**The fix was the prompt, not the model.** The system prompt now ends with three checks: calories
+must match the macros at 4/4/9, calories per gram must fall inside a listed range for that kind of
+food (11 ranges, from raw vegetables at 0.2–0.6 to oil at 6–9), and no macro may outweigh the
+portion. With that, Haiku's densities landed inside their ranges — the pizza came back 280 g /
+650 kcal (2.3 kcal/g), the ham-and-eggs plate 370 kcal.
+
+**Default stays `claude-haiku-4-5`** at ~$0.003 per estimate. What it is still weaker at, and what
+to weigh if this is revisited:
+
+| | Haiku 4.5 | Sonnet 5 |
+|---|---|---|
+| Cost / estimate | ~$0.003 | ~$0.008 |
+| Latency (1024 px photo) | 2.7–4.7 s | 4.6–15 s |
+| Energy density after the prompt fix | inside range | inside range |
+| Portion size | tends low (280 g for a ~450 g pizza) | closer (330 g), still low |
+| Odd foods (raw radish, milk) | still overshoots some | mostly right |
+| Honesty about what it can't see | invented the hidden bread | said it couldn't tell |
+
+Since the user reviews and edits every value before saving, and the switch is one env var
+(`LIFEY_AI_MODEL=claude-sonnet-5`, no release), the cheap default is the right starting point.
+Revisit it if real users' corrections cluster on portions rather than names.
+
+**Open, from this pass:** both models under-estimate portion weight for a large single dish, and
+neither was tested against *weighed* food — every number above is judged by eye. A proper check
+needs a handful of photos of meals whose real weight is known.

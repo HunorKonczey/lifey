@@ -66,16 +66,21 @@ void main() {
     final actual = await _filesReferencing('aiCreditsProvider')
       ..remove('core/entitlements/entitlement_providers.dart');
 
-    // `requireAiCredits` and `AiCreditChip` exist (Prompt 4) but as of this
-    // writing are not yet embedded in any AI-action screen — mobile has no
-    // AI meal-photo-estimation UI built yet (docs/23-ai-calorie-estimation-plan.md
-    // is still a backend-only/future surface here). This set records that
-    // honestly rather than pretending a gate is wired somewhere it isn't;
-    // the day an AI action screen is built, its own file lands in this set
-    // and this test forces a deliberate edit here to acknowledge it.
+    // Screens never read the provider directly: an AI action goes through
+    // `requireAiCredits` and shows `AiCreditChip` (Prompt 4). Where those two
+    // are mounted is pinned by the next test.
     expect(actual, {
       'core/entitlements/ai_credit_gate.dart',
       'features/nutrition/presentation/widgets/ai_credit_chip.dart',
     });
+  });
+
+  test('AI actions — exactly these screens gate on requireAiCredits', () async {
+    final actual = await _filesReferencing('requireAiCredits(')
+      ..remove('core/entitlements/ai_credit_gate.dart');
+
+    // The AI meal-photo estimate (docs/23-ai-calorie-estimation-plan.md). A new
+    // AI action must land here deliberately — and must use the gate.
+    expect(actual, {'features/nutrition/presentation/log_meal_screen.dart'});
   });
 }

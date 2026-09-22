@@ -24,6 +24,7 @@
         <stripe.version>33.4.0</stripe.version>
         <app-store-server-library.version>5.2.0</app-store-server-library.version>
         <bouncycastle.version>1.84</bouncycastle.version>
+        <anthropic-java.version>2.64.0</anthropic-java.version>
         <android-publisher.version>v3-rev20260825-2.0.0</android-publisher.version>
     </properties>
 
@@ -112,6 +113,14 @@
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
             <version>9.4.1</version>
+        </dependency>
+
+        <!-- Claude API client for AI meal estimation (docs/23-ai-calorie-estimation-plan.md).
+             Typed client + structured outputs instead of hand-rolled HTTP against the Messages API. -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
+            <version>${anthropic-java.version}</version>
         </dependency>
 
         <!-- Stripe Checkout + billing-portal sessions for trainer subscriptions

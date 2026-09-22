@@ -213,7 +213,7 @@ the first paying customer · **S3** = correctness of the record, or polish.
 | M4 | ✅ **Fixed (Prompt 9).** 200 % text-scale adaptation not implemented | measured; see D-F5 | S2 |
 | M5 | ✅ **Fixed (Prompt 8).** Locked range rows drew their label at 0.6 opacity | `_RangeMenuRow`; contradicted commit `1c252fd`'s app-wide rule | S2 |
 | M6 | ✅ **Fixed (Prompt 8).** Plan cards were not semantic radios | `_PlanCard` drew the icons but carried no `Semantics(inMutuallyExclusiveGroup:, checked:)`; `69` §8 asks for "a single semantic radio" | S2 |
-| M7 | `AiCreditChip` / `requireAiCredits` are built, tested and mounted nowhere | recorded deliberately in `gated_surfaces_test.dart`; blocked on `docs/23` | S3 |
+| M7 | ✅ **Mounted (2026-09-22)** on the Log meal screen's "Estimate from a photo" row (`docs/23` mobile). Originally: `AiCreditChip` / `requireAiCredits` were built, tested and mounted nowhere | recorded deliberately in `gated_surfaces_test.dart`; blocked on `docs/23` | S3 |
 | M8 | `PaywallTrigger.onboarding` is unreachable | see D-F7 — a decision once recorded, not a defect | S3 |
 | M9 | ⏸ **Written up, not run (Prompt 13).** `67` §11's manual row still needs two physical devices and both store sandboxes; it is now a 15-row matrix in [`73`](73-billing-verification-runbook.md) §2 rather than a one-line reminder | needs devices + store sandboxes | S1 |
 | M10 | Chat-attachment tests fail on Windows — 2 to 4 per run, not a fixed 3: it is a file-lock race (`PathAccessException`), so the count varies | pre-existing, unrelated, documented in `67` §11 | S3 |
@@ -222,10 +222,10 @@ the first paying customer · **S3** = correctness of the record, or polish.
 
 | # | Finding | Evidence | Sev |
 |---|---|---|---|
-| B1 | ⏸ **Specified, still unbuilt (Prompt 14).** The gate half has no AI call path to sit in; `docs/23` now carries the exact call site, transaction boundary and status code it must use when that feature lands | `docs/23` §"The credit counter already exists" | S2 |
+| B1 | ✅ **Built with `docs/23`'s backend (2026-09-22).** `EntitlementAiFeatureGate` checks before the call, `MealEstimationServiceImpl` increments after a successful one, 402 `AI_CREDITS_EXHAUSTED`. Originally: the gate half had no AI call path to sit in; `docs/23` now carries the exact call site, transaction boundary and status code it must use when that feature lands | `docs/23` §"The credit counter already exists" | S2 |
 | B2 | ✅ **Fixed (Prompt 14).** Free AI allowance config default was 5 while the strategy and the paywall design both say 3 | `application.yml`; now pinned end to end by `EntitlementControllerIntegrationTest` against the real config file | S2 |
 | B3 | ⚠️ **Half closed (Prompt 12).** Every Checkout/Portal call is now validated against Stripe's own API schema via `stripe-mock` — no account needed, runs in CI. The half that needs a real test-mode account (do our price ids exist, does the consent checkbox render, a real cancellation) is a 12-step runbook in [`73`](73-billing-verification-runbook.md) §1 | `StripeBillingServiceStripeMockIntegrationTest`; `64` Prompt 4 and `66` §11's manual rows | S1 |
-| B4 | Pro's 100/month fair-use ceiling (`63` D-M5 note 2) is enforced nowhere | deliberate — belongs to `AiFeatureGate`; tracked here so it is not forgotten | S3 |
+| B4 | ✅ **Enforced by `EntitlementAiFeatureGate` (2026-09-22)** via `lifey.billing.pro-ai-fair-use-per-month`. Originally: Pro's 100/month fair-use ceiling (`63` D-M5 note 2) was enforced nowhere | deliberate — belongs to `AiFeatureGate`; tracked here so it is not forgotten | S3 |
 | B5 | No runbook for `BillingReconciliationJob` corrections | `64` §15 asks for one. [`73`](73-billing-verification-runbook.md) covers the verification passes, not this — it is still open | S2 |
 
 ### 3.4 Design canvases (`68`, `69`)

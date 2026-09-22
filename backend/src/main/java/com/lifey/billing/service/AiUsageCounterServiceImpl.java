@@ -10,12 +10,11 @@ import java.time.Clock;
 import java.time.YearMonth;
 
 /**
- * Not yet wired into an actual AI call: docs/23-ai-calorie-estimation-plan.md's
- * meal-estimation feature (the intended caller, via its {@code AiFeatureGate})
- * doesn't exist in this codebase yet. This is the counter half of `64` Prompt
- * 12 — {@link #usedThisMonth} already feeds {@code EntitlementServiceImpl}'s
- * {@code aiCreditsRemaining}, and {@link #recordUsage} is ready for that
- * feature's gate to call once it lands.
+ * The counter half of `64` Prompt 12. {@link #usedThisMonth} feeds {@code
+ * EntitlementServiceImpl}'s {@code aiCreditsRemaining} and {@code
+ * AiFeatureGate}'s limit check; {@link #recordUsage} is called by {@code
+ * MealEstimationServiceImpl} after a successful model call
+ * (docs/23-ai-calorie-estimation-plan.md).
  */
 @Service
 @RequiredArgsConstructor

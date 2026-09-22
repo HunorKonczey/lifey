@@ -53,8 +53,8 @@ class EntitlementServiceImplTest {
     // (63 D-M5). The AI number was 5 here and in config until
     // docs/landing_page/72 D-F6; `EntitlementControllerIntegrationTest` pins it
     // against the actual config file so this fixture cannot drift again.
-    private static final BillingProperties ENABLED = new BillingProperties(true, 30, 3, 7, 200);
-    private static final BillingProperties DISABLED = new BillingProperties(false, 30, 3, 7, 200);
+    private static final BillingProperties ENABLED = new BillingProperties(true, 30, 3, 7, 200, 100);
+    private static final BillingProperties DISABLED = new BillingProperties(false, 30, 3, 7, 200, 100);
 
     @Mock
     UserRepository userRepository;

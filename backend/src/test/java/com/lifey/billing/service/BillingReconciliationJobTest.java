@@ -52,7 +52,7 @@ class BillingReconciliationJobTest {
     private static final Instant NOW = Instant.parse("2026-06-15T03:30:00Z");
     private static final String PACKAGE_NAME = "com.lifey.app";
 
-    private static final BillingProperties BILLING_PROPERTIES = new BillingProperties(true, 30, 5, 7, 200);
+    private static final BillingProperties BILLING_PROPERTIES = new BillingProperties(true, 30, 5, 7, 200, 100);
     private static final StripeProperties STRIPE_PROPERTIES = new StripeProperties(
             "sk_test_123", "whsec_test_123", "https://lifey.hu/success", "https://lifey.hu/cancel",
             "https://lifey.hu/portal", "p1", "p2", "p3", "p4", "p5", "p6");
@@ -229,7 +229,7 @@ class BillingReconciliationJobTest {
         noStaleTrials();
         noReconciliationCandidates();
 
-        job(new BillingProperties(true, 30, 5, 7, 25)).run();
+        job(new BillingProperties(true, 30, 5, 7, 25, 100)).run();
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         verify(subscriptionRepository).findByStatusInAndProviderSubscriptionIdIsNotNull(any(), pageableCaptor.capture());

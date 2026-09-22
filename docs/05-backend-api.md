@@ -53,6 +53,16 @@ PUT /api/v1/meals/{id}
 
 DELETE /api/v1/meals/{id}
 
+POST /api/v1/meals/estimate
+* AI calorie estimation from a meal photo (docs/23-ai-calorie-estimation-plan.md).
+  Multipart, part `image` (JPEG/PNG, ≤ 10 MB). Online-only; nothing is stored.
+* 200 `{ items: [{ name, estimatedGrams, calories, proteinGrams, carbsGrams,
+  fatGrams, confidence: HIGH|MEDIUM|LOW }], notes }` — values are for the
+  portion, not per 100 g; empty `items` means no food was recognized.
+* 400 invalid image · 402 `AI_CREDITS_EXHAUSTED` (monthly allowance: Free 3,
+  Pro fair-use 100) · 502 `AI_UNAVAILABLE` (model call failed — no credit
+  used) · 503 `AI_NOT_CONFIGURED` (no `ANTHROPIC_API_KEY` on the server).
+
 ## Workouts
 
 GET /api/v1/workout-templates
