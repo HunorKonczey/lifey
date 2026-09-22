@@ -22,9 +22,11 @@ gombja — részletek a `23` két „As built” szakaszában. Hátravan:
 
 - **Lemért ételek próbája:** az élő pass (`23` „Live prompt pass”) szemre ítélt fotókon futott.
   Néhány fotó olyan ételről, aminek ismert a valódi tömege, megmondaná, mennyit téved az adagoknál
-  (mindkét modell alábecsül). Ez dönthetné el a `claude-haiku-4-5` → `claude-sonnet-5` váltást is.
-- **2. fázis:** a backend kész (`POST /api/v1/recipes/generate`, `23` „As built — Phase 2
-  backend”); hátra a mobil varázsló és az előnézet-képernyő (`23` 8–9. lépés).
+  (mindkét modell alábecsül). Ez dönthetné el a `claude-haiku-4-5` → `claude-sonnet-5` váltást is,
+  amit a receptgenerálás élő próbája is felvetett (`23` „Live pass”).
+- **Eszközös próba:** sem a fotós becslés, sem a receptvarázsló nem futott még valódi telefonon.
+- **2. fázis kész** (backend + mobil varázsló, `23` „As built — Phase 2”): `POST
+  /api/v1/recipes/generate` és a Receptek fül „Generálás AI-val” gombja.
 
 Az eredeti állapot, amiből indult:
 

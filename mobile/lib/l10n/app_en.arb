@@ -1416,6 +1416,151 @@
     "description": "Confirm button of the AI estimate review sheet; adds the reviewed foods to the meal (docs/23)",
     "placeholders": {"count": {"type": "int"}}
   },
+  "generateRecipeWithAiButton": "Generate with AI",
+  "@generateRecipeWithAiButton": {
+    "description": "Recipes tab: opens the AI recipe wizard; the AI credit chip sits beside it (docs/23 Phase 2)"
+  },
+  "recipeWizardBackTooltip": "Previous step",
+  "@recipeWizardBackTooltip": {
+    "description": "Back button of the AI recipe wizard"
+  },
+  "recipeWizardDietTitle": "What should it be made of?",
+  "@recipeWizardDietTitle": {
+    "description": "Step 1 of the AI recipe wizard: diet type"
+  },
+  "recipeWizardMealTitle": "Which meal is it for?",
+  "@recipeWizardMealTitle": {
+    "description": "Step 2 of the AI recipe wizard: meal type"
+  },
+  "recipeWizardCaloriesTitle": "How many calories per serving?",
+  "@recipeWizardCaloriesTitle": {
+    "description": "Step 3 of the AI recipe wizard: calorie band, per serving"
+  },
+  "recipeWizardMeatTitle": "Which meat or fish?",
+  "@recipeWizardMeatTitle": {
+    "description": "Step 4 of the AI recipe wizard: meat type; skipped for vegetarian and vegan"
+  },
+  "recipeWizardExtrasTitle": "Anything else?",
+  "@recipeWizardExtrasTitle": {
+    "description": "Step 5 of the AI recipe wizard: free-text extras"
+  },
+  "recipeWizardExtrasHint": "No mushrooms, quick to make, Asian style…",
+  "@recipeWizardExtrasHint": {
+    "description": "Hint text of the free-text field in the AI recipe wizard"
+  },
+  "recipeWizardGenerateButton": "Generate recipe",
+  "@recipeWizardGenerateButton": {
+    "description": "Final button of the AI recipe wizard, starts the generation"
+  },
+  "recipeDietAnything": "Anything",
+  "@recipeDietAnything": {
+    "description": "AI recipe wizard diet option: no restriction"
+  },
+  "recipeDietMeat": "With meat",
+  "@recipeDietMeat": {
+    "description": "AI recipe wizard diet option: contains meat"
+  },
+  "recipeDietFish": "Fish",
+  "@recipeDietFish": {
+    "description": "AI recipe wizard diet option: fish or seafood, no other meat"
+  },
+  "recipeDietVegetarian": "Vegetarian",
+  "@recipeDietVegetarian": {
+    "description": "AI recipe wizard diet option"
+  },
+  "recipeDietVegan": "Vegan",
+  "@recipeDietVegan": {
+    "description": "AI recipe wizard diet option"
+  },
+  "recipeCaloriesUnder300": "Under 300",
+  "@recipeCaloriesUnder300": {
+    "description": "AI recipe wizard calorie band option, kcal per serving"
+  },
+  "recipeCalories300To500": "300–500",
+  "@recipeCalories300To500": {
+    "description": "AI recipe wizard calorie band option, kcal per serving"
+  },
+  "recipeCalories500To700": "500–700",
+  "@recipeCalories500To700": {
+    "description": "AI recipe wizard calorie band option, kcal per serving"
+  },
+  "recipeCaloriesOver700": "Over 700",
+  "@recipeCaloriesOver700": {
+    "description": "AI recipe wizard calorie band option, kcal per serving"
+  },
+  "recipeMeatChicken": "Chicken",
+  "@recipeMeatChicken": {
+    "description": "AI recipe wizard meat option"
+  },
+  "recipeMeatBeef": "Beef",
+  "@recipeMeatBeef": {
+    "description": "AI recipe wizard meat option"
+  },
+  "recipeMeatPork": "Pork",
+  "@recipeMeatPork": {
+    "description": "AI recipe wizard meat option"
+  },
+  "recipeMeatTurkey": "Turkey",
+  "@recipeMeatTurkey": {
+    "description": "AI recipe wizard meat option"
+  },
+  "recipeMeatFish": "Fish",
+  "@recipeMeatFish": {
+    "description": "AI recipe wizard meat option"
+  },
+  "recipeMeatSurpriseMe": "Surprise me",
+  "@recipeMeatSurpriseMe": {
+    "description": "AI recipe wizard meat option: the model picks"
+  },
+  "generatedRecipeTitle": "Recipe proposal",
+  "@generatedRecipeTitle": {
+    "description": "Title of the screen showing the AI-generated recipe before saving (docs/23 Phase 2)"
+  },
+  "recipeGenerationLoadingMessage": "Putting a recipe together…",
+  "@recipeGenerationLoadingMessage": {
+    "description": "Shown while the AI recipe generation is running"
+  },
+  "recipeGenerationFailedMessage": "The recipe didn't come together this time. No credit was used.",
+  "@recipeGenerationFailedMessage": {
+    "description": "Shown when the AI recipe generation failed server-side; retrying is free"
+  },
+  "recipeGenerationOfflineMessage": "You're offline — generating a recipe needs a connection.",
+  "@recipeGenerationOfflineMessage": {
+    "description": "Snackbar / screen message when recipe generation is attempted without connectivity"
+  },
+  "generatedRecipePerServingLabel": "Per serving, as proposed",
+  "@generatedRecipePerServingLabel": {
+    "description": "Label above the per-serving macros of an AI-generated recipe"
+  },
+  "generatedRecipeExistingFoodBadge": "Already in your foods",
+  "@generatedRecipeExistingFoodBadge": {
+    "description": "Badge on an AI-generated recipe ingredient that references one of the user's existing foods"
+  },
+  "generatedRecipeNewFoodBadge": "Will be added to your foods",
+  "@generatedRecipeNewFoodBadge": {
+    "description": "Badge on an AI-generated recipe ingredient that would create a new food on save"
+  },
+  "generatedRecipeRemoveIngredientTooltip": "Leave this out",
+  "@generatedRecipeRemoveIngredientTooltip": {
+    "description": "Tooltip of the button removing an ingredient from the AI recipe proposal"
+  },
+  "generatedRecipeRestoreIngredientTooltip": "Put it back",
+  "@generatedRecipeRestoreIngredientTooltip": {
+    "description": "Tooltip of the button restoring a removed ingredient in the AI recipe proposal"
+  },
+  "generatedRecipeRegenerateButton": "Try again",
+  "@generatedRecipeRegenerateButton": {
+    "description": "Secondary button on the AI recipe proposal: generates another recipe from the same answers (spends another AI credit)"
+  },
+  "generatedRecipeSavedMessage": "Recipe saved",
+  "@generatedRecipeSavedMessage": {
+    "description": "Snackbar after saving an AI-generated recipe"
+  },
+  "generatedRecipeSavedWithSkippedMessage": "{count, plural, one{Recipe saved — 1 ingredient was left out} other{Recipe saved — {count} ingredients were left out}}",
+  "@generatedRecipeSavedWithSkippedMessage": {
+    "description": "Snackbar after saving an AI-generated recipe when some ingredients could not be resolved to a local food",
+    "placeholders": {"count": {"type": "int"}}
+  },
   "paywallCloseTooltip": "Close",
   "@paywallCloseTooltip": {
     "description": "Accessibility tooltip for the paywall's top-left close button (69 §3.1)"

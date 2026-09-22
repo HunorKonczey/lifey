@@ -1,8 +1,8 @@
 # AI Nutrition Plan — Calorie Estimation (Phase 1) + Recipe Generation (Phase 2)
 
-Status: **Phase 1 done** — backend (steps 1–2), the live prompt pass (step 3) and mobile (steps
-4–5). **Phase 2 backend done (step 6–7)**; its mobile wizard (steps 8–9) is next. See the "As
-built" sections at the end.
+Status: **Both phases built** — Phase 1 (steps 1–5) and Phase 2 (steps 6–9). See the "As built"
+sections at the end for what differs from the plan and what the live passes showed. Neither phase
+has been exercised on a real device yet.
 
 Two roadmap-V3 features on a shared AI foundation (`01-product-vision.md`, `07-roadmap.md`):
 
@@ -594,3 +594,49 @@ The default stays `claude-haiku-4-5` for both features, but **recipe generation 
 Sonnet gap is widest**: a wrong number here is copied into the user's food catalog, not just into
 one meal. If one model for both ever stops being the right trade, the cheapest fix is a second
 property beside `lifey.ai.model` rather than a code change.
+
+---
+
+## As built — Phase 2 mobile (2026-09-22)
+
+**Entry point:** a "Generate with AI" row at the top of the Recipes tab, with `AiCreditChip`
+beside it — the recipe half of what the Log meal screen's photo row does. Offline it dims and
+explains instead of opening the wizard; at zero credits it opens the paywall.
+
+| Piece | File (under `mobile/lib/features/recipes/generation/`) |
+|---|---|
+| `RecipeWizardAnswers` + the four enums, with the wire values | `domain/recipe_wizard.dart` |
+| `GeneratedRecipe`, `GeneratedIngredient`, `GeneratedNewFood`, `RecipeMacros` | `domain/generated_recipe.dart` |
+| `RecipeGenerationRepository` — `POST /recipes/generate`, 90 s receive timeout (client default is 10 s) | `data/recipe_generation_repository.dart` |
+| `RecipeGenerationController` — idle / loading / done / creditsExhausted (402) / offline / failed; refreshes the entitlement after a success | `application/recipe_generation_controller.dart` |
+| `GeneratedRecipeSaver` — new foods first, existing ones resolved by server id, then the recipe | `application/generated_recipe_saver.dart` |
+| `RecipeWizardSheet` (5 steps) and `GeneratedRecipeScreen` (proposal) | `presentation/` |
+
+**The wizard** is entirely local — only the final press costs a call. The meat step is skipped for
+a vegetarian or vegan diet **in both directions**, so stepping back doesn't land on a question that
+no longer applies, and switching to a meatless diet clears a meat chosen earlier (the backend
+rejects that combination — see Phase 2's 400).
+
+**The proposal screen** lets the user rename the recipe, change the serving count, edit each
+quantity and leave ingredients out (strike-through, undoable — not a delete). Each row says
+whether the food is *already in your foods* or *will be added*. "Try again" re-runs the same
+answers and spends another credit, which is why it is the secondary button.
+
+**Saving** is the one part with a subtlety worth knowing: the backend references existing foods by
+**server id**, but a local recipe ingredient needs the **client id**. `GeneratedRecipeSaver` looks
+each one up (`FoodRepository.findByServerId`, added for this) — a food that hasn't synced down yet
+is left out and counted, and the snackbar says how many. Everything else is the ordinary
+offline-first path: new foods are created visible (not hidden like the meal estimate's ad-hoc
+foods — these belong in the catalog, that being the whole point of the dedup), then the recipe.
+A proposal with nothing left to save fails instead of writing an ingredient-less recipe the
+backend would reject.
+
+Strings: 36 new keys, EN + HU. Tests: `recipe_wizard_test.dart` (step flow incl. the skip in both
+directions, and the serialization), `recipe_generation_controller_test.dart`,
+`generated_recipe_saver_test.dart` (id resolution, edits, the skip, the empty-save guard),
+`generated_recipe_screen_test.dart`, `recipes_tab_generate_test.dart`, and `gated_surfaces_test`
+now pins both AI entry points. Full mobile suite: 1894 pass, 3 pre-existing Windows-only chat
+failures.
+
+**Not done:** nothing here has run on a real device — as with Phase 1, the wizard, the camera-free
+flow and the save path are verified by widget tests only.

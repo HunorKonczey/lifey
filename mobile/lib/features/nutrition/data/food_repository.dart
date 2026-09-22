@@ -35,6 +35,16 @@ class FoodRepository {
     return row == null ? null : _toDomain(row);
   }
 
+  /// Looks up a locally-cached food by the server's id — the form an id takes
+  /// when it comes back from an endpoint rather than from the local DB (e.g.
+  /// the AI recipe generator's `existingFoodId`, docs/23 Phase 2). Null when
+  /// the row hasn't been pulled down yet.
+  Future<Food?> findByServerId(int serverId) async {
+    final row = await (_db.select(_db.foods)..where((t) => t.serverId.equals(serverId)))
+        .getSingleOrNull();
+    return row == null ? null : _toDomain(row);
+  }
+
   /// Like [watchAll] but bounded to the first [limit] foods (by name). The
   /// pending-delete filter can drop rows below the SQL LIMIT, so callers that
   /// need to know whether more rows exist beyond [limit] should request
