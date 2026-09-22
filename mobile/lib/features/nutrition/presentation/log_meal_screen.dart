@@ -20,10 +20,16 @@ import 'widgets/add_macros_sheet.dart';
 import 'widgets/add_meal_entry_sheet.dart';
 
 /// Full-screen form for logging a meal, or editing one when [meal] is provided.
+///
+/// Pass [initialFood] to start a new meal with the add-food sheet already
+/// open on that food (docs/75-log-food-from-foods-tab-plan.md §2.4); if that
+/// first sheet is dismissed without adding anything, the screen closes too.
 class LogMealScreen extends ConsumerStatefulWidget {
-  const LogMealScreen({super.key, this.meal});
+  const LogMealScreen({super.key, this.meal, this.initialFood})
+      : assert(meal == null || initialFood == null);
 
   final Meal? meal;
+  final Food? initialFood;
 
   @override
   ConsumerState<LogMealScreen> createState() => _LogMealScreenState();
@@ -83,6 +89,12 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
         ));
       }
     }
+    final initialFood = widget.initialFood;
+    if (initialFood != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _addEntry(preselected: initialFood, closeScreenOnCancel: true);
+      });
+    }
   }
 
   Future<void> _pickDateTime() async {
@@ -108,17 +120,27 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     _autoSave();
   }
 
-  Future<void> _addEntry() async {
+  /// [closeScreenOnCancel] is only set for the sheet auto-opened from
+  /// [LogMealScreen.initialFood]: dismissing it on a still-empty meal leaves
+  /// the screen too (docs/75 §2.5). Nothing needs undoing — an empty meal is
+  /// never persisted.
+  Future<void> _addEntry({Food? preselected, bool closeScreenOnCancel = false}) async {
     final draft = await showModalBottomSheet<MealEntryDraft>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => AddMealEntrySheet(mealDateTime: _dateTime),
+      builder: (_) => AddMealEntrySheet(
+        preselectedFood: preselected,
+        mealDateTime: _dateTime,
+      ),
     );
+    if (!mounted) return;
     if (draft != null) {
       setState(() => _entries.add((food: draft.food, grams: draft.grams)));
       _autoSave();
+    } else if (closeScreenOnCancel && _entries.isEmpty) {
+      Navigator.of(context).pop();
     }
   }
 

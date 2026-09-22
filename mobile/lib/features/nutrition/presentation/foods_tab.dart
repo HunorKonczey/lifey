@@ -11,6 +11,7 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/food_controller.dart';
 import '../domain/food.dart';
+import 'log_meal_screen.dart';
 import 'widgets/add_food_sheet.dart';
 
 /// "Foods" tab: list of foods with tap-to-edit, swipe-to-delete, and
@@ -58,6 +59,14 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => AddFoodSheet(food: food),
+    );
+  }
+
+  /// Opens a new meal with the add-food sheet already on [food], quantity
+  /// focused (docs/75-log-food-from-foods-tab-plan.md §2.6).
+  void _addToMeal(BuildContext context, Food food) {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => LogMealScreen(initialFood: food)),
     );
   }
 
@@ -144,6 +153,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
                   food: food,
                   macroLine: _macroLine(context, food),
                   onTap: () => _edit(context, food),
+                  onAddToMeal: () => _addToMeal(context, food),
                   onDelete: () => _delete(context, ref, food),
                 );
               },
@@ -189,6 +199,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
               food: food,
               macroLine: _macroLine(context, food),
               onTap: () => _edit(context, food),
+              onAddToMeal: () => _addToMeal(context, food),
               onDelete: () => _delete(context, ref, food),
             );
           },
@@ -212,12 +223,14 @@ class _FoodCard extends StatelessWidget {
     required this.food,
     required this.macroLine,
     required this.onTap,
+    required this.onAddToMeal,
     required this.onDelete,
   });
 
   final Food food;
   final String macroLine;
   final VoidCallback onTap;
+  final VoidCallback onAddToMeal;
   final VoidCallback onDelete;
 
   @override
@@ -300,7 +313,13 @@ class _FoodCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 SyncStatusIndicator(clientId: food.clientId),
-                Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  color: scheme.primary,
+                  tooltip: l10n.addToMealTooltip,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onAddToMeal,
+                ),
               ],
             ),
           ),

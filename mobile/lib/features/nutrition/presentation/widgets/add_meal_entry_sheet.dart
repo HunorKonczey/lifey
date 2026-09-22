@@ -19,6 +19,11 @@ typedef MealEntryDraft = ({Food food, double grams});
 /// Pass [initialFood] and [initialGrams] to open in edit mode — the food field
 /// is pre-filled and locked to the existing food, only the quantity is editable.
 ///
+/// Pass [preselectedFood] to open in add mode with that food already picked
+/// (docs/75-log-food-from-foods-tab-plan.md §2.2): unlike edit mode the food
+/// stays changeable, but the quantity field is focused and prefilled with the
+/// food's last-used grams, and the recents row is hidden.
+///
 /// Pass [mealDateTime] so the sheet can show a live "what this does to
 /// today's budget" preview under the quantity field — only rendered when the
 /// meal being built/edited is dated today and a calorie goal is set.
@@ -27,11 +32,13 @@ class AddMealEntrySheet extends ConsumerStatefulWidget {
     super.key,
     this.initialFood,
     this.initialGrams,
+    this.preselectedFood,
     this.mealDateTime,
-  });
+  }) : assert(initialFood == null || preselectedFood == null);
 
   final Food? initialFood;
   final double? initialGrams;
+  final Food? preselectedFood;
   final DateTime? mealDateTime;
 
   @override
@@ -60,6 +67,12 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
 
   bool get _isEditing => widget.initialFood != null;
 
+  bool get _isPreselected => widget.preselectedFood != null;
+
+  /// Set once the pre-selected food's last-used grams have been applied, so
+  /// later [foodUsageProvider] emissions don't prefill again (docs/75 §2.3).
+  bool _preselectPrefillApplied = false;
+
   bool get _isMealToday {
     final mealDateTime = widget.mealDateTime;
     return mealDateTime != null && DateUtils.isSameDay(mealDateTime, DateTime.now());
@@ -68,9 +81,29 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   @override
   void initState() {
     super.initState();
-    _food = widget.initialFood;
+    _food = widget.initialFood ?? widget.preselectedFood;
     final initial = widget.initialGrams?.toStringAsFixed(0) ?? '';
     _grams = TextEditingController(text: initial);
+    if (_isPreselected) {
+      // Usage may not have emitted yet when the sheet opens, so prefill on
+      // the first emission that has stats for the food — outside build, and
+      // never over grams the user already typed (see [_prefillGrams]).
+      ref.listenManual<AsyncValue<Map<String, FoodUsage>>>(
+        foodUsageProvider,
+        (_, next) => _prefillPreselected(next.value),
+        fireImmediately: true,
+      );
+    }
+  }
+
+  void _prefillPreselected(Map<String, FoodUsage>? usage) {
+    if (_preselectPrefillApplied || usage == null) return;
+    final food = widget.preselectedFood!;
+    if (_food?.clientId != food.clientId) return;
+    final stats = usage[food.clientId];
+    if (stats == null) return;
+    _preselectPrefillApplied = true;
+    _prefillGrams(stats);
   }
 
   @override
@@ -181,7 +214,11 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
             );
           }
           final ranked = rankFoodsByUsage(foods, usage);
-          final recents = _isEditing ? const <Food>[] : recentFoodsByUsage(foods, usage);
+          // Hidden while the pre-selected food is still picked — the user
+          // already chose; clearing it brings the row back.
+          final hideRecents = _isEditing ||
+              (_isPreselected && _food?.clientId == widget.preselectedFood!.clientId);
+          final recents = hideRecents ? const <Food>[] : recentFoodsByUsage(foods, usage);
           return Form(
             key: _formKey,
             child: Column(
@@ -213,6 +250,9 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                 else
                   Autocomplete<Food>(
                     displayStringForOption: (f) => f.name,
+                    initialValue: _isPreselected
+                        ? TextEditingValue(text: widget.preselectedFood!.name)
+                        : null,
                     optionsBuilder: (textEditingValue) {
                       final query = normalizeForSearch(textEditingValue.text.trim());
                       final matches = query.isEmpty
@@ -225,7 +265,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                       return TextFormField(
                         controller: controller,
                         focusNode: focusNode,
-                        autofocus: true,
+                        autofocus: !_isPreselected,
                         decoration: InputDecoration(
                           labelText: l10n.foodFieldLabel,
                           border: const OutlineInputBorder(),
@@ -259,7 +299,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                 TextFormField(
                   controller: _grams,
                   focusNode: _gramsFocus,
-                  autofocus: _isEditing,
+                  autofocus: _isEditing || _isPreselected,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.done,

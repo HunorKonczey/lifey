@@ -264,6 +264,10 @@
   "@addFoodToMealTitle": {
     "description": "Title of the add-meal-entry bottom sheet"
   },
+  "addToMealTooltip": "Add to meal",
+  "@addToMealTooltip": {
+    "description": "Tooltip of the add-to-meal icon button on each food card in the Foods tab; opens a new meal with this food pre-selected (docs/75 §2.6)"
+  },
   "recentFoodsLabel": "Recent",
   "@recentFoodsLabel": {
     "description": "Label above the recent-foods quick-pick chips in the add-meal-entry sheet"
