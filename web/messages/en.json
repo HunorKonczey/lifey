@@ -707,7 +707,9 @@
       "colKcal": "Kcal",
       "colProtein": "Protein",
       "colCarbs": "Carbs",
-      "colFat": "Fat"
+      "colFat": "Fat",
+      "addToMeal": "Add to meal",
+      "addedToMeal": "Added to {meal}"
     },
     "recipesView": {
       "searchPlaceholder": "Search recipes…",
@@ -768,7 +770,8 @@
       "carbsG": "Carbs (g)",
       "fatG": "Fat (g)",
       "addItemFailed": "Failed to add item",
-      "customEntry": "Custom entry"
+      "customEntry": "Custom entry",
+      "mealType": "Meal type"
     },
     "logRecipeDialog": {
       "title": "Log as meal",

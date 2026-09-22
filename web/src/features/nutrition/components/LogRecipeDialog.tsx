@@ -10,16 +10,8 @@ import { logTimestampFor } from "@/lib/utils/logTime";
 import {
   buildEntries, defaultGrams, scaledTotals, type GramsOverrides,
 } from "../logRecipePortion";
+import { defaultMealType } from "../mealTypeDefault";
 import type { RecipeResponse, MealType } from "../types";
-
-/** Pick a sensible default meal type based on the current hour (mirrors mobile). */
-function defaultMealType(): MealType {
-  const h = new Date().getHours();
-  if (h < 11) return "BREAKFAST";
-  if (h < 15) return "LUNCH";
-  if (h < 21) return "DINNER";
-  return "SNACK";
-}
 
 /**
  * Log a whole recipe as a meal: its ingredients become the meal's entries.

@@ -707,7 +707,9 @@
       "colKcal": "Kcal",
       "colProtein": "Fehérje",
       "colCarbs": "Szénhidrát",
-      "colFat": "Zsír"
+      "colFat": "Zsír",
+      "addToMeal": "Hozzáadás étkezéshez",
+      "addedToMeal": "Hozzáadva: {meal}"
     },
     "recipesView": {
       "searchPlaceholder": "Receptek keresése…",
@@ -768,7 +770,8 @@
       "carbsG": "Szénhidrát (g)",
       "fatG": "Zsír (g)",
       "addItemFailed": "Nem sikerült hozzáadni a tételt",
-      "customEntry": "Egyedi tétel"
+      "customEntry": "Egyedi tétel",
+      "mealType": "Étkezés típusa"
     },
     "logRecipeDialog": {
       "title": "Rögzítés étkezésként",

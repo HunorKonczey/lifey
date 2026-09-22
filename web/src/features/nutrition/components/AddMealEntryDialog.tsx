@@ -15,11 +15,19 @@ import { isOver, remainingOf, type BudgetMetric } from "../budget";
 import type { MealType, FoodResponse, MealResponse } from "../types";
 
 interface AddMealEntryDialogProps {
+  /** The meal type to log under — fixed when opened from a meal section, the
+   * initial chip selection when opened with `initialFood`. */
   mealType: MealType;
   date: Date;
-  onClose: () => void;
+  /** Called with the meal type the meal was saved under, or with nothing if
+   * no meal exists when the dialog closes. */
+  onClose: (savedAs?: MealType) => void;
   /** When set, the dialog edits this existing meal's items instead of creating a new meal. */
   meal?: MealResponse;
+  /** Opened from the Foods tab (docs/75 §2.7): the dialog starts with this
+   * food picked and the quantity focused, and shows a meal-type selector
+   * since there is no meal section to take the type from. */
+  initialFood?: FoodResponse;
 }
 
 type Mode = "search" | "macros";
@@ -46,7 +54,7 @@ function draftItemsFromMeal(meal: MealResponse): DraftItem[] {
   }));
 }
 
-export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEntryDialogProps) {
+export function AddMealEntryDialog({ mealType, date, onClose, meal, initialFood }: AddMealEntryDialogProps) {
   const t = useTranslations("nutrition.addMealDialog");
   const n = useTranslations("nutrition");
   const common = useTranslations("common");
@@ -59,6 +67,12 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
   // whatever id got created by the very first auto-saved item otherwise.
   const [mealId, setMealId] = useState<number | null>(meal?.id ?? null);
   const gramsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Only selectable when opened with `initialFood`. Mirrored in a ref so a
+  // persist scheduled in the same handler as a chip change already uses the
+  // new type (state would still hold the old one until the next render).
+  const [selectedType, setSelectedType] = useState<MealType>(mealType);
+  const selectedTypeRef = useRef<MealType>(mealType);
+  const showTypePicker = initialFood != null && !isEditing;
 
   useEffect(() => () => {
     if (gramsSaveTimer.current) clearTimeout(gramsSaveTimer.current);
@@ -104,11 +118,11 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
       return mealId != null
         ? mealApi.update(mealId, {
             dateTime: meal?.dateTime ?? logTimestampFor(date),
-            mealType: meal?.mealType ?? mealType,
+            mealType: meal?.mealType ?? selectedTypeRef.current,
             name: meal?.name ?? null,
             entries,
           })
-        : mealApi.create({ dateTime: logTimestampFor(date), mealType, name: null, entries });
+        : mealApi.create({ dateTime: logTimestampFor(date), mealType: selectedTypeRef.current, name: null, entries });
     },
     onSuccess: (result) => {
       setMealId(result?.id ?? null);
@@ -169,6 +183,15 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
       return next;
     });
 
+  // Changing the type after the meal exists moves it (docs/75 §2.7).
+  const changeType = (type: MealType) => {
+    setSelectedType(type);
+    selectedTypeRef.current = type;
+    if (mealId != null) schedulePersist(items);
+  };
+
+  const close = () => onClose(mealId != null ? selectedTypeRef.current : undefined);
+
   const totalKcal = items.reduce((s, i) => s + (i.caloriesPer100g * i.quantityInGrams) / 100, 0);
   const totalProtein = items.reduce((s, i) => s + (i.proteinPer100g * i.quantityInGrams) / 100, 0);
   const totalCarbs = items.reduce((s, i) => s + (i.carbsPer100g * i.quantityInGrams) / 100, 0);
@@ -177,12 +200,15 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
   const mealTypeLabels: Record<MealType, string> = {
     BREAKFAST: n("breakfast"), LUNCH: n("lunch"), DINNER: n("dinner"), SNACK: n("snack"),
   };
+  // From the Foods tab the day comes from the top bar, not a section the
+  // user just clicked — name it when it isn't today (docs/75 §2.8).
+  const dateSuffix = showTypePicker && !isTodayDate ? ` · ${format(date, "MMM d")}` : "";
 
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,.5)" }}
-      onClick={onClose}
+      onClick={close}
     >
       <div
         className="w-full max-w-md rounded-[var(--r-lg)] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
@@ -191,18 +217,37 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
       >
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-base">
-            {isEditing ? t("editTitle", { meal: mealTypeLabels[mealType] }) : t("addTitle", { meal: mealTypeLabels[mealType] })}
+            {isEditing
+              ? t("editTitle", { meal: mealTypeLabels[mealType] })
+              : t("addTitle", { meal: mealTypeLabels[selectedType] }) + dateSuffix}
           </h3>
           <div className="flex items-center gap-2">
             {persistMutation.isPending && (
               <span className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{common("saving")}</span>
             )}
-            <button onClick={onClose} aria-label={common("close")}
+            <button onClick={close} aria-label={common("close")}
               className="p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container">
               <span className="material-symbols-rounded">close</span>
             </button>
           </div>
         </div>
+
+        {showTypePicker && (
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("mealType")}>
+            {(Object.keys(mealTypeLabels) as MealType[]).map((type) => (
+              <button key={type} onClick={() => changeType(type)}
+                role="radio" aria-checked={selectedType === type}
+                className="px-3 h-8 rounded-[var(--r-pill)] text-xs font-semibold transition-colors"
+                style={{
+                  background: selectedType === type ? "var(--primary)" : "var(--surface-container)",
+                  color: selectedType === type ? "var(--bg)" : "var(--on-surface-variant)",
+                  border: "1px solid var(--outline)",
+                }}>
+                {mealTypeLabels[type]}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Mode tabs */}
         <div className="flex gap-1 p-1 rounded-[var(--r-pill)]" style={{ background: "var(--surface-highest)" }}>
@@ -219,7 +264,7 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
         </div>
 
         {mode === "search" ? (
-          <SearchMode onAdd={addItem} usage={usage} budgetContext={budgetContext} />
+          <SearchMode onAdd={addItem} usage={usage} budgetContext={budgetContext} initialPicked={initialFood} />
         ) : (
           <MacrosMode onAdd={addItem} />
         )}
@@ -262,9 +307,12 @@ function SearchMode({
   onAdd,
   usage,
   budgetContext,
+  initialPicked,
 }: {
   onAdd: (item: DraftItem) => void;
   usage: Map<number, FoodUsage>;
+  /** Start with this food already picked (docs/75 §2.2). */
+  initialPicked?: FoodResponse;
   /** Today's calorie goal + consumption so far (already-saved meals plus
    * whatever's staged in this dialog), so the quantity preview can show
    * "→ 420 kcal remaining" once a food + quantity are picked. Null when
@@ -275,8 +323,11 @@ function SearchMode({
   const nf = useTranslations("nutrition.foodsView");
   const d = useTranslations("dashboard");
   const [search, setSearch] = useState("");
-  const [picked, setPicked] = useState<FoodResponse | null>(null);
-  const [gramsStr, setGramsStr] = useState("");
+  const [picked, setPicked] = useState<FoodResponse | null>(initialPicked ?? null);
+  const initialLastGrams = initialPicked ? usage.get(initialPicked.id)?.lastGrams : undefined;
+  const [gramsStr, setGramsStr] = useState(() =>
+    initialLastGrams != null ? String(Math.round(initialLastGrams)) : "",
+  );
   const grams = gramsStr.trim() ? Math.max(1, Number(gramsStr)) : 0;
   const gramsInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -286,6 +337,30 @@ function SearchMode({
       gramsInputRef.current?.select();
     }
   }, [picked]);
+
+  // Meal history (hence usage) may still be loading when the dialog opens
+  // with `initialPicked`: prefill last-used grams once it arrives — only if
+  // that food is still picked and the field is still empty, so a quantity
+  // the user already typed is never replaced (docs/75 §2.3).
+  // Adjusted during render rather than in an effect (react.dev "adjusting
+  // state when a prop changes"); the effect below only touches the DOM.
+  const [initialPrefillDone, setInitialPrefillDone] = useState(initialLastGrams != null);
+  const [latePrefill, setLatePrefill] = useState<string | null>(null);
+  if (!initialPrefillDone && initialLastGrams != null) {
+    setInitialPrefillDone(true);
+    if (picked?.id === initialPicked?.id && gramsStr === "") {
+      const prefill = String(Math.round(initialLastGrams));
+      setGramsStr(prefill);
+      setLatePrefill(prefill);
+    }
+  }
+  // Select a late prefill like an initial one, so typing replaces it outright.
+  useEffect(() => {
+    const input = gramsInputRef.current;
+    if (latePrefill != null && input && document.activeElement === input && input.value === latePrefill) {
+      input.select();
+    }
+  }, [latePrefill]);
 
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
 

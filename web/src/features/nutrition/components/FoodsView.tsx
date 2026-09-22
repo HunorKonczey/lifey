@@ -6,12 +6,15 @@ import { useTranslations } from "next-intl";
 import { foodApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
+import { useDateStore } from "@/lib/hooks/useDateStore";
 import { DataTable, type Column } from "@/components/data/DataTable";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { FoodEditor } from "./FoodEditor";
-import type { FoodResponse } from "../types";
+import { AddMealEntryDialog } from "./AddMealEntryDialog";
+import { defaultMealType } from "../mealTypeDefault";
+import type { FoodResponse, MealType } from "../types";
 import type { FoodFormValues } from "../schemas";
 
 const PAGE_SIZE = 25;
@@ -29,7 +32,9 @@ const SORT_FIELDS: Record<string, string> = {
 
 export function FoodsView() {
   const t = useTranslations("nutrition.foodsView");
+  const n = useTranslations("nutrition");
   const { show } = useToast();
+  const { date } = useDateStore();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -40,6 +45,17 @@ export function FoodsView() {
   const [selected, setSelected] = useState<FoodResponse | null>(null);
   const [creating, setCreating] = useState(false);
   const [prefill, setPrefill] = useState<(Partial<FoodFormValues> & { barcode?: string }) | undefined>();
+  // Food being logged via "Add to meal" (docs/75 §2.9).
+  const [loggingFood, setLoggingFood] = useState<FoodResponse | null>(null);
+
+  const mealTypeLabels: Record<MealType, string> = {
+    BREAKFAST: n("breakfast"), LUNCH: n("lunch"), DINNER: n("dinner"), SNACK: n("snack"),
+  };
+
+  const closeLogging = (savedAs?: MealType) => {
+    setLoggingFood(null);
+    if (savedAs) show(t("addedToMeal", { meal: mealTypeLabels[savedAs] }), "success");
+  };
 
   // Debounce the search box so typing doesn't refetch on every keystroke.
   // Reset to page 0 alongside it, since a new search term invalidates the
@@ -131,6 +147,22 @@ export function FoodsView() {
       key: "fat", header: t("colFat"), sortable: true, align: "right", color: "var(--metric-fat)",
       sortValue: (f) => f.fatPer100g ?? 0,
       render: (f) => (f.fatPer100g != null ? `${+f.fatPer100g.toFixed(1)}g` : "—"),
+    },
+    {
+      key: "actions", header: "", align: "right",
+      render: (f) => (
+        <button
+          // Don't let the click also select the row (opening the editor
+          // behind the dialog) — docs/75 risk checkpoints.
+          onClick={(e) => { e.stopPropagation(); setLoggingFood(f); }}
+          aria-label={t("addToMeal")}
+          title={t("addToMeal")}
+          className="inline-flex p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container"
+          style={{ color: "var(--primary)" }}
+        >
+          <span className="material-symbols-rounded text-xl">add_circle</span>
+        </button>
+      ),
     },
   ];
 
@@ -227,8 +259,18 @@ export function FoodsView() {
             prefill={creating ? prefill : undefined}
             onSaved={() => { setSelected(null); setCreating(false); setPrefill(undefined); }}
             onCancel={() => { setSelected(null); setCreating(false); setPrefill(undefined); }}
+            onAddToMeal={setLoggingFood}
           />
         </div>
+      )}
+
+      {loggingFood && (
+        <AddMealEntryDialog
+          initialFood={loggingFood}
+          mealType={defaultMealType()}
+          date={date}
+          onClose={closeLogging}
+        />
       )}
     </div>
   );

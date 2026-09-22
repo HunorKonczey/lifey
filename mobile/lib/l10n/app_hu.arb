@@ -66,6 +66,7 @@
   "currentPasswordLabel": "Jelenlegi jelszó",
   "passwordChangedSuccessMessage": "Jelszó megváltoztatva",
   "addFoodToMealTitle": "Étel hozzáadása az étkezéshez",
+  "addToMealTooltip": "Hozzáadás étkezéshez",
   "recentFoodsLabel": "Legutóbbiak",
   "editFoodEntryTitle": "Étel szerkesztése",
   "foodFieldLabel": "Étel",
