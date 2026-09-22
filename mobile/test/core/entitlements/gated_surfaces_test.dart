@@ -79,8 +79,12 @@ void main() {
     final actual = await _filesReferencing('requireAiCredits(')
       ..remove('core/entitlements/ai_credit_gate.dart');
 
-    // The AI meal-photo estimate (docs/23-ai-calorie-estimation-plan.md). A new
-    // AI action must land here deliberately — and must use the gate.
-    expect(actual, {'features/nutrition/presentation/log_meal_screen.dart'});
+    // The AI meal-photo estimate and the AI recipe wizard
+    // (docs/23-ai-calorie-estimation-plan.md, Phases 1 and 2). A new AI action
+    // must land here deliberately — and must use the gate.
+    expect(actual, {
+      'features/nutrition/presentation/log_meal_screen.dart',
+      'features/recipes/presentation/recipes_tab.dart',
+    });
   });
 }

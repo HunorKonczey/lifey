@@ -33,6 +33,16 @@ class EntitlementAiFeatureGate implements AiFeatureGate {
 
     @Override
     public void checkMealEstimation(Long userId) {
+        checkAllowance(userId);
+    }
+
+    @Override
+    public void checkRecipeGeneration(Long userId) {
+        checkAllowance(userId);
+    }
+
+    /** One allowance for both features — see {@link AiFeatureGate}. */
+    private void checkAllowance(Long userId) {
         int limit = entitlementService.resolve(userId).tier() == EntitlementTier.PRO
                 ? billingProperties.proAiFairUsePerMonth()
                 : billingProperties.freeAiCreditsPerMonth();

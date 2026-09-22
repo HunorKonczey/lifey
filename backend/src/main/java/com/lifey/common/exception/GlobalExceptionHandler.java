@@ -7,6 +7,7 @@ import com.lifey.auth.exception.*;
 import com.lifey.billing.exception.InvalidReceiptException;
 import com.lifey.billing.exception.SeatLimitExceededException;
 import com.lifey.billing.exception.SubscriptionAlreadyLinkedException;
+import com.lifey.nutrition.recipe.generation.exception.InvalidGenerationRequestException;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
@@ -241,6 +242,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, "Access denied", request, List.of(), ex);
+    }
+
+    /** docs/23 Phase 2 — the wizard's answers contradict each other. */
+    @ExceptionHandler(InvalidGenerationRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidGenerationRequest(InvalidGenerationRequestException ex,
+                                                                   HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(InvalidCardioRequestException.class)

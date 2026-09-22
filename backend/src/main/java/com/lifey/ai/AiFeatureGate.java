@@ -6,6 +6,9 @@ package com.lifey.ai;
  * <em>before</em> the model call; the usage counter is only incremented by the
  * caller <em>after</em> a successful one, so a failed call never burns a credit
  * (docs/landing_page/64-billing-backend-plan.md §3.4).
+ *
+ * <p>Both AI features spend from the same monthly allowance — a credit is a
+ * credit, whichever feature used it (`63` D-M5).
  */
 public interface AiFeatureGate {
 
@@ -14,4 +17,10 @@ public interface AiFeatureGate {
      * month's allowance for the user's plan is used up
      */
     void checkMealEstimation(Long userId);
+
+    /**
+     * @throws com.lifey.ai.exception.AiCreditsExhaustedException when this
+     * month's allowance for the user's plan is used up
+     */
+    void checkRecipeGeneration(Long userId);
 }

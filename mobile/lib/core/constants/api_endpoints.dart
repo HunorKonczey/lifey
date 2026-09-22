@@ -5,6 +5,7 @@ class ApiEndpoints {
   static const foods = '/foods';
   static String foodByBarcode(String barcode) => '/foods/barcode/$barcode';
   static const recipes = '/recipes';
+  static const recipeGenerate = '/recipes/generate';
   static const meals = '/meals';
   static const mealEstimate = '/meals/estimate';
   static const workoutTemplates = '/workout-templates';

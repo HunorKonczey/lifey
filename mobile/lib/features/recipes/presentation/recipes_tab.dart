@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/entitlements/ai_credit_gate.dart';
+import '../../../core/sync/connectivity_status_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/search_normalize.dart';
 import '../../../l10n/app_localizations.dart';
@@ -12,9 +14,13 @@ import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/origin_trainer_badge.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
+import '../../nutrition/presentation/widgets/ai_credit_chip.dart';
 import '../application/recipe_image_controller.dart';
 import '../application/recipes_controller.dart';
 import '../domain/recipe.dart';
+import '../generation/domain/recipe_wizard.dart';
+import '../generation/presentation/generated_recipe_screen.dart';
+import '../generation/presentation/recipe_wizard_sheet.dart';
 import 'create_recipe_screen.dart';
 import 'widgets/log_recipe_sheet.dart';
 
@@ -34,6 +40,32 @@ class RecipesTab extends ConsumerWidget {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => LogRecipeSheet(recipe: recipe),
+    );
+  }
+
+  /// AI recipe generation (docs/23-ai-calorie-estimation-plan.md Phase 2):
+  /// the wizard is local, only its result costs a call. The credit check is a
+  /// courtesy — the server's 402 is authoritative and lands on the same
+  /// paywall, from [GeneratedRecipeScreen].
+  Future<void> _generate(BuildContext context, WidgetRef ref, bool offline) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (offline) {
+      AppSnackbar.showError(context, title: l10n.recipeGenerationOfflineMessage);
+      return;
+    }
+    if (!requireAiCredits(context, ref)) return;
+
+    final answers = await showModalBottomSheet<RecipeWizardAnswers>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const RecipeWizardSheet(),
+    );
+    if (answers == null || !answers.isComplete || !context.mounted) return;
+
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => GeneratedRecipeScreen(answers: answers)),
     );
   }
 
@@ -98,6 +130,7 @@ class RecipesTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final query = normalizeForSearch(searchQuery?.trim() ?? '');
+    final offline = ref.watch(isOfflineProvider).value ?? false;
 
     return RefreshIndicator(
       displacement: topPadding,
@@ -107,32 +140,101 @@ class RecipesTab extends ConsumerWidget {
           final visible = query.isEmpty
               ? recipes
               : recipes.where((r) => normalizeForSearch(r.name).contains(query)).toList();
+          final showGenerate = query.isEmpty;
           if (visible.isEmpty) {
-            return EmptyView(
-              icon: query.isEmpty ? Icons.menu_book_outlined : Icons.search_off,
-              title: query.isEmpty ? l10n.noRecipesYetTitle : l10n.noSearchResultsTitle,
-              subtitle: query.isEmpty
-                  ? l10n.tapPlusToCreateOneMessage
-                  : l10n.tryDifferentSearchMessage,
+            return Column(
+              children: [
+                if (showGenerate)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(12, topPadding, 12, 0),
+                    child: _GenerateWithAiCard(
+                        offline: offline, onTap: () => _generate(context, ref, offline)),
+                  ),
+                Expanded(child: _emptyView(l10n, query)),
+              ],
             );
           }
           return ListView.builder(
             padding: EdgeInsets.fromLTRB(12, topPadding, 12, bottomPad + 88),
-            itemCount: visible.length,
-            itemBuilder: (context, index) => _RecipeCard(
-              recipe: visible[index],
-              onDelete: () => _delete(context, ref, visible[index]),
-              onLogAsMeal: () => _logAsMeal(context, visible[index]),
-              onDuplicate: () => _duplicate(context, ref, visible[index]),
-              onEdit: () => _edit(context, visible[index]),
-              onToggleFavorite: () => _toggleFavorite(ref, visible[index]),
-            ),
+            itemCount: visible.length + (showGenerate ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (showGenerate && index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _GenerateWithAiCard(
+                        offline: offline, onTap: () => _generate(context, ref, offline)),
+                );
+              }
+              final recipe = visible[index - (showGenerate ? 1 : 0)];
+              return _RecipeCard(
+                recipe: recipe,
+                onDelete: () => _delete(context, ref, recipe),
+                onLogAsMeal: () => _logAsMeal(context, recipe),
+                onDuplicate: () => _duplicate(context, ref, recipe),
+                onEdit: () => _edit(context, recipe),
+                onToggleFavorite: () => _toggleFavorite(ref, recipe),
+              );
+            },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(
           error: error,
           onRetry: () => ref.read(recipeControllerProvider.notifier).refresh(),
+        ),
+      ),
+    );
+  }
+
+  Widget _emptyView(AppLocalizations l10n, String query) {
+    return EmptyView(
+              icon: query.isEmpty ? Icons.menu_book_outlined : Icons.search_off,
+              title: query.isEmpty ? l10n.noRecipesYetTitle : l10n.noSearchResultsTitle,
+      subtitle: query.isEmpty
+          ? l10n.tapPlusToCreateOneMessage
+          : l10n.tryDifferentSearchMessage,
+    );
+  }
+}
+
+/// The AI entry point, with the credit chip beside it — the recipe half of
+/// what the Log meal screen's photo row does (`72` M7).
+class _GenerateWithAiCard extends StatelessWidget {
+  const _GenerateWithAiCard({required this.offline, required this.onTap});
+
+  /// Dimmed, not disabled: tapping it offline explains why it can't run.
+  final bool offline;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
+    final color = offline ? scheme.onSurfaceVariant : scheme.primary;
+
+    return Material(
+      color: scheme.primaryContainer.withValues(alpha: offline ? 0.2 : 0.45),
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 21, color: color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  AppLocalizations.of(context)!.generateRecipeWithAiButton,
+                  style: theme.textTheme.labelLarge
+                      ?.copyWith(fontWeight: FontWeight.w700, color: color),
+                ),
+              ),
+              const AiCreditChip(),
+            ],
+          ),
         ),
       ),
     );
