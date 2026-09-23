@@ -5,7 +5,7 @@ the code cites those plans by section — migrations, entity javadoc and Dart
 comments all refer back to them.
 
 **Numbering.** Root docs and most topic folders share one global sequence
-(currently up to `75`). Take the next free number, never reuse a
+(currently up to `76`). Take the next free number, never reuse a
 gap, and keep the `NN-<kebab-topic>-plan.md` shape. Two exceptions exist for
 historical reasons: `web/` runs its own `01–09` series, and a few early numbers
 are duplicated at the root (`05`, `06`, `15`, `16`).
@@ -40,7 +40,6 @@ iterations.
 |---|---|
 | [07-roadmap.md](07-roadmap.md) | Version roadmap (V1, V2, …) |
 | [05-improvement-roadmap.md](05-improvement-roadmap.md) | Improvement roadmap — most numbered plans below cite an item here |
-| [76-smarter-weight-trend-plan.md](76-smarter-weight-trend-plan.md) | Weight: 7-day moving average + goal projection (roadmap #11) |
 | [REMAINING-WORK.md](REMAINING-WORK.md) | App-wide backlog: what is still missing, left half-done or blocked (unnumbered working list) |
 
 ## Topic folders
@@ -93,6 +92,7 @@ iterations.
 | 38 | [Personal records (roadmap #3)](38-personal-records-plan.md) | |
 | 39 | [Rest timer](39-rest-timer-plan.md) | done |
 | 75 | [Log a food from the Foods tab](75-log-food-from-foods-tab-plan.md) | mobile done, web in review |
+| 76 | [Smarter weight trend (roadmap #11)](76-smarter-weight-trend-plan.md) | built |
 
 Plans 40–74 live in the topic folders above.
 

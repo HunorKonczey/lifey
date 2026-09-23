@@ -61,12 +61,10 @@ Nincs belőle semmi a kódban.
 - Méretek: derék, mellkas, kar, comb — előzmény + grafikon.
 - A meglévő képfeltöltési infrastruktúra (recept / avatar) újrahasznosítható.
 
-### 1.4 Okosabb súlytrend — [`05`](05-improvement-roadmap.md) #11
+### 1.4 Okosabb súlytrend — [`05`](05-improvement-roadmap.md) #11 — ✅ kész (2026-09-23)
 
-A célsúlyt az onboarding bekéri (`userdetails`), de:
-
-- nincs 7 napos mozgóátlag a nyers napi pontok helyett;
-- nincs „várhatóan ekkor éred el a célsúlyt” becslés a statisztika oldalon.
+7 napos mozgóátlag a Súly fülön és a statisztika súly-metrikáján, plusz a célsúly-kártya a
+becsült dátummal ([`76`](76-smarter-weight-trend-plan.md)). Eszközön még nem láttuk.
 
 ### 1.5 Garmin / Strava — [`07`](07-roadmap.md) V4
 
