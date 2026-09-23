@@ -26,6 +26,7 @@ import '../application/stats_range_controller.dart';
 import '../domain/stat_kind_filter.dart';
 import '../domain/stat_metric.dart';
 import '../domain/stat_summary.dart';
+import '../../weight/domain/weight_trend.dart';
 
 /// Statistics: kind filter (Mind/Erősítő/Cardio), metric + range popup
 /// pickers in a filter strip below the AppBar, KPI summary cards, and a
@@ -573,6 +574,10 @@ class _StatisticsChart extends StatelessWidget {
             accentColor: accent,
             areaColor: accent.withValues(alpha: 0.12),
             goalValue: goalValue,
+            // Weight is the one metric whose daily reading is mostly water
+            // (docs/76-smarter-weight-trend-plan.md); the rest are counts of
+            // things that happened, and averaging those hides the day.
+            trendValues: metric == StatMetric.weight ? movingAverage(points) : null,
           ),
         ),
       ],

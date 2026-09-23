@@ -20,8 +20,10 @@ import '../../../shared/widgets/shell_fab.dart';
 import '../application/weight_chart_data.dart';
 import '../application/weight_controller.dart';
 import '../application/weight_range.dart';
+import '../application/weight_trend_data.dart';
 import '../domain/weight_entry.dart';
 import 'widgets/add_weight_sheet.dart';
+import 'widgets/goal_progress_card.dart';
 
 /// Weight: a chart card (current reading + range + TimeSeriesChart) over a
 /// History list of past entries, mirroring the redesign mockup
@@ -142,6 +144,7 @@ class _WeightBody extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final range = ref.watch(weightRangeControllerProvider);
     final chartData = ref.watch(weightChartDataProvider);
+    final trend = ref.watch(weightTrendProvider).value;
     final bottomPad = MediaQuery.paddingOf(context).bottom + 24;
 
     final latest = entries.first;
@@ -222,13 +225,43 @@ class _WeightBody extends ConsumerWidget {
                             ),
                           ),
                         )
-                      : TimeSeriesChart(
-                          points: points,
-                          dateLabelBuilder: _chartDateLabel.format,
-                          valueLabelBuilder: (value) =>
-                              l10n.weightKgValue(value.toStringAsFixed(1)),
-                          accentColor: mc.weight,
-                          areaColor: mc.weight.withValues(alpha: 0.12),
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TimeSeriesChart(
+                              points: points,
+                              dateLabelBuilder: _chartDateLabel.format,
+                              valueLabelBuilder: (value) =>
+                                  l10n.weightKgValue(value.toStringAsFixed(1)),
+                              accentColor: mc.weight,
+                              areaColor: mc.weight.withValues(alpha: 0.12),
+                              trendValues: trend,
+                            ),
+                            // Only claim a trend line when one is actually
+                            // drawn — a week of scattered weigh-ins has no
+                            // full window to average (docs/76 D-W2).
+                            if (trend?.any((v) => v != null) ?? false) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 14,
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      color: mc.weight,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    l10n.weightTrendCaption,
+                                    style: theme.textTheme.labelSmall
+                                        ?.copyWith(color: scheme.onSurfaceVariant),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),
@@ -240,6 +273,9 @@ class _WeightBody extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+          // ── Goal weight + projection (docs/76) ─────────────────────────
+          const GoalProgressCard(),
 
           // ── History ────────────────────────────────────────────────────
           Padding(
