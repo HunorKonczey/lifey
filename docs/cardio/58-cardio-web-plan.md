@@ -1,6 +1,7 @@
 # 58 – Cardio: web (Next.js) — mit kell hozzányúlni, és mit nem
 
-Státusz: **TERV.** Iteráció: **C1w** (megjelenítés, a C1 backend után bármikor), **C3w** (statisztika, a C3-mal együtt).
+Státusz: **LESZÁLLÍTVA** (C1w + C3w) — a webes dashboard és statisztika megjeleníti a cardiót;
+indítani továbbra sem lehet onnan (D-W.1).
 Előzmény: [51-cardio-overview-plan.md](51-cardio-overview-plan.md),
 [52-cardio-domain-backend-plan.md](52-cardio-domain-backend-plan.md) (API),
 [56-cardio-statistics-plan.md](56-cardio-statistics-plan.md) (metrika-definíciók).

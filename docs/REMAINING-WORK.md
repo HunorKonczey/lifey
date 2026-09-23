@@ -5,7 +5,7 @@ felvett vagy elvetett tételnél változik. A landing page / monetizáció sajá
 [`landing_page/REMAINING-WORK.md`](landing_page/REMAINING-WORK.md) — ez a fájl arra hivatkozik,
 nem ismétli meg.
 
-Utolsó átnézés: **2026-09-22** (a teljes `docs/` státuszsorai + kódellenőrzés alapján).
+Utolsó átnézés: **2026-09-23** (a teljes `docs/` státuszsorai + kódellenőrzés alapján).
 
 **Használat:** ha egy tételt felveszel, csináld meg, **töröld a sorát**, és a landolt állapotot
 a hozzá tartozó számozott tervbe írd.
@@ -103,18 +103,6 @@ Nincs integráció. A HealthKit és a Health Connect kész.
 - **Store-indulás** (App Store Connect, Play Console, IAP, AdMob, Stripe, impresszum, jogi
   review) — a cégalapításra vár, tudatosan parkoló. Részletek:
   [`landing_page/REMAINING-WORK.md`](landing_page/REMAINING-WORK.md) §1.
-
----
-
-## 5. Elavult dokumentáció (státusz-frissítés kell)
-
-| Doc | Mit állít | Valóság |
-|---|---|---|
-| [`cardio/README.md`](cardio/README.md), [`cardio/51`](cardio/51-cardio-overview-plan.md), [`cardio/59`](cardio/59-cardio-implementation-plan.md) | „terv, nem indult el” | a cardio le van szállítva (C0–C5, a `62` szerint) |
-| [`cardio/60`](cardio/60-cardio-sport-specifics-plan.md) | C7 és C8 (túra) hátravan | időjárás-, útpont- és magasságprofil-kód már létezik — ellenőrizni, mi kész |
-| [`16-delta-sync-rollout.md`](16-delta-sync-rollout.md) | a Foods-on kívül minden „Not started” | szinte minden kontroller támogatja már a delta sync-et |
-| [`14-pagination-plan.md`](14-pagination-plan.md), [`15-delta-sync.md`](15-delta-sync.md), [`15-set-rest-time-plan.md`](15-set-rest-time-plan.md) | „proposed” / „design only” | Foods-ra kész; a set-időbélyegek a `39` szerint kész |
-| [`05-improvement-roadmap.md`](05-improvement-roadmap.md) | #10, #11 jelöletlen | valóban hiányoznak (lásd §1.3, §1.4) — ez stimmel |
 
 ---
 

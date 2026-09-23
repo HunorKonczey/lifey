@@ -1,6 +1,7 @@
 # 56 – Cardio: statisztika, rekordok, riportok — „mi romolhat el”
 
-Státusz: **TERV.** Iteráció: **C3** (a C6/C8 sport-specifikus metrikákat tesz hozzá).
+Státusz: **LESZÁLLÍTVA** (C3, a C6/C8 metrikáival együtt) — `activity_ranking.dart`,
+`cardio_personal_record.dart`, a statisztika-fül cardio-metrikái.
 Előzmény: [51-cardio-overview-plan.md](51-cardio-overview-plan.md) (D-C.9, R2),
 [52-cardio-domain-backend-plan.md](52-cardio-domain-backend-plan.md) (séma).
 Háttér: [../17-statistics-page-plan.md](../17-statistics-page-plan.md),

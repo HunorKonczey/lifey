@@ -1,6 +1,9 @@
 # 51 – Cardio & sportedzések: koncepció és ütemterv
 
-Státusz: **TERV — nem indult el.**
+Státusz: **LESZÁLLÍTVA (C0–C5), a sport-specifikumokkal együtt.** A doc innentől a cardio
+döntés-naplója (`D-C*`), nem ütemterv. Kódbizonyíték: `com.lifey.workout.session.cardio`
+(backend), `mobile/lib/features/workouts` cardio-rétege, Wear OS + watchOS, és a webes
+megjelenítés.
 Nyelv: a terv magyar, a kód/ARB-kulcsok angolok (repo-konvenció).
 
 Kapcsolódó dokumentumok (ebben a mappában):

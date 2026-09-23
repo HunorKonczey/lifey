@@ -1,7 +1,9 @@
 # 15 – Delta (incremental) sync design spike
 
-Status: design only — no implementation in this doc (per
-[docs/14-pagination-plan.md](14-pagination-plan.md) Phase 3 / Prompt 3.1).
+Status: **implemented and rolled out.** The cursor model designed here shipped for the Foods
+pilot and then for every entity `PullEngine` pulls — see
+[16-delta-sync-rollout.md](16-delta-sync-rollout.md). This doc stays as the reasoning behind the
+mechanism (why a cursor, why tombstones, why `updatedAt >=`), not as a proposal.
 
 ## 0. Scope
 

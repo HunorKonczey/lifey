@@ -1,7 +1,8 @@
 # 59 – Cardio: fejlesztési terv (lépésekre bontva)
 
-Státusz: **KÉSZ TERV, a fejlesztés nem indult el.** A design **elkészült** (§1), tehát minden
-UI-t szállító lépés indítható.
+Státusz: **VÉGREHAJTVA.** A lépéslista teljes egészében leszállt (C0–C5), a sport-specifikumok
+pedig a [60-as docban](60-cardio-sport-specifics-plan.md) zárultak le. A doc innentől azt
+mutatja, milyen sorrendben épült fel a cardio — nem azt, mi van hátra.
 Előzmény: [51](51-cardio-overview-plan.md) (iterációk, kockázatok), [52](52-cardio-domain-backend-plan.md) (séma),
 [53](53-cardio-mobile-plan.md) (mobil), [54](54-cardio-gps-route-plan.md) (GPS),
 [55](55-cardio-watch-plan.md) (óra), [56](56-cardio-statistics-plan.md) (statisztika),

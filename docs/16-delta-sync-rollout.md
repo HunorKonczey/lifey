@@ -1,7 +1,14 @@
 # 16 – Delta sync rollout plan (post-Foods)
 
-Status: planning only — no implementation. Written so a future session can
-pick one entity from §3 and go, without re-deriving this analysis.
+Status: **executed — every entity below is delta-synced.** `PullEngine` now pulls foods, meals,
+recipes, exercises, workout templates, workout sessions, weights, water entries, water sources,
+daily step counts, cardio interval plans and settings with an `updatedSince` cursor, and each has
+its backend counterpart. What this doc still describes accurately is *how* that was done and the
+three traps in §2 (user-scoping the query, soft delete + tombstone, parent/child aggregates) —
+worth reading before adding a **new** synced entity.
+
+The "Phase 1 (local pagination)" column in §1 is a different question and is still mostly "not
+started": only Foods and Meals read their local tables in windows.
 
 Foods finished the full track: [14-pagination-plan.md](14-pagination-plan.md)
 Phases 1–2 (UI pagination + pageable/searchable backend endpoint) and
@@ -45,8 +52,10 @@ three properties none of the others share:
 | Daily step counts | `steps.DailyStepCount` | Yes | Hard, no children | — | `DailyStepCounts` | Slow — exactly 1/day | Not started |
 | Settings | `settings.UserSettings` | Yes (singleton) | N/A (no delete) | — | `UserSettingsTable` | None — always 1 row | N/A |
 
-None of these have any `Pageable`/`Page<`/searchable repository method today
-(confirmed by grep) — Foods is still the only entity with that pattern.
+**Updated:** that is no longer true. Foods, meals and recipes now have pageable (and for foods
+and recipes, searchable) repository methods, and every entity in the table has a pageable delta
+query behind its `updatedSince` endpoint. What is still missing on most of them is the *client*
+half — a windowed local read like `FoodRepository.watchPaged`.
 
 ## 2. Where the Foods recipe needs to change
 

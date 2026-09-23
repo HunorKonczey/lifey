@@ -1,6 +1,8 @@
 # 15 – Set timestamps & rest time
 
-Status: proposed
+Status: **done.** `performedAt`/`doneAt` on `exercise_sets` shipped and became the foundation of
+the rest timer ([39-rest-timer-plan.md](39-rest-timer-plan.md), which lists this as its
+already-done dependency).
 Author: planning doc (implement in 3 prompts, in order)
 Scope: workout session sets (`exercise_sets`) — backend + mobile
 

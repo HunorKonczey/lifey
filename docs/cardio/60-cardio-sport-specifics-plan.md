@@ -1,7 +1,10 @@
 # 60 – Cardio sport-specifikumok: fejlesztési terv (C6–C9)
 
-Státusz: **A design kész (2026-08-16), és két iteráció leszállt (2026-08-17): a teljes C6 (MF6a)
-és a teljes C9 (MF6b).**
+Státusz: **LESZÁLLÍTVA — mind a négy iteráció (C6, C7, C8, C9).** A C6 (futás) és a C9
+(2026-08-17) után a C7 (intervall-tervek a gép-családhoz: `cardio_interval_plan_*`,
+`interval_player_controller.dart`) és a C8 (túra: magasságprofil, útpontok, időjárás — a kódban
+`waypoint_track_match.dart`, `weather_condition.dart`, `elevation_profile_chart.dart`) is
+elkészült.
 A C6.5 watchOS-fele Macen készült el, ezzel a terv egyetlen Mac-es lépése is megvan; a C6.7
 statisztika-listája az egyetlen kimaradt darab, mert nincs mit bővíteni
 (ld. [§4](#4-c6--futás-specifikum-8-lépés--mf6a)). A hátralévő iterációk: **C7 (bicikli)** és **C8 (túra)**.
