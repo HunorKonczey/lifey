@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../shared/trainer_fab.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../schedule/application/recurrence_text.dart';
@@ -32,13 +33,15 @@ class ProgramDetailScreen extends ConsumerWidget {
         title: Text(program.value?.name ?? l10n.trainerProgramsTitle),
       ),
       floatingActionButton: program.hasValue
-          ? FloatingActionButton.extended(
-              heroTag: null,
-              backgroundColor: Theme.of(context).colorScheme.tertiary,
-              foregroundColor: Theme.of(context).colorScheme.onTertiary,
-              icon: const Icon(Icons.person_add_alt),
-              label: Text(l10n.trainerStartProgramButton),
-              onPressed: () => _assign(context, ref, program.requireValue),
+          ? TrainerFabPadding(
+              child: FloatingActionButton.extended(
+                heroTag: null,
+                backgroundColor: Theme.of(context).colorScheme.tertiary,
+                foregroundColor: Theme.of(context).colorScheme.onTertiary,
+                icon: const Icon(Icons.person_add_alt),
+                label: Text(l10n.trainerStartProgramButton),
+                onPressed: () => _assign(context, ref, program.requireValue),
+              ),
             )
           : null,
       body: program.when(

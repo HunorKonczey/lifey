@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../../core/network/error_message.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../shared/trainer_fab.dart';
 import '../../../../../shared/widgets/app_snackbar.dart';
 import '../../../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../../../shared/widgets/empty_view.dart';
@@ -110,7 +111,7 @@ class ClientScheduleTab extends ConsumerWidget {
         ),
         Positioned(
           right: 16,
-          bottom: 16,
+          bottom: trainerFabBottom(context),
           child: FloatingActionButton.extended(
             heroTag: null,
             backgroundColor: Theme.of(context).colorScheme.tertiary,

@@ -7,6 +7,7 @@ import '../../../../core/network/error_message.dart';
 import '../../../../core/sync/connectivity_status_provider.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../shared/trainer_fab.dart';
 import '../../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/confirm_delete_dialog.dart';
@@ -52,13 +53,15 @@ class AssignmentsScreen extends ConsumerWidget {
         ref.read(assignmentsControllerProvider.notifier).refresh();
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: null,
-        onPressed: () => _assign(context, ref),
-        backgroundColor: Theme.of(context).colorScheme.tertiary,
-        foregroundColor: Theme.of(context).colorScheme.onTertiary,
-        icon: const Icon(Icons.add),
-        label: Text(l10n.trainerAssignButton),
+      floatingActionButton: TrainerFabPadding(
+        child: FloatingActionButton.extended(
+          heroTag: null,
+          onPressed: () => _assign(context, ref),
+          backgroundColor: Theme.of(context).colorScheme.tertiary,
+          foregroundColor: Theme.of(context).colorScheme.onTertiary,
+          icon: const Icon(Icons.add),
+          label: Text(l10n.trainerAssignButton),
+        ),
       ),
       body: ScrollCollapseListener(
         child: Stack(

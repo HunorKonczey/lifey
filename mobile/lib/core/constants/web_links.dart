@@ -1,8 +1,18 @@
-/// The public marketing/legal site (`docs/landing_page/65-web-landing-page-plan.md`)
-/// — real per-locale URLs, same domain the app's own download-page invite
-/// links point at.
+/// The web app and the public marketing/legal site
+/// (`docs/landing_page/65-web-landing-page-plan.md`) — the same deployment the
+/// app's own download-page invite links point at.
+///
+/// The base is overridable at build time, because it changes per environment
+/// and ahead of the real domain:
+///   flutter build apk --dart-define=WEB_BASE_URL=https://lifey.hu
+/// The default is the current deployment; `lifey.hu` becomes the default once
+/// it actually serves the app (it needs the company that `docs/landing_page/
+/// REMAINING-WORK.md` §1 is waiting on).
 abstract final class WebLinks {
-  static const _baseUrl = 'https://lifey.hu';
+  static const _baseUrl = String.fromEnvironment(
+    'WEB_BASE_URL',
+    defaultValue: 'https://lifey-theta.vercel.app',
+  );
 
   static String terms(String languageCode) => '$_baseUrl/${_locale(languageCode)}/legal/terms';
   static String privacy(String languageCode) => '$_baseUrl/${_locale(languageCode)}/legal/privacy';
