@@ -1,6 +1,7 @@
 # 55 – Cardio: óra-integráció (Apple Watch + Wear OS)
 
-Státusz: **TERV.** Iteráció: **C5** (a watch-GPS-rész a C4a-ra épül).
+Státusz: **LESZÁLLÍTVA** (C5) mindkét platformon — Wear OS (`mobile/android/wear`) és watchOS
+(`mobile/ios/LifeyWatch`).
 Előzmény: [51-cardio-overview-plan.md](51-cardio-overview-plan.md),
 [53-cardio-mobile-plan.md](53-cardio-mobile-plan.md).
 Watch-alapok (kötelező előolvasás): [../watch/40-watch-app-plan.md](../watch/40-watch-app-plan.md),

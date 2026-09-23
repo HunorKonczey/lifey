@@ -31,8 +31,8 @@ iterations.
 | [06-development-rules.md](06-development-rules.md) | Development rules (Java, DTOs, injection, Flyway) |
 | [10-offline-frontend.md](10-offline-frontend.md) | Offline-first synchronization architecture — read before touching sync |
 | [13-localization-guide.md](13-localization-guide.md) | HU/EN localization reference (see also the `localization` skill) |
-| [15-delta-sync.md](15-delta-sync.md) | Delta sync design spike — the reasoning behind the cursor model |
-| [16-delta-sync-rollout.md](16-delta-sync-rollout.md) | Delta sync rollout plan, entity by entity |
+| [15-delta-sync.md](15-delta-sync.md) | Delta sync design spike — the reasoning behind the cursor model (shipped) |
+| [16-delta-sync-rollout.md](16-delta-sync-rollout.md) | Delta sync rollout, entity by entity — executed; read it before adding a new synced entity |
 
 ## Roadmaps
 
@@ -46,7 +46,7 @@ iterations.
 
 | Folder | What it covers |
 |---|---|
-| [`cardio/`](cardio) | Non-set-based training (running, bike, hike, games): overview, backend, mobile, GPS, watch, statistics, web, design — has its own README with a reading order |
+| [`cardio/`](cardio) | Non-set-based training (running, bike, hike, games): overview, backend, mobile, GPS, watch, statistics, web, design — **shipped**, so these read as reference; has its own README with a reading order |
 | [`personal_trainer/`](personal_trainer) | Trainer role: concept, domain, backend, web admin, mobile, scheduling, calendar — has its own README |
 | [`web/`](web) | The Next.js web surface: feature inventory, architecture, API integration, design system, screens — has its own README, own `01–09` numbering |
 | [`chat/`](chat) | Trainer ↔ client chat (40–44), including the extraction of the chat into its own service (44) |
@@ -65,8 +65,8 @@ iterations.
 | 09 | [Settings module](09-settings-module.md) | |
 | 11 | [Barcode scanner + OpenFoodFacts](11-v2-pland.md) | |
 | 12 | [Language selector (HU/EN)](12-language-plan.md) | |
-| 14 | [Pagination / lazy loading](14-pagination-plan.md) | proposed |
-| 15 | [Set timestamps & rest time](15-set-rest-time-plan.md) | proposed |
+| 14 | [Pagination / lazy loading](14-pagination-plan.md) | partly done (foods, meals, recipes) |
+| 15 | [Set timestamps & rest time](15-set-rest-time-plan.md) | done |
 | 16 | [Apple Health integration](16-apple-health-integration-plan.md) | proposed |
 | 17 | [Statistics page](17-statistics-page-plan.md) | |
 | 18 | [Macros tab (nutrition)](18-macros-tab-plan.md) | |

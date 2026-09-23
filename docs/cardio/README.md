@@ -1,7 +1,10 @@
 # Cardio & sportedzések — dokumentáció
 
 Ez a mappa a **nem szett-alapú edzések** (szobabicikli, futás, séta, túrázás, kosárlabda, foci)
-támogatásának tervét tartalmazza. Státusz: **teljes egészében terv, nem indult el.**
+támogatásának tervét tartalmazza. Státusz: **leszállítva** — a C0–C5 alap (backend, mobil, GPS,
+óra, statisztika, web) és a C6–C9 sport-specifikumok is élnek; a 62-es doc külön zárta a
+kültéri biciklit. Ezek a doksik innentől **referenciák, nem tervek**: a bennük rögzített
+döntések (`D-C*`) érvényesek, a lépéslisták viszont már megtörtént munkát írnak le.
 
 ## Olvasási sorrend
 
@@ -15,8 +18,8 @@ támogatásának tervét tartalmazza. Státusz: **teljes egészében terv, nem i
 | [56-cardio-statistics-plan.md](56-cardio-statistics-plan.md) | Ütközési leltár, metrika-definíciók, PR-ok, edzői riportok — **„mi romolhat el”** | Backend + Flutter + Web |
 | [57-cardio-design-prompt.md](57-cardio-design-prompt.md) | **Önhordó design prompt a Claude Designnak** (§0 blokk másolható) + döntés-napló | Design |
 | [58-cardio-web-plan.md](58-cardio-web-plan.md) | A 11 érintett web-fájl, olvasó cardio-nézet — és **miért nem indítható webről** | Web (Next.js) |
-| [59-cardio-implementation-plan.md](59-cardio-implementation-plan.md) | **Fejlesztési terv C0–C5-ig: ~50 prompt-méretű lépés**, frame-leképezéssel, mérföldkövekkel | **Fejlesztés — innen dolgozz** |
-| [60-cardio-sport-specifics-plan.md](60-cardio-sport-specifics-plan.md) | **Fejlesztési terv C6–C9-re: 30 lépés** (futás · játék · bicikli · túra), iterációnkénti mérföldkövekkel és a nyitott döntésekkel | Fejlesztés — a C5 után |
+| [59-cardio-implementation-plan.md](59-cardio-implementation-plan.md) | A C0–C5 lépéslistája (~50 lépés), frame-leképezéssel — **végrehajtva** | Így épült fel |
+| [60-cardio-sport-specifics-plan.md](60-cardio-sport-specifics-plan.md) | A C6–C9 lépéslistája (futás · játék · bicikli · túra) a döntés-naplóval — **végrehajtva** | Így épült fel |
 | [61-cardio-sport-specifics-design-prompts.md](61-cardio-sport-specifics-design-prompts.md) | **A C6–C9 kész designja frame-enként** (M33–M45): elrendezés, tokenek, állapotok, indoklás + a 8 visszaadott termékdöntés · a lefuttatott promptok a végén | **Design + fejlesztés — a C6–C9 UI innen dolgozik** |
 | [`design/`](design) | A három kész design-canvas: mobil + web · óra · **sport-specifikumok (M33–M45)** | Mind |
 | [62-cardio-cycling-plan.md](62-cardio-cycling-plan.md) | **Új, hetedik `ActivityType`: szabadtéri kerékpározás** a `DISTANCE` családban — nem a C7 szobabiciklije. Sebesség vs. tempó, GPS-sebességhatár, PR-jogosultság | Backend + Flutter + Watch |

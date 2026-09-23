@@ -1,6 +1,8 @@
 # 54 – Cardio: GPS, nyomvonal és útvonal-megjelenítés
 
-Státusz: **TERV.** Iteráció: **C4a** (nyomvonal-rögzítés + saját útvonalrajz), **C4b** (opcionális, valódi térképcsempe).
+Státusz: **LESZÁLLÍTVA a C4a** (nyomvonal-rögzítés + saját útvonalrajz: `cardio_track_point.dart`,
+`track_simplify.dart`, `route_encoder.dart`). A **C4b** (valódi térképcsempe) opcionális volt, és
+nem készült el.
 Előzmény: [51-cardio-overview-plan.md](51-cardio-overview-plan.md) (D-C.5, D-C.6),
 [53-cardio-mobile-plan.md](53-cardio-mobile-plan.md) (élő képernyő), séma:
 [52-cardio-domain-backend-plan.md](52-cardio-domain-backend-plan.md) (D-C1.2 — nyers pont nem megy szerverre).

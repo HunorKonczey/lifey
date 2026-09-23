@@ -1,6 +1,7 @@
 # 52 – Cardio: domain, migrációk, backend API
 
-Státusz: **TERV.** Iterációk: **C0** (taxonómia), **C1** (adat-mag), a C4a a nyomvonal-táblát viszi.
+Státusz: **LESZÁLLÍTVA** (C0, C1, C4a). A séma és az API él — `ActivityType`/`ActivityFamily`,
+`CardioDetails`, `CardioSplit`, `CardioWaypoint`, `/workout-sessions` cardio-mezők.
 Előzmény: [51-cardio-overview-plan.md](51-cardio-overview-plan.md) — a D-C.1 (közös entitás) és a
 D-C.2 (hibrid tárolás) döntés itt válik sémává.
 

@@ -1,6 +1,10 @@
 # 14 – Pagination / lazy loading plan
 
-Status: proposed
+Status: **partly implemented.** Foods went through the whole track (UI pagination, a
+pageable/searchable backend endpoint, then delta sync); meals have the local windowed read
+(`MealRepository.watchPaged`), and recipes gained the pageable/searchable backend query.
+Exercises, sessions and the rest still load whole tables — the plan below is still the recipe
+for them.
 Author: planning doc (implement in phases)
 Scope: Foods tab first, then every long list (meals, recipes, exercises, sessions, …)
 

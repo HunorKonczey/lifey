@@ -1,6 +1,6 @@
 # 53 – Cardio: mobil (Flutter) terv
 
-Státusz: **TERV.** Iterációk: **C0** (audit + taxonómia), **C1** (adatréteg + kézi rögzítés),
+Státusz: **LESZÁLLÍTVA** (C0, C1, C2). Iterációk: **C0** (audit + taxonómia), **C1** (adatréteg + kézi rögzítés),
 **C2** (élő edzés + gyorsindítás + Live Activity).
 Előzmény: [51-cardio-overview-plan.md](51-cardio-overview-plan.md), séma:
 [52-cardio-domain-backend-plan.md](52-cardio-domain-backend-plan.md).
