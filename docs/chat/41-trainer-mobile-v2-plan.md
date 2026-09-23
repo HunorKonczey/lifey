@@ -417,9 +417,28 @@ rendezni — mindegyik **additív**, egyik sem töri a webet:
    közepén. Javaslat: olvasás + hozzárendelés kötelező, szerkesztés opcionális.~~
    **Megválaszolva a T6-ban: nem.** Olvasás + hozzárendelés mobilon, szerkesztés a
    weben — az indoklás a T6 szakaszban.
-2. **Kell-e tablet-elrendezés?** A naptár hónapnézete és a program-rács tableten
-   *működne*. Ha az edzők jelentős része iPaden dolgozik, az érv erős — ehhez használati
-   adat kell, nem tervezői megérzés.
+2. ~~**Kell-e tablet-elrendezés?**~~ **Megválaszolva (2026-09-23): igen, de nem a
+   naptárral kezdve.** Az edzői munka egész nap lista → részletező: kliensek és az
+   adataik, programok és a hetük. Telefonon ez egyszerre egy dolog, és minden
+   összehasonlítás ára egy vissza gomb. **900 dp felett** a kliens-lista és a
+   program-könyvtár kettéosztott nézetre vált: a lista marad (380 dp), mellette a
+   kiválasztott elem részletezője. A koppintás ilyenkor **kijelöl, nem navigál**.
+
+   A küszöb azért 900 és nem a szokásos 600, mert 600-nál a lista a szélesség kétharmadát
+   vinné, a részletező fülsora pedig továbbra sem férne ki — az rosszabb tablet, mint egy
+   nyújtott telefon.
+
+   Amihez **nem** nyúltunk: a naptár hónapnézete már ma is igazodik a szélességhez
+   (`month_overview.dart`), a navigáció tableten is alul marad (oldalsó sáv az egész
+   shellt érintené, és ez a kérdés nem azt kérte), és a mélylink (`/trainer/clients/{id}`
+   értesítésből) tableten is teljes képernyőn nyílik. A hozzárendelés-lista egy oszlop
+   marad, de 720 dp-nél nem nyúlik tovább.
+
+   Fájlok: `trainer/shared/trainer_layout.dart` (küszöb, `TrainerTwoPane`,
+   tartalomszélesség), `clients/application/selected_client_controller.dart` és
+   `programs/application/selected_program_controller.dart` (melyik elem van a panelben —
+   a listából kikerült elem kiüríti), plusz a két részletező `embedded` kapcsolója:
+   beágyazva nincs vissza gomb, illetve nincs AppBar, mert nincs hová visszamenni.
 3. **Legyen-e „edzői” push-csomag** (kliens kihagyott edzést, kliens leadta a heti
    mérését)? Ez természetes folytatás a 30-as terv infrastruktúráján, de **külön terv** —
    nem a v2 része.

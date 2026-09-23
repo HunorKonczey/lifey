@@ -10,7 +10,10 @@ import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../../shared/widgets/trainer_view_menu.dart';
 import '../../../chat/application/conversation_list_controller.dart';
+import '../../client_detail/presentation/client_detail_screen.dart';
+import '../../shared/trainer_layout.dart';
 import '../../shared/trainer_view_badge.dart';
+import '../application/selected_client_controller.dart';
 import '../application/trainer_clients_controller.dart';
 import '../domain/compliance.dart';
 import '../domain/trainer_client.dart';
@@ -31,12 +34,20 @@ class TrainerClientsScreen extends ConsumerWidget {
     final statusTop = MediaQuery.paddingOf(context).top;
     final barTop = statusTop + 8.0;
     final contentTop = barTop + 58.0 + 12.0;
+    final twoPane = isTrainerTwoPane(context);
 
     Future<void> refresh() =>
         ref.read(trainerClientsControllerProvider.notifier).refresh();
 
-    return Scaffold(
-      body: ScrollCollapseListener(
+    // A client who is no longer on the list must not stay in the pane beside
+    // it — the relationship may have ended while the tablet was open.
+    ref.listen(trainerClientsControllerProvider, (_, next) {
+      next.whenData((clients) => ref
+          .read(selectedClientControllerProvider.notifier)
+          .keepOnlyIfPresent(clients.map((client) => client.userId)));
+    });
+
+    final list = ScrollCollapseListener(
         child: Stack(
           children: [
             Positioned.fill(
@@ -66,7 +77,11 @@ class TrainerClientsScreen extends ConsumerWidget {
                                   label: Text(l10n.trainerSendInviteButton),
                                 ),
                               )
-                            : _ClientList(clients: clients, contentTop: contentTop),
+                            : _ClientList(
+                                clients: clients,
+                                contentTop: contentTop,
+                                twoPane: twoPane,
+                              ),
                         loading: () => const Center(child: CircularProgressIndicator()),
                         error: (error, _) => ErrorView(error: error, onRetry: refresh),
                       ),
@@ -99,7 +114,40 @@ class TrainerClientsScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
+    );
+
+    // Tablet: the list keeps its place while the detail changes beside it
+    // (docs/chat/41-trainer-mobile-v2-plan.md §8.2).
+    return Scaffold(
+      body: twoPane
+          ? TrainerTwoPane(list: list, detail: const _ClientDetailPane())
+          : list,
+    );
+  }
+}
+
+/// The right-hand pane: the picked client, or an invitation to pick one.
+class _ClientDetailPane extends ConsumerWidget {
+  const _ClientDetailPane();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(selectedClientControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
+
+    if (selected == null) {
+      return EmptyView(
+        icon: Icons.touch_app_outlined,
+        title: l10n.trainerPickClientTitle,
+        subtitle: l10n.trainerPickClientMessage,
+      );
+    }
+    // Keyed so switching clients rebuilds the tabs against the new one rather
+    // than keeping the previous client's scroll and tab state.
+    return ClientDetailScreen(
+      key: ValueKey(selected),
+      clientId: selected,
+      embedded: true,
     );
   }
 }
@@ -109,10 +157,18 @@ class TrainerClientsScreen extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _ClientList extends ConsumerWidget {
-  const _ClientList({required this.clients, required this.contentTop});
+  const _ClientList({
+    required this.clients,
+    required this.contentTop,
+    required this.twoPane,
+  });
 
   final List<TrainerClient> clients;
   final double contentTop;
+
+  /// On a tablet a tap picks the pane's client; on a phone it pushes the
+  /// detail screen, exactly as before.
+  final bool twoPane;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,12 +187,19 @@ class _ClientList extends ConsumerWidget {
         .where((c) => !complianceFor(c, now: now).needsAttention)
         .toList();
 
+    final selected = ref.watch(selectedClientControllerProvider);
+
     Widget card(TrainerClient client) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           child: ClientCard(
             client: client,
             now: now,
-            onTap: () => context.push('$trainerShellLocation/${client.userId}'),
+            selected: twoPane && client.userId == selected,
+            onTap: () => twoPane
+                ? ref
+                    .read(selectedClientControllerProvider.notifier)
+                    .select(client.userId)
+                : context.push('$trainerShellLocation/${client.userId}'),
           ),
         );
 

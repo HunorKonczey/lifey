@@ -14,9 +14,12 @@ import '../../../shared/client_avatar.dart';
 /// The client detail screen's header card: who am I looking at, since when,
 /// and the one way out of read-only — writing to them (frame C1).
 class ClientDetailHeader extends ConsumerStatefulWidget {
-  const ClientDetailHeader({super.key, required this.client});
+  const ClientDetailHeader({super.key, required this.client, this.showBack = true});
 
   final TrainerClient client;
+
+  /// False in the tablet layout's detail pane, where nothing was pushed.
+  final bool showBack;
 
   @override
   ConsumerState<ClientDetailHeader> createState() => _ClientDetailHeaderState();
@@ -59,11 +62,14 @@ class _ClientDetailHeaderState extends ConsumerState<ClientDetailHeader> {
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                onPressed: () => context.pop(),
-              ),
+              if (widget.showBack)
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  onPressed: () => context.pop(),
+                )
+              else
+                const SizedBox(width: 8),
               const Spacer(),
               if (_openingChat)
                 const Padding(

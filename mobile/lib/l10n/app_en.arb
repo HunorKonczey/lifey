@@ -1600,6 +1600,22 @@
   "@weightGoalNotEnoughDataMessage": {
     "description": "Goal card when there are too few weigh-ins to project a date (docs/76 D-W6)"
   },
+  "trainerPickClientTitle": "Pick a client",
+  "@trainerPickClientTitle": {
+    "description": "Placeholder in the tablet layout's right-hand pane before a client is picked (docs/chat/41 §8.2)"
+  },
+  "trainerPickClientMessage": "Their workouts, food, steps and schedule show up here.",
+  "@trainerPickClientMessage": {
+    "description": "Subtitle of the tablet client-pane placeholder"
+  },
+  "trainerPickProgramTitle": "Pick a program",
+  "@trainerPickProgramTitle": {
+    "description": "Placeholder in the tablet layout's right-hand pane before a program is picked (docs/chat/41 §8.2)"
+  },
+  "trainerPickProgramMessage": "Its weeks open here, and you can start a client on it.",
+  "@trainerPickProgramMessage": {
+    "description": "Subtitle of the tablet program-pane placeholder"
+  },
   "paywallCloseTooltip": "Close",
   "@paywallCloseTooltip": {
     "description": "Accessibility tooltip for the paywall's top-left close button (69 §3.1)"

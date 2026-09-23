@@ -45,10 +45,10 @@ A monetizáció elvarratlan szálai:
 
 A **telefonos** edzői nézet kész (T1–T7, PR #34, `mobile/lib/features/trainer/`). Ami hiányzik:
 
-- **Tablet-elrendezés.** Jelenleg csak a naptár havi rácsa igazodik a szélességhez
-  (`trainer/schedule/presentation/widgets/month_overview.dart`). Nincs master–detail
-  (kliens-lista + adatlap egymás mellett), a program-rács sem használja ki a szélességet.
-  Akkor éri meg, ha a célzott edzők tényleg iPaden / tableten dolgoznak.
+- ✅ **Tablet-elrendezés kész (2026-09-23).** 900 dp felett a kliens-lista és a
+  program-könyvtár kettéosztott nézetre vált (lista + részletező egymás mellett); a
+  döntés indoklása és a szándékos kihagyások a [`chat/41`](chat/41-trainer-mobile-v2-plan.md)
+  §8.2-ben. Eszközön még nem láttuk.
 - **Edzői push-csomag** (41 §8.3): pl. „a kliens kihagyott egy edzést”, „leadta a heti mérést”.
   A [`30`](30-push-notifications-plan.md) infrastruktúrájára épül, külön terv kell hozzá.
 - *Nem hiány:* a programszerkesztés tudatos döntés alapján csak weben van (41 T6).

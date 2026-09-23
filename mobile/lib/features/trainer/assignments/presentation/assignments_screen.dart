@@ -8,6 +8,7 @@ import '../../../../core/sync/connectivity_status_provider.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../shared/trainer_fab.dart';
+import '../../shared/trainer_layout.dart';
 import '../../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/confirm_delete_dialog.dart';
@@ -81,9 +82,11 @@ class AssignmentsScreen extends ConsumerWidget {
                         ),
                       )
                     : state.when(
-                        data: (rows) => _AssignmentList(
-                          rows: rows,
-                          contentTop: contentTop,
+                        data: (rows) => TrainerContentWidth(
+                          child: _AssignmentList(
+                            rows: rows,
+                            contentTop: contentTop,
+                          ),
                         ),
                         loading: () =>
                             const Center(child: CircularProgressIndicator()),
