@@ -11,9 +11,12 @@ import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../../shared/widgets/trainer_view_menu.dart';
 import '../../../chat/application/conversation_list_controller.dart';
+import '../../shared/trainer_layout.dart';
 import '../../shared/trainer_view_badge.dart';
 import '../application/programs_controller.dart';
+import '../application/selected_program_controller.dart';
 import '../domain/program.dart';
+import 'program_detail_screen.dart';
 import 'widgets/edit_on_web_notice.dart';
 
 /// The trainer's program library (frame G1).
@@ -31,14 +34,21 @@ class ProgramsScreen extends ConsumerWidget {
     final statusTop = MediaQuery.paddingOf(context).top;
     final barTop = statusTop + 8.0;
     final contentTop = barTop + 58.0 + 12.0;
+    final twoPane = isTrainerTwoPane(context);
 
     Future<void> refresh() async {
       ref.invalidate(programsProvider);
       await ref.read(programsProvider.future);
     }
 
-    return Scaffold(
-      body: ScrollCollapseListener(
+    // A program deleted on the web must not linger in the pane beside the list.
+    ref.listen(programsProvider, (_, next) {
+      next.whenData((list) => ref
+          .read(selectedProgramControllerProvider.notifier)
+          .keepOnlyIfPresent(list.map((program) => program.id)));
+    });
+
+    final list = ScrollCollapseListener(
         child: Stack(
           children: [
             Positioned.fill(
@@ -75,7 +85,10 @@ class ProgramsScreen extends ConsumerWidget {
                                     Padding(
                                       padding:
                                           const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                                      child: _ProgramCard(program: program),
+                                      child: _ProgramCard(
+                                        program: program,
+                                        twoPane: twoPane,
+                                      ),
                                     ),
                                   const Padding(
                                     padding: EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -110,28 +123,70 @@ class ProgramsScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
+    );
+
+    // Tablet: a program's weeks read far better beside the library than after
+    // a push (docs/chat/41-trainer-mobile-v2-plan.md §8.2).
+    return Scaffold(
+      body: twoPane
+          ? TrainerTwoPane(list: list, detail: const _ProgramDetailPane())
+          : list,
     );
   }
 }
 
-class _ProgramCard extends StatelessWidget {
-  const _ProgramCard({required this.program});
-
-  final ProgramSummary program;
+/// The right-hand pane: the picked program, or an invitation to pick one.
+class _ProgramDetailPane extends ConsumerWidget {
+  const _ProgramDetailPane();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(selectedProgramControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
+
+    if (selected == null) {
+      return EmptyView(
+        icon: Icons.touch_app_outlined,
+        title: l10n.trainerPickProgramTitle,
+        subtitle: l10n.trainerPickProgramMessage,
+      );
+    }
+    return ProgramDetailScreen(
+      key: ValueKey(selected),
+      programId: selected,
+      embedded: true,
+    );
+  }
+}
+
+class _ProgramCard extends ConsumerWidget {
+  const _ProgramCard({required this.program, required this.twoPane});
+
+  final ProgramSummary program;
+  final bool twoPane;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final selected = twoPane && ref.watch(selectedProgramControllerProvider) == program.id;
 
     return Material(
-      color: scheme.surfaceContainer,
-      borderRadius: AppRadius.cardAll,
+      color: selected ? scheme.surfaceContainerHighest : scheme.surfaceContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.cardAll,
+        side: selected
+            ? BorderSide(color: scheme.tertiary, width: 1.5)
+            : BorderSide.none,
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push('$trainerProgramsLocation/${program.id}'),
+        onTap: () => twoPane
+            ? ref
+                .read(selectedProgramControllerProvider.notifier)
+                .select(program.id)
+            : context.push('$trainerProgramsLocation/${program.id}'),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

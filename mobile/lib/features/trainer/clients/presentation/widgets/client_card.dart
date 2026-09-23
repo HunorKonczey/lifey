@@ -17,6 +17,7 @@ class ClientCard extends StatelessWidget {
     required this.client,
     required this.now,
     this.onTap,
+    this.selected = false,
   });
 
   final TrainerClient client;
@@ -29,6 +30,10 @@ class ClientCard extends StatelessWidget {
   /// contexts that are only showing a client rather than offering one.
   final VoidCallback? onTap;
 
+  /// Marks the card whose detail the pane beside it is showing (§8.2). Only a
+  /// two-pane layout has one: on a phone the detail covers the list anyway.
+  final bool selected;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -37,8 +42,15 @@ class ClientCard extends StatelessWidget {
     final flags = complianceFor(client, now: now);
 
     return Material(
-      color: scheme.surfaceContainer,
-      borderRadius: AppRadius.cardAll,
+      color: selected ? scheme.surfaceContainerHighest : scheme.surfaceContainer,
+      // One shape rather than a borderRadius: Material takes either, and the
+      // selected card only differs by its outline.
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.cardAll,
+        side: selected
+            ? BorderSide(color: scheme.tertiary, width: 1.5)
+            : BorderSide.none,
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

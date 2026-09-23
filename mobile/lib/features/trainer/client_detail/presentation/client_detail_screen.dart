@@ -26,9 +26,14 @@ import 'widgets/client_detail_header.dart';
 /// why the header waits on the client list rather than assuming it: arriving
 /// from outside, there may be nothing loaded yet.
 class ClientDetailScreen extends ConsumerWidget {
-  const ClientDetailScreen({super.key, required this.clientId});
+  const ClientDetailScreen({super.key, required this.clientId, this.embedded = false});
 
   final int clientId;
+
+  /// True when this is the detail pane of a two-pane tablet layout rather
+  /// than a pushed screen (§8.2): there is nothing to go back to, so the
+  /// header drops its back button.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -47,7 +52,7 @@ class ClientDetailScreen extends ConsumerWidget {
                   title: l10n.trainerClientNotFoundTitle,
                   subtitle: l10n.trainerClientNotFoundMessage,
                 )
-              : _Loaded(client: client),
+              : _Loaded(client: client, embedded: embedded),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => ErrorView(
             error: error,
@@ -61,9 +66,10 @@ class ClientDetailScreen extends ConsumerWidget {
 }
 
 class _Loaded extends ConsumerStatefulWidget {
-  const _Loaded({required this.client});
+  const _Loaded({required this.client, required this.embedded});
 
   final TrainerClientSummary client;
+  final bool embedded;
 
   @override
   ConsumerState<_Loaded> createState() => _LoadedState();
@@ -123,7 +129,10 @@ class _LoadedState extends ConsumerState<_Loaded>
 
     return Column(
       children: [
-        ClientDetailHeader(client: widget.client.client),
+        ClientDetailHeader(
+          client: widget.client.client,
+          showBack: !widget.embedded,
+        ),
         // Five tabs do not fit a phone's width as text, and two rows would
         // push the content below the fold. A scrolling row keeps every label
         // readable and the first tabs visible where the thumb is.

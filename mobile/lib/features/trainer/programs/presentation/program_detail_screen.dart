@@ -19,9 +19,13 @@ import 'widgets/edit_on_web_notice.dart';
 /// cells is unreadable, while a week you can open one at a time is exactly how
 /// a trainer talks about a block anyway.
 class ProgramDetailScreen extends ConsumerWidget {
-  const ProgramDetailScreen({super.key, required this.programId});
+  const ProgramDetailScreen({super.key, required this.programId, this.embedded = false});
 
   final int programId;
+
+  /// True in the two-pane tablet layout (§8.2): the list beside it already
+  /// names the program, and there is nothing to go back to.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,9 +33,9 @@ class ProgramDetailScreen extends ConsumerWidget {
     final program = ref.watch(programProvider(programId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(program.value?.name ?? l10n.trainerProgramsTitle),
-      ),
+      appBar: embedded
+          ? null
+          : AppBar(title: Text(program.value?.name ?? l10n.trainerProgramsTitle)),
       floatingActionButton: program.hasValue
           ? TrainerFabPadding(
               child: FloatingActionButton.extended(
