@@ -40,6 +40,7 @@ iterations.
 |---|---|
 | [07-roadmap.md](07-roadmap.md) | Version roadmap (V1, V2, …) |
 | [05-improvement-roadmap.md](05-improvement-roadmap.md) | Improvement roadmap — most numbered plans below cite an item here |
+| [76-smarter-weight-trend-plan.md](76-smarter-weight-trend-plan.md) | Weight: 7-day moving average + goal projection (roadmap #11) |
 | [REMAINING-WORK.md](REMAINING-WORK.md) | App-wide backlog: what is still missing, left half-done or blocked (unnumbered working list) |
 
 ## Topic folders

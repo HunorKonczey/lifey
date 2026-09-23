@@ -29,6 +29,7 @@ class TimeSeriesChart extends StatefulWidget {
     this.goalValue,
     this.areaColor,
     this.accentColor,
+    this.trendValues,
   });
 
   final List<TimeSeriesPoint> points;
@@ -54,6 +55,14 @@ class TimeSeriesChart extends StatefulWidget {
   /// Color for the line and data points. Defaults to the theme's primary when
   /// omitted — callers pass a metric/category color to tint the chart.
   final Color? accentColor;
+
+  /// A smoothed series drawn over [points] — a moving average, parallel to
+  /// them index by index, `null` where there is no value
+  /// (docs/76-smarter-weight-trend-plan.md). Sharing the points' geometry is
+  /// the point: one x-scale, one set of tap targets, one tooltip. When set,
+  /// the raw line steps back to a thin translucent one and the trend is what
+  /// reads (D-W3).
+  final List<double?>? trendValues;
 
   @override
   State<TimeSeriesChart> createState() => _TimeSeriesChartState();
@@ -108,6 +117,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                     deltaLabelBuilder: widget.showDeltaLabels ? widget.deltaLabelBuilder : null,
                     selectedIndex: selectedIndex,
                     goalValue: widget.goalValue,
+                    trendValues: widget.trendValues,
                     lineColor: accent,
                     pointColor: accent,
                     selectedPointColor: theme.colorScheme.secondary,
@@ -281,6 +291,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
     required this.deltaLabelBuilder,
     required this.selectedIndex,
     required this.goalValue,
+    required this.trendValues,
     required this.lineColor,
     required this.pointColor,
     required this.selectedPointColor,
@@ -297,6 +308,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
   final String Function(double delta)? deltaLabelBuilder;
   final int? selectedIndex;
   final double? goalValue;
+  final List<double?>? trendValues;
   final Color lineColor;
   final Color pointColor;
   final Color selectedPointColor;
@@ -308,6 +320,35 @@ class _TimeSeriesChartPainter extends CustomPainter {
   final Color? areaColor;
 
   static const _maxDateLabels = 3;
+
+  /// Draws the smoothed series over the same geometry, breaking the line
+  /// wherever the average has no value — a gap is a gap, not a straight line
+  /// across one.
+  void _paintTrend(Canvas canvas, _ChartGeometry geometry, List<Offset> offsets) {
+    final paint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    Path? path;
+    for (var i = 0; i < offsets.length && i < trendValues!.length; i++) {
+      final value = trendValues![i];
+      if (value == null) {
+        if (path != null) canvas.drawPath(path, paint);
+        path = null;
+        continue;
+      }
+      final point = Offset(offsets[i].dx, geometry.yFor(value));
+      if (path == null) {
+        path = Path()..moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    if (path != null) canvas.drawPath(path, paint);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -358,6 +399,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
         canvas.drawPath(areaPath, Paint()..color = areaColor!..style = PaintingStyle.fill);
       }
 
+      final hasTrend = trendValues?.any((v) => v != null) ?? false;
       final path = Path()..moveTo(offsets.first.dx, offsets.first.dy);
       for (final offset in offsets.skip(1)) {
         path.lineTo(offset.dx, offset.dy);
@@ -365,11 +407,14 @@ class _TimeSeriesChartPainter extends CustomPainter {
       canvas.drawPath(
         path,
         Paint()
-          ..color = lineColor
+          // The raw line gives way to the trend rather than competing with
+          // it, but stays visible: it is what the user typed in (D-W3).
+          ..color = hasTrend ? lineColor.withValues(alpha: 0.32) : lineColor
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
+          ..strokeWidth = hasTrend ? 1.5 : 2.5
           ..strokeCap = StrokeCap.round,
       );
+      if (hasTrend) _paintTrend(canvas, geometry, offsets);
     }
 
     for (var i = 0; i < offsets.length; i++) {
@@ -450,6 +495,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
         oldDelegate.lineColor != lineColor ||
         oldDelegate.selectedIndex != selectedIndex ||
         oldDelegate.goalValue != goalValue ||
+        oldDelegate.trendValues != trendValues ||
         oldDelegate.areaColor != areaColor ||
         (oldDelegate.deltaLabelBuilder == null) != (deltaLabelBuilder == null);
   }

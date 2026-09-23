@@ -79,7 +79,7 @@ clients, assignments, schedules, calendar) on the web admin.
 * Measurements: waist, chest, arms, thighs — history + charts
 * Reuse the existing image upload infrastructure (recipe/receipt images)
 
-#### 11. Smarter Weight Trend
+#### 11. Smarter Weight Trend (DONE, plan: 76-smarter-weight-trend-plan.md)
 
 * 7-day moving average instead of raw daily points
 * Goal weight + estimated date of reaching it on the statistics screen

@@ -1561,6 +1561,45 @@
     "description": "Snackbar after saving an AI-generated recipe when some ingredients could not be resolved to a local food",
     "placeholders": {"count": {"type": "int"}}
   },
+  "weightTrendCaption": "7-day average",
+  "@weightTrendCaption": {
+    "description": "Legend under the weight chart for the smoothed trend line (docs/76-smarter-weight-trend-plan.md)"
+  },
+  "weightGoalCardTitle": "Goal weight",
+  "@weightGoalCardTitle": {
+    "description": "Title of the goal card on the Weight tab (docs/76 §4)"
+  },
+  "weightGoalRemainingValue": "{kg} kg to go",
+  "@weightGoalRemainingValue": {
+    "description": "How far the goal still is, on the Weight tab's goal card; {kg} is already formatted to one decimal",
+    "placeholders": {"kg": {"type": "String"}}
+  },
+  "weightGoalRateValue": "{rate} kg/week",
+  "@weightGoalRateValue": {
+    "description": "Current rate of change on the goal card; {rate} is signed and already formatted (e.g. \"−0.4\")",
+    "placeholders": {"rate": {"type": "String"}}
+  },
+  "weightGoalEtaMessage": "At this rate, around {date}",
+  "@weightGoalEtaMessage": {
+    "description": "Estimated date of reaching the goal weight; {date} is already formatted for the locale",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "weightGoalReachedMessage": "You're at your goal weight",
+  "@weightGoalReachedMessage": {
+    "description": "Goal card when the trend is within 0.2 kg of the goal"
+  },
+  "weightGoalWrongWayMessage": "The trend is moving away from your goal",
+  "@weightGoalWrongWayMessage": {
+    "description": "Goal card when the weight trend moves away from the goal instead of toward it"
+  },
+  "weightGoalTooSlowMessage": "At this rate it would take years",
+  "@weightGoalTooSlowMessage": {
+    "description": "Goal card when the trend moves toward the goal but would need more than two years"
+  },
+  "weightGoalNotEnoughDataMessage": "Keep weighing in for a couple of weeks and an estimate shows up here",
+  "@weightGoalNotEnoughDataMessage": {
+    "description": "Goal card when there are too few weigh-ins to project a date (docs/76 D-W6)"
+  },
   "paywallCloseTooltip": "Close",
   "@paywallCloseTooltip": {
     "description": "Accessibility tooltip for the paywall's top-left close button (69 §3.1)"
