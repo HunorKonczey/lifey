@@ -1,10 +1,12 @@
 # 21 — Design-modernizáció: prompt Claude Designnak
 
 > **A fájl célja:** önállóan átadható prompt a Lifey mobilapp **vizuális modernizálásához**.
-> A §0 blokkot egy az egyben be lehet másolni. Mellé a `lifey-design-screens-part1.zip` és
-> `-part2.zip` csomagot kell csatolni. Ketté vannak bontva, mert a feltöltési limit 20 MB.
-> Együtt 135 képernyőképet tartalmaznak a mostani állapotról, 11 mappában. Mindkettőben
-> benne van a `README.md`, ami leírja a funkciókat és a megfigyeléseket.
+> A §0 blokkot egy az egyben be lehet másolni. Mellé ezeket kell csatolni:
+> - a `lifey-current-design.pdf` fájlt: 60 oldal, 8 MB, benne a 135 képernyőkép a mostani
+>   állapotról, oldalanként 3, felirattal, 11 szekcióban;
+> - a `README.md` fájlt, ami leírja a funkciókat és a megfigyeléseket.
+>
+> Azért PDF, mert a Claude Design nem fogad el zipet, és 20 MB a feltöltési limit.
 >
 > Előzmények: [18-design-system-prompt.md](18-design-system-prompt.md) (az első redesign
 > promptja, ebből lett a mostani rendszer), [20-design-implementation-tasks.md](20-design-implementation-tasks.md).
@@ -15,12 +17,12 @@
 ## 0. A prompt (ezt add át)
 
 > A **Lifey**-n dolgozol. Ez egy offline-first fitness- és táplálkozáskövető mobilapp
-> (Flutter, Material 3). A csatolt két zip együtt **135 képernyőképet** tartalmaz a jelenlegi
-> állapotról, mappákba rendezve. A part1-ben van az auth és onboarding, a dashboard, az
-> étrend, az edzések és a súly. A part2-ben a statisztika, a chat, a beállítások, a világos
-> téma, a magyar nyelv és az edzői nézet. Minden mappában van egy
-> `_overview.jpg` áttekintő kép. A `README.md` képernyőnként leírja a funkciókat, a mostani
-> design tokeneket és egy listát a hibákról és következetlenségekről.
+> (Flutter, Material 3). A csatolt `lifey-current-design.pdf` **135 képernyőképet** tartalmaz
+> a jelenlegi állapotról, 11 szekcióba rendezve: auth és onboarding, dashboard, étrend,
+> edzések, súly, statisztika, chat, beállítások, világos téma, magyar nyelv, edzői nézet.
+> Minden kép fölött ott van a szekció és a képernyő neve. A csatolt `README.md` ugyanezekkel
+> a nevekkel írja le a funkciókat, a mostani design tokeneket és egy listát a hibákról és
+> következetlenségekről.
 >
 > **A cél: modernizáld a designt, legyen szebb.** Az app ma funkcionálisan gazdag, de
 > vizuálisan kicsit lapos és zsúfolt: sok egyforma sötét kártya, gyenge hierarchia,
