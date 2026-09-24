@@ -18,10 +18,20 @@ class PillTabBar extends StatelessWidget {
     super.key,
     required this.controller,
     required this.tabs,
+    this.horizontalMargin = legacyMargin,
   });
 
   final TabController controller;
   final List<Widget> tabs;
+
+  /// Side margin. Defaults to the v1 12 px the unmigrated screens' content
+  /// still uses, so the bar lines up with the cards under it; a screen
+  /// passes [AppSpacing.screen] (20, the design's margin) in the iteration
+  /// that moves its content to 20 too (R0 emulator review: a 20 px bar over
+  /// 12 px cards looked misaligned).
+  final double horizontalMargin;
+
+  static const double legacyMargin = 12;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +40,7 @@ class PillTabBar extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen, vertical: AppSpacing.s8),
+      padding: EdgeInsets.symmetric(horizontal: horizontalMargin, vertical: AppSpacing.s8),
       child: Container(
         height: 46,
         padding: const EdgeInsets.all(AppSpacing.s4),

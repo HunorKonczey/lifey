@@ -132,8 +132,8 @@ class _SwitchersSectionState extends State<_SwitchersSection> with SingleTickerP
           selected: _range,
           onChanged: (v) => setState(() => _range = v),
         ),
-        const GalleryCaption('PillTabBar (has its own 20 px screen margin)'),
-        PillTabBar(controller: _tabs, tabs: [
+        const GalleryCaption('PillTabBar (design margin 20 — screens opt in per iteration)'),
+        PillTabBar(controller: _tabs, horizontalMargin: AppSpacing.screen, tabs: [
           Tab(text: hu ? 'Étkezések' : 'Meals'),
           Tab(text: hu ? 'Receptek' : 'Recipes'),
           Tab(text: hu ? 'Ételek' : 'Foods'),
