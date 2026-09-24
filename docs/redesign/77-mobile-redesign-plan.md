@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: not started (plan only — no code written yet)
+Status: in progress — R0.1 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -105,11 +105,12 @@ misleading names (e.g. `outline` as text-3) — that is how "fehérje = kijelöl
 
 | Design token | Dark | Light | `AppPalette` field | `ColorScheme` slot |
 |---|---|---|---|---|
-| bg | `#12130E` | `#F4F2E9` | `bg` | `surface`, `surfaceContainerLowest`, scaffold bg |
+| bg | `#12130E` | `#F4F2E9` | `bg` | `surface`, scaffold bg; `surfaceContainerLowest` in dark (light keeps it white, the M3 light convention existing call sites rely on) |
 | surface-1 · card | `#1A1C15` | `#FFFFFF` | `card` | `surfaceContainerLow` |
 | surface-2 · nested | `#22251C` | `#F0EEE3` | `nested` | `surfaceContainer` |
 | surface-3 · chip, input, track | `#2C2F24` | `#E6E4D6` | `control` | `surfaceContainerHigh` |
-| float · nav, header | `#282C20` @ 82 % + blur 24 | bg @ 86 % + blur | `float` (+ `floatBlur`) | `surfaceContainerHighest` (opaque fallback) |
+| *(derived)* surface-4 | `#36392D` | `#DCDAC9` | `raised` | `surfaceContainerHighest` — one step past `control` so the ladder stays monotonic |
+| float · nav, header | `#282C20` @ 82 % + blur 24 | bg @ 86 % + blur | `float` | — (translucent; no Material slot) |
 | header scrim | bg @ 88 % + blur | bg @ 88 % + blur | `scrim` | — |
 | text | `#F2F1E6` (16.8:1) | `#1C1D16` (15.9:1) | `text` | `onSurface` |
 | text-2 | `#B6B5A5` (9.1:1) | `#56574B` (6.9:1) | `text2` | `onSurfaceVariant` |
@@ -118,30 +119,41 @@ misleading names (e.g. `outline` as text-3) — that is how "fehérje = kijelöl
 | primary tint (avatar, selected chip) | primary @ 16 %, text `#D6E2A6` | primary @ 12 %, text primary | `primaryTint` | `primaryContainer` / `onPrimaryContainer` |
 | clay (trainer role) | existing secondary `#C49A6C` | existing secondary `#7E613C` | `role` | `secondary` (unchanged) |
 
-Outline / divider values are not in the canvas; derive them as text @ 7 % (dark, the canvas's
-`rgba(242,241,230,0.07)` hairline) and `#E6E4D6` (light) and note them as derived in the code.
+Outline / divider values are not in the canvas; derived: `hairline` = text @ 7 % (dark, the canvas's
+`rgba(242,241,230,0.07)`) / `#E6E4D6` (light); `outline` (component boundaries) `#45483B` dark,
+`#CDCBBC` light (unchanged). The canvas's printed contrast ratios run 2–4 % above what the WCAG
+formula gives for the same hexes; every text tier is still AA on bg, card and nested
+(`test/core/theme/contrast_test.dart`).
 
 ### D-R0.3 Metric colours get new, equal-lightness values; protein is no longer the brand olive
 
 `AppMetricColors` keeps its shape and gains three semantic roles. Rejected: keeping protein =
 primary — the design explicitly separates them so "selected" and "protein" stop blending.
 
-| Metric | Dark · `oklch(0.76 0.11 h)` | Light · `oklch(0.52 0.11 h)` (text-safe) |
-|---|---|---|
-| calories | `#EC9A66` | `#B35A22` |
-| protein | `#93C98C` | `#3F7F3A` |
-| carbs | `#E2BE62` | `#8C6A0C` |
-| fat | `#A3A1DB` | `#5A57A8` |
-| water | `#74B6D6` | `#1F6F92` |
-| steps | `#C593CC` | `#8A4E94` |
-| weight | `#98ADC0` | `#4F6579` |
-| heart | `#E07F76` | `#B2433B` |
+| Metric | Dark · canvas, `oklch(0.76 0.11 h)` | Light · canvas hue + chroma at oklch L 0.50 | Light · canvas hex (not used) |
+|---|---|---|---|
+| calories | `#EC9A66` | `#9D4602` | `#B35A22` |
+| protein | `#93C98C` | `#34742F` | `#3F7F3A` |
+| carbs | `#E2BE62` | `#7F5D00` | `#8C6A0C` |
+| fat | `#A3A1DB` | `#5A57A8` | `#5A57A8` |
+| water | `#74B6D6` | `#1A6C8F` | `#1F6F92` |
+| steps | `#C593CC` | `#83488D` | `#8A4E94` |
+| weight | `#98ADC0` | `#50667A` | `#4F6579` |
+| heart | `#E07F76` | `#A73831` | `#B2433B` |
+
+**Light deviates from the canvas hexes (decided in R0.1).** The canvas labels its light set
+`oklch(0.52 …)` and promises chips at "AA ≥ 4.8:1", but its hexes actually spread over L
+0.50–0.57, and calories / protein / carbs measure only 4.1–4.3:1 on their own 12 % chip tint
+(below AA) and 4.25–4.48:1 as text on bg. Moving all eight to one shared L = 0.50 (same hue and
+chroma) keeps the "one family" rule and the canvas's own promise: worst chip 4.82:1, every colour
+≥ 5:1 on bg. Rejected: darkening only the three failing colours (breaks equal lightness), and a
+lighter chip tint (the chip would stop reading as a chip).
 
 New semantic roles (aliases, so a later palette change moves them together):
 `improvement` = protein (the ↑ "better than last time" mark), `record` = carbs (🏆 PR),
 `decrease` = weight (a signed "−" change chip), `increase` = calories (a signed "+" chip).
-`positive` / `negative` stay for goal states (reached / over budget) and map to protein /
-calories. **In light theme every metric colour is used for text, fills, rings and bars alike**
+`positive` / `negative` stay for goal states (reached / over budget) and take the protein /
+calories values. The roles are getters on `AppMetricColors`, not fields. **In light theme every metric colour is used for text, fills, rings and bars alike**
 — there is no separate "fill" variant (the canvas: "a sávok és gyűrűk is ezt használják").
 
 ### D-R0.4 Tinted chips follow one rule per theme — this closes the deferred AA issue
@@ -303,7 +315,7 @@ in the gallery.
 4. *Hungarian is the yardstick* — every row may wrap to two lines; labels sized for the longest
    HU string; no ellipsis on labels.
 
-### R0.1 — Mobile UI: new palette in `ColorScheme` + `AppPalette` extension
+### R0.1 — Mobile UI: new palette in `ColorScheme` + `AppPalette` extension ✅
 
 - Files: `core/theme/app_theme.dart`, `core/theme/app_tokens.dart` (new `AppPalette` +
   `context.palette`), `test/core/theme/contrast_test.dart` (new).

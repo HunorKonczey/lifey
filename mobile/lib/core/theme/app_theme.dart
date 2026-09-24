@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'app_tokens.dart';
 
-/// Centralized application theming — dark-first, brown-green identity.
+/// Centralized application theming — dark-first, warm olive identity.
 ///
-/// Token source: docs/design/design-handoff/.../Lifey Redesign.dc.html
-/// Dark is the hero theme; light uses the same semantic tokens on a warm
-/// off-white base.
+/// Token source: docs/redesign/Lifey Design System.dc.html (design system v2),
+/// mapped per docs/redesign/77-mobile-redesign-plan.md D-R0.2. Surface, text
+/// and tint values live in [AppPalette]; this file maps them onto the
+/// Material [ColorScheme] slots so stock widgets pick them up. Dark is the
+/// hero theme; light is the same system, not an inversion.
 class AppTheme {
   const AppTheme._();
 
@@ -17,59 +19,67 @@ class AppTheme {
   static ThemeData get dark => ThemeData(
         useMaterial3: true,
         colorScheme: _darkScheme,
-        scaffoldBackgroundColor: _dark.bg,
+        scaffoldBackgroundColor: AppPalette.dark.bg,
         fontFamily: _fontFamily,
         textTheme: _textTheme,
-        extensions: const [AppMetricColors.dark],
+        extensions: const [AppMetricColors.dark, AppPalette.dark],
         // Subtle, on-brand ripple — default is onSurface (~white) at 12%,
         // which looks harshly bright on near-black surfaces.
-        splashColor: const Color(0xFF9DAE6B).withValues(alpha: 0.10),
-        highlightColor: const Color(0xFF9DAE6B).withValues(alpha: 0.06),
+        splashColor: _darkPrimary.withValues(alpha: 0.10),
+        highlightColor: _darkPrimary.withValues(alpha: 0.06),
       );
 
-  static const _DarkColors _dark = _DarkColors();
+  static const Color _darkPrimary = Color(0xFFB5C47C);
+  static const Color _lightPrimary = Color(0xFF4E6530);
 
-  static ColorScheme get _darkScheme => ColorScheme(
-        brightness: Brightness.dark,
-        // Primary — moss-olive green
-        primary: _dark.primary,
-        onPrimary: _dark.bg,
-        primaryContainer: _dark.container,
-        onPrimaryContainer: _dark.primary,
-        // Secondary — warm brown
-        secondary: _dark.secondary,
-        onSecondary: _dark.bg,
-        secondaryContainer: const Color(0xFF2A2018),
-        onSecondaryContainer: _dark.secondary,
-        // Tertiary — forest green
-        tertiary: _dark.tertiary,
-        onTertiary: _dark.bg,
-        tertiaryContainer: const Color(0xFF1A2E1A),
-        onTertiaryContainer: _dark.tertiary,
-        // Error — keep Material standard for actual errors
-        error: const Color(0xFFCF6679),
-        onError: const Color(0xFF1C0008),
-        errorContainer: const Color(0xFF8C1D2F),
-        onErrorContainer: const Color(0xFFFFB3BF),
-        // Surfaces — stepped warm-dark layers
-        surface: _dark.surface,
-        onSurface: _dark.onSurface,
-        onSurfaceVariant: _dark.onSurfaceVariant,
-        surfaceContainerLowest: _dark.bg,
-        surfaceContainerLow: _dark.surface,
-        surfaceContainer: _dark.container,
-        surfaceContainerHigh: _dark.high,
-        surfaceContainerHighest: _dark.highest,
-        // Outline
-        outline: const Color(0xFF3C3E32),
-        outlineVariant: _dark.high,
-        // Inverse
-        inverseSurface: _dark.onSurface,
-        onInverseSurface: _dark.bg,
-        inversePrimary: const Color(0xFF586E38),
-        shadow: const Color(0xFF000000),
-        scrim: const Color(0xFF000000),
-      );
+  static ColorScheme get _darkScheme {
+    const p = AppPalette.dark;
+    return ColorScheme(
+      brightness: Brightness.dark,
+      // Primary — brand olive, reserved for controls (buttons, active tab,
+      // selection); never a metric colour.
+      primary: _darkPrimary,
+      onPrimary: const Color(0xFF1A1F0A),
+      // Opaque version of p.primaryTint — the header avatar fill on the canvas.
+      primaryContainer: const Color(0xFF3A4228),
+      onPrimaryContainer: p.onPrimaryTint,
+      // Secondary — warm clay (also the trainer role mark, p.role)
+      secondary: p.role,
+      onSecondary: p.bg,
+      secondaryContainer: const Color(0xFF2A2018),
+      onSecondaryContainer: p.role,
+      // Tertiary — forest green. Unchanged by the v2 palette; the trainer
+      // shell stops using it as its accent in R6.
+      tertiary: const Color(0xFF6E9A6A),
+      onTertiary: p.bg,
+      tertiaryContainer: const Color(0xFF1A2E1A),
+      onTertiaryContainer: const Color(0xFF6E9A6A),
+      // Error — keep Material standard for actual errors
+      error: const Color(0xFFCF6679),
+      onError: const Color(0xFF1C0008),
+      errorContainer: const Color(0xFF8C1D2F),
+      onErrorContainer: const Color(0xFFFFB3BF),
+      // Surfaces — bg < card < nested < control < raised
+      surface: p.bg,
+      onSurface: p.text,
+      onSurfaceVariant: p.text2,
+      surfaceContainerLowest: p.bg,
+      surfaceContainerLow: p.card,
+      surfaceContainer: p.nested,
+      surfaceContainerHigh: p.control,
+      surfaceContainerHighest: p.raised,
+      // Outline — component boundaries (outlined buttons, inputs) need to stay
+      // visible, so this is stronger than the p.hairline divider.
+      outline: const Color(0xFF45483B),
+      outlineVariant: p.control,
+      // Inverse
+      inverseSurface: p.text,
+      onInverseSurface: p.bg,
+      inversePrimary: _lightPrimary,
+      shadow: const Color(0xFF000000),
+      scrim: const Color(0xFF000000),
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Light
@@ -78,57 +88,68 @@ class AppTheme {
   static ThemeData get light => ThemeData(
         useMaterial3: true,
         colorScheme: _lightScheme,
-        scaffoldBackgroundColor: _light.bg,
+        scaffoldBackgroundColor: AppPalette.light.bg,
         fontFamily: _fontFamily,
         textTheme: _textTheme,
-        extensions: const [AppMetricColors.light],
-        splashColor: const Color(0xFF586E38).withValues(alpha: 0.10),
-        highlightColor: const Color(0xFF586E38).withValues(alpha: 0.06),
+        extensions: const [AppMetricColors.light, AppPalette.light],
+        splashColor: _lightPrimary.withValues(alpha: 0.10),
+        highlightColor: _lightPrimary.withValues(alpha: 0.06),
       );
 
-  static const _LightColors _light = _LightColors();
-
-  static ColorScheme get _lightScheme => ColorScheme(
-        brightness: Brightness.light,
-        // Primary — deeper olive for light contrast
-        primary: _light.primary,
-        onPrimary: Colors.white,
-        primaryContainer: const Color(0xFFDDEEBB),
-        onPrimaryContainer: const Color(0xFF1A2E0A),
-        // Secondary — deep brown
-        secondary: _light.secondary,
-        onSecondary: Colors.white,
-        secondaryContainer: const Color(0xFFF4DFC8),
-        onSecondaryContainer: const Color(0xFF2E1A08),
-        // Tertiary — forest green
-        tertiary: _light.tertiary,
-        onTertiary: Colors.white,
-        tertiaryContainer: const Color(0xFFCCE8D2),
-        onTertiaryContainer: const Color(0xFF0A2E14),
-        // Error
-        error: const Color(0xFFBA1A2C),
-        onError: Colors.white,
-        errorContainer: const Color(0xFFFFDADE),
-        onErrorContainer: const Color(0xFF40000E),
-        // Surfaces
-        surface: _light.surface,
-        onSurface: _light.onSurface,
-        onSurfaceVariant: _light.onSurfaceVariant,
-        surfaceContainerLowest: Colors.white,
-        surfaceContainerLow: const Color(0xFFF8F7EE),
-        surfaceContainer: _light.bg,
-        surfaceContainerHigh: _light.container,
-        surfaceContainerHighest: const Color(0xFFE6E5D8),
-        // Outline
-        outline: _light.outline,
-        outlineVariant: const Color(0xFFE6E5DC),
-        // Inverse
-        inverseSurface: _light.onSurface,
-        onInverseSurface: _light.bg,
-        inversePrimary: const Color(0xFF9DAE6B),
-        shadow: const Color(0xFF000000),
-        scrim: const Color(0xFF000000),
-      );
+  static ColorScheme get _lightScheme {
+    const p = AppPalette.light;
+    return ColorScheme(
+      brightness: Brightness.light,
+      // Primary — deep olive, 6.8:1 on white
+      primary: _lightPrimary,
+      onPrimary: Colors.white,
+      // Opaque version of p.primaryTint (primary at 12 % on white).
+      primaryContainer: const Color(0xFFEAECE6),
+      onPrimaryContainer: p.onPrimaryTint,
+      // Secondary — deep clay (also the trainer role mark, p.role).
+      //
+      // Was 0xFF8A6A42, which as text measured 4.42:1 on the old bg and
+      // 4.15:1 on the old container — below WCAG AA's 4.5:1. Darkened ~3%
+      // lightness at the same hue and saturation; same value as web's
+      // `--secondary`, which was fixed for the same reason (the two products
+      // share this palette).
+      secondary: p.role,
+      onSecondary: Colors.white,
+      secondaryContainer: const Color(0xFFF4DFC8),
+      onSecondaryContainer: const Color(0xFF2E1A08),
+      // Tertiary — forest green. Darkened from 0xFF4A7A52 for the same reason
+      // as secondary. Unchanged by the v2 palette.
+      tertiary: const Color(0xFF44704C),
+      onTertiary: Colors.white,
+      tertiaryContainer: const Color(0xFFCCE8D2),
+      onTertiaryContainer: const Color(0xFF0A2E14),
+      // Error
+      error: const Color(0xFFBA1A2C),
+      onError: Colors.white,
+      errorContainer: const Color(0xFFFFDADE),
+      onErrorContainer: const Color(0xFF40000E),
+      // Surfaces — white cards on a warm off-white bg; nesting gets darker.
+      // Lowest stays white (the M3 light convention the existing call sites
+      // were written against).
+      surface: p.bg,
+      onSurface: p.text,
+      onSurfaceVariant: p.text2,
+      surfaceContainerLowest: p.card,
+      surfaceContainerLow: p.card,
+      surfaceContainer: p.nested,
+      surfaceContainerHigh: p.control,
+      surfaceContainerHighest: p.raised,
+      // Outline
+      outline: const Color(0xFFCDCBBC),
+      outlineVariant: p.hairline,
+      // Inverse
+      inverseSurface: p.text,
+      onInverseSurface: p.bg,
+      inversePrimary: _darkPrimary,
+      shadow: const Color(0xFF000000),
+      scrim: const Color(0xFF000000),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -172,78 +193,3 @@ TextStyle _ts(double size, FontWeight weight, {bool tabular = false}) =>
       fontWeight: weight,
       fontFeatures: tabular ? const [FontFeature.tabularFigures()] : null,
     );
-
-// ---------------------------------------------------------------------------
-// Color value holders — single source of truth per theme
-// ---------------------------------------------------------------------------
-
-final class _DarkColors {
-  const _DarkColors();
-
-  /// Near-black warm bg — scaffold background, deepest surface
-  Color get bg => const Color(0xFF161611);
-
-  /// Main surface (cards, list tiles sit on this)
-  Color get surface => const Color(0xFF1C1E16);
-
-  /// Container surface (elevated cards, stat cards)
-  Color get container => const Color(0xFF22241B);
-
-  /// High container (nav bar, floating bars)
-  Color get high => const Color(0xFF2A2C20);
-
-  /// Highest container (chips, segmented selected bg)
-  Color get highest => const Color(0xFF32342A);
-
-  /// Moss-olive primary accent
-  Color get primary => const Color(0xFF9DAE6B);
-
-  /// Warm brown secondary
-  Color get secondary => const Color(0xFFC49A6C);
-
-  /// Forest green tertiary
-  Color get tertiary => const Color(0xFF6E9A6A);
-
-  /// Primary text on dark surfaces
-  Color get onSurface => const Color(0xFFF1F0E4);
-
-  /// Muted / secondary text
-  Color get onSurfaceVariant => const Color(0xFFA8A899);
-}
-
-final class _LightColors {
-  const _LightColors();
-
-  /// Warm off-white scaffold background
-  Color get bg => const Color(0xFFF3F2E8);
-
-  /// Pure white surface for cards
-  Color get surface => const Color(0xFFFFFFFF);
-
-  /// Container (elevated groups)
-  Color get container => const Color(0xFFECEBDE);
-
-  /// Deeper olive for light-mode primary (contrast on white)
-  Color get primary => const Color(0xFF586E38);
-
-  /// Deep warm brown.
-  ///
-  /// Was 0xFF8A6A42, which as text measured 4.42:1 on [bg] and 4.15:1 on
-  /// [container] — below WCAG AA's 4.5:1. Darkened ~3% lightness at the same
-  /// hue and saturation; same value as web's `--secondary`, which was fixed
-  /// for the same reason (the two products share this palette).
-  Color get secondary => const Color(0xFF7E613C);
-
-  /// Forest green. Darkened from 0xFF4A7A52 for the same reason as
-  /// [secondary] (4.45:1 / 4.17:1 as text before, 5.09-5.73:1 now).
-  Color get tertiary => const Color(0xFF44704C);
-
-  /// Near-black primary text
-  Color get onSurface => const Color(0xFF1E1F18);
-
-  /// Muted secondary text
-  Color get onSurfaceVariant => const Color(0xFF5C5C50);
-
-  /// Subtle borders
-  Color get outline => const Color(0xFFCDCBBC);
-}
