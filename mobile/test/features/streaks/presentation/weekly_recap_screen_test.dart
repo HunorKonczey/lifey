@@ -114,7 +114,7 @@ void main() {
       macros: [_macros(_lastWeekDay(0), 1800), _macros(_lastWeekDay(1), 2200)],
     );
 
-    expect(find.text('1 workouts'), findsOneWidget);
+    expect(find.text('1 workout'), findsOneWidget);
     expect(find.text('40 min total'), findsOneWidget);
     expect(find.text('2000'), findsOneWidget); // avg of 1800/2200
     expect(find.text('avg of 2 logged days'), findsOneWidget);

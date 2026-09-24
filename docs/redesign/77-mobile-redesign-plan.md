@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.3 done
+Status: in progress — R0.1–R0.4 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -415,7 +415,7 @@ in the gallery.
 - **Verify:** app-wide click-through of all 5 tabs: no giant or clipped text; unit test that
   `AppType.number` has `tnum`.
 
-### R0.4 — Mobile UI: one number/date/plural formatting layer
+### R0.4 — Mobile UI: one number/date/plural formatting layer ✅
 
 - Files: `core/format/lifey_format.dart` (new), `test/core/format/lifey_format_test.dart`,
   ARB audit via the `localization` skill.
@@ -429,6 +429,31 @@ in the gallery.
   "workouts", "sessions") and convert to ICU plurals — keys unchanged, so call sites don't move.
 - Call sites are **not** migrated here; each iteration migrates its own.
 - **Verify:** unit tests for EN + HU of every function incl. negatives, 0, 999.95, 17518.6.
+
+*As built:* `LifeyFormat(locale)` / `LifeyFormat.of(context)` in `core/format/lifey_format.dart`
+with `integer`, `kcal`, `grams`, `weight`, `distance`, `litres`, `decimal`, `percent`,
+`signedDelta`, `compactAxis`, `dayLabel`, `shortDayLabel`, `time`, `weekdayNarrow`
+(`test/core/format/lifey_format_test.dart`, 20 cases). Decisions made on the way:
+- **Hungarian decimals use a comma** ("64,5 kg", "0,25 L") — the locale's own separator and the
+  house style in the `localization` skill. The HU canvas frame (1.3) shows dots; that is read as
+  a canvas oversight, not a decision. Display only — editable fields keep their own parsing.
+- **Root cause of the "Thu, Sep 24" leak:** the app never sets `Intl.defaultLocale`, and most of
+  the ~25 `DateFormat(...)` calls pass no locale, so they render English in Hungarian mode.
+  `LifeyFormat` always passes the locale; each iteration replaces its screens' bare
+  `DateFormat`s (the R7.1 audit should count `DateFormat('` without a locale argument).
+- **Hungarian chart weekdays are abbreviations** (H K Sze Cs P Szo V): intl's narrow form
+  repeats "Sz" for Wednesday and Saturday.
+- **`durationHm` is not in `LifeyFormat`** — its unit words need translating; the existing
+  `trainerDurationHoursMinutesLabel` ARB key ("{hours} h {minutes} min" / "{hours} ó {minutes}
+  perc") is generalised when R3/R4 first need it.
+- **Plurals fixed** (keys and signatures unchanged): `exercisesCountLabel`, `setsCountLabel`,
+  `workoutExerciseCount`, `workoutSuccessSubtitle`, `recapWorkoutsCount`,
+  `intervalPlanSummaryLabel`, `intervalSectionsCountChip`, `waypointsCountChip`,
+  `trainerOccurrenceCountSummary`. Left alone because their count can never be 1:
+  `stepGoalNotificationBody`, `chatSearchPromptBody`, `intervalSectionsShowAll`,
+  `trainerTooManyOccurrencesMessage`. Three widget tests asserted the buggy "1 workouts" /
+  "1 waypoints" / "1 sets" and were corrected; `test/l10n/plural_strings_test.dart` guards
+  the fix.
 
 ### R0.5 — Mobile UI: motion primitives + page transitions
 

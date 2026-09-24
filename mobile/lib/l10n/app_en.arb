@@ -912,7 +912,7 @@
   "@tapPlusToCreateOneMessage": {
     "description": "Empty state subtitle on the Templates tab"
   },
-  "exercisesCountLabel": "{count} exercises",
+  "exercisesCountLabel": "{count, plural, =1{1 exercise} other{{count} exercises}}",
   "@exercisesCountLabel": {
     "description": "Fallback subtitle showing a template's exercise count",
     "placeholders": {
@@ -1015,7 +1015,7 @@
   "@upcomingWorkoutDismissTooltip": {
     "description": "Tooltip for the close button on the upcoming-workout pop-up card"
   },
-  "setsCountLabel": "{count} sets",
+  "setsCountLabel": "{count, plural, =1{1 set} other{{count} sets}}",
   "@setsCountLabel": {
     "description": "Number of sets in a workout session",
     "placeholders": {
@@ -2257,7 +2257,7 @@
       }
     }
   },
-  "workoutExerciseCount": "{count} exercises",
+  "workoutExerciseCount": "{count, plural, =1{1 exercise} other{{count} exercises}}",
   "@workoutExerciseCount": {
     "description": "Number of distinct exercises on the recent workout tile",
     "placeholders": {
@@ -2641,7 +2641,7 @@
   "@workoutSuccessTitle": {
     "description": "Title of the celebration dialog shown when a workout finishes with a net improvement in at least 2 metrics"
   },
-  "workoutSuccessSubtitle": "You improved in {count} areas since last time",
+  "workoutSuccessSubtitle": "{count, plural, =1{You improved in 1 area since last time} other{You improved in {count} areas since last time}}",
   "@workoutSuccessSubtitle": {
     "description": "Subtitle of the workout-success celebration dialog",
     "placeholders": {
@@ -3257,7 +3257,7 @@
   "@recapWorkoutsSectionTitle": {
     "description": "Recap screen section heading for the week's workouts"
   },
-  "recapWorkoutsCount": "{count} workouts",
+  "recapWorkoutsCount": "{count, plural, =1{1 workout} other{{count} workouts}}",
   "@recapWorkoutsCount": {
     "description": "Number of workouts done during the recap week",
     "placeholders": {
@@ -4730,7 +4730,7 @@
   "@intervalPlanPickerWithoutPlan": {
     "description": "Starts the indoor-bike session with no interval plan — the screen then looks exactly as it always has (M38)"
   },
-  "intervalPlanSummaryLabel": "{duration} · {sections} sections",
+  "intervalPlanSummaryLabel": "{duration} · {sections, plural, =1{1 section} other{{sections} sections}}",
   "@intervalPlanSummaryLabel": {
     "description": "Subtitle of a saved plan in the picker: total length and section count",
     "placeholders": {
@@ -4763,7 +4763,7 @@
   "@intervalSectionsSectionLabel": {
     "description": "Header of the executed interval sections card on the machine summary (M39)"
   },
-  "intervalSectionsCountChip": "{count} sections",
+  "intervalSectionsCountChip": "{count, plural, =1{1 section} other{{count} sections}}",
   "@intervalSectionsCountChip": {
     "description": "Chip in the interval sections card header (M39)",
     "placeholders": {
@@ -4875,7 +4875,7 @@
   "@waypointsSectionLabel": {
     "description": "Header of the waypoint list card on the hike summary screen (docs/cardio/60 C8.4, M42)"
   },
-  "waypointsCountChip": "{count} waypoints",
+  "waypointsCountChip": "{count, plural, =1{1 waypoint} other{{count} waypoints}}",
   "@waypointsCountChip": {
     "description": "Chip in the waypoint list card header (M42)",
     "placeholders": {
@@ -5801,7 +5801,7 @@
       }
     }
   },
-  "trainerOccurrenceCountSummary": "This creates {count} sessions, {from} – {to}",
+  "trainerOccurrenceCountSummary": "This creates {count, plural, =1{1 session} other{{count} sessions}}, {from} – {to}",
   "@trainerOccurrenceCountSummary": {
     "description": "The create-schedule form's answer to \"how many sessions is this\", shown before anything is sent (frame F4). Dates are already formatted",
     "placeholders": {

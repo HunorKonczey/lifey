@@ -151,7 +151,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(ActivityChip), findsNothing);
     expect(find.byIcon(Icons.fitness_center), findsOneWidget);
-    expect(find.text('1 sets'), findsOneWidget);
+    expect(find.text('1 set'), findsOneWidget);
   });
 
   testWidgets('a DISTANCE session shows its distance as the primary metric', (tester) async {
