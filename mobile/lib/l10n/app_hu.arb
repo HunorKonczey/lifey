@@ -1319,5 +1319,7 @@
   "trainerNutritionGoalsSubtitle": "A kliensed a saját céljaként látja majd ezeket.",
   "trainerNutritionGoalsBlankHint": "Hagyd üresen a mezőt, ha arra nem adsz célt.",
   "trainerGoalsSavedNotifiedMessage": "Célok mentve — a kliensed értesítést kapott.",
-  "trainerGoalsSavedMessage": "Célok mentve."
+  "trainerGoalsSavedMessage": "Célok mentve.",
+  "deltaDownSemantics": "{value} csökkenés",
+  "deltaUpSemantics": "{value} növekedés"
 }

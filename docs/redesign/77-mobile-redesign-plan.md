@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.6 done
+Status: in progress — R0.1–R0.7 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -501,7 +501,7 @@ gallery opens without an account. `contrastRatio` moved to `core/theme/contrast.
 shared with the contrast test. `test/shared/widgets/ds/design_gallery_test.dart` walks all 16
 toolbar combinations at 411 × 923 dp and fails on any overflow.
 
-### R0.7 — Mobile UI: surface + text components
+### R0.7 — Mobile UI: surface + text components ✅
 
 - Files in `shared/widgets/ds/`: `lifey_card.dart` (variants `card` r22/e1/pad 16, `hero`
   r30/e2/pad 20–22, `nested` surface-2 r = parent − padding), `section_label.dart` (12/16 caps
@@ -511,6 +511,29 @@ toolbar combinations at 411 × 923 dp and fails on any overflow.
   name, fallback first letter of e-mail; primary tint bg; 44 px default).
 - **Verify:** gallery section per component, dark/light/HU/1.3; widget test that the monogram
   for "Anna Kovács" is "AK" and for no name falls back to the e-mail initial.
+
+*As built* (values checked against the canvases' markup, not only the design-system page):
+- `LifeyCard` / `.hero` / `.nested`. **The hero has no drop shadow in dark** — the dashboard
+  canvas draws only the 3.5 % top light edge, although the design-system page labels heroes
+  "e2"; the screen canvas wins. Nested radius defaults to 14; pass
+  `AppRadius.nested(parent, inset)` for concentric corners. Tappable cards go through
+  `Pressable` (no ripple).
+- `SectionLabel` — caps via `AppType.sectionLabel`, 4 px side inset, "See all" in primary
+  13/700 with a 48 dp target; screen readers get the sentence-case label as a header.
+- `TintedChip` — two sizes from the canvases: **small 26** (12/700, 10 px padding, 13 px icon —
+  what the screens use) and **medium 32** (13/700 — the design-system showcase row).
+- `DeltaChip.arrow` ("↓ 0.1 kg": arrow + unsigned number) and `DeltaChip.signed` ("−0.1"), colour
+  by direction with an override — the weight hero's "↓ 1.4 in 30 d" is **protein green** on the
+  canvas (progress toward the goal), only plain history chips use blue/orange. A change that
+  rounds to zero is neutral with no arrow. Spoken as "down 0.1 kg" / "0,1 kg csökkenés" (new ARB
+  keys `deltaDownSemantics`, `deltaUpSemantics`). `RecordChip` (🏆 carbs gold) and
+  `ImprovementChip` (↑ protein green) fix those two meanings in one place.
+- `MonogramAvatar` — font = 0.34 × size (the canvases' 44/15, 48/16, 56/19); self = olive
+  tint, other people a stable metric hue from `MonogramAvatar.colorFor(name)` (the trainer and
+  chat canvases give each person a different hue); optional photo with initials as fallback;
+  initials never scale with dynamic type.
+- Gallery: `gallery/component_sections.dart` ("Cards & labels", "Chips & avatars"); tests:
+  `test/shared/widgets/ds/base_components_test.dart` (23 cases).
 
 ### R0.8 — Mobile UI: list rows, buttons, chips, inputs, dialogs (themes)
 

@@ -6133,5 +6133,15 @@
   "trainerGoalsSavedMessage": "Goals saved.",
   "@trainerGoalsSavedMessage": {
     "description": "Confirmation after saving goals that turned out identical. Nothing was notified, so nothing is claimed"
+  },
+  "deltaDownSemantics": "down {value}",
+  "@deltaDownSemantics": {
+    "description": "Screen-reader text for a change chip showing a decrease, e.g. 'down 0.1 kg'. {value} is the formatted amount with its unit. The chip itself shows an arrow and the number (docs/redesign/77-mobile-redesign-plan.md R0.7)",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "deltaUpSemantics": "up {value}",
+  "@deltaUpSemantics": {
+    "description": "Screen-reader text for a change chip showing an increase, e.g. 'up 0.3 kg'. {value} is the formatted amount with its unit (docs/redesign/77-mobile-redesign-plan.md R0.7)",
+    "placeholders": {"value": {"type": "String"}}
   }
 }
