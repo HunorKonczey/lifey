@@ -32,7 +32,8 @@ type and navigation, and the most-seen screen is fully redesigned. Everything af
 paused without leaving the app in a broken or inconsistent-looking state (see D-R0.1).
 
 Every iteration has the same shape: **goal → design source → current code → target spec →
-steps (prompt-sized) → derived screens → verification → acceptance**. Steps are numbered
+steps (prompt-sized) → derived screens → verification → acceptance → emulator review (§4.1)**.
+No iteration counts as done until its emulator review is written up. Steps are numbered
 `R<iteration>.<n>` and are the unit of work: one surface, one session, independently mergeable.
 
 ---
@@ -296,6 +297,44 @@ separate, optional backend step whose absence the UI tolerates.
   · no overflow stripes · last list item fully visible above the nav.
 - Keep behaviour identical unless the step says otherwise; relocations (logout, copy, delete)
   are called out explicitly.
+- **Every step ends with a commit and a push** to `feature/mobile-redesign` (one commit per
+  step, message `Mobile: <what> (redesign R<n>.<m>)`), after `flutter analyze` and `flutter test`
+  pass. The step heading gets a ✅ in this doc in the same commit.
+
+### 4.1 Iteration-end emulator review (mandatory, every R)
+
+After the last step of an iteration, a thorough check on an **Android emulator** that everything
+was built the way the canvas describes. Tests and the gallery catch structure; this catches
+what only a running app shows (real data, scroll behaviour, keyboard, animations, navigation).
+
+**Setup (once):** an AVD close to the design's 411 × 923 dp phone (Pixel 7-class, API 34+), and
+for R6 a 1280 × 800 tablet AVD. No emulator exists on the dev machine yet (2026-09-24), so the
+first review (end of R0) starts by creating them (`flutter emulators --create`, or Android
+Studio's Device Manager). Backend runs locally (`RUNNING.md` §0); a test account is seeded with
+data resembling the canvas (≈ 621 / 2 360 kcal day, a week of meals, a strength session with a
+PR, a run with HR zones, 30 days of weights) so screens can be compared value by value.
+
+**Procedure:**
+1. `flutter run` on the emulator; walk every screen the iteration touched, in this matrix:
+   **dark EN · light EN · dark HU · light HU**, plus one pass at **text scale 1.3** and one with
+   **Remove animations** (reduced motion) on.
+2. For every canvas frame of the iteration (e.g. R1: 1.1 top + scrolled, 1.2 light top +
+   scrolled, 1.3 HU), take an emulator screenshot (`adb exec-out screencap -p`) of the same
+   state and put it next to the canvas frame (canvas opened in a browser from `docs/redesign/`).
+3. Check against the canvas, item by item: layout order, spacing and radii, colours (metric vs
+   brand olive), type sizes of hero numbers and titles, icons, chip tints, number formatting,
+   HU strings (no ellipsis), the "MI VÁLTOZOTT ÉS MIÉRT" notes of every frame (each note is a
+   requirement), motion (count-up, ring fill, sheet, tab transitions), nothing under the status
+   bar, last row visible above the nav, ≥ 48 dp touch targets.
+4. Exercise the flows, not just the screens: the iteration's demo flow from the §0 table
+   (e.g. R2 = log a meal end to end), including offline for AI entry points.
+5. Write the result into **§12 Review log** of this doc: date, device, what matches, every
+   deviation (intended — with the decision id — or a bug). Bugs are fixed as extra steps
+   `R<n>.fix-<k>` (each committed and pushed) and the affected part re-checked.
+6. Send the side-by-side screenshots to the user. Screenshots are **not committed** (repo size);
+   the review log is the durable record.
+
+The iteration is done when the review log has no open bug for it.
 
 ---
 
@@ -486,8 +525,13 @@ in the gallery.
 colour in R0.1. Click through all tabs after R0.1–R0.3 and list anything unreadable in the
 R0 PR; fix only true breakages (unreadable text), leave layout to its iteration.
 
-**R0 acceptance:** gallery shows every component of the canvas "Alapkomponensek" section in both
+**R0 acceptance** (plus the §4.1 emulator review logged in §12)**:** gallery shows every component of the canvas "Alapkomponensek" section in both
 themes; contrast test green; the app runs on the new palette/type/nav with no screen unreadable.
+
+**R0 emulator review focus:** R0 redesigns no screen, so the review covers the gallery (every
+component against the canvas "Alapkomponensek" section, both themes, EN/HU, 1.3) and a pass over
+**every** existing screen on the new palette/type/nav, listing anything unreadable or broken
+(fixed as `R0.fix-<k>`; purely layout issues are left to their iteration and noted).
 
 ---
 
@@ -585,7 +629,7 @@ streaks, water, steps, weight). Step goal: see R1.4.
 header + `LifeyCard`s + `MetricValue` (R1.8 if it doesn't fit in R1.2). Onboarding banner and
 sponsorship card → `LifeyCard` with primary / clay accents.
 
-**R1 acceptance:** 1.1 / 1.2 / 1.3 canvases reproduced; no card-in-card; scrolled state shows the
+**R1 acceptance** (plus the §4.1 emulator review logged in §12)**:** 1.1 / 1.2 / 1.3 canvases reproduced; no card-in-card; scrolled state shows the
 scrim; nothing truncated in HU at 1.3.
 
 ---
@@ -688,7 +732,7 @@ the model doesn't have → **non-goal** (§6).
 `generated_recipe_screen.dart` ("Recipe proposal" — the canvas explicitly names it as a subpage
 header user), `recipe_wizard_sheet.dart`.
 
-**R2 acceptance:** log a meal from the week strip through the add-food sheet to Save without
+**R2 acceptance** (plus the §4.1 emulator review logged in §12)**:** log a meal from the week strip through the add-food sheet to Save without
 leaving the new UI; 2.1–2.4 reproduced in dark and light.
 
 ---
@@ -795,7 +839,7 @@ session-level lookup is expensive, compute once per list build, not per row.
 `recommended_workout_card`, `elevation_profile_chart`. Split R3.10 = list/picker screens,
 R3.11 = sheets.
 
-**R3 acceptance:** a full strength session (sets, rest, PR, finish, celebration) and a full
+**R3 acceptance** (plus the §4.1 emulator review logged in §12)**:** a full strength session (sets, rest, PR, finish, celebration) and a full
 cardio session (start, pause, slide to finish, detail) on the new UI in dark and light.
 
 ---
@@ -893,7 +937,7 @@ existing aggregation types are the constraint.)
 
 **R4 derived screens:** none beyond the above (statistics_tab in trainer detail is R6).
 
-**R4 acceptance:** 4 and 5 canvases reproduced in dark and light (Weight light and Stats light
+**R4 acceptance** (plus the §4.1 emulator review logged in §12)**:** 4 and 5 canvases reproduced in dark and light (Weight light and Stats light
 frames exist in the canvas); every metric shows a sensible hero and side stats.
 
 ---
@@ -981,7 +1025,7 @@ frames exist in the canvas); every metric shows a sensible hero and side stats.
 `my_trainers` and `trainer_invite` client-side screens; subscription / paywall screens get the
 tokens only (their layout is governed by docs/landing_page/69).
 
-**R5 acceptance:** register → onboarding → dashboard → chat → settings → logout, all on the new
+**R5 acceptance** (plus the §4.1 emulator review logged in §12)**:** register → onboarding → dashboard → chat → settings → logout, all on the new
 system, no plain `AppBar` left in these features.
 
 ---
@@ -1065,7 +1109,7 @@ R6.2 (optional backend) + R6.3; until then the card shows two KPIs and no PR chi
 (`program_detail_screen.dart` AppBar → subpage header), invites (`trainer_invites_screen.dart`
 AppBar), `trainer_settings_screen.dart` (AppBar).
 
-**R6 acceptance:** trainer flow on phone and tablet looks like the client app with a clay role
+**R6 acceptance** (plus the §4.1 emulator review logged in §12)**:** trainer flow on phone and tablet looks like the client app with a clay role
 mark; no second green.
 
 ---
@@ -1098,7 +1142,7 @@ mark; no second green.
   `docs/REMAINING-WORK.md` the deferred items from §6; update the tinted-chip backlog note as
   resolved.
 
-**R7 acceptance:** audit clean, one header system, one nav, one card, one chip; docs current.
+**R7 acceptance** (plus the §4.1 emulator review logged in §12)**:** audit clean, one header system, one nav, one card, one chip; docs current.
 
 ---
 
@@ -1178,12 +1222,15 @@ priorities change; the canvas priority order (dashboard, nutrition, workouts, �
 - *Widget:* no overflow at 1.3 + HU for each redesigned screen's key widget (hero card, meal row,
   set row, client card, settings group); semantics labels on the bottom nav; ≥ 48 dp hit areas;
   count-up doesn't restart on rebuild; over-budget states.
-- *Manual (per step):* the §4 checklist + side-by-side screenshot against the canvas section.
+- *Manual (per step):* the §4 checklist.
+- *Emulator review (per iteration):* §4.1 — the full dark/light × EN/HU matrix, text scale 1.3,
+  reduced motion, every canvas frame side by side, the iteration's demo flow; results in §12.
 
-**PR split:** one PR per step (`redesign/r1-3-hero-card` → `feature/mobile-redesign`). At each
-milestone end (M1, M3, M5, M7, M9) merge `feature/mobile-redesign` into `main` so the branch
-never drifts far; because the app is unreleased (D-R0.1) a milestone merge doesn't need to be a
-release. Derived-screen steps that grow beyond one session split by folder.
+**Commit / PR split:** one commit per step, pushed straight to `feature/mobile-redesign` (§4).
+At the end of each iteration — after its emulator review (§4.1) — the branch is proposed for
+merge into `main` as one PR per iteration, so the branch never drifts far; because the app is
+unreleased (D-R0.1) such a merge doesn't need to be a release. Nothing goes to `main` without
+the user's go-ahead. Derived-screen steps that grow beyond one session split by folder.
 
 ---
 
@@ -1247,3 +1294,13 @@ Reviewers should stare at these; each produces a wrong look or number, not an er
 - `docs/REMAINING-WORK.md` — add the §6 deferred items.
 - Follow-up plans to open: web palette alignment, chat result-sharing card, piece-based
   portions, native widgets/watch colour alignment.
+
+---
+
+## 12. Review log
+
+One entry per iteration-end emulator review (§4.1). Format: `### R<n> — <date> — <device(s)>`,
+then *Matches*, *Deviations (intended)* with decision ids, *Bugs* with the fix step that closed
+each.
+
+*(no reviews yet)*
