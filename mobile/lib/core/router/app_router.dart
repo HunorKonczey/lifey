@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,6 +34,7 @@ import '../../features/workouts/application/workout_resume_prompt.dart';
 import '../../features/workouts/presentation/workouts_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 import '../../shared/widgets/trainer_shell.dart';
+import '../../shared/widgets/ds/gallery/design_gallery_screen.dart';
 import '../../shared/widgets/trainer_view_menu.dart';
 import '../auth/current_roles_provider.dart';
 import '../entitlements/paywall_trigger.dart';
@@ -120,6 +122,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/forgot-password';
 
+      // The design gallery needs no account — it only exists in debug builds.
+      if (kDebugMode && state.matchedLocation == DesignGalleryScreen.routePath) return null;
       if (!isLoggedIn && !isAuthRoute) return '/login';
       if (isLoggedIn && isAuthRoute) return homeLocation();
       // Every /trainer route is ROLE_TRAINER-only. This is a navigation
@@ -178,6 +182,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const TrainerSettingsScreen(),
       ),
       GoRoute(path: '/recap', builder: (context, state) => const WeeklyRecapScreen()),
+      // Debug builds only — the redesign's design gallery (docs/redesign/
+      // 77-mobile-redesign-plan.md R0.6). Tree-shaken out of release builds.
+      if (kDebugMode)
+        GoRoute(
+          path: DesignGalleryScreen.routePath,
+          builder: (context, state) => const DesignGalleryScreen(),
+        ),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       // A [PaywallTrigger] (docs/landing_page/67-mobile-free-pro-plan.md §4.3)
       // is passed as `extra` by every gated surface via `openPaywall()`.

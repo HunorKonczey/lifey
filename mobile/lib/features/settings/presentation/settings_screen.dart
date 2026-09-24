@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show File, Platform;
 import 'dart:typed_data' show Uint8List;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +18,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/ds/gallery/design_gallery_screen.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../auth/application/auth_controller.dart';
@@ -890,6 +892,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ],
                 ),
+
+                // ── Debug (debug builds only) ─────────────────────────────
+                // The design gallery for the redesign reviews
+                // (docs/redesign/77-mobile-redesign-plan.md R0.6). Never in a
+                // release build, so its labels are deliberately not in the ARB.
+                if (kDebugMode) ...[
+                  const SizedBox(height: 20),
+                  const _GroupLabel('Debug'),
+                  const SizedBox(height: 8),
+                  _SettingsCard(
+                    children: [
+                      _SettingRow(
+                        icon: Icons.palette_outlined,
+                        iconColor: scheme.primary,
+                        label: 'Design gallery',
+                        onTap: () => context.push(DesignGalleryScreen.routePath),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 22,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

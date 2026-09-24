@@ -2,20 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/core/theme/app_tokens.dart';
+import 'package:lifey/core/theme/contrast.dart';
 
-/// WCAG 2.x contrast ratio. A translucent [fg] is composited onto [bg] first,
-/// the way it renders.
-double contrast(Color fg, Color bg) {
-  final a = Color.alphaBlend(fg, bg).computeLuminance();
-  final b = bg.computeLuminance();
-  final hi = a > b ? a : b;
-  final lo = a > b ? b : a;
-  return (hi + 0.05) / (lo + 0.05);
-}
+double contrast(Color fg, Color bg) => contrastRatio(fg, bg);
 
-/// The fill a tinted chip draws on a card: [metric] at [alpha] over [card].
-Color tint(Color metric, double alpha, Color card) =>
-    Color.alphaBlend(metric.withValues(alpha: alpha), card);
+Color tint(Color metric, double alpha, Color card) => tintOver(metric, alpha, card);
 
 const double aa = 4.5;
 

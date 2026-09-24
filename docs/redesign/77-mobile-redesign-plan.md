@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.5 done
+Status: in progress — R0.1–R0.6 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -479,7 +479,7 @@ Flutter's `kPressTimeout`, so a scroll starting on a card doesn't flash it),
 Tests: `test/shared/widgets/ds/motion_widgets_test.dart`, `test/core/router/transitions_test.dart`
 (17 cases, including tab state surviving a switch and the leaving tab not taking taps).
 
-### R0.6 — Mobile UI: debug design gallery (skeleton)
+### R0.6 — Mobile UI: debug design gallery (skeleton) ✅
 
 - Files: `shared/widgets/ds/gallery/design_gallery_screen.dart`, route `/debug/design` in
   `app_router.dart` guarded by `kDebugMode` (never reachable in release), an entry in the
@@ -488,6 +488,18 @@ Tests: `test/shared/widgets/ds/motion_widgets_test.dart`, `test/core/router/tran
 - Sections so far: colour swatches with contrast ratios, type scale, spacing, radius,
   elevation, icon mapping (D-R0.10). Every later R0 component step adds its section.
 - **Verify:** open the gallery in both themes; screenshot next to the canvas's token sections.
+
+*As built:* `shared/widgets/ds/gallery/` — `design_gallery_screen.dart` (the `gallerySections`
+registry every later component step appends to), `gallery_section.dart`,
+`foundation_sections.dart` (Colour with **live WCAG ratios** for every text tier, metric and chip —
+anything under 4.5 shows a red ✗ — Type with each slot's live size/line/weight/tracking, Formatting,
+Spacing & radius, Elevation incl. blur, Motion demos, Icon mapping). The toolbar has a fourth
+toggle beyond the plan: **reduced motion**. Settings has no debug section or version label, so
+the entry is a "Debug → Design gallery" row at the bottom of Settings, `kDebugMode` only (its
+labels deliberately not in the ARB); the route is also exempt from the login redirect, so the
+gallery opens without an account. `contrastRatio` moved to `core/theme/contrast.dart` and is
+shared with the contrast test. `test/shared/widgets/ds/design_gallery_test.dart` walks all 16
+toolbar combinations at 411 × 923 dp and fails on any overflow.
 
 ### R0.7 — Mobile UI: surface + text components
 
