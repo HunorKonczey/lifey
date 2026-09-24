@@ -5,6 +5,7 @@ import '../../../../core/theme/app_tokens.dart';
 import 'component_sections.dart';
 import 'control_sections.dart';
 import 'foundation_sections.dart';
+import 'header_sections.dart';
 import 'progress_sections.dart';
 import 'gallery_section.dart';
 
@@ -16,6 +17,7 @@ List<GallerySection> get gallerySections => [
       ...componentSections,
       ...controlSections,
       ...progressSections,
+      ...headerSections,
     ];
 
 /// Debug-only design gallery (route `/debug/design`, registered only under

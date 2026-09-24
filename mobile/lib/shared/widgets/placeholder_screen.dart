@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'ds/lifey_header.dart';
 
 /// Simple scaffold for tabs whose feature isn't built yet, so the bottom
 /// navigation feels complete.
@@ -18,7 +19,7 @@ class PlaceholderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(title), centerTitle: false),
+      appBar: LifeySubpageHeader(title: title),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

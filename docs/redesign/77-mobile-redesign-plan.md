@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.9 done
+Status: in progress — R0.1–R0.10 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -623,7 +623,7 @@ from the text above, all following the canvases:
 - Gallery: `gallery/progress_sections.dart` (hero composition, ring states, macro and week
   rings, day budget); tests `test/shared/widgets/ds/progress_test.dart` (19 cases).
 
-### R0.10 — Mobile UI: `LifeyHeader` (large title) + `LifeySubpageHeader` + status-bar scrim
+### R0.10 — Mobile UI: `LifeyHeader` (large title) + `LifeySubpageHeader` + status-bar scrim ✅
 
 - Files: `shared/widgets/ds/lifey_header.dart` (sliver: optional overline (date) 13–14/600 text2,
   large title 30/800 −2 %, trailing 44 px round actions incl. unread dot and monogram avatar;
@@ -634,6 +634,27 @@ from the text above, all following the canvases:
   `placeholder_screen.dart` (the smallest real user, as proof).
 - **Verify:** placeholder screen: scroll a long list — nothing visible under the status bar;
   title collapses 30 → 20; TalkBack reads the title once.
+
+*As built* — `shared/widgets/ds/lifey_header.dart`, measured from the canvases (Lifey 1 top and
+scrolled, Lifey 2 "Edit meal", Lifey 5 chat):
+- `LifeyHeader` — pinned sliver; expanded = 13/600 overline + 30/800 title (two lines allowed);
+  collapsed = status bar + a **52 px** row with a 20/800 title; the scrim (bg @ 90 % + blur 24,
+  the canvas's scrolled values) fades in with the collapse and gets the hairline when fully
+  collapsed. **Extents are measured with `TextPainter`** from the actual title, width and text
+  scale, so a long Hungarian title at 130 % can't overflow. Only the title is the semantic
+  heading (the date overline was being read as part of it). Sets the status-bar icon brightness.
+- `LifeySubpageHeader` — a `PreferredSizeWidget`, so the 14 plain-`AppBar` screens migrate with a
+  one-line `appBar:` swap: 44 px round back button (auto when the route can pop), optional
+  leading avatar, 20/800 title or 18/800 + 13/600 subtitle (colour settable — the chat's green
+  "online"), trailing actions; always on the scrim, hairline once content scrolls under (the
+  same `ScrollNotificationObserver` hook Material's AppBar uses).
+- `HeaderIconButton` — 44 px round surface-2 button in a 48 dp touch box, optional unread dot
+  (9 px calorie orange, 2 px ring); `StatusBarScrim` for header-less screens.
+- Migrated: `placeholder_screen.dart` (currently has no callers — the proof migration). The
+  pinned header can't be shown inside the gallery's own scroll view, so the gallery's
+  "Headers" section opens two demo screens (`LargeTitleDemo`, `SubpageDemo`) in the preview's
+  theme/locale/scale — the emulator review checks the header there.
+- Tests: `test/shared/widgets/ds/header_test.dart` (13 cases incl. both demos at 100/130 %).
 
 ### R0.11 — Mobile UI: bottom nav — active tab expands into a labelled pill
 
