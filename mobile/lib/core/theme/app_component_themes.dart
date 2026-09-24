@@ -166,6 +166,22 @@ ThemeData withLifeyComponents(ThemeData base) {
       insetPadding: const EdgeInsets.fromLTRB(AppSpacing.s16, 0, AppSpacing.s16, AppSpacing.s8),
     ),
     dividerTheme: DividerThemeData(color: p.hairline, thickness: 1, space: 1),
+    // Canvas "BOTTOM SHEET": surface-2, radius 30 on top, the backdrop dims
+    // to 40 % (motion spec). Depth comes from the tone, so no elevation
+    // shadow; the handle is drawn by LifeySheet, not Material's 48 px one.
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: p.nested,
+      modalBackgroundColor: p.nested,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      modalElevation: 0,
+      modalBarrierColor: Colors.black.withValues(alpha: 0.4),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.hero)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      showDragHandle: false,
+    ),
     // Generic (non-metric) progress: brand olive on a surface-3 track. Data
     // progress uses ProgressRing / MetricBar in the metric colour (R0.9).
     progressIndicatorTheme: ProgressIndicatorThemeData(color: s.primary, linearTrackColor: p.control, circularTrackColor: p.control),

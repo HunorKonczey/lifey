@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.11 done
+Status: in progress — R0.1–R0.12 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -689,7 +689,7 @@ label shrinks to fit (`FittedBox`) on a 360 px phone at 130 %.
 - Gallery "Bottom nav" section (real nav, tab switching, collapse toggle); tests
   `test/shared/widgets/adaptive_bottom_nav_test.dart` (8 cases).
 
-### R0.12 — Mobile UI: bottom sheet + empty and error states
+### R0.12 — Mobile UI: bottom sheet + empty and error states ✅
 
 - Files: `app_theme.dart` (`BottomSheetThemeData`: r30 top, surface-2, handle 36×4
   `#4A4E3E`-equivalent, backdrop 40 %), `shared/widgets/ds/lifey_sheet.dart`
@@ -699,6 +699,25 @@ label shrinks to fit (`FittedBox`) on a 360 px phone at 130 %.
 - Rewire the existing `showModalBottomSheet` helper calls only where it is a one-line change;
   others move with their iteration.
 - **Verify:** gallery; open the existing Add water sheet — it already picks up the theme.
+
+*As built* (canvas "BOTTOM SHEET", "ÜRES ÁLLAPOT", "HIBAÁLLAPOT", Lifey 4 "Log weight"):
+- `BottomSheetThemeData` in `app_component_themes.dart` — surface-2, radius 30 on top, no
+  elevation (depth by tone), backdrop **40 %** (the motion spec's figure; the Lifey 4 canvas
+  frame shows 55 % — the written spec wins). All ~57 existing `showModalBottomSheet`s pick it
+  up; none was rewired here.
+- `ds/lifey_sheet.dart` — `showLifeySheet` / `LifeySheet`: its **own 36 × 4 handle** (Material's
+  drag handle brings a 48 px box, taller than the canvas's 10 + 4), 20/800 title with a
+  trailing value or close button, keyboard- and safe-area-aware, scrolls when tall, 350 ms
+  enter/exit curves (instant under reduced motion).
+- `EmptyView` rebuilt as the canvas card: 56 px tinted icon holder (brand olive by default,
+  a metric colour optional), 17/700 title as a heading, 14/500 text, main + **new
+  `secondaryAction`**. API compatible — the 32 call sites are unchanged.
+- `ErrorView` rebuilt as the canvas card: red hairline ring, 40 px `heart`-tinted `cloud_off`
+  holder, 15/700 title, friendly message, a 48 dp "Retry" text action; **new `title`/`message`
+  overrides** for the design's specific copy ("AI features need a connection…"). API
+  compatible — the 46 call sites are unchanged. The canvas says "Try again"; the existing
+  `retryButton` string ("Retry" / "Újra") means the same and is reused.
+- Gallery "Sheets & states"; tests `test/shared/widgets/ds/states_test.dart` (8 cases).
 
 ### R0.13 — Mobile UI: `LifeyBarChart`
 

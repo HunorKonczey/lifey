@@ -7,6 +7,7 @@ import 'control_sections.dart';
 import 'foundation_sections.dart';
 import 'header_sections.dart';
 import 'progress_sections.dart';
+import 'state_sections.dart';
 import 'gallery_section.dart';
 
 /// Every gallery section, in canvas order. Each redesign step that adds a
@@ -18,6 +19,7 @@ List<GallerySection> get gallerySections => [
       ...controlSections,
       ...progressSections,
       ...headerSections,
+      ...stateSections,
     ];
 
 /// Debug-only design gallery (route `/debug/design`, registered only under
