@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_tokens.dart';
+import 'app_type.dart';
 
 /// Centralized application theming — dark-first, warm olive identity.
 ///
@@ -156,40 +157,61 @@ class AppTheme {
 // Typography
 // ---------------------------------------------------------------------------
 
-const String _fontFamily = 'PlusJakartaSans';
+const String _fontFamily = AppType.fontFamily;
 
 /// Shared TextTheme — applied to both dark and light ThemeData.
 ///
-/// Scale (mockup source: Lifey Redesign.dc.html › Type block):
-///   displayLarge  34 / 800  — hero metric numbers (dashboard stat values)
-///   headlineMedium 26 / 700  — screen titles
-///   titleLarge    20 / 700  — section headers, card titles
-///   bodyMedium    15 / 500  — default body / list subtitles
-///   labelMedium   13 / 600  — section labels, chips, tab text
+/// Scale: docs/redesign/Lifey Design System.dc.html › Tipográfia, mapped per
+/// docs/redesign/77-mobile-redesign-plan.md D-R0.7. Design roles:
+///   displayLarge   72/68 · 800 · −3 %   display-xl (weight log sheet)
+///   displayMedium  48/48 · 800 · −2.5 % display (rest timer)
+///   headlineMedium 30/36 · 800 · −2 %   headline (large page title, greeting)
+///   titleLarge     20/26 · 700 · −1 %   title (card / sheet titles)
+///   titleMedium    16/22 · 700          title-s (list-row title)
+///   bodyMedium     15/22 · 500          body (default Text style)
+///   bodySmall      13/18 · 500          body-s (metadata, footnotes)
+///   labelSmall     12/16 · 700          label (caps + tracking via
+///                                       AppType.sectionLabel, not here)
+/// Derived, so no slot falls back to Material's 400-weight defaults:
+///   displaySmall 36/40, headlineLarge 34/40, headlineSmall 24/30 (all 800),
+///   titleSmall 14/20 · 700, bodyLarge 16/22 · 600 (Material's list-tile
+///   title and input text), labelLarge 14/20 · 700 (buttons, nav pill),
+///   labelMedium 13/16 · 600 (chips, tabs).
 ///
-/// Tabular numerals are set on display-scale styles so metric values
-/// (calories, weight, steps…) align cleanly in cards.
+/// Display styles are tabular. Hero numbers at other sizes come from
+/// AppType.number; they don't grow with dynamic type (AppType.noScale).
 TextTheme get _textTheme => TextTheme(
-      // 34 / 800 — biggest metric values (e.g. "1,780 kcal" hero card)
-      displayLarge: _ts(34, FontWeight.w800, tabular: true),
-      // 26 / 700 — screen titles in app bars
-      headlineMedium: _ts(26, FontWeight.w700),
-      // 20 / 700 — section titles, card headings
-      titleLarge: _ts(20, FontWeight.w700),
-      // 15 / 500 — body text, list subtitles
-      bodyMedium: _ts(15, FontWeight.w500),
-      // 14 / 600 — slightly prominent body (list tile titles)
-      bodyLarge: _ts(14, FontWeight.w600),
-      // 13 / 600 — labels, section headers, tab bar
-      labelMedium: _ts(13, FontWeight.w600),
-      // 11 / 700 — uppercase section labels (ALL CAPS tracked)
-      labelSmall: _ts(11, FontWeight.w700),
+      displayLarge: _ts(72, 68, FontWeight.w800, tracking: -0.03, tabular: true),
+      displayMedium: _ts(48, 48, FontWeight.w800, tracking: -0.025, tabular: true),
+      displaySmall: _ts(36, 40, FontWeight.w800, tracking: -0.025, tabular: true),
+      headlineLarge: _ts(34, 40, FontWeight.w800, tracking: -0.02),
+      headlineMedium: _ts(30, 36, FontWeight.w800, tracking: -0.02),
+      headlineSmall: _ts(24, 30, FontWeight.w800, tracking: -0.02),
+      titleLarge: _ts(20, 26, FontWeight.w700, tracking: -0.01),
+      titleMedium: _ts(16, 22, FontWeight.w700),
+      titleSmall: _ts(14, 20, FontWeight.w700),
+      bodyLarge: _ts(16, 22, FontWeight.w600),
+      bodyMedium: _ts(15, 22, FontWeight.w500),
+      bodySmall: _ts(13, 18, FontWeight.w500),
+      labelLarge: _ts(14, 20, FontWeight.w700),
+      labelMedium: _ts(13, 16, FontWeight.w600),
+      labelSmall: _ts(12, 16, FontWeight.w700),
     );
 
-TextStyle _ts(double size, FontWeight weight, {bool tabular = false}) =>
+/// [lineHeight] in px (the canvas notation "size/line"), [tracking] as a
+/// fraction of the size (the canvas's "−3 %").
+TextStyle _ts(
+  double size,
+  double lineHeight,
+  FontWeight weight, {
+  double tracking = 0,
+  bool tabular = false,
+}) =>
     TextStyle(
       fontFamily: _fontFamily,
       fontSize: size,
+      height: lineHeight / size,
       fontWeight: weight,
-      fontFeatures: tabular ? const [FontFeature.tabularFigures()] : null,
+      letterSpacing: tracking == 0 ? null : tracking * size,
+      fontFeatures: tabular ? AppType.tabular : null,
     );

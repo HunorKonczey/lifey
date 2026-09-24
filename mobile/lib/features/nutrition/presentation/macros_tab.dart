@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/theme/app_type.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
@@ -185,12 +186,10 @@ class _FeaturedDayCard extends StatelessWidget {
                 const SizedBox(width: 5),
                 Text(
                   _kcalFmt.format(day.calories.round()),
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurface,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    letterSpacing: -1,
-                  ),
+                  // Pinned at its v1 size: `headlineMedium` grew 26 → 30 in the
+                  // v2 type scale and this row has no room to wrap. The tab is
+                  // redesigned in R2.8 (docs/redesign/77-mobile-redesign-plan.md).
+                  style: AppType.number(26, color: scheme.onSurface),
                 ),
                 if (calorieGoal != null) ...[
                   const SizedBox(width: 2),

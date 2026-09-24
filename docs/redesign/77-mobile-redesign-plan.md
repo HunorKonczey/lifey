@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.2 done
+Status: in progress — R0.1–R0.3 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -193,9 +193,16 @@ above the nav). Documented uses: 4 icon↔label · 8 chip gap, tight group · 12
 | title-s | 16/22 · 700 | `titleMedium` | list-row title |
 | body | 15/22 · 500 | `bodyMedium` (the default `Text` style) | body copy |
 | body-s | 13/18 · 500 | `bodySmall` | metadata, footnotes |
-| label | 12/16 · 700 · +8 % · CAPS | `labelSmall` | section labels only |
+| label | 12/16 · 700 (· +8 % · CAPS via `AppType.sectionLabel`) | `labelSmall` | small labels; caps section labels use the helper |
 | (derived) | 14/20 · 700 | `labelLarge` | buttons, nav pill label |
 | (derived) | 13/16 · 600 | `labelMedium` | chips, tabs |
+| (derived) | 16/22 · 600 | `bodyLarge` | Material list-tile title, input text |
+| (derived) | 36/40, 34/40, 24/30 · 800 | `displaySmall`, `headlineLarge`, `headlineSmall` | keep today's sizes for existing users (login wordmark, weight hero, sheet titles) |
+| (derived) | 14/20 · 700 | `titleSmall` | — |
+
+Every slot is defined, so none falls back to Material's 400-weight defaults. The +8 % caps
+tracking is **not** baked into `labelSmall`: ~50 of its ~56 users are ordinary small labels
+that the tracking would spread out.
 
 Numbers not on the scale (34 ring centre, 40 pace, 44 rest timer, 52 distance, 60 plan kcal, 64
 current weight, 104 moving time) come from `AppType.number(size)` — same family, 800, tracking
@@ -390,16 +397,21 @@ in the gallery.
   `disableAnimations`, legacy aliases map as above, the edge band follows the corner radius;
   `flutter analyze` clean.
 
-### R0.3 — Mobile UI: type scale + number helpers
+### R0.3 — Mobile UI: type scale + number helpers ✅
 
 - Files: `core/theme/app_theme.dart` (`_textTheme`), `core/theme/app_type.dart` (new:
-  `AppType.number(size)`, `AppType.noScale(context)`), `shared/widgets/ds/metric_value.dart`.
+  `AppType.number(size)`, `AppType.unit(size)`, `AppType.sectionLabel()`,
+  `AppType.noScale(context)`, `AppType.tabular`), `shared/widgets/ds/metric_value.dart`.
 - Remap the `TextTheme` per D-R0.7 (line heights as `height:`, tracking as `letterSpacing`).
 - `MetricValue(value, unit, size)` — RichText, number tabular, unit at 0.42× in `text2`,
   hero clamp per D-R0.8, `Semantics(label: "1739 kilocalories left")`.
 - Grep every `textTheme.displayLarge/headlineMedium/bodyLarge` usage — slot meanings shift
   (e.g. `displayLarge` goes 34 → 72); fix call sites that would now render absurdly (most
-  should become `AppType.number(34)`).
+  should become `AppType.number(34)`). *Done:* `displayLarge`/`displayMedium` had no users;
+  the only risky one was the macros-tab kcal total in a no-wrap row (`headlineMedium` 26 → 30),
+  pinned to `AppType.number(26)` until R2.8. `bodyLarge` 14 → 16 moves list titles toward the
+  design's 16 px row title; `bodySmall` 12/400 → 13/500 everywhere — watch for tight rows in
+  the R0 emulator review.
 - **Verify:** app-wide click-through of all 5 tabs: no giant or clipped text; unit test that
   `AppType.number` has `tnum`.
 
