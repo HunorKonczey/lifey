@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1 done
+Status: in progress — R0.1–R0.2 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -168,9 +168,11 @@ widget encodes this; no call site picks alphas by hand. This is the design call 
 
 New: `AppRadius.tag = 8` (tag, set row), `control = 14` (input, button, icon holder),
 `card = 22`, `hero = 30` (hero card, sheet, nav), `pill`. Nested elements use
-`parent − inner padding`. The old names stay as `@Deprecated` aliases pointing at the nearest
+`parent − inner padding`. The old names stay as legacy aliases pointing at the nearest
 new step (`sm→8`, `md→14`, `input→14`, `card→22`, `lg→22`, `nav→30`) so R0 doesn't have to
-touch 140 call sites; each iteration moves its files to the new names, R7 deletes the aliases.
+touch 140 call sites — marked with a "Legacy — use X" doc comment, **not** `@Deprecated`,
+because CI's `flutter analyze` treats infos as fatal and the deprecation infos would keep CI
+red until R7; the R7.1 audit script counts them instead; each iteration moves its files to the new names, R7 deletes the aliases.
 Rejected: a big-bang rename in R0 (an unreviewable diff across every feature).
 
 ### D-R0.6 Spacing gains 20 / 40 / 56; the screen side margin becomes 20
@@ -369,19 +371,24 @@ in the gallery.
   mean protein; list findings in the PR (fixed in the owning iteration, not here).
 - **Verify:** contrast test green; app runs, every tab shows the new bg/cards in both themes.
 
-### R0.2 — Mobile UI: spacing, radius, elevation and motion tokens
+### R0.2 — Mobile UI: spacing, radius, elevation and motion tokens ✅
 
 - Files: `core/theme/app_tokens.dart`.
 - `AppSpacing` + `s20`, `s40`, `s56` (D-R0.6). `AppRadius` new names + deprecated aliases
-  (D-R0.5). `AppElevation`: `e0` hairline border; `e1` card = top light edge
-  (white @ 3.5 % dark, none light) + light-theme shadow `0 1 2 rgba(40,38,20,.06)`; `e2` hero/FAB
-  = e1 + `0 10 24 −12 black@.8` (dark) / 2-px warm shadow (light); `e3` nav/sheet =
-  `0 20 40 −12 black@.9` + blur 24. Dark depth comes from tone, shadows only on floating layers.
+  (D-R0.5). `AppElevation` ThemeExtension (`context.elevation`), values taken from the
+  canvases' actual `box-shadow`s: `border` (e0 hairline: text @ 7 % dark, `rgba(28,29,22,.08)`
+  light); top light edges `cardEdge` / `heroEdge` / `floatEdge` (white @ 3.5 / 5 / 7 % dark,
+  none light); `e1` card (none dark; light `0 1 2 rgba(40,38,20,.05)` + `0 10 24 −16 .22`); `e2`
+  hero/FAB (dark `0 10 24 −12 black@.8`; light = e1); `e3` nav (dark `0 20 40 −12 black@.9`;
+  light `0 16 32 −12 rgba(40,38,20,.3)`); `sheet` (e3 cast upwards). Blur sigmas: `floatBlur`
+  24 (nav, floating bars), `scrimBlur` 20 (status-bar scrim). `AppSpacing.screen` = 20.
+  `AppRadius.nested(parent, inset)` for concentric corners.
 - `AppMotion` per D-R0.13 (keep `AppCurve.collapse` for the nav until R0.10 replaces it).
 - The "top light edge" needs a painter: Flutter can't draw a non-uniform `Border` with a radius.
   Implement it once in `ds/card_edge_painter.dart` (strokes the top arc of the RRect only).
-- **Verify:** unit test that `AppMotion` returns zero durations under `disableAnimations`;
-  `flutter analyze` shows only deprecation infos for the aliases.
+- **Verify:** `test/core/theme/tokens_test.dart` — `AppMotion.of` is zero under
+  `disableAnimations`, legacy aliases map as above, the edge band follows the corner radius;
+  `flutter analyze` clean.
 
 ### R0.3 — Mobile UI: type scale + number helpers
 

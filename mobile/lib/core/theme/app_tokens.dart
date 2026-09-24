@@ -1,55 +1,158 @@
 import 'package:flutter/material.dart';
 
 // ---------------------------------------------------------------------------
-// Spacing — 4pt base grid
+// Spacing — 4pt base grid (docs/redesign/77-mobile-redesign-plan.md D-R0.6)
 // ---------------------------------------------------------------------------
 
 abstract final class AppSpacing {
+  /// Icon ↔ label.
   static const double s4 = 4;
+
+  /// Chip gap, tight group.
   static const double s8 = 8;
+
+  /// List-row inner padding.
   static const double s12 = 12;
+
+  /// Card inner padding.
   static const double s16 = 16;
+
+  /// Screen side margin.
+  static const double s20 = 20;
+
+  /// Between cards.
   static const double s24 = 24;
+
+  /// Between sections.
   static const double s32 = 32;
+
+  /// Above a hero.
+  static const double s40 = 40;
+
+  /// Bottom of a screen, above the nav.
+  static const double s56 = 56;
+
+  /// Horizontal margin of every screen's content.
+  static const double screen = s20;
 }
 
 // ---------------------------------------------------------------------------
-// Radius scale
+// Radius scale — four steps + pill (D-R0.5)
 // ---------------------------------------------------------------------------
 
 abstract final class AppRadius {
-  /// 8 — small chips, tags, inner elements
-  static const double sm = 8;
+  /// 8 — tag, set row.
+  static const double tag = 8;
 
-  /// 16 — medium buttons, smaller cards
-  static const double md = 16;
+  /// 14 — input, button, icon holder.
+  static const double control = 14;
 
-  /// 18 — inputs, FABs, action rows
-  static const double input = 18;
+  /// 22 — card.
+  static const double card = 22;
 
-  /// 20 — list-tile cards
-  static const double card = 20;
+  /// 30 — hero card, bottom sheet, bottom nav.
+  static const double hero = 30;
 
-  /// 24 — large stat cards, chart cards
-  static const double lg = 24;
-
-  /// 28–30 — nav bar (floating)
-  static const double nav = 28;
-
-  /// Stadium — pill shapes (chips, segmented, collapsed nav)
+  /// Stadium — chips, segmented control, nav pill.
   static const BorderRadius pill = BorderRadius.all(Radius.circular(999));
 
-  static BorderRadius get smAll => BorderRadius.circular(sm);
-  static BorderRadius get mdAll => BorderRadius.circular(md);
-  static BorderRadius get inputAll => BorderRadius.circular(input);
+  static BorderRadius get tagAll => BorderRadius.circular(tag);
+  static BorderRadius get controlAll => BorderRadius.circular(control);
   static BorderRadius get cardAll => BorderRadius.circular(card);
-  static BorderRadius get lgAll => BorderRadius.circular(lg);
-  static BorderRadius get navAll => BorderRadius.circular(nav);
+  static BorderRadius get heroAll => BorderRadius.circular(hero);
+
+  /// Radius of an element nested [inset] px inside a parent of radius
+  /// [parent]: the design rule "beágyazott elem sugara = szülő − belső margó",
+  /// so the two curves stay concentric.
+  static double nested(double parent, double inset) =>
+      parent - inset > 0 ? parent - inset : 0;
+
+  // --- Legacy names ---------------------------------------------------------
+  // The v1 scale (8 / 16 / 18 / 20 / 24 / 28), each now pointing at the nearest
+  // v2 step so unmigrated screens already get the new corners. Each redesign
+  // iteration moves its own files to the names above; R7.3 deletes these.
+  // Deliberately not @Deprecated: CI runs `flutter analyze` with fatal infos,
+  // and ~140 call sites would fail it until the last iteration lands.
+
+  /// Legacy — use [tag].
+  static const double sm = tag;
+
+  /// Legacy — use [control].
+  static const double md = control;
+
+  /// Legacy — use [control].
+  static const double input = control;
+
+  /// Legacy — use [card].
+  static const double lg = card;
+
+  /// Legacy — use [hero].
+  static const double nav = hero;
+
+  /// Legacy — use [tagAll].
+  static BorderRadius get smAll => tagAll;
+
+  /// Legacy — use [controlAll].
+  static BorderRadius get mdAll => controlAll;
+
+  /// Legacy — use [controlAll].
+  static BorderRadius get inputAll => controlAll;
+
+  /// Legacy — use [cardAll].
+  static BorderRadius get lgAll => cardAll;
+
+  /// Legacy — use [heroAll].
+  static BorderRadius get navAll => heroAll;
 }
 
 // ---------------------------------------------------------------------------
-// Motion
+// Motion — v2 spec (D-R0.13)
 // ---------------------------------------------------------------------------
+
+abstract final class AppMotion {
+  /// Tap feedback — card scales to 0.98.
+  static const Duration tap = Duration(milliseconds: 100);
+
+  /// Set-done tint + check.
+  static const Duration setDone = Duration(milliseconds: 250);
+
+  /// Page change — shared-axis X within a tab, fade-through between tabs.
+  static const Duration page = Duration(milliseconds: 300);
+
+  /// Bottom sheet slide-up.
+  static const Duration sheet = Duration(milliseconds: 350);
+
+  /// Main numbers rolling from the old to the new value.
+  static const Duration countUp = Duration(milliseconds: 600);
+
+  /// Ring and bar fill.
+  static const Duration fill = Duration(milliseconds: 900);
+
+  /// Delay between consecutive macro rings/bars.
+  static const Duration stagger = Duration(milliseconds: 60);
+
+  /// One-shot PR celebration.
+  static const Duration celebration = Duration(milliseconds: 1200);
+
+  /// Most transitions — cubic(0.2, 0, 0, 1).
+  static const Curve standard = Cubic(0.2, 0, 0, 1);
+
+  /// Elements entering (fills, sheets opening) — cubic(0.05, 0.7, 0.1, 1).
+  static const Curve enter = Cubic(0.05, 0.7, 0.1, 1);
+
+  /// Elements leaving — cubic(0.3, 0, 0.8, 0.15).
+  static const Curve exit = Cubic(0.3, 0, 0.8, 0.15);
+
+  /// [duration], or zero when the platform asks for reduced motion — then
+  /// every animation becomes an instant cut and numbers sit on their final
+  /// value. Every v2 animation reads its duration through this.
+  static Duration of(BuildContext context, Duration duration) =>
+      (MediaQuery.maybeDisableAnimationsOf(context) ?? false) ? Duration.zero : duration;
+}
+
+// --- Legacy motion (v1) ------------------------------------------------------
+// Still driving the v1 floating bars; replaced by [AppMotion] when the header
+// and bottom nav are rebuilt (R0.10 / R0.11), deleted in R7.3.
 
 abstract final class AppDuration {
   static const Duration fast = Duration(milliseconds: 150);
@@ -67,6 +170,141 @@ abstract final class AppCurve {
   /// Spring-like easing for the nav collapse/expand
   /// Matches: cubic-bezier(.2,.8,.2,1) from the design prototype
   static const Curve collapse = Cubic(0.2, 0.8, 0.2, 1.0);
+}
+
+// ---------------------------------------------------------------------------
+// Elevation (R0.2)
+// Dark: depth comes from surface tone; drop shadows only on floating layers,
+// plus a 1 px top light edge on cards (drawn by CardEdgePainter — CSS's
+// `inset 0 1px 0` has no BoxShadow equivalent). Light: white cards on a warm
+// bg with a soft warm shadow instead of a border. Values are the ones the
+// canvases use.
+// ---------------------------------------------------------------------------
+
+@immutable
+class AppElevation extends ThemeExtension<AppElevation> {
+  const AppElevation({
+    required this.border,
+    required this.cardEdge,
+    required this.heroEdge,
+    required this.floatEdge,
+    required this.e1,
+    required this.e2,
+    required this.e3,
+    required this.sheet,
+  });
+
+  /// e0 — a 1 px hairline ring, for flat elements that need an outline.
+  final Color border;
+
+  /// Top light edge of an e1 card (transparent in light).
+  final Color cardEdge;
+
+  /// Top light edge of an e2 hero / FAB (transparent in light).
+  final Color heroEdge;
+
+  /// Top light edge of an e3 floating layer (transparent in light).
+  final Color floatEdge;
+
+  /// e1 — card.
+  final List<BoxShadow> e1;
+
+  /// e2 — hero card, FAB.
+  final List<BoxShadow> e2;
+
+  /// e3 — bottom nav, floating bars; always with a [floatBlur] backdrop.
+  final List<BoxShadow> e3;
+
+  /// Bottom sheet — e3 cast upwards.
+  final List<BoxShadow> sheet;
+
+  /// Backdrop blur sigma under the bottom nav and floating bars.
+  static const double floatBlur = 24;
+
+  /// Backdrop blur sigma under the status-bar scrim.
+  static const double scrimBlur = 20;
+
+  static const AppElevation dark = AppElevation(
+    border: Color(0x12F2F1E6), // rgba(242,241,230,0.07)
+    cardEdge: Color(0x09FFFFFF), // rgba(255,255,255,0.035)
+    heroEdge: Color(0x0DFFFFFF), // rgba(255,255,255,0.05)
+    floatEdge: Color(0x12FFFFFF), // rgba(255,255,255,0.07)
+    e1: [],
+    e2: [
+      BoxShadow(color: Color(0xCC000000), offset: Offset(0, 10), blurRadius: 24, spreadRadius: -12),
+    ],
+    e3: [
+      BoxShadow(color: Color(0xE6000000), offset: Offset(0, 20), blurRadius: 40, spreadRadius: -12),
+    ],
+    sheet: [
+      BoxShadow(color: Color(0x99000000), offset: Offset(0, -20), blurRadius: 40, spreadRadius: -12),
+    ],
+  );
+
+  static const AppElevation light = AppElevation(
+    border: Color(0x141C1D16), // rgba(28,29,22,0.08)
+    cardEdge: Color(0x00FFFFFF),
+    heroEdge: Color(0x00FFFFFF),
+    floatEdge: Color(0x00FFFFFF),
+    e1: [
+      BoxShadow(color: Color(0x0D282614), offset: Offset(0, 1), blurRadius: 2),
+      BoxShadow(color: Color(0x38282614), offset: Offset(0, 10), blurRadius: 24, spreadRadius: -16),
+    ],
+    e2: [
+      BoxShadow(color: Color(0x0D282614), offset: Offset(0, 1), blurRadius: 2),
+      BoxShadow(color: Color(0x38282614), offset: Offset(0, 10), blurRadius: 24, spreadRadius: -16),
+    ],
+    e3: [
+      BoxShadow(color: Color(0x4D282614), offset: Offset(0, 16), blurRadius: 32, spreadRadius: -12),
+    ],
+    sheet: [
+      BoxShadow(color: Color(0x4D282614), offset: Offset(0, -16), blurRadius: 32, spreadRadius: -12),
+    ],
+  );
+
+  @override
+  AppElevation copyWith({
+    Color? border,
+    Color? cardEdge,
+    Color? heroEdge,
+    Color? floatEdge,
+    List<BoxShadow>? e1,
+    List<BoxShadow>? e2,
+    List<BoxShadow>? e3,
+    List<BoxShadow>? sheet,
+  }) =>
+      AppElevation(
+        border: border ?? this.border,
+        cardEdge: cardEdge ?? this.cardEdge,
+        heroEdge: heroEdge ?? this.heroEdge,
+        floatEdge: floatEdge ?? this.floatEdge,
+        e1: e1 ?? this.e1,
+        e2: e2 ?? this.e2,
+        e3: e3 ?? this.e3,
+        sheet: sheet ?? this.sheet,
+      );
+
+  @override
+  AppElevation lerp(AppElevation? other, double t) {
+    if (other == null) return this;
+    return AppElevation(
+      border: Color.lerp(border, other.border, t)!,
+      cardEdge: Color.lerp(cardEdge, other.cardEdge, t)!,
+      heroEdge: Color.lerp(heroEdge, other.heroEdge, t)!,
+      floatEdge: Color.lerp(floatEdge, other.floatEdge, t)!,
+      e1: BoxShadow.lerpList(e1, other.e1, t)!,
+      e2: BoxShadow.lerpList(e2, other.e2, t)!,
+      e3: BoxShadow.lerpList(e3, other.e3, t)!,
+      sheet: BoxShadow.lerpList(sheet, other.sheet, t)!,
+    );
+  }
+}
+
+/// Convenience extension — read elevation tokens from any [BuildContext].
+extension AppElevationX on BuildContext {
+  AppElevation get elevation =>
+      Theme.of(this).extension<AppElevation>() ??
+      (Theme.of(this).brightness == Brightness.dark ? AppElevation.dark : AppElevation.light);
 }
 
 // ---------------------------------------------------------------------------

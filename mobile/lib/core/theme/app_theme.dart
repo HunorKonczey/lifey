@@ -22,7 +22,7 @@ class AppTheme {
         scaffoldBackgroundColor: AppPalette.dark.bg,
         fontFamily: _fontFamily,
         textTheme: _textTheme,
-        extensions: const [AppMetricColors.dark, AppPalette.dark],
+        extensions: const [AppMetricColors.dark, AppPalette.dark, AppElevation.dark],
         // Subtle, on-brand ripple — default is onSurface (~white) at 12%,
         // which looks harshly bright on near-black surfaces.
         splashColor: _darkPrimary.withValues(alpha: 0.10),
@@ -91,7 +91,7 @@ class AppTheme {
         scaffoldBackgroundColor: AppPalette.light.bg,
         fontFamily: _fontFamily,
         textTheme: _textTheme,
-        extensions: const [AppMetricColors.light, AppPalette.light],
+        extensions: const [AppMetricColors.light, AppPalette.light, AppElevation.light],
         splashColor: _lightPrimary.withValues(alpha: 0.10),
         highlightColor: _lightPrimary.withValues(alpha: 0.06),
       );
