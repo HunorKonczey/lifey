@@ -36,6 +36,7 @@ import '../../shared/widgets/trainer_shell.dart';
 import '../../shared/widgets/trainer_view_menu.dart';
 import '../auth/current_roles_provider.dart';
 import '../entitlements/paywall_trigger.dart';
+import 'transitions.dart';
 
 /// Notifies GoRouter to re-run its redirect whenever the signed-in user changes.
 class _AuthRefreshListenable extends ChangeNotifier {
@@ -185,7 +186,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             PaywallScreen(trigger: state.extra as PaywallTrigger? ?? PaywallTrigger.settings),
       ),
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
+        navigatorContainerBuilder: _fadeThroughBranches,
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),
         branches: [
@@ -235,7 +237,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // (docs/chat/41-trainer-mobile-v2-plan.md §2.1). T1 registers the one
       // branch it delivers; T2/T4/T6 each add theirs here and in
       // TrainerShell's destination list.
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
+        navigatorContainerBuilder: _fadeThroughBranches,
         builder: (context, state, navigationShell) =>
             TrainerShell(navigationShell: navigationShell),
         branches: [
@@ -296,3 +299,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Tab switches in both shells fade through instead of cutting
+/// (docs/redesign/77-mobile-redesign-plan.md R0.5); otherwise identical to
+/// `StatefulShellRoute.indexedStack` — every branch stays mounted.
+Widget _fadeThroughBranches(
+  BuildContext context,
+  StatefulNavigationShell navigationShell,
+  List<Widget> children,
+) =>
+    FadeThroughBranchContainer(
+      currentIndex: navigationShell.currentIndex,
+      children: children,
+    );

@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.4 done
+Status: in progress — R0.1–R0.5 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -253,9 +253,15 @@ functions (formatting, contrast, averages, bucketing) get unit tests.
 ### D-R0.12 Page transitions are built in-house on `go_router`, no `animations` package
 
 Only two transitions are needed: fade-through between bottom-nav tabs, shared-axis X for pushes
-within a tab (300 ms). Both are ~40 lines as `CustomTransitionPage` builders in
-`core/router/`. Rejected: `package:animations` — small and official, but a dependency for two
-transitions is not justified.
+within a tab (300 ms), both in `core/router/transitions.dart`. Rejected: `package:animations` —
+small and official, but a dependency for two transitions is not justified.
+
+*As built (R0.5):* shared-axis X is a `PageTransitionsBuilder` installed through the themes'
+`pageTransitionsTheme` — not per-route `CustomTransitionPage`s — so it also covers the ~30
+screens pushed with a plain `MaterialPageRoute`. It applies on Android (and desktop); **iOS keeps
+the Cupertino transition**, because replacing it would remove the edge swipe-back gesture.
+Fade-through is a `navigatorContainerBuilder` for both `StatefulShellRoute`s (they were
+`.indexedStack`); every branch stays mounted as before.
 
 ### D-R0.13 Animations are implicit widgets with a reduced-motion switch
 
@@ -455,7 +461,7 @@ with `integer`, `kcal`, `grams`, `weight`, `distance`, `litres`, `decimal`, `per
   "1 waypoints" / "1 sets" and were corrected; `test/l10n/plural_strings_test.dart` guards
   the fix.
 
-### R0.5 — Mobile UI: motion primitives + page transitions
+### R0.5 — Mobile UI: motion primitives + page transitions ✅
 
 - Files: `shared/widgets/ds/animated_number.dart`, `shared/widgets/ds/pressable.dart` (tap
   scale 0.98 / 100 ms), `core/router/transitions.dart`, `core/router/app_router.dart`.
@@ -464,6 +470,14 @@ with `integer`, `kcal`, `grams`, `weight`, `distance`, `litres`, `decimal`, `per
 - Fade-through for shell tab switches, shared-axis X for pushed routes (D-R0.12).
 - **Verify:** widget test — rebuild with the same value causes no animation; with
   `disableAnimations` the final value shows on the first frame.
+
+*As built:* `AnimatedNumber` (builder API, continues from the on-screen value when retargeted
+mid-animation, screen readers get only the final `semanticsLabel`), `Pressable` (scale 0.98,
+`button` semantics, a long-press action only when there is a handler; tap-down shows after
+Flutter's `kPressTimeout`, so a scroll starting on a card doesn't flash it),
+`SharedAxisXPageTransitionsBuilder` + `lifeyPageTransitions`, `FadeThroughBranchContainer`.
+Tests: `test/shared/widgets/ds/motion_widgets_test.dart`, `test/core/router/transitions_test.dart`
+(17 cases, including tab state surviving a switch and the leaving tab not taking taps).
 
 ### R0.6 — Mobile UI: debug design gallery (skeleton)
 
