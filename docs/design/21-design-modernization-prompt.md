@@ -1,9 +1,10 @@
 # 21 — Design-modernizáció: prompt Claude Designnak
 
 > **A fájl célja:** önállóan átadható prompt a Lifey mobilapp **vizuális modernizálásához**.
-> A §0 blokkot egy az egyben be lehet másolni. Mellé a `lifey-design-screens.zip` csomagot
-> kell csatolni: 135 képernyőkép a mostani állapotról, 11 mappában, és egy `README.md`,
-> ami leírja a funkciókat és a megfigyeléseket.
+> A §0 blokkot egy az egyben be lehet másolni. Mellé a `lifey-design-screens-part1.zip` és
+> `-part2.zip` csomagot kell csatolni. Ketté vannak bontva, mert a feltöltési limit 20 MB.
+> Együtt 135 képernyőképet tartalmaznak a mostani állapotról, 11 mappában. Mindkettőben
+> benne van a `README.md`, ami leírja a funkciókat és a megfigyeléseket.
 >
 > Előzmények: [18-design-system-prompt.md](18-design-system-prompt.md) (az első redesign
 > promptja, ebből lett a mostani rendszer), [20-design-implementation-tasks.md](20-design-implementation-tasks.md).
@@ -14,9 +15,10 @@
 ## 0. A prompt (ezt add át)
 
 > A **Lifey**-n dolgozol. Ez egy offline-first fitness- és táplálkozáskövető mobilapp
-> (Flutter, Material 3). A csatolt zip **135 képernyőképet** tartalmaz a jelenlegi állapotról,
-> mappákba rendezve (auth és onboarding, dashboard, étrend, edzések, súly, statisztika,
-> chat, beállítások, világos téma, magyar nyelv, edzői nézet). Minden mappában van egy
+> (Flutter, Material 3). A csatolt két zip együtt **135 képernyőképet** tartalmaz a jelenlegi
+> állapotról, mappákba rendezve. A part1-ben van az auth és onboarding, a dashboard, az
+> étrend, az edzések és a súly. A part2-ben a statisztika, a chat, a beállítások, a világos
+> téma, a magyar nyelv és az edzői nézet. Minden mappában van egy
 > `_overview.jpg` áttekintő kép. A `README.md` képernyőnként leírja a funkciókat, a mostani
 > design tokeneket és egy listát a hibákról és következetlenségekről.
 >
