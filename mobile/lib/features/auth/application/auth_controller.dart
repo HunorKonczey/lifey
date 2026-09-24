@@ -6,6 +6,7 @@ import '../../../core/entitlements/entitlement_refresher.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_preferences.dart';
 import '../../../core/local_db/database_provider.dart';
+import '../../../core/local_db/local_data_guard.dart';
 import '../../../core/location/location_permission_preferences.dart';
 import '../../trainer/application/trainer_view_preference.dart';
 import '../../trainer/client_detail/application/client_detail_tab_preference.dart';
@@ -35,6 +36,8 @@ class AuthController extends AsyncNotifier<AuthUser?> {
   AuthRepository get _repo => ref.read(authRepositoryProvider);
   TokenStorage get _storage => ref.read(tokenStorageProvider);
   GoogleAuthService get _googleAuth => ref.read(googleAuthServiceProvider);
+  LocalDataGuard get _localData =>
+      LocalDataGuard(ref.read(localDataOwnerProvider), _clearLocalAccountData);
 
   @override
   Future<AuthUser?> build() async {
@@ -46,12 +49,14 @@ class AuthController extends AsyncNotifier<AuthUser?> {
 
     final accessToken = await _storage.readAccessToken();
     if (accessToken == null) return null;
+    final user = AuthUser.fromAccessToken(accessToken);
+    await _localData.claim(user.id, adoptUnowned: true);
     // Cold start while already signed in — (re-)registers the push token,
     // e.g. after an APNs/FCM rotation that happened while the app was closed.
     unawaited(ref.read(pushTokenRegistrarProvider).register());
     // "App start after auth" (D-P3) for the already-signed-in case.
     unawaited(ref.read(entitlementRefresherProvider).refreshNow());
-    return AuthUser.fromAccessToken(accessToken);
+    return user;
   }
 
   Future<void> register({
@@ -66,8 +71,11 @@ class AuthController extends AsyncNotifier<AuthUser?> {
 
   Future<void> login({required String email, required String password}) async {
     final tokens = await _repo.login(email: email, password: password);
+    final user = AuthUser.fromAccessToken(tokens.accessToken);
+    // Before the tokens are saved — see LocalDataGuard.claim.
+    await _localData.claim(user.id);
     await _storage.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
-    state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
+    state = AsyncValue.data(user);
     unawaited(ref.read(pushTokenRegistrarProvider).register());
     // Sign-in doesn't itself trigger a connectivity-restore or app-resume
     // event, so kick off the initial pull explicitly instead of waiting for
@@ -85,8 +93,10 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     if (idToken == null) return false;
 
     final tokens = await _repo.loginWithGoogle(idToken);
+    final user = AuthUser.fromAccessToken(tokens.accessToken);
+    await _localData.claim(user.id);
     await _storage.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
-    state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
+    state = AsyncValue.data(user);
     unawaited(ref.read(pushTokenRegistrarProvider).register());
     unawaited(ref.read(connectivitySyncControllerProvider).refreshNow());
     // "App start after auth" (D-P3) for a fresh Google sign-in.
@@ -136,8 +146,32 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // still-valid access token to identify the caller.
     await ref.read(pushTokenRegistrarProvider).unregister();
     await _storage.clear();
+    await _clearLocalAccountData();
+    await _localData.release();
+    state = const AsyncValue.data(null);
+    if (refreshToken != null) {
+      try {
+        await _repo.logout(refreshToken);
+      } catch (_) {
+        // Best-effort: the token is already gone client-side either way.
+      }
+    }
+    try {
+      await _googleAuth.signOut();
+    } catch (_) {
+      // Best-effort: doesn't affect our own session either way.
+    }
+  }
+
+  /// Everything a signed-in account leaves on the device, except the token
+  /// pair. Runs on logout, and at sign-in when the incoming account is not the
+  /// one the local data belongs to (a session that ended by expiry, not by
+  /// logout — see [LocalDataGuard]).
+  Future<void> _clearLocalAccountData() async {
     // Wipe the offline cache too, so a different account signing in on this
-    // device doesn't inherit this account's settings, weight, meals, etc.
+    // device doesn't inherit this account's settings, weight, meals, etc. —
+    // nor its unsynced outbox, which would otherwise be pushed under the next
+    // account's token.
     await ref.read(appDatabaseProvider).clearAllData();
     await ref.read(healthPreferencesProvider).clear();
     // Same reasoning as healthPreferences.clear() above — a device-local
@@ -178,19 +212,6 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     ref.invalidate(trainerClientsControllerProvider);
     ref.invalidate(healthControllerProvider);
     ref.invalidate(musicControllerProvider);
-    state = const AsyncValue.data(null);
-    if (refreshToken != null) {
-      try {
-        await _repo.logout(refreshToken);
-      } catch (_) {
-        // Best-effort: the token is already gone client-side either way.
-      }
-    }
-    try {
-      await _googleAuth.signOut();
-    } catch (_) {
-      // Best-effort: doesn't affect our own session either way.
-    }
   }
 }
 

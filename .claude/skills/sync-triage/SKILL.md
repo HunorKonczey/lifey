@@ -100,6 +100,14 @@ Each of these already happened; the code comments name them.
   destroys the `serverId` the DELETE needs. A row that reappears after a
   rejected delete is the system working as designed — check whether the caller
   honoured the contract before "fixing" it.
+- **Outbox inherited across accounts.** A failed token refresh ends the
+  session without `logout()`, so the Drift cache and its outbox survived, and
+  the next account to sign in pushed the previous one's pending ops under its
+  own token (and saw its exercises and templates). `LocalDataGuard.claim`
+  now wipes at sign-in when the incoming user is not the recorded owner — and
+  it must run *before* the new tokens are saved. Anything that signs a user in
+  goes through it; anything that stores per-account local state belongs in
+  `AuthController._clearLocalAccountData`.
 - **Dangling `clientRef:`.** A reference to an entity that was deleted before
   it ever synced can never resolve; `_resolvePayload` parks the operation as
   failed rather than blocking it forever. Expect this after a delete-then-edit
