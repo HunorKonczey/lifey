@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.8 done
+Status: in progress — R0.1–R0.9 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -583,7 +583,7 @@ from the text above, all following the canvases:
 - Gallery: `gallery/control_sections.dart`; tests `test/shared/widgets/ds/controls_test.dart`
   (23 cases). The gallery matrix test now prints the full overflow error.
 
-### R0.9 — Mobile UI: progress components
+### R0.9 — Mobile UI: progress components ✅
 
 - Files in `shared/widgets/ds/`: `progress_ring.dart` (size, stroke, track `control`, round
   caps, animated fill 900 ms enter curve; over-goal state: full ring in `negative` +
@@ -593,6 +593,35 @@ from the text above, all following the canvases:
 - Stagger helper for "60 ms between macros".
 - **Verify:** gallery with 0 %, 22 %, 100 %, 130 % states; widget test that a value above goal
   renders the over state and never a > 360° sweep.
+
+*As built* (sizes read from the canvases):
+- `AnimatedFill` drives every fill: **fills animate in from 0 on first appearance** (900 ms,
+  enter curve, `AppMotion.staggered(i)` = 60 ms steps) — unlike the count-up number, which
+  doesn't — and later changes animate only the difference; equal rebuilds and reduced motion
+  never animate.
+- `ProgressRing`: stroke = 15/160 of the size (the canvases' 144/88/30/132 rings all use that
+  proportion), track surface-3, round caps from 12 o'clock; holds its own size under tight
+  constraints. **Over the goal** (no canvas example): the ring completes and a second lap
+  runs over it in the same colour with a soft shadow under its leading end (Apple-rings style)
+  — no extra colour, so "colour means data" holds; `overColor` for screens that want it louder.
+  `ringSweeps()` caps the overflow lap at one turn.
+- `MetricBar` 7 px; `RatioBar` 10 px / 3 px gaps: with a `total` (the kcal goal) segment widths
+  are kcal ÷ goal — so the canvas's P/C/F bar shows 5 % / 15 % / 8 % and the empty track is the
+  budget left — scaled together past the goal; without `total` it is a 100 % split (macros tab).
+- `MetricTile`: canvas tile (16 padding, 18 px icon + 13/600 label, value 26/800 with a **13 px
+  unit** — the tile's own 0.5 ratio, not MetricValue's 0.42), optional bar, delta chip,
+  subline, trailing (sparkline) and the solid metric-coloured 48 dp quick-add button floating
+  over the corner. The header is a fixed 32 px so tiles side by side line up with or without
+  the button; the value/unit may wrap instead of truncating.
+- **Found on the way — fixed:** `AppTheme.dark/light` were getters building a new `ThemeData`
+  per call; since R0.8's `resolveWith` closures two builds are never `==`, so every app-root
+  rebuild made `AnimatedTheme` run a 200 ms "transition" repainting everything. The themes
+  are now built once (`static final`).
+- **For R1.3:** the hero's macro rows need the HU canvas rule — at 130 % "Szénhidrát" +
+  "88 / 313 g" doesn't fit beside the ring, so the value wraps under the label (the gallery
+  demo already does this with a `Wrap`).
+- Gallery: `gallery/progress_sections.dart` (hero composition, ring states, macro and week
+  rings, day budget); tests `test/shared/widgets/ds/progress_test.dart` (19 cases).
 
 ### R0.10 — Mobile UI: `LifeyHeader` (large title) + `LifeySubpageHeader` + status-bar scrim
 

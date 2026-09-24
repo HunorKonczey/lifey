@@ -5,6 +5,7 @@ import '../../../../core/theme/app_tokens.dart';
 import 'component_sections.dart';
 import 'control_sections.dart';
 import 'foundation_sections.dart';
+import 'progress_sections.dart';
 import 'gallery_section.dart';
 
 /// Every gallery section, in canvas order. Each redesign step that adds a
@@ -14,6 +15,7 @@ List<GallerySection> get gallerySections => [
       ...foundationSections,
       ...componentSections,
       ...controlSections,
+      ...progressSections,
     ];
 
 /// Debug-only design gallery (route `/debug/design`, registered only under

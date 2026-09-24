@@ -134,6 +134,10 @@ abstract final class AppMotion {
   /// One-shot PR celebration.
   static const Duration celebration = Duration(milliseconds: 1200);
 
+  /// Delay of the [index]-th element in a staggered group ("60 ms eltolással
+  /// a makrók között").
+  static Duration staggered(int index) => stagger * index;
+
   /// Most transitions — cubic(0.2, 0, 0, 1).
   static const Curve standard = Cubic(0.2, 0, 0, 1);
 

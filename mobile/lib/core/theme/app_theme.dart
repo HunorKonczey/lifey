@@ -19,7 +19,12 @@ class AppTheme {
   // Dark
   // ---------------------------------------------------------------------------
 
-  static ThemeData get dark => withLifeyComponents(ThemeData(
+  // Built once and cached, not a getter: component themes hold
+  // `WidgetStateProperty.resolveWith` closures, so two separately built
+  // ThemeData are never ==, and MaterialApp's AnimatedTheme would run a
+  // 200 ms theme "transition" (rebuilding every widget each frame) whenever
+  // the app root rebuilds with a fresh instance.
+  static final ThemeData dark = withLifeyComponents(ThemeData(
         useMaterial3: true,
         colorScheme: _darkScheme,
         scaffoldBackgroundColor: AppPalette.dark.bg,
@@ -89,7 +94,7 @@ class AppTheme {
   // Light
   // ---------------------------------------------------------------------------
 
-  static ThemeData get light => withLifeyComponents(ThemeData(
+  static final ThemeData light = withLifeyComponents(ThemeData(
         useMaterial3: true,
         colorScheme: _lightScheme,
         scaffoldBackgroundColor: AppPalette.light.bg,
