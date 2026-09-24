@@ -63,6 +63,27 @@ void main() {
       expect(tester.getSize(find.byType(FilledButton)).height, 48);
     });
 
+    // R0 emulator review: a WidgetStateTextStyle in ChipThemeData left every
+    // chip label without a colour (near-invisible in light). Assert the
+    // colour that actually reaches the rendered paragraph.
+    for (final (name, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+      testWidgets('$name: chip labels render in text / onPrimary colours', (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          theme: theme,
+          home: Scaffold(body: Column(children: [
+            ActionChip(label: const Text('action'), onPressed: () {}),
+            FilterChip(label: const Text('off'), selected: false, onSelected: (_) {}),
+            FilterChip(label: const Text('on'), selected: true, onSelected: (_) {}),
+          ])),
+        ));
+        Color? rendered(String text) => tester.renderObject<RenderParagraph>(find.text(text)).text.style?.color;
+        final p = theme.extension<AppPalette>()!;
+        expect(rendered('action'), p.text);
+        expect(rendered('off'), p.text);
+        expect(rendered('on'), theme.colorScheme.onPrimary);
+      });
+    }
+
     testWidgets('a selected ChoiceChip is at least 40 tall', (tester) async {
       await tester.pumpWidget(_host(ChoiceChip(label: const Text('Breakfast'), selected: true, onSelected: (_) {})));
       expect(tester.getSize(find.byType(ChoiceChip)).height, greaterThanOrEqualTo(40));

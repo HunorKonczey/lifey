@@ -89,11 +89,17 @@ ThemeData withLifeyComponents(ThemeData base) {
       color: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected) ? s.primary : p.nested,
       ),
-      labelStyle: WidgetStateTextStyle.resolveWith(
-        (states) => t.labelMedium!.copyWith(
-          fontSize: 14,
-          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w600,
-          color: states.contains(WidgetState.selected) ? s.onPrimary : p.text,
+      // A plain style with a state-dependent *colour*: RawChip resolves only
+      // `labelStyle.color` per state (`resolveAs<Color?>`), not a whole
+      // WidgetStateTextStyle — that rendered every chip label with no colour
+      // at all (found in the R0 emulator review). The weight can't vary by
+      // state this way, so both are 600; selection reads from the fill and
+      // the check.
+      labelStyle: t.labelMedium!.copyWith(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? s.onPrimary : p.text,
         ),
       ),
       checkmarkColor: s.onPrimary,
