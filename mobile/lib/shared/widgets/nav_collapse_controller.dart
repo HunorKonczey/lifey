@@ -68,6 +68,15 @@ class NavCollapseController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Force-collapse — the design gallery's nav demo and tests; screens drive
+  /// the state by scrolling.
+  void collapse() {
+    if (!_collapsed) {
+      _collapsed = true;
+      notifyListeners();
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

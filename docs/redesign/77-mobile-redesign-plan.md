@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.10 done
+Status: in progress — R0.1–R0.11 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -656,7 +656,7 @@ scrolled, Lifey 2 "Edit meal", Lifey 5 chat):
   theme/locale/scale — the emulator review checks the header there.
 - Tests: `test/shared/widgets/ds/header_test.dart` (13 cases incl. both demos at 100/130 %).
 
-### R0.11 — Mobile UI: bottom nav — active tab expands into a labelled pill
+### R0.11 — Mobile UI: bottom nav — active tab expands into a labelled pill ✅
 
 - Files: `shared/widgets/adaptive_bottom_nav.dart` (visuals rewritten, **public API kept** so
   `main_shell.dart` and `trainer_shell.dart` don't change), `nav_collapse_controller.dart`
@@ -667,6 +667,27 @@ scrolled, Lifey 2 "Edit meal", Lifey 5 chat):
   hidden. Uses `AppMotion` curves instead of `AppCurve.collapse`.
 - **Verify:** widget test — semantics finds all 5 labels; HU "Áttekintés"/"Statisztika" fit at
   1.3; scroll collapses to 56 and back.
+
+*As built:* `adaptive_bottom_nav.dart` rewritten, public API unchanged (both shells untouched
+except `MainShell`'s icons and FAB). 68 px bar, radius 30, 16 px side margins, `float` + blur
+24 + e3 + top light edge; active = brand-olive pill (22 px filled icon + 14/700 label, grows
+open with the tab switch), others 48 × 48 outlined icons in `text2`; collapses to 56 px (the
+v1 separate collapsed pill is gone); a bg gradient behind the bar fades content under it (the
+canvas's 130 px fade, kept within the nav's slot). Each tab is one semantics node — label,
+button, selected — and the visible label is excluded, so nothing is read twice. The active
+label shrinks to fit (`FittedBox`) on a 360 px phone at 130 %.
+- **The reserved slot stays 84** (68 bar + 16 gap = the v1 58 + 26), so `navSlotHeight` and all
+  banner-ad / FAB placement math (`core/ads/nav_reserved_space.dart`, `trainer_fab.dart`) and
+  their tests are unchanged.
+- `MainShell`: destinations use the canvas icons (`space_dashboard`, … — outlined / rounded);
+  the FAB drops its own radius-18 and colour overrides (the R0.8 FAB theme applies: radius 22,
+  primary) and gains the canvas's olive glow; right margin 20.
+- `NavCollapseController.collapse()` added (gallery demo, tests); scroll logic unchanged.
+- **Caught by the tests:** `AnimatedSize` with a zero duration throws a layout assertion — with
+  reduced motion on, every tab switch would have errored. The label skips `AnimatedSize` then.
+- The trainer shell still passes `tertiary` as its accent — R6.1 removes that.
+- Gallery "Bottom nav" section (real nav, tab switching, collapse toggle); tests
+  `test/shared/widgets/adaptive_bottom_nav_test.dart` (8 cases).
 
 ### R0.12 — Mobile UI: bottom sheet + empty and error states
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/format/lifey_format.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../adaptive_bottom_nav.dart';
+import '../../nav_collapse_controller.dart';
 import '../lifey_header.dart';
 import '../list_group.dart';
 import '../monogram_avatar.dart';
@@ -18,7 +20,79 @@ final List<GallerySection> headerSections = [
     source: 'Design System › Fejléc · Lifey 1 top/scrolled · Lifey 2 Edit meal · Lifey 5 chat · R0.10',
     builder: (_) => const _HeadersSection(),
   ),
+  GallerySection(
+    title: 'Bottom nav',
+    source: 'Design System › Alsó navigáció · Lifey 1 · R0.11',
+    builder: (_) => const _NavSection(),
+  ),
 ];
+
+/// The real nav in a fixed box: tap tabs to see the pill travel, toggle the
+/// scrolled (56 px) state.
+class _NavSection extends StatefulWidget {
+  const _NavSection();
+
+  @override
+  State<_NavSection> createState() => _NavSectionState();
+}
+
+class _NavSectionState extends State<_NavSection> {
+  final _collapse = NavCollapseController();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _collapse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hu = _hu(context);
+    final labels = hu
+        ? ['Áttekintés', 'Étrend', 'Edzések', 'Súly', 'Statisztika']
+        : ['Today', 'Nutrition', 'Workouts', 'Weight', 'Stats'];
+    const icons = [
+      (Icons.space_dashboard_outlined, Icons.space_dashboard_rounded),
+      (Icons.restaurant_outlined, Icons.restaurant_rounded),
+      (Icons.fitness_center_outlined, Icons.fitness_center_rounded),
+      (Icons.monitor_weight_outlined, Icons.monitor_weight_rounded),
+      (Icons.bar_chart_outlined, Icons.bar_chart_rounded),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton(
+            onPressed: () => setState(() => _collapse.collapsed ? _collapse.expand() : _collapse.collapse()),
+            child: Text(_collapse.collapsed ? 'Expand (68)' : 'Collapse (56)'),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s8),
+        // The nav keeps its own 16 px from the edges of this box.
+        Container(
+          color: context.palette.card,
+          child: MediaQuery.removePadding(
+            context: context,
+            removeBottom: true,
+            child: NavCollapseScope(
+              controller: _collapse,
+              child: AdaptiveBottomNav(
+                selectedIndex: _index,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                destinations: [
+                  for (var i = 0; i < labels.length; i++)
+                    AdaptiveNavDestination(icon: icons[i].$1, selectedIcon: icons[i].$2, label: labels[i]),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 bool _hu(BuildContext context) => Localizations.localeOf(context).languageCode == 'hu';
 
