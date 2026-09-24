@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
+import 'chart_sections.dart';
 import 'component_sections.dart';
 import 'control_sections.dart';
 import 'foundation_sections.dart';
@@ -20,6 +21,7 @@ List<GallerySection> get gallerySections => [
       ...progressSections,
       ...headerSections,
       ...stateSections,
+      ...chartSections,
     ];
 
 /// Debug-only design gallery (route `/debug/design`, registered only under

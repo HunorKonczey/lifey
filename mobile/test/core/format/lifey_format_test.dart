@@ -110,6 +110,11 @@ void main() {
       expect(hu.shortDayLabel(thu), endsWith('szept. 24.'));
     });
 
+    test('short date for axes', () {
+      expect(en.shortDate(thu), 'Sep 24');
+      expect(hu.shortDate(thu), 'szept. 24.');
+    });
+
     test('time is 24-hour in both languages', () {
       expect(en.time(thu), '07:15');
       expect(hu.time(thu), '07:15');

@@ -114,6 +114,10 @@ class LifeyFormat {
     return DateFormat('EEE, d MMM', locale).format(date);
   }
 
+  /// Month and day for chart axes and history rows: "Sep 24" /
+  /// "szept. 24." (the canvases' axis labels).
+  String shortDate(DateTime date) => DateFormat(_hu ? 'MMM d.' : 'MMM d', locale).format(date);
+
   /// 24-hour clock time: "07:15".
   String time(DateTime date) => DateFormat('HH:mm', locale).format(date);
 

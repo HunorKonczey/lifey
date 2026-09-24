@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.12 done
+Status: in progress — R0.1–R0.13 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -719,7 +719,7 @@ label shrinks to fit (`FittedBox`) on a 360 px phone at 130 %.
   `retryButton` string ("Retry" / "Újra") means the same and is reused.
 - Gallery "Sheets & states"; tests `test/shared/widgets/ds/states_test.dart` (8 cases).
 
-### R0.13 — Mobile UI: `LifeyBarChart`
+### R0.13 — Mobile UI: `LifeyBarChart` ✅
 
 - Files: `shared/widgets/charts/bar_chart.dart`, `test/shared/widgets/charts/bar_chart_test.dart`.
 - Spec per D-R0.9. Pure helpers `yAxisTicks(max)` (0 / mid / nice max) and
@@ -728,6 +728,25 @@ label shrinks to fit (`FittedBox`) on a 360 px phone at 130 %.
   text3; weekday letters locale-aware (HU: H K Sze Cs P Szo V).
 - **Verify:** unit tests (average excludes today; ticks for max 0, 7, 2 360, 13 000);
   gallery example with the canvas's "This week" data.
+
+*As built* — `shared/widgets/charts/chart_math.dart` + `bar_chart.dart`, measured from the
+dashboard "This week" and stats "Workouts · last 30 days" canvases:
+- **Axis rule, reverse-engineered from the canvases:** the top rounds up to two significant
+  digits (2 360 → 2 400, 12 612 → 13 000); small integer counts get one step of headroom (a
+  peak of 6 workouts → 7); the middle label is the exact half ("3.5", not rounded); the goal
+  counts toward the top. `niceAxisMax`, `yAxisTicks`.
+- `averageExcludingPartialToday(points, now, ignoreZero:)` — skips today, missing days, and
+  (optionally) zero days — for calories a 0 means "nothing logged"; null when nothing is left.
+- `LifeyBarChart`: 34 px axis (11/600 `text3`, labels centred on their lines), bars with 6/6/2/2
+  corners at 45 % except the highlighted one, dashed 1.5 px goal line in the metric colour at
+  70 %, hairline baseline, X labels (highlighted one 800 in `text`); `height` 96 / 150 and
+  `barGap` 8 / 14 per canvas; bars grow in via `AnimatedFill`. Per-bar `semanticsLabel`, a
+  summary label that keeps them (`explicitChildNodes`), and the Y-axis numbers are excluded
+  from screen readers.
+- `LifeyFormat.shortDate` added ("Sep 24" / "szept. 24." — the canvas axes).
+- Weekly bucketing stays in R4.7 (it is stats data shaping, not chart drawing).
+- Gallery "Bar chart" (both canvas charts); tests `test/shared/widgets/charts/bar_chart_test.dart`
+  (14 cases).
 
 ### R0.14 — Mobile UI: `TimeSeriesChart` upgrade
 
