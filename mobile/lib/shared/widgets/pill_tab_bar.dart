@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
-/// Pill-shaped segmented tab bar.
+import '../../core/theme/app_tokens.dart';
+
+/// Pill-shaped segmented tab bar — the nutrition canvas's "Meals · Recipes ·
+/// Foods · Macros" (design system v2; docs/redesign/77-mobile-redesign-plan.md
+/// R0.8).
 ///
-/// Wraps a [TabBar] in a rounded container so the active tab indicator
-/// appears as a filled pill rather than an underline. Drop this in place of
-/// any [TabBar] where the mockup calls for the stadium-segment style.
+/// A card-coloured pill track with a hairline ring and 4 px padding; the
+/// active tab is a surface-3 pill with a small shadow and 700-weight text,
+/// the others 600 in the secondary text colour. (The v1 bar filled the active
+/// tab with brand olive; v2 keeps olive for actions, not for "where am I".)
 ///
 /// The [tabs] list is passed straight to [TabBar.tabs] — use [Tab(text: …)]
-/// for text-only tabs. Height is fixed at 38 px; side padding is handled
-/// internally.
+/// for text-only tabs. 46 tall in all: 38 pills in a 4 px track.
 class PillTabBar extends StatelessWidget {
   const PillTabBar({
     super.key,
@@ -21,39 +25,39 @@ class PillTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen, vertical: AppSpacing.s8),
       child: Container(
-        height: 38,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(99),
+        height: 46,
+        padding: const EdgeInsets.all(AppSpacing.s4),
+        decoration: BoxDecoration(color: p.card, borderRadius: AppRadius.pill),
+        // Foreground, like the canvas's inset ring — a real border would eat
+        // 2 px of the 38 px pills.
+        foregroundDecoration: BoxDecoration(
+          borderRadius: AppRadius.pill,
+          border: Border.all(color: context.elevation.border),
         ),
         child: TabBar(
           controller: controller,
           indicator: BoxDecoration(
-            color: scheme.primary,
-            borderRadius: BorderRadius.circular(99),
+            color: p.control,
+            borderRadius: AppRadius.pill,
+            boxShadow: dark
+                ? const [BoxShadow(color: Color(0x66000000), offset: Offset(0, 2), blurRadius: 8)]
+                : context.elevation.e1,
           ),
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
           overlayColor: WidgetStateProperty.all(Colors.transparent),
-          labelColor: scheme.onPrimary,
-          unselectedLabelColor: scheme.onSurfaceVariant,
-          labelStyle: const TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            height: 1.0,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            height: 1.0,
-          ),
+          labelColor: p.text,
+          unselectedLabelColor: p.text2,
+          labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+          labelStyle: t.labelLarge!.copyWith(fontWeight: FontWeight.w700, height: 1),
+          unselectedLabelStyle: t.labelLarge!.copyWith(fontWeight: FontWeight.w600, height: 1),
           tabs: tabs,
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import 'nav_collapse_controller.dart';
 
@@ -52,7 +53,7 @@ class DateRangeFilterButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final size = collapsed ? 32.0 : 40.0;
-    final radius = collapsed ? 11.0 : 13.0;
+    final radius = collapsed ? AppRadius.tag : AppRadius.control;
     final iconSize = collapsed ? 18.0 : 21.0;
 
     return PopupMenuButton<DateRangeFilter>(
@@ -85,11 +86,9 @@ class DateRangeFilterButton extends StatelessWidget {
             child: Text(
               value.label(l10n),
               key: ValueKey(value),
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: collapsed ? 11.0 : 13.0,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                fontSize: collapsed ? 12.0 : 13.0,
+                color: context.palette.text2,
               ),
             ),
           ),
@@ -99,7 +98,7 @@ class DateRangeFilterButton extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: scheme.surfaceContainerLowest,
+              color: context.palette.nested,
               borderRadius: BorderRadius.circular(radius),
             ),
             child: Center(
@@ -139,7 +138,7 @@ class LabeledFilterButton extends StatelessWidget {
     final collapsed = NavCollapseScope.collapsedOf(context);
     final scheme = Theme.of(context).colorScheme;
     final size = collapsed ? 32.0 : 40.0;
-    final radius = collapsed ? 11.0 : 13.0;
+    final radius = collapsed ? AppRadius.tag : AppRadius.control;
     final iconSize = collapsed ? 18.0 : 21.0;
 
     return PopupMenuButton<String>(
@@ -154,11 +153,9 @@ class LabeledFilterButton extends StatelessWidget {
             child: Text(
               label,
               key: ValueKey(label),
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: collapsed ? 11.0 : 13.0,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
+              style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                fontSize: collapsed ? 12.0 : 13.0,
+                color: context.palette.text2,
               ),
             ),
           ),
@@ -168,7 +165,7 @@ class LabeledFilterButton extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: scheme.surfaceContainerLowest,
+              color: context.palette.nested,
               borderRadius: BorderRadius.circular(radius),
             ),
             child: Center(

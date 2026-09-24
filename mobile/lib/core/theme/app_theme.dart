@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../router/transitions.dart';
+import 'app_component_themes.dart';
 import 'app_tokens.dart';
 import 'app_type.dart';
 
@@ -18,7 +19,7 @@ class AppTheme {
   // Dark
   // ---------------------------------------------------------------------------
 
-  static ThemeData get dark => ThemeData(
+  static ThemeData get dark => withLifeyComponents(ThemeData(
         useMaterial3: true,
         colorScheme: _darkScheme,
         scaffoldBackgroundColor: AppPalette.dark.bg,
@@ -30,7 +31,7 @@ class AppTheme {
         // which looks harshly bright on near-black surfaces.
         splashColor: _darkPrimary.withValues(alpha: 0.10),
         highlightColor: _darkPrimary.withValues(alpha: 0.06),
-      );
+      ));
 
   static const Color _darkPrimary = Color(0xFFB5C47C);
   static const Color _lightPrimary = Color(0xFF4E6530);
@@ -88,7 +89,7 @@ class AppTheme {
   // Light
   // ---------------------------------------------------------------------------
 
-  static ThemeData get light => ThemeData(
+  static ThemeData get light => withLifeyComponents(ThemeData(
         useMaterial3: true,
         colorScheme: _lightScheme,
         scaffoldBackgroundColor: AppPalette.light.bg,
@@ -98,7 +99,7 @@ class AppTheme {
         pageTransitionsTheme: lifeyPageTransitions,
         splashColor: _lightPrimary.withValues(alpha: 0.10),
         highlightColor: _lightPrimary.withValues(alpha: 0.06),
-      );
+      ));
 
   static ColorScheme get _lightScheme {
     const p = AppPalette.light;

@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.7 done
+Status: in progress — R0.1–R0.8 done
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -535,7 +535,7 @@ toolbar combinations at 411 × 923 dp and fails on any overflow.
 - Gallery: `gallery/component_sections.dart` ("Cards & labels", "Chips & avatars"); tests:
   `test/shared/widgets/ds/base_components_test.dart` (23 cases).
 
-### R0.8 — Mobile UI: list rows, buttons, chips, inputs, dialogs (themes)
+### R0.8 — Mobile UI: list rows, buttons, chips, inputs, dialogs (themes) ✅
 
 - Files: `shared/widgets/ds/list_group.dart` (`ListGroup` = one card with row dividers,
   `ListRow` = 40 px icon holder r14 in metric/neutral tint + title-s + body-s meta + trailing
@@ -549,6 +549,39 @@ toolbar combinations at 411 × 923 dp and fails on any overflow.
 - `pill_tab_bar.dart` and `date_range_filter_bar.dart` restyled onto these themes.
 - **Verify:** gallery sections; widget test that every button/chip/icon button measures ≥ 48 dp
   hit area.
+
+*As built* — component themes live in `core/theme/app_component_themes.dart`
+(`withLifeyComponents`, applied to both themes), measured from the canvases' markup. Deviations
+from the text above, all following the canvases:
+- **Radii follow the 4-step rule even where a canvas sample doesn't**: the button samples still
+  use 16/18 and the FAB 20 → buttons 14, FAB 22 (the design-system page itself says the old
+  8/16/18/20/24/28 are gone).
+- **Button sizes:** theme default 48 (so ~100 existing buttons in tight rows keep fitting); the
+  canvas's 56 px full-width primary CTA is `lifeyLargeButtonStyle`, applied per screen.
+  `OutlinedButton` = the canvas "Secondary" (surface-2 + hairline). Pressed = lighter tone, no
+  splash.
+- **Selected chip = solid brand olive with a check** (canvas "CHIP · szűrő"), not the tint this
+  plan assumed; unselected surface-2 + hairline; 40 tall.
+- **Segmented control is a widget, `LifeySegmented`, not a `SegmentedButtonTheme`** — Material's
+  `SegmentedButton` draws joined segments and can't make the canvas's floating selected pill.
+  The 3 existing `SegmentedButton`s move to it in their iteration.
+- **Inputs:** default is the in-sheet field (surface-3, no ring, 14, ≥ 52); the login canvas's
+  on-page field (card fill + hairline, 56) is a per-screen override in R5.
+- **Dialog** fill = control in dark (canvas `#2A2D22`), white in light; radius 30.
+- **Hairline rings are foreground decorations** (the canvas uses inset box-shadows): a real
+  `Border` adds 2 px of layout — it had squeezed the tab bar's pills to 36 px.
+- `ListGroup`/`ListRow` follow the dashboard canvas: 44 px icon holder, title 15/700 (the
+  screen canvas, not the 16 px title-s of the type page), value 15/800 + 12 px unit, divider
+  inset 74; subtitles wrap to 2 lines. `ListIconHolder`, `ListRowValue`, `SquareIconButton`
+  (48 px, surface-2).
+- `AppSnackbar` rebuilt on tokens (7 colour literals gone): an inverse surface — the v2 dark
+  palette in both themes — with success = `positive`, error = `heart`, info = `water` (brand
+  olive is for controls); close and action are 48 dp targets.
+- `PillTabBar` → canvas tab bar (card track + hairline, surface-3 selected pill with shadow,
+  20 px screen margin); the v1 olive-filled active tab is gone. `date_range_filter_bar` moved
+  onto tokens only (it is replaced by the week strip in R2).
+- Gallery: `gallery/control_sections.dart`; tests `test/shared/widgets/ds/controls_test.dart`
+  (23 cases). The gallery matrix test now prints the full overflow error.
 
 ### R0.9 — Mobile UI: progress components
 

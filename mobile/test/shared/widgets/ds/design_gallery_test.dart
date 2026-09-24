@@ -52,7 +52,10 @@ void main() {
       final bit = (i & -i).bitLength - 1; // lowest set bit of i
       await tester.tap(find.byKey(ValueKey('gallery-${toggles[bit]}')));
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: 'combination ${i ^ (i >> 1)}');
+      final error = tester.takeException();
+      expect(error, isNull,
+          reason: 'combination ${i ^ (i >> 1)} (bits: theme, language, textScale, motion):\n'
+              '${error is FlutterError ? error.toStringDeep() : error}');
     }
   });
 
