@@ -1,4 +1,20 @@
+import 'dart:ui' show PointMode;
+
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_tokens.dart';
+import 'chart_math.dart';
+
+/// How [TimeSeriesChart.trendValues] is drawn.
+enum TrendStyle {
+  /// docs/76 D-W3: the trend is the bold line, the raw series a thin
+  /// translucent one behind it. The default, so existing charts don't change.
+  emphasized,
+
+  /// Design system v2 (weight canvas): the daily line stays the hero; the
+  /// moving average is a dotted line over it.
+  dotted,
+}
 
 /// A single (date, value) sample plotted by [TimeSeriesChart].
 class TimeSeriesPoint {
@@ -30,6 +46,13 @@ class TimeSeriesChart extends StatefulWidget {
     this.areaColor,
     this.accentColor,
     this.trendValues,
+    this.axisLabelBuilder,
+    this.yFromZero = false,
+    this.gradientFill = false,
+    this.trendStyle = TrendStyle.emphasized,
+    this.showPoints = true,
+    this.highlightLast = false,
+    this.legend,
   });
 
   final List<TimeSeriesPoint> points;
@@ -64,6 +87,35 @@ class TimeSeriesChart extends StatefulWidget {
   /// reads (D-W3).
   final List<double?>? trendValues;
 
+  // --- Design system v2 options (docs/redesign/77-mobile-redesign-plan.md
+  // R0.14). All default off, so a chart looks as before until its screen's
+  // iteration opts in.
+
+  /// When set, a 34 px Y axis with three labels (top, middle, bottom of the
+  /// plotted range) and a faint grid line at each is drawn — e.g. "66.0 /
+  /// 65.1 / 64.2" on the weight canvas, "13k / 6.5k / 0" on stats.
+  final String Function(double value)? axisLabelBuilder;
+
+  /// Plot from 0 up to a nice max (counts, steps) instead of around the data
+  /// (weight).
+  final bool yFromZero;
+
+  /// Fill under the line with the accent fading from 32 % to 0 (canvas).
+  final bool gradientFill;
+
+  final TrendStyle trendStyle;
+
+  /// Dots on every point. The v2 charts show only the last point.
+  final bool showPoints;
+
+  /// Emphasise the last point ("today"): a 12 px dot with a ring in the card
+  /// colour.
+  final bool highlightLast;
+
+  /// Legend under the chart: the daily line's label and the trend's
+  /// ("Daily · 7-day average"); the trend entry only appears with a trend.
+  final ({String daily, String? trend})? legend;
+
   @override
   State<TimeSeriesChart> createState() => _TimeSeriesChartState();
 }
@@ -83,10 +135,18 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
   }
 
   void _handleTapDown(TapDownDetails details, Size size) {
-    final geometry = _ChartGeometry(widget.points, size);
+    final geometry = _geometry(size);
     final nearest = geometry.nearestIndex(details.localPosition);
     setState(() => _selectedIndex = _selectedIndex == nearest ? null : nearest);
   }
+
+  _ChartGeometry _geometry(Size size) => _ChartGeometry(
+        widget.points,
+        size,
+        goalValue: widget.goalValue,
+        withAxis: widget.axisLabelBuilder != null,
+        yFromZero: widget.yFromZero,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -95,13 +155,14 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
     final selectedIndex = _selectedIndex;
     final accent = widget.accentColor ?? theme.colorScheme.primary;
 
-    return SizedBox(
+    final p = context.palette;
+    final chart = SizedBox(
       height: widget.height,
       width: double.infinity,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = constraints.biggest;
-          final geometry = _ChartGeometry(widget.points, size, goalValue: widget.goalValue);
+          final geometry = _geometry(size);
           return Stack(
             clipBehavior: Clip.none,
             children: [
@@ -129,9 +190,44 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                     positiveDeltaColor: theme.colorScheme.error,
                     negativeDeltaColor: theme.colorScheme.tertiary,
                     areaColor: widget.areaColor,
+                    geometry: geometry,
+                    axisLabelBuilder: widget.axisLabelBuilder,
+                    hairline: p.hairline,
+                    gradientFill: widget.gradientFill,
+                    trendStyle: widget.trendStyle,
+                    trendColor: p.text.withValues(alpha: 0.75),
+                    showPoints: widget.showPoints,
+                    highlightLast: widget.highlightLast,
+                    ringColor: p.card,
                   ),
                 ),
               ),
+              // v2 axis labels: widgets (they scale with text size, like
+              // LifeyBarChart's), centred on their grid lines; not read out —
+              // the numbers mean nothing on their own.
+              if (widget.axisLabelBuilder != null)
+                for (final v in geometry.axisValues)
+                  Positioned(
+                    left: 0,
+                    width: _ChartGeometry.axisWidth,
+                    top: geometry.yFor(v) - 6,
+                    child: ExcludeSemantics(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          widget.axisLabelBuilder!(v),
+                          maxLines: 1,
+                          style: theme.textTheme.labelSmall!.copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            height: 1,
+                            color: p.text3,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               if (selectedIndex != null && selectedIndex < widget.points.length)
                 _PointTooltip(
                   geometry: geometry,
@@ -144,7 +240,74 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
         },
       ),
     );
+
+    final legend = widget.legend;
+    if (legend == null) return chart;
+    final hasTrend = widget.trendValues?.any((v) => v != null) ?? false;
+    final legendStyle = theme.textTheme.labelMedium!.copyWith(fontSize: 12, color: p.text2);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        chart,
+        const SizedBox(height: AppSpacing.s12),
+        Wrap(spacing: AppSpacing.s16, runSpacing: AppSpacing.s4, children: [
+          _LegendEntry(
+            swatch: Container(
+              width: 14,
+              height: 3,
+              decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(2)),
+            ),
+            label: legend.daily,
+            style: legendStyle,
+          ),
+          if (hasTrend && legend.trend != null)
+            _LegendEntry(
+              swatch: CustomPaint(
+                size: const Size(14, 2),
+                painter: _DottedSwatchPainter(p.text.withValues(alpha: 0.75)),
+              ),
+              label: legend.trend!,
+              style: legendStyle,
+            ),
+        ]),
+      ],
+    );
   }
+}
+
+class _LegendEntry extends StatelessWidget {
+  const _LegendEntry({required this.swatch, required this.label, required this.style});
+
+  final Widget swatch;
+  final String label;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+        swatch,
+        const SizedBox(width: 6),
+        Text(label, style: style),
+      ]);
+}
+
+class _DottedSwatchPainter extends CustomPainter {
+  const _DottedSwatchPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.height
+      ..strokeCap = StrokeCap.round;
+    for (var x = 1.0; x < size.width; x += 5) {
+      canvas.drawPoints(PointMode.points, [Offset(x, size.height / 2)], paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DottedSwatchPainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// The tap-to-reveal tooltip, positioned above the selected point using the
@@ -215,11 +378,23 @@ class _PointTooltip extends StatelessWidget {
 /// all build one of these for the same [Size], so a tap and its tooltip are
 /// always positioned against exactly the geometry that was drawn.
 class _ChartGeometry {
-  _ChartGeometry(this.points, this.size, {this.goalValue})
-      : plotTop = _topPadding,
+  _ChartGeometry(
+    this.points,
+    this.size, {
+    this.goalValue,
+    this.withAxis = false,
+    this.yFromZero = false,
+  })  : plotTop = withAxis ? _axisTopPadding : _topPadding,
         plotBottom = size.height - _bottomPadding,
-        plotLeft = _sidePadding,
-        plotRight = size.width - _sidePadding {
+        plotLeft = withAxis ? axisWidth + _axisGap : _sidePadding,
+        plotRight = size.width - (withAxis ? 0 : _sidePadding) {
+    if (yFromZero) {
+      final peak = [...points.map((p) => p.value), if (goalValue != null) goalValue!]
+          .fold<double>(0, (m, v) => v > m ? v : m);
+      minY = 0;
+      maxY = niceAxisMax(peak);
+      return;
+    }
     if (points.isEmpty) {
       minY = goalValue ?? 0;
       maxY = goalValue != null ? goalValue! + 1 : 0;
@@ -244,6 +419,13 @@ class _ChartGeometry {
   }
 
   final double? goalValue;
+  final bool withAxis;
+  final bool yFromZero;
+
+  /// The v2 axis column, as in LifeyBarChart.
+  static const axisWidth = 34.0;
+  static const _axisGap = 8.0;
+  static const _axisTopPadding = 6.0;
 
   static const _topPadding = 24.0;
   static const _bottomPadding = 24.0;
@@ -257,6 +439,9 @@ class _ChartGeometry {
   final double plotRight;
   late final double minY;
   late final double maxY;
+
+  /// The v2 axis: top, middle and bottom of the plotted range.
+  List<double> get axisValues => [maxY, (maxY + minY) / 2, minY];
 
   double xFor(int index) {
     if (points.length == 1) return (plotLeft + plotRight) / 2;
@@ -301,6 +486,15 @@ class _TimeSeriesChartPainter extends CustomPainter {
     required this.positiveDeltaColor,
     required this.negativeDeltaColor,
     this.areaColor,
+    required this.geometry,
+    required this.axisLabelBuilder,
+    required this.hairline,
+    required this.gradientFill,
+    required this.trendStyle,
+    required this.trendColor,
+    required this.showPoints,
+    required this.highlightLast,
+    required this.ringColor,
   });
 
   final List<TimeSeriesPoint> points;
@@ -318,6 +512,15 @@ class _TimeSeriesChartPainter extends CustomPainter {
   final Color positiveDeltaColor;
   final Color negativeDeltaColor;
   final Color? areaColor;
+  final _ChartGeometry geometry;
+  final String Function(double value)? axisLabelBuilder;
+  final Color hairline;
+  final bool gradientFill;
+  final TrendStyle trendStyle;
+  final Color trendColor;
+  final bool showPoints;
+  final bool highlightLast;
+  final Color ringColor;
 
   static const _maxDateLabels = 3;
 
@@ -325,18 +528,21 @@ class _TimeSeriesChartPainter extends CustomPainter {
   /// wherever the average has no value — a gap is a gap, not a straight line
   /// across one.
   void _paintTrend(Canvas canvas, _ChartGeometry geometry, List<Offset> offsets) {
+    final dotted = trendStyle == TrendStyle.dotted;
     final paint = Paint()
-      ..color = lineColor
+      ..color = dotted ? trendColor : lineColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = dotted ? 2 : 2.5
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
+
+    void draw(Path path) => canvas.drawPath(dotted ? _dotted(path) : path, paint);
 
     Path? path;
     for (var i = 0; i < offsets.length && i < trendValues!.length; i++) {
       final value = trendValues![i];
       if (value == null) {
-        if (path != null) canvas.drawPath(path, paint);
+        if (path != null) draw(path);
         path = null;
         continue;
       }
@@ -347,14 +553,37 @@ class _TimeSeriesChartPainter extends CustomPainter {
         path.lineTo(point.dx, point.dy);
       }
     }
-    if (path != null) canvas.drawPath(path, paint);
+    if (path != null) draw(path);
+  }
+
+  /// The canvas's `stroke-dasharray="1 5"` with round caps: a dot every
+  /// 6 px along [source].
+  static Path _dotted(Path source) {
+    final dots = Path();
+    for (final metric in source.computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += 6) {
+        dots.addPath(metric.extractPath(d, d + 1), Offset.zero);
+      }
+    }
+    return dots;
+  }
+
+  /// v2 axis grid: a hairline at the top, middle and bottom of the plotted
+  /// range (the labels are widgets — see [_ChartGeometry.axisValues]).
+  void _paintAxis(Canvas canvas, _ChartGeometry g) {
+    final gridPaint = Paint()
+      ..color = hairline
+      ..strokeWidth = 1;
+    for (final v in g.axisValues) {
+      final y = g.yFor(v);
+      canvas.drawLine(Offset(g.plotLeft, y), Offset(g.plotRight, y), gridPaint);
+    }
   }
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (axisLabelBuilder != null) _paintAxis(canvas, geometry);
     if (points.isEmpty) return;
-
-    final geometry = _ChartGeometry(points, size, goalValue: goalValue);
 
     // Dashed goal line drawn behind the data line so data reads on top.
     if (goalValue != null) {
@@ -373,14 +602,16 @@ class _TimeSeriesChartPainter extends CustomPainter {
       }
     }
 
-    // Baseline grid line.
-    canvas.drawLine(
-      Offset(geometry.plotLeft, geometry.plotBottom),
-      Offset(geometry.plotRight, geometry.plotBottom),
-      Paint()
-        ..color = gridColor
-        ..strokeWidth = 1,
-    );
+    // Baseline grid line (the v2 axis draws its own grid).
+    if (axisLabelBuilder == null) {
+      canvas.drawLine(
+        Offset(geometry.plotLeft, geometry.plotBottom),
+        Offset(geometry.plotRight, geometry.plotBottom),
+        Paint()
+          ..color = gridColor
+          ..strokeWidth = 1,
+      );
+    }
 
     final offsets = [for (var i = 0; i < points.length; i++) geometry.offsetFor(i)];
 
@@ -398,6 +629,24 @@ class _TimeSeriesChartPainter extends CustomPainter {
           ..close();
         canvas.drawPath(areaPath, Paint()..color = areaColor!..style = PaintingStyle.fill);
       }
+      if (gradientFill) {
+        final areaPath = Path()..moveTo(offsets.first.dx, geometry.plotBottom);
+        for (final o in offsets) {
+          areaPath.lineTo(o.dx, o.dy);
+        }
+        areaPath
+          ..lineTo(offsets.last.dx, geometry.plotBottom)
+          ..close();
+        canvas.drawPath(
+          areaPath,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [lineColor.withValues(alpha: 0.32), lineColor.withValues(alpha: 0)],
+            ).createShader(Rect.fromLTRB(0, geometry.plotTop, size.width, geometry.plotBottom)),
+        );
+      }
 
       final hasTrend = trendValues?.any((v) => v != null) ?? false;
       final path = Path()..moveTo(offsets.first.dx, offsets.first.dy);
@@ -409,21 +658,29 @@ class _TimeSeriesChartPainter extends CustomPainter {
         Paint()
           // The raw line gives way to the trend rather than competing with
           // it, but stays visible: it is what the user typed in (D-W3).
-          ..color = hasTrend ? lineColor.withValues(alpha: 0.32) : lineColor
+          ..color = hasTrend && trendStyle == TrendStyle.emphasized ? lineColor.withValues(alpha: 0.32) : lineColor
           ..style = PaintingStyle.stroke
-          ..strokeWidth = hasTrend ? 1.5 : 2.5
-          ..strokeCap = StrokeCap.round,
+          ..strokeWidth = hasTrend && trendStyle == TrendStyle.emphasized ? 1.5 : 2.5
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
       );
       if (hasTrend) _paintTrend(canvas, geometry, offsets);
     }
 
     for (var i = 0; i < offsets.length; i++) {
       final isSelected = i == selectedIndex;
+      if (!showPoints && !isSelected) continue;
       canvas.drawCircle(
         offsets[i],
         isSelected ? 5.5 : 3.5,
         Paint()..color = isSelected ? selectedPointColor : pointColor,
       );
+    }
+
+    // "Today": a 12 px dot with a 4 px ring in the card colour (canvas).
+    if (highlightLast) {
+      canvas.drawCircle(offsets.last, 10, Paint()..color = ringColor);
+      canvas.drawCircle(offsets.last, 6, Paint()..color = lineColor);
     }
 
     if (deltaLabelBuilder != null) {
@@ -497,6 +754,12 @@ class _TimeSeriesChartPainter extends CustomPainter {
         oldDelegate.goalValue != goalValue ||
         oldDelegate.trendValues != trendValues ||
         oldDelegate.areaColor != areaColor ||
+        oldDelegate.gradientFill != gradientFill ||
+        oldDelegate.trendStyle != trendStyle ||
+        oldDelegate.showPoints != showPoints ||
+        oldDelegate.highlightLast != highlightLast ||
+        oldDelegate.hairline != hairline ||
+        (oldDelegate.axisLabelBuilder == null) != (axisLabelBuilder == null) ||
         (oldDelegate.deltaLabelBuilder == null) != (deltaLabelBuilder == null);
   }
 }

@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.13 done
+Status: in progress — R0.1–R0.14 done; R0 emulator review next
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -748,13 +748,27 @@ dashboard "This week" and stats "Workouts · last 30 days" canvases:
 - Gallery "Bar chart" (both canvas charts); tests `test/shared/widgets/charts/bar_chart_test.dart`
   (14 cases).
 
-### R0.14 — Mobile UI: `TimeSeriesChart` upgrade
+### R0.14 — Mobile UI: `TimeSeriesChart` upgrade ✅
 
 - Files: `shared/widgets/charts/time_series_chart.dart`.
 - Add: 3-label Y axis, faint horizontal grid, gradient fill under the value line, optional
   dotted average series, emphasised last point, legend row ("Daily · 7-day average"), 3 X
   labels (start/mid/end, locale dates). Existing callers keep working with defaults off.
 - **Verify:** existing chart tests green; gallery example matching canvas §4 chart.
+
+*As built* — new options on `TimeSeriesChart`, **all off by default**, so the five existing
+charts (weight, statistics, trainer trend card, cardio summary, exercise detail) look exactly
+as before until their iteration opts in (existing chart tests unchanged and green):
+`axisLabelBuilder` (34 px axis + hairline grid at top/middle/bottom; labels are widgets,
+excluded from semantics, like `LifeyBarChart`), `yFromZero` (nice max via `niceAxisMax`),
+`gradientFill` (accent 32 % → 0), `trendStyle`, `showPoints`, `highlightLast` (12 px dot with a
+4 px card-colour ring), `legend` ("Daily · 7-day average", the trend entry only when a trend is
+drawn). Values from the Lifey 4 weight canvas.
+- **Open decision (§10 Q4):** the canvas draws the daily line as the hero with the 7-day
+  average **dotted** — the reverse of docs/76 D-W3 (trend bold, raw thin). Both are
+  `TrendStyle` values (`emphasized` default = D-W3, `dotted` = canvas); R4.2 picks one.
+- Gallery "Line chart" (weight month with dotted average + legend; steps from zero with goal);
+  tests `test/shared/widgets/charts/time_series_chart_v2_test.dart` (7 cases).
 
 **R0 derived screens:** none — but because tokens change in place, *every* screen changes
 colour in R0.1. Click through all tabs after R0.1–R0.3 and list anything unreadable in the
@@ -1516,6 +1530,10 @@ Reviewers should stare at these; each produces a wrong look or number, not an er
    and no PR chip permanently.
 3. **Greeting copy (R1.2)** — time-of-day greeting ("Good morning/afternoon/evening") or a fixed
    one? Canvas shows "Good morning, Anna" only.
+4. **R4.2 — which weight line leads.** The canvas makes the daily weight line the hero and the
+   7-day average dotted; docs/76 D-W3 decided the opposite (the smoothed trend is what should
+   read, the raw line steps back). Both are built (`TrendStyle`); keep D-W3, or follow the
+   canvas?
 
 ---
 
