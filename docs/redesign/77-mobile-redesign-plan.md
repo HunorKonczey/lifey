@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 in progress (R4.1–R4.3 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1585,17 +1585,38 @@ something for the metric.
 (Confirm each row against `stat_summary_data.dart` in R4.5; the table is the target, the
 existing aggregation types are the constraint.)
 
-### R4.1 — Mobile UI: weight hero + goal band
+### R4.1 — Mobile UI: weight hero + goal band ✅
 - `weight_screen.dart`, `goal_progress_card.dart` → goal band.
 - **Verify:** no goal set → band shows a "Set a goal" action instead of zeros.
 
-### R4.2 — Mobile UI: weight chart + range switcher
+*As built:* `WeightScreen` is a `CustomScrollView` under the v2 `LifeyHeader` ("Weight", collapsing to the 52 dp row; pull-to-refresh starts below it) with one **hero card**
+(`LifeyCard.hero`): **`WeightHeroHeader`** — the overline "Current · today 07:02" (the time it was logged; a date when the latest weigh-in is older) over the weight at **64 px** (`MetricValue`, fixed
+under text scaling) and, beside it, the two changes as `DeltaChip.arrow`s — "↓ 0.1 today" (vs the previous day's weigh-in; "since last" when the latest isn't today) and "↓ 1.4 in 30 d" (only with ≥ 7 days
+inside the window; the 30-day chip is the improvement green when it moved toward the goal, the calorie orange when away, the weight blue with no goal). Number and chips are one `Wrap`: at 360 dp × 1.3 the chips
+drop under the number instead of squeezing it. **`WeightGoalBand`** replaces the old `GoalProgressCard`: "Start 67.9 · Goal **62.0 kg** · 2.5 kg to go" over an 8 dp `MetricBar` in the weight colour
+(start = the first weight ever recorded, goal from onboarding, progress clamped 0–100 %, "Goal reached" once within 0.2 kg or past it), with the docs/76 projection ("−0.3 kg/week · At this rate, around …",
+wrong-way / too-slow / not-enough-data) as tertiary text under the track. **No goal → a "Set a goal weight" action** (opens the profile editor), never zeros. Numbers come from the pure
+`computeWeightHeadline` (`application/weight_headline.dart`, 14 unit tests: canvas values, two entries a day, short history, gain/loss goals, reached, drift) behind `weightHeadlineProvider`. The header's ⋮ holds "Import from
+Health" and is only drawn while Health is connected (that is its only item); "+ Log" is the shell's extended FAB (`logFabLabel`). ARB: `weightCurrentToday/On`, `weightDeltaToday/SinceLast/30d`, `weightGoalStart`,
+`weightGoalBandGoal/Reached`, `weightSetGoalAction`, `weightChartLegendDaily`, `weightMoreTooltip`; range labels now "7 d / 30 d / 90 d / All" ("7 n … Mind").
+
+### R4.2 — Mobile UI: weight chart + range switcher ✅
 - `weight_screen.dart` on the upgraded `TimeSeriesChart`; 7-day average from the docs/76 trend.
 - **Verify:** single entry → one point, no average line; gaps don't draw fake lines.
 
-### R4.3 — Mobile UI: weight history rows with signed chips
+*As built:* inside the hero card, `LifeySegmented` (7 d · 30 d · 90 d · All; **30 d is the default**, the canvas' — the controller's doc said month but returned week) and the v2 `TimeSeriesChart`: 3 Y labels with grid,
+daily line with the gradient fill, **the 7-day average dotted** (`TrendStyle.dotted`), the last point emphasised, legend "Daily · 7-day average" (the average only when one is drawn). **Decision D-R4.1 (§10 Q4):
+follow the canvas** — the daily line leads, the average is dotted; docs/76's D-W3 style (bold trend) stays as `TrendStyle.emphasized` for other callers. A single entry is one point with no average and no legend entry for
+it; an empty range says so instead of drawing (tests). One fix on the way: the empty state of the screen (`EmptyView` is a scroll-fill) must sit in a bounded `SliverFillRemaining`, not `hasScrollBody: false`.
+
+### R4.3 — Mobile UI: weight history rows with signed chips ✅
 - `weight_screen.dart`.
 - **Verify:** sign and colour follow the direction; U+2212 minus; 0.0 change has no sign.
+
+*As built:* "HISTORY" (`SectionLabel`) over lazily built `GroupedListItem` rows (one card, hairlines, radius 22 at the ends): the weight in 19/800 with its unit, "Today / Yesterday / Mon, Sep 21" under it (localized), and a
+`DeltaChip.signed` — "−0.1" with a real U+2212, "+0.6" in the calorie orange for a gain, the weight blue for a loss, "0.0" neutral and unsigned; the oldest entry has none. The free-history boundary row and the
+Health import (now in the ⋮ menu) are kept. Tests: `weight_screen_test` (title, hero, switcher, chart style, FAB, signs and colours, single entry, empty, range switch, no overflow at 411/360 dp × 1.3 HU dark + light) and
+`weight_hero_test` (chips, colours, the goal band states).
 
 ### R4.4 — Mobile UI: log-weight sheet
 - `add_weight_sheet.dart`.

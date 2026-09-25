@@ -124,3 +124,12 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
     );
   }
 }
+
+/// Opens the log-weight sheet over the shell (root navigator).
+Future<void> showAddWeightSheet(BuildContext context) => showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const AddWeightSheet(),
+    );

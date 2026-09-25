@@ -1206,15 +1206,15 @@
       }
     }
   },
-  "weightRangeWeekLabel": "7 days",
+  "weightRangeWeekLabel": "7 d",
   "@weightRangeWeekLabel": {
     "description": "Weight chart range selector: last 7 days"
   },
-  "weightRangeMonthLabel": "30 days",
+  "weightRangeMonthLabel": "30 d",
   "@weightRangeMonthLabel": {
     "description": "Weight chart range selector: last 30 days"
   },
-  "weightRangeQuarterLabel": "90 days",
+  "weightRangeQuarterLabel": "90 d",
   "@weightRangeQuarterLabel": {
     "description": "Weight chart range selector: last 90 days"
   },
@@ -1510,10 +1510,6 @@
   "weightTrendCaption": "7-day average",
   "@weightTrendCaption": {
     "description": "Legend under the weight chart for the smoothed trend line (docs/76-smarter-weight-trend-plan.md)"
-  },
-  "weightGoalCardTitle": "Goal weight",
-  "@weightGoalCardTitle": {
-    "description": "Title of the goal card on the Weight tab (docs/76 §4)"
   },
   "weightGoalRemainingValue": "{kg} kg to go",
   "@weightGoalRemainingValue": {
@@ -2177,10 +2173,6 @@
   "currentWeightSectionTitle": "Current weight",
   "@currentWeightSectionTitle": {
     "description": "Dashboard section heading for the latest weight entry"
-  },
-  "weightCurrentLabel": "Current",
-  "@weightCurrentLabel": {
-    "description": "Small label above the current weight reading in the weight chart card header"
   },
   "weightHistoryLabel": "History",
   "@weightHistoryLabel": {
@@ -6340,5 +6332,52 @@
   "cardioStatusAutoPauseOff": "Auto-pause off",
   "@cardioStatusAutoPauseOff": {
     "description": "Part of the live cardio header's status line, e.g. 'GPS · Auto-pause off'"
+  },
+  "weightCurrentToday": "Current · today {time}",
+  "@weightCurrentToday": {
+    "description": "Overline over the weight hero when the latest weigh-in is today, with the time it was logged (docs/redesign/77-mobile-redesign-plan.md R4.1)",
+    "placeholders": {"time": {"type": "String"}}
+  },
+  "weightCurrentOn": "Current · {date}",
+  "@weightCurrentOn": {
+    "description": "Overline over the weight hero when the latest weigh-in is from an earlier day, e.g. 'Current · Sep 21'",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "weightDeltaToday": "today",
+  "@weightDeltaToday": {
+    "description": "After the change chip on the weight hero, e.g. '↓ 0.1 today': the change since the previous weigh-in, when the latest one is from today"
+  },
+  "weightDeltaSinceLast": "since last",
+  "@weightDeltaSinceLast": {
+    "description": "After the change chip on the weight hero when the latest weigh-in is not from today, e.g. '↓ 0.4 since last'"
+  },
+  "weightDelta30d": "in 30 d",
+  "@weightDelta30d": {
+    "description": "After the 30-day change chip on the weight hero, e.g. '↓ 1.4 in 30 d'"
+  },
+  "weightGoalStart": "Start {kg}",
+  "@weightGoalStart": {
+    "description": "Left end of the goal band under the weight hero: the first weight ever recorded",
+    "placeholders": {"kg": {"type": "String"}}
+  },
+  "weightGoalBandGoal": "Goal",
+  "@weightGoalBandGoal": {
+    "description": "Label before the goal weight in the goal band, e.g. 'Goal 62.0 kg · 2.5 kg to go'"
+  },
+  "weightGoalBandReached": "Goal reached",
+  "@weightGoalBandReached": {
+    "description": "Replaces the 'kg to go' part of the goal band once the goal weight is reached"
+  },
+  "weightSetGoalAction": "Set a goal weight",
+  "@weightSetGoalAction": {
+    "description": "Action in place of the goal band when no goal weight is set; opens the profile editor"
+  },
+  "weightChartLegendDaily": "Daily",
+  "@weightChartLegendDaily": {
+    "description": "Legend entry of the weight chart's daily line, before '7-day average'"
+  },
+  "weightMoreTooltip": "More",
+  "@weightMoreTooltip": {
+    "description": "Tooltip of the ⋮ button in the weight screen's header"
   }
 }
