@@ -269,7 +269,11 @@ class _DashboardBody extends ConsumerWidget {
 
         // ── This week — calories bar chart ──────────────────────────────────────────────────────────────
         WeeklyCaloriesCard(points: data.weeklyCalories, goal: settings.dailyCalorieGoal),
-        const SizedBox(height: 24),
+
+        // No gaps around the section labels below: a label row is 48 dp tall
+        // (its "See all" is a 48 dp target), which already puts the label's
+        // text 16 dp below the previous card and 24 dp above the next one —
+        // the canvas' rhythm.
 
         // ── Weekly recap ready nudge (hidden most of the time) ─────────
         const RecapReadyCard(),
@@ -286,7 +290,6 @@ class _DashboardBody extends ConsumerWidget {
             MaterialPageRoute<void>(builder: (_) => const LogMealScreen(startWithPhoto: true)),
           ),
         ),
-        const SizedBox(height: 24),
 
         // ── Recent workouts ───────────────────────────────────────────
         RecentWorkoutsSection(
@@ -304,6 +307,8 @@ class _DashboardBody extends ConsumerWidget {
         LifeyHeader(
           overline: format.dayLabel(DateTime.now()),
           title: _greeting(l10n, firstName),
+          // The scrolled row is just the screen's name, as on the canvas.
+          collapsedTitle: l10n.dashboardTabLabel,
           actions: [
             // Chat's only permanent entry point: it gets no bottom-nav
             // branch of its own (docs/chat/40-trainer-chat-plan.md §6.1), so

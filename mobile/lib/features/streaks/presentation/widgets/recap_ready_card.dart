@@ -71,7 +71,8 @@ class _RecapReadyCardState extends ConsumerState<RecapReadyCard> {
     final l10n = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.s16),
+      // Space above, not below: the section label that follows brings its own.
+      padding: const EdgeInsets.only(top: AppSpacing.s16),
       child: NoticeCard(
         icon: Icons.auto_awesome_rounded,
         title: l10n.recapReadyCardTitle,

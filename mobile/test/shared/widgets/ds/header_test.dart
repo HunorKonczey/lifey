@@ -45,6 +45,41 @@ void main() {
       expect(find.text('Thursday, 24 Sep'), findsOneWidget);
     });
 
+    testWidgets('a collapsedTitle replaces the greeting once scrolled (canvas: "Today")', (tester) async {
+      Widget page() => Scaffold(
+            body: CustomScrollView(slivers: [
+              const LifeyHeader(title: 'Good morning, Anna', collapsedTitle: 'Today'),
+              SliverList.list(children: [for (var i = 0; i < 60; i++) SizedBox(height: 48, child: Text('row $i'))]),
+            ]),
+          );
+      double opacityOf(WidgetTester t, String text) => t
+          .widget<Opacity>(find.ancestor(of: find.text(text), matching: find.byType(Opacity)).first)
+          .opacity;
+
+      await tester.pumpWidget(_app(page()));
+      expect(opacityOf(tester, 'Good morning, Anna'), 1);
+      expect(opacityOf(tester, 'Today'), 0);
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      expect(opacityOf(tester, 'Good morning, Anna'), 0);
+      expect(opacityOf(tester, 'Today'), 1);
+      expect(tester.widget<Text>(find.text('Today')).style!.fontSize, 20);
+    });
+
+    testWidgets('screen readers get the expanded title only', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(_app(Scaffold(
+        body: CustomScrollView(slivers: [
+          const LifeyHeader(title: 'Good morning, Anna', collapsedTitle: 'Today'),
+          SliverList.list(children: const [SizedBox(height: 900)]),
+        ]),
+      )));
+      expect(find.bySemanticsLabel('Good morning, Anna'), findsOneWidget);
+      expect(find.bySemanticsLabel('Today'), findsNothing);
+      handle.dispose();
+    });
+
     testWidgets('scrolled: shrinks to a 20 px title in a status bar + 52 px bar', (tester) async {
       await tester.pumpWidget(_app(_largeTitlePage()));
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));

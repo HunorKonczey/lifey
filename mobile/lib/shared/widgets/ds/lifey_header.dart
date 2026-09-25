@@ -139,11 +139,18 @@ class LifeyHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.overline,
+    this.collapsedTitle,
     this.actions = const [],
   });
 
   final String title;
   final String? overline;
+
+  /// What the 20 px row says once the page has scrolled — canvas Lifey 1
+  /// scrolled: the "Good morning, Anna" of the expanded header becomes
+  /// "Today". Null keeps [title] (shrunk). The two cross-fade around the
+  /// half-way point; screen readers only ever get [title].
+  final String? collapsedTitle;
   final List<Widget> actions;
 
   @override
@@ -184,6 +191,7 @@ class LifeyHeader extends StatelessWidget {
       delegate: _LargeTitleDelegate(
         title: title,
         overline: overline,
+        collapsedTitle: collapsedTitle,
         actions: actions,
         minExtentValue: minExtent,
         maxExtentValue: maxExtent,
@@ -200,6 +208,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
   _LargeTitleDelegate({
     required this.title,
     required this.overline,
+    required this.collapsedTitle,
     required this.actions,
     required this.minExtentValue,
     required this.maxExtentValue,
@@ -211,6 +220,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
 
   final String title;
   final String? overline;
+  final String? collapsedTitle;
   final List<Widget> actions;
   final double minExtentValue;
   final double maxExtentValue;
@@ -272,22 +282,49 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
                 // plain text, so it isn't read as part of the header.
                 Semantics(
                   header: true,
-                  child: Text(
-                    title,
-                    maxLines: t < 0.5 ? 2 : 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: titleStyle.copyWith(
-                      fontSize: fontSize,
-                      height: lerpDouble(titleStyle.height, 1.2, t),
-                      letterSpacing: lerpDouble(
-                          -0.02 * titleStyle.fontSize!, -0.01 * 20, t),
-                      color: p.text,
+                  child: Opacity(
+                    opacity: collapsedTitle == null
+                        ? 1
+                        : (1 - 2 * t).clamp(0.0, 1.0),
+                    child: Text(
+                      title,
+                      maxLines: t < 0.5 ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle.copyWith(
+                        fontSize: fontSize,
+                        height: lerpDouble(titleStyle.height, 1.2, t),
+                        letterSpacing: lerpDouble(
+                            -0.02 * titleStyle.fontSize!, -0.01 * 20, t),
+                        color: p.text,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
+          if (collapsedTitle != null)
+            Positioned(
+              left: AppSpacing.screen,
+              right: AppSpacing.screen + actionsWidth,
+              bottom: 14,
+              child: ExcludeSemantics(
+                child: Opacity(
+                  opacity: (2 * t - 1).clamp(0.0, 1.0),
+                  child: Text(
+                    collapsedTitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: titleStyle.copyWith(
+                      fontSize: 20,
+                      height: 1.2,
+                      letterSpacing: -0.01 * 20,
+                      color: p.text,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (actions.isNotEmpty)
             Positioned(
               right: AppSpacing.screen -
@@ -310,6 +347,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_LargeTitleDelegate old) =>
       old.title != title ||
       old.overline != overline ||
+      old.collapsedTitle != collapsedTitle ||
       old.actions != actions ||
       old.minExtentValue != minExtentValue ||
       old.maxExtentValue != maxExtentValue ||
