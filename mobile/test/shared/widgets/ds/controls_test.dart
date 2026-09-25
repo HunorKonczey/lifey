@@ -155,6 +155,22 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('a locked segment wears a lock, stays tappable and is read out as gated', (tester) async {
+      final handle = tester.ensureSemantics();
+      final taps = <int>[];
+      await tester.pumpWidget(_host(LifeySegmented<int>(
+        segments: const [(7, '7 d'), (30, '30 d'), (0, 'All')],
+        selected: 30,
+        locked: const {0},
+        onChanged: taps.add,
+      )));
+      expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+      expect(find.bySemanticsLabel('All — Pro required'), findsOneWidget);
+      await tester.tap(find.text('All'));
+      expect(taps, [0]);
+      handle.dispose();
+    });
+
     testWidgets('fits a narrow phone at 130 % without overflow', (tester) async {
       await tester.pumpWidget(_host(segmented(7, (_) {}), textScale: 1.3, width: 280));
       expect(tester.takeException(), isNull);

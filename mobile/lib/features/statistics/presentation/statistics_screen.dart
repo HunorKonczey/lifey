@@ -1,69 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/ads/banner_ad_slot.dart';
 import '../../../core/ads/nav_reserved_space.dart';
-import '../../../core/entitlements/entitlement_providers.dart';
-import '../../../core/entitlements/paywall_navigation.dart';
-import '../../../core/entitlements/paywall_trigger.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
-import '../../../shared/widgets/charts/stats_range.dart';
-import '../../../shared/widgets/charts/time_series_chart.dart';
-import '../../../shared/widgets/empty_view.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../shared/widgets/ds/lifey_segmented.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
-import '../../dashboard/presentation/widgets/stat_card.dart';
-import '../../settings/application/settings_controller.dart';
-import '../../settings/domain/user_settings.dart';
 import '../application/stat_chart_data.dart';
 import '../application/stat_kind_filter_controller.dart';
 import '../application/stat_metric_controller.dart';
-import '../application/stat_summary_data.dart';
-import '../application/stats_range_controller.dart';
 import '../domain/stat_kind_filter.dart';
 import '../domain/stat_metric.dart';
-import '../domain/stat_summary.dart';
-import '../../weight/domain/weight_trend.dart';
+import 'widgets/stat_hero_card.dart';
+import 'widgets/stat_metric_chips.dart';
+import 'widgets/stat_side_stats.dart';
 
-/// Statistics: kind filter (Mind/Erősítő/Cardio), metric + range popup
-/// pickers in a filter strip below the AppBar, KPI summary cards, and a
-/// chart. The header collapses on scroll like every other screen in the app.
+/// Statistics (canvas Lifey 4 › 5; docs/redesign/77-mobile-redesign-plan.md
+/// R4.5–R4.7): metric chips, then one hero card — the metric's number over the
+/// range with its trend, the chart that fits it, the range switcher — and three
+/// side figures that mean something for that metric. The large title collapses
+/// as the page scrolls.
 class StatisticsScreen extends ConsumerWidget {
   const StatisticsScreen({super.key});
+
+  /// Only these metrics are affected by the strength / cardio switch (D-C3.4);
+  /// for the rest it would be a control that does nothing.
+  static bool _hasKindFilter(StatMetric m) =>
+      m == StatMetric.workoutCount || m == StatMetric.workoutMinutes || m == StatMetric.activeCalories;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
-    // AppBar (58) + kind-filter row (~40 + vertical padding 8×2 = 56) +
-    // metric/range filter strip (button ~40 + vertical padding 8×2 = 56)
-    final contentTop = barTop + 58.0 + 56.0 + 56.0;
+    final metric = ref.watch(statMetricControllerProvider);
+    final summary = ref.watch(statSummaryProvider).value;
+    final failure = ref.watch(statCurrentSeriesProvider).error;
+    final bannerHeight = ref.watch(bannerAdSlotHeightProvider(4));
+    final bottomPad = MediaQuery.paddingOf(context).bottom + bannerHeight + AppSpacing.s32;
+    const gutter = EdgeInsets.symmetric(horizontal: AppSpacing.screen);
 
     return Scaffold(
       body: ScrollCollapseListener(
         child: Stack(
           children: [
             Positioned.fill(
-              child: _StatisticsBody(topPadding: contentTop),
-            ),
-            Positioned(
-              top: barTop,
-              left: 0,
-              right: 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: AdaptiveAppBar(title: l10n.statisticsTitle),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  LifeyHeader(title: l10n.statisticsTitle),
+                  // A stream that failed replaces the page: the chips and the
+                  // range switcher would only lead to the same error.
+                  if (failure != null)
+                    SliverFillRemaining(child: ErrorView(error: failure))
+                  else ...[
+                  if (_hasKindFilter(metric))
+                    const SliverPadding(
+                      padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, 0),
+                      sliver: SliverToBoxAdapter(child: _KindFilter()),
+                    ),
+                  const SliverPadding(
+                    padding: EdgeInsets.only(top: AppSpacing.s12),
+                    sliver: SliverToBoxAdapter(child: StatMetricChips()),
                   ),
-                  const _StatsKindFilterRow(),
-                  const _StatsFilterStrip(),
+                  const SliverPadding(
+                    padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s16, AppSpacing.screen, 0),
+                    sliver: SliverToBoxAdapter(child: StatHeroCard()),
+                  ),
+                  if (summary != null && summary.sides.isNotEmpty)
+                    SliverPadding(
+                      padding: gutter.copyWith(top: AppSpacing.s12),
+                      sliver: SliverToBoxAdapter(child: StatSideStats(metric: metric, sides: summary.sides)),
+                    ),
+                  SliverPadding(
+                    padding: gutter.copyWith(top: AppSpacing.s12),
+                    sliver: const SliverToBoxAdapter(child: StatRangeSwitcher()),
+                  ),
+                  SliverToBoxAdapter(child: SizedBox(height: bottomPad)),
+                  ],
                 ],
               ),
             ),
@@ -80,506 +95,29 @@ class StatisticsScreen extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Kind filter — Mind / Erősítő / Cardio (docs/cardio/56-cardio-statistics-plan.md
-// D-C3.4) — a `SegmentedButton`, exactly as D-C3.4 specifies, not a fourth
-// popup chip matching the other two: this one is a real 3-way toggle, always
-// visible, so a user stuck on an empty "no cardio this range" chart
-// (M22) can tap straight back to another kind without hunting for it.
-// ---------------------------------------------------------------------------
-
-class _StatsKindFilterRow extends ConsumerWidget {
-  const _StatsKindFilterRow();
-
-  String _label(AppLocalizations l10n, StatKindFilter filter) => switch (filter) {
-        StatKindFilter.all => l10n.allFilterLabel,
-        StatKindFilter.strength => l10n.activityTypeStrength,
-        StatKindFilter.cardio => l10n.sessionKindCardioLabel,
-      };
+/// Everything / strength / cardio (docs/cardio/56-cardio-statistics-plan.md
+/// D-C3.4) — a real three-way switch, so someone stuck on an empty "no cardio
+/// this range" chart can tap straight back.
+class _KindFilter extends ConsumerWidget {
+  const _KindFilter();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final selected = ref.watch(statKindFilterControllerProvider);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: SegmentedButton<StatKindFilter>(
-        showSelectedIcon: false,
-        segments: [
-          for (final filter in StatKindFilter.values)
-            ButtonSegment(value: filter, label: Text(_label(l10n, filter))),
-        ],
-        selected: {selected},
-        onSelectionChanged: (selection) =>
-            ref.read(statKindFilterControllerProvider.notifier).select(selection.first),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Filter strip — metric + range popup buttons side by side
-// ---------------------------------------------------------------------------
-
-class _StatsFilterStrip extends StatelessWidget {
-  const _StatsFilterStrip();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _StatsMetricButton(),
-          _StatsRangeButton(),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Metric picker popup
-// ---------------------------------------------------------------------------
-
-class _StatsMetricButton extends ConsumerWidget {
-  const _StatsMetricButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final metric = ref.watch(statMetricControllerProvider);
-    final availableMetrics = ref.watch(availableStatMetricsProvider);
-    final pickableMetrics =
-        availableMetrics.isEmpty ? StatMetric.values.toSet() : availableMetrics;
-
-    if (!pickableMetrics.contains(metric)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref
-            .read(statMetricControllerProvider.notifier)
-            .select(pickableMetrics.first);
-      });
-    }
-
-    final collapsed = NavCollapseScope.collapsedOf(context);
-    final scheme = Theme.of(context).colorScheme;
-    final currentMetric =
-        pickableMetrics.contains(metric) ? metric : pickableMetrics.first;
-
-    return PopupMenuButton<StatMetric>(
-      initialValue: currentMetric,
-      onSelected: (m) =>
-          ref.read(statMetricControllerProvider.notifier).select(m),
-      padding: EdgeInsets.zero,
-      itemBuilder: (context) => [
-        for (final m in StatMetric.values)
-          if (pickableMetrics.contains(m))
-            PopupMenuItem(
-              value: m,
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 20,
-                    child: m == currentMetric
-                        ? Icon(Icons.check, size: 16, color: scheme.primary)
-                        : null,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(m.label(l10n)),
-                ],
-              ),
-            ),
-      ],
-      child: _FilterChip(
-        label: currentMetric.label(l10n),
-        collapsed: collapsed,
-        scheme: scheme,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Range picker popup
-// ---------------------------------------------------------------------------
-
-class _StatsRangeButton extends ConsumerWidget {
-  const _StatsRangeButton();
-
-  String _label(AppLocalizations l10n, StatsRange range) => switch (range) {
-        StatsRange.week => l10n.statRangeWeekLabel,
-        StatsRange.month => l10n.statRangeMonthLabel,
-        StatsRange.quarter => l10n.statRangeQuarterLabel,
-        StatsRange.all => l10n.statRangeAllLabel,
-      };
-
-  /// Whether [r] would show data older than the current entitlement's
-  /// history window (`67` §3.3, `69` §4.1) — `entitlementCutoff == null`
-  /// means unlimited (Pro, or unresolved and fail-open, D-P4).
-  bool _isLocked(StatsRange r, DateTime? entitlementCutoff) {
-    if (entitlementCutoff == null) return false;
-    final rangeCutoff = r.cutoff();
-    if (rangeCutoff == null) return true; // "all" always exceeds a real cutoff
-    return rangeCutoff.isBefore(entitlementCutoff);
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final range = ref.watch(statsRangeControllerProvider);
-    final collapsed = NavCollapseScope.collapsedOf(context);
-    final scheme = Theme.of(context).colorScheme;
-    final entitlementCutoff = ref.watch(historyCutoffProvider);
-
-    return PopupMenuButton<StatsRange>(
-      initialValue: range,
-      onSelected: (r) {
-        if (_isLocked(r, entitlementCutoff)) {
-          openPaywall(context, PaywallTrigger.historyRange);
-        } else {
-          ref.read(statsRangeControllerProvider.notifier).select(r);
-        }
-      },
-      padding: EdgeInsets.zero,
-      itemBuilder: (context) => [
-        for (final r in StatsRange.values)
-          PopupMenuItem(
-            // The row stays tappable even when locked (D-DM1) — `onSelected`
-            // above is what decides whether that opens the paywall instead
-            // of selecting the range.
-            value: r,
-            child: _RangeMenuRow(
-              label: _label(l10n, r),
-              selected: r == range,
-              locked: _isLocked(r, entitlementCutoff),
-              scheme: scheme,
-            ),
-          ),
-      ],
-      child: _FilterChip(
-        label: _label(l10n, range),
-        collapsed: collapsed,
-        scheme: scheme,
-      ),
-    );
-  }
-}
-
-/// One row in the range popup. Exactly one of [selected]/[locked] ever draws
-/// in the leading 20 px slot — a check for the selected range (fixing `69`
-/// DV-9, which drew two checks), a `lock` glyph for a range beyond the free
-/// history window, or nothing.
-class _RangeMenuRow extends StatelessWidget {
-  const _RangeMenuRow({
-    required this.label,
-    required this.selected,
-    required this.locked,
-    required this.scheme,
-  });
-
-  final String label;
-  final bool selected;
-  final bool locked;
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    final row = Row(
-      children: [
-        SizedBox(
-          width: 20,
-          child: selected
-              ? Icon(Icons.check, size: 16, color: scheme.primary)
-              : locked
-                  ? Icon(Icons.lock, size: 16, color: scheme.secondary)
-                  : null,
-        ),
-        const SizedBox(width: 4),
-        // Full alpha, locked or not. `69` §4.1 asks for the locked label at
-        // 60 % opacity, but that is the exact pattern commit 1c252fd removed
-        // from 15 other places in this app after measuring 0.6–0.8 alpha
-        // secondary text at 2.9–3.9:1 — below WCAG AA. This row escaped that
-        // sweep only because it dimmed with `Opacity()` around a subtree
-        // instead of an alpha'd colour. The `lock` glyph in the slot on the
-        // left and the row's own semantics label already say "locked"
-        // without leaning on contrast (`69` §8: no gate by colour alone).
-        // Deviation recorded in `72` D-F4.
-        Text(label),
-      ],
-    );
-
-    if (!locked) return row;
-
-    // The reason *replaces* what the row would otherwise read out: without
-    // `ExcludeSemantics` the child `Text` merges into the node and a screen
-    // reader says "90 days — Pro required, 90 days" (`69` §8).
+    String label(StatKindFilter f) => switch (f) {
+          StatKindFilter.all => l10n.allFilterLabel,
+          StatKindFilter.strength => l10n.activityTypeStrength,
+          StatKindFilter.cardio => l10n.sessionKindCardioLabel,
+        };
     return Semantics(
-      label: l10n.statRangeLockedSemanticsLabel(label),
-      child: ExcludeSemantics(child: row),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Shared filter chip appearance (label + icon button)
-// ---------------------------------------------------------------------------
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.collapsed,
-    required this.scheme,
-  });
-
-  final String label;
-  final bool collapsed;
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = collapsed ? 32.0 : 40.0;
-    final radius = collapsed ? 11.0 : 13.0;
-    final iconSize = collapsed ? 18.0 : 21.0;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 150),
-          child: Text(
-            label,
-            key: ValueKey(label),
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: collapsed ? 11.0 : 13.0,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(radius),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.filter_list_rounded,
-              size: iconSize,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Body — chart only; controls live in the floating header above
-// ---------------------------------------------------------------------------
-
-class _StatisticsBody extends ConsumerWidget {
-  const _StatisticsBody({required this.topPadding});
-
-  final double topPadding;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final metric = ref.watch(statMetricControllerProvider);
-    final chartData = ref.watch(statChartDataProvider);
-    final summary = ref.watch(statSummaryProvider);
-    final settings =
-        ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
-    final goalValue =
-        metric == StatMetric.steps ? settings.effectiveDailyStepGoal.toDouble() : null;
-    final bannerHeight = ref.watch(bannerAdSlotHeightProvider(4));
-    final bottomPad = MediaQuery.paddingOf(context).bottom + bannerHeight;
-
-    return chartData.when(
-      data: (points) => points.isEmpty
-          // EmptyView uses ScrollFill (LayoutBuilder) — needs bounded height
-          // from the Positioned.fill ancestor, so return it unwrapped.
-          ? EmptyView(icon: Icons.bar_chart, title: l10n.noStatsDataForRangeTitle)
-          : SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(16, topPadding, 16, bottomPad + 24),
-              child: _StatisticsChart(
-                metric: metric,
-                points: points,
-                summary: summary.value ?? StatSummary.empty,
-                goalValue: goalValue,
-              ),
-            ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => ErrorView(error: error),
-    );
-  }
-}
-
-class _StatisticsChart extends StatelessWidget {
-  const _StatisticsChart({
-    required this.metric,
-    required this.points,
-    required this.summary,
-    this.goalValue,
-  });
-
-  final StatMetric metric;
-  final List<TimeSeriesPoint> points;
-  final StatSummary summary;
-  final double? goalValue;
-
-  static final _chartDateLabel = DateFormat('MMM d');
-
-  Color _metricColor(BuildContext context, StatMetric m) {
-    final mc = context.metricColors;
-    final scheme = Theme.of(context).colorScheme;
-    return switch (m) {
-      StatMetric.calories => mc.calories,
-      StatMetric.protein => mc.protein,
-      StatMetric.carbs => mc.carbs,
-      StatMetric.fat => mc.fat,
-      StatMetric.water => mc.water,
-      StatMetric.weight => mc.weight,
-      StatMetric.activeCalories => mc.calories,
-      StatMetric.workoutMinutes => scheme.primary,
-      StatMetric.workoutCount => scheme.primary,
-      StatMetric.steps => mc.steps,
-      // Same accent `activityTypeColor` already gives cardio elsewhere
-      // (mc.calories doubles as the app's "cardio = orange" color there).
-      StatMetric.cardioDistance => mc.calories,
-      StatMetric.cardioMovingMinutes => mc.calories,
-      StatMetric.cardioElevationGain => mc.calories,
-      StatMetric.cardioAvgPace => mc.calories,
-      StatMetric.cardioSessions => mc.calories,
-      StatMetric.maxHeartRate => mc.heart,
-      // A heart-rate metric, so it takes the heart colour rather than
-      // cardio's orange (C9.5).
-      StatMetric.cardioHardZoneMinutes => mc.heart,
-      StatMetric.cardioMaxAltitude => mc.calories,
-    };
-  }
-
-  bool get _isIntegerMetric =>
-      metric == StatMetric.workoutCount ||
-      metric == StatMetric.steps ||
-      metric == StatMetric.cardioSessions ||
-      metric == StatMetric.maxHeartRate;
-
-  String _formatValue(double value, AppLocalizations l10n) {
-    if (metric == StatMetric.cardioAvgPace) return _formatPace(value, l10n);
-    final formatted = _isIntegerMetric
-        ? value.round().toString()
-        : value.toStringAsFixed(1);
-    final unit = metric.unitLabel(l10n);
-    return unit.isEmpty ? formatted : '$formatted $unit';
-  }
-
-  /// "5:23 /km" — matches `CardioFormatter.pace`'s M:SS convention
-  /// elsewhere in the app instead of the generic decimal formatting every
-  /// other metric here uses. [value] is already decimal minutes/km (see
-  /// `_cardioAvgPacePoints`, stat_chart_data.dart).
-  String _formatPace(double value, AppLocalizations l10n) {
-    if (!value.isFinite) return '—';
-    final totalSeconds = (value * 60).round();
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')} ${metric.unitLabel(l10n)}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final trendPercent = summary.trendPercent;
-    final accent = _metricColor(context, metric);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                label: l10n.statSumLabel,
-                value: _formatValue(summary.sum, l10n),
-                icon: Icons.functions,
-                color: accent,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: StatCard(
-                label: l10n.statAverageLabel,
-                value: _formatValue(summary.average, l10n),
-                icon: Icons.show_chart,
-                color: accent,
-                trailing: trendPercent == null
-                    ? null
-                    : Icon(
-                        trendPercent >= 0
-                            ? Icons.arrow_upward
-                            : Icons.arrow_downward,
-                        size: 16,
-                        color: scheme.onSurfaceVariant,
-                      ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                label: l10n.statMinLabel,
-                value: _formatValue(summary.min, l10n),
-                icon: Icons.south,
-                color: accent,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: StatCard(
-                label: l10n.statMaxLabel,
-                value: _formatValue(summary.max, l10n),
-                icon: Icons.north,
-                color: accent,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: TimeSeriesChart(
-            points: points,
-            dateLabelBuilder: _chartDateLabel.format,
-            valueLabelBuilder: (value) => _formatValue(value, l10n),
-            accentColor: accent,
-            areaColor: accent.withValues(alpha: 0.12),
-            goalValue: goalValue,
-            // Weight is the one metric whose daily reading is mostly water
-            // (docs/76-smarter-weight-trend-plan.md); the rest are counts of
-            // things that happened, and averaging those hides the day.
-            trendValues: metric == StatMetric.weight ? movingAverage(points) : null,
-          ),
-        ),
-      ],
+      container: true,
+      label: l10n.statKindFilterSemantics,
+      child: LifeySegmented<StatKindFilter>(
+        segments: [for (final f in StatKindFilter.values) (f, label(f))],
+        selected: selected,
+        onChanged: (f) => ref.read(statKindFilterControllerProvider.notifier).select(f),
+      ),
     );
   }
 }

@@ -1270,15 +1270,15 @@
   "@statisticsTitle": {
     "description": "Title of the statistics screen"
   },
-  "statRangeWeekLabel": "7 days",
+  "statRangeWeekLabel": "7 d",
   "@statRangeWeekLabel": {
     "description": "Statistics chart range selector: last 7 days"
   },
-  "statRangeMonthLabel": "30 days",
+  "statRangeMonthLabel": "30 d",
   "@statRangeMonthLabel": {
     "description": "Statistics chart range selector: last 30 days"
   },
-  "statRangeQuarterLabel": "90 days",
+  "statRangeQuarterLabel": "90 d",
   "@statRangeQuarterLabel": {
     "description": "Statistics chart range selector: last 90 days"
   },
@@ -1729,22 +1729,6 @@
   "noStatsDataForRangeTitle": "No data in this range",
   "@noStatsDataForRangeTitle": {
     "description": "Empty state on the statistics chart when the selected metric has no data in the selected range"
-  },
-  "statSumLabel": "Total",
-  "@statSumLabel": {
-    "description": "Statistics KPI card label: sum of the selected metric over the range"
-  },
-  "statAverageLabel": "Average",
-  "@statAverageLabel": {
-    "description": "Statistics KPI card label: average of the selected metric over the range"
-  },
-  "statMinLabel": "Min",
-  "@statMinLabel": {
-    "description": "Statistics KPI card label: minimum daily value over the range"
-  },
-  "statMaxLabel": "Max",
-  "@statMaxLabel": {
-    "description": "Statistics KPI card label: maximum daily value over the range"
   },
   "statUnitKcal": "kcal",
   "@statUnitKcal": {
@@ -6401,5 +6385,144 @@
   "weightSheetTypeTooltip": "Type a weight",
   "@weightSheetTypeTooltip": {
     "description": "Tooltip / screen-reader hint of the big number in the log-weight sheet, which becomes a text field when tapped"
+  },
+  "statHeroDailyAverage": "Daily average",
+  "@statHeroDailyAverage": {
+    "description": "Overline of the statistics hero for a metric whose hero is the mean of the days, e.g. 'Daily average · last 30 days' (docs/redesign/77-mobile-redesign-plan.md R4.6/R4.7)"
+  },
+  "statHeroLatest": "Latest",
+  "@statHeroLatest": {
+    "description": "Overline of the statistics hero for the newest reading (weight), before the period"
+  },
+  "statHeroHighest": "Highest",
+  "@statHeroHighest": {
+    "description": "Overline of the statistics hero for a peak (max heart rate, highest altitude)"
+  },
+  "statHeroAveragePace": "Average pace",
+  "@statHeroAveragePace": {
+    "description": "Overline of the statistics hero for the pace, weighted by distance"
+  },
+  "statPeriodWeek": "last 7 days",
+  "@statPeriodWeek": {
+    "description": "The period a statistics hero covers, after the overline's label"
+  },
+  "statPeriodMonth": "last 30 days",
+  "@statPeriodMonth": {
+    "description": "The period a statistics hero covers, after the overline's label"
+  },
+  "statPeriodQuarter": "last 90 days",
+  "@statPeriodQuarter": {
+    "description": "The period a statistics hero covers, after the overline's label"
+  },
+  "statPeriodAll": "all time",
+  "@statPeriodAll": {
+    "description": "The period a statistics hero covers when the range is 'All'"
+  },
+  "statUnitWorkouts": "{count, plural, one{workout} other{workouts}}",
+  "@statUnitWorkouts": {
+    "description": "Unit after the workout count hero, e.g. '22 workouts'",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "statUnitSessions": "{count, plural, one{session} other{sessions}}",
+  "@statUnitSessions": {
+    "description": "Unit after the cardio session count hero",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "statTrendVsPrior": "vs prior {days} d",
+  "@statTrendVsPrior": {
+    "description": "After the trend chip of the statistics hero, e.g. '↓ 4% vs prior 30 d': the previous period of the same length",
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "statPerWeekValue": "{value} / week",
+  "@statPerWeekValue": {
+    "description": "Chip on the statistics hero for counted events, e.g. '5.1 / week'",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "statSideLowest": "Lowest",
+  "@statSideLowest": {
+    "description": "Label of a side stat under the statistics chart: the lowest day"
+  },
+  "statSideHighest": "Highest",
+  "@statSideHighest": {
+    "description": "Label of a side stat under the statistics chart: the highest day"
+  },
+  "statSideTotal": "Total",
+  "@statSideTotal": {
+    "description": "Label of a side stat under the statistics chart: the sum over the range"
+  },
+  "statSideDaysOnTarget": "Days on target",
+  "@statSideDaysOnTarget": {
+    "description": "Label of a side stat: days within 10 % of the calorie goal"
+  },
+  "statSideDaysAtGoal": "Days at goal",
+  "@statSideDaysAtGoal": {
+    "description": "Label of a side stat: days at or above the goal"
+  },
+  "statSideChange": "Change",
+  "@statSideChange": {
+    "description": "Label of a side stat: how much the weight changed over the range"
+  },
+  "statSidePerWeek": "Per week",
+  "@statSidePerWeek": {
+    "description": "Label of a side stat: the range's total per week"
+  },
+  "statSideMostInWeek": "Most in a week",
+  "@statSideMostInWeek": {
+    "description": "Label of a side stat: the busiest calendar week"
+  },
+  "statSideTotalTime": "Total time",
+  "@statSideTotalTime": {
+    "description": "Label of a side stat: the time of all workouts of the range"
+  },
+  "statSideAvgPerWorkout": "Avg per workout",
+  "@statSideAvgPerWorkout": {
+    "description": "Label of a side stat: mean workout time"
+  },
+  "statSideAvgPerSession": "Avg per session",
+  "@statSideAvgPerSession": {
+    "description": "Label of a side stat: mean per cardio session"
+  },
+  "statSideLongest": "Longest",
+  "@statSideLongest": {
+    "description": "Label of a side stat: the longest single workout or session"
+  },
+  "statSideHighestSession": "Highest session",
+  "@statSideHighestSession": {
+    "description": "Label of a side stat: the session with the most elevation gain"
+  },
+  "statSideFastest": "Fastest",
+  "@statSideFastest": {
+    "description": "Label of a side stat: the fastest day's pace"
+  },
+  "statSideSlowest": "Slowest",
+  "@statSideSlowest": {
+    "description": "Label of a side stat: the slowest day's pace"
+  },
+  "statSideAvgOfMaxima": "Avg of maxima",
+  "@statSideAvgOfMaxima": {
+    "description": "Label of a side stat: mean of the daily maximum heart rates"
+  },
+  "statDaysValue": "{count, plural, one{{count} day} other{{count} days}}",
+  "@statDaysValue": {
+    "description": "A number of days in a statistics side stat",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "statDurationHoursMinutes": "{hours} h {minutes}",
+  "@statDurationHoursMinutes": {
+    "description": "A duration of an hour or more in statistics, e.g. '23 h 40'",
+    "placeholders": {"hours": {"type": "int"}, "minutes": {"type": "String"}}
+  },
+  "statWeeklyFootnote": "Grouped by week so a single day never looks like a spike.",
+  "@statWeeklyFootnote": {
+    "description": "Footnote under the weekly bar chart on the statistics screen"
+  },
+  "statLegendAverageDays": "{days}-day average",
+  "@statLegendAverageDays": {
+    "description": "Legend of the dotted average line on a statistics line chart",
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "statKindFilterSemantics": "Kind of workouts",
+  "@statKindFilterSemantics": {
+    "description": "Screen-reader label of the strength / cardio switch on the statistics screen"
   }
 }

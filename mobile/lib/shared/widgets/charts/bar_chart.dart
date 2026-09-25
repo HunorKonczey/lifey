@@ -67,6 +67,11 @@ class LifeyBarChart extends StatelessWidget {
 
   static const double axisWidth = 34;
 
+  /// More bars than this and the X labels are sparse (see [BarDatum.label]).
+  static const int sparseThreshold = 12;
+
+  bool get _sparse => bars.length > sparseThreshold;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
@@ -146,17 +151,40 @@ class LifeyBarChart extends StatelessWidget {
                     child: Semantics(
                       label: b.semanticsLabel,
                       excludeSemantics: b.semanticsLabel != null,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          b.label,
-                          maxLines: 1,
-                          style: b.highlighted
-                              ? labelStyle.copyWith(
-                                  fontWeight: FontWeight.w800, color: p.text)
-                              : labelStyle,
-                        ),
-                      ),
+                      child: _sparse
+                          // Many slim bars: the few labelled ones are centred on
+                          // their bar and may be wider than it (empty labels
+                          // draw nothing) — scaling "Sep 10" down into a 6 px
+                          // slot would make it unreadable.
+                          ? SizedBox(
+                              height: 14,
+                              child: OverflowBox(
+                              maxWidth: 64,
+                              // The end labels hug the chart's edges instead
+                              // of hanging past them.
+                              alignment: i == 0
+                                  ? Alignment.topLeft
+                                  : (i == bars.length - 1 ? Alignment.topRight : Alignment.topCenter),
+                              child: Text(
+                                b.label,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: b.highlighted
+                                    ? labelStyle.copyWith(fontWeight: FontWeight.w800, color: p.text)
+                                    : labelStyle,
+                              ),
+                            ),
+                            )
+                          : FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                b.label,
+                                maxLines: 1,
+                                style: b.highlighted
+                                    ? labelStyle.copyWith(fontWeight: FontWeight.w800, color: p.text)
+                                    : labelStyle,
+                              ),
+                            ),
                     ),
                   ),
                 ],

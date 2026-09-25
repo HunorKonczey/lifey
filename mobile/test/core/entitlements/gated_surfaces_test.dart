@@ -55,7 +55,7 @@ void main() {
       'features/nutrition/presentation/all_meals_screen.dart',
       'features/nutrition/presentation/meals_tab.dart',
       'features/nutrition/presentation/macros_tab.dart',
-      'features/statistics/presentation/statistics_screen.dart',
+      'features/statistics/presentation/widgets/stat_hero_card.dart',
       'features/statistics/application/stat_chart_data.dart',
       'features/weight/presentation/weight_screen.dart',
       'features/weight/application/weight_chart_data.dart',

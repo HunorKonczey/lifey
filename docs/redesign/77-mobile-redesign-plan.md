@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 in progress (R4.1–R4.4 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 in progress (R4.1–R4.7 done; emulator review pending)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1632,21 +1632,49 @@ date for another day) that opens the date picker; Save is 56 dp. **The amount is
 stays hidden** (the app only imports weight, §6). Weight is stored and shown in kg only in this app (there is no imperial weight anywhere yet), so "imperial still works" is trivially true and unchanged. ARB: `logWeightTitle`,
 `weightSheetYesterday/Last/Decrease/Increase/TypeTooltip`; `addWeightTitle` removed. 11 widget tests (`add_weight_sheet_test`), incl. 411/360 dp × 1.3 HU light.
 
-### R4.5 — Mobile data: per-metric summary definitions
+### R4.5 — Mobile data: per-metric summary definitions ✅
 - `statistics/application/stat_summary_data.dart` (+ `domain/stat_summary.dart`): the table
   above as a pure function `summaryFor(metric, points, range)` + "vs prior period" trend with
   equal-length window and today's partial day excluded; unit tests per metric.
 - **Verify:** weight has no total; prior period 0 → trend hidden, not "∞ %".
 
-### R4.6 — Mobile UI: metric chips + hero + side stats
+*As built:* the summary is a pure function, `summaryFor(metric, current, prior, today, rangeDays, goals)` in `statistics/domain/metric_summary.dart` (32 unit tests), returning a `MetricSummary` — hero kind + value, the trend against the
+period before, up to three side stats, and events per week — behind `statSummaryProvider` (`stat_chart_data.dart`; 43 provider tests). The old `stat_summary_data.dart` / `stat_summary.dart` (sum / average / min / max for every metric)
+are removed. Every row of the table above is implemented as written: no "Total" for weight (its trend is latest vs the latest of the prior window, in kg), a pace weighted by kilometres (Σ time / Σ distance, not a mean of daily paces),
+"per week" / "most in a week" / "total time" for workouts, the longest single session and the average per session from per-session samples (`StatSeries.samples`). **Prior period** = the same number of days ending the day before the range starts;
+it is null for "All", and null when the free history window cuts into it (a whole range against half a period would be a made-up trend). **Today's partial day is left out** of the daily averages, lows and "days on target" for the
+running-total metrics (calories, macros, water, steps, active calories) — a day that is 300 kcal in is not a day at 300 kcal. A prior period of zero gives no trend, never "∞ %". **Decision:** calories are "on target" within ±10 % of the goal
+either way (a calorie goal is a target, not a floor); protein / carbs / fat / water count days at or above the goal. Calendar weeks start on Monday (`weekStart`, `weeklySums` — empty weeks are zeros, not gaps).
+
+### R4.6 — Mobile UI: metric chips + hero + side stats ✅
 - `statistics_screen.dart`. Decision to confirm (§10 Q1): the canvas shows All · Strength ·
   Cardio in the same chip row as the metrics; plan = metrics in the chip row, the kind filter
   as a small segmented control that appears only for workout-derived metrics.
 - **Verify:** switching metric recolours chip, hero and chart; HU labels fit.
 
-### R4.7 — Mobile UI: stats charts incl. weekly bucketing + period switcher under the chart
+*As built:* `StatisticsScreen` is a `CustomScrollView` under the v2 `LifeyHeader` ("Statistics"). **Decisions:** (Q1) the metrics are the chips and the strength / cardio switch is a `LifeySegmented` above them that appears **only for the three
+workout-derived metrics** it actually changes (workout count / minutes, active calories) — a control that does nothing elsewhere is noise; (no calendar icon) the canvas' custom-range calendar is not drawn: the app has no custom-range
+feature, and an icon that opens nothing would be a lie — the four ranges stay. **Metric chips** (`StatMetricChips`): a row that scrolls sideways, one chip per metric the person has data for (`availableStatMetricsProvider`; the
+old fallback to the first available metric is kept), a colour dot in the metric's own colour (`statMetricColor`), the selected chip tinted with a border in that colour. **Hero card** (`StatHeroCard`, `LifeyCard.hero`): the overline
+("Daily average · last 30 days", "Latest · …", "Highest · …", "Average pace · …", or the metric name for totals and counts), the number at **64 px** with its unit (durations "23 h 40" / "72 min", pace "5:24 /km", thousands separators),
+the trend chip vs the prior period (percent for averages, totals and pace; a signed count for workouts and sessions; kg for weight; the improvement green / heart red where a direction is good news — steps, workouts, distance, pace —
+and the neutral direction colours for calories and weight) and a "5.1 / week" chip for event metrics. **Three side tiles** under the card (`StatSideStats`), each with its label and value at 20 px. Number formatting lives in
+`presentation/stat_format.dart` (`StatFormat`). ARB: `statHero*`, `statPeriod*`, `statUnitWorkouts/Sessions`, `statTrendVsPrior`, `statPerWeekValue`, `statSide*`, `statDaysValue`, `statDurationHoursMinutes`, `statKindFilterSemantics`;
+`statSum/Average/Min/MaxLabel` removed, `statRange*Label` now "7 d / 30 d / 90 d / All". The dashboard `StatCard`, used only by the old screen, is deleted.
+
+### R4.7 — Mobile UI: stats charts incl. weekly bucketing + period switcher under the chart ✅
 - `statistics_screen.dart`, `stat_chart_data.dart` (week bucketing helper, unit-tested).
 - **Verify:** 30 d workout count shows ~5 weekly bars, not 30 mostly-zero days.
+
+*As built:* the chart follows the metric (`summary.chartKind`): **daily bars** (`LifeyBarChart`, 150 px plot, today highlighted, the dashed goal line for calories / macros / water) for the daily totals — 7 bars labelled by weekday, 30 and 90
+bars with a date under every 7th / 14th one (the bar chart now supports sparse labels), and beyond 100 days ("All" on a long history) one bar per week holding the mean of its days; **weekly bars** for the count / time / distance
+metrics — one bar per **calendar week** (Monday–Sunday), the current week last and highlighted, empty weeks drawn as empty columns, with the footnote "Grouped by week so a single day never looks like a spike." (30 d ≈ 5–6 bars,
+covered by a test); **lines** (`TimeSeriesChart`, v2 options) for steps (from zero, dashed goal line, 30-day average), weight (7-day average), pace, max heart rate and altitude. **Decisions:** weeks are calendar weeks, not
+today-anchored 7-day blocks like the canvas (a bar labelled with the week's Monday is honest and the current week is simply partial); the 7 d range draws the weekly metrics **by day** — a week of data would be one or two bars. The **range
+switcher sits under the chart and the side tiles**, as on the canvas (`StatRangeSwitcher`, a `LifeySegmented`, thumb reach); ranges beyond the free history window carry a lock and open the paywall (`locked` on `LifeySegmented`, spoken as "90 d — Pro required"); the
+switcher stays when the range is empty ("No data in this range"), so a person is never stranded. A failed data stream replaces the page with the error state. Tests: `statistics_screen_test` (11: empty range keeps the switcher, daily average +
+bars, trend chip, metric chips, weekly bars + footnote, 7 d by day, kind switch only for workout metrics, error, HU / ×1.3 at 360 dp), `statistics_screen_history_window_test` (5, locked segments + paywall), `LifeySegmented.locked` and
+sparse `LifeyBarChart` tests.
 
 **R4 derived screens:** none beyond the above (statistics_tab in trainer detail is R6).
 

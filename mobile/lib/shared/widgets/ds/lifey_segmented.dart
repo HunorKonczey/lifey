@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_tokens.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// A pill segmented control — "7 days / 30 days / 90 days / All" (design
 /// system canvas "SZEGMENTÁLT VÁLTÓ"; docs/redesign/77-mobile-redesign-plan.md
@@ -18,12 +19,17 @@ class LifeySegmented<T> extends StatelessWidget {
     required this.segments,
     required this.selected,
     required this.onChanged,
+    this.locked = const {},
   }) : assert(segments.length >= 2);
 
   /// Value → label, in display order.
   final List<(T, String)> segments;
   final T selected;
   final ValueChanged<T> onChanged;
+
+  /// Segments that need Pro: they stay tappable (the caller decides what a tap
+  /// does — open the paywall) and carry a small lock before the label.
+  final Set<T> locked;
 
   static const double _pad = 4;
   static const double _segmentHeight = 40;
@@ -74,6 +80,13 @@ class LifeySegmented<T> extends StatelessWidget {
                       selected: value == selected,
                       button: true,
                       inMutuallyExclusiveGroup: true,
+                      // "90 days — Pro required" instead of just the label: the
+                      // lock is a glyph, and a gate must not rest on that alone
+                      // (`69` §8).
+                      label: locked.contains(value)
+                          ? AppLocalizations.of(context)!.statRangeLockedSemanticsLabel(label)
+                          : null,
+                      excludeSemantics: locked.contains(value),
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () => onChanged(value),
@@ -84,13 +97,22 @@ class LifeySegmented<T> extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
-                                child: Text(
-                                  label,
-                                  maxLines: 1,
-                                  style: t.labelLarge!.copyWith(
-                                    fontWeight: value == selected ? FontWeight.w700 : FontWeight.w600,
-                                    color: value == selected ? p.text : p.text2,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (locked.contains(value)) ...[
+                                      Icon(Icons.lock_rounded, size: 14, color: p.text3),
+                                      const SizedBox(width: AppSpacing.s4),
+                                    ],
+                                    Text(
+                                      label,
+                                      maxLines: 1,
+                                      style: t.labelLarge!.copyWith(
+                                        fontWeight: value == selected ? FontWeight.w700 : FontWeight.w600,
+                                        color: value == selected ? p.text : p.text2,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

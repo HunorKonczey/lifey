@@ -144,6 +144,23 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('many bars label only the chosen ones, without overflow', (tester) async {
+      // 30 daily bars: only every seventh carries a date; the rest are empty.
+      await tester.pumpWidget(host(LifeyBarChart(
+        bars: [
+          for (var i = 0; i < 30; i++)
+            BarDatum(label: (29 - i) % 7 == 0 ? 'Sep ${i + 1}' : '', value: 100.0 + i, highlighted: i == 29),
+        ],
+        color: AppMetricColors.dark.calories,
+        barGap: 3,
+      )));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Sep 30'), findsOneWidget);
+      expect(find.text('Sep 23'), findsOneWidget);
+      expect(find.text('Sep 22'), findsNothing);
+    });
+
     testWidgets('no data at all still draws an axis without errors', (tester) async {
       await tester.pumpWidget(host(LifeyBarChart(
         bars: const [BarDatum(label: 'M', value: null), BarDatum(label: 'T', value: 0)],
