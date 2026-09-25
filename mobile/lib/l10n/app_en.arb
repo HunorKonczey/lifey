@@ -1266,7 +1266,7 @@
   "@statMetricCardioMaxAltitudeLabel": {
     "description": "Statistics metric (docs/cardio/60 C8.7): the highest point reached per day, DISTANCE family only — a daily maximum, same shape as max heart rate, not a sum"
   },
-  "statisticsTitle": "Statistics",
+  "statisticsTitle": "Stats",
   "@statisticsTitle": {
     "description": "Title of the statistics screen"
   },
