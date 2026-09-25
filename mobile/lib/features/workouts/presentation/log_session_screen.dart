@@ -36,7 +36,7 @@ import 'watch_session_plan.dart';
 import 'watch_set_log_decision.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/exercise_session_card.dart';
-import 'widgets/music_sticky_button.dart';
+import 'widgets/workout_action_bar.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/rest_hero_card.dart';
 import 'widgets/workout_success_dialog.dart';
@@ -2142,7 +2142,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     final showFinishButton = _finishedAt == null;
     // ListView needs extra bottom room so content isn't hidden behind the sticky button.
     final listBottomPad =
-        showFinishButton ? (safeBottom + 24 + 54 + 16) : (safeBottom + 16);
+        showFinishButton ? WorkoutActionBar.reservedHeight(safeBottom) : (safeBottom + 16);
 
     final title = _isEditing
         ? (widget.session!.templateName ?? l10n.editWorkoutTitle)
@@ -2268,57 +2268,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
             ],
           ),
 
-          // ── Sticky music button + "Finish workout" button ──
-          // The music button only shows alongside Finish — both gated on
-          // "running session" (docs/music/46-workout-music-controls-plan.md
-          // §3.4); it never grows the sticky zone's height (listBottomPad
-          // above stays keyed to the Finish button's own 54px alone).
+          // ── Floating bar: music + "Finish workout" (running sessions only) ──
+          // Both are gated on "running session" (docs/music/46-workout-music-
+          // controls-plan.md §3.4); it sits where the nav bar would be.
           if (showFinishButton)
             Positioned(
-              bottom: safeBottom + 24,
-              left: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  const MusicStickyButton(),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 54,
-                      child: FilledButton.icon(
-                        onPressed: _saving ? null : _finishWorkout,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: scheme.primary,
-                          foregroundColor: scheme.onPrimary,
-                          disabledBackgroundColor:
-                              scheme.primary.withValues(alpha: 0.6),
-                          disabledForegroundColor:
-                              scheme.onPrimary.withValues(alpha: 0.7),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          textStyle: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        icon: _saving
-                            ? SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: scheme.onPrimary.withValues(alpha: 0.7),
-                                ),
-                              )
-                            : const Icon(Icons.check, size: 20),
-                        label: Text(l10n.finishWorkoutButton),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: WorkoutActionBar(saving: _saving, onFinish: _finishWorkout),
             ),
         ],
       ),

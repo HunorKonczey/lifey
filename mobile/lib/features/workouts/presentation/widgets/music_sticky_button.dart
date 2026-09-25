@@ -12,13 +12,10 @@ import 'music_player_sheet.dart';
 import 'music_provider_picker_sheet.dart';
 import 'provider_glyph.dart';
 
-/// Same warn color as `_RestBanner`/`showAppConfirmDialog`'s delete-accent —
-/// see docs/music/46-workout-music-controls-plan.md §6.2.
-const _kAttentionColor = Color(0xFFD66B5A);
-
 /// Sticky zene-gomb (docs/music/46-workout-music-controls-plan.md §3.4):
-/// 54x54, sits left of "Finish workout" in the running session's sticky
-/// bottom row. Tapping opens the provider picker (no provider chosen yet) or
+/// 60x60 (docs/redesign/77-mobile-redesign-plan.md R3.6), sits left of "Finish
+/// workout" in the running session's floating bottom bar; its attention dot
+/// takes the theme's negative colour (plan 46 §6.2). Tapping opens the provider picker (no provider chosen yet) or
 /// the mini player (a provider is already selected); a "Switch" tap inside
 /// the player routes back here to reopen the picker.
 class MusicStickyButton extends ConsumerStatefulWidget {
@@ -115,6 +112,7 @@ class _MusicStickyButtonState extends ConsumerState<MusicStickyButton>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     final musicState = ref.watch(musicControllerProvider);
     final playing = musicState.playback?.isPlaying ?? false;
     _syncAnimation(playing);
@@ -127,8 +125,8 @@ class _MusicStickyButtonState extends ConsumerState<MusicStickyButton>
       child: Tooltip(
         message: l10n.musicButtonTooltip,
         child: Container(
-          width: 54,
-          height: 54,
+          width: 60,
+          height: 60,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.card),
             boxShadow: [
@@ -140,7 +138,7 @@ class _MusicStickyButtonState extends ConsumerState<MusicStickyButton>
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(
-                color: scheme.surfaceContainer.withValues(alpha: 0.90),
+                color: p.nested.withValues(alpha: 0.94),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -168,9 +166,9 @@ class _MusicStickyButtonState extends ConsumerState<MusicStickyButton>
                           width: 10,
                           height: 10,
                           decoration: BoxDecoration(
-                            color: _kAttentionColor,
+                            color: context.metricColors.negative,
                             shape: BoxShape.circle,
-                            border: Border.all(color: scheme.surfaceContainer, width: 2),
+                            border: Border.all(color: p.nested, width: 2),
                           ),
                         ),
                       ),

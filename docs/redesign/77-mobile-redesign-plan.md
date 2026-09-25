@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.5 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.6 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1403,9 +1403,18 @@ empty-lines behaviour (memory `workout-session-empty-lines-bug`) is neither bett
 `exerciseBestLineWithOneRm`, `setDoneLabel`. Tests: `exercise_session_card_test` (best line, 52 / 40 dp, tint, faint PREV, ↑ / dash / trophy,
 all three check paths, editor Save, long-press menu, Add set, 360/411 dp × 1.3 HU light).
 
-### R3.6 — Mobile UI: live strength — floating music + finish bar
+### R3.6 — Mobile UI: live strength — floating music + finish bar ✅
 - `log_session_screen.dart`, `music_sticky_button.dart`.
 - **Verify:** bar sits where the nav would be, respects safe area; finish uses the flag icon.
+
+*As built:* `WorkoutActionBar` (`widgets/workout_action_bar.dart`) is the one floating bar of a running strength session: the **music button** (60 × 60,
+`nested` surface, radius 22, blur kept; its attention dot now the theme's negative colour instead of the `Color(0xFFD66B5A)` literal) and
+**"⚑ Finish workout"** (60 dp tall, radius 22, the **flag icon** — never the check of a set). It sits at the bottom edge where the nav bar would be
+(root route, no shell), 16 dp above the safe area, on a short fade of the page colour so the list scrolls under it instead of showing between
+the buttons. `WorkoutActionBar.reservedHeight(safeBottom)` is what the list keeps free under its last item (it replaced the hand-added
+`safeBottom + 24 + 54 + 16`). Finish shows a spinner and does nothing while a save is in flight; the running-session gating, the music flow
+and `_finishWorkout` are unchanged. Tests: `workout_action_bar_test` (flag icon, no check, music left of Finish, 60 dp, above the safe area with the
+16 dp gap, reserved height, saving state, 360/411 dp × 1.3 HU).
 
 ### R3.7 — Mobile UI: PR celebration sheet
 - `workout_success_dialog.dart` → sheet per spec (removes 21 colour literals).
