@@ -594,10 +594,6 @@
   "workoutSuccessMoreCount": "+{count} további",
   "workoutSuccessContinueButton": "Tovább",
   "workoutSuccessRepsAbbrev": "ism.",
-  "workoutSuccessPrTitle": "{count, plural, one{Új személyes rekord!} other{Új személyes rekordok!}}",
-  "workoutSuccessPrSubtitle": "{count, plural, one{Új személyes rekordot értél el} other{{count} új személyes rekordot értél el}}",
-  "workoutSuccessPrSectionLabel": "Személyes rekordok",
-  "workoutSuccessImprovementsSectionLabel": "Fejlődés",
   "postWorkoutFeedbackTitle": "Mennyire volt nehéz ez az edzés?",
   "postWorkoutFeedbackAnchorEasy": "Nagyon könnyű",
   "postWorkoutFeedbackAnchorMax": "Maximális erőfeszítés",
@@ -1386,5 +1382,11 @@
   "setNumberLabel": "{number}. szett",
   "exerciseBestLine": "Legjobb: {best}",
   "exerciseBestLineWithOneRm": "Legjobb: {best} · becsült 1RM {oneRm}",
-  "setDoneLabel": "Szett kész"
+  "setDoneLabel": "Szett kész",
+  "workoutDonePrTitle": "{count, plural, one{1 új egyéni rekord} other{{count} új egyéni rekord}}",
+  "workoutDoneVolume": "{volume} kg össztömeg",
+  "workoutDonePrKindHeaviest": "Legnehezebb szett",
+  "workoutDonePrKindOneRm": "Becsült 1RM",
+  "workoutDonePrKindReps": "Legtöbb ismétlés {weight} kg-mal",
+  "workoutDoneBetterThanLast": "Jobb, mint legutóbb"
 }

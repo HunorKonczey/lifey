@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.6 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.7 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1416,10 +1416,26 @@ the buttons. `WorkoutActionBar.reservedHeight(safeBottom)` is what the list keep
 and `_finishWorkout` are unchanged. Tests: `workout_action_bar_test` (flag icon, no check, music left of Finish, 60 dp, above the safe area with the
 16 dp gap, reserved height, saving state, 360/411 dp × 1.3 HU).
 
-### R3.7 — Mobile UI: PR celebration sheet
+### R3.7 — Mobile UI: PR celebration sheet ✅
 - `workout_success_dialog.dart` → sheet per spec (removes 21 colour literals).
 - **Verify:** 0 PRs → no trophy header (plain done state); multiple PR kinds listed; animation
   runs once.
+
+*As built:* the celebration is now a **bottom sheet** (`widgets/workout_success_sheet.dart`, renamed from `workout_success_dialog.dart`;
+`showWorkoutSuccessSheet`, root navigator, 88 % max height, the sheet's own handle and the surface-2 sheet theme). Top: a **96 dp trophy** in the record
+colour with a 10 dp halo and the title **"2 new personal records"** (28/800; a plural key, HU singular noun), then the summary line
+**"Push day · 58 min · 4,280 kg volume"** (template name · duration · Σ weight × reps of the done sets — `computeWorkoutVolume`; parts that are
+unknown are left out). Below, one `ListGroup`: a **row per record** — trophy `ListIconHolder` in `mc.record`, the exercise, the kind
+("Heaviest set" / "Estimated 1RM" / "Most reps at 60 kg"), the new value 20/800 ("50 kg", "12 reps") and the **gain in `mc.improvement`
+("+2.5 kg")** measured against the exercise's `PrBaseline` (none when there was no earlier record) — then a row per exercise that only got
+better ("Better than last time", up-arrow in `mc.improvement`, the top weight and the biggest single-set gain; up to 5 with "+N more"; exercises that
+set a record are not repeated). Several sets that each beat the old record collapse to the best one per kind, so the title counts what is listed
+(`recordEntryCount`; `totalPrCount`/chips are unchanged). **Without a record** the sheet is the plain done state: check-circle in the improvement
+colour, "Great workout!" and the improvement count, no trophy. The **animation runs once** (`AppMotion.celebration`, 1.2 s): the trophy pops in
+(30 %), then the rows fade/slide in 60 ms apart; the confetti is gone, and under reduced motion everything is in place at once. The 21 colour
+literals are gone (only tokens). ARB: added `workoutDonePrTitle`, `workoutDoneVolume`, `workoutDonePrKind*`, `workoutDoneBetterThanLast`; removed
+`workoutSuccessPrTitle/PrSubtitle/PrSectionLabel/ImprovementsSectionLabel`. The 12 old `computeWorkoutProgress` tests are unchanged; 10 new ones
+cover the deltas, the collapse, 0 PRs, the one-shot animation, reduced motion and no overflow at 411/360 dp × 1.3 HU light.
 
 ### R3.8 — Mobile UI: live cardio screen
 - `cardio_session_screen.dart` (hero moving time, metrics, HR zone row, pause, slide-to-finish

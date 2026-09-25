@@ -2642,32 +2642,6 @@
   "@workoutSuccessRepsAbbrev": {
     "description": "Abbreviated unit for a reps-gain chip in the workout-success dialog, e.g. '+2 reps'"
   },
-  "workoutSuccessPrTitle": "{count, plural, one{New personal record!} other{New personal records!}}",
-  "@workoutSuccessPrTitle": {
-    "description": "Title of the celebration dialog when the session included at least one personal record",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "workoutSuccessPrSubtitle": "{count, plural, one{You hit a new personal record} other{You hit {count} new personal records}}",
-  "@workoutSuccessPrSubtitle": {
-    "description": "Subtitle of the celebration dialog when the session included at least one personal record",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "workoutSuccessPrSectionLabel": "Personal records",
-  "@workoutSuccessPrSectionLabel": {
-    "description": "Caption above the PR rows in the celebration dialog, shown only when both PR rows and regular improvement rows are present"
-  },
-  "workoutSuccessImprovementsSectionLabel": "Improvements",
-  "@workoutSuccessImprovementsSectionLabel": {
-    "description": "Caption above the improvement rows in the celebration dialog, shown only when both PR rows and regular improvement rows are present"
-  },
   "postWorkoutFeedbackTitle": "How hard was this workout?",
   "@postWorkoutFeedbackTitle": {
     "description": "Title of the post-workout feedback bottom sheet, shown after finishing a session"
@@ -6342,5 +6316,32 @@
   "setDoneLabel": "Set done",
   "@setDoneLabel": {
     "description": "Screen-reader label of the check button of a set row"
+  },
+  "workoutDonePrTitle": "{count, plural, one{1 new personal record} other{{count} new personal records}}",
+  "@workoutDonePrTitle": {
+    "description": "Title of the celebration sheet shown when a strength workout finishes with personal records (docs/redesign/77-mobile-redesign-plan.md R3.7)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "workoutDoneVolume": "{volume} kg volume",
+  "@workoutDoneVolume": {
+    "description": "Total weight lifted (sets x reps x kg) in the celebration sheet's summary line, e.g. 'Push day · 58 min · 4,280 kg volume'",
+    "placeholders": {"volume": {"type": "String"}}
+  },
+  "workoutDonePrKindHeaviest": "Heaviest set",
+  "@workoutDonePrKindHeaviest": {
+    "description": "Kind of a personal record on the celebration sheet: the most weight ever lifted for the exercise"
+  },
+  "workoutDonePrKindOneRm": "Estimated 1RM",
+  "@workoutDonePrKindOneRm": {
+    "description": "Kind of a personal record on the celebration sheet: the best estimated one-rep max"
+  },
+  "workoutDonePrKindReps": "Most reps at {weight} kg",
+  "@workoutDonePrKindReps": {
+    "description": "Kind of a personal record on the celebration sheet: the most reps ever done at one weight",
+    "placeholders": {"weight": {"type": "String"}}
+  },
+  "workoutDoneBetterThanLast": "Better than last time",
+  "@workoutDoneBetterThanLast": {
+    "description": "Line under an exercise on the celebration sheet that got heavier or more reps than the last session without setting a record"
   }
 }

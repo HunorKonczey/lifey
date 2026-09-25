@@ -57,7 +57,7 @@ class ExerciseBlock {
   /// Muscle-group code (e.g. "CHEST"), filled from the catalog at the same
   /// time as [exerciseName] (see [LogSessionScreen.build]) — feeds the
   /// per-exercise badge icon on the workout-success dialog
-  /// (workout_success_dialog.dart).
+  /// (workout_success_sheet.dart).
   String? exerciseCategory;
 
   /// Previous-performance hints for this exercise, sorted to line up

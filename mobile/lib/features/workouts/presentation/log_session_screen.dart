@@ -39,7 +39,7 @@ import 'widgets/exercise_session_card.dart';
 import 'widgets/workout_action_bar.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/rest_hero_card.dart';
-import 'widgets/workout_success_dialog.dart';
+import 'widgets/workout_success_sheet.dart';
 
 /// Full-screen form for logging a session, or editing one when [session] is given.
 ///
@@ -1751,7 +1751,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     unawaited(_autoSave());
   }
 
-  /// Shows the celebration dialog if the just-finished session improved on
+  /// Shows the celebration sheet if the just-finished session improved on
   /// at least 2 metrics net vs. the previous one for each exercise. No-op
   /// (and returns immediately) otherwise. Awaited so callers navigate away
   /// only after the user dismisses it.
@@ -1759,7 +1759,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     final l10n = AppLocalizations.of(context)!;
     final progress = computeWorkoutProgress(_blocks, l10n);
     if (!progress.isSuccess) return;
-    await showWorkoutSuccessDialog(context, progress);
+    final startedAt = _startedAt;
+    await showWorkoutSuccessSheet(
+      context,
+      progress,
+      summary: WorkoutSummary(
+        title: widget.session?.templateName ?? widget.template?.name,
+        duration: startedAt == null ? null : (_finishedAt ?? DateTime.now()).difference(startedAt),
+        volume: computeWorkoutVolume(_blocks),
+      ),
+    );
   }
 
   /// Stamps finishedAt = now, stops the ticker, and persists.
