@@ -28,6 +28,20 @@ public record TrainerClientResponse(
         int workoutsPerWeek,
         Instant lastActivityAt,
         LocalDate lastWeightAt,
-        int missedWorkoutCount
+        int missedWorkoutCount,
+        /**
+         * Mean daily calories over the days with meals logged in the last 7
+         * days (the client's own local days), or null when nothing was logged —
+         * the "Avg kcal" KPI of the mobile client card (docs/redesign/
+         * 77-mobile-redesign-plan.md R6.2). Read-only, derived on request.
+         */
+        Integer avgCalories7d,
+        /**
+         * Strength personal records the client set in the last 7 days — the
+         * "🏆 2 PRs this week" chip. Derived from the set history the same way
+         * the phone derives them ({@link com.lifey.trainer.PersonalRecordCounter}).
+         * Null only if it could not be computed; 0 is a real answer.
+         */
+        Integer prCount7d
 ) {
 }

@@ -41,6 +41,22 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     Page<WorkoutSession> findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullAndSessionKind(
             Long userId, SessionKind kind, Pageable pageable);
 
+    /**
+     * Every set of the user's finished strength sessions, oldest session first
+     * and each session's sets in the order they were performed — what the
+     * trainer client list replays to count personal records
+     * ({@link com.lifey.trainer.PersonalRecordCounter}). The session is
+     * fetched with the set, so reading its id and start needs no extra query.
+     */
+    @Query("""
+            select s from ExerciseSet s join fetch s.workoutSession w
+            where w.user.id = :userId and w.deletedAt is null
+              and w.startedAt is not null and w.finishedAt is not null
+              and w.sessionKind = com.lifey.workout.session.SessionKind.STRENGTH
+            order by w.startedAt asc, w.id asc, s.performedAt asc, s.id asc
+            """)
+    List<ExerciseSet> findFinishedStrengthSetsOldestFirst(@Param("userId") Long userId);
+
     Optional<WorkoutSession> findByIdAndUserId(Long id, Long userId);
 
     /** Same as {@link #findByIdAndUserId}, additionally excluding soft-deleted rows — used by the trainer comment endpoint. */
