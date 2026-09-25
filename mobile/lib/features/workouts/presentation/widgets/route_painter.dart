@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../domain/route_encoder.dart';
 import '../../domain/workout_session.dart' show CardioWaypoint;
 
@@ -34,6 +35,8 @@ class RoutePainter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
+    final mc = context.metricColors;
     return SizedBox(
       height: height,
       width: double.infinity,
@@ -42,15 +45,15 @@ class RoutePainter extends StatelessWidget {
           size: Size.infinite,
           painter: _RouteDelegate(
             geometry: _RouteGeometryCache.get(polyline),
-            backgroundColor: scheme.surfaceContainer,
+            backgroundColor: p.nested,
             routeColor: scheme.primary,
-            endColor: scheme.secondary,
+            endColor: mc.calories,
             strokeWidth: 3.5,
             margin: 20,
             showMarkers: true,
             waypoints: waypoints,
-            waypointColor: scheme.tertiary,
-            waypointLabelColor: scheme.onSurface,
+            waypointColor: mc.carbs,
+            waypointLabelColor: p.text,
           ),
         ),
       ),
@@ -76,7 +79,7 @@ class RouteThumbnail extends StatelessWidget {
         size: Size.square(size),
         painter: _RouteDelegate(
           geometry: _RouteGeometryCache.get(polyline),
-          backgroundColor: scheme.surfaceContainerHigh,
+          backgroundColor: context.palette.control,
           routeColor: scheme.primary,
           endColor: null,
           strokeWidth: 2,

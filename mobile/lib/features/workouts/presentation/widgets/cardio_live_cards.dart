@@ -35,6 +35,12 @@ String hrZoneDisplayName(AppLocalizations l10n, int zone) {
   return toBeginningOfSentenceCase(name, l10n.localeName);
 }
 
+/// A field label in sentence case ("DISTANCE" → "Distance"): the ARB keeps the
+/// upper-case forms because the same strings label form fields, the canvas
+/// draws every metric label in sentence case.
+String labelCase(BuildContext context, String label) =>
+    toBeginningOfSentenceCase(label.toLowerCase(), Localizations.localeOf(context).languageCode);
+
 /// A metric of the live cardio screen as a card of its own (canvas Lifey 3 ›
 /// 3.3): the [label] over a big number with its unit — "Distance / 4.52 km".
 /// [value] carries the unit after its last space ("5:24 /km"); a value without
@@ -105,8 +111,7 @@ class LiveMetricCard extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            toBeginningOfSentenceCase(label.toLowerCase(),
-                                Localizations.localeOf(context).languageCode),
+                            labelCase(context, label),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context)

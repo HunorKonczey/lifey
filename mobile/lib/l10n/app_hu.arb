@@ -915,8 +915,6 @@
   "boxScoreOfferAccept": "Igen, kérem",
   "boxScoreOfferDecline": "Nem, kösz",
   "hrZonesSectionLabel": "PULZUSZÓNÁK",
-  "hrZoneEasyEndLabel": "könnyű",
-  "hrZoneHardEndLabel": "kemény",
   "hrZoneVerdictHard": "kemény meccs",
   "hrZoneVerdictBalanced": "kiegyensúlyozott",
   "hrZoneVerdictEasy": "könnyű meccs",

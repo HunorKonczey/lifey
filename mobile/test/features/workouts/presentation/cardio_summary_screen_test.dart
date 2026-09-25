@@ -429,7 +429,7 @@ void main() {
     });
   });
 
-  testWidgets('DISTANCE with a recorded distance shows distance as primary, pace as secondary',
+  testWidgets('DISTANCE with a recorded distance shows the distance as the hero, pace in the strip',
       (tester) async {
     await _pump(
       tester,
@@ -441,11 +441,14 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    expect(find.text('DISTANCE'), findsOneWidget);
+    // the distance is the hero, with the duration beside it ...
     expect(find.text('5.00 km'), findsOneWidget);
-    expect(find.text('PACE'), findsOneWidget);
+    expect(find.text('25:00'), findsOneWidget);
+    expect(find.text('Duration'), findsOneWidget);
+    // ... and pace / elevation in one strip under uniform labels
+    expect(find.text('Pace'), findsOneWidget);
     expect(find.text('5:00 /km'), findsOneWidget);
-    expect(find.text('ELEVATION GAIN'), findsOneWidget);
+    expect(find.text('Elevation gain'), findsOneWidget);
     expect(find.text('42 m'), findsOneWidget);
     // Never entered by hand, no badge.
     expect(find.text('Edited'), findsNothing);
@@ -463,9 +466,9 @@ void main() {
       ),
     );
 
-    expect(find.text('SPEED'), findsOneWidget);
+    expect(find.text('Speed'), findsOneWidget);
     expect(find.text('30.0 km/h'), findsOneWidget);
-    expect(find.text('PACE'), findsNothing);
+    expect(find.text('Pace'), findsNothing);
     expect(find.textContaining('/km'), findsNothing);
   });
 
@@ -546,13 +549,13 @@ void main() {
     });
   });
 
-  testWidgets('DISTANCE without a recorded distance falls back to duration as primary',
+  testWidgets('DISTANCE without a recorded distance still shows the duration, with a dash for the distance',
       (tester) async {
     await _pump(tester, _session(activityType: 'WALKING', movingSeconds: 1800));
 
-    expect(find.text('DURATION'), findsOneWidget);
+    expect(find.text('Duration'), findsOneWidget);
     expect(find.text('30:00'), findsOneWidget);
-    expect(find.text('PACE'), findsNothing);
+    expect(find.text('Pace'), findsNothing);
   });
 
   testWidgets('a manually-entered distance shows the Edited badge', (tester) async {
@@ -1018,7 +1021,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(workoutsSessionsTabRequestProvider), 0);
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pumpAndSettle();
 
       expect(container.read(workoutsSessionsTabRequestProvider), 1);
@@ -1059,7 +1062,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(CardioSummaryScreen), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pumpAndSettle();
 
       expect(find.byType(CardioSummaryScreen), findsNothing);
@@ -1281,14 +1284,14 @@ void main() {
         _session(activityType: 'BASKETBALL', movingSeconds: 3600, cardio: zones()),
       );
 
-      expect(find.text('HEART RATE ZONES'), findsOneWidget);
+      expect(find.text('Heart rate zones'), findsOneWidget);
       // Every zone is listed, including ones with no time — seeing that a zone
       // was untouched is information.
       for (final code in ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']) {
         expect(find.text(code), findsOneWidget);
       }
-      expect(find.text('warm-up'), findsOneWidget);
-      expect(find.text('threshold'), findsOneWidget);
+      expect(find.text('Warm-up'), findsOneWidget);
+      expect(find.text('Threshold'), findsOneWidget);
       expect(find.text('20:00'), findsOneWidget); // z3, 1200 s
       expect(find.text('33%'), findsOneWidget); // z3 of 3600 s measured
     });
@@ -1314,7 +1317,7 @@ void main() {
         _session(activityType: 'BASKETBALL', movingSeconds: 3600, cardio: const CardioMetrics()),
       );
 
-      expect(find.text('HEART RATE ZONES'), findsNothing);
+      expect(find.text('Heart rate zones'), findsNothing);
       expect(find.text('Z1'), findsNothing);
     });
 
@@ -1380,7 +1383,7 @@ void main() {
         ),
       );
 
-      expect(find.text('HEART RATE ZONES'), findsOneWidget);
+      expect(find.text('Heart rate zones'), findsOneWidget);
       expect(find.text('Z5'), findsOneWidget);
     });
 
@@ -1390,7 +1393,7 @@ void main() {
         _session(activityType: 'INDOOR_BIKE', movingSeconds: 3600, cardio: zones()),
       );
 
-      expect(find.text('HEART RATE ZONES'), findsOneWidget);
+      expect(find.text('Heart rate zones'), findsOneWidget);
     });
 
     testWidgets('nothing here is estimated, and the panel says so', (tester) async {

@@ -4044,14 +4044,6 @@
   "@hrZonesSectionLabel": {
     "description": "Header of the heart-rate zone panel on the cardio summary screen (C9.1, M43). One component for every cardio type — only its position differs by family."
   },
-  "hrZoneEasyEndLabel": "easy",
-  "@hrZoneEasyEndLabel": {
-    "description": "Label at the left end of the stacked zone bar (C9.1, M43)"
-  },
-  "hrZoneHardEndLabel": "hard",
-  "@hrZoneHardEndLabel": {
-    "description": "Label at the right end of the stacked zone bar (C9.1, M43)"
-  },
   "hrZoneVerdictHard": "hard session",
   "@hrZoneVerdictHard": {
     "description": "Headline chip when zones 4-5 dominate (C9.1, M43). Said in words because the bar's colours alone are not accessible to a colour-blind reader."

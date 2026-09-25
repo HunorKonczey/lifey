@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.8 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.9 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1462,7 +1462,7 @@ cards, the location card and the waypoint bar are unchanged apart from the 20 dp
 existing cardio-screen suites were adapted to the sentence-case labels, the tooltip'd pause and the 104 px hero; new: `hr_zones_test`, `cardio_live_cards_test`
 and four layout tests in `cardio_session_screen_distance_test`.
 
-### R3.9 — Mobile UI: cardio detail + HR zone card
+### R3.9 — Mobile UI: cardio detail + HR zone card ✅
 - `cardio_summary_screen.dart`, `hr_zone_panel.dart` (5 colour literals out), `route_painter.dart`
   colours from tokens.
 - **Verify:** zone percentages sum to 100 (largest-remainder rounding, unit test); footnote in
@@ -1480,6 +1480,20 @@ R3.11 = sheets.
 
 **R3 acceptance** (plus the §4.1 emulator review logged in §12)**:** a full strength session (sets, rest, PR, finish, celebration) and a full
 cardio session (start, pause, slide to finish, detail) on the new UI in dark and light.
+
+*As built:* **Header:** the summary uses the design system's `LifeySubpageHeader` — back, "Running" over "Tue, Sep 22 · 07:45", and a ⌚ `TintedChip` when the numbers
+came from a watch (the old capsule and the identity row are gone; the canvas's ⋮ is not drawn — nothing sits behind it, every metric is edited by tapping it).
+**DISTANCE family:** `CardioDetailHero` (`widgets/cardio_detail_hero.dart`) — the distance as a **52 px hero** (tap edits it, "Edited" tag when hand-entered) with the duration
+beside it — then `CardioMetricStrip`: pace/speed, elevation, heart rate, calories in **one card under one label style** (sentence case — "Calories" is no longer the odd one out;
+HR number in the heart colour, calories in the calories colour; four across, two by two on a narrow phone or at large text). The tiles that have no place in the strip
+(highest point, backpack weight, running cadence) stay as cards under it. MACHINE and GAME keep their layouts on the same card tokens. **HR zone card** (`HrZonePanel`,
+one card for every family): "Heart rate zones" + the verdict chip, a 12 dp stacked bar (3 dp gaps, pill segments; unmeasured remainder hatched), then per zone
+"Z3 · Tempo · 9:41 · 35 %" — **the percentages come from `HrZoneBreakdown.percents`, the largest-remainder split that always adds to 100** (unit-tested, plus a widget test on
+the rendered texts) — and the footnote in `text3`. The five zone colours are the metric colours (`hrZoneColor`, shared with the live row); the five colour literals, the per-row bars
+and the easy/hard end labels (ARB removed) are gone. The canvas's footnote "max HR of 190 bpm (220 − age). Change in Settings." is **not** used: the stored zones come from the watch
+against the profile's own maximum ("Never estimated" — the existing note stays, in text3), and there is no max-HR setting. `RoutePainter` colours now come from the palette
+(`nested` background, calories end marker, carbs waypoints, text labels). Tests: the summary suite adapted to sentence-case labels and the subpage header; new
+`hr_zone_panel_test` (rows, sum 100, footnote colour, zone colours, partial coverage, overflow at 411/360 × 1.3 HU light, hero/strip) and 5 `percents` cases in `hr_zone_breakdown_test`.
 
 ---
 

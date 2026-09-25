@@ -15,7 +15,10 @@ int? maxHeartRateForAge(int age) => age >= 10 && age <= 100 ? 220 - age : null;
 /// Whole years between [birthDate] and [now].
 int ageOn(DateTime birthDate, DateTime now) {
   var age = now.year - birthDate.year;
-  if (now.month < birthDate.month || (now.month == birthDate.month && now.day < birthDate.day)) age--;
+  if (now.month < birthDate.month ||
+      (now.month == birthDate.month && now.day < birthDate.day)) {
+    age--;
+  }
   return age;
 }
 
