@@ -45,7 +45,7 @@ class _SideTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final t = Theme.of(context).textTheme;
-    return LifeyCard.nested(
+    return LifeyCard(
       padding: const EdgeInsets.all(AppSpacing.s12),
       child: Semantics(
         container: true,
