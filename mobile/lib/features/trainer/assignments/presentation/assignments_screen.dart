@@ -58,8 +58,8 @@ class AssignmentsScreen extends ConsumerWidget {
         child: FloatingActionButton.extended(
           heroTag: null,
           onPressed: () => _assign(context, ref),
-          backgroundColor: Theme.of(context).colorScheme.tertiary,
-          foregroundColor: Theme.of(context).colorScheme.onTertiary,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
           icon: const Icon(Icons.add),
           label: Text(l10n.trainerAssignButton),
         ),
@@ -189,11 +189,11 @@ class _FilterBar extends ConsumerWidget {
           label: Text(label),
           selected: selected,
           showCheckmark: false,
-          selectedColor: scheme.tertiaryContainer,
+          selectedColor: scheme.primaryContainer,
           labelStyle: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: selected ? scheme.onTertiaryContainer : scheme.onSurfaceVariant,
+            color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
           ),
           onSelected: (_) => onTap(),
         );
@@ -313,7 +313,7 @@ class _AssignmentTile extends ConsumerWidget {
                 ? Icons.fitness_center
                 : Icons.restaurant,
             size: 20,
-            color: scheme.tertiary,
+            color: scheme.primary,
           ),
           const SizedBox(width: 12),
           Expanded(

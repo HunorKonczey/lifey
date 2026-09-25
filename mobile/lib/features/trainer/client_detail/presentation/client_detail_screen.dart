@@ -140,7 +140,7 @@ class _LoadedState extends ConsumerState<_Loaded>
           controller: _controller,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          indicatorColor: theme.colorScheme.tertiary,
+          indicatorColor: theme.colorScheme.primary,
           labelColor: theme.colorScheme.onSurface,
           unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
           dividerColor: Colors.transparent,

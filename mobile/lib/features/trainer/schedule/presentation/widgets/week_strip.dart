@@ -126,9 +126,9 @@ class _DayCell extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: selected ? scheme.tertiary : Colors.transparent,
+                  color: selected ? scheme.primary : Colors.transparent,
                   border: isToday && !selected
-                      ? Border.all(color: scheme.tertiary, width: 1.5)
+                      ? Border.all(color: scheme.primary, width: 1.5)
                       : null,
                 ),
                 child: Text(
@@ -137,7 +137,7 @@ class _DayCell extends StatelessWidget {
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: selected ? scheme.onTertiary : scheme.onSurface,
+                    color: selected ? scheme.onPrimary : scheme.onSurface,
                   ),
                 ),
               ),

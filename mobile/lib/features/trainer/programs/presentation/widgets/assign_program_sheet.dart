@@ -152,7 +152,7 @@ class _AssignProgramSheetState extends ConsumerState<AssignProgramSheet> {
                           leading: ClientAvatar(client: client, size: 36),
                           title: Text(client.displayName),
                           trailing: _clientId == client.userId
-                              ? Icon(Icons.check_circle, color: scheme.tertiary)
+                              ? Icon(Icons.check_circle, color: scheme.primary)
                               : null,
                           onTap: _submitting
                               ? null
@@ -181,7 +181,7 @@ class _AssignProgramSheetState extends ConsumerState<AssignProgramSheet> {
             ),
             child: Row(
               children: [
-                Icon(Icons.event_available, size: 18, color: scheme.tertiary),
+                Icon(Icons.event_available, size: 18, color: scheme.primary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -225,8 +225,8 @@ class _AssignProgramSheetState extends ConsumerState<AssignProgramSheet> {
                   child: FilledButton(
                     onPressed: _canSubmit ? _submit : null,
                     style: FilledButton.styleFrom(
-                      backgroundColor: scheme.tertiary,
-                      foregroundColor: scheme.onTertiary,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
                     ),
                     child: Text(l10n.trainerStartProgramButton),
                   ),

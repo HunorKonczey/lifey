@@ -210,7 +210,7 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                   item.type == AssignableContentType.template
                       ? Icons.fitness_center
                       : Icons.restaurant,
-                  color: Theme.of(context).colorScheme.tertiary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 title: Text(item.name),
                 subtitle: Text(
@@ -291,8 +291,8 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
           FilledButton(
             onPressed: _selected.isEmpty || _submitting ? null : _submit,
             style: FilledButton.styleFrom(
-              backgroundColor: theme.colorScheme.tertiary,
-              foregroundColor: theme.colorScheme.onTertiary,
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.all(Radius.circular(AppRadius.input)),
               ),

@@ -47,7 +47,7 @@ class SessionCard extends StatelessWidget {
                   Icon(
                     session.isCardio ? Icons.directions_run : Icons.fitness_center,
                     size: 18,
-                    color: scheme.tertiary,
+                    color: scheme.primary,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -101,8 +101,8 @@ class SessionCard extends StatelessWidget {
                       _Chip(
                         icon: Icons.chat_bubble,
                         label: l10n.trainerYourCommentLabel,
-                        background: scheme.tertiaryContainer,
-                        foreground: scheme.onTertiaryContainer,
+                        background: scheme.primaryContainer,
+                        foreground: scheme.onPrimaryContainer,
                       ),
                   ],
                 ),

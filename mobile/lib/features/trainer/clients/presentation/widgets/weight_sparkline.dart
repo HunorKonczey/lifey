@@ -27,7 +27,7 @@ class WeightSparkline extends StatelessWidget {
         child: CustomPaint(
           painter: _SparklinePainter(
             points: points,
-            color: Theme.of(context).colorScheme.tertiary,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
       ),

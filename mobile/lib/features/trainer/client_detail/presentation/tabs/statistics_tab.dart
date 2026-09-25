@@ -84,12 +84,12 @@ class _ClientStatisticsTabState extends ConsumerState<ClientStatisticsTab> {
                           label: Text(periodLabel(period)),
                           selected: period == _period,
                           showCheckmark: false,
-                          selectedColor: theme.colorScheme.tertiaryContainer,
+                          selectedColor: theme.colorScheme.primaryContainer,
                           labelStyle: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: period == _period
-                                ? theme.colorScheme.onTertiaryContainer
+                                ? theme.colorScheme.onPrimaryContainer
                                 : theme.colorScheme.onSurfaceVariant,
                           ),
                           onSelected: (_) => setState(() => _period = period),
@@ -120,7 +120,7 @@ class _ClientStatisticsTabState extends ConsumerState<ClientStatisticsTab> {
                     label: l10n.workoutsTitle,
                     value: '${statistics.workoutCount ?? 0}',
                     icon: Icons.fitness_center,
-                    color: theme.colorScheme.tertiary,
+                    color: theme.colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 10),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/current_roles_provider.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/trainer/application/trainer_view_preference.dart';
 import '../../l10n/app_localizations.dart';
@@ -58,8 +59,8 @@ class TrainerViewMenu extends ConsumerWidget {
         monogram: _monogramOf(ref),
         // The avatar wears the accent of the view it can take you to, so the
         // switch is legible before the menu is even open.
-        color: inTrainerView ? scheme.primaryContainer : scheme.tertiaryContainer,
-        foreground: inTrainerView ? scheme.onPrimaryContainer : scheme.onTertiaryContainer,
+        color: inTrainerView ? scheme.primaryContainer : context.palette.role.withValues(alpha: 0.16),
+        foreground: inTrainerView ? scheme.onPrimaryContainer : context.palette.role,
       ),
       itemBuilder: (context) => [
         PopupMenuItem<void>(

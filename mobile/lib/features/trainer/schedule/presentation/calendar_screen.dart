@@ -417,7 +417,7 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: scheme.tertiaryContainer,
+          color: scheme.primaryContainer,
           borderRadius: AppRadius.pill,
         ),
         child: Row(
@@ -429,11 +429,11 @@ class _FilterChip extends StatelessWidget {
                 fontFamily: 'PlusJakartaSans',
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: scheme.onTertiaryContainer,
+                color: scheme.onPrimaryContainer,
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.close, size: 12, color: scheme.onTertiaryContainer),
+            Icon(Icons.close, size: 12, color: scheme.onPrimaryContainer),
           ],
         ),
       ),

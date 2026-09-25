@@ -24,8 +24,8 @@ class OccurrenceStatusChip extends StatelessWidget {
     final (label, background, foreground) = switch (status) {
       OccurrenceStatus.upcoming => (
           l10n.trainerOccurrenceUpcomingLabel,
-          scheme.tertiaryContainer,
-          scheme.onTertiaryContainer,
+          scheme.primaryContainer,
+          scheme.onPrimaryContainer,
         ),
       OccurrenceStatus.done => (
           l10n.trainerOccurrenceDoneLabel,
@@ -65,7 +65,7 @@ class OccurrenceStatusChip extends StatelessWidget {
 Color occurrenceStatusColor(BuildContext context, OccurrenceStatus status) {
   final scheme = Theme.of(context).colorScheme;
   return switch (status) {
-    OccurrenceStatus.upcoming => scheme.tertiary,
+    OccurrenceStatus.upcoming => scheme.primary,
     OccurrenceStatus.done => scheme.secondary,
     OccurrenceStatus.missed => scheme.error,
     OccurrenceStatus.cancelled => scheme.outlineVariant,

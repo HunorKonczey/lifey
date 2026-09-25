@@ -50,7 +50,7 @@ class ClientAvatar extends ConsumerWidget {
         alignment: Alignment.center,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: scheme.tertiaryContainer,
+          color: scheme.primaryContainer,
           shape: BoxShape.circle,
         ),
         child: photo == null
@@ -60,7 +60,7 @@ class ClientAvatar extends ConsumerWidget {
                   fontFamily: 'PlusJakartaSans',
                   fontSize: size * 0.36,
                   fontWeight: FontWeight.w800,
-                  color: scheme.onTertiaryContainer,
+                  color: scheme.onPrimaryContainer,
                 ),
               )
             : Image.memory(

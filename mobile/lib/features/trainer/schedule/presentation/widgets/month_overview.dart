@@ -144,7 +144,7 @@ class _DayCell extends StatelessWidget {
             decoration: isToday
                 ? BoxDecoration(
                     borderRadius: AppRadius.smAll,
-                    border: Border.all(color: scheme.tertiary, width: 1.5),
+                    border: Border.all(color: scheme.primary, width: 1.5),
                   )
                 : null,
             child: Column(

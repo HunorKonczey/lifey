@@ -1823,11 +1823,13 @@ nutrition, weight, steps, schedule, statistics), `widgets/*`; `trainer/schedule`
 (`compliance.dart`). **Avg kcal (7 d) and PRs this week are not in `trainer_client.dart`** →
 R6.2 (optional backend) + R6.3; until then the card shows two KPIs and no PR chip.
 
-### R6.1 — Mobile UI: trainer shell into the client family
+### R6.1 — Mobile UI: trainer shell into the client family ✅
 - `trainer_shell.dart` (accent → primary), `trainer_view_badge.dart` (clay "TRAINER" mark with
   `palette.role`), `trainer_view_menu.dart`.
 - **Verify:** no `tertiary` used as an accent anywhere under `features/trainer` (grep); both
   themes.
+
+*As built:* the trainer shell is the client app's family. **The bottom nav takes the default accent** (the olive `primary`; `TrainerShell` no longer passes `accentColor: tertiary`), and **every `tertiary` / `tertiaryContainer` / `onTertiary…` under `features/trainer` and in the trainer widgets (24 files) became the primary tokens** — selected sort chips, the underline of the client-detail tabs, the sparkline, the FABs, the session and assignment sheets, the program cards. The role is shown by one thing only, the **clay "TRAINER" mark** (`TrainerViewBadge`): 12/800 caps in `palette.role` on a 12–16 % clay tint, no icon, no second green; the avatar menu wears the same clay when it leads to the trainer view, and the client-side "from your trainer" badge (`OriginTrainerBadge`) is clay too. The first-arrival intro card is a `showLifeySheet` with a 56 dp primary button instead of a plain modal sheet. `TrainerViewMenu`'s logic (the two homes, the remembered choice, hidden without `ROLE_TRAINER`) is unchanged. Tests: `trainer_family_test` — a source scan that fails if `tertiary` appears anywhere under `features/trainer` or in a trainer widget (the "verify" grep of the plan, now permanent) and the mark's colours in both themes.
 
 ### R6.2 — Backend (optional): client list summary gains `avgCalories7d` and `prCount7d`
 - Use the `backend-feature-slice` skill for the endpoint that feeds the trainer client list;

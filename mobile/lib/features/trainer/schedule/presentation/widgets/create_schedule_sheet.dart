@@ -201,7 +201,7 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
                         }),
                         selected: _recurrence == recurrence,
                         showCheckmark: false,
-                        selectedColor: scheme.tertiaryContainer,
+                        selectedColor: scheme.primaryContainer,
                         onSelected: (_) => setState(() => _recurrence = recurrence),
                       ),
                   ],
@@ -274,8 +274,8 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
                   child: FilledButton(
                     onPressed: _canSubmit ? _submit : null,
                     style: FilledButton.styleFrom(
-                      backgroundColor: scheme.tertiary,
-                      foregroundColor: scheme.onTertiary,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
                     ),
                     child: Text(l10n.trainerScheduleCreateButton),
                   ),
@@ -310,7 +310,7 @@ class _WeekdayChips extends StatelessWidget {
             label: Text(format.format(DateTime(2024, 1, day.isoNumber))),
             selected: selected.contains(day),
             showCheckmark: false,
-            selectedColor: scheme.tertiaryContainer,
+            selectedColor: scheme.primaryContainer,
             onSelected: (_) => onToggle(day),
           ),
       ],
@@ -409,7 +409,7 @@ class _Summary extends StatelessWidget {
           Icon(
             isProblem ? Icons.error_outline : Icons.event_available,
             size: 18,
-            color: isProblem ? scheme.onErrorContainer : scheme.tertiary,
+            color: isProblem ? scheme.onErrorContainer : scheme.primary,
           ),
           const SizedBox(width: 10),
           Expanded(

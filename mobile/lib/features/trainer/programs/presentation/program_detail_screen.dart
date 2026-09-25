@@ -40,8 +40,8 @@ class ProgramDetailScreen extends ConsumerWidget {
           ? TrainerFabPadding(
               child: FloatingActionButton.extended(
                 heroTag: null,
-                backgroundColor: Theme.of(context).colorScheme.tertiary,
-                foregroundColor: Theme.of(context).colorScheme.onTertiary,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 icon: const Icon(Icons.person_add_alt),
                 label: Text(l10n.trainerStartProgramButton),
                 onPressed: () => _assign(context, ref, program.requireValue),

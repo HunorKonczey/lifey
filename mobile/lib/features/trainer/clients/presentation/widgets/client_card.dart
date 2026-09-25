@@ -48,7 +48,7 @@ class ClientCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.cardAll,
         side: selected
-            ? BorderSide(color: scheme.tertiary, width: 1.5)
+            ? BorderSide(color: scheme.primary, width: 1.5)
             : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,

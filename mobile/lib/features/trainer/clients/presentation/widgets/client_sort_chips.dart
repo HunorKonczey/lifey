@@ -45,12 +45,12 @@ class ClientSortChips extends StatelessWidget {
             selected: option == selected,
             onSelected: (_) => onSelected(option),
             showCheckmark: false,
-            selectedColor: scheme.tertiaryContainer,
+            selectedColor: scheme.primaryContainer,
             labelStyle: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: option == selected
-                  ? scheme.onTertiaryContainer
+                  ? scheme.onPrimaryContainer
                   : scheme.onSurfaceVariant,
             ),
           );

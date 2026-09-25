@@ -177,7 +177,7 @@ class _ProgramCard extends ConsumerWidget {
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.cardAll,
         side: selected
-            ? BorderSide(color: scheme.tertiary, width: 1.5)
+            ? BorderSide(color: scheme.primary, width: 1.5)
             : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
@@ -191,7 +191,7 @@ class _ProgramCard extends ConsumerWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              Icon(Icons.calendar_view_week, size: 20, color: scheme.tertiary),
+              Icon(Icons.calendar_view_week, size: 20, color: scheme.primary),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -221,7 +221,7 @@ class _ProgramCard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: scheme.tertiaryContainer,
+                    color: scheme.primaryContainer,
                     borderRadius: AppRadius.pill,
                   ),
                   child: Text(
@@ -232,7 +232,7 @@ class _ProgramCard extends ConsumerWidget {
                       fontFamily: 'PlusJakartaSans',
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: scheme.onTertiaryContainer,
+                      color: scheme.onPrimaryContainer,
                     ),
                   ),
                 ),

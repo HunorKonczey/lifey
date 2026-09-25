@@ -116,7 +116,7 @@ class ClientOverviewTab extends ConsumerWidget {
                   label: l10n.trainerMetricWorkoutsThisWeekLabel,
                   value: '${statistics.workoutCount ?? 0}',
                   icon: Icons.fitness_center,
-                  color: Theme.of(context).colorScheme.tertiary,
+                  color: Theme.of(context).colorScheme.primary,
                   onTap: () => onOpenTab(ClientDetailTab.statistics),
                 ),
                 MetricCard(

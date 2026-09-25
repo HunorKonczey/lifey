@@ -150,8 +150,8 @@ class _TrainerInvitesScreenState extends ConsumerState<TrainerInvitesScreen> {
                     icon: const Icon(Icons.send_outlined, size: 18),
                     label: Text(l10n.trainerSendInviteButton),
                     style: FilledButton.styleFrom(
-                      backgroundColor: theme.colorScheme.tertiary,
-                      foregroundColor: theme.colorScheme.onTertiary,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                     ),
                   ),
                 ),

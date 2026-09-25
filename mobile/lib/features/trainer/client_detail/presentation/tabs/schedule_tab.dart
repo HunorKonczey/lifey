@@ -114,8 +114,8 @@ class ClientScheduleTab extends ConsumerWidget {
           bottom: trainerFabBottom(context),
           child: FloatingActionButton.extended(
             heroTag: null,
-            backgroundColor: Theme.of(context).colorScheme.tertiary,
-            foregroundColor: Theme.of(context).colorScheme.onTertiary,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             icon: const Icon(Icons.add),
             label: Text(l10n.trainerScheduleWorkoutAction),
             onPressed: () async {
@@ -331,7 +331,7 @@ class _ProgramRunCard extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2, right: 10),
-            child: Icon(Icons.calendar_view_week, size: 18, color: scheme.tertiary),
+            child: Icon(Icons.calendar_view_week, size: 18, color: scheme.primary),
           ),
           Expanded(
             child: Column(

@@ -62,7 +62,7 @@ class AssignResultSheet extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.check_circle_outline, color: scheme.tertiary),
+              Icon(Icons.check_circle_outline, color: scheme.primary),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
