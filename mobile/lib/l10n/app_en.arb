@@ -6613,5 +6613,45 @@
   "settingsNotificationsAllOff": "Off",
   "@settingsNotificationsAllOff": {
     "description": "Value of the Notifications row in Settings when no notification type is on"
+  },
+  "trainerClientActiveYesterdayLabel": "Active yesterday",
+  "@trainerClientActiveYesterdayLabel": {
+    "description": "Status line of a client card: the client last logged something yesterday (docs/redesign/77-mobile-redesign-plan.md R6.4)"
+  },
+  "trainerClientLastSeenLabel": "{days, plural, one{Last seen 1 day ago} other{Last seen {days} days ago}}",
+  "@trainerClientLastSeenLabel": {
+    "description": "Status line of a client card for a client who has not logged anything for a few days",
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "trainerClientKpiAvgKcal": "Avg kcal",
+  "@trainerClientKpiAvgKcal": {
+    "description": "Label of the first KPI tile of a client card: the client's mean daily calories over the last 7 days"
+  },
+  "trainerClientKpiWorkouts": "Workouts",
+  "@trainerClientKpiWorkouts": {
+    "description": "Label of the second KPI tile of a client card"
+  },
+  "trainerClientKpiPerWeek": "{count} / wk",
+  "@trainerClientKpiPerWeek": {
+    "description": "Value of the workouts KPI: workouts per week",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerClientKpiWeight": "Weight",
+  "@trainerClientKpiWeight": {
+    "description": "Label of the third KPI tile of a client card: how the weight moved over the sparkline's window"
+  },
+  "trainerClientChipMissed": "{count, plural, one{Missed 1 session} other{Missed {count} sessions}}",
+  "@trainerClientChipMissed": {
+    "description": "Warning chip on a client card: scheduled sessions the client did not do",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerClientChipWeighInDue": "Weigh-in due",
+  "@trainerClientChipWeighInDue": {
+    "description": "Chip on a client card: the client has not logged their weight for a week"
+  },
+  "trainerClientChipPrs": "{count, plural, one{1 PR this week} other{{count} PRs this week}}",
+  "@trainerClientChipPrs": {
+    "description": "Record chip on a client card: personal records the client set in the last 7 days",
+    "placeholders": {"count": {"type": "int"}}
   }
 }

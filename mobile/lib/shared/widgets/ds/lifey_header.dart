@@ -144,6 +144,8 @@ class LifeyHeader extends StatelessWidget {
     this.bottom,
     this.bottomHeight = 0,
     this.onBack,
+    this.badge,
+    this.badgeHeight = 0,
   });
 
   final String title;
@@ -153,6 +155,12 @@ class LifeyHeader extends StatelessWidget {
   /// button at the left of the title row and moves the title beside it. Null
   /// on the main tabs, which have nowhere to go back to.
   final VoidCallback? onBack;
+
+  /// A small mark above the large title — the trainer's clay "TRAINER" chip.
+  /// [badgeHeight] tall (with its text scaling); it folds away as the page
+  /// scrolls, like [overline], and is not part of the collapsed row.
+  final Widget? badge;
+  final double badgeHeight;
 
   /// A widget pinned under the title row — the pill tab bar of Workouts and
   /// Nutrition — [bottomHeight] tall. It is part of this one sliver, so a
@@ -198,8 +206,9 @@ class LifeyHeader extends StatelessWidget {
         overline == null ? 0.0 : measure(overline!, overlineStyle, 1) + 2;
     final top = mq.padding.top;
     final minExtent = top + _rowHeight + bottomHeight;
+    final badgeExtent = badge == null ? 0.0 : badgeHeight + AppSpacing.s4;
     final expandedBody =
-        AppSpacing.s8 + overlineHeight + titleHeight + AppSpacing.s4;
+        AppSpacing.s8 + badgeExtent + overlineHeight + titleHeight + AppSpacing.s4;
     final maxExtent = top +
         (expandedBody > _rowHeight + 12 ? expandedBody : _rowHeight + 12) +
         bottomHeight;
@@ -220,6 +229,8 @@ class LifeyHeader extends StatelessWidget {
         bottom: bottom,
         bottomHeight: bottomHeight,
         onBack: onBack,
+        badge: badge,
+        badgeHeight: badgeHeight,
       ),
     );
   }
@@ -244,8 +255,12 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
     required this.bottom,
     required this.bottomHeight,
     required this.onBack,
+    required this.badge,
+    required this.badgeHeight,
   });
 
+  final Widget? badge;
+  final double badgeHeight;
   final VoidCallback? onBack;
   final Widget? bottom;
   final double bottomHeight;
@@ -293,6 +308,20 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (badge != null)
+                  ClipRect(
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      heightFactor: 1 - t,
+                      child: Opacity(
+                        opacity: (1 - 2 * t).clamp(0.0, 1.0),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.s4),
+                          child: Align(alignment: Alignment.centerLeft, child: badge),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (overline != null)
                   ClipRect(
                     child: Align(
@@ -396,6 +425,8 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
       old.actions != actions ||
       old.bottom != bottom ||
       old.onBack != onBack ||
+      old.badge != badge ||
+      old.badgeHeight != badgeHeight ||
       old.bottomHeight != bottomHeight ||
       old.minExtentValue != minExtentValue ||
       old.maxExtentValue != maxExtentValue ||

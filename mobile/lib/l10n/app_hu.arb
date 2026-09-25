@@ -1452,5 +1452,14 @@
   "settingsHealthOnSubtitle": "Be · a súly és a lépések automatikusan érkeznek",
   "settingsHealthOffSubtitle": "Ki · a súlyt és a lépéseket kézzel rögzíted",
   "settingsNotificationsOnCount": "{count} be",
-  "settingsNotificationsAllOff": "Ki"
+  "settingsNotificationsAllOff": "Ki",
+  "trainerClientActiveYesterdayLabel": "Tegnap volt aktív",
+  "trainerClientLastSeenLabel": "Utoljára {days} napja volt aktív",
+  "trainerClientKpiAvgKcal": "Átl. kcal",
+  "trainerClientKpiWorkouts": "Edzés",
+  "trainerClientKpiPerWeek": "{count} / hét",
+  "trainerClientKpiWeight": "Súly",
+  "trainerClientChipMissed": "{count} kihagyott alkalom",
+  "trainerClientChipWeighInDue": "Mérés esedékes",
+  "trainerClientChipPrs": "{count} PR ezen a héten"
 }

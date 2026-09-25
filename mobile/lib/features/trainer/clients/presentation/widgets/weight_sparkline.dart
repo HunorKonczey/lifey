@@ -1,34 +1,34 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_tokens.dart';
 import '../../domain/trainer_client.dart';
 
-/// The very faint weight trend along the bottom of a client card (frame B1,
-/// following the web client card's sparkline).
+/// The weight line at the top right of a client card (canvas Lifey 6 › 9.1):
+/// no axes, no labels, no tap target, in the weight blue.
 ///
-/// Decoration, not a chart: no axes, no labels, no tap target. Two points is
-/// the minimum — a single reading has no trend to draw, and drawing one
-/// anyway would be a claim the data doesn't support.
+/// Decoration, not a chart. Two points is the minimum — a single reading has
+/// no trend to draw, and drawing one anyway would be a claim the data doesn't
+/// support.
 class WeightSparkline extends StatelessWidget {
-  const WeightSparkline({super.key, required this.points, this.height = 22});
+  const WeightSparkline({super.key, required this.points, this.height = 34, this.width = 88});
 
   final List<WeightTrendPoint> points;
   final double height;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     if (points.length < 2) return const SizedBox.shrink();
 
-    // Decorative: the numbers it hints at are on the weight tab, and a
-    // screen reader has nothing useful to say about a 22-pixel trend line.
+    // Decorative: the numbers it hints at are in the Weight KPI and on the
+    // weight tab, and a screen reader has nothing useful to say about a
+    // 34-pixel line.
     return ExcludeSemantics(
       child: SizedBox(
         height: height,
-        width: double.infinity,
+        width: width,
         child: CustomPaint(
-          painter: _SparklinePainter(
-            points: points,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          painter: _SparklinePainter(points: points, color: context.metricColors.weight),
         ),
       ),
     );
@@ -48,13 +48,15 @@ class _SparklinePainter extends CustomPainter {
     final max = weights.reduce((a, b) => a > b ? a : b);
     final span = max - min;
 
+    // Keeps the stroke off the box's edge.
+    const inset = 2.0;
     final path = Path();
     for (var i = 0; i < weights.length; i++) {
-      final x = size.width * (i / (weights.length - 1));
+      final x = inset + (size.width - 2 * inset) * (i / (weights.length - 1));
       // A flat run has no range to normalise against — draw it down the
       // middle instead of dividing by zero.
       final normalised = span == 0 ? 0.5 : (weights[i] - min) / span;
-      final y = size.height - (normalised * size.height);
+      final y = size.height - inset - normalised * (size.height - 2 * inset);
       i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
     }
 
@@ -62,10 +64,10 @@ class _SparklinePainter extends CustomPainter {
       path,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
+        ..strokeWidth = 2
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
-        ..color = color.withValues(alpha: 0.35),
+        ..color = color,
     );
   }
 

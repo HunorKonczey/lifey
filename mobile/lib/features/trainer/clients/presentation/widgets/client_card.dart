@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/theme/app_tokens.dart';
+import '../../../../../core/theme/app_type.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
 import '../../../shared/client_avatar.dart';
 import '../../domain/compliance.dart';
 import '../../domain/trainer_client.dart';
 import 'compliance_badges.dart';
 import 'weight_sparkline.dart';
 
-/// One client, as a card rather than a table row (frame B1): monogram avatar,
-/// name, how long ago they last logged anything, their compliance badges, and
-/// a very faint weight sparkline along the bottom.
+/// One client, as a card that prioritises (canvas Lifey 6 › 9.1): the monogram,
+/// the name, a status line with a coloured dot ("Active today" green, "Last
+/// seen 4 days ago" orange), the weight sparkline, up to three KPI tiles —
+/// Avg kcal · Workouts / wk · Weight change — and the chips that say what needs
+/// the trainer.
+///
+/// A KPI the backend has no figure for is *hidden*, never drawn as a zero: a
+/// client who logged no meals has no "0 kcal", and one weigh-in has no "Δ".
 class ClientCard extends StatelessWidget {
   const ClientCard({
     super.key,
@@ -22,7 +30,7 @@ class ClientCard extends StatelessWidget {
 
   final TrainerClient client;
 
-  /// Injected so the card's "days ago" and its badges are read off the same
+  /// Injected so the card's "days ago" and its chips are read off the same
   /// instant as the list's sort — and so tests don't depend on wall clock.
   final DateTime now;
 
@@ -36,79 +44,151 @@ class ClientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
+    final mc = context.metricColors;
+    final scheme = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
     final flags = complianceFor(client, now: now);
 
-    return Material(
-      color: selected ? scheme.surfaceContainerHighest : scheme.surfaceContainer,
-      // One shape rather than a borderRadius: Material takes either, and the
-      // selected card only differs by its outline.
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.cardAll,
-        side: selected
-            ? BorderSide(color: scheme.primary, width: 1.5)
-            : BorderSide.none,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final change = client.weightChangeKg;
+    final kpis = <_Kpi>[
+      if (client.avgCalories7d != null) _Kpi(l10n.trainerClientKpiAvgKcal, f.integer(client.avgCalories7d!)),
+      _Kpi(l10n.trainerClientKpiWorkouts, l10n.trainerClientKpiPerWeek(client.workoutsPerWeek)),
+      if (change != null) _Kpi(l10n.trainerClientKpiWeight, '${f.signedDelta(change)} kg', color: mc.weight),
+    ];
+
+    final lastActivityAt = client.lastActivityAt;
+    final days = lastActivityAt == null ? null : _wholeDaysBetween(lastActivityAt, now);
+    final statusLabel = days == null
+        ? l10n.trainerClientNoActivityLabel
+        : days == 0
+            ? l10n.trainerClientActiveTodayLabel
+            : days == 1
+                ? l10n.trainerClientActiveYesterdayLabel
+                : l10n.trainerClientLastSeenLabel(days);
+    // Green while they are around, the warning colour once they have gone quiet
+    // (the compliance threshold), grey when there is nothing to judge yet.
+    final statusColor = flags.inactive ? mc.calories : (days == null ? p.text2 : mc.improvement);
+    final chips = ComplianceBadges(flags: flags, prCount: client.prCount7d);
+
+    final card = LifeyCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      semanticsLabel: '${client.displayName}, $statusLabel',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  ClientAvatar(client: client),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              ClientAvatar(client: client, size: 52),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      client.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: p.text),
+                    ),
+                    const SizedBox(height: AppSpacing.s4),
+                    Row(
                       children: [
-                        Text(
-                          client.displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _lastActiveLabel(l10n),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        Container(width: 8, height: 8, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+                        const SizedBox(width: AppSpacing.s8),
+                        Flexible(
+                          child: Text(
+                            statusLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: statusColor),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  if (flags.needsAttention) ...[
-                    const SizedBox(width: 8),
-                    ComplianceBadges(flags: flags),
                   ],
-                ],
+                ),
               ),
               if (client.weightTrend.length >= 2) ...[
-                const SizedBox(height: 8),
+                const SizedBox(width: AppSpacing.s8),
                 WeightSparkline(points: client.weightTrend),
               ],
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.s16),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (i, kpi) in kpis.indexed) ...[
+                  if (i > 0) const SizedBox(width: AppSpacing.s8),
+                  Expanded(child: _KpiTile(kpi: kpi)),
+                ],
+              ],
+            ),
+          ),
+          if (chips.hasContent) ...[
+            const SizedBox(height: AppSpacing.s12),
+            chips,
+          ],
+        ],
       ),
+    );
+
+    if (!selected) return card;
+    // The card whose detail sits beside the list: a primary ring around it.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.cardAll,
+        border: Border.all(color: scheme.primary, width: 1.5),
+      ),
+      child: card,
     );
   }
 
-  String _lastActiveLabel(AppLocalizations l10n) {
-    final lastActivityAt = client.lastActivityAt;
-    if (lastActivityAt == null) return l10n.trainerClientNoActivityLabel;
-    final days = _wholeDaysBetween(lastActivityAt, now);
-    if (days == 0) return l10n.trainerClientActiveTodayLabel;
-    return l10n.trainerClientActiveDaysAgoLabel(days);
+}
+
+class _Kpi {
+  const _Kpi(this.label, this.value, {this.color});
+
+  final String label;
+  final String value;
+  final Color? color;
+}
+
+class _KpiTile extends StatelessWidget {
+  const _KpiTile({required this.kpi});
+
+  final _Kpi kpi;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    return LifeyCard.nested(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s12),
+      semanticsLabel: '${kpi.label} ${kpi.value}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(kpi.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.labelMedium!.copyWith(color: p.text2)),
+          const SizedBox(height: AppSpacing.s4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              kpi.value,
+              maxLines: 1,
+              textScaler: AppType.noScale(context),
+              style: AppType.number(20, color: kpi.color ?? p.text),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
