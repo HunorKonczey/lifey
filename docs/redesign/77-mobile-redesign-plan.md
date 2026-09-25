@@ -1601,6 +1601,7 @@ theme doesn't break the not-yet-migrated screens.
 - PillTabBar labels wrapped and were clipped in HU at 130 % ("Étkezések", "Receptek") → scale
   down to fit, R0.fix-7.
 
-Each fix has a widget test that fails without it. Full suite green except the 3 known Windows
+R0.fix-1, -4, -5 and -7 have widget tests that fail without the fix; fix-3 (login fields) and
+fix-6 (gallery) were verified on the emulator only. Full suite green except the 3 known Windows
 chat-attachment failures.
 
