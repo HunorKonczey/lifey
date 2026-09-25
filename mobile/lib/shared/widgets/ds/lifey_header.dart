@@ -544,10 +544,19 @@ class _FixedExtentDelegate extends SliverPersistentHeaderDelegate {
   @override
   double get maxExtent => extent;
 
+  // On the same scrim as the header above it: the tab bar of a
+  // NestedScrollView stays put while the list under it scrolls, and that
+  // list scrolls *beneath* it, so it needs the blurred backing too.
   @override
   Widget build(
           BuildContext context, double shrinkOffset, bool overlapsContent) =>
-      child;
+      Stack(
+        fit: StackFit.expand,
+        children: [
+          _ScrimBackground(opacity: 1, showHairline: overlapsContent),
+          child,
+        ],
+      );
 
   @override
   bool shouldRebuild(_FixedExtentDelegate old) =>

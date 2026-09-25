@@ -1,36 +1,49 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/entitlements/ai_credit_gate.dart';
+import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/sync/connectivity_status_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/search_normalize.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../shared/widgets/ds/list_group.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
-import '../../../shared/widgets/origin_trainer_badge.dart';
-import '../../../shared/widgets/sync_status_indicator.dart';
 import '../../nutrition/presentation/widgets/ai_credit_chip.dart';
-import '../application/recipe_image_controller.dart';
 import '../application/recipes_controller.dart';
 import '../domain/recipe.dart';
+import '../domain/recipe_filter.dart';
 import '../generation/domain/recipe_wizard.dart';
 import '../generation/presentation/generated_recipe_screen.dart';
 import '../generation/presentation/recipe_wizard_sheet.dart';
 import 'create_recipe_screen.dart';
 import 'widgets/log_recipe_sheet.dart';
+import 'widgets/recipe_grid_card.dart';
 
-/// "Recipes" tab: tap to edit, quick "log as meal", and swipe-to-delete.
-class RecipesTab extends ConsumerWidget {
+enum _RecipeAction { edit, duplicate, delete }
+
+/// "Recipes" tab (docs/redesign/77-mobile-redesign-plan.md R2.7; canvas
+/// Lifey 2 › 2.3): the "Generate a recipe" entry card, filter chips (All ·
+/// Favourites · High protein · < 400 kcal, combined with the header search)
+/// and a two-column grid of photo cards. Tap edits, "+ Log" logs it as a
+/// meal, long-press opens Edit / Duplicate / Delete.
+class RecipesTab extends ConsumerStatefulWidget {
   const RecipesTab({super.key, this.searchQuery});
-
 
   /// When non-empty, filters the (already fully-loaded) recipe list by name.
   final String? searchQuery;
+
+  @override
+  ConsumerState<RecipesTab> createState() => _RecipesTabState();
+}
+
+class _RecipesTabState extends ConsumerState<RecipesTab> {
+  RecipeFilter _filter = RecipeFilter.all;
 
   Future<void> _logAsMeal(BuildContext context, Recipe recipe) {
     return showModalBottomSheet<void>(
@@ -46,7 +59,7 @@ class RecipesTab extends ConsumerWidget {
   /// the wizard is local, only its result costs a call. The credit check is a
   /// courtesy — the server's 402 is authoritative and lands on the same
   /// paywall, from [GeneratedRecipeScreen].
-  Future<void> _generate(BuildContext context, WidgetRef ref, bool offline) async {
+  Future<void> _generate(BuildContext context, bool offline) async {
     final l10n = AppLocalizations.of(context)!;
     if (offline) {
       AppSnackbar.showError(context, title: l10n.recipeGenerationOfflineMessage);
@@ -74,30 +87,25 @@ class RecipesTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _toggleFavorite(WidgetRef ref, Recipe recipe) {
-    return ref
-        .read(recipeControllerProvider.notifier)
-        .toggleFavorite(recipe.clientId, !recipe.favorite);
-  }
-
-  Future<void> _delete(
-      BuildContext context, WidgetRef ref, Recipe recipe) async {
+  Future<void> _delete(BuildContext context, Recipe recipe) async {
     final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showConfirmDeleteDialog(
+      context,
+      title: l10n.deleteRecipeQuestionTitle,
+      message: l10n.deleteRecipeConfirmMessage(recipe.name),
+    );
+    if (!confirmed || !context.mounted) return;
+    final controller = ref.read(recipeControllerProvider.notifier);
     try {
-      await ref.read(recipeControllerProvider.notifier).deleteRecipe(recipe.clientId);
-      if (context.mounted) {
-        AppSnackbar.showSuccess(context, title: l10n.deletedFoodMessage(recipe.name));
-      }
+      await controller.deleteRecipe(recipe.clientId);
+      if (context.mounted) AppSnackbar.showSuccess(context, title: l10n.deletedFoodMessage(recipe.name));
     } catch (_) {
-      if (context.mounted) {
-        AppSnackbar.showError(context, title: l10n.couldNotDeleteFoodMessage(recipe.name));
-      }
-      await ref.read(recipeControllerProvider.notifier).refresh();
+      if (context.mounted) AppSnackbar.showError(context, title: l10n.couldNotDeleteFoodMessage(recipe.name));
+      await controller.refresh();
     }
   }
 
-  Future<void> _duplicate(
-      BuildContext context, WidgetRef ref, Recipe recipe) async {
+  Future<void> _duplicate(BuildContext context, Recipe recipe) async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showAppConfirmDialog(
       context,
@@ -113,64 +121,163 @@ class RecipesTab extends ConsumerWidget {
             recipe,
             newName: l10n.copyOfName(recipe.name),
           );
-      if (context.mounted) {
-        AppSnackbar.showSuccess(context, title: l10n.recipeDuplicatedMessage);
-      }
+      if (context.mounted) AppSnackbar.showSuccess(context, title: l10n.recipeDuplicatedMessage);
     } catch (_) {
-      if (context.mounted) {
-        AppSnackbar.showError(context, title: l10n.couldNotDuplicateRecipeMessage);
-      }
+      if (context.mounted) AppSnackbar.showError(context, title: l10n.couldNotDuplicateRecipeMessage);
     }
   }
 
+  /// The long-press menu — where the old duplicate button and the swipe to
+  /// delete went, now that the cards are a grid.
+  Future<void> _openMenu(BuildContext context, Recipe recipe) async {
+    final l10n = AppLocalizations.of(context)!;
+    final action = await showLifeySheet<_RecipeAction>(
+      context: context,
+      useRootNavigator: true,
+      title: recipe.name,
+      builder: (sheetContext) {
+        final primary = Theme.of(sheetContext).colorScheme.primary;
+        final mc = sheetContext.metricColors;
+        void pick(_RecipeAction a) => Navigator.of(sheetContext).pop(a);
+        return ListGroup(
+          children: [
+            ListRow(
+              leading: ListIconHolder(icon: Icons.edit_rounded, color: primary),
+              title: l10n.editMenuItem,
+              onTap: () => pick(_RecipeAction.edit),
+            ),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.content_copy_rounded, color: mc.carbs),
+              title: l10n.duplicateMenuItem,
+              onTap: () => pick(_RecipeAction.duplicate),
+            ),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.delete_rounded, color: mc.heart),
+              title: l10n.deleteButton,
+              onTap: () => pick(_RecipeAction.delete),
+            ),
+          ],
+        );
+      },
+    );
+    if (action == null || !context.mounted) return;
+    switch (action) {
+      case _RecipeAction.edit:
+        await _edit(context, recipe);
+      case _RecipeAction.duplicate:
+        await _duplicate(context, recipe);
+      case _RecipeAction.delete:
+        await _delete(context, recipe);
+    }
+  }
+
+  String _filterLabel(AppLocalizations l10n, RecipeFilter filter) => switch (filter) {
+        RecipeFilter.all => l10n.recipeFilterAll,
+        RecipeFilter.favourites => l10n.recipeFilterFavourites,
+        RecipeFilter.highProtein => l10n.recipeFilterHighProtein,
+        RecipeFilter.lowCalorie => l10n.recipeFilterUnder400,
+      };
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(recipeControllerProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final query = normalizeForSearch(searchQuery?.trim() ?? '');
+    final query = normalizeForSearch(widget.searchQuery?.trim() ?? '');
     final offline = ref.watch(isOfflineProvider).value ?? false;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(recipeControllerProvider.notifier).refresh(),
       child: state.when(
         data: (recipes) {
-          final visible = query.isEmpty
-              ? recipes
-              : recipes.where((r) => normalizeForSearch(r.name).contains(query)).toList();
+          final bySearch =
+              query.isEmpty ? recipes : recipes.where((r) => normalizeForSearch(r.name).contains(query)).toList();
+          final visible = bySearch.where((r) => matchesRecipeFilter(r, _filter)).toList();
           final showGenerate = query.isEmpty;
-          if (visible.isEmpty) {
-            return Column(
-              children: [
-                if (showGenerate)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, 0),
-                    child: _GenerateWithAiCard(
-                        offline: offline, onTap: () => _generate(context, ref, offline)),
-                  ),
-                Expanded(child: _emptyView(l10n, query)),
-              ],
-            );
-          }
+
+          Widget empty() => EmptyStateCard(
+                icon: recipes.isEmpty && query.isEmpty ? Icons.menu_book_outlined : Icons.search_off,
+                title: recipes.isEmpty && query.isEmpty ? l10n.noRecipesYetTitle : l10n.noSearchResultsTitle,
+                subtitle: recipes.isEmpty && query.isEmpty
+                    ? l10n.tapPlusToCreateOneMessage
+                    : query.isNotEmpty
+                        ? l10n.tryDifferentSearchMessage
+                        : l10n.noRecipesMatchMessage,
+              );
+
+          // header items (generate card, chips), then one row per two recipes
+          final headerCount = (showGenerate ? 1 : 0) + (recipes.isEmpty ? 0 : 1);
+          final rows = (visible.length / 2).ceil();
+          final tail = visible.isEmpty ? 1 : rows;
           return ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
-            itemCount: visible.length + (showGenerate ? 1 : 0),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
+            itemCount: headerCount + tail,
             itemBuilder: (context, index) {
-              if (showGenerate && index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _GenerateWithAiCard(
-                        offline: offline, onTap: () => _generate(context, ref, offline)),
+              var i = index;
+              if (showGenerate) {
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.s16),
+                    child: _GenerateCard(offline: offline, onTap: () => _generate(context, offline)),
+                  );
+                }
+                i--;
+              }
+              if (recipes.isNotEmpty) {
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final filter in RecipeFilter.values) ...[
+                            if (filter != RecipeFilter.all) const SizedBox(width: AppSpacing.s8),
+                            ChoiceChip(
+                              label: Text(_filterLabel(l10n, filter)),
+                              selected: _filter == filter,
+                              showCheckmark: false,
+                              // Tighter than the theme's 12 so all four fit a 411 dp
+                              // row, as in the canvas.
+                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4, vertical: AppSpacing.s8),
+                              onSelected: (_) => setState(() => _filter = filter),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                i--;
+              }
+              if (visible.isEmpty) return empty();
+              final first = i * 2;
+              Widget cell(int n) {
+                if (n >= visible.length) return const SizedBox.shrink();
+                final recipe = visible[n];
+                return RecipeGridCard(
+                  recipe: recipe,
+                  onTap: () => _edit(context, recipe),
+                  onLongPress: () => _openMenu(context, recipe),
+                  onLog: () => _logAsMeal(context, recipe),
+                  onToggleFavorite: () =>
+                      ref.read(recipeControllerProvider.notifier).toggleFavorite(recipe.clientId, !recipe.favorite),
                 );
               }
-              final recipe = visible[index - (showGenerate ? 1 : 0)];
-              return _RecipeCard(
-                recipe: recipe,
-                onDelete: () => _delete(context, ref, recipe),
-                onLogAsMeal: () => _logAsMeal(context, recipe),
-                onDuplicate: () => _duplicate(context, ref, recipe),
-                onEdit: () => _edit(context, recipe),
-                onToggleFavorite: () => _toggleFavorite(ref, recipe),
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: cell(first)),
+                      const SizedBox(width: AppSpacing.s12),
+                      Expanded(child: cell(first + 1)),
+                    ],
+                  ),
+                ),
               );
             },
           );
@@ -183,303 +290,61 @@ class RecipesTab extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _emptyView(AppLocalizations l10n, String query) {
-    return EmptyView(
-              icon: query.isEmpty ? Icons.menu_book_outlined : Icons.search_off,
-              title: query.isEmpty ? l10n.noRecipesYetTitle : l10n.noSearchResultsTitle,
-      subtitle: query.isEmpty
-          ? l10n.tapPlusToCreateOneMessage
-          : l10n.tryDifferentSearchMessage,
-    );
-  }
 }
 
-/// The AI entry point, with the credit chip beside it — the recipe half of
-/// what the Log meal screen's photo row does (`72` M7).
-class _GenerateWithAiCard extends StatelessWidget {
-  const _GenerateWithAiCard({required this.offline, required this.onTap});
+/// The AI entry point, with the credit chip inside it — the recipe half of
+/// what the Log meal screen's photo tile does (`72` M7). Dimmed, not
+/// disabled, offline: tapping it explains why it can't run.
+class _GenerateCard extends ConsumerWidget {
+  const _GenerateCard({required this.offline, required this.onTap});
 
-  /// Dimmed, not disabled: tapping it offline explains why it can't run.
   final bool offline;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-
-    final color = offline ? scheme.onSurfaceVariant : scheme.primary;
-
-    return Material(
-      color: scheme.primaryContainer.withValues(alpha: offline ? 0.2 : 0.45),
-      borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(Icons.auto_awesome, size: 21, color: color),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  AppLocalizations.of(context)!.generateRecipeWithAiButton,
-                  style: theme.textTheme.labelLarge
-                      ?.copyWith(fontWeight: FontWeight.w700, color: color),
-                ),
-              ),
-              const AiCreditChip(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Recipe card
-// ---------------------------------------------------------------------------
-
-class _RecipeCard extends ConsumerWidget {
-  const _RecipeCard({
-    required this.recipe,
-    required this.onDelete,
-    required this.onLogAsMeal,
-    required this.onDuplicate,
-    required this.onEdit,
-    required this.onToggleFavorite,
-  });
-
-  final Recipe recipe;
-  final VoidCallback onDelete;
-  final VoidCallback onLogAsMeal;
-  final VoidCallback onDuplicate;
-  final VoidCallback onEdit;
-  final VoidCallback onToggleFavorite;
-
-  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final primary = Theme.of(context).colorScheme.primary;
+    final color = offline ? p.text2 : primary;
+    final hasCredits = ref.watch(aiCreditsProvider) != null;
 
-    return Dismissible(
-      key: ValueKey(recipe.clientId),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        decoration: BoxDecoration(
-          color: scheme.errorContainer,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 10),
-        child: Icon(Icons.delete, color: scheme.onErrorContainer),
-      ),
-      // Confirm first; the local cache stream removes the tile once the
-      // delete lands, so we never let Dismissible drop it itself.
-      confirmDismiss: (_) async {
-        final confirmed = await showConfirmDeleteDialog(
-          context,
-          title: l10n.deleteRecipeQuestionTitle,
-          message: l10n.deleteRecipeConfirmMessage(recipe.name),
-        );
-        if (confirmed) onDelete();
-        return false;
-      },
-      child: Card(
-        elevation: 0,
-        color: scheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        margin: const EdgeInsets.only(bottom: 10),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onEdit,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    return LifeyCard(
+      color: offline ? p.card : p.primaryTint,
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(AppRadius.control),
+            ),
+            child: Icon(Icons.auto_awesome_rounded, size: 26, color: color),
+          ),
+          const SizedBox(width: AppSpacing.s16),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    _RecipeThumbnail(recipe: recipe),
-                    const SizedBox(width: 12),
-                    // Content
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  recipe.name,
-                                  style: theme.textTheme.bodyLarge,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (recipe.favorite)
-                                Icon(Icons.star, size: 16, color: scheme.primary),
-                              SyncStatusIndicator(clientId: recipe.clientId),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  recipe.servings > 1
-                                      ? l10n.perServingCaloriesProteinLabel(
-                                          (recipe.totalCalories / recipe.servings)
-                                              .toStringAsFixed(0),
-                                          (recipe.totalProtein / recipe.servings)
-                                              .toStringAsFixed(0),
-                                        )
-                                      : l10n.totalCaloriesProteinLabel(
-                                          recipe.totalCalories.toStringAsFixed(0),
-                                          recipe.totalProtein.toStringAsFixed(0),
-                                        ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                              if (recipe.originTrainerId != null) ...[
-                                const SizedBox(width: 6),
-                                OriginTrainerBadge(originTrainerId: recipe.originTrainerId!),
-                              ],
-                            ],
-                          ),
-                          if (recipe.description != null &&
-                              recipe.description!.trim().isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              recipe.description!,
-                              textAlign: TextAlign.left,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
+                Text(
+                  l10n.generateRecipeWithAiButton,
+                  style: t.titleMedium!.copyWith(fontSize: 17, height: 1.3, color: p.text),
                 ),
-                const SizedBox(height: 12),
-                // Actions — own row, bottom-right corner
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // Log-as-meal button — compact rounded square
-                    GestureDetector(
-                      onTap: onLogAsMeal,
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                        decoration: BoxDecoration(
-                          color: scheme.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.restaurant, size: 16, color: scheme.primary),
-                            const SizedBox(width: 4),
-                            Text(
-                              l10n.logAsMealButton,
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.primary,
-                                height: 1.0,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Duplicate button — compact rounded square, same treatment as log-as-meal
-                    Tooltip(
-                      message: l10n.duplicateRecipeAria,
-                      child: GestureDetector(
-                        onTap: onDuplicate,
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          padding: const EdgeInsets.all(9),
-                          decoration: BoxDecoration(
-                            color: scheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(Icons.copy_rounded, size: 16, color: scheme.onSurfaceVariant),
-                        ),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 2),
+                Text(
+                  l10n.generateRecipeSubtitle,
+                  style: t.bodyMedium!.copyWith(fontSize: 14, height: 1.4, color: p.text2),
                 ),
+                if (hasCredits) ...[const SizedBox(height: AppSpacing.s8), const AiCreditChip()],
               ],
             ),
           ),
-        ),
+          Icon(Icons.chevron_right_rounded, color: p.text2),
+        ],
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Recipe card thumbnail (falls back to the book icon while loading, on
-// error, or when the recipe has no photo)
-// ---------------------------------------------------------------------------
-
-class _RecipeThumbnail extends ConsumerWidget {
-  const _RecipeThumbnail({required this.recipe});
-
-  final Recipe recipe;
-
-  static const _size = 96.0;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final recipeId = recipe.id;
-
-    Uint8List? bytes;
-    if (recipeId != null && recipe.imageUpdatedAt != null) {
-      bytes = ref
-          .watch(recipeThumbnailProvider((
-            clientId: recipe.clientId,
-            serverId: recipeId,
-            imageUpdatedAt: recipe.imageUpdatedAt,
-          )))
-          .value;
-    }
-
-    return Container(
-      width: _size,
-      height: _size,
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: bytes != null
-          ? Image.memory(bytes, width: _size, height: _size, fit: BoxFit.cover)
-          : Center(
-              child: Icon(Icons.menu_book, size: 40, color: scheme.onPrimaryContainer),
-            ),
     );
   }
 }

@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.6 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.7 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1201,9 +1201,26 @@ now "Add food", new `addToMealButton`, `entryFoodPer100(NoKcal)`, `quantityDecre
 `mealEntryBudgetLeft/Over`. Tests: `add_meal_entry_sheet_test` (stepper, clamp, chips, per-100 g line, plus the prefill cases) and
 the initial-food / foods-tab tests use "Add to meal".
 
-### R2.7 — Mobile UI: recipes grid, AI entry card, filter chips
+### R2.7 — Mobile UI: recipes grid, AI entry card, filter chips ✅
 - `recipes_tab.dart`, `log_recipe_sheet.dart`; placeholder painter for image-less recipes.
 - **Verify:** filters combine with search; offline → generate card shows the error state.
+
+*As built:* `RecipesTab` (now stateful, it holds the filter) is a 20 px list: the **"Generate a recipe" card** (`LifeyCard` in the primary
+tint, a 52 px icon holder, "From what's in your fridge, sized to your goals", the AI credit chip under it when there is a credit count,
+a chevron; dimmed offline — tapping still explains, as before), the four **filter chips** All · Favourites · High protein · < 400 kcal
+(single-select `ChoiceChip`s in a horizontal scroller; combined with the header search — "search hides the generate card"), and a **two-column
+grid** built as rows of two `IntrinsicHeight` cards so a wrapped name never breaks the pair. `RecipeGridCard`: a 4:3 photo (the recipe photo,
+or `RecipePhotoPlaceholder` — 45° neutral stripes with a quiet icon; the canvas' "recipe photo" caption is mock text and is not drawn), the
+☆ / ★ on it (40 px circle on a 70 % scrim, 48 dp target, yellow when set), the name (2 lines, never cut), "520 kcal · 46 g P" per
+serving in the metric colours, the trainer badge when there is one, and a full-width "+ Log". Tap edits, **long-press opens Edit / Duplicate /
+Delete** — where the old duplicate button and the swipe-to-delete went (a grid has no swipe), so delete is now: long-press → Delete →
+confirmation. The description line of the old card is not shown. `recipe_filter.dart`: "High protein" = protein kcal (4 × g) ≥ 30 % of the
+recipe's kcal (`highProteinCalorieShare`), "< 400 kcal" = per serving (`lowCalorieServingLimit`), unit-tested incl. the canvas recipes.
+`generateRecipeWithAiButton` now reads "Generate a recipe" (HU "Recept generálása"). `LogRecipeSheet` only got its date label through
+`LifeyFormat` (it was an English-only `DateFormat`). The pinned tab bar of the `NestedScrollView` (R2.1) now sits on the header's scrim too:
+content scrolls beneath it, and without the backing it showed through the gap between the title row and the bar (found here). Removed ARB
+keys: `perServingCaloriesProteinLabel`, `totalCaloriesProteinLabel`, `logAsMealButton`, `duplicateRecipeAria`. Tests: `recipe_filter_test`,
+`recipes_tab_grid_test` (chips, search combination, empty, favourite, menu, 360/411 dp × 1.3 HU), `recipes_tab_generate_test` updated.
 
 ### R2.8 — Mobile UI: macros tab rings + 7-day ratio rows
 - `macros_tab.dart`.

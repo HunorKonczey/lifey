@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../core/format/lifey_format.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../nutrition/application/meal_controller.dart';
@@ -25,8 +25,6 @@ class LogRecipeSheet extends ConsumerStatefulWidget {
 }
 
 class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
-  static final _label = DateFormat('EEE, MMM d · HH:mm');
-
   static const _minPortionDivisor = 1;
   static const _maxPortionDivisor = 20;
 
@@ -290,7 +288,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
             OutlinedButton.icon(
               onPressed: _submitting ? null : _pickDateTime,
               icon: const Icon(Icons.schedule),
-              label: Text(_label.format(_dateTime)),
+              label: Text('${LifeyFormat.of(context).shortDayLabel(_dateTime)} · ${LifeyFormat.of(context).time(_dateTime)}'),
             ),
             const SizedBox(height: 8),
             SwitchListTile(

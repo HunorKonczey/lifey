@@ -1366,7 +1366,7 @@
     "description": "Confirm button of the AI estimate review sheet; adds the reviewed foods to the meal (docs/23)",
     "placeholders": {"count": {"type": "int"}}
   },
-  "generateRecipeWithAiButton": "Generate with AI",
+  "generateRecipeWithAiButton": "Generate a recipe",
   "@generateRecipeWithAiButton": {
     "description": "Recipes tab: opens the AI recipe wizard; the AI credit chip sits beside it (docs/23 Phase 2)"
   },
@@ -2082,34 +2082,6 @@
   "@noIngredientsMessage": {
     "description": "Shown on a recipe card when it has no ingredients"
   },
-  "totalCaloriesProteinLabel": "≈ {calories} kcal · {protein} g protein",
-  "@totalCaloriesProteinLabel": {
-    "description": "A recipe's total calories and protein",
-    "placeholders": {
-      "calories": {
-        "type": "String"
-      },
-      "protein": {
-        "type": "String"
-      }
-    }
-  },
-  "perServingCaloriesProteinLabel": "≈ {calories} kcal · {protein} g protein / serving",
-  "@perServingCaloriesProteinLabel": {
-    "description": "A recipe's per-serving calories and protein (shown when servings > 1)",
-    "placeholders": {
-      "calories": {
-        "type": "String"
-      },
-      "protein": {
-        "type": "String"
-      }
-    }
-  },
-  "logAsMealButton": "Log as meal",
-  "@logAsMealButton": {
-    "description": "Button on a recipe card to log it as a meal"
-  },
   "copyOfName": "{name} (Copy)",
   "@copyOfName": {
     "description": "Name given to a duplicated recipe/template, derived from the original's name",
@@ -2118,10 +2090,6 @@
         "type": "String"
       }
     }
-  },
-  "duplicateRecipeAria": "Duplicate recipe",
-  "@duplicateRecipeAria": {
-    "description": "Button/tooltip to duplicate a recipe"
   },
   "duplicateRecipeQuestionTitle": "Duplicate this recipe?",
   "@duplicateRecipeQuestionTitle": {
@@ -6284,5 +6252,41 @@
   "@entryBudgetOver": {
     "description": "Live preview in the add-food sheet: calories over the day's goal once this amount is counted; {value} is formatted",
     "placeholders": {"value": {"type": "String"}}
+  },
+  "generateRecipeSubtitle": "From what's in your fridge, sized to your goals",
+  "@generateRecipeSubtitle": {
+    "description": "Second line of the 'Generate a recipe' entry card on the Recipes tab (docs/redesign/77-mobile-redesign-plan.md R2.7)"
+  },
+  "recipeFilterAll": "All",
+  "@recipeFilterAll": {
+    "description": "Filter chip on the Recipes tab: every recipe"
+  },
+  "recipeFilterFavourites": "Favourites",
+  "@recipeFilterFavourites": {
+    "description": "Filter chip on the Recipes tab: starred recipes only"
+  },
+  "recipeFilterHighProtein": "High protein",
+  "@recipeFilterHighProtein": {
+    "description": "Filter chip on the Recipes tab: recipes where protein gives at least 30 % of the calories"
+  },
+  "recipeFilterUnder400": "< 400 kcal",
+  "@recipeFilterUnder400": {
+    "description": "Filter chip on the Recipes tab: recipes under 400 kcal per serving"
+  },
+  "recipeLogAction": "Log",
+  "@recipeLogAction": {
+    "description": "The '+ Log' button on a recipe card: logs the recipe as a meal"
+  },
+  "recipeFavoriteTooltip": "Add to favourites",
+  "@recipeFavoriteTooltip": {
+    "description": "Tooltip / screen-reader label of the star on a recipe card that is not a favourite yet"
+  },
+  "recipeUnfavoriteTooltip": "Remove from favourites",
+  "@recipeUnfavoriteTooltip": {
+    "description": "Tooltip / screen-reader label of the star on a favourite recipe card"
+  },
+  "noRecipesMatchMessage": "Try another filter",
+  "@noRecipesMatchMessage": {
+    "description": "Hint of the empty state on the Recipes tab when the chosen filter chip leaves no recipe"
   }
 }
