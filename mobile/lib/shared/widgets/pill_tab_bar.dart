@@ -68,9 +68,21 @@ class PillTabBar extends StatelessWidget {
           labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
           labelStyle: t.labelLarge!.copyWith(fontWeight: FontWeight.w700, height: 1),
           unselectedLabelStyle: t.labelLarge!.copyWith(fontWeight: FontWeight.w600, height: 1),
-          tabs: tabs,
+          tabs: [for (final tab in tabs) _fitted(tab)],
         ),
       ),
+    );
+  }
+
+  /// The tabs share the bar equally; a text label that doesn't fit its
+  /// share (Hungarian at 130 % — "Étkezések", "Receptek") shrinks instead of
+  /// being clipped mid-word. Other tab widgets pass through unchanged.
+  static Widget _fitted(Widget tab) {
+    if (tab is! Tab || tab.text == null || tab.icon != null) return tab;
+    return Tab(
+      key: tab.key,
+      height: tab.height,
+      child: FittedBox(fit: BoxFit.scaleDown, child: Text(tab.text!, maxLines: 1, softWrap: false)),
     );
   }
 }
