@@ -1925,6 +1925,25 @@
       }
     }
   },
+  "dashboardWeekTitle": "This week",
+  "@dashboardWeekTitle": {
+    "description": "Title of the weekly calorie bar chart card on the dashboard (docs/redesign/77-mobile-redesign-plan.md R1.5)"
+  },
+  "dashboardWeekAvg": "avg {value} kcal",
+  "@dashboardWeekAvg": {
+    "description": "Average daily calories of the past complete days, top right of the weekly chart card. {value} is shown in bold — keep it as a placeholder",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dashboardWeekBarSemantics": "{day}, {value} kcal",
+  "@dashboardWeekBarSemantics": {
+    "description": "Screen-reader text for one bar of the weekly calorie chart. {day} is a weekday name such as 'Monday'",
+    "placeholders": {"day": {"type": "String"}, "value": {"type": "String"}}
+  },
+  "dashboardWeekChartSemantics": "This week, average {value} kcal",
+  "@dashboardWeekChartSemantics": {
+    "description": "Screen-reader summary of the weekly calorie chart",
+    "placeholders": {"value": {"type": "String"}}
+  },
   "dashboardStepsTileLabel": "Steps",
   "@dashboardStepsTileLabel": {
     "description": "Label of the steps tile on the dashboard (docs/redesign/77-mobile-redesign-plan.md R1.4)"
@@ -2245,19 +2264,6 @@
   "weightHistoryYesterdayLabel": "Yesterday",
   "@weightHistoryYesterdayLabel": {
     "description": "Relative date shown on a weight history row recorded yesterday"
-  },
-  "thisWeekCaloriesLabel": "This week · calories",
-  "@thisWeekCaloriesLabel": {
-    "description": "Header label on the dashboard weekly calorie sparkline card"
-  },
-  "avgCaloriesBadge": "avg {count}",
-  "@avgCaloriesBadge": {
-    "description": "Average daily calorie badge on the sparkline card",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "todaysMealsSectionTitle": "Today's meals",
   "@todaysMealsSectionTitle": {

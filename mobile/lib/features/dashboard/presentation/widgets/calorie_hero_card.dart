@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/format/emphasis.dart';
 import '../../../../core/format/lifey_format.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/app_type.dart';
@@ -173,10 +174,10 @@ class _Ring extends StatelessWidget {
           if (eatenGoal != null) ...[
             const SizedBox(height: 10),
             Text.rich(
-              _boldNumbers(
-                l10n.dashboardHeroEatenGoal(_eatenMark, _goalMark),
-                eatenGoal!,
-                bold: captionStyle.copyWith(color: p.text, fontWeight: FontWeight.w700),
+              Emphasis.span(
+                l10n.dashboardHeroEatenGoal(Emphasis.marker(0), Emphasis.marker(1)),
+                [eatenGoal!.eaten, eatenGoal!.goal],
+                captionStyle.copyWith(color: p.text, fontWeight: FontWeight.w700),
               ),
               textAlign: TextAlign.center,
               style: captionStyle.copyWith(height: 1.3),
@@ -185,38 +186,6 @@ class _Ring extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  // Placeholders for the two numbers: the ARB string is rendered with these
-  // markers first and then split, so translators keep one sentence with real
-  // placeholders while the numbers can be set in bold.
-  static const _eatenMark = '\u0001';
-  static const _goalMark = '\u0002';
-
-  static TextSpan _boldNumbers(
-    String template,
-    ({String eaten, String goal}) numbers, {
-    required TextStyle bold,
-  }) {
-    final spans = <InlineSpan>[];
-    final buffer = StringBuffer();
-    void flush() {
-      if (buffer.isEmpty) return;
-      spans.add(TextSpan(text: buffer.toString()));
-      buffer.clear();
-    }
-
-    for (final rune in template.runes) {
-      final ch = String.fromCharCode(rune);
-      if (ch == _eatenMark || ch == _goalMark) {
-        flush();
-        spans.add(TextSpan(text: ch == _eatenMark ? numbers.eaten : numbers.goal, style: bold));
-      } else {
-        buffer.write(ch);
-      }
-    }
-    flush();
-    return TextSpan(children: spans);
   }
 }
 

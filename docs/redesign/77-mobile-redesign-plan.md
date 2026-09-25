@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.4 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.5 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -935,10 +935,25 @@ Tests: `dashboard_tiles_test.dart` (canvas numbers, bars, own goal, add button �
 no-step-data layout, delta directions, relative day, sparkline data, HU × 360 / 411 dp × 100 / 130 % ×
 dark / light), `sparkline_test.dart`, `effective_step_goal_test.dart`.
 
-### R1.5 — Mobile UI: weekly calorie bar chart
+### R1.5 — Mobile UI: weekly calorie bar chart ✅
 - Files: `calorie_sparkline_card.dart` → replaced by a `LifeyBarChart` card (rename to
   `weekly_calories_card.dart`).
 - **Verify:** the average ignores today; goal line at the calorie goal; HU weekday letters.
+
+*As built:* `WeeklyCaloriesCard` (`weekly_calories_card.dart`, replaces `calorie_sparkline_card.dart`)
+on `LifeyCard` around the R0.13 `LifeyBarChart` (96 px plot, calorie colour, dashed line at the calorie
+goal, today's bar in full colour, weekday letters under the bars — HU: P Szo V H K Sze Cs). Header:
+"This week" 15/700 on the left, "avg **1,712** kcal" on the right with the number bold (new
+`core/format/emphasis.dart` — the ARB sentence keeps real placeholders and the number is swapped in
+at render time; the calorie hero now uses it too). The average goes through
+`averageExcludingPartialToday(ignoreZero)`: today is left out, and a day with nothing logged is an empty
+column that doesn't count (0 kcal means "not logged"); with no complete day there is no average text.
+Every bar has a screen-reader label ("Thursday, 621 kcal") and the chart a summary. Removed ARB keys
+`thisWeekCaloriesLabel`, `avgCaloriesBadge`. Also fixed on the way: `_buildWeeklyCalories` stepped back
+with `today.subtract(Duration(days: i))`, which lands an hour off across a DST change and would have
+picked the wrong calendar day — it now uses field arithmetic. Tests: `weekly_calories_card_test.dart`
+(canvas week, average excludes today / empty days / no complete day, goal line, semantics, HU labels and
+fit × 360 / 411 dp × 100 / 130 % × dark / light), `emphasis_test.dart`.
 
 ### R1.6 — Mobile UI: today's meals + recent workouts lists
 - Files: `dashboard_screen.dart` (meal group + recent workout tiles → `ListGroup`/`ListRow`),

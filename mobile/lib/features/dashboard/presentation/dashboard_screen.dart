@@ -44,9 +44,9 @@ import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import '../domain/today_meal_group.dart';
 import 'widgets/calorie_hero_card.dart';
-import 'widgets/calorie_sparkline_card.dart';
 import 'widgets/dashboard_avatar_menu.dart';
 import 'widgets/dashboard_tiles.dart';
+import 'widgets/weekly_calories_card.dart';
 import 'widgets/sponsorship_ended_card.dart';
 
 Future<void> _openAddWaterSheet(BuildContext context) {
@@ -280,8 +280,8 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
 
-        // ── Weekly calorie sparkline ───────────────────────────────────
-        CalorieSparklineCard(points: data.weeklyCalories),
+        // ── This week — calories bar chart ──────────────────────────────────────────────────────────────
+        WeeklyCaloriesCard(points: data.weeklyCalories, goal: settings.dailyCalorieGoal),
         const SizedBox(height: 24),
 
         // ── Weekly recap ready nudge (hidden most of the time) ─────────
