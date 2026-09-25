@@ -68,8 +68,10 @@ class _StatesSection extends StatelessWidget {
           ),
         ]),
         const GalleryCaption('Empty state'),
+        // Tall enough for HU at 130 %, where the two actions wrap; EmptyView
+        // scrolls inside a shorter box rather than growing it.
         SizedBox(
-          height: 300,
+          height: 400,
           child: EmptyView(
             icon: Icons.restaurant_rounded,
             title: hu ? 'Ma még nincs étkezés' : 'No meals yet today',
@@ -82,7 +84,7 @@ class _StatesSection extends StatelessWidget {
         ),
         const GalleryCaption('Error state'),
         SizedBox(
-          height: 220,
+          height: 300,
           child: ErrorView(
             error: Exception('offline'),
             title: hu ? 'A receptötletek nem érhetők el' : 'Recipe ideas are unavailable',
