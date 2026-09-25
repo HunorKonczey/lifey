@@ -23,7 +23,8 @@ class GpsExplainerSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return Padding(
+    // Scrolls: at a large text size the sheet is taller than a small phone.
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,

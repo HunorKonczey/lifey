@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_tokens.dart';
+
 /// A row of `min..max` numbered chips for a subjective effort/intensity
 /// rating — extracted from `PostWorkoutFeedbackSheet` (docs/cardio/
 /// 59-cardio-implementation-plan.md C1.9 "RPE/jegyzet újrahasznosítás") so
@@ -52,10 +54,12 @@ class RpeSelector extends StatelessWidget {
         if (lowAnchorLabel != null && highAnchorLabel != null) ...[
           const SizedBox(height: 6),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(lowAnchorLabel!, style: theme.textTheme.bodySmall),
-              Text(highAnchorLabel!, style: theme.textTheme.bodySmall),
+              Flexible(child: Text(lowAnchorLabel!, style: theme.textTheme.bodySmall)),
+              const SizedBox(width: AppSpacing.s12),
+              Flexible(
+                child: Text(highAnchorLabel!, textAlign: TextAlign.right, style: theme.textTheme.bodySmall),
+              ),
             ],
           ),
         ],
@@ -79,11 +83,11 @@ class _RpeChip extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: AppRadius.tagAll,
       child: Container(
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: bg, borderRadius: AppRadius.tagAll),
         child: Text(
           '$value',
           style: theme.textTheme.labelLarge?.copyWith(

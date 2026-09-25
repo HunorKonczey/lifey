@@ -161,7 +161,7 @@ class _AddExerciseToSessionSheetState
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: AppRadius.controlAll,
               ),
               child: Row(
                 children: [
@@ -242,7 +242,7 @@ class _StepButton extends StatelessWidget {
           color: onPressed != null
               ? scheme.surfaceContainerHighest
               : scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AppRadius.tagAll,
         ),
         child: Icon(
           icon,

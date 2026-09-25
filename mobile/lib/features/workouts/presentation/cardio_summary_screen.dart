@@ -1849,7 +1849,7 @@ class _InnerMetricTile extends StatelessWidget {
                   ),
                   if (metric.edited) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.edit, size: 11, color: Color(0xFFC49A6C)),
+                    Icon(Icons.edit_rounded, size: 11, color: context.palette.text2),
                   ],
                 ],
               ),
@@ -1890,7 +1890,6 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
   final UnitSystem unitSystem;
   final String Function(CardioPrType type) label;
 
-  static const _amber = Color(0xFFD8B35A);
   static final _previousDate = DateFormat.MMMMd();
 
   /// Each type's own unit — a distance record reads in km, a time record in
@@ -1930,7 +1929,7 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     return AlertDialog(
-      icon: const Icon(Icons.emoji_events, color: _amber, size: 32),
+      icon: Icon(Icons.emoji_events_rounded, color: context.metricColors.record, size: 32),
       title: Text(
         l10n.cardioRecordCelebrationTitle(types.length),
         textAlign: TextAlign.center,
@@ -2050,7 +2049,6 @@ class _BestEffortTile extends StatelessWidget {
   final String recordBadge;
   final ThemeData theme;
 
-  static const _amber = Color(0xFFD8B35A);
 
   @override
   Widget build(BuildContext context) {
@@ -2059,9 +2057,9 @@ class _BestEffortTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: row.isRecord ? _amber.withValues(alpha: 0.12) : Colors.transparent,
+        color: row.isRecord ? context.metricColors.record.withValues(alpha: 0.12) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: row.isRecord ? Border.all(color: _amber.withValues(alpha: 0.34)) : null,
+        border: row.isRecord ? Border.all(color: context.metricColors.record.withValues(alpha: 0.34)) : null,
       ),
       child: Row(
         children: [
@@ -2104,15 +2102,15 @@ class _BestEffortTile extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                         decoration: BoxDecoration(
-                          color: _amber,
+                          color: context.metricColors.record,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           recordBadge,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 9.5,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF161611),
+                            color: context.palette.bg,
                           ),
                         ),
                       ),
@@ -2129,7 +2127,7 @@ class _BestEffortTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
-                color: row.isRecord ? _amber : scheme.onSurfaceVariant,
+                color: row.isRecord ? context.metricColors.record : scheme.onSurfaceVariant,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -2152,7 +2150,6 @@ class _NewRecordBanner extends StatelessWidget {
   final ThemeData theme;
   final ColorScheme scheme;
 
-  static const _amber = Color(0xFFD8B35A);
 
   String _label(CardioPrType type) => switch (type) {
         CardioPrType.longestDistance => l10n.cardioRecordLongestDistance,
@@ -2168,14 +2165,14 @@ class _NewRecordBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: _amber.withValues(alpha: 0.14),
+      color: context.metricColors.record.withValues(alpha: 0.14),
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.emoji_events, color: _amber),
+            Icon(Icons.emoji_events_rounded, color: context.metricColors.record),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -2289,21 +2286,7 @@ class _EditedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFFC49A6C);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.edit, size: 12, color: accent),
-          const SizedBox(width: 4),
-          Text(label,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
-        ],
-      ),
-    );
+    return TintedChip(label: label, color: context.palette.text2, icon: Icons.edit_rounded);
   }
 }
 

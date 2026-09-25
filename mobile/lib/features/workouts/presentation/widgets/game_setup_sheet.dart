@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/game_setup_preferences.dart';
 
@@ -68,15 +69,15 @@ class _FormatOption extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: selected ? scheme.primary.withValues(alpha: 0.18) : scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.controlAll,
         child: Container(
           height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: AppRadius.controlAll,
             border: selected ? Border.all(color: scheme.primary, width: 1.5) : null,
           ),
           child: Text(
@@ -155,15 +156,15 @@ class _VenueOption extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: selected ? scheme.primary.withValues(alpha: 0.18) : scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.controlAll,
         child: Container(
           height: 52,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: AppRadius.controlAll,
             border: selected ? Border.all(color: scheme.primary, width: 1.5) : null,
           ),
           child: Row(

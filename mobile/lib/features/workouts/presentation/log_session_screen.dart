@@ -1304,7 +1304,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
         confirmLabel: l10n.removeButton,
         cancelLabel: l10n.cancelButton,
         icon: Icons.remove_circle_rounded,
-        accentColor: const Color(0xFFD66B5A),
+        accentColor: context.metricColors.negative,
       );
       if (confirmed != true || !mounted) return;
     }

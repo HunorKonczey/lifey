@@ -1860,7 +1860,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             children: [
               _DominantMetric(
                 label: l10n.movingTimeLabel,
-                labelColor: _pauseReason == _PauseReason.auto ? _kAutoAccent : null,
+                labelColor: _pauseReason == _PauseReason.auto ? context.autoAccent : null,
                 value: CardioFormatter.duration(duration),
               ),
               const SizedBox(height: AppSpacing.s24),
@@ -2057,13 +2057,13 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         _DominantMetric(
           label: benched ? l10n.playingTimeStoppedLabel : l10n.playingTimeRunningLabel,
           leading: benched
-              ? const Icon(Icons.pause_circle, size: 15, color: _kAutoAccent)
+              ? Icon(Icons.pause_circle, size: 15, color: context.autoAccent)
               : Container(
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.primary),
                 ),
-          labelColor: benched ? _kAutoAccent : scheme.primary,
+          labelColor: benched ? context.autoAccent : scheme.primary,
           value: CardioFormatter.duration(playingDuration),
           valueColor: benched ? scheme.onSurfaceVariant : null,
         ),
@@ -2230,7 +2230,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                 // rail above everything, so the state is readable before a
                 // single word is.
                 if (autoPaused)
-                  Container(height: 5, color: _kAutoAccent),
+                  Container(height: 5, color: context.autoAccent),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, 0),
                   child: _ActivityHeaderBar(
@@ -2501,10 +2501,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   }
 }
 
-/// M09's amber auto-pause accent — the design's own literal tone for "the
-/// system did this, not you" (DD-6). Matching it to a semantic theme color
-/// would be a coincidence, so it stays a named constant.
-const Color _kAutoAccent = Color(0xFFC49A6C);
+/// M09's auto-pause accent — the "the system did this, not you" tone (DD-6),
+/// the theme's calories orange.
+extension _AutoAccent on BuildContext {
+  Color get autoAccent => metricColors.calories;
+}
 
 /// What to show on the in-session "no GPS" card (C4a.2, M27/M28) for a given
 /// [LocationAvailability] — `null` from [_locationCardContent] when tracking
@@ -2799,8 +2800,8 @@ class _PauseStatusCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: auto ? 15 : 12),
       decoration: BoxDecoration(
-        color: auto ? _kAutoAccent.withValues(alpha: 0.14) : scheme.surfaceContainer,
-        border: auto ? Border.all(color: _kAutoAccent.withValues(alpha: 0.5), width: 1.5) : null,
+        color: auto ? context.autoAccent.withValues(alpha: 0.14) : scheme.surfaceContainer,
+        border: auto ? Border.all(color: context.autoAccent.withValues(alpha: 0.5), width: 1.5) : null,
         borderRadius: BorderRadius.circular(auto ? 22 : 20),
       ),
       child: Row(
@@ -2809,7 +2810,7 @@ class _PauseStatusCard extends StatelessWidget {
           Icon(
             auto ? Icons.motion_photos_paused : Icons.pause_circle,
             size: auto ? 24 : 20,
-            color: auto ? _kAutoAccent : scheme.onSurface,
+            color: auto ? context.autoAccent : scheme.onSurface,
           ),
           SizedBox(width: auto ? 12 : 10),
           Expanded(
@@ -2834,7 +2835,7 @@ class _PauseStatusCard extends StatelessWidget {
                     fontSize: auto ? 12 : 11,
                     height: auto ? 1.5 : 1.3,
                     fontWeight: FontWeight.w600,
-                    color: auto ? _kAutoAccent : scheme.onSurfaceVariant,
+                    color: auto ? context.autoAccent : scheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -2869,7 +2870,7 @@ class _AutoPauseResumeButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(32),
         child: CustomPaint(
-          painter: const _DashedBorderPainter(color: _kAutoAccent, radius: 32),
+          painter: _DashedBorderPainter(color: context.autoAccent, radius: 32),
           child: SizedBox(
             height: 104,
             child: Column(
@@ -2877,11 +2878,11 @@ class _AutoPauseResumeButton extends StatelessWidget {
               children: [
                 Text(
                   titleLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.2,
-                    color: _kAutoAccent,
+                    color: context.autoAccent,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -2890,7 +2891,7 @@ class _AutoPauseResumeButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: _kAutoAccent.withValues(alpha: 0.72),
+                    color: context.autoAccent.withValues(alpha: 0.72),
                   ),
                 ),
               ],
@@ -3156,7 +3157,7 @@ class _FinishConfirmationOverlay extends StatelessWidget {
               // that drag has to keep reaching the bar underneath.
               IgnorePointer(
                 child: Container(
-                  color: const Color(0xFF0A0B08).withValues(alpha: 0.55),
+                  color: context.palette.bg.withValues(alpha: 0.6),
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 150),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -3448,14 +3449,14 @@ class _BenchedNoticeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: _kAutoAccent.withValues(alpha: 0.12),
-        border: Border.all(color: _kAutoAccent.withValues(alpha: 0.32)),
+        color: context.autoAccent.withValues(alpha: 0.12),
+        border: Border.all(color: context.autoAccent.withValues(alpha: 0.32)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.timer_off, size: 20, color: _kAutoAccent),
+          Icon(Icons.timer_off, size: 20, color: context.autoAccent),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -3530,8 +3531,8 @@ class _CourtSwitch extends StatelessWidget {
                   icon: Icons.airline_seat_recline_normal,
                   label: onBenchLabel,
                   selected: !onCourt,
-                  selectedColor: _kAutoAccent,
-                  onSelectedColor: const Color(0xFF231C12),
+                  selectedColor: context.autoAccent,
+                  onSelectedColor: context.palette.bg,
                   onPressed: enabled && onCourt ? () => onChanged(false) : null,
                 ),
               ),
@@ -3545,7 +3546,7 @@ class _CourtSwitch extends StatelessWidget {
           style: TextStyle(
             fontSize: 10.5,
             fontWeight: FontWeight.w600,
-            color: onCourt ? scheme.onSurfaceVariant : _kAutoAccent,
+            color: onCourt ? scheme.onSurfaceVariant : context.autoAccent,
           ),
         ),
       ],

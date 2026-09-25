@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.10 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.11 done; emulator review pending)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1484,10 +1484,19 @@ rows of a tab sit *under* the collapsed title/tab bar (and a short tab opened af
 (`SliverOverlapInjector`; empty when a tab is used on its own). Applied to **Workouts** (Sessions/Templates/Exercises) and — same defect — **Nutrition** (its title/search row and tab bar stay two slivers, each on its own
 handle; Meals/Recipes/Foods/Macros lists became `CustomScrollView`s). Regression tests in `header_test`. Each Workouts tab also has its own `PageStorageBucket` so keyless scrollables cannot restore each other's offset.
 
-### R3.11 — Mobile UI: sheets
+### R3.11 — Mobile UI: sheets ✅
 - `add_exercise_sheet`, `add_exercise_to_session_sheet`, `add_set_sheet`, `post_workout_feedback_sheet` + `rpe_selector`, `music_player_sheet`, `music_provider_picker_sheet`, `game_setup_sheet`, `box_score_stepper`,
   `gps_explainer_sheet`, `cardio_session_settings_sheet`, `interval_plan_picker_sheet` onto `showLifeySheet` / DS tokens.
 - **Verify:** every sheet has the DS handle, surface-2 and radius 30, no colour literal, no overflow at 360 dp × 1.3 HU.
+
+*As built:* **One handle for every sheet:** the theme's `bottomSheetTheme` now draws Material's drag handle (`showDragHandle: true`, used by 17 workout call sites) as the design system's — 36 × 4 in `text3` at 60 % — so
+every sheet, `showLifeySheet` or not, opens with the same handle on the same surface-2 / radius-30 sheet. **Colour literals out:** the music sheet's error dot (`0xFFD66B5A`) and the delete-session dialog's accent are the
+theme's negative colour; the cardio summary's record gold (`0xFFD8B35A` ×3, PR banner/dialog/best-effort rows) is `mc.record` — the same "🏆 always carbs-gold" as the strength screens — its manual-edit badge a `TintedChip`; the
+auto-pause accent (`0xFFC49A6C`) is one `autoAccent` (calories orange) and the finish overlay scrim / selected-chip colours come from the palette. Every `BorderRadius.circular(n)` in the sheets is an `AppRadius` token
+(`box_score_stepper`, `game_setup`, `interval_plan_picker`, `add_exercise_to_session`, `cardio_session_settings`, `rpe_selector`). **Overflow fixes found by the new `sheets_layout_test` (411/360 dp × 1.3, HU, dark + light):** the GPS
+explainer and the post-workout feedback sheet now scroll (they were taller than a small phone at large text); the RPE anchor labels ("Very easy" / "Maximal effort") share the row instead of overflowing it by 196 dp in Hungarian;
+the box-score stepper's three columns (basketball) overflowed a 360 dp phone even at 100 % — its buttons are 36 / 50.4 dp instead of 40 / 56 (still 1.4 × wider `+`), and its hint wraps. Not restyled (already on tokens, no
+findings): `add_exercise_sheet`, `add_set_sheet`, the music sheets' layout, `interval_plan_picker_sheet` — they get the new handle; their inner font sizes stay (text-scale tested through their existing suites).
 
 **R3 derived screens (R3.10–R3.11):** templates tab, exercises tab, `exercise_detail_screen`,
 `create_template_screen`, `template_picker_screen` (AppBar → subpage header),

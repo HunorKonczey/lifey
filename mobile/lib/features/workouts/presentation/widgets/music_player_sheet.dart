@@ -11,12 +11,6 @@ import '../../../../l10n/app_localizations.dart';
 import 'music_provider_picker_sheet.dart';
 import 'provider_glyph.dart';
 
-/// Same warn color as `_RestBanner`/`showAppConfirmDialog`'s delete-accent —
-/// see docs/music/46-workout-music-controls-plan.md §6.2 (reusing the
-/// existing color rather than introducing a one-off design-system token for
-/// a single icon/dot).
-const _kAttentionColor = Color(0xFFD66B5A);
-
 /// Result popped from [MusicPlayerSheet] when the user taps "Switch" — the
 /// sheet itself never re-shows [MusicProviderPickerSheet] (its own
 /// BuildContext would be gone the moment it pops), so the caller
@@ -224,14 +218,16 @@ class _ErrorBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    // The warn colour of the delete accents and the music button's attention
+    // dot: the theme's negative (docs/music/46 §6.2).
+    final attention = context.metricColors.negative;
     return Column(
       children: [
         Container(
           width: 64,
           height: 64,
-          decoration:
-              BoxDecoration(color: _kAttentionColor.withValues(alpha: 0.14), shape: BoxShape.circle),
-          child: const Icon(Icons.cloud_off_rounded, size: 30, color: _kAttentionColor),
+          decoration: BoxDecoration(color: attention.withValues(alpha: 0.14), shape: BoxShape.circle),
+          child: Icon(Icons.cloud_off_rounded, size: 30, color: attention),
         ),
         const SizedBox(height: 12),
         Text(

@@ -186,6 +186,10 @@ ThemeData withLifeyComponents(ThemeData base) {
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.hero)),
       ),
       clipBehavior: Clip.antiAlias,
+      // The handle of every sheet that asks for Material's (`showDragHandle:
+      // true`) is drawn like LifeySheet's own: 36 x 4, tertiary text at 60 %.
+      dragHandleColor: p.text3.withValues(alpha: 0.6),
+      dragHandleSize: const Size(36, 4),
       showDragHandle: false,
     ),
     // Generic (non-metric) progress: brand olive on a surface-3 track. Data

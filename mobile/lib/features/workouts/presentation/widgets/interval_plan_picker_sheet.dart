@@ -96,7 +96,7 @@ class IntervalPlanPickerSheet extends ConsumerWidget {
                       Navigator.of(context).pop(const IntervalPlanChoice.withoutPlan()),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.controlAll),
                     textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                   ),
                   child: Text(l10n.intervalPlanPickerWithoutPlan),
@@ -128,9 +128,9 @@ class _PlanRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: AppRadius.controlAll,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -181,9 +181,9 @@ class _AddRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.controlAll,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
