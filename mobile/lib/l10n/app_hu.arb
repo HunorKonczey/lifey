@@ -1440,5 +1440,8 @@
   "onboardingChipSurplus": "+{percent}% többlet",
   "onboardingChipDeficit": "−{percent}% hiány",
   "onboardingChipMaintenance": "Szinten tartás",
-  "onboardingWaterPerDay": "naponta"
+  "onboardingWaterPerDay": "naponta",
+  "chatPeerRoleTrainer": "Az edződ",
+  "chatPeerRoleClient": "A tanítványod",
+  "chatMoreTooltip": "Továbbiak"
 }

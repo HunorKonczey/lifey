@@ -6562,5 +6562,17 @@
   "onboardingWaterPerDay": "per day",
   "@onboardingWaterPerDay": {
     "description": "Unit suffix after the suggested water amount, e.g. '2.6 L per day'"
+  },
+  "chatPeerRoleTrainer": "Your trainer",
+  "@chatPeerRoleTrainer": {
+    "description": "Under the name in a chat header when the other person is the user's trainer (docs/redesign/77-mobile-redesign-plan.md R5.5)"
+  },
+  "chatPeerRoleClient": "Your client",
+  "@chatPeerRoleClient": {
+    "description": "Under the name in a chat header when the other person is the trainer's client"
+  },
+  "chatMoreTooltip": "More",
+  "@chatMoreTooltip": {
+    "description": "Tooltip of the ⋮ button in the chat header, which holds mute / unmute"
   }
 }

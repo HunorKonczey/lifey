@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/chat/domain/chat_message.dart';
 import 'package:lifey/features/chat/presentation/widgets/message_bubble.dart';
+import 'package:lifey/core/theme/app_tokens.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 ChatMessage _message({
@@ -30,6 +32,7 @@ Future<void> _pump(
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme: AppTheme.dark,
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -39,8 +42,6 @@ Future<void> _pump(
           isOwn: isOwn,
           senderName: 'Kiss Anna',
           showTail: showTail,
-          showAvatar: !isOwn && showTail,
-          peerMonogram: 'KA',
           onRetry: () {},
           onDelete: () {},
         ),
@@ -51,6 +52,36 @@ Future<void> _pump(
 }
 
 void main() {
+  group('canvas 7: bubbles in the brand colour', () {
+    testWidgets('an own bubble is the primary colour with its on-primary text', (tester) async {
+      await _pump(tester, message: _message());
+
+      final bubble = tester.widgetList<Container>(find.byType(Container)).firstWhere(
+            (c) => c.decoration is BoxDecoration && (c.decoration! as BoxDecoration).color != null,
+          );
+      final context = tester.element(find.text('Holnap 17:00 jó?'));
+      final scheme = Theme.of(context).colorScheme;
+      expect((bubble.decoration! as BoxDecoration).color, scheme.primary);
+      expect(tester.widget<Text>(find.text('Holnap 17:00 jó?')).style!.color, scheme.onPrimary);
+    });
+
+    testWidgets("a peer's bubble is the card surface with the normal text colour", (tester) async {
+      await _pump(tester, message: _message(), isOwn: false);
+
+      final context = tester.element(find.text('Holnap 17:00 jó?'));
+      final palette = context.palette;
+      expect(tester.widget<Text>(find.text('Holnap 17:00 jó?')).style!.color, palette.text);
+    });
+
+    testWidgets('the time sits under the bubble, not inside it', (tester) async {
+      await _pump(tester, message: _message());
+
+      final text = tester.getRect(find.text('Holnap 17:00 jó?'));
+      final time = tester.getRect(find.text('14:32'));
+      expect(time.top, greaterThan(text.bottom));
+    });
+  });
+
   group('status icons on own messages', () {
     testWidgets('an unsent message shows the clock', (tester) async {
       await _pump(tester, message: _message(state: ChatMessageState.pending, serverId: null));
