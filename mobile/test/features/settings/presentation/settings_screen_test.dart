@@ -253,6 +253,17 @@ void main() {
     }
   }
 
+  testWidgets('at 130 % in Hungarian the Units pill drops under its title', (tester) async {
+    await _pump(tester, const SettingsScreen(),
+        locale: const Locale('hu'), textScale: 1.3, size: const Size(360, 3200));
+
+    // The pill is below the title, not squeezed beside it (the test font is
+    // wider than the real one, so only the placement is asserted here; the
+    // one-line title is checked on the emulator).
+    final pill = tester.getRect(find.text('Metrikus'));
+    expect(pill.top, greaterThan(tester.getRect(find.text('Mértékegységek')).bottom - 1));
+  });
+
   group('notification settings', () {
     testWidgets('sits under the subpage header, one grouped switch row per type', (tester) async {
       await _pump(tester, const NotificationSettingsScreen());

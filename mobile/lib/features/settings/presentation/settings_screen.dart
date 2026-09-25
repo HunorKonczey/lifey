@@ -409,10 +409,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         // ── Preferences ────────────────────────────────────────────────────
         SliverToBoxAdapter(
           child: group(l10n.preferencesLabel, [
-            SettingsRow(
+            SettingsChoiceRow(
               icon: Icons.straighten_rounded,
               title: l10n.unitsLabel,
-              trailing: InlinePillSegment<UnitSystem>(
+              control: InlinePillSegment<UnitSystem>(
                 options: [
                   (UnitSystem.metric, l10n.unitsMetricShort),
                   (UnitSystem.imperial, l10n.unitsImperialShort),
@@ -424,10 +424,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
             ),
-            SettingsRow(
+            SettingsChoiceRow(
               icon: Icons.dark_mode_outlined,
               title: l10n.themeLabel,
-              trailing: InlinePillSegment<ThemePreference>(
+              control: InlinePillSegment<ThemePreference>(
                 options: [
                   (ThemePreference.light, l10n.themeLight),
                   (ThemePreference.dark, l10n.themeDark),
@@ -543,9 +543,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
 
         // ── My trainers (hidden entirely when there are none) ─────────────
-        SliverToBoxAdapter(
-          child: Padding(padding: gutter.copyWith(top: AppSpacing.s24), child: const MyTrainersSection()),
-        ),
+        const SliverToBoxAdapter(child: Padding(padding: gutter, child: MyTrainersSection())),
 
         // ── Subscription (docs/landing_page/67-mobile-free-pro-plan.md §4.4,
         // frame P14) ─────────────────────────────────────────────────────────
@@ -555,11 +553,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         SliverToBoxAdapter(
           child: group(l10n.accountLabel, [
             if (email != null)
-              SettingsRow(
-                icon: Icons.mail_outline_rounded,
-                title: l10n.emailLabel,
-                trailing: Flexible(child: SettingsValue(email, chevron: false)),
-              ),
+              // The address is the row's subline, so it is always shown in full
+              // (a trailing value would be cut to "anna.r5@life…" at 130 %).
+              SettingsRow(icon: Icons.mail_outline_rounded, title: l10n.emailLabel, subtitle: email),
             SettingsRow(
               icon: Icons.lock_outline_rounded,
               title: l10n.changePasswordButton,

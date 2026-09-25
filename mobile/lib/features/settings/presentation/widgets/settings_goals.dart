@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/format/lifey_format.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/theme/app_type.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/ds/lifey_card.dart';
 import '../../../../shared/widgets/ds/lifey_sheet.dart';
-import '../../../../shared/widgets/ds/metric_value.dart';
 import '../../domain/user_settings.dart';
 
 /// The six daily goals as small tiles — a metric dot, the name, the value
@@ -111,7 +111,12 @@ class _GoalTile extends StatelessWidget {
               Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
               const SizedBox(width: AppSpacing.s8),
               Expanded(
-                child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.labelMedium!.copyWith(color: p.text2)),
+                // Scales down instead of ending in "…" — "Szénhidrát" at 130 %.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(label, maxLines: 1, style: t.labelMedium!.copyWith(color: p.text2)),
+                ),
               ),
             ],
           ),
@@ -119,7 +124,14 @@ class _GoalTile extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: MetricValue(value: value, unit: unit, size: 22),
+            // The unit at the number's own size — "129 g", as on the canvas —
+            // not the small unit style of a hero number.
+            child: Text(
+              unit == null ? value : '$value $unit',
+              maxLines: 1,
+              textScaler: AppType.noScale(context),
+              style: AppType.number(22, color: p.text),
+            ),
           ),
         ],
       ),

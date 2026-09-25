@@ -43,6 +43,45 @@ class SettingsRow extends StatelessWidget {
   }
 }
 
+/// A row whose control is a segmented pill (Units, Theme). At large text sizes
+/// the title and the pill cannot share one line — "Mértékegységek" would be
+/// squeezed into four — so the pill drops under the title, full width.
+class SettingsChoiceRow extends StatelessWidget {
+  const SettingsChoiceRow({super.key, required this.icon, required this.title, required this.control});
+
+  final IconData icon;
+  final String title;
+  final Widget control;
+
+  /// Above this text scale the control goes under the title.
+  static const double stackAbove = 1.15;
+
+  @override
+  Widget build(BuildContext context) {
+    final stacked = MediaQuery.textScalerOf(context).scale(1) > stackAbove;
+    if (!stacked) return SettingsRow(icon: icon, title: title, trailing: control);
+
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              ListIconHolder(icon: icon, color: p.text, size: 40),
+              const SizedBox(width: AppSpacing.s16),
+              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium!.copyWith(color: p.text))),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Align(alignment: Alignment.centerRight, child: control),
+        ],
+      ),
+    );
+  }
+}
+
 /// "System ›" / "3 on ›" — a current value with the chevron that says the row
 /// opens something.
 class SettingsValue extends StatelessWidget {

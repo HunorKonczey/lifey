@@ -28,7 +28,9 @@ class MyTrainersSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final p = context.palette;
 
-    return Column(
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.s24),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionLabel(l10n.myTrainersSectionLabel),
@@ -39,8 +41,8 @@ class MyTrainersSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
           child: Text(l10n.myTrainersDataSharingExplanation, style: Theme.of(context).textTheme.bodySmall!.copyWith(color: p.text2)),
         ),
-        const SizedBox(height: AppSpacing.s24),
       ],
+    ),
     );
   }
 }
