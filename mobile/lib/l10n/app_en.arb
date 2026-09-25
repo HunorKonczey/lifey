@@ -124,10 +124,6 @@
   "@healthIntegrationLabel": {
     "description": "Section heading for the Health integration (Apple Health on iOS, Health Connect on Android)"
   },
-  "signInSubtitle": "Sign in to continue",
-  "@signInSubtitle": {
-    "description": "Subtitle on the login screen"
-  },
   "emailLabel": "Email",
   "@emailLabel": {
     "description": "Label for the email field"
@@ -156,10 +152,6 @@
   "@signInButton": {
     "description": "Button to submit the login form"
   },
-  "registerPromptButton": "Don't have an account? Register",
-  "@registerPromptButton": {
-    "description": "Button on the login screen that navigates to registration"
-  },
   "createAccountTitle": "Create account",
   "@createAccountTitle": {
     "description": "Title of the registration screen and its submit button"
@@ -179,10 +171,6 @@
   "passwordsDoNotMatchError": "Passwords do not match",
   "@passwordsDoNotMatchError": {
     "description": "Validation error when password and confirmation differ"
-  },
-  "signInPromptButton": "Already have an account? Sign in",
-  "@signInPromptButton": {
-    "description": "Button on the registration screen that navigates back to login"
   },
   "forgotPasswordButton": "Forgot password?",
   "@forgotPasswordButton": {
@@ -6524,5 +6512,21 @@
   "statKindFilterSemantics": "Kind of workouts",
   "@statKindFilterSemantics": {
     "description": "Screen-reader label of the strength / cardio switch on the statistics screen"
+  },
+  "signInWelcomeTitle": "Welcome back",
+  "@signInWelcomeTitle": {
+    "description": "Large title of the sign-in screen (docs/redesign/77-mobile-redesign-plan.md R5.1)"
+  },
+  "signInSubtitle": "Sign in to pick up where you left off. Your logs stay on this phone, even offline.",
+  "@signInSubtitle": {
+    "description": "One-line promise under the sign-in title"
+  },
+  "registerPromptLead": "New to Lifey?",
+  "@registerPromptLead": {
+    "description": "Grey lead-in of the line at the foot of the sign-in screen; followed by the 'Create account' action in the accent colour"
+  },
+  "signInPromptLead": "Already have an account?",
+  "@signInPromptLead": {
+    "description": "Grey lead-in of the line at the foot of the register screen; followed by the 'Sign in' action in the accent colour"
   }
 }

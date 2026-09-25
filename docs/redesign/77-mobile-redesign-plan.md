@@ -1720,10 +1720,12 @@ frames exist in the canvas); every metric shows a sensible hero and side stats.
   Connect with an honest subline "Off · weight and steps are logged by hand", Notifications
   "3 on ›"); "ACCOUNT" → Log out at the bottom, with the confirmation dialog.
 
-### R5.1 — Mobile UI: login + register + forgot/change password
+### R5.1 — Mobile UI: login + register + forgot/change password ✅
 - `login_screen.dart`, `register_screen.dart`, `forgot_password_screen.dart`,
   `change_password_screen.dart` (AppBar → subpage header).
 - **Verify:** Google sign-in unchanged; keyboard doesn't cover the primary button.
+
+*As built:* one shared kit, `auth/presentation/widgets/auth_widgets.dart`, replaces the four copies of `_AuthCard` / `_AuthField` / `_OrDivider` / Google button: **`AuthPage`** (a scrolling column with the 20 dp gutter, ≤ 440 dp on a tablet, and an optional foot prompt that sits at the bottom of the screen when there is room and scrolls with the form — never under the keyboard — when there isn't; screens reached from login carry the round back button of the subpage header), **`AuthLogoTile`** (64 dp primary tile with the "L"), **`AuthHeading`** (36/800 title + one-line promise), **`AuthTextField`** (label above, 56 dp, card fill, hairline, primary ring on focus, leading icon), **`AuthPrimaryButton`** (56 dp, spinner while working — the only filled button on a page), **`AuthOrDivider`**, **`AuthGoogleButton`** (outlined, secondary), **`AuthSwitchPrompt`** ("New to Lifey? **Create account**"). Login is the canvas: logo, "Welcome back", "Sign in to pick up where you left off. Your logs stay on this phone, even offline.", mail / lock fields, "Forgot password?", Sign in, "or", Google, and the create-account prompt pinned to the foot. Register, forgot-password (both steps; the reset-code hint is a `NoticeCard`) and change-password use the same fields; the change-password `AppBar` is now `LifeySubpageHeader`. Nothing in the flows changed (validators, autofill group, Google sign-in, routing after Google). **Deviation:** the Google button keeps the multi-colour "G" of Google (its branding guidelines require the mark; the canvas draws the label alone). ARB: `signInWelcomeTitle`, `signInSubtitle` (new wording), `registerPromptLead`, `signInPromptLead`; `registerPromptButton` / `signInPromptButton` removed. 11 widget tests (`auth_screens_test`: canvas contents, one filled button, 56 dp, validation, and no overflow at 360 dp × 1.3 in HU, dark and light, with the keyboard up).
 
 ### R5.2 — Mobile UI: onboarding frame — segmented progress, skip, button hierarchy
 - `onboarding_screen.dart` (shared scaffold for all steps).

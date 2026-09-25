@@ -31,7 +31,6 @@
   "waterSourcesDescription": "Újrafelhasználható beállítások egyérintéses naplózáshoz, pl. \"Kulacs\" = 0,75L",
   "manageWaterSourcesButton": "Vízforrások kezelése",
   "healthIntegrationLabel": "Egészségügyi adatok",
-  "signInSubtitle": "Jelentkezz be a folytatáshoz",
   "emailLabel": "E-mail",
   "firstNameLabel": "Keresztnév",
   "lastNameLabel": "Vezetéknév",
@@ -39,13 +38,11 @@
   "requiredFieldError": "Kötelező",
   "invalidEmailError": "Adj meg egy érvényes e-mail címet",
   "signInButton": "Bejelentkezés",
-  "registerPromptButton": "Nincs még fiókod? Regisztrálj",
   "createAccountTitle": "Fiók létrehozása",
   "passwordHelperText": "Legalább 8 karakter",
   "passwordTooShortError": "Legalább 8 karakter hosszúnak kell lennie",
   "confirmPasswordLabel": "Jelszó megerősítése",
   "passwordsDoNotMatchError": "A jelszavak nem egyeznek",
-  "signInPromptButton": "Már van fiókod? Jelentkezz be",
   "forgotPasswordButton": "Elfelejtett jelszó?",
   "continueWithGoogleButton": "Folytatás Google-lal",
   "orDividerLabel": "vagy",
@@ -1430,5 +1427,9 @@
   "statDurationHoursMinutes": "{hours} ó {minutes}",
   "statWeeklyFootnote": "Hetente csoportosítva, hogy egy nap sose tűnjön kiugrásnak.",
   "statLegendAverageDays": "{days} napos átlag",
-  "statKindFilterSemantics": "Edzések fajtája"
+  "statKindFilterSemantics": "Edzések fajtája",
+  "signInWelcomeTitle": "Üdv újra!",
+  "signInSubtitle": "Jelentkezz be, és folytasd ott, ahol abbahagytad. A naplód a telefonodon marad, offline is.",
+  "registerPromptLead": "Új vagy a Lifey-ban?",
+  "signInPromptLead": "Már van fiókod?"
 }
