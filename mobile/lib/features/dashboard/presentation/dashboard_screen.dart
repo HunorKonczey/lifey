@@ -12,9 +12,10 @@ import '../../../core/sync/sync_engine_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../core/format/lifey_format.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
-import '../../../shared/widgets/trainer_view_menu.dart';
 import '../../chat/application/conversation_list_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
@@ -44,13 +45,9 @@ import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import '../domain/today_meal_group.dart';
 import 'widgets/calorie_sparkline_card.dart';
+import 'widgets/dashboard_avatar_menu.dart';
 import 'widgets/sponsorship_ended_card.dart';
 import 'widgets/stat_card.dart';
-
-// Vertical layout constants shared between DashboardScreen and _DashboardBody.
-const double _kBarTopGap = 8.0;   // status-bar-bottom → bar top
-const double _kBarHeight = 58.0;  // expanded AdaptiveAppBar height
-const double _kBarBotGap = 12.0;  // bar bottom → first content item
 
 final _intFmt = NumberFormat.decimalPattern();
 
@@ -172,11 +169,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
     final todaySteps = ref.watch(todayStepsControllerProvider).value;
     final recommendedTemplate = ref.watch(recommendedTemplateProvider);
     final streaks = ref.watch(streaksProvider);
-    final l10n = AppLocalizations.of(context)!;
 
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + _kBarTopGap;
-    final contentTop = barTop + _kBarHeight + _kBarBotGap;
+    // The pinned header collapses to the status bar + a 52 px row; the
+    // pull-to-refresh spinner starts below it.
+    final headerBottom = MediaQuery.paddingOf(context).top + 52;
 
     return Scaffold(
       body: ScrollCollapseListener(
@@ -184,7 +180,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
           children: [
             Positioned.fill(
               child: RefreshIndicator(
-                displacement: contentTop,
+                edgeOffset: headerBottom,
                 onRefresh: _forceSync,
                 child: _DashboardBody(
                   data: data,
@@ -202,34 +198,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
                     context.go('/nutrition');
                   },
                 ),
-              ),
-            ),
-            Positioned(
-              top: barTop,
-              left: 12,
-              right: 12,
-              child: AdaptiveAppBar(
-                title: l10n.dashboardTodayTitle,
-                actions: [
-                  // Chat's only permanent entry point: it gets no bottom-nav
-                  // branch of its own (docs/chat/40-trainer-chat-plan.md
-                  // §6.1), so the unread badge lives here for both roles.
-                  AdaptiveAppBarAction(
-                    icon: Icons.chat_bubble_outline,
-                    tooltip: l10n.chatOpenTooltip,
-                    badgeCount: ref.watch(unreadBadgeProvider).value ?? 0,
-                    onPressed: () => context.push('/chat'),
-                  ),
-                  AdaptiveAppBarAction(
-                    icon: Icons.settings_outlined,
-                    tooltip: l10n.settingsTitle,
-                    onPressed: () => context.push('/settings'),
-                  ),
-                ],
-                // Renders nothing unless the signed-in user is a trainer —
-                // for everyone else this app bar is unchanged (docs/chat/41
-                // §2.1, T1).
-                trailing: const TrainerViewMenu(inTrainerView: false),
               ),
             ),
             Positioned(
@@ -299,14 +267,22 @@ class _DashboardBody extends ConsumerWidget {
         ? null
         : l10n.proteinMoreBadge((protGoal - stats.protein).round());
 
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final contentTop = statusTop + _kBarTopGap + _kBarHeight + _kBarBotGap;
     final bannerHeight = ref.watch(bannerAdSlotHeightProvider(0));
-    final bottomPad = MediaQuery.paddingOf(context).bottom + bannerHeight + 16;
+    // The body extends behind the bottom nav, so the safe-area bottom already
+    // includes the nav's height.
+    final bottomPad = MediaQuery.paddingOf(context).bottom + bannerHeight + AppSpacing.s56;
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad),
-      children: [
+    final format = LifeyFormat.of(context);
+    final user = ref.watch(authControllerProvider).value;
+    final firstName = user?.firstName?.trim();
+
+    final children = <Widget>[
+        // ── Streak strip — right under the header ────────────────────────
+        if (streaks.isNotEmpty) ...[
+          StreakChipRow(streaks: streaks, onTap: () => context.push('/recap')),
+          const SizedBox(height: 16),
+        ],
+
         // ── Recommended workout — pinned above everything, styled distinct
         // from the plain cards below so it doesn't read as a list item ─────
         if (recommendedTemplate != null) ...[
@@ -331,14 +307,6 @@ class _DashboardBody extends ConsumerWidget {
           onAdd: () => _openAddWaterSheet(context),
         ),
         const SizedBox(height: 16),
-
-        // ── Greeting ─────────────────────────────────────────────────
-        _DayGreeting(l10n: l10n),
-        if (streaks.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          StreakChipRow(streaks: streaks, onTap: () => context.push('/recap')),
-        ],
-        const SizedBox(height: 4),
 
         // ── Calories — hero metric, full width ────────────────────────
         StatCard(
@@ -483,8 +451,47 @@ class _DashboardBody extends ConsumerWidget {
               onRate: () => onRateWorkoutTap(w.clientId),
             ),
           ),
+    ];
+
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        LifeyHeader(
+          overline: format.dayLabel(DateTime.now()),
+          title: _greeting(l10n, firstName),
+          actions: [
+            // Chat's only permanent entry point: it gets no bottom-nav
+            // branch of its own (docs/chat/40-trainer-chat-plan.md §6.1), so
+            // the unread dot lives here for both roles.
+            HeaderIconButton(
+              icon: Icons.chat_bubble_outline_rounded,
+              tooltip: l10n.chatOpenTooltip,
+              showDot: (ref.watch(unreadBadgeProvider).value ?? 0) > 0,
+              onPressed: () => context.push('/chat'),
+            ),
+            const DashboardAvatarMenu(),
+          ],
+        ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s16, AppSpacing.s20, bottomPad),
+          sliver: SliverList(delegate: SliverChildListDelegate(children)),
+        ),
       ],
     );
+  }
+
+  /// "Good morning, Anna" — by time of day; the plain greeting when the
+  /// account has no first name.
+  String _greeting(AppLocalizations l10n, String? firstName) {
+    final hour = DateTime.now().hour;
+    final hasName = firstName != null && firstName.isNotEmpty;
+    if (hour >= 5 && hour < 12) {
+      return hasName ? l10n.greetingMorningName(firstName) : l10n.greetingMorning;
+    }
+    if (hour >= 12 && hour < 18) {
+      return hasName ? l10n.greetingAfternoonName(firstName) : l10n.greetingAfternoon;
+    }
+    return hasName ? l10n.greetingEveningName(firstName) : l10n.greetingEvening;
   }
 }
 
@@ -836,36 +843,6 @@ class _SectionTitle extends StatelessWidget {
       style: theme.textTheme.labelSmall?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
         letterSpacing: 1.2,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Day greeting — time-of-day label shown at the top of the content area
-// ---------------------------------------------------------------------------
-
-class _DayGreeting extends StatelessWidget {
-  const _DayGreeting({required this.l10n});
-
-  final AppLocalizations l10n;
-
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) return l10n.greetingMorning;
-    if (hour >= 12 && hour < 18) return l10n.greetingAfternoon;
-    return l10n.greetingEvening;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      _greeting(),
-      style: theme.textTheme.headlineSmall?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.5,
-        color: theme.colorScheme.onSurface,
       ),
     );
   }

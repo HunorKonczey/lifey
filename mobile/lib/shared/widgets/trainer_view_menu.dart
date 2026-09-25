@@ -21,6 +21,15 @@ const String trainerProgramsLocation = '/trainer/programs';
 const String trainerInvitesLocation = '/trainer/invites';
 const String trainerSettingsLocation = '/trainer/settings';
 
+/// Moves between the client and trainer homes and remembers the choice —
+/// shared by this menu and the dashboard's avatar menu.
+void switchTrainerView(BuildContext context, WidgetRef ref, {required bool trainer}) {
+  // Remember first: if the app is killed right after the switch, it should
+  // come back where the user just went, not where they left.
+  ref.read(lastViewIsTrainerProvider.notifier).set(isTrainerView: trainer);
+  context.go(trainer ? trainerShellLocation : '/dashboard');
+}
+
 /// The avatar menu that moves a trainer between their two homes:
 /// "Trainer view" from the client side, "My own log" from the trainer side
 /// (docs/chat/41-trainer-mobile-v2-plan.md §2.1).
@@ -54,7 +63,7 @@ class TrainerViewMenu extends ConsumerWidget {
       ),
       itemBuilder: (context) => [
         PopupMenuItem<void>(
-          onTap: () => _switchTo(context, ref, trainer: !inTrainerView),
+          onTap: () => switchTrainerView(context, ref, trainer: !inTrainerView),
           child: Row(
             children: [
               Icon(
@@ -91,13 +100,6 @@ class TrainerViewMenu extends ConsumerWidget {
           ),
       ],
     );
-  }
-
-  void _switchTo(BuildContext context, WidgetRef ref, {required bool trainer}) {
-    // Remember first: if the app is killed right after the switch, it should
-    // come back where the user just went, not where they left.
-    ref.read(lastViewIsTrainerProvider.notifier).set(isTrainerView: trainer);
-    context.go(trainer ? trainerShellLocation : '/dashboard');
   }
 
   String _monogramOf(WidgetRef ref) {

@@ -1905,6 +1905,29 @@
   "@greetingEvening": {
     "description": "Greeting shown on the dashboard in the evening (18:00–04:59)"
   },
+  "greetingMorningName": "Good morning, {name}",
+  "@greetingMorningName": {
+    "description": "Dashboard header title in the morning (05:00–11:59) when the user's first name is known (docs/redesign/77-mobile-redesign-plan.md R1.2)",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "greetingAfternoonName": "Good afternoon, {name}",
+  "@greetingAfternoonName": {
+    "description": "Dashboard header title in the afternoon (12:00–17:59) when the user's first name is known",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "greetingEveningName": "Good evening, {name}",
+  "@greetingEveningName": {
+    "description": "Dashboard header title in the evening (18:00–04:59) when the user's first name is known",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "streakStripWeekInReview": "Week in review",
+  "@streakStripWeekInReview": {
+    "description": "Tappable label at the end of the dashboard streak strip; opens the weekly recap screen (docs/redesign/77-mobile-redesign-plan.md R1.2)"
+  },
+  "dashboardProfileMenuLabel": "Profile & settings",
+  "@dashboardProfileMenuLabel": {
+    "description": "Item of the dashboard avatar menu that opens Settings, and the avatar button's tooltip (docs/redesign/77-mobile-redesign-plan.md R1.2)"
+  },
   "kcalLeftBadge": "{count} left",
   "@kcalLeftBadge": {
     "description": "Badge on the calorie card showing remaining kcal to reach goal",

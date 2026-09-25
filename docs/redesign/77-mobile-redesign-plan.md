@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.2 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -843,13 +843,35 @@ behaviour — no "uploaded first" promise as in the canvas, because `logout()` d
 Tests: `test/features/settings/presentation/widgets/logout_dialog_test.dart` (EN copy, cancel / confirm /
 barrier, HU at 100 / 130 % × dark / light without overflow).
 
-### R1.2 — Mobile UI: dashboard header + streak strip
+### R1.2 — Mobile UI: dashboard header + streak strip ✅
 - Files: `dashboard_screen.dart`, `streak_chip_row.dart`, `trainer_view_menu.dart` (entry via
   avatar menu), `lifey_format.dart` (`dayLabel`).
 - Migrate the dashboard to `CustomScrollView` + `LifeyHeader`; greeting by time of day (existing
   strings if present, else new ARB keys); avatar via `MonogramAvatar`.
 - **Verify:** HU date is fully Hungarian; unread dot appears with an unread message; trainers
   still reach the trainer view.
+
+*As built:* `DashboardScreen` no longer has a `Stack` of floating bar + `ListView`: the body is a
+`CustomScrollView` — pinned `LifeyHeader` (overline = `LifeyFormat.dayLabel`, title = "Good
+morning, Anna" via `greeting{Morning,Afternoon,Evening}Name`, the plain greeting when the account
+has no first name), then a `SliverPadding` (20 px side margin, `s56` + nav/safe-area + banner at the
+bottom) around the still-old cards, which R1.3–R1.6 replace. Actions: chat `HeaderIconButton` with
+the calorie-orange unread dot, and `DashboardAvatarMenu` — the 44 px `MonogramAvatar` (initials from
+the name, the uploaded photo when there is one) opening **Profile & settings** and, for trainers,
+**Trainer view** (`switchTrainerView`, extracted from `TrainerViewMenu`, which the trainer shell
+keeps until R6). The Settings icon is gone from the dashboard header with the logout icon (R1.1);
+the avatar menu is now the only way to Settings from Today. The "Today" title and the separate
+`_DayGreeting` are gone (the title *is* the greeting). Pull-to-refresh starts below the pinned header
+(`edgeOffset`).
+`StreakChipRow` is the canvas strip: one pill on the card surface (hairline ring + top edge, no
+layout-adding border), one **icon + count per streak** — flame = calories, walk = steps, drop =
+water, dumbbell = workouts, each in its metric colour (workouts: brand olive), muted text-3 icon /
+text-2 count at 0 — and "Week in review ›" in primary at the end, which wraps to two lines instead of
+truncating in HU at 130 %. The whole strip is the tap target (→ `/recap`). It sits directly under the
+header; the recommended-workout card, onboarding banner and sponsorship card follow it. Tests:
+`streak_chip_row_test.dart` (icons/order/colours, label only when tappable, HU × 4 streaks at 360 dp ×
+100/130 %), `dashboard_avatar_menu_test.dart` (monogram, fallback, 48 dp target, client vs trainer
+items, HU label).
 
 ### R1.3 — Mobile UI: hero calorie card
 - Files: new `dashboard/presentation/widgets/calorie_hero_card.dart`, remove the calorie/macro
