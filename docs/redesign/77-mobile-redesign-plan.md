@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.3 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.4 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1360,9 +1360,26 @@ an "In progress" chip on its metrics line. The FAB is "▶ Start". Removed: `hea
 icon), the per-row `deleteWorkoutTooltip`. Tests: `session_groups_test`, `session_row_test` (metrics, dating, PR chip singular / none,
 imperial, HU, 360/411 dp × 1.3), `sessions_tab_groups_test`; the cardio / kind-filter suites were adapted to the new row.
 
-### R3.4 — Mobile UI: live strength — rest hero card
+### R3.4 — Mobile UI: live strength — rest hero card ✅
 - `log_session_screen.dart` (`_RestBanner` → new `widgets/rest_hero_card.dart`).
 - **Verify:** +15 s and Skip behave as today; last-5-s colour change; reduced motion = no pulse.
+
+*As built:* `RestHeroCard` (`widgets/rest_hero_card.dart`) replaces `_RestBanner` (and its two chip / icon helpers): a `nested` card with a 1.5 px primary outline —
+"REST" in the section-label style over the countdown at **44/800**, **"+15 s"** (surface-3) and **"Skip"** (primary fill) as 48 dp-tall
+buttons, an 8 px **bar that drains** from full to empty, and "**Next: Bench press · set 2 · 60 kg × 8**" under it (the first row still to do,
+looking from the exercise of the last logged set on; the load is the row's own or last time's, without one only the set is named; nothing left
+= no line). `RestState` holds the maths and is unit-tested: **the last five seconds (inclusive) turn the number into the calorie colour and
+pulse it once a second** (scale 1 ↔ 1.06; no animation time under reduced motion), reaching the target turns it into the overtime count-up
+"+0:12" in the negative colour (Skip stays, +15 s goes, the bar is empty), a "+15 s" tap pushes the target out, a zero target is overtime at
+once; with the rest timer off it is the plain elapsed count-up without buttons or bar. The buttons shrink (≤ 55 % of the width) rather than
+push the number out at 130 % Hungarian ("Kihagyás"). The behaviour behind the buttons (`_restAdjustment`, the rescheduled notification, the
+Live Activity update, skip) is the old code, moved unchanged. **The header came with it** (it decides where the card sits): the frosted
+floating bar is a `LifeySubpageHeader` — the template name, the subtitle "2 of 3 exercises" (the first exercise that is not complete yet,
+`workoutExerciseProgress`), and pills on the right for the elapsed time, the watch, the live heart rate and calories (`_HeaderPill`, 44 px on
+surface-2). The card is pinned above the list in a `Column` instead of `Positioned` maths with a hard-coded banner height. The set table
+and the bottom bar are still the old ones (R3.5 / R3.6). New ARB: `restSkipLabel`, `restNextSet`, `restNextSetLoad`, `workoutExerciseProgress`.
+Tests: `rest_hero_card_test` (state boundaries, canvas card, callbacks, ≥ 48 dp buttons, colour + pulse, reduced motion, overtime, timer off, no
+"Next" line, 360/411 dp × 1.3 HU).
 
 ### R3.5 — Mobile UI: live strength — exercise card + set rows
 - `exercise_session_card.dart`, set row widgets in `log_session_screen.dart`.

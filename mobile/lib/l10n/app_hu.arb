@@ -1378,5 +1378,9 @@
   "sessionsGroupLastWeek": "Múlt hét",
   "sessionPrChip": "{count, plural, one{1 rekord} other{{count} rekord}}",
   "sessionHeartRateFromSource": "Pulzus: {source}",
-  "sessionMenuOpen": "Megnyitás"
+  "sessionMenuOpen": "Megnyitás",
+  "workoutExerciseProgress": "{current}. / {total} gyakorlat",
+  "restSkipLabel": "Kihagyás",
+  "restNextSet": "Következik: {exercise} · {set}. szett",
+  "restNextSetLoad": "Következik: {exercise} · {set}. szett · {load}"
 }

@@ -6304,5 +6304,24 @@
   "sessionMenuOpen": "Open",
   "@sessionMenuOpen": {
     "description": "Action in a session row's long-press menu: opens the session"
+  },
+  "workoutExerciseProgress": "{current} of {total, plural, one{1 exercise} other{{total} exercises}}",
+  "@workoutExerciseProgress": {
+    "description": "Subtitle of the live strength workout header: the exercise being worked on out of all of them, e.g. '2 of 3 exercises' (docs/redesign/77-mobile-redesign-plan.md R3.4)",
+    "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "restSkipLabel": "Skip",
+  "@restSkipLabel": {
+    "description": "Visible label of the button that ends the rest countdown early on the rest card (the tooltip says 'Skip rest')"
+  },
+  "restNextSet": "Next: {exercise} · set {set}",
+  "@restNextSet": {
+    "description": "Line on the rest card naming the next set to do when its weight and reps are not known",
+    "placeholders": {"exercise": {"type": "String"}, "set": {"type": "int"}}
+  },
+  "restNextSetLoad": "Next: {exercise} · set {set} · {load}",
+  "@restNextSetLoad": {
+    "description": "Line on the rest card naming the next set with its load; {load} is e.g. '47.5 kg × 8'",
+    "placeholders": {"exercise": {"type": "String"}, "set": {"type": "int"}, "load": {"type": "String"}}
   }
 }
