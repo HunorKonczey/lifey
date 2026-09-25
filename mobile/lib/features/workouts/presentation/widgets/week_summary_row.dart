@@ -65,7 +65,7 @@ class _Tile extends StatelessWidget {
       label: '$value $label',
       excludeSemantics: true,
       child: LifeyCard(
-        padding: const EdgeInsets.all(AppSpacing.s16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -89,7 +89,7 @@ class _Tile extends StatelessWidget {
             const SizedBox(height: AppSpacing.s4),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 14, height: 1.3, color: p.text2),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 13, height: 1.3, color: p.text2),
             ),
           ],
         ),

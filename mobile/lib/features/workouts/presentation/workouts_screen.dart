@@ -133,7 +133,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
   ({IconData icon, String label, VoidCallback onPressed}) _fab(AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
-        return (icon: Icons.add, label: l10n.logFabLabel, onPressed: _logSession);
+        return (icon: Icons.play_arrow_rounded, label: l10n.startWorkoutButtonLabel, onPressed: _logSession);
       case 1:
         return (icon: Icons.add, label: l10n.templateFabLabel, onPressed: _newTemplate);
       default:

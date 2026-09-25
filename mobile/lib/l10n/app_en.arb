@@ -2210,22 +2210,6 @@
   "@noWorkoutsLoggedYetPeriodMessage": {
     "description": "Shown on the dashboard when there are no recent workouts"
   },
-  "enrichedFromWatchTooltip": "Measured by watch",
-  "@enrichedFromWatchTooltip": {
-    "description": "Tooltip/semantics label for the watch badge on a session card whose metrics were enriched from a paired watch's workout summary"
-  },
-  "healthStatsLine": "{calories} kcal · {heartRate} bpm avg (Health)",
-  "@healthStatsLine": {
-    "description": "Line showing active calories and average heart rate imported from Health on a session card",
-    "placeholders": {
-      "calories": {
-        "type": "String"
-      },
-      "heartRate": {
-        "type": "String"
-      }
-    }
-  },
   "importFromHealthButton": "Import from Health",
   "@importFromHealthButton": {
     "description": "Button on the weight screen that imports recent body-weight entries from the health store"
@@ -6294,5 +6278,31 @@
   "workoutsFilterMuscleGroup": "Muscle group",
   "@workoutsFilterMuscleGroup": {
     "description": "Section label in the Exercises filter sheet"
+  },
+  "sessionsGroupToday": "Today",
+  "@sessionsGroupToday": {
+    "description": "Header of the group of today's sessions in the Sessions list (docs/redesign/77-mobile-redesign-plan.md R3.3)"
+  },
+  "sessionsGroupEarlierThisWeek": "Earlier this week",
+  "@sessionsGroupEarlierThisWeek": {
+    "description": "Header of the sessions of this calendar week before today in the Sessions list"
+  },
+  "sessionsGroupLastWeek": "Last week",
+  "@sessionsGroupLastWeek": {
+    "description": "Header of the previous calendar week's sessions in the Sessions list"
+  },
+  "sessionPrChip": "{count, plural, one{1 PR} other{{count} PRs}}",
+  "@sessionPrChip": {
+    "description": "Trophy chip on a session row: how many personal records the session set",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "sessionHeartRateFromSource": "Heart rate from {source}",
+  "@sessionHeartRateFromSource": {
+    "description": "Line under a cardio session row whose heart rate came from the phone's health platform; {source} is the platform's name (Health Connect / Apple Health), not translated",
+    "placeholders": {"source": {"type": "String"}}
+  },
+  "sessionMenuOpen": "Open",
+  "@sessionMenuOpen": {
+    "description": "Action in a session row's long-press menu: opens the session"
   }
 }

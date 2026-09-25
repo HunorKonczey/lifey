@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.2 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.3 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1340,9 +1340,25 @@ per `CardioPrType` broken against the earlier cardio sessions; an unfinished ses
 separate. Editing an older session re-judges every later one because nothing is stored. Tests: `session_pr_counts_test` (11 cases incl. the
 canvas "2 PRs", same-session ordering, ties, edit re-judging, input order, cardio).
 
-### R3.3 — Mobile UI: session list rows + day grouping
+### R3.3 — Mobile UI: session list rows + day grouping ✅
 - `sessions_tab.dart` (row anatomy, grouping headers, PR chip, long-press delete).
 - **Verify:** HU "(Egészségügyi adatok)" source line never truncates; delete still reachable.
+
+*As built:* the Sessions list is the week summary, then **one grouped card per week bucket** under `SectionLabel` headers — "TODAY",
+"EARLIER THIS WEEK", "LAST WEEK", and "Sep 7 – Sep 13" for each older Monday–Sunday week (`groupSessionsByWeek`, unit-tested incl. Monday
+and the year boundary). The rows are lazily built `GroupedListItem`s (new `ds/grouped_list_item.dart`, extracted from the R2.9 foods list,
+which uses it now too): the surface, rounded first/last, hairlines, optional swipe-to-delete. `SessionRow` is the one anatomy for strength
+and cardio: a 44 px icon holder (dumbbell in the primary tint for strength, the activity's own icon and colour for cardio — the round
+`ActivityChip` is gone from the list), the title (template name, activity name, "Strength" when a session has no template) with the
+`TintedChip` trophy **"2 PRs"** in the `record` colour, a bright **metrics line** — strength "Wed 17:30 · 34 min · 7 sets · 4,280 kg" (lb
+for imperial), cardio "Tue 07:45 · 5.21 km · 5:19 /km · 156 bpm" (pace for runs, km/h for rides, the duration for machine and game
+sessions, the heart rate in the heart colour) — glued with no-break spaces so it wraps only at the dots, and a details line: the
+exercises, or "Heart rate from Health Connect / Apple Health" (own line, so the Hungarian source never truncates). "Today" rows leave the
+date out, this and last week name the weekday, older weeks the date. The trash icon per row is gone: **long-press → Open / Delete**
+(confirmation kept), swipe-to-delete also kept; the route thumbnail of a GPS run stays at the row's end, an unfinished session shows
+an "In progress" chip on its metrics line. The FAB is "▶ Start". Removed: `healthStatsLine`, `enrichedFromWatchTooltip` (the watch
+icon), the per-row `deleteWorkoutTooltip`. Tests: `session_groups_test`, `session_row_test` (metrics, dating, PR chip singular / none,
+imperial, HU, 360/411 dp × 1.3), `sessions_tab_groups_test`; the cardio / kind-filter suites were adapted to the new row.
 
 ### R3.4 — Mobile UI: live strength — rest hero card
 - `log_session_screen.dart` (`_RestBanner` → new `widgets/rest_hero_card.dart`).

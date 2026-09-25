@@ -495,8 +495,6 @@
   "weightHistoryYesterdayLabel": "Tegnap",
   "recentWorkoutsSectionTitle": "Legutóbbi edzések",
   "noWorkoutsLoggedYetPeriodMessage": "Még nincs naplózott edzés.",
-  "enrichedFromWatchTooltip": "Órán mérve",
-  "healthStatsLine": "{calories} kcal · {heartRate} bpm átlag (Egészségügyi adatok)",
   "importFromHealthButton": "Importálás egészségügyi adatokból",
   "todaysMealsSectionTitle": "Mai étkezések",
   "noMealsLoggedYetPeriodMessage": "Még nem rögzítettél étkezést.",
@@ -1374,5 +1372,11 @@
   "workoutsFilterTitle": "Szűrők",
   "workoutsFilterPeriod": "Időszak",
   "workoutsFilterType": "Típus",
-  "workoutsFilterMuscleGroup": "Izomcsoport"
+  "workoutsFilterMuscleGroup": "Izomcsoport",
+  "sessionsGroupToday": "Ma",
+  "sessionsGroupEarlierThisWeek": "Korábban a héten",
+  "sessionsGroupLastWeek": "Múlt hét",
+  "sessionPrChip": "{count, plural, one{1 rekord} other{{count} rekord}}",
+  "sessionHeartRateFromSource": "Pulzus: {source}",
+  "sessionMenuOpen": "Megnyitás"
 }

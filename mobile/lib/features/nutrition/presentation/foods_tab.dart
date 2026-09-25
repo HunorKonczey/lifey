@@ -7,6 +7,7 @@ import '../../../core/utils/search_normalize.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/ds/grouped_list_item.dart';
 import '../../../shared/widgets/ds/list_group.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -252,66 +253,46 @@ class _FoodRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
-    final heart = context.metricColors.heart;
     final primary = Theme.of(context).colorScheme.primary;
-    const radius = Radius.circular(AppRadius.card);
-    final shape = BorderRadius.vertical(top: first ? radius : Radius.zero, bottom: last ? radius : Radius.zero);
 
-    return ClipRRect(
-      borderRadius: shape,
-      child: Dismissible(
-        key: ValueKey(food.clientId),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          color: heart.withValues(alpha: 0.16),
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
-          child: Icon(Icons.delete_rounded, color: heart),
-        ),
-        confirmDismiss: (_) async {
-          final confirmed = await showConfirmDeleteDialog(
-            context,
-            title: l10n.deleteFoodQuestionTitle,
-            message: l10n.deleteFoodConfirmMessage(food.name),
-          );
-          if (confirmed) onDelete();
-          // The local cache stream removes the row on its own once the
-          // delete lands; don't let Dismissible do it too.
-          return false;
-        },
-        child: Material(
-          color: p.card,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!first) Divider(height: 1, thickness: 1, indent: 74, color: p.hairline),
-              ListRow(
-                leading: ListIconHolder(icon: Icons.restaurant_menu_rounded, color: primary),
-                title: food.name,
-                subtitle: macroLine,
-                onTap: onTap,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SyncStatusIndicator(clientId: food.clientId),
-                    IconButton(
-                      icon: const Icon(Icons.add_rounded),
-                      tooltip: l10n.addToMealTooltip,
-                      onPressed: onAddToMeal,
-                      style: IconButton.styleFrom(
-                        fixedSize: const Size.square(44),
-                        minimumSize: const Size.square(44),
-                        backgroundColor: p.primaryTint,
-                        foregroundColor: primary,
-                        shape: const CircleBorder(),
-                        tapTargetSize: MaterialTapTargetSize.padded,
-                      ),
-                    ),
-                  ],
-                ),
+    return GroupedListItem(
+      first: first,
+      last: last,
+      dismissKey: ValueKey(food.clientId),
+      confirmDismiss: () async {
+        final confirmed = await showConfirmDeleteDialog(
+          context,
+          title: l10n.deleteFoodQuestionTitle,
+          message: l10n.deleteFoodConfirmMessage(food.name),
+        );
+        if (confirmed) onDelete();
+        // The local cache stream removes the row on its own once the delete
+        // lands; don't let Dismissible do it too.
+        return false;
+      },
+      child: ListRow(
+        leading: ListIconHolder(icon: Icons.restaurant_menu_rounded, color: primary),
+        title: food.name,
+        subtitle: macroLine,
+        onTap: onTap,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SyncStatusIndicator(clientId: food.clientId),
+            IconButton(
+              icon: const Icon(Icons.add_rounded),
+              tooltip: l10n.addToMealTooltip,
+              onPressed: onAddToMeal,
+              style: IconButton.styleFrom(
+                fixedSize: const Size.square(44),
+                minimumSize: const Size.square(44),
+                backgroundColor: p.primaryTint,
+                foregroundColor: primary,
+                shape: const CircleBorder(),
+                tapTargetSize: MaterialTapTargetSize.padded,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
