@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.5 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.6 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -955,12 +955,45 @@ picked the wrong calendar day — it now uses field arithmetic. Tests: `weekly_c
 (canvas week, average excludes today / empty days / no complete day, goal line, semantics, HU labels and
 fit × 360 / 411 dp × 100 / 130 % × dark / light), `emphasis_test.dart`.
 
-### R1.6 — Mobile UI: today's meals + recent workouts lists
+### R1.6 — Mobile UI: today's meals + recent workouts lists ✅
 - Files: `dashboard_screen.dart` (meal group + recent workout tiles → `ListGroup`/`ListRow`),
   "+ Meal" / "Photo" buttons (Photo = existing AI estimate entry, hidden when AI is unavailable
   exactly as today).
 - **Verify:** "2 exercises" / "1 exercise" plural; the rating chip opens the existing feedback
   sheet.
+
+*As built:* two sections, each a `SectionLabel` ("TODAY'S MEALS" / "RECENT WORKOUTS" + a "See all" text
+button, new `dashboardSeeAll`) over one `ListGroup`. `ListGroup` gained a `footer` (inside the card, no
+divider before it) for the meals card's quick actions.
+- **`TodayMealsSection`:** one row per meal type with entries. A meal the user named shows the name over
+  "Breakfast · 07:15"; an unnamed one shows its type over its first three foods and the time ("Apple,
+  Almonds · 08:27") — both canvas rows; several meals of a type → the type, earliest time. Trailing kcal
+  total. Icon holders per type (breakfast = carbs colour, snack = protein as drawn; lunch = calories,
+  dinner = fat, chosen so the four differ). Under the rows, aligned with their text: **"+ Meal"** (tinted
+  brand olive; → the meal editor, like the Nutrition FAB) and **"Photo"** (surface-2; → the editor
+  straight into the AI estimate). Both are 36 px pills in a 48 dp touch box. Without meals: the hint
+  and the two buttons.
+- **`LogMealScreen(startWithPhoto: true)`:** the Photo action reuses the editor's existing estimate flow
+  (offline message, credit check, picker, estimate sheet) instead of duplicating it, and closes the screen
+  again if nothing was added (cancelled / offline / failed pick) so the user is never stranded on an empty
+  meal; when the credits are gone the paywall route is left on top rather than popped. **"Hidden when AI is
+  unavailable" as today** = today it is never hidden — the editor's button stays and reports "offline" —
+  so Photo is always shown and behaves the same way.
+- **`RecentWorkoutsSection`:** strength = template name (else "Strength") over "Wed 17:30 · 34 min ·
+  2 exercises" (`LifeyFormat.weekdayTime`, plural ARB), brand-olive dumbbell; cardio = the activity name
+  over "Tue 07:45 · 5.21 km · 28 min", the activity's own icon and colour (running = calorie orange, as
+  the canvas), duration = **moving** time. `RecentWorkout` gained `distanceMeters` / `movingSeconds`
+  (from `session.cardio`). Trailing: "In progress" chip → **"★ Rate"** chip (36 px, star in the record
+  colour, 48 dp box) when `needsRatingNudge` — it rates without opening the session → else the kcal when
+  known. Imperial users get miles via `CardioFormatter` (its dot decimal is left as is — the HU + imperial
+  combination is rare and out of R1). First three sessions, as before.
+- **Dropped:** the "N strength · M cardio" breakdown line under the workouts heading (docs/cardio/56 §4) —
+  the canvas has no place for it; it can come back as a stats-screen detail in R4. The muscle-group tint of
+  the strength badge is gone too (one brand-olive holder, per the canvas).
+Tests: `dashboard_lists_test.dart` (both canvas rows in EN and HU, named / unnamed / multiple meals, three
+foods max, empty states, callbacks, touch boxes, per-type tint, plural, moving time, miles, rating chip
+rates without opening, kcal fallback, in progress, HU × 360 / 411 dp × 100 / 130 % × dark / light),
+`lifey_format_test.dart` (`weekdayTime`).
 
 ### R1.7 — Mobile UI: add-water sheet + water sources screen
 - Files: `water/presentation/widgets/add_water_sheet.dart` (canvas "Add water": 3 × 64 px

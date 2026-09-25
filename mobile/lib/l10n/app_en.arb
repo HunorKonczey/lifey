@@ -1868,10 +1868,6 @@
   "@dashboardTabLabel": {
     "description": "Bottom navigation label for the dashboard tab"
   },
-  "dashboardTodayTitle": "Today",
-  "@dashboardTodayTitle": {
-    "description": "Title shown in the dashboard floating app bar"
-  },
   "greetingMorning": "Good morning",
   "@greetingMorning": {
     "description": "Greeting shown on the dashboard in the morning (05:00–11:59)"
@@ -1924,6 +1920,22 @@
         "type": "int"
       }
     }
+  },
+  "dashboardSeeAll": "See all",
+  "@dashboardSeeAll": {
+    "description": "Text button at the right of a dashboard section label ('Today's meals', 'Recent workouts') that opens the full list (docs/redesign/77-mobile-redesign-plan.md R1.6)"
+  },
+  "dashboardAddMealAction": "Meal",
+  "@dashboardAddMealAction": {
+    "description": "Label of the '+ Meal' quick action under today's meals on the dashboard; the plus is a separate icon"
+  },
+  "dashboardPhotoAction": "Photo",
+  "@dashboardPhotoAction": {
+    "description": "Label of the camera quick action under today's meals on the dashboard: estimate a meal from a photo"
+  },
+  "dashboardRateChip": "Rate",
+  "@dashboardRateChip": {
+    "description": "Short chip, with a star, on a recent finished workout that has no rating yet; opens the feedback sheet"
   },
   "dashboardWeekTitle": "This week",
   "@dashboardWeekTitle": {

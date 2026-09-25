@@ -115,6 +115,12 @@ void main() {
       expect(hu.shortDate(thu), 'szept. 24.');
     });
 
+    test('weekday and time for list rows', () {
+      final evening = DateTime(2026, 9, 23, 17, 30); // a Wednesday
+      expect(en.weekdayTime(evening), 'Wed 17:30');
+      expect(hu.weekdayTime(evening), 'Sze 17:30');
+    });
+
     test('time is 24-hour in both languages', () {
       expect(en.time(thu), '07:15');
       expect(hu.time(thu), '07:15');

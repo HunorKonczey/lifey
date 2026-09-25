@@ -16,10 +16,15 @@ class ListGroup extends StatelessWidget {
     super.key,
     required this.children,
     this.dividerInset = 74,
+    this.footer,
   });
 
   final List<Widget> children;
   final double dividerInset;
+
+  /// Sits inside the card under the last row **without** a divider — the
+  /// dashboard's "+ Meal / Photo" buttons.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +42,7 @@ class ListGroup extends StatelessWidget {
               if (i > 0) Divider(height: 1, thickness: 1, indent: dividerInset, color: hairline),
               children[i],
             ],
+            if (footer != null) footer!,
           ],
         ),
       ),

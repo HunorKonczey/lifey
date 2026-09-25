@@ -113,6 +113,8 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
       rpe: session.rpe,
       sessionKind: session.sessionKind,
       activityType: session.activityType,
+      distanceMeters: session.cardio?.distanceMeters,
+      movingSeconds: session.movingSeconds,
     );
   }).toList();
 

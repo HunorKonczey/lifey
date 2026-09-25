@@ -121,6 +121,10 @@ class LifeyFormat {
   /// 24-hour clock time: "07:15".
   String time(DateTime date) => DateFormat('HH:mm', locale).format(date);
 
+  /// Weekday and clock time for a list row: "Wed 17:30" / "Sze 17:30".
+  String weekdayTime(DateTime date) =>
+      _capitalize('${DateFormat('EEE', locale).format(date)} ${time(date)}');
+
   /// Shortest unambiguous weekday for chart axes: "T" / "Cs". English uses
   /// the one-letter form; Hungarian uses the abbreviation (H K Sze Cs P Szo
   /// V), because its narrow form repeats "Sz" for Wednesday and Saturday.

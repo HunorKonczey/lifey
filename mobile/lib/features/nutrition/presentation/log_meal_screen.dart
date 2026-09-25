@@ -34,15 +34,25 @@ import 'widgets/meal_estimate_sheet.dart';
 /// open on that food (docs/75-log-food-from-foods-tab-plan.md §2.4); if that
 /// first sheet is dismissed without adding anything, the screen closes too.
 class LogMealScreen extends ConsumerStatefulWidget {
-  const LogMealScreen({super.key, this.meal, this.initialFood})
-      : assert(meal == null || initialFood == null);
+  const LogMealScreen({super.key, this.meal, this.initialFood, this.startWithPhoto = false})
+      : assert(meal == null || initialFood == null),
+        assert(!startWithPhoto || (meal == null && initialFood == null));
 
   final Meal? meal;
   final Food? initialFood;
 
+  /// Open straight into "estimate from a photo" (the dashboard's Photo
+  /// action). The screen closes again if nothing came of it — cancelled,
+  /// offline or a failed pick — so it never strands the user on an empty
+  /// meal.
+  final bool startWithPhoto;
+
   @override
   ConsumerState<LogMealScreen> createState() => _LogMealScreenState();
 }
+
+/// How an AI photo estimate ended — see [LogMealScreen.startWithPhoto].
+enum _PhotoOutcome { added, dismissed, paywall }
 
 class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   static final _dateTimeLabel = DateFormat('EEE, MMM d · HH:mm');
@@ -102,6 +112,17 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (initialFood != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _addEntry(preselected: initialFood, closeScreenOnCancel: true);
+      });
+    }
+    if (widget.startWithPhoto) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final outcome = await _estimateFromPhoto();
+        // A paywall route is on top in the `paywall` case: popping would
+        // close that instead of this screen.
+        if (mounted && outcome == _PhotoOutcome.dismissed && _entries.isEmpty) {
+          Navigator.of(context).pop();
+        }
       });
     }
   }
@@ -171,13 +192,13 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   /// The estimate needs the network; the confirmed items are saved like any
   /// other entry. The credit check here is a courtesy — the server's 402 is
   /// authoritative, and lands on the same paywall.
-  Future<void> _estimateFromPhoto() async {
+  Future<_PhotoOutcome> _estimateFromPhoto() async {
     final l10n = AppLocalizations.of(context)!;
     if (ref.read(isOfflineProvider).value ?? false) {
       AppSnackbar.showError(context, title: l10n.mealEstimateOfflineMessage);
-      return;
+      return _PhotoOutcome.dismissed;
     }
-    if (!requireAiCredits(context, ref)) return;
+    if (!requireAiCredits(context, ref)) return _PhotoOutcome.paywall;
 
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -201,7 +222,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
         ),
       ),
     );
-    if (source == null || !mounted) return;
+    if (source == null || !mounted) return _PhotoOutcome.dismissed;
 
     final XFile? picked;
     try {
@@ -211,9 +232,9 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
           .pickImage(source: source, maxWidth: 1024, maxHeight: 1024, imageQuality: 85);
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
-      return;
+      return _PhotoOutcome.dismissed;
     }
-    if (picked == null || !mounted) return;
+    if (picked == null || !mounted) return _PhotoOutcome.dismissed;
     final imagePath = picked.path;
 
     final drafts = await showModalBottomSheet<List<MealEntryDraft>>(
@@ -223,13 +244,16 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       showDragHandle: true,
       builder: (_) => MealEstimateSheet(imagePath: imagePath),
     );
-    if (!mounted) return;
+    if (!mounted) return _PhotoOutcome.dismissed;
     if (drafts != null && drafts.isNotEmpty) {
       setState(() => _entries.addAll(drafts.map((d) => (food: d.food, grams: d.grams))));
       _autoSave();
+      return _PhotoOutcome.added;
     } else if (ref.read(mealEstimationControllerProvider) is MealEstimationCreditsExhausted) {
       openPaywall(context, PaywallTrigger.aiCredits);
+      return _PhotoOutcome.paywall;
     }
+    return _PhotoOutcome.dismissed;
   }
 
   Future<void> _editEntry(int index) async {

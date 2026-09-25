@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/ads/banner_ad_slot.dart';
 import '../../../core/ads/nav_reserved_space.dart';
@@ -11,7 +10,6 @@ import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/activity_chip.dart';
 import '../../../core/format/lifey_format.dart';
 import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../auth/application/auth_controller.dart';
@@ -24,28 +22,27 @@ import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
 import '../../workouts/application/recommended_template_provider.dart';
 import '../../workouts/application/workout_session_controller.dart';
-import '../../workouts/domain/exercise_enums.dart';
 import '../../workouts/domain/workout_template.dart';
 import '../../workouts/presentation/log_session_screen.dart';
 import '../../workouts/presentation/open_workout_screens.dart';
 import '../../workouts/presentation/widgets/post_workout_feedback_sheet.dart';
 import '../../workouts/presentation/widgets/recommended_workout_card.dart';
-import '../../nutrition/domain/meal.dart';
+import '../../nutrition/presentation/log_meal_screen.dart';
 import '../../nutrition/presentation/nutrition_screen.dart';
 import '../../onboarding/presentation/widgets/onboarding_banner.dart';
 import '../../streaks/application/streaks_provider.dart';
 import '../../streaks/domain/streak.dart';
 import '../../streaks/presentation/widgets/recap_ready_card.dart';
 import '../../streaks/presentation/widgets/streak_chip_row.dart';
-import '../../workouts/domain/activity_type.dart';
 import '../application/dashboard_controller.dart';
 import '../application/today_steps_controller.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
-import '../domain/today_meal_group.dart';
 import 'widgets/calorie_hero_card.dart';
 import 'widgets/dashboard_avatar_menu.dart';
 import 'widgets/dashboard_tiles.dart';
+import 'widgets/recent_workouts_section.dart';
+import 'widgets/today_meals_section.dart';
 import 'widgets/weekly_calories_card.dart';
 import 'widgets/sponsorship_ended_card.dart';
 
@@ -288,46 +285,27 @@ class _DashboardBody extends ConsumerWidget {
         const RecapReadyCard(),
 
         // ── Today's meals ─────────────────────────────────────────────
-        _SectionTitle(l10n.todaysMealsSectionTitle),
-        const SizedBox(height: 10),
-        if (data.todaysMealGroups.isEmpty)
-          _EmptyHint(l10n.noMealsLoggedYetPeriodMessage)
-        else
-          ...data.todaysMealGroups.map(
-            (g) => _MealGroupTile(group: g, onTap: onMealsTap),
+        TodayMealsSection(
+          groups: data.todaysMealGroups,
+          onSeeAll: onMealsTap,
+          onMealTap: onMealsTap,
+          onAddMeal: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const LogMealScreen()),
           ),
+          onPhoto: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const LogMealScreen(startWithPhoto: true)),
+          ),
+        ),
         const SizedBox(height: 24),
 
         // ── Recent workouts ───────────────────────────────────────────
-        _SectionTitle(l10n.recentWorkoutsSectionTitle),
-        // Quiet kind breakdown (docs/cardio/56-cardio-statistics-plan.md §4:
-        // "az „edzések" szám alá egy halk bontás-sor") — there's no bare
-        // workout-count stat card on this screen to sit literally "under",
-        // so this sits under the closest thing to one, the section heading
-        // above the list it describes. Reuses the existing
-        // strength/cardio filter-chip label strings rather than a new
-        // composed sentence.
-        if (stats.workoutCount > 0) ...[
-          const SizedBox(height: 2),
-          Text(
-            '${stats.strengthWorkoutCount} ${l10n.activityTypeStrength} · '
-            '${stats.cardioWorkoutCount} ${l10n.sessionKindCardioLabel}',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-        ],
-        const SizedBox(height: 10),
-        if (data.recentWorkouts.isEmpty)
-          _EmptyHint(l10n.noWorkoutsLoggedYetPeriodMessage)
-        else
-          ...data.recentWorkouts.take(3).map(
-            (w) => _WorkoutTile(
-              workout: w,
-              onTap: () => onWorkoutTap(w.clientId),
-              onRate: () => onRateWorkoutTap(w.clientId),
-            ),
-          ),
+        RecentWorkoutsSection(
+          workouts: data.recentWorkouts,
+          unitSystem: settings.unitSystem,
+          onSeeAll: () => context.go('/workouts'),
+          onTap: onWorkoutTap,
+          onRate: onRateWorkoutTap,
+        ),
     ];
 
     return CustomScrollView(
@@ -369,375 +347,5 @@ class _DashboardBody extends ConsumerWidget {
       return hasName ? l10n.greetingAfternoonName(firstName) : l10n.greetingAfternoon;
     }
     return hasName ? l10n.greetingEveningName(firstName) : l10n.greetingEvening;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Recent workout tile
-// ---------------------------------------------------------------------------
-
-class _WorkoutTile extends StatelessWidget {
-  const _WorkoutTile({required this.workout, this.onTap, this.onRate});
-
-  final RecentWorkout workout;
-  final VoidCallback? onTap;
-
-  /// Tapped from the "rate this workout" nudge chip — see
-  /// [RecentWorkout.needsRatingNudge].
-  final VoidCallback? onRate;
-
-  String _statsLine(AppLocalizations l10n) {
-    final parts = <String>[];
-    if (workout.finishedAt != null) {
-      final mins = workout.finishedAt!.difference(workout.startedAt).inMinutes;
-      if (mins > 0) parts.add(l10n.workoutDurationMin(mins));
-    }
-    final exCount = workout.exerciseNames.length;
-    if (exCount > 0) parts.add(l10n.workoutExerciseCount(exCount));
-    if (workout.activeCalories != null) {
-      parts.add(l10n.workoutKcal(workout.activeCalories!.round()));
-    }
-    return parts.join(' · ');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final dateLabel = DateFormat('MMM d, HH:mm').format(workout.startedAt.toLocal());
-    // A cardio session never has exercises to list — its activity type
-    // (e.g. "Running") is the meaningful equivalent, not the "—" a
-    // strength-shaped fallback would otherwise show here.
-    final exercises = workout.isCardio
-        ? activityTypeLabel(l10n, workout.activityType!)
-        : workout.exerciseNames.isEmpty
-            ? '—'
-            : workout.exerciseNames.join(', ');
-    final statsLine = _statsLine(l10n);
-
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      margin: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              // Rounded icon box — cardio gets the same ActivityChip used
-              // elsewhere for a session of its kind (docs/cardio/56 §4:
-              // "a legutóbbi edzések listája ikonos"); strength keeps its
-              // existing muscle-group badge, unchanged.
-              if (workout.isCardio)
-                ActivityChip(activityType: workout.activityType!, size: 44)
-              else
-                _StrengthBadge(categoryCode: workout.categoryCode),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (workout.templateName != null) ...[
-                      Text(
-                        workout.templateName!,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        dateLabel,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ] else ...[
-                      Text(
-                        dateLabel,
-                        style: theme.textTheme.bodyLarge,
-                      ),
-                    ],
-                    const SizedBox(height: 2),
-                    Text(
-                      exercises,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (statsLine.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        statsLine,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (workout.inProgress)
-                _StatusChip(
-                  label: l10n.inProgressLabel,
-                  color: theme.colorScheme.tertiary,
-                )
-              else if (workout.needsRatingNudge)
-                _RateWorkoutChip(
-                  label: l10n.postWorkoutFeedbackEmptyState,
-                  onTap: onRate,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The strength-session icon badge — unchanged from before cardio sessions
-/// existed, just extracted so [_WorkoutTile] can pick between this and
-/// [ActivityChip] instead of hard-coding [Icons.fitness_center] for every
-/// session regardless of kind.
-class _StrengthBadge extends StatelessWidget {
-  const _StrengthBadge({required this.categoryCode});
-
-  final String? categoryCode;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final Color badgeBg;
-    final Color badgeIconColor;
-    if (categoryCode != null) {
-      final mc = muscleGroupColor(categoryCode!, context);
-      badgeBg = mc.withValues(alpha: 0.15);
-      badgeIconColor = mc;
-    } else {
-      badgeBg = theme.colorScheme.primaryContainer;
-      badgeIconColor = theme.colorScheme.onPrimaryContainer;
-    }
-
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(13)),
-      child: Center(
-        child: Icon(Icons.fitness_center, size: 22, color: badgeIconColor),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Today's meal group tile
-// ---------------------------------------------------------------------------
-
-class _MealGroupTile extends StatelessWidget {
-  const _MealGroupTile({required this.group, this.onTap});
-
-  final TodayMealGroup group;
-  final VoidCallback? onTap;
-
-  IconData _icon() => switch (group.type) {
-        MealType.breakfast => Icons.free_breakfast,
-        MealType.lunch => Icons.lunch_dining,
-        MealType.dinner => Icons.dinner_dining,
-        MealType.snack => Icons.cookie,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final foods = group.meals
-        .expand((m) => m.entries)
-        .map((e) => e.foodName)
-        .take(3)
-        .join(', ');
-
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      margin: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: Center(
-                  child: Icon(
-                    _icon(),
-                    size: 22,
-                    color: theme.colorScheme.onSecondaryContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      group.type.label(l10n),
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                    if (foods.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        foods,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${group.totalCalories.toStringAsFixed(0)} kcal',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-          height: 1.0,
-        ),
-      ),
-    );
-  }
-}
-
-/// Tappable pill nudging the user to rate a recently finished, unrated
-/// workout — see [RecentWorkout.needsRatingNudge]. A separate small
-/// [InkWell] nested inside the tile's own tap area, so tapping the chip
-/// opens the feedback sheet instead of navigating into the session.
-class _RateWorkoutChip extends StatelessWidget {
-  const _RateWorkoutChip({required this.label, this.onTap});
-
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return Material(
-      color: color.withValues(alpha: 0.14),
-      borderRadius: BorderRadius.circular(99),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(99),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: color,
-              height: 1.0,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Section title — small all-caps label
-// ---------------------------------------------------------------------------
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      text.toUpperCase(),
-      style: theme.textTheme.labelSmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-        letterSpacing: 1.2,
-      ),
-    );
-  }
-}
-
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Text(
-        text,
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-      ),
-    );
   }
 }

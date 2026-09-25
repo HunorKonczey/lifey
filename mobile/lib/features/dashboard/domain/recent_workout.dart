@@ -13,6 +13,8 @@ class RecentWorkout {
     this.rpe,
     this.sessionKind = 'STRENGTH',
     this.activityType,
+    this.distanceMeters,
+    this.movingSeconds,
   });
 
   final String clientId;
@@ -31,6 +33,14 @@ class RecentWorkout {
   final String? activityType;
 
   bool get isCardio => sessionKind == 'CARDIO';
+
+  /// Distance covered, for the cardio row's "5.21 km"; null for strength or
+  /// when nothing was recorded.
+  final double? distanceMeters;
+
+  /// Moving time of a cardio session — what the row shows as its duration
+  /// (elapsed time includes pauses); null falls back to start → finish.
+  final int? movingSeconds;
 
   /// Snapshot of the template's name this session was started from, if any.
   final String? templateName;
