@@ -6323,5 +6323,24 @@
   "@restNextSetLoad": {
     "description": "Line on the rest card naming the next set with its load; {load} is e.g. '47.5 kg × 8'",
     "placeholders": {"exercise": {"type": "String"}, "set": {"type": "int"}, "load": {"type": "String"}}
+  },
+  "setNumberLabel": "Set {number}",
+  "@setNumberLabel": {
+    "description": "Name of one set of an exercise in a workout, e.g. the title of a set's long-press menu (docs/redesign/77-mobile-redesign-plan.md R3.5)",
+    "placeholders": {"number": {"type": "int"}}
+  },
+  "exerciseBestLine": "Best {best}",
+  "@exerciseBestLine": {
+    "description": "Line under an exercise's name on the live strength screen: the heaviest set so far, e.g. 'Best 50 kg × 8'",
+    "placeholders": {"best": {"type": "String"}}
+  },
+  "exerciseBestLineWithOneRm": "Best {best} · e1RM {oneRm}",
+  "@exerciseBestLineWithOneRm": {
+    "description": "Same line with the best estimated one-rep max, e.g. 'Best 50 kg × 8 · e1RM 63.3 kg'",
+    "placeholders": {"best": {"type": "String"}, "oneRm": {"type": "String"}}
+  },
+  "setDoneLabel": "Set done",
+  "@setDoneLabel": {
+    "description": "Screen-reader label of the check button of a set row"
   }
 }

@@ -1382,5 +1382,9 @@
   "workoutExerciseProgress": "{current}. / {total} gyakorlat",
   "restSkipLabel": "Kihagyás",
   "restNextSet": "Következik: {exercise} · {set}. szett",
-  "restNextSetLoad": "Következik: {exercise} · {set}. szett · {load}"
+  "restNextSetLoad": "Következik: {exercise} · {set}. szett · {load}",
+  "setNumberLabel": "{number}. szett",
+  "exerciseBestLine": "Legjobb: {best}",
+  "exerciseBestLineWithOneRm": "Legjobb: {best} · becsült 1RM {oneRm}",
+  "setDoneLabel": "Szett kész"
 }
