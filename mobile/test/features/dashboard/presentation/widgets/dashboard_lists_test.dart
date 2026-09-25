@@ -111,6 +111,10 @@ RecentWorkout _run() => RecentWorkout(
       distanceMeters: 5210,
       movingSeconds: 28 * 60,
       activeCalories: 323,
+      // Rated, so the trailing kcal shows on any day the suite runs: an unrated
+      // session younger than three days gets the "Rate" chip instead
+      // (RecentWorkout.needsRatingNudge reads the wall clock).
+      rpe: 7,
     );
 
 Widget _workouts(
