@@ -39,6 +39,12 @@ class LifeySegmented<T> extends StatelessWidget {
     final p = context.palette;
     final t = Theme.of(context).textTheme;
     final index = segments.indexWhere((s) => s.$1 == selected);
+    // Dark: the selected pill is a lighter surface with light text. Light: the
+    // brand green with white text (canvases 4.2 / 5 light).
+    final light = Theme.of(context).brightness == Brightness.light;
+    final scheme = Theme.of(context).colorScheme;
+    final pillColor = light ? scheme.primary : p.control;
+    final selectedText = light ? scheme.onPrimary : p.text;
     return Container(
       padding: const EdgeInsets.all(_pad),
       decoration: BoxDecoration(color: p.card, borderRadius: AppRadius.pill),
@@ -65,7 +71,7 @@ class LifeySegmented<T> extends StatelessWidget {
                   bottom: 0,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: p.control,
+                      color: pillColor,
                       borderRadius: AppRadius.pill,
                       boxShadow: Theme.of(context).brightness == Brightness.dark
                           ? const [BoxShadow(color: Color(0x66000000), offset: Offset(0, 2), blurRadius: 8)]
@@ -109,7 +115,7 @@ class LifeySegmented<T> extends StatelessWidget {
                                       maxLines: 1,
                                       style: t.labelLarge!.copyWith(
                                         fontWeight: value == selected ? FontWeight.w700 : FontWeight.w600,
-                                        color: value == selected ? p.text : p.text2,
+                                        color: value == selected ? selectedText : p.text2,
                                       ),
                                     ),
                                   ],

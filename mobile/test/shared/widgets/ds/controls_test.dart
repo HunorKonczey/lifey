@@ -155,6 +155,15 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('light theme: the selected pill is the brand green with white text', (tester) async {
+      await tester.pumpWidget(_host(segmented(30, (_) {}), theme: AppTheme.light));
+      final label = tester.widget<Text>(find.text('30 nap'));
+      expect(label.style!.color, Colors.white);
+      final pill = tester.widgetList<DecoratedBox>(find.descendant(of: find.byType(LifeySegmented<int>), matching: find.byType(DecoratedBox)))
+          .map((d) => d.decoration).whereType<BoxDecoration>().where((d) => d.color == AppTheme.light.colorScheme.primary);
+      expect(pill, isNotEmpty);
+    });
+
     testWidgets('a locked segment wears a lock, stays tappable and is read out as gated', (tester) async {
       final handle = tester.ensureSemantics();
       final taps = <int>[];
