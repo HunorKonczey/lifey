@@ -20,7 +20,6 @@ import '../../chat/application/conversation_list_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../../water/presentation/widgets/add_water_sheet.dart';
-import '../../water/presentation/widgets/water_card.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
 import '../../workouts/application/recommended_template_provider.dart';
@@ -47,8 +46,8 @@ import '../domain/today_meal_group.dart';
 import 'widgets/calorie_hero_card.dart';
 import 'widgets/calorie_sparkline_card.dart';
 import 'widgets/dashboard_avatar_menu.dart';
+import 'widgets/dashboard_tiles.dart';
 import 'widgets/sponsorship_ended_card.dart';
-import 'widgets/stat_card.dart';
 
 Future<void> _openAddWaterSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -89,20 +88,6 @@ Future<void> _rateWorkout(BuildContext context, WidgetRef ref, String clientId) 
         rpe: result.rpe,
         feedbackNote: result.feedbackNote,
       );
-}
-
-enum WeightTrend { up, down }
-
-typedef WeightDelta = ({WeightTrend trend, double diff});
-
-/// Compares the two most recent entries (newest first). Null when there
-/// aren't at least two entries, or the weight didn't change.
-WeightDelta? _weightDelta(List<WeightEntry> entries) {
-  if (entries.length < 2) return null;
-  final diff = entries[0].weight - entries[1].weight;
-  if (diff > 0) return (trend: WeightTrend.up, diff: diff);
-  if (diff < 0) return (trend: WeightTrend.down, diff: diff.abs());
-  return null;
 }
 
 /// Dashboard: today's calories & macros, current weight, recent workouts.
@@ -164,7 +149,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
   Widget build(BuildContext context) {
     final data = ref.watch(dashboardControllerProvider);
     final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
-    final weightDelta = _weightDelta(ref.watch(weightControllerProvider).value ?? const []);
+    final weights = ref.watch(weightControllerProvider).value ?? const <WeightEntry>[];
     final todaySteps = ref.watch(todayStepsControllerProvider).value;
     final recommendedTemplate = ref.watch(recommendedTemplateProvider);
     final streaks = ref.watch(streaksProvider);
@@ -184,7 +169,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
                 child: _DashboardBody(
                   data: data,
                   settings: settings,
-                  weightDelta: weightDelta,
+                  weights: weights,
                   todaySteps: todaySteps,
                   recommendedTemplate: recommendedTemplate,
                   streaks: streaks,
@@ -220,7 +205,7 @@ class _DashboardBody extends ConsumerWidget {
     required this.onRateWorkoutTap,
     required this.onMealsTap,
     required this.onStartRecommended,
-    this.weightDelta,
+    this.weights = const [],
     this.todaySteps,
     this.recommendedTemplate,
     this.streaks = const [],
@@ -228,7 +213,8 @@ class _DashboardBody extends ConsumerWidget {
 
   final DashboardData data;
   final UserSettings settings;
-  final WeightDelta? weightDelta;
+  /// Newest first.
+  final List<WeightEntry> weights;
   final int? todaySteps;
   final WorkoutTemplate? recommendedTemplate;
   final List<Streak> streaks;
@@ -240,9 +226,7 @@ class _DashboardBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = data.stats;
-    final weight = stats.latestWeight;
     final l10n = AppLocalizations.of(context)!;
-    final mc = context.metricColors;
 
     final bannerHeight = ref.watch(bannerAdSlotHeightProvider(0));
     // The body extends behind the bottom nav, so the safe-area bottom already
@@ -277,14 +261,6 @@ class _DashboardBody extends ConsumerWidget {
         // the user had yesterday are gone today. ─────────────────────────
         const SponsorshipEndedCard(),
 
-        // ── Water ────────────────────────────────────────────────────────
-        WaterCard(
-          currentLiters: stats.water,
-          goalLiters: settings.dailyWaterGoalLiters,
-          onAdd: () => _openAddWaterSheet(context),
-        ),
-        const SizedBox(height: 16),
-
         // ── Calories + macros — the one hero of the screen ────────────
         CalorieHeroCard(
           stats: stats,
@@ -293,33 +269,14 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
 
-        // ── Steps + Weight row ────────────────────────────────────────
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (todaySteps != null) ...[
-              Expanded(
-                child: _StepsCard(
-                  steps: todaySteps!,
-                  goal: settings.dailyStepGoal,
-                ),
-              ),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              child: StatCard(
-                label: l10n.latestEntryLabel,
-                value: weight != null ? weight.toStringAsFixed(1) : '—',
-                unit: weight != null ? 'kg' : null,
-                icon: Icons.monitor_weight,
-                color: mc.weight,
-                onTap: () => context.go('/weight'),
-                valueTrailing: weightDelta == null
-                    ? null
-                    : _WeightDeltaBadge(delta: weightDelta!),
-              ),
-            ),
-          ],
+        // ── Water + steps + weight tiles ──────────────────────────────
+        DashboardTiles(
+          stats: stats,
+          settings: settings,
+          todaySteps: todaySteps,
+          weights: weights,
+          onAddWater: () => _openAddWaterSheet(context),
+          onWeightTap: () => context.go('/weight'),
         ),
         const SizedBox(height: 16),
 
@@ -764,76 +721,6 @@ class _SectionTitle extends StatelessWidget {
         color: theme.colorScheme.onSurfaceVariant,
         letterSpacing: 1.2,
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Steps card — shows today's steps with optional goal progress
-// ---------------------------------------------------------------------------
-
-class _StepsCard extends StatelessWidget {
-  const _StepsCard({required this.steps, this.goal});
-
-  final int steps;
-  final int? goal;
-
-  @override
-  Widget build(BuildContext context) {
-    final mc = context.metricColors;
-    final l10n = AppLocalizations.of(context)!;
-    final fmt = NumberFormat.decimalPattern();
-    final ratio = (goal == null || goal! <= 0) ? null : steps / goal!;
-    final goalReached = ratio != null && ratio >= 1.0;
-    final subtitle = goal == null ? null : '/ ${fmt.format(goal)}';
-
-    return StatCard(
-      label: l10n.todaysStepsLabel,
-      value: fmt.format(steps),
-      icon: Icons.directions_walk,
-      color: mc.steps,
-      ratio: ratio,
-      goalReached: goalReached,
-      goalTone: GoalTone.positive,
-      subtitle: subtitle,
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Weight delta badge — colored arrow + diff shown next to weight value
-// ---------------------------------------------------------------------------
-
-class _WeightDeltaBadge extends StatelessWidget {
-  const _WeightDeltaBadge({required this.delta});
-
-  final WeightDelta delta;
-
-  @override
-  Widget build(BuildContext context) {
-    final mc = context.metricColors;
-    final isDown = delta.trend == WeightTrend.down;
-    final color = isDown ? mc.positive : mc.negative;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(
-          isDown ? Icons.arrow_downward : Icons.arrow_upward,
-          size: 13,
-          color: color,
-        ),
-        Text(
-          delta.diff.toStringAsFixed(1),
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: color,
-            height: 1.0,
-          ),
-        ),
-      ],
     );
   }
 }

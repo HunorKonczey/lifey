@@ -1099,27 +1099,6 @@
   "@exerciseFabLabel": {
     "description": "FAB label when on the Exercises tab"
   },
-  "waterAmountLabel": "{current} / {goal} L",
-  "@waterAmountLabel": {
-    "description": "Current water intake vs. daily goal",
-    "placeholders": {
-      "current": {
-        "type": "String"
-      },
-      "goal": {
-        "type": "String"
-      }
-    }
-  },
-  "waterAmountNoGoalLabel": "{current} L",
-  "@waterAmountNoGoalLabel": {
-    "description": "Current water intake when no daily goal is set",
-    "placeholders": {
-      "current": {
-        "type": "String"
-      }
-    }
-  },
   "logWaterTitle": "Log water",
   "@logWaterTitle": {
     "description": "Title of the log-water sheet, and the tooltip on the dashboard's add-water button"
@@ -1946,6 +1925,33 @@
       }
     }
   },
+  "dashboardStepsTileLabel": "Steps",
+  "@dashboardStepsTileLabel": {
+    "description": "Label of the steps tile on the dashboard (docs/redesign/77-mobile-redesign-plan.md R1.4)"
+  },
+  "dashboardWaterOfGoal": "/ {goal} L",
+  "@dashboardWaterOfGoal": {
+    "description": "Unit text beside today's water total in the dashboard water tile, e.g. '0.99 / 2.6 L' — this is the '/ 2.6 L' part. {goal} is the formatted daily goal in litres (docs/redesign/77-mobile-redesign-plan.md R1.4)",
+    "placeholders": {"goal": {"type": "String"}}
+  },
+  "dashboardStepsOfGoal": "of {goal}",
+  "@dashboardStepsOfGoal": {
+    "description": "Text beside today's step count in the dashboard steps tile, e.g. '6,412 of 10,000' — this is the 'of 10,000' part. {goal} is the formatted daily goal",
+    "placeholders": {"goal": {"type": "String"}}
+  },
+  "dashboardWeightLatestEntry": "Latest entry · {when}",
+  "@dashboardWeightLatestEntry": {
+    "description": "Line under the weight in the dashboard weight tile. {when} is 'today', 'yesterday' or a short date",
+    "placeholders": {"when": {"type": "String"}}
+  },
+  "dashboardDayToday": "today",
+  "@dashboardDayToday": {
+    "description": "Lower-case 'today', used inside a sentence such as 'Latest entry · today'"
+  },
+  "dashboardDayYesterday": "yesterday",
+  "@dashboardDayYesterday": {
+    "description": "Lower-case 'yesterday', used inside a sentence such as 'Latest entry · yesterday'"
+  },
   "dashboardHeroKcalLeft": "kcal left",
   "@dashboardHeroKcalLeft": {
     "description": "Caption under the big number in the dashboard calorie ring: the number is the calories remaining today (docs/redesign/77-mobile-redesign-plan.md R1.3)"
@@ -2220,17 +2226,9 @@
   "@todaySectionTitle": {
     "description": "Dashboard section heading for today's nutrition stats"
   },
-  "todaysCaloriesLabel": "Today's calories",
-  "@todaysCaloriesLabel": {
-    "description": "Stat card label for today's calorie total"
-  },
   "currentWeightSectionTitle": "Current weight",
   "@currentWeightSectionTitle": {
     "description": "Dashboard section heading for the latest weight entry"
-  },
-  "latestEntryLabel": "Latest entry",
-  "@latestEntryLabel": {
-    "description": "Stat card label for the most recent weight entry"
   },
   "weightCurrentLabel": "Current",
   "@weightCurrentLabel": {
@@ -2336,10 +2334,6 @@
         "type": "int"
       }
     }
-  },
-  "todaysStepsLabel": "Today's steps",
-  "@todaysStepsLabel": {
-    "description": "Dashboard stat card label for today's HealthKit step count"
   },
   "stepsLabel": "Steps",
   "@stepsLabel": {

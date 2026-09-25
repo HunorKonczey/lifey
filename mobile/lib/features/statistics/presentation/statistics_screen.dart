@@ -400,9 +400,8 @@ class _StatisticsBody extends ConsumerWidget {
     final summary = ref.watch(statSummaryProvider);
     final settings =
         ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
-    final goalValue = metric == StatMetric.steps && settings.dailyStepGoal != null
-        ? settings.dailyStepGoal!.toDouble()
-        : null;
+    final goalValue =
+        metric == StatMetric.steps ? settings.effectiveDailyStepGoal.toDouble() : null;
     final bannerHeight = ref.watch(bannerAdSlotHeightProvider(4));
     final bottomPad = MediaQuery.paddingOf(context).bottom + bannerHeight;
 

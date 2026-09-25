@@ -683,12 +683,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             icon: Icons.directions_walk,
                             iconColor: mc.steps,
                             label: l10n.stepsLabel,
-                            value: _formatInt(_stepGoal),
+                            // No goal set = the default, shown instead of "—"
+                            // (canvas Lifey 5).
+                            value: _formatInt(_stepGoal ?? UserSettings.defaultDailyStepGoal),
                             onTap:
                                 () => _openGoalSheet(
                                   label: l10n.stepsLabel,
                                   suffix: l10n.statUnitSteps,
-                                  initialText: _stepGoal?.toString() ?? '',
+                                  initialText:
+                                      (_stepGoal ?? UserSettings.defaultDailyStepGoal).toString(),
                                   decimal: false,
                                   onSave:
                                       (text) => setState(

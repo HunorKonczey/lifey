@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.3 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.4 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -900,7 +900,7 @@ editor still uses them until R2). Tests: `calorie_hero_card_test.dart` (canvas n
 over / exactly-on-goal, no goals, semantics, tap, HU × 360 / 411 dp × 100 / 130 % × dark / light with no
 ellipsis).
 
-### R1.4 — Mobile UI: water / steps / weight tiles + effective step goal
+### R1.4 — Mobile UI: water / steps / weight tiles + effective step goal ✅
 - Files: `water_card.dart` → restyled as `MetricTile` (or replaced; keep the file if other
   screens use it), `stat_card.dart` (delete if unused afterwards), `dashboard_screen.dart`,
   `features/settings/domain/user_settings.dart` (`effectiveDailyStepGoal` = setting ?? 10 000).
@@ -908,6 +908,32 @@ ellipsis).
   the displayed goal and the notified goal can't disagree — call out in the PR that users with
   no step goal now get 10 000 everywhere.
 - **Verify:** "6 412 of 10 000" with no goal set; `+` on water opens the restyled sheet.
+
+*As built:* `DashboardTiles` (`dashboard/presentation/widgets/dashboard_tiles.dart`): water + steps in an
+`IntrinsicHeight` row of `MetricTile`s, weight full width under them. **Water** — "0.99 / 2.6 L" (value
+`litres`, unit `dashboardWaterOfGoal`), bar, the 48 dp `+` (tooltip "Log water") → the add sheet; with
+no water goal just "0.99 L" and no bar. **Steps** — "6,412 of 10,000" against
+`UserSettings.effectiveDailyStepGoal`; the tile appears only with step data (no health integration → the
+water tile takes the full width, as the old card layout did). **Weight** — value, `DeltaChip.arrow`
+against the previous entry (**blue for a loss, calorie orange for a gain, never green** — the old
+green/red badge judged a direction the tile can't know the goal for), the "Latest entry · today /
+yesterday / Sep 22" line on its own row (the HU truncation fix), and a new `ds/Sparkline` (120 × 56, 2.5 px
+round stroke, r 4.5 end dot — the canvas svg) over the last 10 entries, drawn from two entries up. Weight
+tile taps to `/weight`. `WaterCard` deleted (its only user was the dashboard); `StatCard` stays — the
+statistics screen still uses it (R4). The five ARB keys the old cards used (`waterAmountLabel`,
+`waterAmountNoGoalLabel`, `todaysStepsLabel`, `latestEntryLabel`, `todaysCaloriesLabel`) are deleted.
+- **Effective step goal:** `UserSettings.defaultDailyStepGoal = 10000` and one getter,
+  `effectiveDailyStepGoal` (a stored 0 counts as unset). Used by the dashboard tile, the statistics goal
+  line (steps now always have one) and `StepGoalNotifier` (**users with no step goal now get the
+  "goal reached" notification at 10 000 steps**). The native home-screen widget snapshot keeps the explicit
+  goal (`stepGoal` stays null when unset — its test pins that, and the Kotlin/Swift side can't be checked
+  here); align it when the widgets are next touched. Settings shows the
+  default instead of "—" and pre-fills the edit sheet with it; the stored value stays null until the user
+  edits it. **Streaks and the weekly recap keep the explicit `dailyStepGoal`**: a default isn't a
+  commitment, and a steps streak for someone who never tracked steps would be a permanent "0" in the strip.
+Tests: `dashboard_tiles_test.dart` (canvas numbers, bars, own goal, add button ≥ 48 dp, no-water-goal,
+no-step-data layout, delta directions, relative day, sparkline data, HU × 360 / 411 dp × 100 / 130 % ×
+dark / light), `sparkline_test.dart`, `effective_step_goal_test.dart`.
 
 ### R1.5 — Mobile UI: weekly calorie bar chart
 - Files: `calorie_sparkline_card.dart` → replaced by a `LifeyBarChart` card (rename to
