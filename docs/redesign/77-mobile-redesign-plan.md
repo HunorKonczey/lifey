@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 in progress (R4.1–R4.7 done; emulator review pending)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 done (R4.1–R4.7 + review fixes R4.fix-1…3, reviewed 2026-09-25)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -2227,3 +2227,34 @@ template picker and the Templates / Exercises tabs.
   → fixed in R3.11.
 
 **Not exercised on the emulator** (widget tests only): the zone card, route map and splits (the seeded run has none), the game / indoor-bike layouts, imperial units, offline.
+
+### R4 — 2026-09-25 — Pixel_10 AVD (1080 × 2424, 420 dpi = 411 × 923 dp, API 37)
+
+Scope: Weight and Statistics against `Lifey 4 Weight Stats.dc.html` — 4.1 weight, 4.2 log-weight sheet, 4.3 weight light, 5 stats (steps dark, workouts light) — canvas frames put next to emulator
+screenshots, plus the flows: **log weight** (Weight → "+ Log" → 64.5 → tap + twice → 64.7 → Save → the hero reads 64.7 with a 0.1 ↑ chip in the calorie orange and the chart's last point moves) and
+**Statistics** (metric chips → weekly workouts → weight line → the 7 d range). Seeded account `anna.r1@lifey.test` (no onboarding weight goal, no steps or water history, 30 days of weights, 13 workouts in
+the last 30 days). Matrix covered: Weight dark HU, light HU, light HU ×1.3 and its sheet; Stats dark HU (calories, workouts, weight), dark EN (weight), light HU (weight, ×1.3), and the 7 d range with
+**Remove animations** on (the chart and pill change on the same frame).
+
+**Matches**
+- Weight: large title with the collapsing header, the hero card (overline, 64 px number, the two delta chips, the goal band / "Set a goal weight" action), the segmented range switcher above the chart,
+  3-label axis with grid, gradient fill, dotted 7-day average, emphasised last point, legend "Daily · 7-day average"; HISTORY rows with signed chips; extended "+ Log" FAB — dark and light.
+- Log sheet: 72 px value between the 56 dp ±0.1 buttons, "Yesterday 64.6 kg", the date row, full-width Save; the flow saves 64.7 exactly (whole-gram steps) and the screen updates at once.
+- Stats: header, metric chips with the colour dot, the hero card (overline "Daily average · last 30 days" / "Latest · last 30 days", 64 px number and unit, "↓ 4 % vs prior 30 d" style chips), the chart per
+  metric (weekly workout bars with dates and the footnote, weight line with the dotted average, calorie bars with the dashed goal), three side tiles, the range switcher under them, the paywall lock on
+  gated ranges (widget tests). HU strings ("Napi átlag · elmúlt 30 nap", "Legtöbb egy hétben", "Hetente csoportosítva, hogy egy nap sose tűnjön kiugrásnak.") fit at ×1.3 with nothing truncated.
+
+**Deviations (intended)**
+- The strength / cardio switch is drawn only for the workout-derived metrics (canvas: always) — Q1 as planned, R4.6; no calendar icon — the app has no custom range, R4.6.
+- Weekly bars are calendar weeks starting Monday (the canvas' end on today), and the 7 d range shows workouts by day — R4.7.
+- "Also saved to Health Connect" is hidden — the app only imports weight (R4.4). The seeded account has no goal, so the goal band's progress track was verified by widget tests only.
+- At ×1.3 the two hero delta chips stack under the number instead of sitting beside it (R4.1).
+
+**Bugs (fixed on `feature/mobile-redesign`)**
+- The segmented control's selected pill was the dark-mode surface in light too; the canvas draws it in the brand green with white text (weight, stats) → **R4.fix-1** (`LifeySegmented`, test).
+- The three stats side tiles used the nested surface (a lighter box in dark, beige in light); the canvas uses the card colour → **R4.fix-2**.
+- The English "Statistics" title and nav label are "Stats" on the canvas and in the plan's spec → **R4.fix-3** (ARB only).
+- Found while building, before the review: the sparse date labels under 30 / 90 bars hung past the card's edge (the newest label is now right-aligned to the chart, the oldest left-aligned), and the metric
+  chip row did not scroll to a selected chip (it is a plain scroll view now and reveals the selection).
+
+**Not exercised on the emulator** (widget tests only): steps, water, cardio metrics and the locked ranges (no such history / entitlement in the seed), the goal band with a goal, Health import from the ⋮ menu.
