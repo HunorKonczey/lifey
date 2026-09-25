@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 next
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.2 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1310,15 +1310,35 @@ number; PR ↑ and 🏆 have one consistent colour language everywhere.
 `application/` from `personal_record.dart` / `cardio_personal_record.dart` (R3.2 below) — if a
 session-level lookup is expensive, compute once per list build, not per row.
 
-### R3.1 — Mobile UI: workouts header + tabs + week summary
+### R3.1 — Mobile UI: workouts header + tabs + week summary ✅
 - `workouts_screen.dart`, `sessions_tab.dart`; filter moves to the header icon.
 - **Verify:** filter still works; week summary matches the list for the current week (same week
   definition as streaks/recap — docs/37).
 
-### R3.2 — Mobile data: PR count per session for the list
+*As built:* `WorkoutsScreen` is a `NestedScrollView` like the Nutrition screen (R2.1): pinned `LifeyHeader` "Workouts" with the round
+**`tune` filter button** (Sessions and Exercises tabs; a dot on it while a non-default filter is on; none on Templates), the pill tab bar
+pinned under it on the header's scrim, the tabs as the body (no `topPadding` any more). The old popup menus are gone: the button opens a
+`LifeySheet` — **Sessions:** "PERIOD" (Today / Week / All) and "TYPE" (All, Strength, Cardio and every activity) as choice chips that
+apply at once; **Exercises:** the muscle group. `SessionsTab` now leads its list with the recommended-workout card, the **week summary**
+(`WeekSummaryRow`: three equal-height tiles — 30/800 number over a wrapping label: "3 workouts this week · 96 min this week · 5.2 km this
+week", miles for imperial) and the upcoming section. `computeWeekSummary` uses **the weekly recap's rules** (Monday–Sunday local week, started
+sessions finished or not, finished sessions' effective minutes, DISTANCE + MACHINE cardio distance) and counts the whole week whatever the
+list is filtered to. Tests: `week_summary_test`, `week_summary_row_test` (canvas numbers, singular, miles, HU, 360/411 dp × 1.3, equal
+tile heights), `workouts_screen_test` (header, filter sheet, dot, no filter on Templates). The session rows themselves are still the old
+cards until R3.3.
+
+### R3.2 — Mobile data: PR count per session for the list ✅
 - `workouts/application/` new provider `sessionPrCountsProvider` (map sessionId → count) built
   from the existing PR domain; unit tests.
 - **Verify:** a session that set a PR reports ≥ 1; editing an older session re-computes.
+
+*As built:* `computeSessionPrCounts` (`workouts/application/session_pr_counts.dart`) replays the whole cached history oldest to newest and
+returns a `clientId → count` map (`sessionPrCountsProvider`, one recompute per change of the sessions — not per row). Strength: one record
+per **(exercise, `PrType`)** pair the session set, judged against the exercise's earlier sessions *and* the earlier sets of the same session
+(a bench press with a new heaviest weight and a new estimated 1RM = 2, three heavier sets in a row = still one "heaviest set"); cardio: one
+per `CardioPrType` broken against the earlier cardio sessions; an unfinished session has none; the strength and cardio engines stay
+separate. Editing an older session re-judges every later one because nothing is stored. Tests: `session_pr_counts_test` (11 cases incl. the
+canvas "2 PRs", same-session ordering, ties, edit re-judging, input order, cardio).
 
 ### R3.3 — Mobile UI: session list rows + day grouping
 - `sessions_tab.dart` (row anatomy, grouping headers, PR chip, long-press delete).

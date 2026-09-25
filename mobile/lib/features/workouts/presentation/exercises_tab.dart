@@ -26,11 +26,9 @@ import 'widgets/add_exercise_sheet.dart';
 class ExercisesTab extends ConsumerStatefulWidget {
   const ExercisesTab({
     super.key,
-    this.topPadding = 0,
     this.categoryFilter,
   });
 
-  final double topPadding;
 
   /// null = show all (grouped view); non-null = flat list for that category.
   /// Owned by the parent screen and shown in the AppBar.
@@ -82,7 +80,6 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return RefreshIndicator(
-      displacement: widget.topPadding,
       onRefresh: () => ref.read(exerciseControllerProvider.notifier).refresh(),
       child: state.when(
         data: (exercises) {
@@ -102,7 +99,7 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
 
           return CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(child: SizedBox(height: widget.topPadding)),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s8)),
               if (widget.categoryFilter != null)
                 _FlatList(
                   exercises: exercises

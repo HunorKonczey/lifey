@@ -24,6 +24,7 @@ import '../application/recommended_template_provider.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/exercise_enums.dart';
+import '../domain/week_summary.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'log_session_screen.dart';
@@ -31,6 +32,7 @@ import 'open_workout_screens.dart';
 import 'session_row_plan.dart';
 import 'widgets/recommended_workout_card.dart';
 import 'widgets/route_painter.dart';
+import 'widgets/week_summary_row.dart';
 import 'widgets/upcoming_sessions_section.dart';
 
 /// Whether [session] passes the sessions-tab kind/type filter
@@ -57,13 +59,11 @@ bool matchesSessionKindFilter(
 class SessionsTab extends ConsumerStatefulWidget {
   const SessionsTab({
     super.key,
-    this.topPadding = 0,
     this.filter = DateRangeFilter.today,
     this.kindFilter,
     this.activityTypeFilter,
   });
 
-  final double topPadding;
   final DateRangeFilter filter;
 
   /// `null` (all), `'STRENGTH'`, or `'CARDIO'` — see [matchesSessionKindFilter].
@@ -154,12 +154,6 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
           orElse: () => const <String, String?>{},
         );
 
-    // The recommended-workout card is pinned above the scrollable area (not a
-    // list item), so once it's shown the list itself starts right below it
-    // instead of under `widget.topPadding`.
-    final listTopPadding = recommended == null ? widget.topPadding : 4.0;
-    final refreshDisplacement = recommended == null ? widget.topPadding : 40.0;
-
     final content = state.when(
       data: (sessions) {
         // Trainer-scheduled, not-yet-started sessions within the 7-day
@@ -189,39 +183,50 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 
         if (sessions.isEmpty || (filtered.isEmpty && upcoming.isEmpty)) {
           return RefreshIndicator(
-            displacement: refreshDisplacement,
-            onRefresh: () =>
-                ref.read(workoutSessionControllerProvider.notifier).refresh(),
+            onRefresh: () => ref.read(workoutSessionControllerProvider.notifier).refresh(),
             child: EmptyView(
               icon: Icons.fitness_center_outlined,
-              title: sessions.isEmpty
-                  ? l10n.noWorkoutsLoggedYetTitle
-                  : l10n.noWorkoutsInRangeTitle,
-              subtitle: sessions.isEmpty
-                  ? l10n.tapPlusToLogOneMessage
-                  : l10n.tryWiderDateFilterMessage,
+              title: sessions.isEmpty ? l10n.noWorkoutsLoggedYetTitle : l10n.noWorkoutsInRangeTitle,
+              subtitle: sessions.isEmpty ? l10n.tapPlusToLogOneMessage : l10n.tryWiderDateFilterMessage,
             ),
           );
         }
 
+        // The week summary counts the whole calendar week, whatever the list
+        // is filtered to (same rules as the weekly recap).
+        final summary = computeWeekSummary(sessions, DateTime.now());
         final hasUpcoming = upcoming.isNotEmpty;
-        final leadingCount = hasUpcoming ? 1 : 0;
+        // Leading items: the recommended-workout card, the week summary, the
+        // upcoming section — each only when it has something to show.
+        final leading = <Widget>[
+          if (recommended != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+              child: RecommendedWorkoutCard(
+                template: recommended,
+                onTap: () => _startRecommended(context, recommended),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.s16),
+            child: WeekSummaryRow(summary: summary, unitSystem: unitSystem),
+          ),
+          if (hasUpcoming)
+            UpcomingSessionsSection(
+              sessions: upcoming,
+              onStart: (s) => _edit(context, s),
+              onDelete: (s) => _confirmDelete(context, ref, s),
+            ),
+        ];
         return RefreshIndicator(
-          displacement: refreshDisplacement,
-          onRefresh: () =>
-              ref.read(workoutSessionControllerProvider.notifier).refresh(),
+          onRefresh: () => ref.read(workoutSessionControllerProvider.notifier).refresh(),
           child: ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, listTopPadding, 12, bottomPad + 88),
-            itemCount: leadingCount + visible.length + (truncated ? 1 : 0),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
+            itemCount: leading.length + visible.length + (truncated ? 1 : 0),
             itemBuilder: (context, index) {
-              if (hasUpcoming && index == 0) {
-                return UpcomingSessionsSection(
-                  sessions: upcoming,
-                  onStart: (s) => _edit(context, s),
-                  onDelete: (s) => _confirmDelete(context, ref, s),
-                );
-              }
-              final i = index - leadingCount;
+              if (index < leading.length) return leading[index];
+              final i = index - leading.length;
               if (i >= visible.length) return const HistoryBoundaryRow();
               return _SessionCard(
                 session: visible[i],
@@ -238,26 +243,11 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => ErrorView(
         error: error,
-        onRetry: () =>
-            ref.read(workoutSessionControllerProvider.notifier).refresh(),
+        onRetry: () => ref.read(workoutSessionControllerProvider.notifier).refresh(),
       ),
     );
 
-    if (recommended == null) return content;
-
-    return Column(
-      children: [
-        SizedBox(height: widget.topPadding),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: RecommendedWorkoutCard(
-            template: recommended,
-            onTap: () => _startRecommended(context, recommended),
-          ),
-        ),
-        Expanded(child: content),
-      ],
-    );
+    return content;
   }
 }
 

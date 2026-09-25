@@ -1366,5 +1366,13 @@
   "noRecipesMatchMessage": "Próbálj másik szűrőt",
   "macrosLastDaysTitle": "Utolsó 7 nap",
   "recipeIngredientsSectionCount": "Hozzávalók · {count}",
-  "recipeTotalLabel": "Recept összesen"
+  "recipeTotalLabel": "Recept összesen",
+  "weekSummaryWorkoutsLabel": "{count, plural, one{edzés a héten} other{edzés a héten}}",
+  "weekSummaryMinutesLabel": "perc a héten",
+  "weekSummaryKmLabel": "km a héten",
+  "weekSummaryMilesLabel": "mérföld a héten",
+  "workoutsFilterTitle": "Szűrők",
+  "workoutsFilterPeriod": "Időszak",
+  "workoutsFilterType": "Típus",
+  "workoutsFilterMuscleGroup": "Izomcsoport"
 }

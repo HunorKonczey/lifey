@@ -6261,5 +6261,38 @@
   "recipeTotalLabel": "Recipe total",
   "@recipeTotalLabel": {
     "description": "Label of the floating summary panel of the recipe editor (the meal editor's says 'Meal total')"
+  },
+  "weekSummaryWorkoutsLabel": "{count, plural, one{workout this week} other{workouts this week}}",
+  "@weekSummaryWorkoutsLabel": {
+    "description": "Label under the number of workouts in the week summary above the Sessions list (docs/redesign/77-mobile-redesign-plan.md R3.1)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "weekSummaryMinutesLabel": "min this week",
+  "@weekSummaryMinutesLabel": {
+    "description": "Label under the workout minutes of the week in the week summary above the Sessions list"
+  },
+  "weekSummaryKmLabel": "km this week",
+  "@weekSummaryKmLabel": {
+    "description": "Label under the distance of the week in kilometres in the week summary above the Sessions list"
+  },
+  "weekSummaryMilesLabel": "mi this week",
+  "@weekSummaryMilesLabel": {
+    "description": "Label under the distance of the week in miles (imperial units) in the week summary above the Sessions list"
+  },
+  "workoutsFilterTitle": "Filter",
+  "@workoutsFilterTitle": {
+    "description": "Title of the filter sheet and tooltip of the tune button in the Workouts header"
+  },
+  "workoutsFilterPeriod": "Period",
+  "@workoutsFilterPeriod": {
+    "description": "Section label in the Sessions filter sheet: today / week / all"
+  },
+  "workoutsFilterType": "Type",
+  "@workoutsFilterType": {
+    "description": "Section label in the Sessions filter sheet: all / strength / cardio / one activity"
+  },
+  "workoutsFilterMuscleGroup": "Muscle group",
+  "@workoutsFilterMuscleGroup": {
+    "description": "Section label in the Exercises filter sheet"
   }
 }
