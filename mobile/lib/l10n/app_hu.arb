@@ -1446,5 +1446,11 @@
   "logOutDialogMessage": "Minden mentve van a fiókodban. A telefonon lévő adataid törlődnek.",
   "logOutDialogMessageUpload": "{count} nem szinkronizált módosítás előbb feltöltődik. A telefonon lévő adataid törlődnek.",
   "logOutDialogMessageLoss": "{count} módosítást nem lehet feltölteni, és el fog veszni. Nincs internetkapcsolat. A telefonon lévő adataid törlődnek.",
-  "logOutUploadingMessage": "Módosítások feltöltése…"
+  "logOutUploadingMessage": "Módosítások feltöltése…",
+  "settingsGoalsEditAction": "Szerkesztés",
+  "settingsProChip": "Pro",
+  "settingsHealthOnSubtitle": "Be · a súly és a lépések automatikusan érkeznek",
+  "settingsHealthOffSubtitle": "Ki · a súlyt és a lépéseket kézzel rögzíted",
+  "settingsNotificationsOnCount": "{count} be",
+  "settingsNotificationsAllOff": "Ki"
 }

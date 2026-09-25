@@ -143,10 +143,16 @@ class LifeyHeader extends StatelessWidget {
     this.actions = const [],
     this.bottom,
     this.bottomHeight = 0,
+    this.onBack,
   });
 
   final String title;
   final String? overline;
+
+  /// A pushed screen with a large title (Settings): draws the round back
+  /// button at the left of the title row and moves the title beside it. Null
+  /// on the main tabs, which have nowhere to go back to.
+  final VoidCallback? onBack;
 
   /// A widget pinned under the title row — the pill tab bar of Workouts and
   /// Nutrition — [bottomHeight] tall. It is part of this one sliver, so a
@@ -172,7 +178,8 @@ class LifeyHeader extends StatelessWidget {
     final actionsWidth = actions.isEmpty
         ? 0.0
         : actions.length * 48.0 + (actions.length - 1) * 8 + 12;
-    final titleWidth = (mq.size.width - 2 * AppSpacing.screen - actionsWidth)
+    final backWidth = onBack == null ? 0.0 : _backInset;
+    final titleWidth = (mq.size.width - 2 * AppSpacing.screen - actionsWidth - backWidth)
         .clamp(80.0, double.infinity);
 
     final titleStyle = t.headlineMedium!;
@@ -212,9 +219,14 @@ class LifeyHeader extends StatelessWidget {
         actionsWidth: actionsWidth,
         bottom: bottom,
         bottomHeight: bottomHeight,
+        onBack: onBack,
       ),
     );
   }
+
+  /// The back button (44 dp circle in a 48 dp box) and its gap: what the title
+  /// gives up on the left.
+  static const double _backInset = 48 + AppSpacing.s4;
 }
 
 class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
@@ -231,8 +243,10 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
     required this.actionsWidth,
     required this.bottom,
     required this.bottomHeight,
+    required this.onBack,
   });
 
+  final VoidCallback? onBack;
   final Widget? bottom;
   final double bottomHeight;
   final String title;
@@ -260,6 +274,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
     final t = range <= 0 ? 1.0 : (shrinkOffset / range).clamp(0.0, 1.0);
     final collapsed = t >= 1;
     final fontSize = lerpDouble(titleStyle.fontSize, 20, t)!;
+    final backInset = onBack == null ? 0.0 : LifeyHeader._backInset;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: _overlayStyle(context),
@@ -269,7 +284,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
           _ScrimBackground(
               opacity: t, showHairline: collapsed || overlapsContent),
           Positioned(
-            left: AppSpacing.screen,
+            left: AppSpacing.screen + backInset,
             right: AppSpacing.screen + actionsWidth,
             // Bottom-anchored: as the header shrinks the title rides up, and
             // in the collapsed 52 px row it ends vertically centred.
@@ -322,7 +337,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
           ),
           if (collapsedTitle != null)
             Positioned(
-              left: AppSpacing.screen,
+              left: AppSpacing.screen + backInset,
               right: AppSpacing.screen + actionsWidth,
               bottom: bottomHeight + 14,
               child: ExcludeSemantics(
@@ -340,6 +355,17 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
                     ),
                   ),
                 ),
+              ),
+            ),
+          if (onBack != null)
+            Positioned(
+              left: AppSpacing.screen - 2,
+              bottom: bottomHeight,
+              height: _rowHeight,
+              child: HeaderIconButton(
+                icon: Icons.arrow_back_rounded,
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: onBack,
               ),
             ),
           if (actions.isNotEmpty)
@@ -369,6 +395,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
       old.collapsedTitle != collapsedTitle ||
       old.actions != actions ||
       old.bottom != bottom ||
+      old.onBack != onBack ||
       old.bottomHeight != bottomHeight ||
       old.minExtentValue != minExtentValue ||
       old.maxExtentValue != maxExtentValue ||

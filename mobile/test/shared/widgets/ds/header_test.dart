@@ -39,6 +39,35 @@ double _titleSize(WidgetTester tester, String title) => tester.widget<Text>(find
 
 void main() {
   group('LifeyHeader (large title)', () {
+    testWidgets('onBack draws a round back button and moves the title beside it', (tester) async {
+      var back = 0;
+      await tester.pumpWidget(_app(Scaffold(
+        body: CustomScrollView(slivers: [
+          LifeyHeader(title: 'Settings', onBack: () => back++),
+          SliverList.list(children: [for (var i = 0; i < 40; i++) SizedBox(height: 48, child: Text('row $i'))]),
+        ]),
+      )));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+      final titleLeft = tester.getTopLeft(find.text('Settings')).dx;
+      final backRight = tester.getTopRight(find.byIcon(Icons.arrow_back_rounded)).dx;
+      expect(titleLeft, greaterThanOrEqualTo(backRight));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      expect(back, 1);
+
+      // Collapsed, the button and the title still share the 52 dp row.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('without onBack there is no back button (the main tabs)', (tester) async {
+      await tester.pumpWidget(_app(_largeTitlePage()));
+      expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+    });
+
     testWidgets('expanded: 30 px title under the date overline', (tester) async {
       await tester.pumpWidget(_app(_largeTitlePage()));
       expect(_titleSize(tester, 'Good morning, Anna'), 30);

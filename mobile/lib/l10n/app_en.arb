@@ -6588,5 +6588,30 @@
   "logOutUploadingMessage": "Uploading your changes…",
   "@logOutUploadingMessage": {
     "description": "Shown in a small progress dialog while the queued changes are uploaded before logging out"
+  },
+  "settingsGoalsEditAction": "Edit",
+  "@settingsGoalsEditAction": {
+    "description": "Action at the right of the DAILY GOALS label in Settings; opens Body & goals, which recalculates the goals (docs/redesign/77-mobile-redesign-plan.md R5.7)"
+  },
+  "settingsProChip": "Pro",
+  "@settingsProChip": {
+    "description": "Chip on the profile card in Settings when the account is on the Pro tier"
+  },
+  "settingsHealthOnSubtitle": "On · weight and steps are imported automatically",
+  "@settingsHealthOnSubtitle": {
+    "description": "Subline of the Health row in Settings while the connection is on"
+  },
+  "settingsHealthOffSubtitle": "Off · weight and steps are logged by hand",
+  "@settingsHealthOffSubtitle": {
+    "description": "Subline of the Health row in Settings while the connection is off — says what off means"
+  },
+  "settingsNotificationsOnCount": "{count} on",
+  "@settingsNotificationsOnCount": {
+    "description": "Value of the Notifications row in Settings: how many notification types are switched on, e.g. '3 on'",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "settingsNotificationsAllOff": "Off",
+  "@settingsNotificationsAllOff": {
+    "description": "Value of the Notifications row in Settings when no notification type is on"
   }
 }
