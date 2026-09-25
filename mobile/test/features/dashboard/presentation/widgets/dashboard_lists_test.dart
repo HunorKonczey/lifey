@@ -59,6 +59,9 @@ final _canvasGroups = [
   ]),
 ];
 
+/// A row's meta line as the widget builds it: parts glued with no-break spaces.
+String _meta(List<String> parts) => parts.map((p) => p.replaceAll(' ', ' ')).join(' · ');
+
 Widget _meals({
   List<TodayMealGroup>? groups,
   VoidCallback? onSeeAll,
@@ -223,9 +226,9 @@ void main() {
       await tester.pumpWidget(_app(_workouts([_strength(), _run()])));
       expect(find.text('RECENT WORKOUTS'), findsOneWidget);
       expect(find.text('Push day'), findsOneWidget);
-      expect(find.text('Wed 17:30 · 34 min · 2 exercises'), findsOneWidget);
+      expect(find.text(_meta(['Wed 17:30', '34 min', '2 exercises'])), findsOneWidget);
       expect(find.text('Running'), findsOneWidget);
-      expect(find.text('Tue 07:45 · 5.21 km · 28 min'), findsOneWidget);
+      expect(find.text(_meta(['Tue 07:45', '5.21 km', '28 min'])), findsOneWidget);
       expect(find.textContaining('323', findRichText: true), findsOneWidget);
       expect(tester.widgetList<ListIconHolder>(find.byType(ListIconHolder)).map((h) => h.icon),
           [Icons.fitness_center_rounded, Icons.directions_run]);
@@ -233,7 +236,7 @@ void main() {
 
     testWidgets('"1 exercise" is singular', (tester) async {
       await tester.pumpWidget(_app(_workouts([_strength(exercises: const ['Squat'])])));
-      expect(find.text('Wed 17:30 · 34 min · 1 exercise'), findsOneWidget);
+      expect(find.text(_meta(['Wed 17:30', '34 min', '1 exercise'])), findsOneWidget);
     });
 
     testWidgets('a strength session without a template is called "Strength"', (tester) async {
@@ -243,8 +246,8 @@ void main() {
 
     testWidgets('cardio uses moving time, not the elapsed time with pauses', (tester) async {
       await tester.pumpWidget(_app(_workouts([_run()])));
-      expect(find.textContaining('28 min'), findsOneWidget);
-      expect(find.textContaining('35 min'), findsNothing);
+      expect(find.textContaining('28 min'), findsOneWidget);
+      expect(find.textContaining('35 min'), findsNothing);
     });
 
     testWidgets('imperial units show miles', (tester) async {
@@ -319,8 +322,8 @@ void main() {
       expect(find.text('Étkezés'), findsOneWidget);
       expect(find.text('Fotó'), findsOneWidget);
       expect(find.text('Reggeli · 07:15'), findsOneWidget);
-      expect(find.textContaining('Sze 17:30'), findsOneWidget);
-      expect(find.textContaining('5,21 km'), findsOneWidget);
+      expect(find.textContaining('Sze 17:30'), findsOneWidget);
+      expect(find.textContaining('5,21 km'), findsOneWidget);
       expect(find.textContaining(RegExp('Wed|Tue')), findsNothing);
     });
 

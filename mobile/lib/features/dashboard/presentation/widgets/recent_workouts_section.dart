@@ -109,11 +109,17 @@ class RecentWorkoutsSection extends StatelessWidget {
     return ListRow(
       leading: ListIconHolder(icon: icon, color: color),
       title: title,
-      subtitle: parts.join(' · '),
+      subtitle: _joinMeta(parts),
       trailing: trailing,
       onTap: () => onTap(w.clientId),
     );
   }
+
+  /// "Wed 17:30 · 34 min · 2 exercises" — a wrapped line breaks only at the
+  /// dots: every part keeps its number and unit together ("34 perc") and the
+  /// separator stays with the part before it, so no line starts with a "·".
+  static String _joinMeta(List<String> parts) =>
+      parts.map((p) => p.replaceAll(' ', ' ')).join(' · ');
 
   /// Cardio: moving time (elapsed time includes pauses); strength: start →
   /// finish. Under a minute shows nothing.
