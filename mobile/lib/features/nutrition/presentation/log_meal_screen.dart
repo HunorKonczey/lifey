@@ -34,12 +34,22 @@ import 'widgets/meal_estimate_sheet.dart';
 /// open on that food (docs/75-log-food-from-foods-tab-plan.md §2.4); if that
 /// first sheet is dismissed without adding anything, the screen closes too.
 class LogMealScreen extends ConsumerStatefulWidget {
-  const LogMealScreen({super.key, this.meal, this.initialFood, this.startWithPhoto = false})
-      : assert(meal == null || initialFood == null),
-        assert(!startWithPhoto || (meal == null && initialFood == null));
+  const LogMealScreen({
+    super.key,
+    this.meal,
+    this.initialFood,
+    this.startWithPhoto = false,
+    this.initialDate,
+  })  : assert(meal == null || initialFood == null),
+        assert(!startWithPhoto || (meal == null && initialFood == null)),
+        assert(initialDate == null || meal == null);
 
   final Meal? meal;
   final Food? initialFood;
+
+  /// The day a new meal is logged on (the Meals tab's selected day), at the
+  /// current time of day. Null = now.
+  final DateTime? initialDate;
 
   /// Open straight into "estimate from a photo" (the dashboard's Photo
   /// action). The screen closes again if nothing came of it — cancelled,
@@ -91,7 +101,10 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     super.initState();
     final meal = widget.meal;
     _mealType = meal?.mealType ?? _mealTypeForHour(DateTime.now().hour);
-    _dateTime = meal?.dateTime ?? DateTime.now();
+    final now = DateTime.now();
+    final day = widget.initialDate;
+    _dateTime = meal?.dateTime ??
+        (day == null ? now : DateTime(day.year, day.month, day.day, now.hour, now.minute));
     if (meal != null) {
       for (final entry in meal.entries) {
         final q = entry.quantityInGrams;

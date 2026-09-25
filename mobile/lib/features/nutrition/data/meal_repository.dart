@@ -98,6 +98,29 @@ class MealRepository {
     });
   }
 
+  /// Every meal logged on the local calendar day of [day], newest first —
+  /// the Meals tab's selected day. Bounded by the day's own [start, next
+  /// midnight) window rather than by [watchPaged]'s row count, so a busy
+  /// week can't push part of a day out of view. (`DateTime(y, m, d + 1)`
+  /// is the next local midnight even across a daylight-saving change.)
+  Stream<List<Meal>> watchDay(DateTime day) {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = DateTime(day.year, day.month, day.day + 1);
+    final joinedMeals$ = (_db.select(_db.meals)
+          ..where((t) =>
+              t.mealDateTime.isBiggerOrEqualValue(start) & t.mealDateTime.isSmallerThanValue(end)))
+        .join([
+      leftOuterJoin(_db.mealEntries, _db.mealEntries.mealClientId.equalsExp(_db.meals.clientId)),
+      leftOuterJoin(_db.foods, _db.foods.clientId.equalsExp(_db.mealEntries.foodClientId)),
+    ]).watch();
+
+    return combineLatest2(
+      joinedMeals$,
+      _db.select(_db.pendingOperations).watch(),
+      _processJoined,
+    );
+  }
+
   List<Meal> _processJoined(List<_JoinedMealRow> joinedRows, List<PendingOperationRow> ops) {
     final blocked = blockedByActiveDelete(ops);
 

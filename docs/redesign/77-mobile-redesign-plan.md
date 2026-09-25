@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.3 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1116,13 +1116,35 @@ Meals gets its day selection in R2.2, Macros loses its range chip in R2.8 (the c
 (header, copy-day sheet, search open/close per tab).
 `mealTypeStyle` moved to `nutrition/presentation/widgets/meal_type_style.dart` (dashboard + nutrition share it).
 
-### R2.2 — Mobile UI: week strip replaces the Today / Week / All filter
+### R2.2 — Mobile UI: week strip replaces the Today / Week / All filter ✅
 - New `nutrition/presentation/widgets/week_strip.dart`; `meals_tab.dart`; the calendar icon
   keeps the old All view reachable.
 - **Verify:** selecting a past day shows its meals; ring fill matches that day's kcal/goal; HU
   weekday abbreviations.
 
-### R2.3 — Mobile UI: day budget card + meal list rows
+*As built (R2.2 and R2.3 landed together, one commit):* the Meals tab is a `ListView` on 20 px margins:
+`WeekStrip` (seven equal cells, 72 tall, weekday 11/600 over a 30 px calorie `ProgressRing` with the date
+inside; the selected day is a `nested` pill with a 1.5 px primary outline and a primary weekday) → `DayBudgetCard`
+(`621 / 2,360 kcal`, `TintedChip` "1,739 left" / "212 over", the P/C/F `RatioBar` — segments are `g × 4|4|9 /
+calorie goal`, so the empty stretch is what is left —, and the three "29 / 129 g P" lines with the value bold in
+its metric colour; macros without a goal show just grams, no calorie goal → no chip and the bar shows the
+macros' share) → one `ListGroup` of `MealListRow`s (44 icon holder tinted per meal type, name / kcal,
+"Breakfast · 07:15" / P C F in colour, the foods line wrapping to two lines; time order, oldest first, as in
+the canvas). The selected day is `selectedMealDayProvider` (null = today; `effectiveMealDay` drops a pick that
+has left the strip) and its meals come from the new `MealRepository.watchDay` / `mealsOnDayProvider` — a
+day-bounded query, so a busy week can't fall off `mealControllerProvider`'s 40-meal page. "+ Meal" and the
+empty state's "Add meal" log onto the selected day (`LogMealScreen.initialDate`). **The old Today / Week / All
+filter is gone:** the last seven days are the strip, and the header's calendar button opens the new
+`AllMealsScreen` (day-grouped, paged, free-history boundary) for anything older. Empty day: `EmptyStateCard`
+(new, extracted from `EmptyView`) "No meals yet today" + Add meal + **Copy a day** — it replaces the one-tap
+"Copy yesterday" button (`copyYesterdayButton` deleted; the sheet lists yesterday first). Per-meal copy moved
+into the row's **long-press menu** (Edit / Duplicate / Delete in a `LifeySheet`); swipe-to-delete with its
+confirmation is kept, and the duplicate dialog is rebuilt on tokens like `LogoutDialog` (its five colour
+literals gone). Hungarian macro letters are new ARB keys (`macroLetterProtein/Carbs/Fat` = F / Sz / Zs; EN P / C / F).
+Tests: `meal_days_test`, `week_strip_test`, `day_budget_card_test`, `meal_list_row_test`, `meals_tab_test`
+(replaces `meals_tab_copy_yesterday_test`).
+
+### R2.3 — Mobile UI: day budget card + meal list rows ✅ (built with R2.2, see its notes)
 - `meals_tab.dart`, new `widgets/day_budget_card.dart`; per-meal copy → long-press menu
   (`duplicate_meal_dialog` restyled, its 5 colour literals removed).
 - **Verify:** 0-meal day shows the R0 empty state ("No meals yet today" + Add meal / Copy a

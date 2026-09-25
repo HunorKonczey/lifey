@@ -144,13 +144,15 @@ class ListIconHolder extends StatelessWidget {
 }
 
 /// The trailing number of a row — "383 kcal": 15/800 tabular, unit 12/600
-/// in the secondary text colour.
+/// in the secondary text colour. [size] is the number's size (the nutrition
+/// meal rows draw it at 16).
 class ListRowValue extends StatelessWidget {
-  const ListRowValue({super.key, required this.value, this.unit, this.color});
+  const ListRowValue({super.key, required this.value, this.unit, this.color, this.size = 15});
 
   final String value;
   final String? unit;
   final Color? color;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +163,7 @@ class ListRowValue extends StatelessWidget {
           text: value,
           style: TextStyle(
             fontFamily: AppType.fontFamily,
-            fontSize: 15,
+            fontSize: size,
             fontWeight: FontWeight.w800,
             color: color ?? p.text,
             fontFeatures: AppType.tabular,

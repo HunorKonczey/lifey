@@ -423,10 +423,6 @@
   "@tapPlusToLogOneMessage": {
     "description": "Empty state subtitle on the Meals tab"
   },
-  "noMealsInRangeTitle": "No meals in this range",
-  "@noMealsInRangeTitle": {
-    "description": "Empty state title when a date filter excludes all meals"
-  },
   "tryWiderDateFilterMessage": "Try a wider date filter",
   "@tryWiderDateFilterMessage": {
     "description": "Empty state subtitle when a date filter excludes all meals"
@@ -458,10 +454,6 @@
   "couldNotDuplicateMealMessage": "Couldn't duplicate the meal",
   "@couldNotDuplicateMealMessage": {
     "description": "Snackbar shown when duplicating a meal fails"
-  },
-  "copyYesterdayButton": "Copy yesterday",
-  "@copyYesterdayButton": {
-    "description": "Empty-state action button that copies yesterday's meals to today"
   },
   "copyPreviousDayAria": "Copy a previous day",
   "@copyPreviousDayAria": {
@@ -6216,5 +6208,61 @@
   "closeSearchTooltip": "Close search",
   "@closeSearchTooltip": {
     "description": "Tooltip of the round button that closes the open search field in a screen header (docs/redesign/77-mobile-redesign-plan.md R2.1)"
+  },
+  "macroLetterProtein": "P",
+  "@macroLetterProtein": {
+    "description": "One-letter abbreviation of protein next to a gram amount, e.g. '29 / 129 g P' (docs/redesign/77-mobile-redesign-plan.md R2.3). Hungarian: F (fehérje)"
+  },
+  "macroLetterCarbs": "C",
+  "@macroLetterCarbs": {
+    "description": "One-letter abbreviation of carbs next to a gram amount, e.g. '88 / 313 g C'. Hungarian: Sz (szénhidrát)"
+  },
+  "macroLetterFat": "F",
+  "@macroLetterFat": {
+    "description": "One-letter abbreviation of fat next to a gram amount, e.g. '20 / 66 g F'. Hungarian: Zs (zsír)"
+  },
+  "weekStripDaySemantics": "{date}: {kcal} kcal",
+  "@weekStripDaySemantics": {
+    "description": "Screen-reader label of one day in the Meals tab's week strip: the day and the calories eaten that day (docs/redesign/77-mobile-redesign-plan.md R2.2)",
+    "placeholders": {"date": {"type": "String"}, "kcal": {"type": "String"}}
+  },
+  "dayBudgetOfGoal": "/ {goal} kcal",
+  "@dayBudgetOfGoal": {
+    "description": "The goal after the big eaten number on the day budget card: '621 / 2,360 kcal'; {goal} is the formatted daily goal (docs/redesign/77-mobile-redesign-plan.md R2.3)",
+    "placeholders": {"goal": {"type": "String"}}
+  },
+  "dayBudgetKcalLeft": "{value} left",
+  "@dayBudgetKcalLeft": {
+    "description": "Badge on the day budget card: calories still available today, e.g. '1,739 left'; {value} is formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dayBudgetKcalOver": "{value} over",
+  "@dayBudgetKcalOver": {
+    "description": "Badge on the day budget card once the calorie goal is exceeded, e.g. '212 over'; {value} is formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "mealsEmptyTodayTitle": "No meals yet today",
+  "@mealsEmptyTodayTitle": {
+    "description": "Title of the empty state on the Meals tab when today has no meals (docs/redesign/77-mobile-redesign-plan.md R2.3)"
+  },
+  "mealsEmptyDayTitle": "No meals on this day",
+  "@mealsEmptyDayTitle": {
+    "description": "Title of the empty state on the Meals tab when a past day chosen in the week strip has no meals"
+  },
+  "mealsEmptyMessage": "Log what you eat and the budget above shows what is left.",
+  "@mealsEmptyMessage": {
+    "description": "Body of the empty state on the Meals tab"
+  },
+  "mealsEmptyAddAction": "Add meal",
+  "@mealsEmptyAddAction": {
+    "description": "Main button of the empty state on the Meals tab; opens the meal editor"
+  },
+  "mealsEmptyCopyAction": "Copy a day",
+  "@mealsEmptyCopyAction": {
+    "description": "Secondary button of today's empty state on the Meals tab; opens the copy-a-previous-day sheet"
+  },
+  "allMealsTitle": "All meals",
+  "@allMealsTitle": {
+    "description": "Title of the screen listing every logged meal, day by day, and tooltip of the calendar button on the Meals tab that opens it (docs/redesign/77-mobile-redesign-plan.md R2.2)"
   }
 }

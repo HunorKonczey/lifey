@@ -15,6 +15,9 @@ import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
 import '../application/meal_controller.dart';
 import '../domain/day_meals_summary.dart';
+import '../application/selected_meal_day_provider.dart';
+import '../domain/meal_days.dart';
+import 'all_meals_screen.dart';
 import 'barcode_scanner_screen.dart';
 import 'foods_tab.dart';
 import 'log_meal_screen.dart';
@@ -144,9 +147,17 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     );
   }
 
+  /// Logs onto the day picked in the Meals tab's week strip.
   void _logMeal() {
+    final day = effectiveMealDay(ref.read(selectedMealDayProvider), DateTime.now());
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => const LogMealScreen()),
+      MaterialPageRoute(builder: (_) => LogMealScreen(initialDate: day)),
+    );
+  }
+
+  void _openAllMeals() {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => const AllMealsScreen()),
     );
   }
 
@@ -256,6 +267,12 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                             tooltip: l10n.searchTooltip,
                             onPressed: _openSearch,
                           ),
+                        if (_tabController.index == 0)
+                          HeaderIconButton(
+                            icon: Icons.calendar_month_rounded,
+                            tooltip: l10n.allMealsTitle,
+                            onPressed: _openAllMeals,
+                          ),
                         HeaderIconButton(
                           icon: Icons.content_copy_rounded,
                           tooltip: l10n.copyPreviousDayAria,
@@ -285,7 +302,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                 body: TabBarView(
                   controller: _tabController,
                   children: [
-                    const MealsTab(),
+                    MealsTab(onCopyDay: _openCopyDaySheet),
                     RecipesTab(searchQuery: _searching ? _searchQuery : null),
                     FoodsTab(searchQuery: _searching ? _searchQuery : null),
                     const MacrosTab(),
