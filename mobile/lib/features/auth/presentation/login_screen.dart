@@ -127,6 +127,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: _submitting ? null : () => context.push('/forgot-password'),
+            // Flush with the field's right edge, like the canvas.
+            style: TextButton.styleFrom(padding: const EdgeInsets.only(left: AppSpacing.s12)),
             child: Text(l10n.forgotPasswordButton),
           ),
         ),
