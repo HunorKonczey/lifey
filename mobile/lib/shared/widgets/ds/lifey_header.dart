@@ -473,15 +473,22 @@ class _LifeySubpageHeaderState extends State<LifeySubpageHeader> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            widget.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: t.titleLarge!.copyWith(
-                              fontSize: hasSubtitle ? 18 : 20,
-                              height: 1.2,
-                              fontWeight: FontWeight.w800,
-                              color: p.text,
+                          // Shrinks to fit instead of ending in "…" — a
+                          // Hungarian "Étkezés szerkesztése" beside a Save
+                          // button at 130 % text.
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              widget.title,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: t.titleLarge!.copyWith(
+                                fontSize: hasSubtitle ? 18 : 20,
+                                height: 1.2,
+                                fontWeight: FontWeight.w800,
+                                color: p.text,
+                              ),
                             ),
                           ),
                           if (hasSubtitle)

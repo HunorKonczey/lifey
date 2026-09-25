@@ -121,6 +121,30 @@ void main() {
           body: ListView(children: [for (var i = 0; i < 60; i++) SizedBox(height: 48, child: Text('m $i'))]),
         );
 
+    testWidgets('a long title shrinks to fit beside a Save button instead of ending in an ellipsis', (tester) async {
+      tester.view.physicalSize = const Size(360 * 3, 800 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_app(
+        Scaffold(
+          appBar: LifeySubpageHeader(
+            title: 'Étkezés szerkesztése',
+            actions: [FilledButton(onPressed: () {}, child: const Text('Mentés'))],
+          ),
+        ),
+        textScale: 1.3,
+      ));
+      await tester.pumpAndSettle();
+
+      final text = tester.widget<Text>(find.text('Étkezés szerkesztése'));
+      expect(text.overflow, isNot(TextOverflow.ellipsis));
+      expect(text.softWrap, isFalse);
+      expect(find.ancestor(of: find.text('Étkezés szerkesztése'), matching: find.byType(FittedBox)), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      // Scaled down, but still inside the row: left of the button.
+      expect(tester.getTopRight(find.text('Étkezés szerkesztése')).dx, lessThan(tester.getTopLeft(find.text('Mentés')).dx));
+    });
+
     Future<void> openPushed(WidgetTester tester, Widget page) async {
       await tester.pumpWidget(_app(Builder(
         builder: (context) => Scaffold(

@@ -52,6 +52,7 @@ void main() {
 
     expect(actual, {
       'features/workouts/presentation/sessions_tab.dart',
+      'features/nutrition/presentation/all_meals_screen.dart',
       'features/nutrition/presentation/meals_tab.dart',
       'features/nutrition/presentation/macros_tab.dart',
       'features/statistics/presentation/statistics_screen.dart',

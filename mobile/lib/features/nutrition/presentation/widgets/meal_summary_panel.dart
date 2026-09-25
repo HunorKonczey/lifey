@@ -63,7 +63,8 @@ class MealSummaryPanel extends StatelessWidget {
     return LifeyCard(
       radius: AppRadius.hero,
       color: p.nested,
-      padding: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s16, AppSpacing.s16, 14),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s16, AppSpacing.s16, AppSpacing.s16, 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -87,17 +88,26 @@ class MealSummaryPanel extends StatelessWidget {
                   ),
                 ),
               ),
-              Expanded(child: Text('kcal', textAlign: TextAlign.end, style: small)),
+              Expanded(
+                  child: Text('kcal', textAlign: TextAlign.end, style: small)),
             ],
           ),
           const SizedBox(height: AppSpacing.s12),
           Row(
             children: [
-              Expanded(child: _MacroTile(value: protein, label: l10n.proteinLabel, color: mc.protein)),
+              Expanded(
+                  child: _MacroTile(
+                      value: protein,
+                      label: l10n.proteinLabel,
+                      color: mc.protein)),
               const SizedBox(width: AppSpacing.s8),
-              Expanded(child: _MacroTile(value: carbs, label: l10n.carbsLabel, color: mc.carbs)),
+              Expanded(
+                  child: _MacroTile(
+                      value: carbs, label: l10n.carbsLabel, color: mc.carbs)),
               const SizedBox(width: AppSpacing.s8),
-              Expanded(child: _MacroTile(value: fat, label: l10n.fatLabel, color: mc.fat)),
+              Expanded(
+                  child: _MacroTile(
+                      value: fat, label: l10n.fatLabel, color: mc.fat)),
             ],
           ),
           if (preview != null) ...[
@@ -108,7 +118,9 @@ class MealSummaryPanel extends StatelessWidget {
               spacing: AppSpacing.s8,
               children: [
                 Text(
-                  day == null ? l10n.mealSummaryAfterToday : l10n.mealSummaryAfterDay(f.shortDayLabel(day!)),
+                  day == null
+                      ? l10n.mealSummaryAfterToday
+                      : l10n.mealSummaryAfterDay(f.shortDayLabel(day!)),
                   style: small.copyWith(fontSize: 13),
                 ),
                 Text(
@@ -130,7 +142,10 @@ class MealSummaryPanel extends StatelessWidget {
               total: preview.goal.toDouble(),
               segments: [
                 (value: preview.othersKcal, color: mc.calories),
-                (value: preview.draftKcal, color: mc.calories.withValues(alpha: 0.45)),
+                (
+                  value: preview.draftKcal,
+                  color: mc.calories.withValues(alpha: 0.45)
+                ),
               ],
             ),
           ],
@@ -142,7 +157,8 @@ class MealSummaryPanel extends StatelessWidget {
 
 /// "23 g / Protein" in a tile tinted with the macro colour.
 class _MacroTile extends StatelessWidget {
-  const _MacroTile({required this.value, required this.label, required this.color});
+  const _MacroTile(
+      {required this.value, required this.label, required this.color});
 
   final double value;
   final String label;
@@ -153,7 +169,8 @@ class _MacroTile extends StatelessWidget {
     final f = LifeyFormat.of(context);
     final alpha = Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.12;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: alpha),
         borderRadius: BorderRadius.circular(AppRadius.control),
@@ -174,16 +191,19 @@ class _MacroTile extends StatelessWidget {
               fontFeatures: AppType.tabular,
             ),
           ),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppType.fontFamily,
-              fontSize: 14,
-              height: 1.2,
-              fontWeight: FontWeight.w500,
-              color: color,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: AppType.fontFamily,
+                fontSize: 14,
+                height: 1.2,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
             ),
           ),
         ],

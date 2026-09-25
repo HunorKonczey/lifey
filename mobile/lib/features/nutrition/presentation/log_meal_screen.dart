@@ -84,8 +84,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       _entries.fold(0, (s, e) => s + e.food.caloriesPer100g * e.grams / 100);
   double get _totalProtein =>
       _entries.fold(0, (s, e) => s + e.food.proteinPer100g * e.grams / 100);
-  double get _totalCarbs =>
-      _entries.fold(0, (s, e) => s + (e.food.carbsPer100g ?? 0) * e.grams / 100);
+  double get _totalCarbs => _entries.fold(
+      0, (s, e) => s + (e.food.carbsPer100g ?? 0) * e.grams / 100);
   double get _totalFat =>
       _entries.fold(0, (s, e) => s + (e.food.fatPer100g ?? 0) * e.grams / 100);
 
@@ -108,7 +108,9 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     final now = DateTime.now();
     final day = widget.initialDate;
     _dateTime = meal?.dateTime ??
-        (day == null ? now : DateTime(day.year, day.month, day.day, now.hour, now.minute));
+        (day == null
+            ? now
+            : DateTime(day.year, day.month, day.day, now.hour, now.minute));
     if (meal != null) {
       for (final entry in meal.entries) {
         final q = entry.quantityInGrams;
@@ -128,7 +130,9 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     final initialFood = widget.initialFood;
     if (initialFood != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _addEntry(preselected: initialFood, closeScreenOnCancel: true);
+        if (mounted) {
+          _addEntry(preselected: initialFood, closeScreenOnCancel: true);
+        }
       });
     }
     if (widget.startWithPhoto) {
@@ -159,7 +163,9 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     );
     if (!mounted) return;
     final picked = DateTime(
-      date.year, date.month, date.day,
+      date.year,
+      date.month,
+      date.day,
       time?.hour ?? _dateTime.hour,
       time?.minute ?? _dateTime.minute,
     );
@@ -171,7 +177,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   /// [LogMealScreen.initialFood]: dismissing it on a still-empty meal leaves
   /// the screen too (docs/75 §2.5). Nothing needs undoing — an empty meal is
   /// never persisted.
-  Future<void> _addEntry({Food? preselected, bool closeScreenOnCancel = false}) async {
+  Future<void> _addEntry(
+      {Food? preselected, bool closeScreenOnCancel = false}) async {
     final draft = await showModalBottomSheet<MealEntryDraft>(
       context: context,
       useRootNavigator: true,
@@ -245,8 +252,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     try {
       // Downscaled on the device too: the server bounds the photo to 1024 px
       // anyway, so anything larger is only upload time on mobile data.
-      picked = await ImagePicker()
-          .pickImage(source: source, maxWidth: 1024, maxHeight: 1024, imageQuality: 85);
+      picked = await ImagePicker().pickImage(
+          source: source, maxWidth: 1024, maxHeight: 1024, imageQuality: 85);
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
       return _PhotoOutcome.dismissed;
@@ -263,10 +270,12 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     );
     if (!mounted) return _PhotoOutcome.dismissed;
     if (drafts != null && drafts.isNotEmpty) {
-      setState(() => _entries.addAll(drafts.map((d) => (food: d.food, grams: d.grams))));
+      setState(() =>
+          _entries.addAll(drafts.map((d) => (food: d.food, grams: d.grams))));
       _autoSave();
       return _PhotoOutcome.added;
-    } else if (ref.read(mealEstimationControllerProvider) is MealEstimationCreditsExhausted) {
+    } else if (ref.read(mealEstimationControllerProvider)
+        is MealEstimationCreditsExhausted) {
       openPaywall(context, PaywallTrigger.aiCredits);
       return _PhotoOutcome.paywall;
     }
@@ -325,7 +334,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   Future<void> _persist() async {
     final notifier = ref.read(mealControllerProvider.notifier);
     final entries = _entries
-        .map((e) => MealEntryInput(foodClientId: e.food.clientId, grams: e.grams))
+        .map((e) =>
+            MealEntryInput(foodClientId: e.food.clientId, grams: e.grams))
         .toList();
     final id = _isEditing ? widget.meal!.clientId : _mealClientId;
     if (id != null) {
@@ -365,7 +375,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   MealBudgetPreview? _budgetPreview() {
     final goal = ref.watch(settingsControllerProvider).value?.dailyCalorieGoal;
     if (goal == null || goal <= 0) return null;
-    final dayMeals = ref.watch(mealsOnDayProvider(dateOnly(_dateTime.toLocal()))).value;
+    final dayMeals =
+        ref.watch(mealsOnDayProvider(dateOnly(_dateTime.toLocal()))).value;
     if (dayMeals == null) return null;
     return MealBudgetPreview(
       goal: goal,
@@ -392,13 +403,16 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
         actions: [
           FilledButton(
             onPressed: _saveAndClose,
-            style: FilledButton.styleFrom(minimumSize: const Size(0, 44), tapTargetSize: MaterialTapTargetSize.padded),
+            style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                tapTargetSize: MaterialTapTargetSize.padded),
             child: Text(l10n.saveButton),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8,
+            AppSpacing.screen, AppSpacing.s24),
         children: [
           // Meal type — choice chips.
           Wrap(
@@ -430,7 +444,10 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                   Expanded(
                     child: Text(
                       '${f.shortDayLabel(_dateTime.toLocal())} · ${f.time(_dateTime.toLocal())}',
-                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontSize: 16, color: p.text),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium!
+                          .copyWith(fontSize: 16, color: p.text),
                     ),
                   ),
                   Icon(Icons.expand_more_rounded, size: 24, color: p.text2),
@@ -501,8 +518,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       // Pinned above the keyboard and the bottom edge, outside the list.
       bottomNavigationBar: _hasMacroData || _entries.isNotEmpty
           ? Padding(
-              padding: EdgeInsets.fromLTRB(
-                  AppSpacing.s12, AppSpacing.s8, AppSpacing.s12, math.max(bottomInset, AppSpacing.s12)),
+              padding: EdgeInsets.fromLTRB(AppSpacing.s12, AppSpacing.s8,
+                  AppSpacing.s12, math.max(bottomInset, AppSpacing.s12)),
               child: MealSummaryPanel(
                 calories: _totalCalories,
                 protein: _totalProtein,
@@ -545,15 +562,17 @@ class _FoodRow extends StatelessWidget {
     final hasMacros = food.caloriesPer100g > 0;
     final kcal = food.caloriesPer100g * grams / 100;
     final protein = food.proteinPer100g * grams / 100;
-    final subtitle =
-        hasMacros ? l10n.mealFoodRowSubtitle(f.grams(grams), f.grams(protein)) : '${f.grams(grams)} g';
+    final subtitle = hasMacros
+        ? l10n.mealFoodRowSubtitle(f.grams(grams), f.grams(protein))
+        : '${f.grams(grams)} g';
 
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 64),
         child: Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.s16, top: AppSpacing.s8, bottom: AppSpacing.s8),
+          padding: const EdgeInsets.only(
+              left: AppSpacing.s16, top: AppSpacing.s8, bottom: AppSpacing.s8),
           child: Row(
             children: [
               Expanded(
@@ -561,9 +580,13 @@ class _FoodRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(food.name, style: t.titleMedium!.copyWith(fontSize: 16, height: 1.25, color: p.text)),
+                    Text(food.name,
+                        style: t.titleMedium!.copyWith(
+                            fontSize: 16, height: 1.25, color: p.text)),
                     const SizedBox(height: 3),
-                    Text(subtitle, style: t.bodySmall!.copyWith(fontSize: 13, height: 1.4, color: p.text2)),
+                    Text(subtitle,
+                        style: t.bodySmall!.copyWith(
+                            fontSize: 13, height: 1.4, color: p.text2)),
                   ],
                 ),
               ),
@@ -579,10 +602,12 @@ class _FoodRow extends StatelessWidget {
                   _FoodAction.remove => onRemove(),
                 },
                 itemBuilder: (context) => [
-                  PopupMenuItem(value: _FoodAction.edit, child: Text(l10n.editMenuItem)),
+                  PopupMenuItem(
+                      value: _FoodAction.edit, child: Text(l10n.editMenuItem)),
                   PopupMenuItem(
                     value: _FoodAction.remove,
-                    child: Text(l10n.removeButton, style: TextStyle(color: context.metricColors.heart)),
+                    child: Text(l10n.removeButton,
+                        style: TextStyle(color: context.metricColors.heart)),
                   ),
                 ],
               ),
@@ -629,22 +654,31 @@ class _ActionTile extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 84),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s8, vertical: AppSpacing.s12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 24, color: foreground),
-                const SizedBox(height: AppSpacing.s4),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelLarge!
-                      .copyWith(fontWeight: FontWeight.w700, height: 1.2, color: foreground),
-                ),
-                if (footer != null) ...[const SizedBox(height: AppSpacing.s4), footer!],
-              ],
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s4, vertical: AppSpacing.s12),
+            // Three tiles share the row, so their labels stop growing at 115 %
+            // (a wrapped "hozzáadása" would break mid-word).
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.15,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 24, color: foreground),
+                  const SizedBox(height: AppSpacing.s4),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        color: foreground),
+                  ),
+                  if (footer != null) ...[
+                    const SizedBox(height: AppSpacing.s4),
+                    footer!
+                  ],
+                ],
+              ),
             ),
           ),
         ),

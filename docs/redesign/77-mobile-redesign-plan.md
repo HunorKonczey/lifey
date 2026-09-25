@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.9 done; emulator review next)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 next
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1928,3 +1928,45 @@ dark EN, light EN, dark HU, light HU at ×1.3, plus scroll-to-the-end (last row 
 **Not exercised on the emulator** (covered by widget tests only): the unread-dot on the chat button (no
 chat messages seeded), the sponsorship-ended card, the recommended-workout card, over-budget ring
 state, the "Remove animations" pass, imperial units.
+
+### R2 — 2026-09-25 — Pixel_10 AVD (1080 × 2424, 420 dpi = 411 × 923 dp, API 37)
+
+Scope: Nutrition against `Lifey 2 Nutrition.dc.html` — 2.1 Meals (week strip, budget card, grouped rows), 2.2 Edit meal + Add
+food sheet, 2.3 Recipes, 2.4 Macros — rendered from the canvas with Playwright at 2.625× and put next to emulator screenshots, plus the
+flows: **the demo flow** (week strip → Thu → "+ Meal" → Add food → Apple chip → Add to meal → Save → back on Thu with the new row and
+the rings/budget updated), long-press menu on a meal, edit an existing meal, the add-food sheet with a chip and the numeric keyboard.
+Seeded account `anna.r1@lifey.test` (the R1 data + four recipes). Matrix covered: dark EN, light EN, dark HU, light HU at ×1.3 (Meals, the
+editor and the add-food sheet), dark EN with animations removed (Macros, Recipes tabs).
+
+**Matches**
+- Header (30/800 title, round copy-day and scanner buttons), pill tab bar, week strip (Fri…Thu, 30 px calorie rings, selected day in a primary
+  outline), budget card (621 / 2,360 kcal, "1,739 left" chip, P/C/F bar, coloured gram lines), meal rows (icon holder, name / kcal, meta +
+  P C F in colour, foods line) — value for value, dark and light. Edit meal: Save in the header, choice chips with the check, date row,
+  "FOODS · n" group with ⋮, three equal tiles, floating summary (Meal total, tinted macro tiles, "after this meal" with the paler
+  segment). Add food: search with the scanner inside, recent chips, the outlined food card with the − / + hero, quick chips,
+  "+95 kcal → 1,643 kcal left", full-width "Add to meal". Recipes: entry card, chips, two-column grid with placeholder photos, star, "+ Log".
+  Macros: Today card with three rings and the 26 % chip, "LAST 7 DAYS" rows.
+- HU: "Étrend", "Étkezések / Receptek / Ételek / Makrók", weekday abbreviations Szo…P, "1 737 maradt", macro letters F / Sz / Zs,
+  "Ma az étkezés után", "Étkezés szerkesztése"; at ×1.3 nothing is cut off (tile labels shrink in the card, "Szénhidrát" fits).
+- With animations removed the rings, bars and numbers show their final value at once; nothing else moves.
+
+**Deviations (intended)**
+- Numbers: EN groups with a comma ("2,360"), the canvas a space; HU decimals/thousands per `LifeyFormat` (R0.4).
+- The header has a **search** button on Recipes / Foods and a **calendar** ("All meals") button on Meals in addition to the two canvas buttons
+  (R2.1 / R2.2 — the canvas draws neither, both are needed for existing functions).
+- "1,739 left" in the editor instead of the canvas' "1,356": the canvas counts the edited meal twice; the plan (§9 risk 3) asks for the correct
+  figure (R2.5). Bars on the Macros rows split the whole bar (100 %) where the canvas stops short.
+- Not built: ☆ favourite on a food and the "½ pc / 1 pc" chips (no such data — §6); the recipe photo caption of the mock.
+- The 7-day strip / "Last 7 days" are the last days *with meals*; older days live in "All meals". The old Today / Week / All filter is gone.
+- A live language change leaves the shell's "+ Meal" FAB label in the old language until the tab is left and re-entered (the label is pushed
+  to the shell once per tab activation — pre-existing).
+
+**Bugs (fixed on `feature/mobile-redesign`)**
+- The pinned tab bar of the `NestedScrollView` showed the list scrolling *through* the gap between the title row and itself → the pinned
+  sliver sits on the header's scrim (found while checking Recipes; part of R2.7).
+- At HU ×1.3: the editor's title ended in "Étkezés szerkes…", the "Étel hozzáadása" tile broke mid-word over three lines and "Szénhid…" was cut in the
+  summary tile → `LifeySubpageHeader` titles shrink to fit instead of ellipsizing, the three action tiles stop scaling text at 115 % and
+  tighten their padding, the macro tile label shrinks (R2.fix-1; covered by the 360 / 411 dp × 1.3 HU layout tests).
+
+**Not exercised on the emulator** (covered by widget tests only): the barcode camera, AI photo estimate, recipe wizard and generated recipe,
+recipe long-press menu / photo, over-goal state of the budget and rings, no-goal accounts, imperial units, a free-tier account with the history boundary.

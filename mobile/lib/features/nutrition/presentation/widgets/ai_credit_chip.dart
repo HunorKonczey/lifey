@@ -21,7 +21,12 @@ import '../../../../shared/widgets/ds/tinted_chip.dart';
 /// indicator, since the real AI action itself is the control, gated
 /// separately by [requireAiCredits].
 class AiCreditChip extends ConsumerWidget {
-  const AiCreditChip({super.key});
+  const AiCreditChip({super.key, this.margin});
+
+  /// Space around the chip that exists only while the chip does — a card
+  /// can put it under a line of text without leaving a gap for accounts
+  /// with no credit count (Pro).
+  final EdgeInsetsGeometry? margin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,7 +57,7 @@ class AiCreditChip extends ConsumerWidget {
     // re-adds the "tappable" announcement for the exhausted state that
     // ExcludeSemantics would otherwise also hide.
     final chip = ExcludeSemantics(child: TintedChip(label: label, color: color));
-    return Semantics(
+    final semantics = Semantics(
       label: l10n.aiCreditsRemainingSemanticsLabel(remaining),
       button: exhausted,
       onTap: exhausted ? () => openPaywall(context, PaywallTrigger.aiCredits) : null,
@@ -65,6 +70,7 @@ class AiCreditChip extends ConsumerWidget {
             )
           : chip,
     );
+    return margin == null ? semantics : Padding(padding: margin!, child: semantics);
   }
 
   /// The next calendar-month boundary — matches the backend's counter, keyed

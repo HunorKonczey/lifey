@@ -53,14 +53,14 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
   bool get _isEditing => widget.recipe != null;
 
-  double get _totalCalories =>
-      _ingredients.fold(0, (s, e) => s + e.food.caloriesPer100g * e.grams / 100);
+  double get _totalCalories => _ingredients.fold(
+      0, (s, e) => s + e.food.caloriesPer100g * e.grams / 100);
   double get _totalProtein =>
       _ingredients.fold(0, (s, e) => s + e.food.proteinPer100g * e.grams / 100);
-  double get _totalCarbs =>
-      _ingredients.fold(0, (s, e) => s + (e.food.carbsPer100g ?? 0) * e.grams / 100);
-  double get _totalFat =>
-      _ingredients.fold(0, (s, e) => s + (e.food.fatPer100g ?? 0) * e.grams / 100);
+  double get _totalCarbs => _ingredients.fold(
+      0, (s, e) => s + (e.food.carbsPer100g ?? 0) * e.grams / 100);
+  double get _totalFat => _ingredients.fold(
+      0, (s, e) => s + (e.food.fatPer100g ?? 0) * e.grams / 100);
 
   @override
   void initState() {
@@ -145,7 +145,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       ),
     );
     if (draft != null) {
-      setState(() => _ingredients[index] = (food: draft.food, grams: draft.grams));
+      setState(
+          () => _ingredients[index] = (food: draft.food, grams: draft.grams));
       _autoSave();
     }
   }
@@ -199,7 +200,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     final name = _name.text.trim();
     final description = _description.text.trim();
     final ingredients = _ingredients
-        .map((e) => RecipeIngredientInput(foodClientId: e.food.clientId, grams: e.grams))
+        .map((e) => RecipeIngredientInput(
+            foodClientId: e.food.clientId, grams: e.grams))
         .toList();
     final id = _isEditing ? widget.recipe!.clientId : _recipeClientId;
     if (id != null) {
@@ -239,7 +241,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     return widget.recipe;
   }
 
-  void _openPhotoSheet(AppLocalizations l10n, RecipeImageKey key, {required bool hasPhoto}) {
+  void _openPhotoSheet(AppLocalizations l10n, RecipeImageKey key,
+      {required bool hasPhoto}) {
     showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
@@ -258,7 +261,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.photo_library_outlined, color: scheme.primary),
+              leading:
+                  Icon(Icons.photo_library_outlined, color: scheme.primary),
               title: Text(l10n.chooseFromGalleryAction),
               onTap: () {
                 Navigator.of(sheetCtx).pop();
@@ -268,7 +272,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             if (hasPhoto)
               ListTile(
                 leading: Icon(Icons.delete_outline, color: scheme.error),
-                title: Text(l10n.removePhotoAction, style: TextStyle(color: scheme.error)),
+                title: Text(l10n.removePhotoAction,
+                    style: TextStyle(color: scheme.error)),
                 onTap: () {
                   Navigator.of(sheetCtx).pop();
                   _removePhoto(key, l10n);
@@ -286,7 +291,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     if (_photoBusy) return;
     final XFile? picked;
     try {
-      picked = await ImagePicker().pickImage(source: source, maxWidth: 1600, imageQuality: 90);
+      picked = await ImagePicker()
+          .pickImage(source: source, maxWidth: 1600, imageQuality: 90);
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
       return;
@@ -295,8 +301,12 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
     setState(() => _photoBusy = true);
     try {
-      await ref.read(recipeImageControllerProvider).upload(key, File(picked.path));
-      if (mounted) AppSnackbar.showSuccess(context, title: l10n.recipePhotoUpdatedMessage);
+      await ref
+          .read(recipeImageControllerProvider)
+          .upload(key, File(picked.path));
+      if (mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.recipePhotoUpdatedMessage);
+      }
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
     } finally {
@@ -309,7 +319,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     setState(() => _photoBusy = true);
     try {
       await ref.read(recipeImageControllerProvider).remove(key);
-      if (mounted) AppSnackbar.showSuccess(context, title: l10n.recipePhotoRemovedMessage);
+      if (mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.recipePhotoRemovedMessage);
+      }
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
     } finally {
@@ -335,7 +347,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     final f = LifeyFormat.of(context);
     final primary = Theme.of(context).colorScheme.primary;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final liveRecipe = _liveRecipe(ref.watch(recipeControllerProvider).value ?? const []);
+    final liveRecipe =
+        _liveRecipe(ref.watch(recipeControllerProvider).value ?? const []);
 
     return Scaffold(
       appBar: LifeySubpageHeader(
@@ -343,20 +356,25 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
         actions: [
           FilledButton(
             onPressed: _saveAndClose,
-            style: FilledButton.styleFrom(minimumSize: const Size(0, 44), tapTargetSize: MaterialTapTargetSize.padded),
+            style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                tapTargetSize: MaterialTapTargetSize.padded),
             child: Text(l10n.saveButton),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8,
+            AppSpacing.screen, AppSpacing.s24),
         children: [
           _PhotoSection(
             recipe: liveRecipe,
             busy: _photoBusy,
             l10n: l10n,
-            onTap: (key, hasPhoto) => _openPhotoSheet(l10n, key, hasPhoto: hasPhoto),
-            onTapUnsynced: () => AppSnackbar.showError(context, title: l10n.recipePhotoNeedsSyncMessage),
+            onTap: (key, hasPhoto) =>
+                _openPhotoSheet(l10n, key, hasPhoto: hasPhoto),
+            onTapUnsynced: () => AppSnackbar.showError(context,
+                title: l10n.recipePhotoNeedsSyncMessage),
           ),
           const SizedBox(height: AppSpacing.s20),
           SectionLabel(l10n.nameLabel),
@@ -374,7 +392,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             textCapitalization: TextCapitalization.sentences,
             minLines: 2,
             maxLines: 4,
-            decoration: InputDecoration(hintText: l10n.descriptionOptionalLabel, alignLabelWithHint: true),
+            decoration: InputDecoration(
+                hintText: l10n.descriptionOptionalLabel,
+                alignLabelWithHint: true),
           ),
           const SizedBox(height: AppSpacing.s16),
           SectionLabel(l10n.servingsLabel),
@@ -385,7 +405,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               children: [
                 _StepperButton(
                   icon: Icons.remove_rounded,
-                  onPressed: _servings > _minServings ? _decrementServings : null,
+                  onPressed:
+                      _servings > _minServings ? _decrementServings : null,
                 ),
                 Expanded(
                   child: Center(
@@ -403,7 +424,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                 ),
                 _StepperButton(
                   icon: Icons.add_rounded,
-                  onPressed: _servings < _maxServings ? _incrementServings : null,
+                  onPressed:
+                      _servings < _maxServings ? _incrementServings : null,
                 ),
               ],
             ),
@@ -428,7 +450,10 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                   Expanded(
                     child: Text(
                       _favorite ? l10n.removeFavorite : l10n.markFavorite,
-                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontSize: 15, color: p.text),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium!
+                          .copyWith(fontSize: 15, color: p.text),
                     ),
                   ),
                   Switch(
@@ -444,7 +469,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           ),
           if (_ingredients.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.s16),
-            SectionLabel(l10n.recipeIngredientsSectionCount(_ingredients.length)),
+            SectionLabel(
+                l10n.recipeIngredientsSectionCount(_ingredients.length)),
             const SizedBox(height: AppSpacing.s8),
             ListGroup(
               dividerInset: AppSpacing.s16,
@@ -490,8 +516,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       ),
       bottomNavigationBar: _ingredients.isNotEmpty
           ? Padding(
-              padding: EdgeInsets.fromLTRB(
-                  AppSpacing.s12, AppSpacing.s8, AppSpacing.s12, math.max(bottomInset, AppSpacing.s12)),
+              padding: EdgeInsets.fromLTRB(AppSpacing.s12, AppSpacing.s8,
+                  AppSpacing.s12, math.max(bottomInset, AppSpacing.s12)),
               child: MealSummaryPanel(
                 label: l10n.recipeTotalLabel,
                 calories: _totalCalories,
@@ -556,7 +582,9 @@ class _PhotoSection extends ConsumerWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: GestureDetector(
-        onTap: busy ? null : () => key != null ? onTap(key, hasPhoto) : onTapUnsynced(),
+        onTap: busy
+            ? null
+            : () => key != null ? onTap(key, hasPhoto) : onTapUnsynced(),
         behavior: HitTestBehavior.opaque,
         child: Container(
           height: _size,
@@ -576,14 +604,16 @@ class _PhotoSection extends ConsumerWidget {
                   child: Icon(
                     Icons.add_photo_alternate_outlined,
                     size: 40,
-                    color: p.text2.withValues(alpha: serverId != null ? 1.0 : 0.4),
+                    color:
+                        p.text2.withValues(alpha: serverId != null ? 1.0 : 0.4),
                   ),
                 ),
               if (busy)
                 Positioned.fill(
                   child: Container(
                     color: p.scrim,
-                    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2)),
                   ),
                 ),
             ],
@@ -621,7 +651,8 @@ class _IngredientRow extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final hasMacros = food.caloriesPer100g > 0;
     final subtitle = hasMacros
-        ? l10n.mealFoodRowSubtitle(f.grams(grams), f.grams(food.proteinPer100g * grams / 100))
+        ? l10n.mealFoodRowSubtitle(
+            f.grams(grams), f.grams(food.proteinPer100g * grams / 100))
         : '${f.grams(grams)} g';
 
     return InkWell(
@@ -629,7 +660,8 @@ class _IngredientRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 64),
         child: Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.s16, top: AppSpacing.s8, bottom: AppSpacing.s8),
+          padding: const EdgeInsets.only(
+              left: AppSpacing.s16, top: AppSpacing.s8, bottom: AppSpacing.s8),
           child: Row(
             children: [
               Expanded(
@@ -637,15 +669,22 @@ class _IngredientRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(food.name, style: t.titleMedium!.copyWith(fontSize: 16, height: 1.25, color: p.text)),
+                    Text(food.name,
+                        style: t.titleMedium!.copyWith(
+                            fontSize: 16, height: 1.25, color: p.text)),
                     const SizedBox(height: 3),
-                    Text(subtitle, style: t.bodySmall!.copyWith(fontSize: 13, height: 1.4, color: p.text2)),
+                    Text(subtitle,
+                        style: t.bodySmall!.copyWith(
+                            fontSize: 13, height: 1.4, color: p.text2)),
                   ],
                 ),
               ),
               if (hasMacros) ...[
                 const SizedBox(width: AppSpacing.s8),
-                ListRowValue(value: f.kcal(food.caloriesPer100g * grams / 100), unit: 'kcal', size: 16),
+                ListRowValue(
+                    value: f.kcal(food.caloriesPer100g * grams / 100),
+                    unit: 'kcal',
+                    size: 16),
               ],
               PopupMenuButton<_IngredientAction>(
                 tooltip: l10n.mealFoodMenuTooltip,
@@ -655,10 +694,13 @@ class _IngredientRow extends StatelessWidget {
                   _IngredientAction.remove => onRemove(),
                 },
                 itemBuilder: (context) => [
-                  PopupMenuItem(value: _IngredientAction.edit, child: Text(l10n.editMenuItem)),
+                  PopupMenuItem(
+                      value: _IngredientAction.edit,
+                      child: Text(l10n.editMenuItem)),
                   PopupMenuItem(
                     value: _IngredientAction.remove,
-                    child: Text(l10n.removeButton, style: TextStyle(color: context.metricColors.heart)),
+                    child: Text(l10n.removeButton,
+                        style: TextStyle(color: context.metricColors.heart)),
                   ),
                 ],
               ),
@@ -701,21 +743,27 @@ class _ActionTile extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 84),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s8, vertical: AppSpacing.s12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 24, color: foreground),
-                const SizedBox(height: AppSpacing.s4),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelLarge!
-                      .copyWith(fontWeight: FontWeight.w700, height: 1.2, color: foreground),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s4, vertical: AppSpacing.s12),
+            // Three tiles share the row, so their labels stop growing at 115 %
+            // (a wrapped "hozzáadása" would break mid-word).
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.15,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 24, color: foreground),
+                  const SizedBox(height: AppSpacing.s4),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        color: foreground),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -744,7 +792,8 @@ class _StepperButton extends StatelessWidget {
         foregroundColor: p.text,
         disabledBackgroundColor: p.control.withValues(alpha: 0.5),
         disabledForegroundColor: p.text3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.control)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.control)),
       ),
     );
   }

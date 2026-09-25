@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/entitlements/ai_credit_gate.dart';
-import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/sync/connectivity_status_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/search_normalize.dart';
@@ -295,20 +294,19 @@ class _RecipesTabState extends ConsumerState<RecipesTab> {
 /// The AI entry point, with the credit chip inside it — the recipe half of
 /// what the Log meal screen's photo tile does (`72` M7). Dimmed, not
 /// disabled, offline: tapping it explains why it can't run.
-class _GenerateCard extends ConsumerWidget {
+class _GenerateCard extends StatelessWidget {
   const _GenerateCard({required this.offline, required this.onTap});
 
   final bool offline;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final p = context.palette;
     final t = Theme.of(context).textTheme;
     final primary = Theme.of(context).colorScheme.primary;
     final color = offline ? p.text2 : primary;
-    final hasCredits = ref.watch(aiCreditsProvider) != null;
 
     return LifeyCard(
       color: offline ? p.card : p.primaryTint,
@@ -338,7 +336,7 @@ class _GenerateCard extends ConsumerWidget {
                   l10n.generateRecipeSubtitle,
                   style: t.bodyMedium!.copyWith(fontSize: 14, height: 1.4, color: p.text2),
                 ),
-                if (hasCredits) ...[const SizedBox(height: AppSpacing.s8), const AiCreditChip()],
+                const AiCreditChip(margin: EdgeInsets.only(top: AppSpacing.s8)),
               ],
             ),
           ),
