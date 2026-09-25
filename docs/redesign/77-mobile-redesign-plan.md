@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 in progress (R4.1–R4.3 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 in progress (R4.1–R4.4 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1618,10 +1618,19 @@ it; an empty range says so instead of drawing (tests). One fix on the way: the e
 Health import (now in the ⋮ menu) are kept. Tests: `weight_screen_test` (title, hero, switcher, chart style, FAB, signs and colours, single entry, empty, range switch, no overflow at 411/360 dp × 1.3 HU dark + light) and
 `weight_hero_test` (chips, colours, the goal band states).
 
-### R4.4 — Mobile UI: log-weight sheet
+### R4.4 — Mobile UI: log-weight sheet ✅
 - `add_weight_sheet.dart`.
 - **Verify:** ±0.1 steps don't accumulate float error (step in grams internally, unit test);
   imperial units still work if enabled in Settings.
+
+*As built:* `showAddWeightSheet` opens the body (`AddWeightSheet`) in a `showLifeySheet` — DS handle, "Log weight" with the close button (root navigator, over the shell). The value is **72 px** (`MetricValue`, fixed under
+text scaling, scaled down in a `FittedBox` when a narrow phone can't hold it) between two **56 dp ±0.1 buttons** (a tap steps once; holding repeats after 400 ms every 90 ms; disabled at the limits, screen-reader
+labels "Lower / Raise by 0.1 kg"); **tapping the number turns it into a text field** (dot or comma; refused with "Enter a number" and a disabled Save when it isn't 1–500 kg) — typing an exact 64.55 is still possible.
+Under the number the reference: "Yesterday 64.6 kg" (the weigh-in of the day before the selected date) or, without one, "Last 64.9 kg · Mon, Sep 21"; none with no history. The date row is a nested card "Today · 07:02" (a
+date for another day) that opens the date picker; Save is 56 dp. **The amount is whole grams** (`domain/weight_amount.dart`, 9 unit tests): a thousand +0.1 taps add exactly 100 kg, 64.5 + 0.1 + 0.1 is `64.7` and saves as
+`64.7`, up/down round-trips, limits, parsing. Until the person touches the number it follows the latest weigh-in even if the entries arrive a frame late; with no history it starts at 70 kg. **"Also saved to Health Connect"
+stays hidden** (the app only imports weight, §6). Weight is stored and shown in kg only in this app (there is no imperial weight anywhere yet), so "imperial still works" is trivially true and unchanged. ARB: `logWeightTitle`,
+`weightSheetYesterday/Last/Decrease/Increase/TypeTooltip`; `addWeightTitle` removed. 11 widget tests (`add_weight_sheet_test`), incl. 411/360 dp × 1.3 HU light.
 
 ### R4.5 — Mobile data: per-metric summary definitions
 - `statistics/application/stat_summary_data.dart` (+ `domain/stat_summary.dart`): the table

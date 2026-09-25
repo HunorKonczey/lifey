@@ -258,7 +258,6 @@
   "tapPlusToAddOneWaterSourceMessage": "Koppints a + gombra egy hozzáadásához, pl. \"Kulacs\" = 0,75L",
   "litersValue": "{liters} L",
   "couldNotSaveEntryMessage": "Nem sikerült elmenteni a bejegyzést. Próbáld újra.",
-  "addWeightTitle": "Súly hozzáadása",
   "weightTitle": "Súly",
   "noWeightEntriesYetTitle": "Még nincsenek súlybejegyzések",
   "tapPlusToAddFirstOneMessage": "Koppints a + gombra az első hozzáadásához",
@@ -1396,5 +1395,11 @@
   "weightGoalBandReached": "Cél elérve",
   "weightSetGoalAction": "Célsúly megadása",
   "weightChartLegendDaily": "Napi",
-  "weightMoreTooltip": "Továbbiak"
+  "weightMoreTooltip": "Továbbiak",
+  "logWeightTitle": "Súly rögzítése",
+  "weightSheetYesterday": "Tegnap {kg} kg",
+  "weightSheetLast": "Legutóbb {kg} kg · {date}",
+  "weightSheetDecrease": "0,1 kg-mal kevesebb",
+  "weightSheetIncrease": "0,1 kg-mal több",
+  "weightSheetTypeTooltip": "Súly beírása"
 }

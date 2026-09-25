@@ -1173,10 +1173,6 @@
   "@couldNotSaveEntryMessage": {
     "description": "Error shown when saving a weight entry fails"
   },
-  "addWeightTitle": "Add weight",
-  "@addWeightTitle": {
-    "description": "Title of the add-weight-entry sheet"
-  },
   "weightTitle": "Weight",
   "@weightTitle": {
     "description": "Title of the weight screen, and label for the weight field"
@@ -6379,5 +6375,31 @@
   "weightMoreTooltip": "More",
   "@weightMoreTooltip": {
     "description": "Tooltip of the ⋮ button in the weight screen's header"
+  },
+  "logWeightTitle": "Log weight",
+  "@logWeightTitle": {
+    "description": "Title of the log-weight sheet (docs/redesign/77-mobile-redesign-plan.md R4.4)"
+  },
+  "weightSheetYesterday": "Yesterday {kg} kg",
+  "@weightSheetYesterday": {
+    "description": "Reference under the number in the log-weight sheet: the weigh-in of the day before the selected date",
+    "placeholders": {"kg": {"type": "String"}}
+  },
+  "weightSheetLast": "Last {kg} kg · {date}",
+  "@weightSheetLast": {
+    "description": "Reference under the number in the log-weight sheet when there was no weigh-in the day before: the most recent earlier one",
+    "placeholders": {"kg": {"type": "String"}, "date": {"type": "String"}}
+  },
+  "weightSheetDecrease": "Lower by 0.1 kg",
+  "@weightSheetDecrease": {
+    "description": "Screen-reader label of the minus button of the log-weight sheet"
+  },
+  "weightSheetIncrease": "Raise by 0.1 kg",
+  "@weightSheetIncrease": {
+    "description": "Screen-reader label of the plus button of the log-weight sheet"
+  },
+  "weightSheetTypeTooltip": "Type a weight",
+  "@weightSheetTypeTooltip": {
+    "description": "Tooltip / screen-reader hint of the big number in the log-weight sheet, which becomes a text field when tapped"
   }
 }
