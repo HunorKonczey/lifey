@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/error_message.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../shared/widgets/ds/list_group.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../trainer/clients/domain/trainer_client.dart';
 import '../application/new_conversation_controller.dart';
@@ -11,11 +14,11 @@ import 'widgets/chat_avatar.dart';
 /// Opens the trainer's client picker. Resolves to the id of the thread to
 /// navigate into, or null if the sheet was dismissed.
 Future<int?> showNewConversationSheet(BuildContext context) {
-  return showModalBottomSheet<int>(
+  return showLifeySheet<int>(
     context: context,
+    title: AppLocalizations.of(context)!.chatNewConversationTitle,
+    showClose: true,
     useRootNavigator: true,
-    isScrollControlled: true,
-    showDragHandle: true,
     builder: (_) => const _NewConversationSheet(),
   );
 }
@@ -72,83 +75,57 @@ class _NewConversationSheetState extends ConsumerState<_NewConversationSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     final state = ref.watch(newConversationControllerProvider);
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.7,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.chatNewConversationTitle,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.chatNewConversationSubtitle,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
+    // The title is the sheet's own; the explanation and the picker go here.
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.62,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.chatNewConversationSubtitle,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.text2),
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          TextField(
+            controller: _searchController,
+            onChanged: (value) => setState(() => _query = value),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search_rounded, size: 22),
+              hintText: l10n.chatNewConversationSearchHint,
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => _query = value),
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  hintText: l10n.chatNewConversationSearchHint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Expanded(
+            child: state.when(
+              data: (clients) {
+                if (clients.isEmpty) {
+                  return _SheetEmpty(icon: Icons.check_circle_outline, message: l10n.chatNewConversationEmpty);
+                }
+                final visible = _filter(clients);
+                return SingleChildScrollView(
+                  child: ListGroup(
+                    dividerInset: 72,
+                    children: [
+                      for (final client in visible)
+                        ListRow(
+                          leading: ChatAvatar(monogram: client.monogram, userId: client.userId, size: 44),
+                          title: client.displayName,
+                          subtitle: client.email,
+                          trailing: Icon(Icons.chevron_right_rounded, size: 22, color: p.text2),
+                          onTap: _starting ? null : () => _start(client),
+                        ),
+                    ],
                   ),
-                ),
-              ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _SheetEmpty(icon: Icons.cloud_off, message: friendlyError(error)),
             ),
-            Expanded(
-              child: state.when(
-                data: (clients) {
-                  if (clients.isEmpty) {
-                    return _SheetEmpty(
-                      icon: Icons.check_circle_outline,
-                      message: l10n.chatNewConversationEmpty,
-                    );
-                  }
-                  final visible = _filter(clients);
-                  return ListView.builder(
-                    itemCount: visible.length,
-                    itemBuilder: (context, index) {
-                      final client = visible[index];
-                      return ListTile(
-                        leading: ChatAvatar(monogram: client.monogram, userId: client.userId, size: 40),
-                        title: Text(client.displayName),
-                        subtitle: Text(client.email),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: _starting ? null : () => _start(client),
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => _SheetEmpty(
-                  icon: Icons.cloud_off,
-                  message: friendlyError(error),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -162,23 +139,16 @@ class _SheetEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 44, color: scheme.outline),
-            const SizedBox(height: 14),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: scheme.onSurfaceVariant),
-            ),
+            Icon(icon, size: 44, color: p.text3),
+            const SizedBox(height: AppSpacing.s16),
+            Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.text2)),
           ],
         ),
       ),

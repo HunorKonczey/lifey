@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../core/auth/current_roles_provider.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -45,55 +47,52 @@ class _ChatSearchScreenState extends ConsumerState<ChatSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final state = ref.watch(chatSearchControllerProvider(widget.conversationId));
     final conversation = ref.watch(chatConversationProvider(widget.conversationId)).value;
     final currentUserId = ref.watch(currentUserIdProvider);
 
     return Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        titleSpacing: 0,
-        title: TextField(
-          controller: _controller,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          onChanged: _search.search,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurface,
-          ),
-          decoration: InputDecoration(
-            // Transparent: it sits inside its own container; the v2 theme
-            // fills fields by default (redesign R0.fix-3).
-            filled: false,
-            border: InputBorder.none,
-            hintText: l10n.chatSearchPlaceholder,
-            hintStyle: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: scheme.onSurfaceVariant,
+      // Back, the search field and — with a query — a clear button: the field
+      // is the title, so this is the subpage header's row with a field in it.
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(64),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s8, AppSpacing.screen, AppSpacing.s8),
+            child: Row(
+              children: [
+                HeaderIconButton(
+                  icon: Icons.arrow_back_rounded,
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  onPressed: () => context.pop(),
+                ),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    textInputAction: TextInputAction.search,
+                    onChanged: _search.search,
+                    decoration: InputDecoration(
+                      hintText: l10n.chatSearchPlaceholder,
+                      suffixIcon: state.query.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 22),
+                              tooltip: l10n.chatSearchClearAction,
+                              onPressed: () {
+                                _controller.clear();
+                                _search.search('');
+                              },
+                            ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        actions: [
-          if (state.query.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: l10n.chatSearchClearAction,
-              onPressed: () {
-                _controller.clear();
-                _search.search('');
-              },
-            ),
-        ],
       ),
       body: _body(state, conversation?.peer.displayName ?? '', currentUserId, l10n),
     );
@@ -130,9 +129,9 @@ class _ChatSearchScreenState extends ConsumerState<ChatSearchScreen> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s12, AppSpacing.screen, AppSpacing.s24),
       itemCount: state.results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.s8),
       itemBuilder: (context, index) {
         final message = state.results[index];
         return _ResultTile(
@@ -166,56 +165,27 @@ class _ResultTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).languageCode;
     final when = DateFormat.yMMMd(locale).add_Hm().format(message.createdAt);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
+    return LifeyCard(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                senderName,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: scheme.onSurface,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  when,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              if (message.hasAttachment)
-                Text(
-                  l10n.chatImagePreview,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
+              Text(senderName, style: t.labelLarge!.copyWith(fontWeight: FontWeight.w800, color: p.text)),
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(child: Text(when, style: t.bodySmall!.copyWith(color: p.text3))),
+              if (message.hasAttachment) Text(l10n.chatImagePreview, style: t.bodySmall!.copyWith(color: p.text3)),
             ],
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: AppSpacing.s4),
           Text.rich(
             TextSpan(
               children: [
@@ -224,7 +194,7 @@ class _ResultTile extends StatelessWidget {
                     text: segment.text,
                     style: segment.match
                         ? TextStyle(
-                            color: scheme.onSurface,
+                            color: p.text,
                             fontWeight: FontWeight.w800,
                             backgroundColor: scheme.primary.withValues(alpha: 0.28),
                           )
@@ -232,13 +202,7 @@ class _ResultTile extends StatelessWidget {
                   ),
               ],
             ),
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 13.5,
-              fontWeight: FontWeight.w500,
-              height: 1.35,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: t.bodyMedium!.copyWith(color: p.text2),
           ),
         ],
       ),

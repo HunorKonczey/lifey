@@ -4,7 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/lifey_header.dart';
 import '../../data/chat_repository.dart';
 import '../../domain/chat_message.dart';
 
@@ -173,18 +175,27 @@ class _FullScreenImage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    // A picture on black: the close button floats over it instead of an app
+    // bar (nothing else on this screen needs a header).
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          tooltip: l10n.chatCloseImageAction,
-          onPressed: () => Navigator.of(context).pop(),
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(64),
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.s16),
+              child: HeaderIconButton(
+                icon: Icons.close_rounded,
+                tooltip: l10n.chatCloseImageAction,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
         ),
       ),
-      extendBodyBehindAppBar: true,
       body: Center(
         child: InteractiveViewer(
           maxScale: 4,

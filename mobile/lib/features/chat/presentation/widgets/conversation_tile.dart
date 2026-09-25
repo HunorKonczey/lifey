@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../domain/chat_conversation.dart';
 import '../../domain/chat_peer.dart';
 import 'chat_avatar.dart';
@@ -47,6 +48,8 @@ class ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context)!;
     final unread = conversation.hasUnread;
     final archived = conversation.isArchived;
@@ -66,110 +69,83 @@ class ConversationTile extends StatelessWidget {
       preview = '$ownPrefix${conversation.lastMessagePreview}';
     }
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.input),
-        child: Opacity(
-          // An archived thread is still readable, just visibly past.
-          opacity: archived ? 0.6 : 1,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            child: Row(
-              children: [
-                ChatAvatar(
-                  monogram: conversation.peer.monogram,
-                  userId: conversation.peer.userId,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+        child: Row(
+          children: [
+            ChatAvatar(
+              monogram: conversation.peer.monogram,
+              userId: conversation.peer.userId,
+              size: 48,
+            ),
+            const SizedBox(width: AppSpacing.s16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // A Wrap, not a Row: at large text the name and its labels
+                  // (role, archived, muted) go onto a second line instead of
+                  // running out of the row.
+                  Wrap(
+                    spacing: AppSpacing.s8,
+                    runSpacing: AppSpacing.s4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              conversation.peer.displayName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 14.5,
-                                fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
-                                color: scheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          if (showRoleLabel) ...[
-                            const SizedBox(width: 6),
-                            _RoleLabel(role: conversation.peer.role),
-                          ],
-                          if (archived) ...[
-                            const SizedBox(width: 6),
-                            _MetaChip(label: l10n.chatArchivedLabel),
-                          ],
-                          // A muted thread still shows its unread dot — the
-                          // mute silences the notification, not the count.
-                          if (conversation.isMuted && !archived) ...[
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.notifications_off,
-                              size: 14,
-                              color: scheme.onSurfaceVariant,
-                              semanticLabel: l10n.chatMutedLabel,
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
                       Text(
-                        preview,
+                        conversation.peer.displayName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 12.5,
-                          fontWeight: unread ? FontWeight.w600 : FontWeight.w500,
-                          color: unread ? scheme.onSurface : scheme.onSurfaceVariant,
+                        style: t.titleMedium!.copyWith(
+                          fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
+                          // An archived thread is still readable, just visibly
+                          // past — a quieter tier, not an alpha.
+                          color: archived ? p.text2 : p.text,
                         ),
                       ),
+                      if (showRoleLabel) _RoleLabel(role: conversation.peer.role),
+                      if (archived) TintedChip(label: l10n.chatArchivedLabel, color: p.text2),
+                      // A muted thread still shows its unread dot — the mute
+                      // silences the notification, not the count.
+                      if (conversation.isMuted && !archived)
+                        Icon(Icons.notifications_off, size: 16, color: p.text3, semanticLabel: l10n.chatMutedLabel),
                     ],
                   ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _timeLabel(context),
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 11,
-                        fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
-                        color: unread ? scheme.primary : scheme.onSurfaceVariant,
-                      ),
+                  const SizedBox(height: 2),
+                  Text(
+                    preview,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: t.bodyMedium!.copyWith(
+                      fontWeight: unread ? FontWeight.w600 : FontWeight.w500,
+                      color: archived ? p.text3 : (unread ? p.text : p.text2),
                     ),
-                    const SizedBox(height: 6),
-                    if (unread)
-                      Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                          color: scheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 9),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _timeLabel(context),
+                  style: t.bodySmall!.copyWith(
+                    fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
+                    color: unread ? scheme.primary : p.text3,
+                  ),
                 ),
+                const SizedBox(height: 6),
+                if (unread)
+                  Container(width: 10, height: 10, decoration: BoxDecoration(color: scheme.primary, shape: BoxShape.circle))
+                else
+                  const SizedBox(height: 10),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -186,38 +162,9 @@ class _RoleLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return _MetaChip(
-      label: role == ChatPeerRole.trainer
-          ? l10n.chatPeerRoleTrainerLabel
-          : l10n.chatPeerRoleClientLabel,
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
+    return TintedChip(
+      label: role == ChatPeerRole.trainer ? l10n.chatPeerRoleTrainerLabel : l10n.chatPeerRoleClientLabel,
+      color: context.palette.text2,
     );
   }
 }

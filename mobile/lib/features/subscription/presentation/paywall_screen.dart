@@ -459,7 +459,7 @@ class _BenefitRow extends StatelessWidget {
       decoration: highlighted
           ? BoxDecoration(
               color: scheme.tertiaryContainer,
-              borderRadius: BorderRadius.circular(AppRadius.card),
+              borderRadius: AppRadius.cardAll,
             )
           : null,
       child: Row(
@@ -539,13 +539,13 @@ class _PlanCard extends StatelessWidget {
       checked: selected,
       child: Material(
         color: selected ? scheme.tertiaryContainer : scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppRadius.card),
+        borderRadius: AppRadius.cardAll,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.card),
+              borderRadius: AppRadius.cardAll,
               border: Border.all(
                 color: selected ? scheme.primary : Colors.transparent,
                 width: 2,
@@ -584,7 +584,7 @@ class _PlanCard extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: scheme.secondary,
-                                borderRadius: BorderRadius.circular(99),
+                                borderRadius: AppRadius.pill,
                               ),
                               child: Text(
                                 discountBadge!,
@@ -647,7 +647,7 @@ class _PlanCardSkeleton extends StatelessWidget {
       height: 68,
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppRadius.card),
+        borderRadius: AppRadius.cardAll,
       ),
     );
   }
@@ -711,7 +711,7 @@ class _PendingCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(AppRadius.card),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Row(
         children: [
