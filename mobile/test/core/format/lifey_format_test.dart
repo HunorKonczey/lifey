@@ -113,6 +113,8 @@ void main() {
     test('short date for axes', () {
       expect(en.shortDate(thu), 'Sep 24');
       expect(hu.shortDate(thu), 'szept. 24.');
+      expect(en.fullDate(thu), '24 Sep 2026');
+      expect(hu.fullDate(thu), '2026. szept. 24.');
     });
 
     test('weekday and time for list rows', () {

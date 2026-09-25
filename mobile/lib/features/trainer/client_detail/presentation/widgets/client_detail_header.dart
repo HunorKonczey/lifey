@@ -1,149 +1,92 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../../../../../core/network/error_message.dart';
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
-import '../../../../../shared/widgets/app_snackbar.dart';
-import '../../../../chat/data/chat_repository.dart';
+import '../../../../../shared/widgets/ds/lifey_header.dart';
 import '../../../clients/domain/trainer_client.dart';
 import '../../../shared/client_avatar.dart';
 
-/// The client detail screen's header card: who am I looking at, since when,
-/// and the one way out of read-only — writing to them (frame C1).
-class ClientDetailHeader extends ConsumerStatefulWidget {
-  const ClientDetailHeader({super.key, required this.client, this.showBack = true});
+/// The client detail screen's header (canvas Lifey 6, client overview): the
+/// subpage header — round back button, the client's monogram, their name over
+/// "Client since 24 Sep 2026", and a ⋮ menu — as a drop-in `Scaffold.appBar`.
+///
+/// The one screen that is about this person and nobody else, so it is where
+/// their face belongs ([ClientAvatar.showPhoto]). Messaging and scheduling are
+/// buttons under the tabs, not in here; the menu keeps the quieter way to the
+/// chat.
+class ClientDetailHeader extends StatelessWidget implements PreferredSizeWidget {
+  const ClientDetailHeader({
+    super.key,
+    required this.client,
+    required this.onMessage,
+    this.showBack = true,
+    this.openingChat = false,
+  });
 
   final TrainerClient client;
+
+  /// Opens the chat with this client.
+  final VoidCallback onMessage;
 
   /// False in the tablet layout's detail pane, where nothing was pushed.
   final bool showBack;
 
+  /// The chat is being opened: the menu button gives way to a spinner so a
+  /// second tap cannot start a second conversation.
+  final bool openingChat;
+
   @override
-  ConsumerState<ClientDetailHeader> createState() => _ClientDetailHeaderState();
-}
-
-class _ClientDetailHeaderState extends ConsumerState<ClientDetailHeader> {
-  bool _openingChat = false;
-
-  Future<void> _openChat() async {
-    if (_openingChat) return;
-    setState(() => _openingChat = true);
-    try {
-      final conversationId = await ref
-          .read(chatRepositoryProvider)
-          .openConversationWith(widget.client.userId);
-      if (mounted) context.push('/chat/$conversationId');
-    } catch (error) {
-      if (mounted) AppSnackbar.showError(context, title: friendlyError(error));
-    } finally {
-      if (mounted) setState(() => _openingChat = false);
-    }
-  }
+  Size get preferredSize => const LifeySubpageHeader(title: '').preferredSize;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final client = widget.client;
-    final dateFormat = DateFormat.yMMMd(Localizations.localeOf(context).toString());
+    final p = context.palette;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      padding: const EdgeInsets.fromLTRB(4, 8, 8, 12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: AppRadius.cardAll,
+    return LifeySubpageHeader(
+      title: client.displayName,
+      subtitle: l10n.trainerClientSinceLabel(
+        LifeyFormat.of(context).fullDate(client.activeSince.toLocal()),
       ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              if (widget.showBack)
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  onPressed: () => context.pop(),
-                )
-              else
-                const SizedBox(width: 8),
-              const Spacer(),
-              if (_openingChat)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              else
-                PopupMenuButton<void>(
-                  tooltip: l10n.trainerClientActionsTooltip,
-                  position: PopupMenuPosition.under,
-                  icon: const Icon(Icons.more_horiz),
-                  itemBuilder: (context) => [
-                    PopupMenuItem<void>(
-                      onTap: _openChat,
-                      child: Row(
-                        children: [
-                          Icon(Icons.chat_bubble_outline,
-                              size: 20, color: scheme.onSurfaceVariant),
-                          const SizedBox(width: 12),
-                          Text(l10n.trainerMessageClientAction),
-                        ],
-                      ),
-                    ),
+      leading: ClientAvatar(client: client, size: 48, showPhoto: true),
+      showBack: showBack,
+      actions: [
+        if (openingChat)
+          const SizedBox.square(
+            dimension: 44,
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.s12),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          )
+        else
+          PopupMenuButton<void>(
+            tooltip: l10n.trainerClientActionsTooltip,
+            position: PopupMenuPosition.under,
+            icon: const Icon(Icons.more_vert_rounded, size: 22),
+            style: IconButton.styleFrom(
+              fixedSize: const Size.square(44),
+              minimumSize: const Size.square(44),
+              tapTargetSize: MaterialTapTargetSize.padded,
+              backgroundColor: p.nested,
+              foregroundColor: p.text,
+              shape: const CircleBorder(),
+            ),
+            itemBuilder: (context) => [
+              PopupMenuItem<void>(
+                onTap: onMessage,
+                child: Row(
+                  children: [
+                    Icon(Icons.chat_bubble_outline_rounded, size: 20, color: p.text2),
+                    const SizedBox(width: AppSpacing.s12),
+                    Flexible(child: Text(l10n.trainerMessageClientAction)),
                   ],
                 ),
+              ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                // The one screen that is about this person and nobody else,
-                // so it is where their face belongs.
-                ClientAvatar(client: client, size: 52, showPhoto: true),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        client.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        client.email,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.trainerClientSinceLabel(
-                          dateFormat.format(client.activeSince.toLocal()),
-                        ),
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }

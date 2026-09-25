@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/trainer/client_detail/presentation/tabs/schedule_tab.dart';
+import 'package:lifey/features/trainer/client_detail/presentation/widgets/client_action_bar.dart';
 import 'package:lifey/features/trainer/programs/data/programs_repository.dart';
 import 'package:lifey/features/trainer/programs/domain/program.dart';
 import 'package:lifey/features/trainer/schedule/application/calendar_controller.dart';
 import 'package:lifey/features/trainer/schedule/data/schedule_repository.dart';
 import 'package:lifey/features/trainer/schedule/domain/schedule.dart';
+import 'package:lifey/features/trainer/schedule/presentation/widgets/create_schedule_sheet.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_template.dart';
 import 'package:lifey/l10n/app_localizations.dart';
@@ -144,6 +146,8 @@ class _FakeScheduleRepository extends ScheduleRepository {
       cancelledSchedules.add(scheduleId);
 }
 
+void _noop() {}
+
 Future<void> _pump(
   WidgetTester tester, {
   required _FakeScheduleRepository repo,
@@ -163,11 +167,25 @@ Future<void> _pump(
         workoutTemplateControllerProvider
             .overrideWith(() => _FakeTemplateController(templates)),
       ],
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(body: ClientScheduleTab(clientId: 7, offline: false)),
+        // The "Schedule" button lives under the client detail's tabs now, not
+        // on this tab; the same bar stands in for it here.
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Column(
+              children: [
+                ClientActionBar(
+                  onMessage: _noop,
+                  onSchedule: () => CreateScheduleSheet.show(context, clientId: 7),
+                ),
+                const Expanded(child: ClientScheduleTab(clientId: 7, offline: false)),
+              ],
+            ),
+          ),
+        ),
       ),
     ),
   );

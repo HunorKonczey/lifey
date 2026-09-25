@@ -1,0 +1,65 @@
+import 'package:flutter/material.dart';
+
+import '../../../../../core/theme/app_tokens.dart';
+import '../../../../../l10n/app_localizations.dart';
+
+/// "Message" and "Schedule" right under the tabs (canvas Lifey 6, client
+/// overview: "akció elöl") — the two things a trainer does *to* a client, one
+/// tap from every tab instead of a menu or a floating button in the way of the
+/// list. Message is the quiet outlined button, Schedule the primary one.
+class ClientActionBar extends StatelessWidget {
+  const ClientActionBar({
+    super.key,
+    required this.onMessage,
+    required this.onSchedule,
+    this.busy = false,
+  });
+
+  final VoidCallback onMessage;
+  final VoidCallback onSchedule;
+
+  /// The chat is opening; Message waits for it instead of opening twice.
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s12, AppSpacing.screen, AppSpacing.s4),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: busy ? null : onMessage,
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+              label: _Label(l10n.trainerMessageClientButton),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: onSchedule,
+              icon: const Icon(Icons.event_outlined, size: 22),
+              label: _Label(l10n.trainerScheduleWorkoutAction),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A button caption that shrinks to fit instead of ending in "…": two buttons
+/// share the row, and Hungarian "Ütemezés" at 130 % text is wider than half of
+/// a small phone.
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(text, maxLines: 1, softWrap: false),
+      );
+}

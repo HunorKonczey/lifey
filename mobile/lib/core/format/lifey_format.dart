@@ -118,6 +118,10 @@ class LifeyFormat {
   /// "szept. 24." (the canvases' axis labels).
   String shortDate(DateTime date) => DateFormat(_hu ? 'MMM d.' : 'MMM d', locale).format(date);
 
+  /// Full date with the year, for "since" lines: "24 Sep 2026" /
+  /// "2026. szept. 24."
+  String fullDate(DateTime date) => DateFormat(_hu ? 'y. MMM d.' : 'd MMM y', locale).format(date);
+
   /// 24-hour clock time: "07:15".
   String time(DateTime date) => DateFormat('HH:mm', locale).format(date);
 

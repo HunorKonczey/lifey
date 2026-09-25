@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/error_message.dart';
 import '../../../../core/sync/connectivity_status_provider.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/ds/lifey_header.dart';
 import '../../../../shared/widgets/empty_view.dart';
 import '../../../../shared/widgets/error_view.dart';
+import '../../../chat/data/chat_repository.dart';
 import '../../clients/application/trainer_clients_controller.dart';
+import '../../programs/application/programs_controller.dart';
+import '../../schedule/application/client_schedules_controller.dart';
+import '../../schedule/presentation/widgets/create_schedule_sheet.dart';
 import '../application/client_detail_entry.dart';
 import '../application/client_detail_tab_preference.dart';
 import '../domain/client_detail_tab.dart';
@@ -16,7 +24,9 @@ import 'tabs/statistics_tab.dart';
 import 'tabs/workouts_tab.dart';
 import 'tabs/steps_tab.dart';
 import 'tabs/weight_tab.dart';
+import 'widgets/client_action_bar.dart';
 import 'widgets/client_detail_header.dart';
+import 'widgets/client_tab_bar.dart';
 
 /// Everything the trainer can see about one client — read-only in T2
 /// (docs/chat/41-trainer-mobile-v2-plan.md).
@@ -40,25 +50,31 @@ class ClientDetailScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final client = ref.watch(trainerClientProvider(clientId));
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: client.when(
-          data: (client) => client == null
-              ? EmptyView(
-                  icon: Icons.person_off_outlined,
-                  // Not an error: the relationship may simply have ended
-                  // while this link was sitting in someone's notifications.
-                  title: l10n.trainerClientNotFoundTitle,
-                  subtitle: l10n.trainerClientNotFoundMessage,
-                )
-              : _Loaded(client: client, embedded: embedded),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ErrorView(
-            error: error,
-            onRetry: () =>
-                ref.read(trainerClientsControllerProvider.notifier).refresh(),
-          ),
+    // The loaded screen builds its own Scaffold (its header needs the
+    // client); the states without one get the same header, bare, so there is
+    // still a way back from a spinner or an error.
+    Widget bare(Widget body) => Scaffold(
+          appBar: LifeySubpageHeader(title: l10n.trainerClientFallbackTitle, showBack: !embedded),
+          body: body,
+        );
+
+    return client.when(
+      data: (client) => client == null
+          ? bare(
+              EmptyView(
+                icon: Icons.person_off_outlined,
+                // Not an error: the relationship may simply have ended
+                // while this link was sitting in someone's notifications.
+                title: l10n.trainerClientNotFoundTitle,
+                subtitle: l10n.trainerClientNotFoundMessage,
+              ),
+            )
+          : _Loaded(client: client, embedded: embedded),
+      loading: () => bare(const Center(child: CircularProgressIndicator())),
+      error: (error, _) => bare(
+        ErrorView(
+          error: error,
+          onRetry: () => ref.read(trainerClientsControllerProvider.notifier).refresh(),
         ),
       ),
     );
@@ -100,9 +116,34 @@ class _LoadedState extends ConsumerState<_Loaded>
 
   void _openTab(ClientDetailTab tab) => _controller.animateTo(tab.index);
 
+  bool _openingChat = false;
+
+  Future<void> _openChat() async {
+    if (_openingChat) return;
+    setState(() => _openingChat = true);
+    try {
+      final conversationId =
+          await ref.read(chatRepositoryProvider).openConversationWith(widget.client.client.userId);
+      if (mounted) context.push('/chat/$conversationId');
+    } catch (error) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _openingChat = false);
+    }
+  }
+
+  Future<void> _schedule() async {
+    final clientId = widget.client.client.userId;
+    final created = await CreateScheduleSheet.show(context, clientId: clientId);
+    if (created != true) return;
+    // The schedule tab reads these; it may be showing the old list.
+    ref.invalidate(clientSchedulesProvider(clientId));
+    ref.invalidate(clientUpcomingOccurrencesProvider(clientId));
+    ref.invalidate(clientProgramAssignmentsProvider(clientId));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final clientId = widget.client.client.userId;
     final offline = ref.watch(isOfflineProvider).value ?? false;
@@ -117,57 +158,44 @@ class _LoadedState extends ConsumerState<_Loaded>
           ClientDetailTab.schedule => l10n.trainerTabScheduleLabel,
         };
 
-    const icons = {
-      ClientDetailTab.overview: Icons.dashboard_outlined,
-      ClientDetailTab.statistics: Icons.bar_chart,
-      ClientDetailTab.workouts: Icons.fitness_center,
-      ClientDetailTab.nutrition: Icons.restaurant_outlined,
-      ClientDetailTab.steps: Icons.directions_walk,
-      ClientDetailTab.weight: Icons.monitor_weight_outlined,
-      ClientDetailTab.schedule: Icons.event_outlined,
-    };
-
-    return Column(
-      children: [
-        ClientDetailHeader(
-          client: widget.client.client,
-          showBack: !widget.embedded,
-        ),
-        // Five tabs do not fit a phone's width as text, and two rows would
-        // push the content below the fold. A scrolling row keeps every label
-        // readable and the first tabs visible where the thumb is.
-        TabBar(
-          controller: _controller,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          indicatorColor: theme.colorScheme.primary,
-          labelColor: theme.colorScheme.onSurface,
-          unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-          dividerColor: Colors.transparent,
-          tabs: [
-            for (final tab in ClientDetailTab.values)
-              Tab(icon: Icon(icons[tab], size: 18), text: label(tab), height: 58),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
+    return Scaffold(
+      appBar: ClientDetailHeader(
+        client: widget.client.client,
+        showBack: !widget.embedded,
+        onMessage: _openChat,
+        openingChat: _openingChat,
+      ),
+      body: Column(
+        children: [
+          // Seven tabs do not fit a phone's width as text, and two rows would
+          // push the content below the fold. A scrolling row keeps every label
+          // readable and the first tabs visible where the thumb is.
+          ClientTabBar(
             controller: _controller,
-            children: [
-              ClientOverviewTab(
-                clientId: clientId,
-                onOpenTab: _openTab,
-                offline: offline,
-              ),
-              ClientStatisticsTab(clientId: clientId, offline: offline),
-              ClientWorkoutsTab(clientId: clientId, offline: offline),
-              ClientNutritionTab(clientId: clientId, offline: offline),
-              ClientStepsTab(clientId: clientId, offline: offline),
-              ClientWeightTab(clientId: clientId, offline: offline),
-              ClientScheduleTab(clientId: clientId, offline: offline),
-            ],
+            labels: [for (final tab in ClientDetailTab.values) label(tab)],
           ),
-        ),
-      ],
+          ClientActionBar(onMessage: _openChat, onSchedule: _schedule, busy: _openingChat),
+          Expanded(
+            child: TabBarView(
+              controller: _controller,
+              children: [
+                ClientOverviewTab(
+                  clientId: clientId,
+                  onOpenTab: _openTab,
+                  offline: offline,
+                  missedWorkoutCount: widget.client.client.missedWorkoutCount,
+                ),
+                ClientStatisticsTab(clientId: clientId, offline: offline),
+                ClientWorkoutsTab(clientId: clientId, offline: offline),
+                ClientNutritionTab(clientId: clientId, offline: offline),
+                ClientStepsTab(clientId: clientId, offline: offline),
+                ClientWeightTab(clientId: clientId, offline: offline),
+                ClientScheduleTab(clientId: clientId, offline: offline),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

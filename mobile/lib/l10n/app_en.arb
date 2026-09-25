@@ -4959,26 +4959,6 @@
   "@trainerTabNutritionLabel": {
     "description": "Client detail tab: one day of the client's food log against their goals"
   },
-  "trainerMetricAvgCaloriesLabel": "Avg. daily calories",
-  "@trainerMetricAvgCaloriesLabel": {
-    "description": "Overview metric card: the client's average calorie intake per day over the last week (frame C3)"
-  },
-  "trainerMetricCurrentWeightLabel": "Current weight",
-  "@trainerMetricCurrentWeightLabel": {
-    "description": "Overview metric card: the client's most recent weigh-in"
-  },
-  "trainerMetricWorkoutsThisWeekLabel": "Workouts this week",
-  "@trainerMetricWorkoutsThisWeekLabel": {
-    "description": "Overview metric card: how many sessions the client logged in the last 7 days"
-  },
-  "trainerMetricAvgStepsLabel": "Avg. daily steps",
-  "@trainerMetricAvgStepsLabel": {
-    "description": "Overview metric card: the client's average step count per day over the last week"
-  },
-  "trainerOverviewPeriodHint": "Figures cover the last 7 days.",
-  "@trainerOverviewPeriodHint": {
-    "description": "Footnote under the overview metric cards, naming the window they are calculated over so the numbers can't be misread as all-time"
-  },
   "trainerPeriodDailyLabel": "Today",
   "@trainerPeriodDailyLabel": {
     "description": "Statistics tab period chip: today's totals only"
@@ -5070,15 +5050,6 @@
     "description": "A body-weight figure with its unit. {value} is already formatted",
     "placeholders": {
       "value": {
-        "type": "String"
-      }
-    }
-  },
-  "trainerKgDeltaValue": "{delta} kg",
-  "@trainerKgDeltaValue": {
-    "description": "The change since the previous weigh-in, on the overview card. {delta} already carries its sign (e.g. '+0.3', '-1.2')",
-    "placeholders": {
-      "delta": {
         "type": "String"
       }
     }
@@ -6653,5 +6624,82 @@
   "@trainerClientChipPrs": {
     "description": "Record chip on a client card: personal records the client set in the last 7 days",
     "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerClientFallbackTitle": "Client",
+  "@trainerClientFallbackTitle": {
+    "description": "Title of the client detail header while the client is still loading or could not be found (canvas Lifey 6, client overview)"
+  },
+  "trainerMessageClientButton": "Message",
+  "@trainerMessageClientButton": {
+    "description": "Outlined button right under the client detail tabs that opens the chat with this client (canvas Lifey 6, client overview)"
+  },
+  "trainerOverviewLast7DaysLabel": "Last 7 days",
+  "@trainerOverviewLast7DaysLabel": {
+    "description": "Small heading above the four KPI tiles on the client overview tab"
+  },
+  "trainerKpiAvgCalories": "Avg calories",
+  "@trainerKpiAvgCalories": {
+    "description": "Label of the average daily calories KPI tile on the client overview (short, sits beside a 18 px icon)"
+  },
+  "trainerKpiWorkouts": "Workouts",
+  "@trainerKpiWorkouts": {
+    "description": "Label of the workouts-in-the-last-7-days KPI tile on the client overview"
+  },
+  "trainerKpiAvgSteps": "Avg steps",
+  "@trainerKpiAvgSteps": {
+    "description": "Label of the average daily steps KPI tile on the client overview"
+  },
+  "trainerKpiAvgRpe": "Avg RPE",
+  "@trainerKpiAvgRpe": {
+    "description": "Label of the average perceived-exertion (RPE) KPI tile on the client overview"
+  },
+  "trainerKpiRpeScale": "/ 10",
+  "@trainerKpiRpeScale": {
+    "description": "Unit written after the average RPE value: the scale it is rated on"
+  },
+  "trainerKpiCalorieGoal": "{percent} of goal",
+  "@trainerKpiCalorieGoal": {
+    "description": "Line under the average calories KPI: how much of the client's daily calorie goal the average is, e.g. '69% of goal'",
+    "placeholders": {"percent": {"type": "String"}}
+  },
+  "trainerKpiWorkoutsMissed": "{count, plural, one{1 session missed · 14 d} other{{count} sessions missed · 14 d}}",
+  "@trainerKpiWorkoutsMissed": {
+    "description": "Line under the workouts KPI when planned sessions were missed in the last 14 days",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerKpiStepsDays": "{count, plural, one{over 1 day} other{over {count} days}}",
+  "@trainerKpiStepsDays": {
+    "description": "Line under the average steps KPI: how many days with recorded steps the average is taken over",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerKpiRpeLight": "light effort",
+  "@trainerKpiRpeLight": {
+    "description": "Line under the average RPE KPI when the average is below 4"
+  },
+  "trainerKpiRpeModerate": "moderate effort",
+  "@trainerKpiRpeModerate": {
+    "description": "Line under the average RPE KPI when the average is from 4 up to 6"
+  },
+  "trainerKpiRpeHard": "hard, not maximal",
+  "@trainerKpiRpeHard": {
+    "description": "Line under the average RPE KPI when the average is from 6 up to 8"
+  },
+  "trainerKpiRpeVeryHard": "very hard",
+  "@trainerKpiRpeVeryHard": {
+    "description": "Line under the average RPE KPI when the average is from 8 up to 9.5"
+  },
+  "trainerKpiRpeMaximal": "maximal effort",
+  "@trainerKpiRpeMaximal": {
+    "description": "Line under the average RPE KPI when the average is 9.5 or more"
+  },
+  "trainerWeightChangeChip": "{delta} kg · {days} d",
+  "@trainerWeightChangeChip": {
+    "description": "Chip on the weight trend card: the change in weight over the last N days, e.g. '−1.4 kg · 30 d'. The delta already carries its sign",
+    "placeholders": {"delta": {"type": "String"}, "days": {"type": "int"}}
+  },
+  "trainerWeightLatestLabel": "Latest: {weight} kg · {date}",
+  "@trainerWeightLatestLabel": {
+    "description": "Line under the weight trend card's title: the client's latest weigh-in and when it was",
+    "placeholders": {"weight": {"type": "String"}, "date": {"type": "String"}}
   }
 }

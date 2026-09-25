@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/widgets/charts/time_series_chart.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
 
 /// A titled card wrapping the shared [TimeSeriesChart].
 ///
@@ -24,6 +25,10 @@ class TrendChartCard extends StatelessWidget {
     required this.emptyMessage,
     this.valueLabelBuilder,
     this.goalValue,
+    this.subtitle,
+    this.trailing,
+    this.chartHeight = 220,
+    this.onTap,
   });
 
   final String title;
@@ -36,10 +41,20 @@ class TrendChartCard extends StatelessWidget {
   final String Function(double value)? valueLabelBuilder;
   final double? goalValue;
 
+  /// A line under the title — "Latest: 71.4 kg · Sep 24".
+  final String? subtitle;
+
+  /// Sits at the title's right edge — the change chip ("−1.4 kg · 30 d").
+  final Widget? trailing;
+
+  final double chartHeight;
+
+  /// Makes the whole card a door to the tab that explains it.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final dateFormat =
         DateFormat.MMMd(Localizations.localeOf(context).toString());
@@ -59,23 +74,39 @@ class TrendChartCard extends StatelessWidget {
         valueLabelBuilder: valueLabelBuilder,
         accentColor: accentColor,
         goalValue: goalValue,
+        height: chartHeight,
+        // The v2 chart: a soft fill under one line, the latest reading marked.
+        gradientFill: true,
+        showPoints: false,
+        highlightLast: true,
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: AppRadius.lgAll,
-      ),
+    return LifeyCard(
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: AppSpacing.s8), trailing!],
+            ],
           ),
-          const SizedBox(height: 12),
+          if (subtitle != null) ...[
+            const SizedBox(height: AppSpacing.s4),
+            Text(
+              subtitle!,
+              style: theme.textTheme.bodySmall?.copyWith(color: context.palette.text2),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.s12),
           body,
         ],
       ),

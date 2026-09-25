@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../../../../core/network/error_message.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
-import '../../../shared/trainer_fab.dart';
 import '../../../../../shared/widgets/app_snackbar.dart';
 import '../../../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../../../shared/widgets/empty_view.dart';
@@ -15,7 +14,6 @@ import '../../../programs/domain/program_dates.dart';
 import '../../../schedule/application/client_schedules_controller.dart';
 import '../../../schedule/application/recurrence_text.dart';
 import '../../../schedule/domain/schedule.dart';
-import '../../../schedule/presentation/widgets/create_schedule_sheet.dart';
 import '../../../schedule/presentation/widgets/occurrence_status_chip.dart';
 import '../../../schedule/presentation/widgets/session_peek_sheet.dart';
 import '../widgets/client_tab_body.dart';
@@ -55,77 +53,57 @@ class ClientScheduleTab extends ConsumerWidget {
       ]);
     }
 
-    return Stack(
-      children: [
-        ClientTabBody(
-          states: [schedules, upcoming, programs],
-          offline: offline,
-          onRefresh: refresh,
-          builder: (context) {
-            final series = schedules.requireValue;
-            final occurrences = upcoming.requireValue;
-            final runs = programs.requireValue;
+    return ClientTabBody(
+      states: [schedules, upcoming, programs],
+      offline: offline,
+      onRefresh: refresh,
+      builder: (context) {
+        final series = schedules.requireValue;
+        final occurrences = upcoming.requireValue;
+        final runs = programs.requireValue;
 
-            if (series.isEmpty && occurrences.isEmpty && runs.isEmpty) {
-              return EmptyView(
-                icon: Icons.event_outlined,
-                title: l10n.trainerNoSchedulesTitle,
-                subtitle: l10n.trainerNoSchedulesMessage,
-              );
-            }
+        if (series.isEmpty && occurrences.isEmpty && runs.isEmpty) {
+          return EmptyView(
+            icon: Icons.event_outlined,
+            title: l10n.trainerNoSchedulesTitle,
+            subtitle: l10n.trainerNoSchedulesMessage,
+          );
+        }
 
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-              children: [
-                // Program runs first: they are the bigger commitment, and
-                // the loose schedules below them are usually the extras
-                // hung around one.
-                if (runs.isNotEmpty) ...[
-                  _SectionHeader(title: l10n.trainerProgramsSectionTitle),
-                  for (final run in runs)
-                    _ProgramRunCard(run: run, onCancelled: refresh),
-                  const SizedBox(height: 12),
-                ],
-                if (series.isNotEmpty) ...[
-                  _SectionHeader(title: l10n.trainerSchedulesSectionTitle),
-                  for (final schedule in series)
-                    _ScheduleCard(
-                      schedule: schedule,
-                      onCancelled: refresh,
-                    ),
-                  const SizedBox(height: 12),
-                ],
-                if (occurrences.isNotEmpty) ...[
-                  _SectionHeader(title: l10n.trainerUpcomingSectionTitle),
-                  for (final occurrence in occurrences)
-                    _OccurrenceRow(
-                      occurrence: occurrence,
-                      schedule: _seriesOf(series, occurrence),
-                      onChanged: refresh,
-                    ),
-                ],
-              ],
-            );
-          },
-        ),
-        Positioned(
-          right: 16,
-          bottom: trainerFabBottom(context),
-          child: FloatingActionButton.extended(
-            heroTag: null,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            icon: const Icon(Icons.add),
-            label: Text(l10n.trainerScheduleWorkoutAction),
-            onPressed: () async {
-              final created =
-                  await CreateScheduleSheet.show(context, clientId: clientId);
-              if (created ?? false) await refresh();
-            },
-          ),
-        ),
-      ],
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          children: [
+            // Program runs first: they are the bigger commitment, and
+            // the loose schedules below them are usually the extras
+            // hung around one.
+            if (runs.isNotEmpty) ...[
+              _SectionHeader(title: l10n.trainerProgramsSectionTitle),
+              for (final run in runs)
+                _ProgramRunCard(run: run, onCancelled: refresh),
+              const SizedBox(height: 12),
+            ],
+            if (series.isNotEmpty) ...[
+              _SectionHeader(title: l10n.trainerSchedulesSectionTitle),
+              for (final schedule in series)
+                _ScheduleCard(
+                  schedule: schedule,
+                  onCancelled: refresh,
+                ),
+              const SizedBox(height: 12),
+            ],
+            if (occurrences.isNotEmpty) ...[
+              _SectionHeader(title: l10n.trainerUpcomingSectionTitle),
+              for (final occurrence in occurrences)
+                _OccurrenceRow(
+                  occurrence: occurrence,
+                  schedule: _seriesOf(series, occurrence),
+                  onChanged: refresh,
+                ),
+            ],
+          ],
+        );
+      },
     );
   }
 
