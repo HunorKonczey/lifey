@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.11 done; emulator review pending)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -2128,3 +2128,44 @@ editor and the add-food sheet), dark EN with animations removed (Macros, Recipes
 
 **Not exercised on the emulator** (covered by widget tests only): the barcode camera, AI photo estimate, recipe wizard and generated recipe,
 recipe long-press menu / photo, over-goal state of the budget and rings, no-goal accounts, imperial units, a free-tier account with the history boundary.
+
+### R3 — 2026-09-25 — Pixel_10 AVD (1080 × 2424, 420 dpi = 411 × 923 dp, API 37)
+
+Scope: Workouts against `Lifey 3 Workouts.dc.html` — 3.1 sessions list, 3.2 live strength (rest hero, set rows, PR language, floating bar) and the PR sheet, 3.3 live cardio and the cardio
+detail — canvas frames rendered with Playwright at 2.625× and put next to emulator screenshots, plus the flows: **the strength demo flow** (start Push day from the recommended card → edit set 2
+to 67.5 kg → check → PR trophy + rest hero counting down → Finish workout → "How hard was this workout?" → Skip → PR sheet with the +2.5 kg / +3.2 kg deltas → Continue → back on the list with the
+"2 PRs" chip) and **the cardio flow** (Cardio → Running → start without GPS → pause → Resume → slide to finish → detail). Seeded account `anna.r1@lifey.test` (the R1/R2 data plus the strength/run history
+of `seed_r3.py`). Matrix covered: dark EN, light EN, dark HU ×1.3, light HU (Exercises tab), dark HU ×1.3 with **Remove animations** on (start Push day → PR → feedback → PR sheet), plus the new
+template picker and the Templates / Exercises tabs.
+
+**Matches**
+- Sessions list: large "Workouts" title with the filter button, pill tabs, recommended card, the three week-summary tiles, "TODAY / EARLIER THIS WEEK / LAST WEEK" labels over grouped cards, session rows with the
+  gold "🏆 2 PRs" chip, the heart-rate row in the heart colour, "In progress" chip, the "Start" FAB — dark and light.
+- Live strength: subpage header ("Push day / 1 of 2 exercises", timer chip), rest hero (REST 1:28 in 44/800, +15 s and Skip 48 dp buttons, draining bar, "Next: Bench press · set 3 · 60 kg × 8"; overtime "+41:16"
+  in the orange), exercise card (name 20/800, "Best 65 kg × 8 · e1RM 82.3 kg", SET · PREV. · KG · REPS header, 52 dp rows, 40 dp checks), done row in the green tint with ↑ and the gold trophy, the floating
+  music button + "⚑ Finish workout" bar with the fade. The "Edit set" sheet is the DS sheet.
+- PR sheet: 96 dp trophy in its halo, "2 new personal records", "Push day · 202 min · 1,040 kg volume", one grouped card of rows (trophy holder, exercise, "Heaviest set" / "Estimated 1RM", value 20/800,
+  "+2.5 kg" in the improvement green), full-width Continue — the same layout as the canvas; with animations removed everything is in place from the first frame.
+- Live cardio: header (activity chip, "Running", status line, settings button), "MOVING TIME" over the 104 px time, Distance and Pace cards with the edit glyph on the empty one, the 96 dp pause disc with its halo,
+  the 64 dp slide track with the red stop knob; paused state greys the numbers and shows the manual-pause card, the full-width Resume and the slide bar. Detail: subpage header with the date, 52 px distance and the
+  duration beside it, the metric strip (the seeded run has no zones/route/HR, so the zone card and route map are covered by widget tests only).
+- Pickers and tabs: "Choose template" (subpage header, one grouped card of Empty workout / Cardio, "TEMPLATES" with the muscle-group chips), Templates and Exercises tabs as cards with icon holders and
+  tinted chips, both themes; HU strings ("Edzések, Sablonok, Gyakorlatok, Válassz sablont, Következik: …, Legnehezebb szett, Becsült 1RM, Húzd a befejezéshez") fit at ×1.3 with nothing truncated.
+
+**Deviations (intended)**
+- No music button in the cardio header (no music lifecycle on that screen; the settings button sits in its place) — R3.8.
+- The PR sheet is as tall as its content, the canvas frame stretches it to 77 % of the screen with Continue at the bottom — R3.7 (a sheet is not made taller than its rows).
+- The canvas's zone-card footnote ("max HR of 190 bpm (220 − age)") is not used — the stored zones come from the watch against the profile's own maximum — R3.9.
+- Exercises named twice ("Bench press" / "Bench Press") are seed data, not a bug.
+
+**Bugs (fixed on `feature/mobile-redesign`)**
+- The pinned title + tab bar hid the top of the tab under them: with the header collapsed the first rows were behind it, and Templates opened after a scrolled Sessions list was *empty* (the card was above the
+  fold; only a pull-down revealed it). Same defect on Nutrition → **R3.fix-1**: title and tab bar are one absorbed sliver, each tab starts with an `OverlapInsetSliver` (Workouts and Nutrition; `header_test`).
+- The RPE sheet's "Very easy / Maximal effort" anchors were packed on the left after the R3.11 overflow fix → **R3.fix-2** (`Expanded` at both ends; `sheets_layout_test` asserts both edges).
+- Exercises / Templates lists used a 12 dp gutter under a 20 dp header and tab bar, and a hand-rolled section header → **R3.fix-3** (20 dp, `SectionLabel`).
+- HU at ×1.3: the "SZETT" and "ELŐZŐ" column labels ran together and the previous-set hint touched the KG pill → **R3.fix-4** (label inset like its values, right inset on the hint; test).
+- The cardio detail's date line was English in Hungarian ("Fri, Sep 25 · 18:01") → **R3.fix-5** (`LifeyFormat`; HU test).
+- Found by the new sheet layout tests before the review: the GPS explainer and the post-workout sheet overflowed a 360 dp phone at large text, the box-score stepper overflowed it even at 100 %
+  → fixed in R3.11.
+
+**Not exercised on the emulator** (widget tests only): the zone card, route map and splits (the seeded run has none), the game / indoor-bike layouts, imperial units, offline.

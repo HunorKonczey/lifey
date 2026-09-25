@@ -65,6 +65,7 @@ Future<_RecordingSessionController> _pump(
   WorkoutSession session, {
   List<CardioPrType> newRecords = const [],
   CardioPrBaseline previousBests = CardioPrBaseline.empty,
+  Locale locale = const Locale('en'),
 }) async {
   final controller = _RecordingSessionController();
   await tester.pumpWidget(
@@ -81,7 +82,7 @@ Future<_RecordingSessionController> _pump(
         appDatabaseProvider.overrideWithValue(_testDatabase()),
       ],
       child: MaterialApp(
-        locale: const Locale('en'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSummaryScreen(
@@ -556,6 +557,13 @@ void main() {
     expect(find.text('Duration'), findsOneWidget);
     expect(find.text('30:00'), findsOneWidget);
     expect(find.text('Pace'), findsNothing);
+  });
+
+  testWidgets('the header says when it happened in the app language', (tester) async {
+    await _pump(tester, _session(activityType: 'RUNNING', movingSeconds: 1500), locale: const Locale('hu'));
+
+    expect(find.textContaining('aug.'), findsWidgets); // "H, aug. 10. · 07:00", never "Aug"
+    expect(find.textContaining('Aug'), findsNothing);
   });
 
   testWidgets('a manually-entered distance shows the Edited badge', (tester) async {

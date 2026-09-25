@@ -10,6 +10,7 @@ import 'package:lifey/features/workouts/presentation/widgets/cardio_session_sett
 import 'package:lifey/features/workouts/presentation/widgets/game_setup_sheet.dart';
 import 'package:lifey/features/workouts/presentation/widgets/gps_explainer_sheet.dart';
 import 'package:lifey/features/workouts/presentation/widgets/post_workout_feedback_sheet.dart';
+import 'package:lifey/features/workouts/presentation/widgets/rpe_selector.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -127,5 +128,22 @@ void main() {
 
     final error = tester.takeException();
     expect(error is FlutterError ? error.toStringDeep() : error, isNull);
+  });
+  testWidgets('RPE anchors sit at the two ends of the scale', (tester) async {
+    tester.view.physicalSize = const Size(411 * 2.625, 923 * 2.625);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.dark,
+      home: Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: RpeSelector(value: null, onChanged: (_) {}, lowAnchorLabel: 'Very easy', highAnchorLabel: 'Maximal effort'),
+        ),
+      ),
+    ));
+
+    expect(tester.getTopLeft(find.text('Very easy')).dx, 16);
+    expect(tester.getTopRight(find.text('Maximal effort')).dx, closeTo(411 - 16, 0.5));
   });
 }

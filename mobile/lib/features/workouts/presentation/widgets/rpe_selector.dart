@@ -55,9 +55,9 @@ class RpeSelector extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              Flexible(child: Text(lowAnchorLabel!, style: theme.textTheme.bodySmall)),
+              Expanded(child: Text(lowAnchorLabel!, style: theme.textTheme.bodySmall)),
               const SizedBox(width: AppSpacing.s12),
-              Flexible(
+              Expanded(
                 child: Text(highAnchorLabel!, textAlign: TextAlign.right, style: theme.textTheme.bodySmall),
               ),
             ],

@@ -116,7 +116,7 @@ class TemplatesTab extends ConsumerWidget {
             slivers: [
               const OverlapInsetSliver(),
               SliverPadding(
-                padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
+                padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
                 sliver: SliverList.builder(
             itemCount: templates.length,
             itemBuilder: (context, index) {

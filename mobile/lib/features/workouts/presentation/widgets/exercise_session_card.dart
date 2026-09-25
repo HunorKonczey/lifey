@@ -365,7 +365,15 @@ class _ColumnHeader extends StatelessWidget {
     return Row(
       children: [
         SizedBox(width: _kSetColumnWidth, child: _fit(l10n.setColumnLabel, style)),
-        SizedBox(width: _kPreviousColumnWidth, child: _fit(l10n.previousColumnLabel, style)),
+        SizedBox(
+          width: _kPreviousColumnWidth,
+          // Lined up with the values under it (8 dp in), and clear of the
+          // SET label that fills its narrow column at large text.
+          child: Padding(
+            padding: const EdgeInsets.only(left: AppSpacing.s8, right: AppSpacing.s4),
+            child: _fit(l10n.previousColumnLabel, style),
+          ),
+        ),
         Expanded(child: _fit(l10n.kgColumnLabel, style, alignment: Alignment.center)),
         const SizedBox(width: AppSpacing.s8),
         Expanded(child: _fit(l10n.repsColumnLabel, style, alignment: Alignment.center)),
@@ -477,7 +485,7 @@ class _SetRowTile extends StatelessWidget {
                 height: kSetRowHeight,
                 child: Center(
                   child: Padding(
-                    padding: const EdgeInsets.only(left: AppSpacing.s8),
+                    padding: const EdgeInsets.only(left: AppSpacing.s8, right: AppSpacing.s4),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: FittedBox(

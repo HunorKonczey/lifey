@@ -225,6 +225,14 @@ void main() {
     expect(calls.addSet, [false]);
   });
 
+  testWidgets('HU x1.3: the SET and PREV. labels do not run into each other', (tester) async {
+    await _pump(tester, _bench(), locale: const Locale('hu'), textScale: 1.3, width: 360);
+
+    final set = tester.getTopRight(find.text('SZETT')).dx;
+    final previous = tester.getTopLeft(find.text('ELŐZŐ')).dx;
+    expect(previous - set, greaterThanOrEqualTo(4));
+  });
+
   for (final width in [411.0, 360.0]) {
     for (final scale in [1.0, 1.3]) {
       testWidgets('no overflow at ${width.toInt()} dp, text x$scale, HU, light', (tester) async {

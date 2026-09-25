@@ -11,6 +11,7 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
 import '../../../shared/widgets/ds/lifey_card.dart';
 import '../../../shared/widgets/ds/list_group.dart';
+import '../../../shared/widgets/ds/section_label.dart';
 import '../application/exercise_controller.dart';
 import '../domain/exercise.dart';
 import '../domain/exercise_enums.dart';
@@ -98,7 +99,7 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
               .where((c) => exercises.any((e) => e.category == c))
               .toList();
 
-          final bottomPadding = EdgeInsets.fromLTRB(12, 0, 12, bottomPad + 88);
+          final bottomPadding = EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, bottomPad + 88);
 
           return CustomScrollView(
             slivers: [
@@ -282,17 +283,9 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 6),
-      child: Text(
-        label.toUpperCase(),
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      padding: const EdgeInsets.only(top: AppSpacing.s16, bottom: AppSpacing.s8),
+      child: SectionLabel(label),
     );
   }
 }
