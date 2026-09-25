@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/nutrition/application/daily_macros_controller.dart';
 import 'package:lifey/features/nutrition/domain/daily_macros.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
@@ -53,7 +54,13 @@ Future<void> _pumpScreen(
   List<WorkoutSession> sessions = const [],
   List<WeightEntry> weights = const [],
   Map<DateTime, double> water = const {},
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+  ThemeData? theme,
 }) async {
+  tester.view.physicalSize = const Size(360 * 2.625, 923 * 2.625);
+  tester.view.devicePixelRatio = 2.625;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -66,10 +73,16 @@ Future<void> _pumpScreen(
         dailyWaterTotalsProvider.overrideWith((ref) => AsyncValue.data(water)),
         allStepCountsProvider.overrideWith((ref) => Stream.value(const [])),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: WeeklyRecapScreen(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: const WeeklyRecapScreen(),
       ),
     ),
   );
@@ -116,7 +129,7 @@ void main() {
 
     expect(find.text('1 workout'), findsOneWidget);
     expect(find.text('40 min total'), findsOneWidget);
-    expect(find.text('2000'), findsOneWidget); // avg of 1800/2200
+    expect(find.textContaining('2,000', findRichText: true), findsOneWidget); // avg of 1800/2200
     expect(find.text('avg of 2 logged days'), findsOneWidget);
   });
 
@@ -139,11 +152,11 @@ void main() {
       ],
     );
 
-    expect(find.text('WEIGHT'), findsOneWidget); // _RecapCard uppercases its title
+    expect(find.text('WEIGHT'), findsOneWidget); // SectionLabel uppercases its title
     expect(find.text('82.0 kg'), findsOneWidget);
-    expect(find.text('80.5 kg'), findsOneWidget);
-    expect(find.text('1.5'), findsOneWidget); // delta magnitude
-    expect(find.byIcon(Icons.arrow_downward), findsOneWidget); // lost weight
+    expect(find.textContaining('80.5', findRichText: true), findsOneWidget);
+    expect(find.textContaining('1.5 kg', findRichText: true), findsOneWidget); // delta magnitude
+    expect(find.byIcon(Icons.south_rounded), findsOneWidget); // lost weight
   });
 
   testWidgets('goals section shows a row per set goal with days-met text', (tester) async {
@@ -159,7 +172,7 @@ void main() {
       ],
     );
 
-    expect(find.text('GOALS & STREAKS'), findsOneWidget); // _RecapCard uppercases its title
+    expect(find.text('GOALS & STREAKS'), findsOneWidget); // SectionLabel uppercases its title
     // "1/7 days within goal" appears twice: once in the nutrition section's
     // caption, once in the goals section's calorie row — both legitimately.
     expect(find.text('1/7 days within goal'), findsNWidgets(2));
@@ -170,7 +183,7 @@ void main() {
     await _pumpScreen(tester);
 
     final nextButton = tester.widget<IconButton>(
-      find.widgetWithIcon(IconButton, Icons.chevron_right),
+      find.widgetWithIcon(IconButton, Icons.chevron_right_rounded),
     );
     expect(nextButton.onPressed, isNull);
   });
@@ -181,17 +194,64 @@ void main() {
     final weekEnd = _lastWeek.add(const Duration(days: 6));
     final originalLabel = '${fmt.format(_lastWeek)} – ${fmt.format(weekEnd)}';
 
-    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.tap(find.byIcon(Icons.chevron_left_rounded));
     await tester.pumpAndSettle();
     expect(find.text(originalLabel), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.tap(find.byIcon(Icons.chevron_right_rounded));
     await tester.pumpAndSettle();
     expect(find.text(originalLabel), findsOneWidget);
 
     final nextButton = tester.widget<IconButton>(
-      find.widgetWithIcon(IconButton, Icons.chevron_right),
+      find.widgetWithIcon(IconButton, Icons.chevron_right_rounded),
     );
     expect(nextButton.onPressed, isNull);
+  });
+
+  group('Hungarian', () {
+    final full = [
+      WorkoutSession(
+        clientId: 's1',
+        startedAt: _lastWeekDay(0),
+        finishedAt: _lastWeekDay(0).add(const Duration(minutes: 40)),
+        exercises: const [],
+        sets: const [],
+      ),
+    ];
+
+    testWidgets('the week range and weekday letters are Hungarian', (tester) async {
+      await _pumpScreen(tester, locale: const Locale('hu'), sessions: full, macros: [_macros(_lastWeekDay(0), 1800)]);
+      final weekEnd = _lastWeek.add(const Duration(days: 6));
+      final hu = DateFormat('MMM d.', 'hu');
+      expect(find.text('${hu.format(_lastWeek)} – ${hu.format(weekEnd)}'), findsOneWidget);
+      expect(find.text('Heti összefoglaló'), findsOneWidget);
+      // Monday-first letters, no repeated "Sz".
+      expect(find.text('Szo'), findsWidgets);
+      expect(find.text('Sze'), findsWidgets);
+    });
+
+    for (final scale in [1.0, 1.3]) {
+      for (final theme in {'dark': AppTheme.dark, 'light': AppTheme.light}.entries) {
+        testWidgets('a full week fits at 360 dp — ${theme.key}, ×$scale', (tester) async {
+          await _pumpScreen(
+            tester,
+            locale: const Locale('hu'),
+            textScale: scale,
+            theme: theme.value,
+            settings: const UserSettings.defaults().copyWith(dailyCalorieGoal: 2000, dailyStepGoal: 8000, dailyWaterGoalLiters: 2.5),
+            sessions: full,
+            macros: [_macros(_lastWeekDay(0), 1800), _macros(_lastWeekDay(2), 2200)],
+            weights: [
+              WeightEntry(clientId: 'a', date: _lastWeek.subtract(const Duration(days: 2)), weight: 82, recordedAt: _lastWeek),
+              WeightEntry(clientId: 'b', date: _lastWeekDay(4), weight: 80.5, recordedAt: _lastWeek),
+            ],
+          );
+          await tester.drag(find.byType(Scrollable).first, const Offset(0, -800));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.textContaining('80,5', findRichText: true), findsOneWidget);
+        });
+      }
+    }
   });
 }

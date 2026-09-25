@@ -63,7 +63,7 @@ void main() {
   testWidgets('dismissing hides it', (tester) async {
     await _pumpCard(tester, pending: true);
 
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
 
     expect(tester.getSize(find.byType(SponsorshipEndedCard)), Size.zero);

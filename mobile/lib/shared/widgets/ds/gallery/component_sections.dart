@@ -6,6 +6,7 @@ import '../delta_chip.dart';
 import '../lifey_card.dart';
 import '../metric_value.dart';
 import '../monogram_avatar.dart';
+import '../notice_card.dart';
 import '../section_label.dart';
 import '../tinted_chip.dart';
 import 'gallery_section.dart';
@@ -22,6 +23,11 @@ final List<GallerySection> componentSections = [
     title: 'Chips & avatars',
     source: 'Design System › Színtokenek › Tinted chip · D-R0.4 · R0.7',
     builder: (_) => const _ChipsSection(),
+  ),
+  GallerySection(
+    title: 'Notice cards',
+    source: 'Lifey 1 › contextual cards (derived) · R1.8',
+    builder: (_) => const _NoticeSection(),
   ),
 ];
 
@@ -168,6 +174,59 @@ class _ChipsSection extends StatelessWidget {
           const MonogramAvatar(email: 'anna.kovacs@mail.com'),
           const MonogramAvatar(),
         ]),
+      ],
+    );
+  }
+}
+
+/// The contextual cards of the Today screen: brand-olive for the app's own
+/// nudges, clay for anything a trainer sent.
+class _NoticeSection extends StatelessWidget {
+  const _NoticeSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final hu = _hu(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        NoticeCard(
+          icon: Icons.eco_rounded,
+          title: hu ? 'Fejezd be a profilodat' : 'Finish your profile',
+          body: hu
+              ? 'Pár kérdés, és a célok a te adataidra épülnek.'
+              : 'A few questions, and your goals are based on your own numbers.',
+          actionLabel: hu ? 'Beállítás' : 'Set up',
+          onAction: () {},
+          onDismiss: () {},
+          dismissTooltip: hu ? 'Elrejtés' : 'Dismiss',
+        ),
+        const SizedBox(height: AppSpacing.s12),
+        NoticeCard(
+          icon: Icons.auto_awesome_rounded,
+          title: hu ? 'Elkészült a heti összefoglalód' : 'Your weekly recap is ready',
+          actionLabel: hu ? 'Megnézem' : 'View',
+          onAction: () {},
+          onDismiss: () {},
+          dismissTooltip: hu ? 'Elrejtés' : 'Dismiss',
+        ),
+        const SizedBox(height: AppSpacing.s12),
+        NoticeCard(
+          icon: Icons.bolt_rounded,
+          overline: hu ? 'Ajánlott edzés' : 'Recommended workout',
+          title: 'Push day',
+          onTap: () {},
+          trailing: Icon(Icons.play_circle_fill_rounded, size: 30, color: Theme.of(context).colorScheme.primary),
+        ),
+        const SizedBox(height: AppSpacing.s12),
+        NoticeCard(
+          icon: Icons.info_outline_rounded,
+          accent: context.palette.role,
+          title: hu ? 'Az edződ Pro-ja lejárt' : "Your coach's Pro has ended",
+          body: hu ? 'Az adataid megvannak, semmi sem veszett el.' : 'Your data is all still here.',
+          onDismiss: () {},
+          dismissTooltip: hu ? 'Elrejtés' : 'Dismiss',
+        ),
       ],
     );
   }
