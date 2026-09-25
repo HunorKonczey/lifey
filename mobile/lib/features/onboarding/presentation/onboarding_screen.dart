@@ -12,6 +12,7 @@ import '../../../core/utils/unit_converters.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/ds/screen_heading.dart';
+import '../../../shared/widgets/ds/section_label.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../../weight/application/weight_controller.dart';
@@ -764,31 +765,21 @@ class _LifestyleStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ScreenHeading(title: l10n.onboardingLifestyleTitle),
+          ScreenHeading(title: l10n.onboardingLifestyleQuestion),
           const SizedBox(height: AppSpacing.s24),
-          Text(l10n.onboardingActivityLevelLabel, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
-          const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.5,
-            children: [
-              for (final a in ActivityLevel.values)
-                OptionCard(
-                  icon: _activityIcon(a),
-                  label: _activityLabel(a),
-                  description: _activityDescription(a),
-                  active: activityLevel == a,
-                  onTap: () => onActivityChanged(a),
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Text(l10n.onboardingPrimaryGoalLabel, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
-          const SizedBox(height: 8),
+          for (final a in ActivityLevel.values) ...[
+            RadioOptionRow(
+              icon: _activityIcon(a),
+              title: _activityLabel(a),
+              description: _activityDescription(a),
+              selected: activityLevel == a,
+              onTap: () => onActivityChanged(a),
+            ),
+            if (a != ActivityLevel.values.last) const SizedBox(height: AppSpacing.s12),
+          ],
+          const SizedBox(height: AppSpacing.s24),
+          SectionLabel(l10n.onboardingPrimaryGoalLabel),
+          const SizedBox(height: AppSpacing.s12),
           Row(
             children: [
               for (final g in PrimaryGoal.values) ...[
@@ -800,7 +791,7 @@ class _LifestyleStep extends StatelessWidget {
                     onTap: () => onGoalChanged(g),
                   ),
                 ),
-                if (g != PrimaryGoal.values.last) const SizedBox(width: 10),
+                if (g != PrimaryGoal.values.last) const SizedBox(width: AppSpacing.s8),
               ],
             ],
           ),

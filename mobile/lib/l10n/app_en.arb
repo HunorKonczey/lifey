@@ -2750,22 +2750,6 @@
   "@onboardingActivityDescriptionSedentary": {
     "description": "Onboarding wizard: activity level description"
   },
-  "onboardingActivityDescriptionLight": "Light exercise 1–3 days/week",
-  "@onboardingActivityDescriptionLight": {
-    "description": "Onboarding wizard: activity level description"
-  },
-  "onboardingActivityDescriptionModerate": "Moderate exercise 3–5 days/week",
-  "@onboardingActivityDescriptionModerate": {
-    "description": "Onboarding wizard: activity level description"
-  },
-  "onboardingActivityDescriptionActive": "Hard exercise 6–7 days/week",
-  "@onboardingActivityDescriptionActive": {
-    "description": "Onboarding wizard: activity level description"
-  },
-  "onboardingActivityDescriptionVeryActive": "Very hard exercise + physical job",
-  "@onboardingActivityDescriptionVeryActive": {
-    "description": "Onboarding wizard: activity level description"
-  },
   "onboardingPrimaryGoalLabel": "Primary goal",
   "@onboardingPrimaryGoalLabel": {
     "description": "Onboarding wizard: primary goal field label"
@@ -6533,5 +6517,25 @@
   "@onboardingStepOfLabel": {
     "description": "Under the segmented progress bar of the onboarding wizard, e.g. 'Step 4 of 6' (docs/redesign/77-mobile-redesign-plan.md R5.2)",
     "placeholders": {"step": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "onboardingActivityDescriptionLight": "Exercise 1–3 days a week",
+  "@onboardingActivityDescriptionLight": {
+    "description": "Description of the 'Light' activity level in the onboarding wizard and Body & goals (docs/redesign/77-mobile-redesign-plan.md R5.3)"
+  },
+  "onboardingActivityDescriptionModerate": "Exercise 3–5 days a week",
+  "@onboardingActivityDescriptionModerate": {
+    "description": "Description of the 'Moderate' activity level"
+  },
+  "onboardingActivityDescriptionActive": "Hard exercise 6–7 days a week",
+  "@onboardingActivityDescriptionActive": {
+    "description": "Description of the 'Active' activity level"
+  },
+  "onboardingActivityDescriptionVeryActive": "Hard exercise and a physical job",
+  "@onboardingActivityDescriptionVeryActive": {
+    "description": "Description of the 'Very active' activity level"
+  },
+  "onboardingLifestyleQuestion": "How active are you?",
+  "@onboardingLifestyleQuestion": {
+    "description": "Title of the wizard step that asks for the activity level and the primary goal"
   }
 }

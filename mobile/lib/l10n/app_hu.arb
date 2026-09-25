@@ -621,10 +621,6 @@
   "onboardingActivityActive": "Aktív",
   "onboardingActivityVeryActive": "Nagyon aktív",
   "onboardingActivityDescriptionSedentary": "Kevés vagy semmi mozgás",
-  "onboardingActivityDescriptionLight": "Könnyű mozgás heti 1–3 napon",
-  "onboardingActivityDescriptionModerate": "Közepes mozgás heti 3–5 napon",
-  "onboardingActivityDescriptionActive": "Kemény mozgás heti 6–7 napon",
-  "onboardingActivityDescriptionVeryActive": "Nagyon kemény mozgás + fizikai munka",
   "onboardingPrimaryGoalLabel": "Fő cél",
   "onboardingGoalLoseWeight": "Fogyás",
   "onboardingGoalMaintain": "Súly tartása",
@@ -1432,5 +1428,10 @@
   "signInSubtitle": "Jelentkezz be, és folytasd ott, ahol abbahagytad. A naplód a telefonodon marad, offline is.",
   "registerPromptLead": "Új vagy a Lifey-ban?",
   "signInPromptLead": "Már van fiókod?",
-  "onboardingStepOfLabel": "{step}/{total}. lépés"
+  "onboardingStepOfLabel": "{step}/{total}. lépés",
+  "onboardingActivityDescriptionLight": "Mozgás heti 1–3 napon",
+  "onboardingActivityDescriptionModerate": "Mozgás heti 3–5 napon",
+  "onboardingActivityDescriptionActive": "Kemény edzés heti 6–7 napon",
+  "onboardingActivityDescriptionVeryActive": "Kemény edzés és fizikai munka",
+  "onboardingLifestyleQuestion": "Milyen aktív vagy?"
 }

@@ -281,24 +281,16 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
           const SizedBox(height: 24),
           Text(l10n.onboardingActivityLevelLabel, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
           const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.5,
-            children: [
-              for (final a in ActivityLevel.values)
-                OptionCard(
-                  icon: _activityIcon(a),
-                  label: _activityLabel(l10n, a),
-                  description: _activityDescription(l10n, a),
-                  active: _activityLevel == a,
-                  onTap: () => setState(() => _activityLevel = a),
-                ),
-            ],
-          ),
+          for (final a in ActivityLevel.values) ...[
+            RadioOptionRow(
+              icon: _activityIcon(a),
+              title: _activityLabel(l10n, a),
+              description: _activityDescription(l10n, a),
+              selected: _activityLevel == a,
+              onTap: () => setState(() => _activityLevel = a),
+            ),
+            if (a != ActivityLevel.values.last) const SizedBox(height: 12),
+          ],
           const SizedBox(height: 24),
           Text(l10n.onboardingPrimaryGoalLabel, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
           const SizedBox(height: 8),
