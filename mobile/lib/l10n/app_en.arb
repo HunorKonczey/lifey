@@ -2150,9 +2150,17 @@
   "@resetIngredientTooltip": {
     "description": "Tooltip on the per-ingredient reset button in the log-recipe sheet, restoring the recipe's own amount"
   },
-  "logOutTooltip": "Log out",
-  "@logOutTooltip": {
-    "description": "Tooltip for the logout button on the dashboard"
+  "logOutLabel": "Log out",
+  "@logOutLabel": {
+    "description": "Log out row at the bottom of Settings (Account group) and the confirm button of the log-out dialog (docs/redesign/77-mobile-redesign-plan.md R1.1)"
+  },
+  "logOutDialogTitle": "Log out of Lifey?",
+  "@logOutDialogTitle": {
+    "description": "Title of the confirmation dialog shown before logging out (docs/redesign/77-mobile-redesign-plan.md R1.1)"
+  },
+  "logOutDialogMessage": "Your data on this phone is removed. Changes not yet synced will be lost.",
+  "@logOutDialogMessage": {
+    "description": "Body of the log-out confirmation dialog. Logging out wipes the local database including any changes that have not reached the server yet, so this states it plainly (docs/redesign/77-mobile-redesign-plan.md R1.1, §9 risk 9)"
   },
   "todaySectionTitle": "Today",
   "@todaySectionTitle": {

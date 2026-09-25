@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 next
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -824,12 +824,24 @@ component against the canvas "Alapkomponensek" section, both themes, EN/HU, 1.3)
 **Data:** everything exists (`DashboardData`, `weeklyCalories`, `RecentWorkout.needsRatingNudge`,
 streaks, water, steps, weight). Step goal: see R1.4.
 
-### R1.1 — Mobile UI: logout moves to Settings (prerequisite)
+### R1.1 — Mobile UI: logout moves to Settings (prerequisite) ✅
 - Files: `settings/presentation/settings_screen.dart`, `dashboard_screen.dart`.
 - Add an "Account → Log out" row at the bottom of Settings with a confirmation dialog whose copy
   describes **today's** behaviour ("Your data on this phone is removed. Changes not yet synced
   will be lost." — R5.6 improves both behaviour and copy). Then remove the dashboard logout icon.
 - **Verify:** log out from Settings; the dashboard has no logout; widget test for the dialog.
+
+*As built:* the row is the last one in Settings › Account (heart-coloured icon + label, so it reads as
+the destructive action; the debug gallery group stays below it). `LogoutDialog`
+(`settings/presentation/widgets/logout_dialog.dart`) follows the "Log out · confirm" canvas frame:
+48 px heart-tinted icon holder (radius 14 — the 4-step scale, the canvas draws 16), 22/800 title, 15/500
+text-2 body, Cancel (secondary) + Log out (heart fill, text = heart hue at 10 % lightness ≈ the canvas
+`#2A0F0C`; white in light) side by side. **Above 115 % text scale the two buttons stack** so
+"Kijelentkezés" is never squeezed or truncated. Copy is EN/HU (`logOutLabel`, `logOutDialogTitle`,
+`logOutDialogMessage`; `logOutTooltip` deleted with the dashboard icon) and describes today's
+behaviour — no "uploaded first" promise as in the canvas, because `logout()` does not sync first (R5.6).
+Tests: `test/features/settings/presentation/widgets/logout_dialog_test.dart` (EN copy, cancel / confirm /
+barrier, HU at 100 / 130 % × dark / light without overflow).
 
 ### R1.2 — Mobile UI: dashboard header + streak strip
 - Files: `dashboard_screen.dart`, `streak_chip_row.dart`, `trainer_view_menu.dart` (entry via

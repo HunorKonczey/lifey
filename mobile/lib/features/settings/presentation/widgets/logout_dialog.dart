@@ -1,0 +1,101 @@
+import 'package:flutter/material.dart';
+
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../l10n/app_localizations.dart';
+
+/// Asks before logging out. Resolves `true` only when the user confirms.
+///
+/// Logout wipes the local database including changes that have not synced
+/// yet, so the copy says so (docs/redesign/77-mobile-redesign-plan.md R1.1;
+/// R5.6 makes the behaviour itself safer).
+Future<bool> showLogoutDialog(BuildContext context) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (_) => const LogoutDialog(),
+  );
+  return confirmed ?? false;
+}
+
+/// The canvas "Log out · confirm" dialog (Lifey 5): 30 px radius (the dialog
+/// theme), 24 px padding, a 48 px heart-tinted icon holder, a 22/800 title,
+/// a 15/500 text-2 body and a Cancel / Log out button pair.
+class LogoutDialog extends StatelessWidget {
+  const LogoutDialog({super.key});
+
+  // The two buttons sit side by side like the canvas, but at large text sizes
+  // "Kijelentkezés" no longer fits half a dialog, so they stack instead of
+  // shrinking or truncating (no ellipsis on labels, D-R0 principle 4).
+  static const double _stackAboveTextScale = 1.15;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final text = theme.textTheme;
+    final palette = context.palette;
+    final heart = context.metricColors.heart;
+    final dark = theme.brightness == Brightness.dark;
+    // Canvas: dark text on the light-red fill (#2A0F0C — the heart hue at
+    // 10 % lightness); the light theme's heart is dark enough for white.
+    final onHeart = dark
+        ? HSLColor.fromColor(heart).withLightness(0.10).toColor()
+        : palette.card;
+    final stack = MediaQuery.textScalerOf(context).scale(1) > _stackAboveTextScale;
+
+    final cancel = OutlinedButton(
+      onPressed: () => Navigator.of(context).pop(false),
+      child: Text(l10n.cancelButton),
+    );
+    final confirm = FilledButton(
+      onPressed: () => Navigator.of(context).pop(true),
+      style: FilledButton.styleFrom(
+        backgroundColor: heart,
+        foregroundColor: onHeart,
+        textStyle: text.labelLarge!.copyWith(fontWeight: FontWeight.w800),
+      ),
+      child: Text(l10n.logOutLabel),
+    );
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: AppSpacing.s24),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.s24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: heart.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(AppRadius.control),
+              ),
+              child: Icon(Icons.logout_rounded, size: 24, color: heart),
+            ),
+            const SizedBox(height: 14),
+            Semantics(
+              header: true,
+              child: Text(l10n.logOutDialogTitle, style: theme.dialogTheme.titleTextStyle),
+            ),
+            const SizedBox(height: 14),
+            Text(l10n.logOutDialogMessage, style: theme.dialogTheme.contentTextStyle),
+            const SizedBox(height: 20),
+            if (stack) ...[
+              confirm,
+              const SizedBox(height: 10),
+              cancel,
+            ] else
+              Row(
+                children: [
+                  Expanded(child: cancel),
+                  const SizedBox(width: 10),
+                  Expanded(child: confirm),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

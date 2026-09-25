@@ -15,7 +15,6 @@ import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/trainer_view_menu.dart';
-import '../../auth/application/auth_controller.dart';
 import '../../chat/application/conversation_list_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
@@ -225,11 +224,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
                     icon: Icons.settings_outlined,
                     tooltip: l10n.settingsTitle,
                     onPressed: () => context.push('/settings'),
-                  ),
-                  AdaptiveAppBarAction(
-                    icon: Icons.logout,
-                    tooltip: l10n.logOutTooltip,
-                    onPressed: () => ref.read(authControllerProvider.notifier).logout(),
                   ),
                 ],
                 // Renders nothing unless the signed-in user is a trainer —

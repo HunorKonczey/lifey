@@ -32,6 +32,7 @@ import '../application/avatar_controller.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
 import 'notification_settings_screen.dart';
+import 'widgets/logout_dialog.dart';
 import 'widgets/subscription_tile.dart';
 
 // ---------------------------------------------------------------------------
@@ -890,6 +891,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
+                    const _RowDivider(),
+                    // Bottom of the screen on purpose: moved here from the
+                    // dashboard header, where one tap wiped the local data
+                    // (docs/redesign/77-mobile-redesign-plan.md R1.1).
+                    _SettingRow(
+                      icon: Icons.logout_rounded,
+                      iconColor: mc.heart,
+                      label: l10n.logOutLabel,
+                      labelColor: mc.heart,
+                      onTap: () => _confirmLogout(context),
+                      trailing: const SizedBox.shrink(),
+                    ),
                   ],
                 ),
 
@@ -939,6 +952,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showLogoutDialog(context);
+    if (!confirmed || !mounted) return;
+    // The router redirects to the login screen once auth state clears.
+    await ref.read(authControllerProvider.notifier).logout();
+  }
 
   String _languageName(LanguagePreference pref, AppLocalizations l10n) {
     return switch (pref) {
@@ -1056,6 +1076,7 @@ class _SettingRow extends StatelessWidget {
     required this.label,
     required this.trailing,
     this.iconColor,
+    this.labelColor,
     this.onTap,
   });
 
@@ -1063,6 +1084,7 @@ class _SettingRow extends StatelessWidget {
   final String label;
   final Widget trailing;
   final Color? iconColor;
+  final Color? labelColor;
   final VoidCallback? onTap;
 
   @override
@@ -1083,7 +1105,7 @@ class _SettingRow extends StatelessWidget {
                 fontFamily: 'PlusJakartaSans',
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
+                color: labelColor ?? scheme.onSurface,
               ),
             ),
           ),
