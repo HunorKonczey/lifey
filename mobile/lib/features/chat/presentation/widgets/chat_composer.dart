@@ -196,6 +196,9 @@ class _ChatComposerState extends State<ChatComposer> {
               ),
               decoration: InputDecoration(
                 isDense: true,
+                // Transparent: it sits inside its own container; the v2 theme
+                // fills fields by default (redesign R0.fix-3).
+                filled: false,
                 border: InputBorder.none,
                 // The counter only earns its space near the limit.
                 counterText: '',

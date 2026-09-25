@@ -163,6 +163,9 @@ class AdaptiveAppBar extends StatelessWidget {
                         ),
                         decoration: InputDecoration(
                           isDense: true,
+                          // Transparent: it sits inside its own container; the v2 theme
+                          // fills fields by default (redesign R0.fix-3).
+                          filled: false,
                           border: InputBorder.none,
                           hintText: searchHint,
                           hintStyle: TextStyle(color: scheme.onSurfaceVariant),

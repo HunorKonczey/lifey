@@ -70,6 +70,9 @@ class _ChatSearchScreenState extends ConsumerState<ChatSearchScreen> {
             color: scheme.onSurface,
           ),
           decoration: InputDecoration(
+            // Transparent: it sits inside its own container; the v2 theme
+            // fills fields by default (redesign R0.fix-3).
+            filled: false,
             border: InputBorder.none,
             hintText: l10n.chatSearchPlaceholder,
             hintStyle: TextStyle(

@@ -377,6 +377,9 @@ class _AuthField extends StatelessWidget {
           decoration: InputDecoration(
             labelText: label,
             helperText: helperText,
+            // Transparent: it sits inside its own container; the v2 theme
+            // fills fields by default (redesign R0.fix-3).
+            filled: false,
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
@@ -390,7 +393,7 @@ class _AuthField extends StatelessWidget {
         if (!last)
           Divider(
             height: 1,
-            color: scheme.outlineVariant.withValues(alpha: 0.5),
+            color: scheme.outline,
           ),
       ],
     );
