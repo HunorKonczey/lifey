@@ -104,7 +104,10 @@ class RatioBar extends StatelessWidget {
               return Row(children: [
                 for (final (n, i) in visible.indexed) ...[
                   if (n > 0) SizedBox(width: gap),
-                  SizedBox(width: usable * f[i], child: ColoredBox(color: segments[i].color)),
+                  // The height is explicit: a Row hands its children loose
+                  // constraints, and a childless ColoredBox takes the
+                  // smallest size — 0 tall, an empty track (R0 review).
+                  SizedBox(width: usable * f[i], height: height, child: ColoredBox(color: segments[i].color)),
                 ],
               ]);
             }),

@@ -83,6 +83,26 @@ void main() {
       expect(RatioBar.fractions([0, 0, 0], 2360), [0, 0, 0]);
       expect(RatioBar.fractions([-5, double.nan, 10], null), [0, 0, 1]);
     });
+
+    testWidgets('segments are drawn at the bar height, not 0 tall', (tester) async {
+      // A childless ColoredBox in a Row shrank to 0 × 0 height: an empty
+      // track on every screen (R0 emulator review).
+      await tester.pumpWidget(_host(const RatioBar(total: 100, segments: [
+        (value: 30, color: Color(0xFF93C98C)),
+        (value: 20, color: Color(0xFFE2BE62)),
+      ])));
+      await tester.pumpAndSettle();
+      final boxes = find.descendant(of: find.byType(RatioBar), matching: find.byType(ColoredBox));
+      final colored = [
+        for (final e in boxes.evaluate())
+          if ((e.widget as ColoredBox).color != AppTheme.dark.extension<AppPalette>()!.control) tester.getSize(find.byWidget(e.widget)),
+      ];
+      expect(colored, hasLength(2));
+      for (final size in colored) {
+        expect(size.height, 10);
+        expect(size.width, greaterThan(0));
+      }
+    });
   });
 
   group('AnimatedFill', () {
