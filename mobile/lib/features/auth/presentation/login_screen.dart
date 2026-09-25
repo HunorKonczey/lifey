@@ -7,6 +7,7 @@ import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/auth_controller.dart';
+import '../../../shared/widgets/ds/screen_heading.dart';
 import 'widgets/auth_widgets.dart';
 
 /// Email/password sign-in. On success the router redirect takes over.
@@ -83,9 +84,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         onPressed: _submitting ? null : () => context.push('/register'),
       ),
       children: [
-        const AuthLogoTile(),
+        const BrandTile(),
         const SizedBox(height: AppSpacing.s32),
-        AuthHeading(title: l10n.signInWelcomeTitle, subtitle: l10n.signInSubtitle),
+        ScreenHeading(title: l10n.signInWelcomeTitle, subtitle: l10n.signInSubtitle),
         const SizedBox(height: AppSpacing.s32),
         Form(
           key: _formKey,

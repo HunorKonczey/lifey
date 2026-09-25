@@ -8,6 +8,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../onboarding/data/user_details_repository.dart';
 import '../application/auth_controller.dart';
+import '../../../shared/widgets/ds/screen_heading.dart';
 import 'widgets/auth_widgets.dart';
 
 /// Account creation. Registering also logs the user in immediately, matching
@@ -112,7 +113,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         onPressed: _submitting ? null : () => Navigator.of(context).maybePop(),
       ),
       children: [
-        AuthHeading(title: l10n.createAccountTitle),
+        ScreenHeading(title: l10n.createAccountTitle),
         const SizedBox(height: AppSpacing.s24),
         Form(
           key: _formKey,

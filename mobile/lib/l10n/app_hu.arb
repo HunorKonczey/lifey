@@ -1431,5 +1431,6 @@
   "signInWelcomeTitle": "Üdv újra!",
   "signInSubtitle": "Jelentkezz be, és folytasd ott, ahol abbahagytad. A naplód a telefonodon marad, offline is.",
   "registerPromptLead": "Új vagy a Lifey-ban?",
-  "signInPromptLead": "Már van fiókod?"
+  "signInPromptLead": "Már van fiókod?",
+  "onboardingStepOfLabel": "{step}/{total}. lépés"
 }

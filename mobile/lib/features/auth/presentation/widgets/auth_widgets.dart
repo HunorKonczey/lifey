@@ -79,56 +79,6 @@ class AuthPage extends StatelessWidget {
   }
 }
 
-/// The brand tile: a 64 dp rounded square in the primary colour with the
-/// initial — the canvas's "L".
-class AuthLogoTile extends StatelessWidget {
-  const AuthLogoTile({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ExcludeSemantics(
-        child: Container(
-          width: 64,
-          height: 64,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(color: scheme.primary, borderRadius: AppRadius.controlAll),
-          child: Text(
-            'L',
-            style: Theme.of(context).textTheme.displaySmall!.copyWith(color: scheme.onPrimary),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Large title with the one-line promise under it.
-class AuthHeading extends StatelessWidget {
-  const AuthHeading({super.key, required this.title, this.subtitle});
-
-  final String title;
-  final String? subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    final p = context.palette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Semantics(header: true, child: Text(title, style: t.displaySmall!.copyWith(color: p.text))),
-        if (subtitle != null) ...[
-          const SizedBox(height: AppSpacing.s12),
-          Text(subtitle!, style: t.bodyLarge!.copyWith(fontWeight: FontWeight.w500, color: p.text2)),
-        ],
-      ],
-    );
-  }
-}
-
 /// A filled field on the page with its label above it and a leading icon
 /// (canvas login: 56 dp, card fill, hairline, primary ring when focused).
 class AuthTextField extends StatelessWidget {

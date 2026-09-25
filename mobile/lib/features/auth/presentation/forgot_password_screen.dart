@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/ds/notice_card.dart';
 import '../application/auth_controller.dart';
+import '../../../shared/widgets/ds/screen_heading.dart';
 import 'widgets/auth_widgets.dart';
 
 enum _Step { email, reset }
@@ -100,7 +101,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   List<Widget> _emailStep(AppLocalizations l10n) => [
-        AuthHeading(title: l10n.forgotPasswordTitle, subtitle: l10n.forgotPasswordSubtitle),
+        ScreenHeading(title: l10n.forgotPasswordTitle, subtitle: l10n.forgotPasswordSubtitle),
         const SizedBox(height: AppSpacing.s24),
         Form(
           key: _emailFormKey,
@@ -131,7 +132,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       ];
 
   List<Widget> _resetStep(AppLocalizations l10n) => [
-        AuthHeading(title: l10n.resetPasswordTitle, subtitle: l10n.resetPasswordSubtitle),
+        ScreenHeading(title: l10n.resetPasswordTitle, subtitle: l10n.resetPasswordSubtitle),
         const SizedBox(height: AppSpacing.s16),
         NoticeCard(icon: Icons.mark_email_read_outlined, title: l10n.resetCodeSentMessage),
         const SizedBox(height: AppSpacing.s24),

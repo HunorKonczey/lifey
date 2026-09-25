@@ -6528,5 +6528,10 @@
   "signInPromptLead": "Already have an account?",
   "@signInPromptLead": {
     "description": "Grey lead-in of the line at the foot of the register screen; followed by the 'Sign in' action in the accent colour"
+  },
+  "onboardingStepOfLabel": "Step {step} of {total}",
+  "@onboardingStepOfLabel": {
+    "description": "Under the segmented progress bar of the onboarding wizard, e.g. 'Step 4 of 6' (docs/redesign/77-mobile-redesign-plan.md R5.2)",
+    "placeholders": {"step": {"type": "int"}, "total": {"type": "int"}}
   }
 }
