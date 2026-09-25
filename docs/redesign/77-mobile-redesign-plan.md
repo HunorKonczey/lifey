@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.8 done; emulator review next)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…2, reviewed 2026-09-25); R2 next
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1771,3 +1771,50 @@ R0.fix-1, -4, -5 and -7 have widget tests that fail without the fix; fix-3 (logi
 fix-6 (gallery) were verified on the emulator only. Full suite green except the 3 known Windows
 chat-attachment failures.
 
+
+### R1 — 2026-09-25 — Pixel_10 AVD (1080 × 2424, 420 dpi = 411 × 923 dp, API 37)
+
+Scope: the Today screen against `Lifey 1 Dashboard.dc.html` (1.1 dark top + scrolled, 1.2 light, 1.3 HU),
+rendered from the canvas with Playwright at 2.625× and put next to emulator screenshots; plus the flows —
+avatar menu → Settings → Log out (dialog, cancelled), the add-water sheet (0.25 L tile → total and bar
+update), Photo (opens the picker, dismissing it closes the empty meal screen), weekly recap, water sources
+(list, ⋮, new-source sheet with the keyboard). Seeded account `anna.r1@lifey.test` (local dev backend
+only; the canvas' numbers: 2 360 kcal goal, 383 + 239 kcal of meals today, a week of meals, 30 weights
+ending 64.5 / 64.6, 0.99 L water, a "Push day" the day before, a run, a workout streak). Matrix covered:
+dark EN, light EN, dark HU, light HU at ×1.3, plus scroll-to-the-end (last row clears the nav).
+
+**Matches**
+- Header (date overline, 30/800 greeting, chat button, monogram avatar), streak strip (icon + count,
+  muted zero, "Week in review ›"), hero card (144 px ring, remaining kcal, Eaten · Goal, three macro rows
+  with bars, "111 g to go" chip), water / steps tiles with the 48 dp `+`, weight tile with the delta chip
+  and sparkline, "This week" bars with axis, dashed goal line, today highlighted, both section lists
+  with icon holders, dividers, "+ Meal / Photo", "★ Rate", the running row with kcal — value for value
+  and in both themes. Light uses white cards with shadow and the darker metric colours as drawn.
+- HU (1.3): "Csütörtök/Péntek, szeptember 25.", "Jó reggelt, Anna", "kcal maradt", "még 111 g", "Víz /
+  Lépések / Súly", "Legutóbbi bejegyzés · ma", "Ezen a héten", "átl."; at ×1.3 nothing is truncated:
+  "Szénhidrát" drops its value under the label, "Evett … · Cél …" wraps, tiles and rows grow.
+- Log-out dialog, Add-water sheet, water-source sheet and the recap screen follow the design system
+  (sheet 30 radius + handle, tinted 64 px tiles, in-sheet fields, section labels over cards).
+
+**Deviations (intended)**
+- Numbers: EN groups with a comma ("1,737"), the canvas shows a space; HU decimals use a comma
+  ("64,5 kg", "1,24 / 2,6 L") where the HU frame draws dots (R0.4 decision).
+- Onboarding banner is shown (the seeded account has not finished onboarding) — the canvas frames
+  have none; it uses `NoticeCard` (R1.8).
+- Steps read 0 / 10 000: no Health data on the emulator. The tile only appears when step data exists
+  (as the old card did) and now defaults its goal to 10 000 (R1.4).
+- Logged-in Settings still has the pre-R5 look (floating bar, old rows) with the new Log out row.
+
+**Bugs (fixed on `feature/mobile-redesign`)**
+- The scrolled header row said "Good morning, Anna"; the canvas says "Today" → `LifeyHeader.collapsedTitle`
+  and the EN nav label "Dashboard" → "Today" (canvas nav), R1.fix-1 (header test asserts the cross-fade and
+  that screen readers get only the expanded title).
+- The section label rows are 48 dp tall (the "See all" target) and the old 24 dp gaps around them put
+  sections ~40 dp apart instead of 16 → gaps removed, `RecapReadyCard` spaces above itself, R1.fix-1
+  (verified against the scrolled canvas frame; layout numbers, no widget test).
+- HU at ×1.3 the workout meta line broke inside "34 | perc" and started a line with "·" → no-break
+  spaces inside each part and before the dot, R1.fix-2 (`dashboard_lists_test` compares the glued string).
+
+**Not exercised on the emulator** (covered by widget tests only): the unread-dot on the chat button (no
+chat messages seeded), the sponsorship-ended card, the recommended-workout card, over-budget ring
+state, the "Remove animations" pass, imperial units.
