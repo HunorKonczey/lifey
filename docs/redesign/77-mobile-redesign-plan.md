@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.7 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 in progress (R3.1–R3.8 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1437,11 +1437,30 @@ literals are gone (only tokens). ARB: added `workoutDonePrTitle`, `workoutDoneVo
 `workoutSuccessPrTitle/PrSubtitle/PrSectionLabel/ImprovementsSectionLabel`. The 12 old `computeWorkoutProgress` tests are unchanged; 10 new ones
 cover the deltas, the collapse, 0 PRs, the one-shot animation, reduced motion and no overflow at 411/360 dp × 1.3 HU light.
 
-### R3.8 — Mobile UI: live cardio screen
+### R3.8 — Mobile UI: live cardio screen ✅
 - `cardio_session_screen.dart` (hero moving time, metrics, HR zone row, pause, slide-to-finish
   with red stop knob). Large file: touch the layout build methods only.
 - **Verify:** accidental stop impossible without a full slide; pause/resume unchanged; all
   sport variants (run, bike, hike, game — docs/cardio/60, 62) still render their extra metrics.
+
+*As built:* the live cardio screen follows canvas 3.3. **Header** (`_ActivityHeaderBar`): flat, the 44 dp activity chip, the name 20/800 over one status line
+("● GPS · Auto-pause on", dot and text in the state's colour — GPS green, weak GPS amber, no GPS/indoor neutral; the two parts are separate `Text`s so
+"GPS" stays findable) and, where the canvas has the music button, the auto-pause settings button (44 dp circle). **No music button:** the cardio
+screen has no music-controller lifecycle (the strength screen activates/deactivates it) and wiring it in is a feature, not a restyle — left out on purpose.
+**Hero:** the **moving time is always the hero** (104 px, centred, "MOVING TIME" spaced label; 82 while an interval plan plays) — the old "distance
+takes over the big slot" rule (DD-5) is gone, so `_DominantMetric` lost its badge/tap. **Distance and pace** are two `LiveMetricCard`s (`widgets/cardio_live_cards.dart`:
+label in sentence case over a 40 px number with its unit; "ESTIMATED" badge on distance while the signal is weak, pace blanks to "No signal"; the empty
+distance card is the tappable "type it in" tile with an edit glyph); the MACHINE and GAME layouts keep their three tiles, now the same card at 28 px. **Heart-rate row**
+(`LiveHeartRateCard`): "♥ 152 bpm", a "Zone 3 · Tempo" chip and a five-segment zone bar with the current zone lit; shown only while there is a reading. The zone
+is the reading against **220 − age** (`domain/hr_zones.dart`; up to 60/70/80/90 % of the maximum = Z1–Z4, above Z5; age from the profile's birth date) — without
+a birth date the row is just the reading. Zone colours come from the metric colours (blue, green, gold, orange, red; `hrZoneColor`, reused by R3.9).
+**Controls:** one 96 dp pause disc with a 10 dp halo, centred, glyph only (label is its tooltip/semantics); the old side circles are gone — the
+interval plan's "skip" circle stays on the right, the distance is edited on its card, the heart rate has its row, auto-pause settings sit in the header
+(ARB `autoPauseCircleLabel`/`distanceCircleLabel` removed). **Slide to finish:** a 64 dp pill track with a **red stop knob** (heart colour, stop square), "Slide to finish »",
+the fill grows in red under the knob; the logic is untouched (a tap or a short drag never finishes; ≥ 75 % or a 600 ms hold does). Paused/auto-paused
+cards, the location card and the waypoint bar are unchanged apart from the 20 dp gutter. ARB: `liveHeartRateZoneChip`, `cardioStatusAutoPauseOn/Off`. Tests: the
+existing cardio-screen suites were adapted to the sentence-case labels, the tooltip'd pause and the 104 px hero; new: `hr_zones_test`, `cardio_live_cards_test`
+and four layout tests in `cardio_session_screen_distance_test`.
 
 ### R3.9 — Mobile UI: cardio detail + HR zone card
 - `cardio_summary_screen.dart`, `hr_zone_panel.dart` (5 colour literals out), `route_painter.dart`

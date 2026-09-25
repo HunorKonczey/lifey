@@ -969,8 +969,6 @@
   "gameMatchPauseLabel": "Meccs szünet",
   "courtSwitchHint": "A játékidő csak „pályán” állásban nő",
   "benchSwitchHint": "Koppints a „Pályán”-ra, ha visszaállsz",
-  "autoPauseCircleLabel": "Auto",
-  "distanceCircleLabel": "Táv",
   "playingTimeRunningLabel": "JÁTÉKIDŐ — PÁLYÁN",
   "playingTimeStoppedLabel": "JÁTÉKIDŐ — ÁLL",
   "grossTimeRunningLabel": "bruttó — fut",
@@ -1388,5 +1386,8 @@
   "workoutDonePrKindHeaviest": "Legnehezebb szett",
   "workoutDonePrKindOneRm": "Becsült 1RM",
   "workoutDonePrKindReps": "Legtöbb ismétlés {weight} kg-mal",
-  "workoutDoneBetterThanLast": "Jobb, mint legutóbb"
+  "workoutDoneBetterThanLast": "Jobb, mint legutóbb",
+  "liveHeartRateZoneChip": "{zone}. zóna · {name}",
+  "cardioStatusAutoPauseOn": "Auto. szünet be",
+  "cardioStatusAutoPauseOff": "Auto. szünet ki"
 }

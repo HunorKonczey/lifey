@@ -4364,14 +4364,6 @@
   "@benchSwitchHint": {
     "description": "Hint under the court/bench switch while benched (M07)"
   },
-  "autoPauseCircleLabel": "Auto",
-  "@autoPauseCircleLabel": {
-    "description": "Label of the small auto-pause settings circle on the live screen (M04)"
-  },
-  "distanceCircleLabel": "Dist.",
-  "@distanceCircleLabel": {
-    "description": "Label of the small distance-entry circle on the live screen (M11)"
-  },
   "playingTimeRunningLabel": "PLAYING TIME — ON COURT",
   "@playingTimeRunningLabel": {
     "description": "Dominant metric label while on court (M06)"
@@ -6343,5 +6335,18 @@
   "workoutDoneBetterThanLast": "Better than last time",
   "@workoutDoneBetterThanLast": {
     "description": "Line under an exercise on the celebration sheet that got heavier or more reps than the last session without setting a record"
+  },
+  "liveHeartRateZoneChip": "Zone {zone} · {name}",
+  "@liveHeartRateZoneChip": {
+    "description": "Chip on the live cardio screen's heart-rate row naming the current zone, e.g. 'Zone 3 · Tempo' (docs/redesign/77-mobile-redesign-plan.md R3.8)",
+    "placeholders": {"zone": {"type": "int"}, "name": {"type": "String"}}
+  },
+  "cardioStatusAutoPauseOn": "Auto-pause on",
+  "@cardioStatusAutoPauseOn": {
+    "description": "Part of the live cardio header's status line, e.g. 'GPS · Auto-pause on': the phone pauses the session by itself when the runner stops"
+  },
+  "cardioStatusAutoPauseOff": "Auto-pause off",
+  "@cardioStatusAutoPauseOff": {
+    "description": "Part of the live cardio header's status line, e.g. 'GPS · Auto-pause off'"
   }
 }

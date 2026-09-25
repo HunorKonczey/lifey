@@ -14,11 +14,14 @@ import '../../../core/health/health_service.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/location/location_service_geolocator.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/theme/app_type.dart';
 import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../onboarding/data/user_details_repository.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/auto_pause_preferences.dart';
@@ -39,12 +42,14 @@ import '../domain/cardio_interval_plan.dart';
 import '../domain/cardio_splits_calculator.dart';
 import '../domain/elevation_profile.dart';
 import '../domain/grade_adjusted_pace.dart';
+import '../domain/hr_zones.dart';
 import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
 import 'cardio_summary_screen.dart';
 import 'open_workout_screens.dart';
 import 'widgets/box_score_stepper.dart';
+import 'widgets/cardio_live_cards.dart';
 import 'widgets/cardio_session_settings_sheet.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
@@ -1802,22 +1807,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     final hasDistance = (_distanceMeters ?? 0) > 0;
     final duration = Duration(seconds: _liveMovingSeconds);
 
-    // The dominant slot always shows distance once there's one to show — the
-    // "cél alakú szám" rule (docs/cardio/57-cardio-design-prompt.md DD-5) —
-    // falling back to moving time only while nothing's been entered yet, so
-    // the screen never shows a giant "0.00 km".
-    final dominantLabel = hasDistance ? l10n.distanceFieldLabel : l10n.movingTimeLabel;
-    final dominantValue = hasDistance
-        ? CardioFormatter.distance(_distanceMeters!, unitSystem)
-        : CardioFormatter.duration(duration);
-    final secondaryLabel = hasDistance ? l10n.movingTimeLabel : l10n.distanceFieldLabel;
-    final secondaryValue = hasDistance ? CardioFormatter.duration(duration) : '—';
-
+    // The hero is always the moving time (canvas Lifey 3 › 3.3), with
+    // distance and pace as two cards under it — so the screen never shows a
+    // giant "0.00 km" and the biggest number is the one that always ticks.
+    //
     // M10: while the signal's weak, pace/speed is blanked rather than
     // showing a stale average — "a tempó nem hazudik" — and the distance
     // number (still shown, since it's a monotonic total that stays
-    // meaningful even through a gap) is labelled "estimated" instead. M04's
-    // healthy state shows neither: a plain "GPS" chip is enough there.
+    // meaningful even through a gap) is labelled "estimated". M04's healthy
+    // state shows neither: a plain "GPS" in the header is enough there.
     final weakSignal = _weakSignal;
     // Cycling shows speed (km/h), not pace (min/km) — docs/cardio/
     // 62-cardio-cycling-plan.md §2.2. Every other DISTANCE type unchanged.
@@ -1833,8 +1831,13 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                 '—')
             : '—');
 
-    final metrics = Theme.of(context).extension<AppMetricColors>();
-    final accent = activityTypeColor(_activityType, context);
+    // The zone of the current beat, against 220 − age. Without a birth date
+    // there is no maximum to measure against, so the row is just the reading.
+    final heartRate = _showHeartRate ? _currentHeartRate : null;
+    final birthDate = heartRate == null ? null : ref.watch(userDetailsProvider).value?.birthDate;
+    final maxHeartRate = birthDate == null ? null : maxHeartRateForAge(ageOn(birthDate, DateTime.now()));
+    final zone = heartRate != null && maxHeartRate != null ? heartRateZone(heartRate, maxHeartRate) : null;
+
     // M04's route card, drawn from the same filtered trail the splits and
     // the summary polyline come from — the live screen's one "picture"
     // region. Nothing to draw before the first fixes land, and MACHINE/GAME
@@ -1856,53 +1859,49 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _DominantMetric(
-                label: dominantLabel,
-                badge: (hasDistance && weakSignal) ? l10n.distanceEstimatedBadgeLabel : null,
+                label: l10n.movingTimeLabel,
                 labelColor: _pauseReason == _PauseReason.auto ? _kAutoAccent : null,
-                value: dominantValue,
-                onTap: _busy || _isFinished || _hasGpsDistance ? null : _editDistance,
+                value: CardioFormatter.duration(duration),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: AppSpacing.s24),
               _MetricRow(
                 children: [
                   _MetricTile(
-                    icon: hasDistance ? Icons.schedule : Icons.straighten,
-                    iconColor: metrics?.protein,
-                    label: secondaryLabel,
-                    value: secondaryValue,
+                    big: true,
+                    label: l10n.distanceFieldLabel,
+                    badge: (hasDistance && weakSignal) ? l10n.distanceEstimatedBadgeLabel : null,
+                    value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
                     // M11: with no distance source the empty tile is the
-                    // call to action — dashed border, "írd be" affordance.
+                    // call to action — "type it in" affordance.
                     outlined: !hasDistance,
-                    onTap: hasDistance || _busy || _isFinished ? null : _editDistance,
+                    onTap: _busy || _isFinished || _hasGpsDistance ? null : _editDistance,
                   ),
                   _MetricTile(
-                    icon: Icons.speed,
-                    iconColor: weakSignal ? scheme.secondary : accent,
+                    big: true,
                     label: paceLabel,
                     value: paceValue,
                     color: weakSignal ? scheme.secondary : null,
                   ),
-                  _MetricTile(
-                    icon: Icons.favorite,
-                    iconColor: metrics?.heart,
-                    label: l10n.heartRateFieldLabel,
-                    value: _showHeartRate && _currentHeartRate != null
-                        ? '$_currentHeartRate bpm'
-                        : '—',
-                  ),
                 ],
               ),
+              if (heartRate != null) ...[
+                const SizedBox(height: AppSpacing.s12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
+                  child: LiveHeartRateCard(bpm: heartRate, zone: zone),
+                ),
+              ],
             ],
           ),
         ),
         if (routePolyline.isNotEmpty) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.s16),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: AppRadius.cardAll,
               child: Container(
-                color: scheme.surfaceContainerLow,
+                color: context.palette.card,
                 child: RoutePainter(
                   polyline: routePolyline,
                   height: 200,
@@ -1926,7 +1925,6 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     // always wins here (docs/cardio/57-cardio-design-prompt.md §2 and
     // docs/cardio/53-cardio-mobile-plan.md §4.2 agree, no doc conflict this
     // time), so it isn't tappable: there's nothing to manually override.
-    final metrics = theme.extension<AppMetricColors>();
     final accent = activityTypeColor(_activityType, context);
     final intervalState = _intervalState;
 
@@ -1955,14 +1953,12 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                 value: CardioFormatter.duration(duration),
                 // The one size change M38 allows against M05, and only while
                 // a plan is playing: the countdown needs the 14 px.
-                valueFontSize: intervalState == null ? 96 : 82,
+                valueFontSize: intervalState == null ? 104 : 82,
               ),
               const SizedBox(height: 18),
               _MetricRow(
                 children: [
                   _MetricTile(
-                    icon: Icons.straighten,
-                    iconColor: accent,
                     label: l10n.distanceFieldLabel,
                     value: _distanceMeters == null
                         ? '—'
@@ -1971,16 +1967,12 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                     onTap: _busy || _isFinished ? null : _editDistance,
                   ),
                   _MetricTile(
-                    icon: Icons.autorenew,
-                    iconColor: metrics?.protein,
                     label: l10n.avgCadenceFieldLabel,
                     value: _avgCadence == null ? '—' : '${_avgCadence!.round()} rpm',
                     outlined: _avgCadence == null,
                     onTap: _busy || _isFinished ? null : _editCadence,
                   ),
                   _MetricTile(
-                    icon: Icons.bolt,
-                    iconColor: metrics?.calories,
                     label: l10n.avgWattsFieldLabel,
                     value: _avgWatts == null ? '—' : '${_avgWatts!.round()} W',
                     outlined: _avgWatts == null,
@@ -1997,13 +1989,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         // chart above it needs a per-second cadence history the app doesn't
         // record, so the card carries the stepper alone.)
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
+          child: LifeyCard(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(24),
-            ),
             child: Row(
               children: [
                 Expanded(
@@ -2058,7 +2046,6 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     final playingDuration = Duration(seconds: _liveMovingSeconds);
     final grossDuration = Duration(seconds: _liveGrossSeconds);
 
-    final metrics = theme.extension<AppMetricColors>();
     // M07: on the bench the dominant number greys out and the *gross* time
     // gets the highlight border instead — "látszik, hogy a mérés nem állt
     // le, csak átterelődött".
@@ -2084,21 +2071,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         _MetricRow(
           children: [
             _MetricTile(
-              icon: Icons.hourglass_top,
-              iconColor: benched ? _kAutoAccent : scheme.onSurfaceVariant,
               label: benched ? l10n.grossTimeRunningLabel : l10n.grossTimeLabel,
               value: CardioFormatter.duration(grossDuration),
               highlighted: benched,
             ),
             _MetricTile(
-              icon: Icons.favorite,
-              iconColor: metrics?.heart,
               label: l10n.heartRateFieldLabel,
               value: _showHeartRate && _currentHeartRate != null ? '$_currentHeartRate bpm' : '—',
             ),
             _MetricTile(
-              icon: Icons.signal_cellular_alt,
-              iconColor: scheme.onSurfaceVariant,
               label: l10n.zoneFieldLabel,
               value: '—',
             ),
@@ -2107,7 +2088,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         if (benched) ...[
           const SizedBox(height: 14),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
             child: _BenchedNoticeCard(
               title: l10n.benchedNoticeTitle,
               body: l10n.benchedNoticeBody,
@@ -2121,7 +2102,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         if (_boxScoreOffer == BoxScoreOffer.unanswered && !_isFinished) ...[
           const SizedBox(height: 14),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
             child: BoxScoreOfferCard(
               onAccept: () => unawaited(_answerBoxScoreOffer(BoxScoreOffer.accepted)),
               onDecline: () => unawaited(_answerBoxScoreOffer(BoxScoreOffer.declined)),
@@ -2131,7 +2112,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         if (_boxScoreOpen) ...[
           const SizedBox(height: 14),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
             child: BoxScoreStepper(
               columns: _boxScoreColumns(l10n),
               enabled: !(_busy || _isFinished),
@@ -2207,6 +2188,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     final gpsChipState = _gpsChipState;
 
     final autoPaused = paused && _pauseReason == _PauseReason.auto;
+    final headerStatus = _headerStatus(context, l10n, scheme, gpsChipState);
 
     // M38: on a hard section the top third of the screen is painted, not
     // just labelled — sweating, with peripheral vision, the colour field is
@@ -2250,11 +2232,13 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                 if (autoPaused)
                   Container(height: 5, color: _kAutoAccent),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, 0),
                   child: _ActivityHeaderBar(
                     activityType: _activityType,
                     title: activityTypeLabel(l10n, _activityType),
-                    status: _headerStatusPill(l10n, scheme, gpsChipState),
+                    statusLabel: headerStatus?.label,
+                    statusDetail: headerStatus?.detail,
+                    statusColor: headerStatus?.color,
                     // C4a.5a — the "Kikapcsolható" half of auto-pause;
                     // DISTANCE only. M04 has no slot for it, so it rides in
                     // the header bar's trailing corner rather than growing a
@@ -2278,7 +2262,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                         if (paused) ...[
                           const SizedBox(height: 14),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
                             child: _PauseStatusCard(
                               l10n: l10n,
                               auto: autoPaused,
@@ -2289,7 +2273,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                         if (locationCardContent != null) ...[
                           const SizedBox(height: 12),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
                             child: _LocationStatusCard(
                               content: locationCardContent,
                               dismissLabel: l10n.locationDismissButton,
@@ -2307,7 +2291,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                         if (gpsChipState == _GpsChipState.weak) ...[
                           const SizedBox(height: 12),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
                             child: _WeakSignalBanner(text: l10n.gpsWeakSignalBannerBody),
                           ),
                         ],
@@ -2335,39 +2319,29 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     );
   }
 
-  /// The header bar's right-hand pill (M04 "GPS" · M10 "Gyenge" · M11 "Nincs
-  /// GPS" · M05/M06 venue) — one slot, filled by whichever state is
-  /// currently true. MACHINE/GAME have no GPS at all, so they fall through
-  /// to the neutral indoor pill instead of showing nothing.
-  Widget? _headerStatusPill(AppLocalizations l10n, ColorScheme scheme, _GpsChipState state) {
-    return switch (state) {
-      _GpsChipState.healthy => _StatusPill(
-          icon: Icons.gps_fixed,
-          label: l10n.gpsHealthyChipLabel,
-          color: scheme.primary,
-          tinted: true,
-        ),
-      _GpsChipState.weak => _StatusPill(
-          icon: Icons.gps_not_fixed,
-          label: l10n.gpsWeakChipLabel,
-          color: scheme.secondary,
-          tinted: true,
-        ),
-      _GpsChipState.off => _StatusPill(
-          icon: Icons.location_disabled,
-          label: l10n.locationOffChipLabel,
-          color: scheme.onSurfaceVariant,
-        ),
-      // M05/M06's "Beltéri" / "Terem" pill — the same slot, saying the one
-      // true thing about a session that never had a GPS story to tell.
-      _GpsChipState.none => _family == ActivityFamily.distance
-          ? null
-          : _StatusPill(
-              icon: Icons.home,
-              label: l10n.indoorVenueChipLabel,
-              color: scheme.onSurfaceVariant,
-            ),
+  /// The header's status line (M04 "GPS" · M10 "Weak GPS" · M11 "No GPS" ·
+  /// M05/M06 "Indoor") and, on a run, whether auto-pause is on — one line
+  /// filled by whichever state is currently true, its colour saying whether
+  /// it's good news. MACHINE/GAME have no GPS at all, so they fall through to
+  /// the neutral indoor label.
+  ({String label, String? detail, Color color})? _headerStatus(
+      BuildContext context, AppLocalizations l10n, ColorScheme scheme, _GpsChipState state) {
+    final p = context.palette;
+    final autoPause =
+        _family == ActivityFamily.distance ? (_autoPauseEnabled ? l10n.cardioStatusAutoPauseOn : l10n.cardioStatusAutoPauseOff) : null;
+    final gps = switch (state) {
+      _GpsChipState.healthy => (label: l10n.gpsHealthyChipLabel, color: context.metricColors.protein),
+      _GpsChipState.weak => (label: l10n.gpsWeakChipLabel, color: scheme.secondary),
+      _GpsChipState.off => (label: l10n.locationOffChipLabel, color: p.text2),
+      // M05/M06's "Beltéri" / "Terem" — the same slot, saying the one true
+      // thing about a session that never had a GPS story to tell.
+      _GpsChipState.none =>
+        _family == ActivityFamily.distance ? null : (label: l10n.indoorVenueChipLabel, color: p.text2),
     };
+    if (gps == null) {
+      return autoPause == null ? null : (label: autoPause, detail: null, color: p.text2);
+    }
+    return (label: gps.label, detail: autoPause, color: gps.color);
   }
 
   /// M12's confirmation body line — the actual numbers being locked in
@@ -2460,13 +2434,6 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       children.add(_RunningControlRow(
         onPause: _busy ? null : pause,
         pauseLabel: l10n.pauseButtonLabel,
-        leading: _family == ActivityFamily.distance
-            ? _CircleAction(
-                icon: Icons.timer_outlined,
-                label: l10n.autoPauseCircleLabel,
-                onPressed: () => unawaited(_openAutoPauseSettings()),
-              )
-            : null,
         trailing: _trailingCircle(l10n),
       ));
     }
@@ -2497,7 +2464,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       }
     }
 
-    children.add(const SizedBox(height: 14));
+    children.add(const SizedBox(height: AppSpacing.s20));
     children.add(
       SizedBox(
         key: const Key('slideToFinishBar'),
@@ -2511,42 +2478,23 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s16),
       child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
 
-  /// The right-hand circle of the running control row: M11's "Táv" quick
-  /// entry whenever distance is still hand-editable, otherwise M05's live
-  /// heart-rate readout. Null when neither applies — the row then centers
-  /// the pause button on its own.
+  /// The right-hand circle of the running control row — only while an interval
+  /// plan is playing (M38: it steps the section). Null otherwise, and the row
+  /// then centres the pause button on its own; the distance is edited on its
+  /// card and the heart rate has a row of its own.
   Widget? _trailingCircle(AppLocalizations l10n) {
-    // M38: the same circle, the same size, in the same corner — while a plan
-    // is playing it steps the section instead of opening the distance sheet.
-    // The finish gesture below it is untouched.
     final intervalState = _intervalState;
     if (intervalState != null && !intervalState.finished && !_isFinished) {
       return _CircleAction(
         key: const Key('intervalSkipCircle'),
-        icon: Icons.skip_next,
+        icon: Icons.skip_next_rounded,
         label: l10n.intervalSkipCircleLabel,
         onPressed: _busy ? null : _skipIntervalSection,
-      );
-    }
-    final canEditDistance = !_isFinished && !_hasGpsDistance && _family != ActivityFamily.game;
-    if (canEditDistance) {
-      return _CircleAction(
-        icon: Icons.straighten,
-        label: l10n.distanceCircleLabel,
-        onPressed: _busy ? null : _editDistance,
-      );
-    }
-    if (_showHeartRate && _currentHeartRate != null) {
-      return _CircleAction(
-        icon: Icons.favorite,
-        label: '$_currentHeartRate',
-        color: Theme.of(context).extension<AppMetricColors>()?.heart,
-        onPressed: null,
       );
     }
     return null;
@@ -2699,111 +2647,97 @@ class _LocationStatusCard extends StatelessWidget {
   }
 }
 
-/// Small persistent header chip — stays visible even after
-/// [_LocationStatusCard] is dismissed for the session (M27's own design
-/// note: measurement quality is always visible, only the actionable card is
-/// skippable). One widget for all three [_GpsChipState] variants that render
-/// a chip (M26-28's grey "off" plus C4a.4's tinted "weak"/"healthy", M04/M10)
-/// — same shape, different color/icon/copy, same pattern as
-/// [_LocationStatusCard] itself.
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.icon,
-    required this.label,
-    required this.color,
-    this.tinted = false,
-  });
 
-  final IconData icon;
-  final String label;
-  final Color color;
 
-  /// False for the neutral "off"/indoor pill (grey background); true for the
-  /// weak/healthy chips, whose background is a tint of [color] instead — a
-  /// plain grey pill wouldn't read as either good or concerning news.
-  final bool tinted;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      decoration: BoxDecoration(
-        color: tinted ? color.withValues(alpha: 0.16) : scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// M04's floating header bar — activity chip, name, and one status pill, in
-/// a 54 px `surfaceContainer` capsule that floats over the screen rather
-/// than an `AppBar` docked to it. The screen is a full-bleed measurement
-/// surface; a Material app bar would cut the top off it.
+/// The live header (canvas Lifey 3 › 3.3): the activity's 44 dp chip, its name
+/// over one status line — "● GPS · Auto-pause on" in the state's colour — and,
+/// where the canvas has the music button, the auto-pause settings button
+/// (docs/redesign/77-mobile-redesign-plan.md R3.8). Flat on the page, not the
+/// old floating capsule: the screen is a measurement surface.
 class _ActivityHeaderBar extends StatelessWidget {
   const _ActivityHeaderBar({
     required this.activityType,
     required this.title,
-    this.status,
+    this.statusLabel,
+    this.statusDetail,
+    this.statusColor,
     this.onSettings,
     this.settingsTooltip,
   });
 
   final String activityType;
   final String title;
-  final Widget? status;
+
+  /// "GPS" / "Weak GPS" / "No GPS" / "Indoor" — the first part of the status
+  /// line, and the one that sets its colour.
+  final String? statusLabel;
+
+  /// "Auto-pause on", after the label.
+  final String? statusDetail;
+  final Color? statusColor;
   final VoidCallback? onSettings;
   final String? settingsTooltip;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      height: 54,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(24),
-      ),
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final color = statusColor ?? p.text2;
+    final statusStyle = t.bodyMedium!.copyWith(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3, color: color);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
       child: Row(
         children: [
-          ActivityChip(activityType: activityType, size: 32),
-          const SizedBox(width: 11),
+          ActivityChip(activityType: activityType, size: 44),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
-            child: Text(
-              title,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 15.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: t.titleLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w800, height: 1.2, color: p.text),
+                  ),
+                ),
+                if (statusLabel != null)
+                  Row(
+                    children: [
+                      Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Wrap(
+                          children: [
+                            Text(statusLabel!, style: statusStyle),
+                            if (statusDetail != null) Text(' · $statusDetail', style: statusStyle),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
           ),
-          if (status != null) status!,
-          if (onSettings != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: IconButton(
-                tooltip: settingsTooltip,
-                iconSize: 20,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.timer_outlined),
-                color: scheme.onSurfaceVariant,
-                onPressed: onSettings,
+          if (onSettings != null) ...[
+            const SizedBox(width: AppSpacing.s12),
+            Tooltip(
+              message: settingsTooltip ?? '',
+              child: Material(
+                color: p.card,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: onSettings,
+                  customBorder: const CircleBorder(),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Icon(Icons.timer_outlined, size: 22, color: p.text),
+                  ),
+                ),
               ),
             ),
+          ],
         ],
       ),
     );
@@ -3036,6 +2970,10 @@ class _SlideToFinishBarState extends State<_SlideToFinishBar> {
   static const _threshold = 0.75;
   static const _longPressDuration = Duration(milliseconds: 600);
 
+  /// The track's height and the red stop knob riding in it.
+  static const double _trackHeight = 64;
+  static const double _knobSize = 52;
+
   double _width = 0;
   Timer? _longPressTimer;
   bool _completing = false;
@@ -3081,7 +3019,9 @@ class _SlideToFinishBarState extends State<_SlideToFinishBar> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
+    final stop = context.metricColors.heart;
+    final t = Theme.of(context).textTheme;
     return LayoutBuilder(
       builder: (context, constraints) {
         _width = constraints.maxWidth;
@@ -3105,72 +3045,60 @@ class _SlideToFinishBarState extends State<_SlideToFinishBar> {
             builder: (context, value, _) {
               final released = value >= _threshold;
               return Container(
-                height: 72,
+                height: _trackHeight,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: scheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(26),
+                  color: p.card,
+                  borderRadius: AppRadius.pill,
+                  border: Border.all(color: p.hairline),
                 ),
                 child: Stack(
                   children: [
-                    // The filled track grows under the handle as the drag
-                    // travels — M12's "66%" state.
+                    // The filled track grows under the knob as the drag
+                    // travels; full colour once letting go would finish.
                     Positioned.fill(
                       child: FractionallySizedBox(
                         alignment: Alignment.centerLeft,
                         widthFactor: value,
-                        child: Container(
-                          color: released
-                              ? scheme.primary
-                              : scheme.primary.withValues(alpha: 0.55),
-                        ),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 22),
-                        child: Icon(
-                          Icons.flag,
-                          size: 22,
-                          color: value > 0.85 ? scheme.onPrimary : scheme.outlineVariant,
-                        ),
+                        child: ColoredBox(color: stop.withValues(alpha: released ? 1 : 0.4)),
                       ),
                     ),
                     Center(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 76),
-                        child: Text(
-                          released ? widget.releaseLabel : widget.label,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: value > 0.4 ? scheme.onPrimary : scheme.onSurfaceVariant,
-                          ),
+                        padding: const EdgeInsets.symmetric(horizontal: _knobSize + AppSpacing.s16),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                released ? widget.releaseLabel : widget.label,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: t.titleSmall!.copyWith(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: released ? p.bg : p.text2,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s4),
+                            Icon(Icons.keyboard_double_arrow_right_rounded, size: 20, color: released ? p.bg : p.text2),
+                          ],
                         ),
                       ),
                     ),
-                    // The handle itself: a 60 px squircle that rides the
-                    // drag, so the gesture has something to grab visually.
+                    // The red stop knob: something to grab, and a stop
+                    // square so it can't be taken for a play button.
                     Align(
                       alignment: Alignment(-1 + 2 * value.clamp(0.0, 1.0) * 0.86, 0),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: (_trackHeight - _knobSize) / 2),
                         child: Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: value > 0 ? scheme.surface : scheme.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            released ? Icons.flag : Icons.chevron_right,
-                            size: 26,
-                            color: value > 0 ? scheme.primary : scheme.onSurface,
-                          ),
+                          width: _knobSize,
+                          height: _knobSize,
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: stop),
+                          child: Icon(Icons.stop_rounded, size: 28, color: p.bg),
                         ),
                       ),
                     ),
@@ -3323,141 +3251,90 @@ class _FinishConfirmationOverlay extends StatelessWidget {
   }
 }
 
-/// The big, headline number — label above, large value below. Tappable when
-/// [onTap] is given (DISTANCE, while showing distance; never for MACHINE's
-/// or GAME's fixed dominant metric).
+/// The hero number of the live screen — a small spaced label over a 104 px
+/// value, centred (canvas Lifey 3 › 3.3: "MOVING TIME / 24:18"). Tappable when
+/// [onTap] is given. A unit after the value's last space rides small on the
+/// number's baseline; a duration ("28:14") has none and stays whole. The
+/// number ignores the text-scale setting — at 104 px it is already the biggest
+/// thing on the screen — but the label follows it.
 class _DominantMetric extends StatelessWidget {
   const _DominantMetric({
     required this.label,
     required this.value,
-    this.badge,
     this.leading,
     this.labelColor,
     this.valueColor,
-    this.onTap,
-    this.valueFontSize = 96,
+    this.valueFontSize = 104,
   });
 
   final String label;
   final String value;
 
-  /// 96 everywhere (M04/M05); 82 only on the MACHINE screen while an interval
-  /// plan is playing, which is the single size change M38 makes against M05.
+  /// 104 everywhere; 82 only on the MACHINE screen while an interval plan is
+  /// playing, whose countdown needs the room.
   final double valueFontSize;
 
-  /// Small pill next to [label] — M10's "BECSÜLT" while the GPS signal is
-  /// weak (docs/cardio/59-cardio-implementation-plan.md C4a.4). `null` the
-  /// rest of the time, including M04's healthy-GPS and every non-GPS state.
-  final String? badge;
-
-  /// M06/M07's state dot or pause glyph ahead of the label.
+  /// The state dot or pause glyph ahead of the label (GAME).
   final Widget? leading;
   final Color? labelColor;
   final Color? valueColor;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    // The unit rides at 26 px next to a 96 px number (M04) — the formatter
-    // hands both back in one string, so the last space is the seam. A
-    // duration ("28:14") has no space and stays whole.
+    final p = context.palette;
     final spaceIndex = value.lastIndexOf(' ');
     final hasUnit = spaceIndex > 0;
     final number = hasUnit ? value.substring(0, spaceIndex) : value;
     final unit = hasUnit ? value.substring(spaceIndex + 1) : null;
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        // Left-aligned, not centered: "napfényben, mozgás közben a bal
-        // szélről indul az olvasás, és a tizedesvessző mindig ugyanott van".
-        padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s4, AppSpacing.screen, 0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (leading != null) ...[leading!, const SizedBox(width: 8)],
+                if (leading != null) ...[leading!, const SizedBox(width: AppSpacing.s8)],
                 Flexible(
                   child: Text(
                     label,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.6,
-                      color: labelColor ?? scheme.onSurfaceVariant,
-                    ),
+                    textAlign: TextAlign.center,
+                    style: AppType.sectionLabel(color: labelColor ?? p.text2).copyWith(fontSize: 13, letterSpacing: 1.6),
                   ),
                 ),
-                if (badge != null) ...[
-                  const SizedBox(width: 7),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: scheme.secondary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      badge!,
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.secondary,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: AppSpacing.s8),
             // One `Text.rich`, not two `Text`s side by side: the unit has to
-            // sit on the number's baseline at a third of its size, and
-            // keeping it a single text node also keeps the whole value
-            // greppable as one string ("5.24 km") for tests and semantics.
+            // sit on the number's baseline, and one text node keeps the whole
+            // value greppable as one string ("5.24 km") for tests and semantics.
             FittedBox(
               fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
               child: Text.rich(
                 TextSpan(
                   children: [
-                    TextSpan(
-                      text: number,
-                      style: TextStyle(
-                        fontSize: valueFontSize,
-                        height: 1.02,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -4,
-                        color: valueColor,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
+                    TextSpan(text: number, style: AppType.number(valueFontSize, color: valueColor ?? p.text)),
                     if (unit != null)
                       TextSpan(
                         text: ' $unit',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
-                          color: valueColor ?? scheme.onSurfaceVariant,
-                        ),
+                        style: AppType.number(26, weight: FontWeight.w700, color: valueColor ?? p.text2)
+                            .copyWith(letterSpacing: 0),
                       ),
                   ],
                 ),
                 maxLines: 1,
+                textScaler: AppType.noScale(context),
               ),
             ),
           ],
         ),
-      ),
     );
   }
 }
 
-/// The three-across secondary metric strip (M04/M05/M06) — equal widths,
-/// full bleed to the screen's 14 px gutter, 9 px gaps.
+/// The secondary metrics as cards side by side (two for a run, three for the
+/// MACHINE and GAME layouts) — equal widths, the screen's 20 dp gutter, 12 dp
+/// gaps.
 class _MetricRow extends StatelessWidget {
   const _MetricRow({required this.children});
 
@@ -3466,17 +3343,17 @@ class _MetricRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
       // IntrinsicHeight, not plain `stretch`: the row lives in a scroll
       // view, so "stretch" alone would ask the tiles for infinite height.
       // The tiles must still match each other — one tile growing a line
-      // taller than its neighbours is exactly what the frames don't do.
+      // taller than its neighbours is exactly what the canvas doesn't do.
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (var i = 0; i < children.length; i++) ...[
-              if (i > 0) const SizedBox(width: 9),
+              if (i > 0) const SizedBox(width: AppSpacing.s12),
               Expanded(child: children[i]),
             ],
           ],
@@ -3486,95 +3363,48 @@ class _MetricRow extends StatelessWidget {
   }
 }
 
-/// One secondary-metric box — tappable when [onTap] is given. [color], when
-/// given, tints both the value and the label (M10's amber pace tile while
-/// the signal is weak); otherwise both use the normal theme colors.
+/// One secondary-metric card — tappable when [onTap] is given. [color], when
+/// given, tints both the value and the label (the amber pace card while the
+/// signal is weak). [big] is the two-across size (40 px numbers); three across
+/// the numbers are 28.
 class _MetricTile extends StatelessWidget {
   const _MetricTile({
     required this.label,
     required this.value,
-    this.icon,
-    this.iconColor,
     this.onTap,
     this.color,
     this.outlined = false,
     this.highlighted = false,
+    this.big = false,
+    this.badge,
   });
 
   final String label;
   final String value;
-  final IconData? icon;
-  final Color? iconColor;
+  final String? badge;
   final VoidCallback? onTap;
   final Color? color;
 
-  /// M11's dashed, empty tile — "— km · írd be": the tile *is* the call to
-  /// action when there's no source for the value.
+  /// The empty tile that is the call to action: "— km · type it in" when
+  /// there is no source for the value.
   final bool outlined;
 
-  /// M07's bordered gross-time tile while benched — the one metric still
-  /// moving gets the frame.
+  /// The frame around the gross-time tile while benched — the one metric
+  /// still moving.
   final bool highlighted;
+  final bool big;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = outlined ? scheme.primary : (color ?? scheme.onSurfaceVariant);
-    return InkWell(
+    return LiveMetricCard(
+      label: label,
+      value: value,
+      numberSize: big ? 40 : 28,
+      color: color,
+      outlined: outlined,
+      highlighted: highlighted,
+      badge: badge,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-        decoration: BoxDecoration(
-          color: highlighted ? scheme.surfaceContainer : scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(18),
-          border: highlighted
-              ? Border.all(color: _kAutoAccent.withValues(alpha: 0.34))
-              : (outlined && onTap != null
-                  ? Border.all(color: scheme.outlineVariant, width: 1.5)
-                  : null),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                if (icon != null)
-                  Icon(icon, size: 17, color: iconColor ?? scheme.onSurfaceVariant),
-                const Spacer(),
-                if (outlined && onTap != null) Icon(Icons.edit, size: 15, color: scheme.primary),
-              ],
-            ),
-            const SizedBox(height: 5),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.8,
-                  color: color,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-            // The frames draw these labels lower-case ("mozgásidő"); the ARB
-            // keeps them upper-case because the same strings are field
-            // labels on the manual-entry sheet and the summary. Casing is
-            // the one place this tile deviates from M04 — everything else
-            // (size, weight, color, order) follows it.
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: accent),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -3766,52 +3596,53 @@ class _CourtSwitchHalf extends StatelessWidget {
   }
 }
 
-/// M04/M05/M10/M11's control row: a 104 px primary pause circle, flanked by
-/// up to two 72 px secondary circles. The frames' left slot is a screen lock
-/// the app doesn't have, so DISTANCE puts the auto-pause settings there and
-/// every other family leaves it empty — the pause circle stays centered
-/// either way.
+/// The running control row: one big round pause button in the middle (canvas
+/// Lifey 3 › 3.3 — a 96 dp disc in the primary colour with a soft halo, the
+/// pause glyph alone), and, while an interval plan is playing, a 56 dp "skip
+/// section" circle on its right; the pause disc stays centred either way.
 class _RunningControlRow extends StatelessWidget {
   const _RunningControlRow({
     required this.onPause,
     required this.pauseLabel,
-    this.leading,
     this.trailing,
   });
 
   final VoidCallback? onPause;
   final String pauseLabel;
-  final Widget? leading;
   final Widget? trailing;
+
+  static const double _discSize = 96;
+  static const double _haloSpread = 10;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Expanded(child: Align(alignment: Alignment.centerLeft, child: leading ?? const SizedBox(width: 72))),
-        Material(
-          color: scheme.primary,
-          shape: const CircleBorder(),
-          child: InkWell(
-            onTap: onPause,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: 104,
-              height: 104,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.pause, size: 38, color: scheme.onPrimary),
-                  Text(
-                    pauseLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onPrimary,
-                    ),
+        const Expanded(child: SizedBox(width: 56)),
+        Tooltip(
+          message: pauseLabel,
+          child: Semantics(
+            button: true,
+            label: pauseLabel,
+            excludeSemantics: true,
+            child: Container(
+              width: _discSize + 2 * _haloSpread,
+              height: _discSize + 2 * _haloSpread,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.primary.withValues(alpha: 0.16)),
+              child: Material(
+                color: scheme.primary,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: onPause,
+                  customBorder: const CircleBorder(),
+                  child: SizedBox(
+                    width: _discSize,
+                    height: _discSize,
+                    child: Icon(Icons.pause_rounded, size: 44, color: scheme.onPrimary),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -3819,7 +3650,7 @@ class _RunningControlRow extends StatelessWidget {
         Expanded(
           child: Align(
             alignment: Alignment.centerRight,
-            child: trailing ?? const SizedBox(width: 72),
+            child: trailing ?? const SizedBox(width: 56),
           ),
         ),
       ],
@@ -3827,44 +3658,35 @@ class _RunningControlRow extends StatelessWidget {
   }
 }
 
-/// One 72 px secondary circle of the control row.
+/// One 56 dp secondary circle of the control row — the icon over a small label.
 class _CircleAction extends StatelessWidget {
   const _CircleAction({
     super.key,
     required this.icon,
     required this.label,
     required this.onPressed,
-    this.color,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback? onPressed;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final fg = color ?? scheme.onSurfaceVariant;
-    return Material(
-      color: scheme.surfaceContainer,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onPressed,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 72,
-          height: 72,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 24, color: fg),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: fg),
-              ),
-            ],
+    final p = context.palette;
+    final fg = p.text2;
+    return Tooltip(
+      message: label,
+      child: Material(
+        color: p.card,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: Icon(icon, size: 26, color: fg),
           ),
         ),
       ),
@@ -4110,7 +3932,7 @@ class _IntervalPlayerBlock extends StatelessWidget {
     final countingDown = state.isCountingDown && !paused;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 13),
         decoration: BoxDecoration(

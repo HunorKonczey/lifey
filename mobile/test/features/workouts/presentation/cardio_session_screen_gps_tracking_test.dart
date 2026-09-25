@@ -185,8 +185,8 @@ void main() {
     expect(find.textContaining('Signal is weak'), findsOneWidget);
     expect(find.text('ESTIMATED'), findsOneWidget);
     expect(find.text('—:—'), findsOneWidget);
-    expect(find.text('no signal'), findsOneWidget);
-    expect(find.text('PACE'), findsNothing); // replaced, not just supplemented
+    expect(find.text('No signal'), findsOneWidget);
+    expect(find.text('Pace'), findsNothing); // replaced, not just supplemented
   });
 
   testWidgets('a fresh fix after going weak clears it back to healthy immediately',
@@ -205,7 +205,7 @@ void main() {
     expect(find.text('GPS'), findsOneWidget);
     expect(find.text('Weak GPS'), findsNothing);
     expect(find.text('ESTIMATED'), findsNothing);
-    expect(find.text('PACE'), findsOneWidget);
+    expect(find.text('Pace'), findsOneWidget);
   });
 
   testWidgets('pausing clears the chip entirely — canTrack stays true, but nothing is expected',
@@ -217,7 +217,7 @@ void main() {
     await tester.pump();
     expect(find.text('GPS'), findsOneWidget);
 
-    await tester.tap(find.text('Pause'));
+    await tester.tap(find.byTooltip('Pause'));
     await tester.pumpAndSettle();
 
     expect(find.text('GPS'), findsNothing);

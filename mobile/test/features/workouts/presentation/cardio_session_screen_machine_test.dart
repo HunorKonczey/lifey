@@ -117,9 +117,9 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('MOVING TIME'), findsOneWidget);
     expect(find.text('42:18'), findsOneWidget);
-    expect(find.text('DISTANCE'), findsOneWidget);
-    expect(find.text('CADENCE'), findsOneWidget);
-    expect(find.text('AVG POWER'), findsOneWidget);
+    expect(find.text('Distance'), findsOneWidget);
+    expect(find.text('Cadence'), findsOneWidget);
+    expect(find.text('Avg power'), findsOneWidget);
     expect(find.text('RESISTANCE'), findsOneWidget);
     expect(find.text('0'), findsOneWidget); // resistance starts at 0
   });
@@ -151,7 +151,7 @@ void main() {
       _machineSession(distanceMeters: 10000, avgWatts: 150, movingSeconds: 60),
     );
 
-    await tester.tap(find.text('CADENCE'));
+    await tester.tap(find.text('Cadence'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '85');
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
@@ -172,7 +172,7 @@ void main() {
   testWidgets('editing power in turn preserves the cadence just set', (tester) async {
     final controller = await _pump(tester, _machineSession(avgCadence: 85, movingSeconds: 60));
 
-    await tester.tap(find.text('AVG POWER'));
+    await tester.tap(find.text('Avg power'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '172');
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
