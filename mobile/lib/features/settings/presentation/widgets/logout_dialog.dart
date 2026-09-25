@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/sync/logout_preflight.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Asks before logging out. Resolves `true` only when the user confirms.
 ///
-/// Logout wipes the local database including changes that have not synced
-/// yet, so the copy says so (docs/redesign/77-mobile-redesign-plan.md R1.1;
-/// R5.6 makes the behaviour itself safer).
-Future<bool> showLogoutDialog(BuildContext context) async {
+/// Logout wipes the local database, so the copy says what happens to the
+/// changes that have not synced yet: they are uploaded first, or — offline —
+/// counted as lost (docs/redesign/77-mobile-redesign-plan.md R1.1, R5.6).
+Future<bool> showLogoutDialog(BuildContext context, {LogoutPlan plan = const LogoutPlan(unsynced: 0, online: true)}) async {
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (_) => const LogoutDialog(),
+    builder: (_) => LogoutDialog(plan: plan),
   );
   return confirmed ?? false;
 }
@@ -20,7 +21,10 @@ Future<bool> showLogoutDialog(BuildContext context) async {
 /// theme), 24 px padding, a 48 px heart-tinted icon holder, a 22/800 title,
 /// a 15/500 text-2 body and a Cancel / Log out button pair.
 class LogoutDialog extends StatelessWidget {
-  const LogoutDialog({super.key});
+  const LogoutDialog({super.key, this.plan = const LogoutPlan(unsynced: 0, online: true)});
+
+  /// What the logout will do to unsynced changes; picks the body text.
+  final LogoutPlan plan;
 
   // The two buttons sit side by side like the canvas, but at large text sizes
   // "Kijelentkezés" no longer fits half a dialog, so they stack instead of
@@ -79,7 +83,16 @@ class LogoutDialog extends StatelessWidget {
               child: Text(l10n.logOutDialogTitle, style: theme.dialogTheme.titleTextStyle),
             ),
             const SizedBox(height: 14),
-            Text(l10n.logOutDialogMessage, style: theme.dialogTheme.contentTextStyle),
+            Text(
+              plan.willLose
+                  ? l10n.logOutDialogMessageLoss(plan.unsynced)
+                  : plan.willUpload
+                      ? l10n.logOutDialogMessageUpload(plan.unsynced)
+                      : l10n.logOutDialogMessage,
+              // Losing changes is the one case that is not routine: the body
+              // takes the warning colour.
+              style: theme.dialogTheme.contentTextStyle?.copyWith(color: plan.willLose ? heart : null),
+            ),
             const SizedBox(height: 20),
             if (stack) ...[
               confirm,

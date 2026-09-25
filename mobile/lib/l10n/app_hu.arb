@@ -477,7 +477,6 @@
   "resetIngredientTooltip": "Visszaállítás a recept szerinti mennyiségre",
   "logOutLabel": "Kijelentkezés",
   "logOutDialogTitle": "Kijelentkezel a Lifey-ból?",
-  "logOutDialogMessage": "A telefonon lévő adataid törlődnek. A még nem szinkronizált módosítások elvesznek.",
   "todaySectionTitle": "Mai nap",
   "currentWeightSectionTitle": "Jelenlegi súly",
   "weightHistoryLabel": "Előzmények",
@@ -1443,5 +1442,9 @@
   "onboardingWaterPerDay": "naponta",
   "chatPeerRoleTrainer": "Az edződ",
   "chatPeerRoleClient": "A tanítványod",
-  "chatMoreTooltip": "Továbbiak"
+  "chatMoreTooltip": "Továbbiak",
+  "logOutDialogMessage": "Minden mentve van a fiókodban. A telefonon lévő adataid törlődnek.",
+  "logOutDialogMessageUpload": "{count} nem szinkronizált módosítás előbb feltöltődik. A telefonon lévő adataid törlődnek.",
+  "logOutDialogMessageLoss": "{count} módosítást nem lehet feltölteni, és el fog veszni. Nincs internetkapcsolat. A telefonon lévő adataid törlődnek.",
+  "logOutUploadingMessage": "Módosítások feltöltése…"
 }

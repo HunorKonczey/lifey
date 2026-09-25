@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/sync/logout_preflight.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/watch/watch_workout_service.dart';
 import '../../../l10n/app_localizations.dart';
@@ -903,7 +904,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       iconColor: mc.heart,
                       label: l10n.logOutLabel,
                       labelColor: mc.heart,
-                      onTap: () => _confirmLogout(context),
+                      onTap: _confirmLogout,
                       trailing: const SizedBox.shrink(),
                     ),
                   ],
@@ -956,11 +957,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  Future<void> _confirmLogout(BuildContext context) async {
-    final confirmed = await showLogoutDialog(context);
+  Future<void> _confirmLogout() async {
+    final preflight = ref.read(logoutPreflightProvider);
+    final plan = await preflight.plan();
+    if (!mounted) return;
+    final confirmed = await showLogoutDialog(context, plan: plan);
     if (!confirmed || !mounted) return;
+    // Queued changes go up before anything is wiped; a small progress dialog
+    // says so while they do (bounded — a bad connection cannot hold it).
+    if (plan.willUpload) await _uploadBeforeLogout(preflight);
+    if (!mounted) return;
     // The router redirects to the login screen once auth state clears.
-    await ref.read(authControllerProvider.notifier).logout();
+    await ref.read(authControllerProvider.notifier).logout(flush: false);
+  }
+
+  Future<void> _uploadBeforeLogout(LogoutPreflight preflight) async {
+    final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    unawaited(showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)),
+              const SizedBox(width: AppSpacing.s16),
+              Expanded(child: Text(l10n.logOutUploadingMessage)),
+            ],
+          ),
+        ),
+      ),
+    ));
+    try {
+      await preflight.flush();
+    } finally {
+      if (navigator.canPop()) navigator.pop();
+    }
   }
 
   String _languageName(LanguagePreference pref, AppLocalizations l10n) {

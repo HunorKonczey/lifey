@@ -2130,10 +2130,6 @@
   "@logOutDialogTitle": {
     "description": "Title of the confirmation dialog shown before logging out (docs/redesign/77-mobile-redesign-plan.md R1.1)"
   },
-  "logOutDialogMessage": "Your data on this phone is removed. Changes not yet synced will be lost.",
-  "@logOutDialogMessage": {
-    "description": "Body of the log-out confirmation dialog. Logging out wipes the local database including any changes that have not reached the server yet, so this states it plainly (docs/redesign/77-mobile-redesign-plan.md R1.1, §9 risk 9)"
-  },
   "todaySectionTitle": "Today",
   "@todaySectionTitle": {
     "description": "Dashboard section heading for today's nutrition stats"
@@ -6574,5 +6570,23 @@
   "chatMoreTooltip": "More",
   "@chatMoreTooltip": {
     "description": "Tooltip of the ⋮ button in the chat header, which holds mute / unmute"
+  },
+  "logOutDialogMessage": "Everything is saved to your account. Your data on this phone is removed.",
+  "@logOutDialogMessage": {
+    "description": "Body of the log-out dialog when there is nothing left to upload (docs/redesign/77-mobile-redesign-plan.md R5.6)"
+  },
+  "logOutDialogMessageUpload": "{count, plural, one{1 unsynced change will be uploaded first.} other{{count} unsynced changes will be uploaded first.}} Your data on this phone is removed.",
+  "@logOutDialogMessageUpload": {
+    "description": "Body of the log-out dialog when there are queued changes and the device is online: they are uploaded before the data is wiped",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "logOutDialogMessageLoss": "{count, plural, one{1 change couldn't be uploaded and will be lost.} other{{count} changes couldn't be uploaded and will be lost.}} You're offline. Your data on this phone is removed.",
+  "@logOutDialogMessageLoss": {
+    "description": "Warning body of the log-out dialog when there are queued changes and the device is offline: they cannot be uploaded and will be lost",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "logOutUploadingMessage": "Uploading your changes…",
+  "@logOutUploadingMessage": {
+    "description": "Shown in a small progress dialog while the queued changes are uploaded before logging out"
   }
 }

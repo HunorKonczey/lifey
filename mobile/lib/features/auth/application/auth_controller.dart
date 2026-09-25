@@ -19,6 +19,7 @@ import '../../../core/push/push_token_registrar.dart';
 import '../../../core/push/weigh_in_reminder_preferences.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/sync/connectivity_sync_controller.dart';
+import '../../../core/sync/logout_preflight.dart';
 import '../../my_trainers/application/my_trainers_controller.dart';
 import '../../chat/data/chat_repository.dart';
 import '../../chat/data/peer_avatar_repository.dart';
@@ -140,7 +141,16 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
   }
 
-  Future<void> logout() async {
+  /// Signs out and wipes this account's data from the device.
+  ///
+  /// Queued changes are uploaded first ([LogoutPreflight.flush], bounded and
+  /// online-only) — the wipe below removes the outbox with everything else, so
+  /// this is the last moment they can still be saved. The caller that already
+  /// ran the flush itself (to show progress) passes `flush: false`. Nothing
+  /// about the wipe changed: the cross-account cleanup runs whatever the flush
+  /// found.
+  Future<void> logout({bool flush = true}) async {
+    if (flush) await ref.read(logoutPreflightProvider).flush();
     final refreshToken = await _storage.readRefreshToken();
     // Must run before storage.clear() below — the DELETE call needs the
     // still-valid access token to identify the caller.
