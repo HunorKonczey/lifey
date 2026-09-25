@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…2, reviewed 2026-09-25); R2 next
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1099,9 +1099,22 @@ in `recipes/domain`, unit-tested); "< 400 kcal" per serving. "Last used amount" 
 `food_usage.dart` carries it; piece-based chips ("½ pc", "1 pc") need a per-food piece weight
 the model doesn't have → **non-goal** (§6).
 
-### R2.1 — Mobile UI: nutrition header + tab bar
+### R2.1 — Mobile UI: nutrition header + tab bar ✅
 - `nutrition_screen.dart`: `LifeyHeader`, copy-day and scanner actions; `pill_tab_bar` restyled.
 - **Verify:** copy-day sheet opens from the header; tabs switch with fade-through.
+
+*As built:* `NutritionScreen` is a `NestedScrollView`: pinned `LifeyHeader` (30/800 "Nutrition", shrinks to
+the 52 px row as the active tab scrolls) with the copy-day and barcode-scanner `HeaderIconButton`s on
+every tab, then the `PillTabBar` (20 px margin now) as a pinned `LifeyPinnedSliver` — the bar stays while
+the title collapses. The tabs are the `TabBarView` body and no longer take a `topPadding` (the nested
+scroll view starts them under the bar). **Search** (Recipes and Foods only) is a third round header
+button that swaps the header for `LifeySearchHeader` (field + close button, same height as the collapsed
+row); the canvas draws no search, this keeps the existing function — `searchTooltip`,
+`closeSearchTooltip`. The old Today / Week / All `DateRangeFilterButton`s are gone from the header:
+Meals gets its day selection in R2.2, Macros loses its range chip in R2.8 (the canvas has a fixed
+"Last 7 days"); until then Meals shows today and Macros the week. Test: `nutrition_screen_test.dart`
+(header, copy-day sheet, search open/close per tab).
+`mealTypeStyle` moved to `nutrition/presentation/widgets/meal_type_style.dart` (dashboard + nutrition share it).
 
 ### R2.2 — Mobile UI: week strip replaces the Today / Week / All filter
 - New `nutrition/presentation/widgets/week_strip.dart`; `meals_tab.dart`; the calendar icon

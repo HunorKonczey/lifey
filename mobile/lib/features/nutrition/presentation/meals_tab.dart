@@ -35,11 +35,9 @@ bool _isYesterday(DateTime dateTime) {
 class MealsTab extends ConsumerStatefulWidget {
   const MealsTab({
     super.key,
-    this.topPadding = 0,
     this.filter = DateRangeFilter.today,
   });
 
-  final double topPadding;
   final DateRangeFilter filter;
 
   @override
@@ -155,7 +153,6 @@ class _MealsTabState extends ConsumerState<MealsTab> {
               filtered.isEmpty &&
               meals.any((m) => _isYesterday(m.dateTime));
           return RefreshIndicator(
-            displacement: widget.topPadding,
             onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
             child: EmptyView(
               icon: Icons.lunch_dining_outlined,
@@ -185,12 +182,11 @@ class _MealsTabState extends ConsumerState<MealsTab> {
         final canLoadMore = hasMore && filtered.length == meals.length && !truncated;
 
         return RefreshIndicator(
-          displacement: widget.topPadding,
           onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
           child: NotificationListener<ScrollNotification>(
             onNotification: (n) => _handleScrollNotification(n, canLoadMore),
             child: ListView.builder(
-              padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+              padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
               itemCount: visible.length + (canLoadMore ? 1 : 0) + (truncated ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < visible.length) {

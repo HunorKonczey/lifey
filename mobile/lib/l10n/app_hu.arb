@@ -1340,5 +1340,7 @@
   "trainerGoalsSavedNotifiedMessage": "Célok mentve — a kliensed értesítést kapott.",
   "trainerGoalsSavedMessage": "Célok mentve.",
   "deltaDownSemantics": "{value} csökkenés",
-  "deltaUpSemantics": "{value} növekedés"
+  "deltaUpSemantics": "{value} növekedés",
+  "searchTooltip": "Keresés",
+  "closeSearchTooltip": "Keresés bezárása"
 }

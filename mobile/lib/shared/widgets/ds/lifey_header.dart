@@ -514,6 +514,171 @@ class _LifeySubpageHeaderState extends State<LifeySubpageHeader> {
 }
 
 // ---------------------------------------------------------------------------
+// Pinned pieces under / instead of the large title (tabbed main screens)
+// ---------------------------------------------------------------------------
+
+/// A fixed-height pinned sliver — the tab bar under a [LifeyHeader] in a
+/// `NestedScrollView`, which stays put while the title above it collapses.
+class LifeyPinnedSliver extends StatelessWidget {
+  const LifeyPinnedSliver({super.key, required this.height, required this.child});
+
+  final double height;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => SliverPersistentHeader(
+        pinned: true,
+        delegate: _FixedExtentDelegate(extent: height, child: child),
+      );
+}
+
+class _FixedExtentDelegate extends SliverPersistentHeaderDelegate {
+  _FixedExtentDelegate({required this.extent, required this.child});
+
+  final double extent;
+  final Widget child;
+
+  @override
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(
+          BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      child;
+
+  @override
+  bool shouldRebuild(_FixedExtentDelegate old) =>
+      old.extent != extent || old.child != child;
+}
+
+/// The header row while a search is open: in place of [LifeyHeader], a
+/// search field on the scrim with a round close button. Pinned, like the
+/// large-title header, and the same height as its collapsed row so opening
+/// and closing a search doesn't move the tab bar under it.
+class LifeySearchHeader extends StatelessWidget {
+  const LifeySearchHeader({
+    super.key,
+    required this.controller,
+    required this.hint,
+    required this.closeTooltip,
+    required this.onChanged,
+    required this.onClose,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final String closeTooltip;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _SearchHeaderDelegate(
+        extent: top + _rowHeight,
+        field: _SearchField(
+            controller: controller, hint: hint, onChanged: onChanged),
+        closeButton: HeaderIconButton(
+          icon: Icons.close_rounded,
+          tooltip: closeTooltip,
+          onPressed: onClose,
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField(
+      {required this.controller, required this.hint, required this.onChanged});
+
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    return SizedBox(
+      height: 44,
+      child: TextField(
+        controller: controller,
+        autofocus: true,
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        style: t.bodyLarge!.copyWith(color: p.text),
+        cursorColor: p.text,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: t.bodyLarge!.copyWith(color: p.text2),
+          prefixIcon: Icon(Icons.search_rounded, size: 22, color: p.text2),
+          filled: true,
+          fillColor: p.nested,
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+          border: const OutlineInputBorder(
+              borderRadius: AppRadius.pill, borderSide: BorderSide.none),
+          enabledBorder: const OutlineInputBorder(
+              borderRadius: AppRadius.pill, borderSide: BorderSide.none),
+          focusedBorder: const OutlineInputBorder(
+              borderRadius: AppRadius.pill, borderSide: BorderSide.none),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _SearchHeaderDelegate(
+      {required this.extent, required this.field, required this.closeButton});
+
+  final double extent;
+  final Widget field;
+  final Widget closeButton;
+
+  @override
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: _overlayStyle(context),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _ScrimBackground(opacity: 1, showHairline: overlapsContent),
+          Positioned(
+            left: AppSpacing.screen,
+            right: AppSpacing.screen - 2,
+            bottom: 0,
+            height: _rowHeight,
+            child: Row(children: [
+              Expanded(child: field),
+              const SizedBox(width: AppSpacing.s8),
+              closeButton,
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SearchHeaderDelegate old) =>
+      old.extent != extent || old.field != field || old.closeButton != closeButton;
+}
+
+// ---------------------------------------------------------------------------
 // Status-bar scrim
 // ---------------------------------------------------------------------------
 

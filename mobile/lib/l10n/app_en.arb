@@ -6208,5 +6208,13 @@
   "@deltaUpSemantics": {
     "description": "Screen-reader text for a change chip showing an increase, e.g. 'up 0.3 kg'. {value} is the formatted amount with its unit (docs/redesign/77-mobile-redesign-plan.md R0.7)",
     "placeholders": {"value": {"type": "String"}}
+  },
+  "searchTooltip": "Search",
+  "@searchTooltip": {
+    "description": "Tooltip of the round search button in a screen header, e.g. on the Nutrition Recipes and Foods tabs (docs/redesign/77-mobile-redesign-plan.md R2.1)"
+  },
+  "closeSearchTooltip": "Close search",
+  "@closeSearchTooltip": {
+    "description": "Tooltip of the round button that closes the open search field in a screen header (docs/redesign/77-mobile-redesign-plan.md R2.1)"
   }
 }

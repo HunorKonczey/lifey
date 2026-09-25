@@ -24,11 +24,9 @@ final _kcalFmt = NumberFormat('#,##0');
 class MacrosTab extends ConsumerStatefulWidget {
   const MacrosTab({
     super.key,
-    this.topPadding = 0,
     this.filter = DateRangeFilter.week,
   });
 
-  final double topPadding;
   final DateRangeFilter filter;
 
   @override
@@ -59,7 +57,6 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
 
         if (days.isEmpty || filtered.isEmpty) {
           return RefreshIndicator(
-            displacement: widget.topPadding,
             onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
             child: EmptyView(
               icon: Icons.pie_chart_outline,
@@ -72,10 +69,9 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
         }
 
         return RefreshIndicator(
-          displacement: widget.topPadding,
           onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
           child: ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+            padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
             itemCount: visible.length + (truncated ? 1 : 0),
             itemBuilder: (context, index) {
               if (index >= visible.length) return const HistoryBoundaryRow();

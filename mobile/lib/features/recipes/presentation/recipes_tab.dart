@@ -26,9 +26,8 @@ import 'widgets/log_recipe_sheet.dart';
 
 /// "Recipes" tab: tap to edit, quick "log as meal", and swipe-to-delete.
 class RecipesTab extends ConsumerWidget {
-  const RecipesTab({super.key, this.topPadding = 0, this.searchQuery});
+  const RecipesTab({super.key, this.searchQuery});
 
-  final double topPadding;
 
   /// When non-empty, filters the (already fully-loaded) recipe list by name.
   final String? searchQuery;
@@ -133,7 +132,6 @@ class RecipesTab extends ConsumerWidget {
     final offline = ref.watch(isOfflineProvider).value ?? false;
 
     return RefreshIndicator(
-      displacement: topPadding,
       onRefresh: () => ref.read(recipeControllerProvider.notifier).refresh(),
       child: state.when(
         data: (recipes) {
@@ -146,7 +144,7 @@ class RecipesTab extends ConsumerWidget {
               children: [
                 if (showGenerate)
                   Padding(
-                    padding: EdgeInsets.fromLTRB(12, topPadding, 12, 0),
+                    padding: const EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, 0),
                     child: _GenerateWithAiCard(
                         offline: offline, onTap: () => _generate(context, ref, offline)),
                   ),
@@ -155,7 +153,7 @@ class RecipesTab extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, topPadding, 12, bottomPad + 88),
+            padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
             itemCount: visible.length + (showGenerate ? 1 : 0),
             itemBuilder: (context, index) {
               if (showGenerate && index == 0) {

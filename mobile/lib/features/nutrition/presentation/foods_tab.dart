@@ -18,9 +18,8 @@ import 'widgets/add_food_sheet.dart';
 /// scroll-triggered pagination over the local cache (see
 /// docs/14-pagination-plan.md).
 class FoodsTab extends ConsumerStatefulWidget {
-  const FoodsTab({super.key, this.topPadding = 0, this.searchQuery});
+  const FoodsTab({super.key, this.searchQuery});
 
-  final double topPadding;
 
   /// When non-empty, the tab shows the full food catalog (via
   /// [foodSearchProvider], bypassing pagination) filtered by name instead of
@@ -118,7 +117,6 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return RefreshIndicator(
-      displacement: widget.topPadding,
       onRefresh: () => ref.read(foodControllerProvider.notifier).refresh(),
       child: state.when(
         data: (foods) {
@@ -133,7 +131,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
           return NotificationListener<ScrollNotification>(
             onNotification: _handleScrollNotification,
             child: ListView.builder(
-              padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+              padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
               itemCount: itemCount,
               itemBuilder: (context, index) {
                 if (index >= foods.length) {
@@ -191,7 +189,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
           );
         }
         return ListView.builder(
-          padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+          padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
           itemCount: matches.length,
           itemBuilder: (context, index) {
             final food = matches[index];

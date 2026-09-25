@@ -5,7 +5,7 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/ds/list_group.dart';
 import '../../../../shared/widgets/ds/section_label.dart';
-import '../../../nutrition/domain/meal.dart';
+import '../../../nutrition/presentation/widgets/meal_type_style.dart';
 import '../../domain/today_meal_group.dart';
 
 /// "TODAY'S MEALS · See all" and the day's meals in one card, with the
@@ -117,19 +117,6 @@ class TodayMealsSection extends StatelessWidget {
       onTap: onMealTap,
     );
   }
-}
-
-/// The icon and tint of a meal type — breakfast in the carbs colour and snack
-/// in protein green as the canvas draws them; lunch and dinner take the two
-/// remaining data colours so the four rows stay tellable apart.
-(IconData, Color) mealTypeStyle(BuildContext context, MealType type) {
-  final mc = context.metricColors;
-  return switch (type) {
-    MealType.breakfast => (Icons.bakery_dining_rounded, mc.carbs),
-    MealType.lunch => (Icons.lunch_dining_rounded, mc.calories),
-    MealType.dinner => (Icons.dinner_dining_rounded, mc.fat),
-    MealType.snack => (Icons.apple_rounded, mc.protein),
-  };
 }
 
 /// The 36 px pill button inside the meals card: a 48 dp touch box around it.
