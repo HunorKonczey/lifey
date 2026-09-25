@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0.1–R0.14 done; R0 emulator review next
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 next
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1556,4 +1556,51 @@ One entry per iteration-end emulator review (§4.1). Format: `### R<n> — <date
 then *Matches*, *Deviations (intended)* with decision ids, *Bugs* with the fix step that closed
 each.
 
-*(no reviews yet)*
+### R0 — 2026-09-25 — Pixel_10 AVD (1080 × 2424, 420 dpi = 411 × 923 dp, API 37)
+
+Scope: the debug design gallery (`lifey:///debug/design`) in light/dark × EN/HU × 100/130 %,
+against `Lifey Design System.dc.html`; plus the logged-in screens with a seeded local account
+(`anna.kovacs@lifey.test`, local dev backend only) and the login screen — to confirm the R0
+theme doesn't break the not-yet-migrated screens.
+
+**Matches**
+- Colour tokens, text tiers and their contrast ratios, metric colours + 16 % chip tints (light
+  and dark), brand-only-for-controls.
+- Type scale roles, tabular hero numbers that stay fixed at 130 % while body text grows.
+- Formatting (HU `17 519`, `64,5`, `szept. 24.`, U+2212 deltas), spacing ladder, 4-step radii
+  with nested = parent − inset, elevation e0–e3 (float + blur), motion durations, press scale.
+- Icons (outlined/filled pairs), cards, section labels, tinted/delta/record chips, monogram
+  avatars, buttons, chips, segmented control, list rows, inputs (focus/error ring), dialog,
+  snackbars, rings (incl. overflow lap), metric bars, tiles, headers, bottom nav (HU
+  "Áttekintés" fits), sheets, empty/error states, bar and line charts.
+
+**Deviations (intended / transitional)**
+- Old screens: scrolled content under the status bar on dashboard/settings (R1/R5 header
+  migration), light-theme cards grey because old code uses `surfaceContainerHigh` (slots not
+  re-mapped on purpose, D-R0.3), old segmented controls and stats formatting (`17518.6 kcal`,
+  EN dates in HU — R4), logout icon on the dashboard (R1.1), avatar from the e-mail (R5),
+  weight delta in green (R1.4), "Oats & berries" crowding its date after body 14 → 16 (R2.3).
+- Weight trend style: canvas dotted average vs docs/76 D-W3 — both are `TrendStyle` options,
+  R4.2 decides (§10 Q4).
+- The floating upcoming-workout card overlapping content is pre-existing (not R0).
+
+**Bugs (all fixed on `feature/mobile-redesign`)**
+- Chip labels rendered with no colour — RawChip resolves only `labelStyle.color` per state →
+  R0.fix-1.
+- PillTabBar at the design's 20 px margin misaligned with 12 px legacy content → per-screen
+  opt-in margin, R0.fix-2.
+- Login/register/password/chat-search/composer fields picked up the v2 fill; email + password
+  merged into one grey block with an invisible divider → `filled: false`, outline divider,
+  R0.fix-3.
+- Body/label slots showed Material's +0.25–0.5 px tracking (null letterSpacing merged with M3
+  geometry by `Theme.of`); units inherited the number's −3 % ("621/2,360kcal") → explicit 0,
+  R0.fix-4.
+- RatioBar segments were 0 px tall (childless ColoredBox in a Row) — every ratio bar showed an
+  empty track → R0.fix-5.
+- Gallery empty-state frame too short for HU (gallery only) → R0.fix-6.
+- PillTabBar labels wrapped and were clipped in HU at 130 % ("Étkezések", "Receptek") → scale
+  down to fit, R0.fix-7.
+
+Each fix has a widget test that fails without it. Full suite green except the 3 known Windows
+chat-attachment failures.
+
