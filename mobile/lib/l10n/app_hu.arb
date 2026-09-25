@@ -129,7 +129,6 @@
   "recipesTabLabel": "Receptek",
   "macrosTabLabel": "Makrók",
   "noMacroDataTitle": "Még nincs makró rögzítve",
-  "noMacroDataInRangeTitle": "Nincs makró ebben az időszakban",
   "foodFabLabel": "Étel",
   "mealFabLabel": "Étkezés",
   "recipeFabLabel": "Recept",
@@ -701,10 +700,6 @@
   "widgetNoDataLabel": "Nyisd meg az appot",
   "liveActivityDefaultTitle": "Edzés",
   "liveActivityDefaultExerciseName": "Gyakorlat",
-  "macrosTodayKcalLeft": "{count} kcal maradt",
-  "macrosTodayKcalOver": "{count} kcal túl",
-  "macrosTodayProteinLeft": "{count} g fehérje maradt",
-  "macrosTodayProteinOver": "{count} g fehérje túl",
   "streakMetricCalories": "kalória",
   "streakMetricSteps": "lépés",
   "streakMetricWater": "víz",
@@ -1368,5 +1363,6 @@
   "recipeLogAction": "Naplózás",
   "recipeFavoriteTooltip": "Hozzáadás a kedvencekhez",
   "recipeUnfavoriteTooltip": "Eltávolítás a kedvencek közül",
-  "noRecipesMatchMessage": "Próbálj másik szűrőt"
+  "noRecipesMatchMessage": "Próbálj másik szűrőt",
+  "macrosLastDaysTitle": "Utolsó 7 nap"
 }

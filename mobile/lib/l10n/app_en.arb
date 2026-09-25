@@ -564,10 +564,6 @@
   "@noMacroDataTitle": {
     "description": "Empty state title on the Macros tab when no meals have been logged at all"
   },
-  "noMacroDataInRangeTitle": "No macros in this range",
-  "@noMacroDataInRangeTitle": {
-    "description": "Empty state title on the Macros tab when a date filter excludes all days"
-  },
   "foodFabLabel": "Food",
   "@foodFabLabel": {
     "description": "FAB label when on the Foods tab"
@@ -3130,42 +3126,6 @@
   "liveActivityDefaultExerciseName": "Exercise",
   "@liveActivityDefaultExerciseName": {
     "description": "Live Activity exercise name fallback before any exercise has a resolved name"
-  },
-  "macrosTodayKcalLeft": "{count} kcal left",
-  "@macrosTodayKcalLeft": {
-    "description": "Fragment of the remaining-budget line on today's featured macros card: calories still under goal",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "macrosTodayKcalOver": "{count} kcal over",
-  "@macrosTodayKcalOver": {
-    "description": "Fragment of the remaining-budget line on today's featured macros card: calorie goal exceeded",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "macrosTodayProteinLeft": "{count} g protein left",
-  "@macrosTodayProteinLeft": {
-    "description": "Fragment of the remaining-budget line on today's featured macros card: protein still under goal",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "macrosTodayProteinOver": "{count} g protein over",
-  "@macrosTodayProteinOver": {
-    "description": "Fragment of the remaining-budget line on today's featured macros card: protein goal exceeded",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "streakMetricCalories": "calorie",
   "@streakMetricCalories": {
@@ -6288,5 +6248,9 @@
   "noRecipesMatchMessage": "Try another filter",
   "@noRecipesMatchMessage": {
     "description": "Hint of the empty state on the Recipes tab when the chosen filter chip leaves no recipe"
+  },
+  "macrosLastDaysTitle": "Last 7 days",
+  "@macrosLastDaysTitle": {
+    "description": "Section label above the list of the previous days on the Macros tab (shown in capitals) (docs/redesign/77-mobile-redesign-plan.md R2.8)"
   }
 }

@@ -1,92 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/entitlements/entitlement_providers.dart';
+import '../../../core/format/lifey_format.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/app_type.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/date_range_filter_bar.dart';
+import '../../../shared/widgets/ds/animated_number.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../../shared/widgets/ds/metric_bar.dart';
+import '../../../shared/widgets/ds/progress_ring.dart';
+import '../../../shared/widgets/ds/section_label.dart';
+import '../../../shared/widgets/ds/tinted_chip.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/history_boundary_row.dart';
 import '../../settings/application/settings_controller.dart';
+import '../../settings/domain/user_settings.dart';
 import '../application/daily_macros_controller.dart';
 import '../application/meal_controller.dart';
 import '../domain/daily_macros.dart';
+import '../domain/meal_days.dart';
 
-final _kcalFmt = NumberFormat('#,##0');
+/// How many earlier days the "Last 7 days" list looks back.
+const macroHistoryDays = 7;
 
-/// "Macros" tab: daily macro totals filtered by date range.
+/// "Macros" tab (docs/redesign/77-mobile-redesign-plan.md R2.8; canvas Lifey 2
+/// › 2.4): today's calories with the share of the goal and **three macro
+/// rings** — each against its own goal — over a "LAST 7 DAYS" group of one row
+/// per day: date, kcal, a bar of the day's P / C / F split and the three gram
+/// values in their colours.
 ///
-/// Each row is one calendar day, showing calorie total prominently and
-/// protein/carbs/fat as compact coloured icon+value chips below.
-class MacrosTab extends ConsumerStatefulWidget {
-  const MacrosTab({
-    super.key,
-    this.filter = DateRangeFilter.week,
-  });
-
-  final DateRangeFilter filter;
+/// The old Today / Week / All range filter is gone (the canvas has no filter,
+/// only the fixed week); days older than a week are in the Meals tab's
+/// "All meals". Days without a logged meal have no row.
+class MacrosTab extends ConsumerWidget {
+  const MacrosTab({super.key});
 
   @override
-  ConsumerState<MacrosTab> createState() => _MacrosTabState();
-}
-
-class _MacrosTabState extends ConsumerState<MacrosTab> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dailyMacrosProvider);
-    final settings = ref.watch(settingsControllerProvider).value;
+    final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
     final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final cutoff = ref.watch(historyCutoffProvider);
 
     return state.when(
       data: (days) {
-        final filtered =
-            days.where((d) => widget.filter.matches(d.day)).toList();
-        // The free history window (`67` §3.2, D-P6) — layered on top of the
-        // date-range filter above, never a change to [dailyMacrosProvider]
-        // itself. `filtered` is newest-first, so anything cut off is a
-        // contiguous tail.
-        final visible = cutoff == null
-            ? filtered
-            : filtered.where((d) => !d.day.toLocal().isBefore(cutoff)).toList();
-        final truncated = visible.length < filtered.length;
-
-        if (days.isEmpty || filtered.isEmpty) {
+        if (days.isEmpty) {
           return RefreshIndicator(
             onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
-            child: EmptyView(
-              icon: Icons.pie_chart_outline,
-              title: days.isEmpty
-                  ? l10n.noMacroDataTitle
-                  : l10n.noMacroDataInRangeTitle,
-              subtitle: days.isEmpty ? null : l10n.tryWiderDateFilterMessage,
-            ),
+            child: EmptyView(icon: Icons.pie_chart_outline, title: l10n.noMacroDataTitle),
           );
         }
+        final now = DateTime.now();
+        final today = dateOnly(now);
+        final oldest = DateTime(now.year, now.month, now.day - macroHistoryDays);
+        DailyMacros? todayTotals;
+        for (final d in days) {
+          if (d.day == today) todayTotals = d;
+        }
+        // Newest first already; "last 7 days" = the seven before today.
+        final earlier = days.where((d) => d.day.isBefore(today) && !d.day.isBefore(oldest)).toList();
+        // The free history window (`67` §3.2, D-P6) — layered on top of the
+        // week, never a change to [dailyMacrosProvider] itself.
+        final visible =
+            cutoff == null ? earlier : earlier.where((d) => !d.day.toLocal().isBefore(cutoff)).toList();
+        final truncated = visible.length < earlier.length;
 
         return RefreshIndicator(
           onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
-          child: ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, AppSpacing.s8, 12, bottomPad + 88),
-            itemCount: visible.length + (truncated ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index >= visible.length) return const HistoryBoundaryRow();
-              final day = visible[index];
-              final now = DateTime.now();
-              final today = DateTime(now.year, now.month, now.day);
-              if (day.day == today) {
-                return _FeaturedDayCard(
-                  day: day,
-                  calorieGoal: settings?.dailyCalorieGoal,
-                  proteinGoal: settings?.dailyProteinGoal,
-                );
-              }
-              return _DailyMacroCard(day: day);
-            },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
+            children: [
+              _TodayCard(totals: todayTotals, settings: settings),
+              if (visible.isNotEmpty || truncated) ...[
+                const SizedBox(height: AppSpacing.s16),
+                SectionLabel(l10n.macrosLastDaysTitle),
+                const SizedBox(height: AppSpacing.s8),
+                if (visible.isNotEmpty)
+                  LifeyCard(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+                    child: Column(
+                      children: [
+                        for (final (i, day) in visible.indexed) ...[
+                          if (i > 0) Divider(height: 1, thickness: 1, indent: AppSpacing.s16, color: context.palette.hairline),
+                          _DayRow(day: day, label: f.shortDayLabel(day.day)),
+                        ],
+                      ],
+                    ),
+                  ),
+                if (truncated) ...[
+                  const SizedBox(height: AppSpacing.s8),
+                  const HistoryBoundaryRow(),
+                ],
+              ],
+            ],
           ),
         );
       },
@@ -100,304 +111,113 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
 }
 
 // ---------------------------------------------------------------------------
-// Featured day card (today) — large calorie + proportion bar + macro pills
+// Today — big kcal, share of the goal, three macro rings
 // ---------------------------------------------------------------------------
 
-class _FeaturedDayCard extends StatelessWidget {
-  const _FeaturedDayCard({required this.day, this.calorieGoal, this.proteinGoal});
+class _TodayCard extends StatelessWidget {
+  const _TodayCard({required this.totals, required this.settings});
 
-  final DailyMacros day;
-  final int? calorieGoal;
-  final int? proteinGoal;
-
-  static final _dateFmt = DateFormat('EEE, MMM d');
-
-  /// "740 kcal left · 52 g protein left" (or "over" once a metric's goal is
-  /// exceeded) — omits a fragment whose goal isn't set, and the whole line
-  /// when neither is.
-  String? _remainingLine(AppLocalizations l10n) {
-    final fragments = <String>[];
-    if (calorieGoal != null) {
-      final remaining = calorieGoal! - day.calories;
-      fragments.add(remaining >= 0
-          ? l10n.macrosTodayKcalLeft(remaining.round())
-          : l10n.macrosTodayKcalOver(remaining.abs().round()));
-    }
-    if (proteinGoal != null) {
-      final remaining = proteinGoal! - day.protein;
-      fragments.add(remaining >= 0
-          ? l10n.macrosTodayProteinLeft(remaining.round())
-          : l10n.macrosTodayProteinOver(remaining.abs().round()));
-    }
-    return fragments.isEmpty ? null : fragments.join(' · ');
-  }
-
-  bool get _isOverAnyGoal =>
-      (calorieGoal != null && day.calories > calorieGoal!) ||
-      (proteinGoal != null && day.protein > proteinGoal!);
+  final DailyMacros? totals;
+  final UserSettings settings;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final mc = context.metricColors;
     final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final mc = context.metricColors;
 
-    return Card(
-      elevation: 0,
-      color: scheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      margin: const EdgeInsets.only(bottom: 10),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Top row: day label + calorie total ──────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    final calories = totals?.calories ?? 0;
+    final goal = settings.dailyCalorieGoal;
+    final hasGoal = goal != null && goal > 0;
+
+    return LifeyCard(
+      padding: const EdgeInsets.all(AppSpacing.s20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.weightHistoryTodayLabel,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: p.text2),
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.end,
                   children: [
-                    Text(
-                      l10n.weightHistoryTodayLabel,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
+                    AnimatedNumber(
+                      value: calories,
+                      builder: (context, v) => Text(
+                        f.kcal(v),
+                        style: TextStyle(
+                          fontFamily: AppType.fontFamily,
+                          fontSize: 44,
+                          height: 1.1,
+                          letterSpacing: -0.02 * 44,
+                          fontWeight: FontWeight.w800,
+                          color: p.text,
+                          fontFeatures: AppType.tabular,
+                        ),
                       ),
                     ),
-                    Text(
-                      _dateFmt.format(day.day),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        hasGoal ? ' ${l10n.dayBudgetOfGoal(f.kcal(goal))}' : ' kcal',
+                        style: TextStyle(
+                          fontFamily: AppType.fontFamily,
+                          fontSize: 16,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                          color: p.text2,
+                          fontFeatures: AppType.tabular,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const Spacer(),
-                Icon(Icons.local_fire_department, size: 22, color: mc.calories),
-                const SizedBox(width: 5),
-                Text(
-                  _kcalFmt.format(day.calories.round()),
-                  // Pinned at its v1 size: `headlineMedium` grew 26 → 30 in the
-                  // v2 type scale and this row has no room to wrap. The tab is
-                  // redesigned in R2.8 (docs/redesign/77-mobile-redesign-plan.md).
-                  style: AppType.number(26, color: scheme.onSurface),
-                ),
-                if (calorieGoal != null) ...[
-                  const SizedBox(width: 2),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      '/ ${_kcalFmt.format(calorieGoal)}',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 4),
+              ),
+              if (hasGoal) ...[
+                const SizedBox(width: AppSpacing.s8),
                 Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'kcal',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: TintedChip(label: f.percent(calories / goal), color: mc.calories),
                 ),
               ],
-            ),
-
-            const SizedBox(height: 14),
-
-            // ── Stacked macro proportion bar ─────────────────────────────
-            _MacroProportionBar(
-              protein: day.protein,
-              carbs: day.carbs,
-              fat: day.fat,
-              proteinColor: mc.protein,
-              carbsColor: mc.carbs,
-              fatColor: mc.fat,
-            ),
-
-            if (_remainingLine(l10n) case final line?) ...[
-              const SizedBox(height: 8),
-              Text(
-                line,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: _isOverAnyGoal ? mc.negative : scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 13),
-
-            // ── Macro pills row ──────────────────────────────────────────
-            IntrinsicHeight(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _MacroPill(
-                      icon: Icons.egg_alt,
-                      color: mc.protein,
-                      value: day.protein,
-                      label: l10n.proteinLabel,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _MacroPill(
-                      icon: Icons.bakery_dining,
-                      color: mc.carbs,
-                      value: day.carbs,
-                      label: l10n.carbsLabel,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _MacroPill(
-                      icon: Icons.water_drop,
-                      color: mc.fat,
-                      value: day.fat,
-                      label: l10n.fatLabel,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Stacked horizontal macro proportion bar
-// ---------------------------------------------------------------------------
-
-class _MacroProportionBar extends StatelessWidget {
-  const _MacroProportionBar({
-    required this.protein,
-    required this.carbs,
-    required this.fat,
-    required this.proteinColor,
-    required this.carbsColor,
-    required this.fatColor,
-  });
-
-  final double protein;
-  final double carbs;
-  final double fat;
-  final Color proteinColor;
-  final Color carbsColor;
-  final Color fatColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = protein + carbs + fat;
-
-    if (total <= 0) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          height: 9,
-          color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        height: 9,
-        child: Row(
-          children: [
-            Flexible(
-              flex: (protein / total * 1000).round(),
-              child: Container(color: proteinColor),
-            ),
-            Flexible(
-              flex: (carbs / total * 1000).round(),
-              child: Container(color: carbsColor),
-            ),
-            Flexible(
-              flex: (fat / total * 1000).round(),
-              child: Container(color: fatColor),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Macro pill — coloured icon + value (large) + label below
-// ---------------------------------------------------------------------------
-
-class _MacroPill extends StatelessWidget {
-  const _MacroPill({
-    required this.icon,
-    required this.color,
-    required this.value,
-    required this.label,
-  });
-
-  final IconData icon;
-  final Color color;
-  final double value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(
-                value.round().toString(),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(width: 2),
-              Text(
-                'g',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
+          const SizedBox(height: AppSpacing.s20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _MacroRing(
+                  value: totals?.protein ?? 0,
+                  goal: settings.dailyProteinGoal,
+                  label: l10n.proteinLabel,
+                  color: mc.protein,
+                ),
+              ),
+              Expanded(
+                child: _MacroRing(
+                  value: totals?.carbs ?? 0,
+                  goal: settings.dailyCarbsGoal,
+                  label: l10n.carbsLabel,
+                  color: mc.carbs,
+                ),
+              ),
+              Expanded(
+                child: _MacroRing(
+                  value: totals?.fat ?? 0,
+                  goal: settings.dailyFatGoal,
+                  label: l10n.fatLabel,
+                  color: mc.fat,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -405,129 +225,170 @@ class _MacroPill extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Daily macro card (compact — prior days)
-// ---------------------------------------------------------------------------
+/// One macro: an 88 px ring against its goal with the grams in the middle,
+/// and the macro's name in its colour under it. Past the goal the ring runs a
+/// second lap; without a goal it stays empty and shows just the grams.
+class _MacroRing extends StatelessWidget {
+  const _MacroRing({required this.value, required this.goal, required this.label, required this.color});
 
-class _DailyMacroCard extends StatelessWidget {
-  const _DailyMacroCard({required this.day});
-
-  final DailyMacros day;
-
-  static final _fallbackDate = DateFormat('EEE, MMM d');
-
-  String _dayLabel(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final d = day.day;
-    final diff = today.difference(d).inDays;
-    if (diff == 0) return l10n.weightHistoryTodayLabel;
-    if (diff == 1) return l10n.weightHistoryYesterdayLabel;
-    return _fallbackDate.format(d);
-  }
+  final double value;
+  final int? goal;
+  final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final mc = context.metricColors;
-
-    return Card(
-      elevation: 0,
-      color: scheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      margin: const EdgeInsets.only(bottom: 10),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Top row: day label + calorie total ──────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  _dayLabel(context),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final hasGoal = goal != null && goal! > 0;
+    return Column(
+      children: [
+        ProgressRing(
+          size: 88,
+          color: color,
+          progress: hasGoal ? value / goal! : 0,
+          semanticsLabel: hasGoal ? '$label ${f.grams(value)} / ${f.grams(goal!)} g' : '$label ${f.grams(value)} g',
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.s12),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    f.grams(value),
+                    style: TextStyle(
+                      fontFamily: AppType.fontFamily,
+                      fontSize: 22,
+                      height: 1.1,
+                      fontWeight: FontWeight.w800,
+                      color: p.text,
+                      fontFeatures: AppType.tabular,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Icon(Icons.local_fire_department, size: 16, color: mc.calories),
-                const SizedBox(width: 4),
-                Text(
-                  _kcalFmt.format(day.calories.round()),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurface,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                  Text(
+                    hasGoal ? '/ ${f.grams(goal!)} g' : 'g',
+                    style: TextStyle(
+                      fontFamily: AppType.fontFamily,
+                      fontSize: 12,
+                      height: 1.2,
+                      fontWeight: FontWeight.w600,
+                      color: p.text2,
+                      fontFeatures: AppType.tabular,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 3),
-                Text(
-                  'kcal',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-
-            const SizedBox(height: 10),
-
-            // ── Bottom row: protein · carbs · fat ───────────────────────
-            Row(
-              children: [
-                _MacroChip(icon: Icons.egg_alt, color: mc.protein, value: day.protein),
-                const SizedBox(width: 16),
-                _MacroChip(icon: Icons.bakery_dining, color: mc.carbs, value: day.carbs),
-                const SizedBox(width: 16),
-                _MacroChip(icon: Icons.water_drop, color: mc.fat, value: day.fat),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.s8),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: AppType.fontFamily,
+            fontSize: 15,
+            height: 1.2,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Macro chip — coloured icon + "value g" (compact, for prior-day cards)
+// One earlier day
 // ---------------------------------------------------------------------------
 
-class _MacroChip extends StatelessWidget {
-  const _MacroChip({
-    required this.icon,
-    required this.color,
-    required this.value,
-  });
+class _DayRow extends StatelessWidget {
+  const _DayRow({required this.day, required this.label});
 
-  final IconData icon;
-  final Color color;
-  final double value;
+  final DailyMacros day;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: 4),
-        Text(
-          '${value.round()} g',
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: color,
-            fontFeatures: const [FontFeature.tabularFigures()],
+    final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final mc = context.metricColors;
+    final t = Theme.of(context).textTheme;
+
+    // Grey like the canvas: the bar above carries the colours.
+    final macroStyle = TextStyle(
+      fontFamily: AppType.fontFamily,
+      fontSize: 13,
+      height: 1.2,
+      fontWeight: FontWeight.w600,
+      color: p.text2,
+      fontFeatures: AppType.tabular,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(label, style: t.titleMedium!.copyWith(fontSize: 16, height: 1.25, color: p.text)),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                    text: f.kcal(day.calories),
+                    style: TextStyle(
+                      fontFamily: AppType.fontFamily,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: p.text,
+                      fontFeatures: AppType.tabular,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' kcal',
+                    style: TextStyle(
+                      fontFamily: AppType.fontFamily,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: p.text2,
+                    ),
+                  ),
+                ]),
+                maxLines: 1,
+                softWrap: false,
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.s8),
+          // The day's split: each macro's share of its own calories, so the
+          // bar always adds up to the whole.
+          RatioBar(
+            segments: [
+              (value: day.protein * 4, color: mc.protein),
+              (value: day.carbs * 4, color: mc.carbs),
+              (value: day.fat * 9, color: mc.fat),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            runSpacing: AppSpacing.s4,
+            spacing: AppSpacing.s12,
+            children: [
+              Text('${l10n.macroLetterProtein} ${f.grams(day.protein)}', style: macroStyle),
+              Text('${l10n.macroLetterCarbs} ${f.grams(day.carbs)}', style: macroStyle),
+              Text('${l10n.macroLetterFat} ${f.grams(day.fat)}', style: macroStyle),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

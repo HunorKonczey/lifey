@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.7 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.8 done; R2.9 derived screens next)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1222,9 +1222,20 @@ content scrolls beneath it, and without the backing it showed through the gap be
 keys: `perServingCaloriesProteinLabel`, `totalCaloriesProteinLabel`, `logAsMealButton`, `duplicateRecipeAria`. Tests: `recipe_filter_test`,
 `recipes_tab_grid_test` (chips, search combination, empty, favourite, menu, 360/411 dp × 1.3 HU), `recipes_tab_generate_test` updated.
 
-### R2.8 — Mobile UI: macros tab rings + 7-day ratio rows
+### R2.8 — Mobile UI: macros tab rings + 7-day ratio rows ✅
 - `macros_tab.dart`.
 - **Verify:** rings over 100 % use the over state; ratio bars sum to 100 %.
+
+*As built:* `MacrosTab` (now a plain `ConsumerWidget`, no range parameter) is a 20 px list: the **Today card** — "Today", the count-up
+`621` 44/800 with "/ 2,360 kcal" and a `TintedChip` with the share of the goal ("26 %"), and **three 88 px `ProgressRing`s** (protein, carbs,
+fat), each against its *own* goal with `29 / 129 g` in the middle and the macro's name in its colour under it (past a goal the ring runs the
+second lap; without a goal the ring stays empty and shows only the grams; no calorie goal → no chip) — then `SectionLabel` "LAST 7 DAYS" over
+one `LifeyCard` of day rows: date (`shortDayLabel`), "1,765 kcal", a `RatioBar` of the day's split (each macro's kcal — 4 / 4 / 9 per gram — over the
+day's sum, so it **always adds up to 100 %**; unit-tested) and "P 104 · C 188 · F 58" in secondary grey as drawn. "Last 7 days" = the seven
+days before today that have meals (a day without a meal has no row); older days are in "All meals". The Today / Week / All range chip is gone with
+its header button (R2.1). The free-history window still cuts the list with the boundary row. Removed ARB keys: `macrosTodayKcalLeft/Over`,
+`macrosTodayProteinLeft/Over`, `noMacroDataInRangeTitle`; new `macrosLastDaysTitle`. Test: `macros_tab_test` (rings vs goals, over-goal lap, no goals,
+no data, week window, HU letters, 360/411 dp × 1.3 light). The canvas bars stop short of the track's end (mock proportions); ours split the whole bar.
 
 **R2 derived screens (R2.9, may split):** `foods_tab.dart` (ListGroup rows, FAB),
 `add_macros_sheet.dart`, `meal_estimate_sheet.dart`, `ai_credit_chip.dart` (TintedChip),
