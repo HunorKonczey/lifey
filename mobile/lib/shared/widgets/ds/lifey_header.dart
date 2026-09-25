@@ -141,10 +141,20 @@ class LifeyHeader extends StatelessWidget {
     this.overline,
     this.collapsedTitle,
     this.actions = const [],
+    this.bottom,
+    this.bottomHeight = 0,
   });
 
   final String title;
   final String? overline;
+
+  /// A widget pinned under the title row — the pill tab bar of Workouts and
+  /// Nutrition — [bottomHeight] tall. It is part of this one sliver, so a
+  /// NestedScrollView can absorb the whole pinned stack as a single overlap
+  /// (`SliverOverlapAbsorber` + `OverlapInsetScope`); two separate pinned
+  /// slivers leave the top of the tab's list hidden under them.
+  final Widget? bottom;
+  final double bottomHeight;
 
   /// What the 20 px row says once the page has scrolled — canvas Lifey 1
   /// scrolled: the "Good morning, Anna" of the expanded header becomes
@@ -180,11 +190,12 @@ class LifeyHeader extends StatelessWidget {
     final overlineHeight =
         overline == null ? 0.0 : measure(overline!, overlineStyle, 1) + 2;
     final top = mq.padding.top;
-    final minExtent = top + _rowHeight;
+    final minExtent = top + _rowHeight + bottomHeight;
     final expandedBody =
         AppSpacing.s8 + overlineHeight + titleHeight + AppSpacing.s4;
-    final maxExtent =
-        top + (expandedBody > _rowHeight + 12 ? expandedBody : _rowHeight + 12);
+    final maxExtent = top +
+        (expandedBody > _rowHeight + 12 ? expandedBody : _rowHeight + 12) +
+        bottomHeight;
 
     return SliverPersistentHeader(
       pinned: true,
@@ -199,6 +210,8 @@ class LifeyHeader extends StatelessWidget {
         titleStyle: titleStyle,
         overlineStyle: overlineStyle,
         actionsWidth: actionsWidth,
+        bottom: bottom,
+        bottomHeight: bottomHeight,
       ),
     );
   }
@@ -216,8 +229,12 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
     required this.titleStyle,
     required this.overlineStyle,
     required this.actionsWidth,
+    required this.bottom,
+    required this.bottomHeight,
   });
 
+  final Widget? bottom;
+  final double bottomHeight;
   final String title;
   final String? overline;
   final String? collapsedTitle;
@@ -256,7 +273,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
             right: AppSpacing.screen + actionsWidth,
             // Bottom-anchored: as the header shrinks the title rides up, and
             // in the collapsed 52 px row it ends vertically centred.
-            bottom: lerpDouble(AppSpacing.s4, 14, t),
+            bottom: bottomHeight + lerpDouble(AppSpacing.s4, 14, t)!,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -307,7 +324,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
             Positioned(
               left: AppSpacing.screen,
               right: AppSpacing.screen + actionsWidth,
-              bottom: 14,
+              bottom: bottomHeight + 14,
               child: ExcludeSemantics(
                 child: Opacity(
                   opacity: (2 * t - 1).clamp(0.0, 1.0),
@@ -329,7 +346,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
             Positioned(
               right: AppSpacing.screen -
                   2, // the 48 dp touch box around a 44 px circle
-              bottom: 0,
+              bottom: bottomHeight,
               height: _rowHeight,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 for (var i = 0; i < actions.length; i++) ...[
@@ -338,6 +355,8 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
                 ],
               ]),
             ),
+          if (bottom != null)
+            Positioned(left: 0, right: 0, bottom: 0, height: bottomHeight, child: bottom!),
         ],
       ),
     );
@@ -349,6 +368,8 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
       old.overline != overline ||
       old.collapsedTitle != collapsedTitle ||
       old.actions != actions ||
+      old.bottom != bottom ||
+      old.bottomHeight != bottomHeight ||
       old.minExtentValue != minExtentValue ||
       old.maxExtentValue != maxExtentValue ||
       old.titleStyle != titleStyle;
@@ -727,5 +748,56 @@ class StatusBarScrim extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Hands a NestedScrollView's overlap handle to the lists of its tabs: each
+/// tab's scroll view starts with an [OverlapInsetSliver] that leaves room for
+/// the pinned header stack (the absorbed [LifeyHeader] with its tab bar), or
+/// its first rows sit under it whenever the large title has collapsed.
+///
+/// ```dart
+/// NestedScrollView(
+///   headerSliverBuilder: (context, _) => [
+///     SliverOverlapAbsorber(
+///       handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+///       sliver: LifeyHeader(..., bottom: tabBar, bottomHeight: 62),
+///     ),
+///   ],
+///   body: Builder(
+///     builder: (context) => OverlapInsetScope(
+///       handles: [NestedScrollView.sliverOverlapAbsorberHandleFor(context)],
+///       child: TabBarView(...),
+///     ),
+///   ),
+/// )
+/// ```
+class OverlapInsetScope extends InheritedWidget {
+  const OverlapInsetScope({super.key, required this.handles, required super.child});
+
+  /// One handle per absorbed pinned sliver (a screen whose title and tab bar
+  /// are separate slivers has two).
+  final List<SliverOverlapAbsorberHandle> handles;
+
+  static OverlapInsetScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<OverlapInsetScope>();
+
+  @override
+  bool updateShouldNotify(OverlapInsetScope old) => old.handles != handles;
+}
+
+/// The first sliver of a tab's scroll view: as tall as the pinned header stack
+/// above it ([SliverOverlapInjector]) — nothing when the tab is used outside an
+/// [OverlapInsetScope].
+class OverlapInsetSliver extends StatelessWidget {
+  const OverlapInsetSliver({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = OverlapInsetScope.maybeOf(context);
+    if (scope == null) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    return SliverMainAxisGroup(slivers: [
+      for (final handle in scope.handles) SliverOverlapInjector(handle: handle),
+    ]);
   }
 }

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/format/cardio_formatter.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../application/cardio_interval_plan_controller.dart';
 import '../domain/cardio_interval_plan.dart';
@@ -269,15 +269,16 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final statusTop = MediaQuery.paddingOf(context).top;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final contentTop = statusTop + 8.0 + 58.0 + 12.0;
+    const contentTop = AppSpacing.s8;
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      body: Stack(
-        children: [
-          ReorderableListView(
+      appBar: LifeySubpageHeader(
+        title: l10n.intervalPlanTitle,
+        onBack: () => Navigator.of(context).pop(),
+      ),
+      body: ReorderableListView(
             padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad + 24),
             onReorderItem: (oldIndex, newIndex) {
               setState(() {
@@ -299,17 +300,6 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
                 ),
             ],
           ),
-          Positioned(
-            top: statusTop + 8,
-            left: 12,
-            right: 12,
-            child: AdaptiveAppBar(
-              title: l10n.intervalPlanTitle,
-              onBack: () => Navigator.of(context).pop(),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

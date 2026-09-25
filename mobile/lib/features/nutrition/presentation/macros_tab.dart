@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
 import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/format/lifey_format.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -71,10 +72,7 @@ class MacrosTab extends ConsumerWidget {
 
         return RefreshIndicator(
           onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
-            children: [
+          child: CustomScrollView(physics: const AlwaysScrollableScrollPhysics(), slivers: [const OverlapInsetSliver(), SliverPadding(padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88), sliver: SliverList.list(children: [
               _TodayCard(totals: todayTotals, settings: settings),
               if (visible.isNotEmpty || truncated) ...[
                 const SizedBox(height: AppSpacing.s16),
@@ -97,8 +95,7 @@ class MacrosTab extends ConsumerWidget {
                   const HistoryBoundaryRow(),
                 ],
               ],
-            ],
-          ),
+            ]))]),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

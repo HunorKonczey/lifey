@@ -59,6 +59,11 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   /// 46 px pill bar + 8 px above and below (`PillTabBar`).
   static const double _tabBarExtent = 62;
 
+  /// The overlap of the pinned title / search row and of the pinned tab bar,
+  /// each absorbed on its own handle (see the header builder below).
+  final _titleOverlap = SliverOverlapAbsorberHandle();
+  final _tabBarOverlap = SliverOverlapAbsorberHandle();
+
   bool _searching = false;
   String _searchQuery = '';
 
@@ -82,6 +87,8 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _titleOverlap.dispose();
+    _tabBarOverlap.dispose();
     super.dispose();
   }
 
@@ -248,8 +255,15 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
             Positioned.fill(
               child: NestedScrollView(
                 headerSliverBuilder: (context, _) => [
-                  if (_searching)
-                    LifeySearchHeader(
+                  // Each pinned sliver is absorbed on a handle of its own and
+                  // every tab starts with the matching injectors
+                  // (OverlapInsetScope): without them a tab's first rows sit
+                  // under the pinned stack whenever the large title has
+                  // collapsed.
+                  SliverOverlapAbsorber(
+                    handle: _titleOverlap,
+                    sliver: _searching
+                        ? LifeySearchHeader(
                       controller: _searchController,
                       hint: _tabController.index == 1
                           ? l10n.searchRecipesHint
@@ -258,8 +272,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                       onChanged: (value) => setState(() => _searchQuery = value),
                       onClose: _closeSearch,
                     )
-                  else
-                    LifeyHeader(
+                        : LifeyHeader(
                       title: l10n.nutritionTitle,
                       actions: [
                         if (_searchableTab)
@@ -286,28 +299,35 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                         ),
                       ],
                     ),
-                  LifeyPinnedSliver(
-                    height: _tabBarExtent,
-                    child: PillTabBar(
-                      controller: _tabController,
-                      horizontalMargin: AppSpacing.screen,
-                      tabs: [
-                        Tab(text: l10n.mealsTabLabel),
-                        Tab(text: l10n.recipesTabLabel),
-                        Tab(text: l10n.foodsLabel),
-                        Tab(text: l10n.macrosTabLabel),
-                      ],
+                  ),
+                  SliverOverlapAbsorber(
+                    handle: _tabBarOverlap,
+                    sliver: LifeyPinnedSliver(
+                      height: _tabBarExtent,
+                      child: PillTabBar(
+                        controller: _tabController,
+                        horizontalMargin: AppSpacing.screen,
+                        tabs: [
+                          Tab(text: l10n.mealsTabLabel),
+                          Tab(text: l10n.recipesTabLabel),
+                          Tab(text: l10n.foodsLabel),
+                          Tab(text: l10n.macrosTabLabel),
+                        ],
+                      ),
                     ),
                   ),
                 ],
-                body: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    MealsTab(onCopyDay: _openCopyDaySheet),
-                    RecipesTab(searchQuery: _searching ? _searchQuery : null),
-                    FoodsTab(searchQuery: _searching ? _searchQuery : null),
-                    const MacrosTab(),
-                  ],
+                body: OverlapInsetScope(
+                  handles: [_titleOverlap, _tabBarOverlap],
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      MealsTab(onCopyDay: _openCopyDaySheet),
+                      RecipesTab(searchQuery: _searching ? _searchQuery : null),
+                      FoodsTab(searchQuery: _searching ? _searchQuery : null),
+                      const MacrosTab(),
+                    ],
+                  ),
                 ),
               ),
             ),

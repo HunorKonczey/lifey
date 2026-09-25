@@ -219,4 +219,71 @@ void main() {
       }
     }
   });
+  group('a NestedScrollView with the title and tab bar as one absorbed header', () {
+    // Regression: with the pinned header stack not absorbed, the top of a tab
+    // sat under it whenever the large title had collapsed — and a short tab
+    // opened after a long, scrolled one was out of sight altogether.
+    Future<(TabController, double)> pumpNested(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(411 * 3, 923 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      final controller = TabController(length: 2, vsync: const TestVSync());
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(_app(Scaffold(
+        body: NestedScrollView(
+          headerSliverBuilder: (context, _) => [
+            SliverOverlapAbsorber(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+              sliver: const LifeyHeader(title: 'Workouts', bottomHeight: 62, bottom: SizedBox(key: Key('tabs'), height: 62)),
+            ),
+          ],
+          body: Builder(
+            builder: (context) => OverlapInsetScope(
+              handles: [NestedScrollView.sliverOverlapAbsorberHandleFor(context)],
+              child: TabBarView(controller: controller, children: [
+                CustomScrollView(slivers: [
+                  const OverlapInsetSliver(),
+                  SliverList.builder(itemCount: 60, itemBuilder: (_, i) => SizedBox(height: 80, child: Text('long $i'))),
+                ]),
+                const CustomScrollView(slivers: [
+                  OverlapInsetSliver(),
+                  SliverToBoxAdapter(child: SizedBox(height: 300, key: Key('card'), child: Text('short card'))),
+                ]),
+              ]),
+            ),
+          ),
+        ),
+      )));
+      await tester.pumpAndSettle();
+      final collapsedHeader = _statusBar + 52 + 62;
+      return (controller, collapsedHeader);
+    }
+
+    testWidgets('the first row starts below the whole header stack', (tester) async {
+      await pumpNested(tester);
+
+      final tabsBottom = tester.getBottomLeft(find.byKey(const Key('tabs'))).dy;
+      // the first row starts under the tab bar, not behind it
+      expect(tester.getTopLeft(find.text('long 0')).dy, greaterThanOrEqualTo(tabsBottom));
+    });
+
+    testWidgets('a short tab opened after a scrolled long one is not left under the header', (tester) async {
+      final (controller, collapsed) = await pumpNested(tester);
+
+      await tester.fling(find.text('long 1'), const Offset(0, -1200), 2000);
+      await tester.pumpAndSettle();
+      controller.animateTo(1);
+      await tester.pumpAndSettle();
+
+      expect(tester.getTopLeft(find.byKey(const Key('card'))).dy, greaterThanOrEqualTo(collapsed));
+    });
+
+    testWidgets('outside a scope the injector is empty', (tester) async {
+      await tester.pumpWidget(_app(const Scaffold(
+        body: CustomScrollView(slivers: [OverlapInsetSliver(), SliverToBoxAdapter(child: Text('row'))]),
+      )));
+
+      expect(tester.getTopLeft(find.text('row')).dy, 0);
+    });
+  });
 }

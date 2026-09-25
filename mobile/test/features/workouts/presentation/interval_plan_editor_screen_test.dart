@@ -188,11 +188,9 @@ void main() {
     await tester.tap(find.text('Start with the 4x4'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Tuesday intervals');
-    // The starter plan is taller than the viewport: scroll far enough for the
-    // footer to be built, then bring it fully into view.
-    await tester.drag(find.byType(ReorderableListView), const Offset(0, -800));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save only'));
+    // The starter plan is taller than the viewport: fling to the end so the
+    // footer is built and fully in view.
+    await tester.fling(find.byType(ReorderableListView), const Offset(0, -3000), 3000);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save only'));
     await tester.pumpAndSettle();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
 import '../../../core/ads/banner_ad_slot.dart';
 import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -62,10 +63,7 @@ class MealsTab extends ConsumerWidget {
         final meals = visible.reversed.toList();
         return RefreshIndicator(
           onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
-            children: [
+          child: CustomScrollView(physics: const AlwaysScrollableScrollPhysics(), slivers: [const OverlapInsetSliver(), SliverPadding(padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88), sliver: SliverList.list(children: [
               WeekStrip(
                 days: lastSevenDays(now),
                 selected: day,
@@ -93,8 +91,7 @@ class MealsTab extends ConsumerWidget {
                 )
               else
                 ListGroup(children: [for (final meal in meals) MealListItem(meal: meal)]),
-            ],
-          ),
+            ]))]),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

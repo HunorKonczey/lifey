@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
 import '../../../core/ads/banner_ad_slot.dart';
 import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/format/lifey_format.dart';
@@ -275,9 +276,13 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 
         return RefreshIndicator(
           onRefresh: () => ref.read(workoutSessionControllerProvider.notifier).refresh(),
-          child: ListView.builder(
+          child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
+            slivers: [
+              const OverlapInsetSliver(),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
+                sliver: SliverList.builder(
             itemCount: entries.length,
             itemBuilder: (context, index) {
               final entry = entries[index];
@@ -302,6 +307,9 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
                 ),
               );
             },
+                ),
+              ),
+            ],
           ),
         );
       },

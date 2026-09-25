@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
 import '../../../core/format/lifey_format.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/search_normalize.dart';
@@ -134,10 +135,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
           final itemCount = foods.length + (hasMore ? 1 : 0);
           return NotificationListener<ScrollNotification>(
             onNotification: _handleScrollNotification,
-            child: ListView.builder(
-              padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
-              itemCount: itemCount,
-              itemBuilder: (context, index) {
+            child: CustomScrollView(slivers: [const OverlapInsetSliver(), SliverPadding(padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88), sliver: SliverList.builder(itemCount: itemCount, itemBuilder: (context, index) {
                 if (index >= foods.length) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -160,8 +158,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
                   onAddToMeal: () => _addToMeal(context, food),
                   onDelete: () => _delete(context, ref, food),
                 );
-              },
-            ),
+              }))]),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -194,10 +191,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
             subtitle: l10n.tryDifferentSearchMessage,
           );
         }
-        return ListView.builder(
-          padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
-          itemCount: matches.length,
-          itemBuilder: (context, index) {
+        return CustomScrollView(slivers: [const OverlapInsetSliver(), SliverPadding(padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88), sliver: SliverList.builder(itemCount: matches.length, itemBuilder: (context, index) {
             final food = matches[index];
             return _FoodRow(
               first: index == 0,
@@ -208,8 +202,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
               onAddToMeal: () => _addToMeal(context, food),
               onDelete: () => _delete(context, ref, food),
             );
-          },
-        );
+          }))]);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => ErrorView(

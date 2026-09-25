@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/search_normalize.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
 import '../domain/exercise.dart';
@@ -187,9 +187,8 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final statusTop = MediaQuery.paddingOf(context).top;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final contentTop = statusTop + 8.0 + 58.0 + 12.0;
+    const contentTop = AppSpacing.s8;
 
     final allExercises = ref.watch(exerciseControllerProvider).maybeWhen(
           data: (exercises) => exercises,
@@ -199,10 +198,22 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      body: Stack(
-        children: [
-          // ── Content ──────────────────────────────────────────────────
-          ReorderableListView(
+      appBar: LifeySubpageHeader(
+        title: _isEditing ? l10n.editTemplateTitle : l10n.newTemplateTitle,
+        onBack: () => Navigator.of(context).pop(),
+        actions: [
+          if (_saving)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.s12),
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: scheme.primary),
+              ),
+            ),
+        ],
+      ),
+      body: ReorderableListView(
             padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad + 24),
             onReorderItem: (oldIndex, newIndex) {
               setState(() {
@@ -221,29 +232,6 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
                 _buildExerciseRow(context, i, exercisesMap, l10n, scheme),
             ],
           ),
-
-          // ── Floating app bar ──────────────────────────────────────────
-          Positioned(
-            top: statusTop + 8,
-            left: 12,
-            right: 12,
-            child: AdaptiveAppBar(
-              title: _isEditing ? l10n.editTemplateTitle : l10n.newTemplateTitle,
-              onBack: () => Navigator.of(context).pop(),
-              trailing: _saving
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: scheme.primary,
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

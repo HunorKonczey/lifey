@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
 import '../../../core/entitlements/ai_credit_gate.dart';
 import '../../../core/sync/connectivity_status_provider.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -208,11 +209,7 @@ class _RecipesTabState extends ConsumerState<RecipesTab> {
           final headerCount = (showGenerate ? 1 : 0) + (recipes.isEmpty ? 0 : 1);
           final rows = (visible.length / 2).ceil();
           final tail = visible.isEmpty ? 1 : rows;
-          return ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
-            itemCount: headerCount + tail,
-            itemBuilder: (context, index) {
+          return CustomScrollView(physics: const AlwaysScrollableScrollPhysics(), slivers: [const OverlapInsetSliver(), SliverPadding(padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88), sliver: SliverList.builder(itemCount: headerCount + tail, itemBuilder: (context, index) {
               var i = index;
               if (showGenerate) {
                 if (i == 0) {
@@ -278,8 +275,7 @@ class _RecipesTabState extends ConsumerState<RecipesTab> {
                   ),
                 ),
               );
-            },
-          );
+            }))]);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(

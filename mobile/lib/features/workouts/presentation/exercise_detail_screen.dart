@@ -7,7 +7,7 @@ import '../../../core/local_db/app_database.dart';
 import '../../../core/local_db/database_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../domain/exercise.dart';
 import '../domain/exercise_enums.dart';
@@ -51,42 +51,27 @@ class ExerciseDetailScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final setsAsync = ref.watch(_setsForExerciseProvider(exercise.clientId));
 
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
-    final contentTop = barTop + 58.0 + 12.0;
-
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: setsAsync.when(
-              data: (sets) => _DetailBody(
-                exercise: exercise,
-                sets: sets,
-                l10n: l10n,
-                contentTop: contentTop,
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text(e.toString())),
-            ),
-          ),
-          Positioned(
-            top: barTop,
-            left: 12,
-            right: 12,
-            child: AdaptiveAppBar(
-              title: exercise.name,
-              onBack: () => Navigator.of(context).pop(),
-              actions: [
-                AdaptiveAppBarAction(
-                  icon: Icons.edit_outlined,
-                  tooltip: l10n.editMenuItem,
-                  onPressed: () => _openEdit(context),
-                ),
-              ],
-            ),
+      appBar: LifeySubpageHeader(
+        title: exercise.name,
+        onBack: () => Navigator.of(context).pop(),
+        actions: [
+          HeaderIconButton(
+            icon: Icons.edit_outlined,
+            tooltip: l10n.editMenuItem,
+            onPressed: () => _openEdit(context),
           ),
         ],
+      ),
+      body: setsAsync.when(
+        data: (sets) => _DetailBody(
+          exercise: exercise,
+          sets: sets,
+          l10n: l10n,
+          contentTop: AppSpacing.s8,
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text(e.toString())),
       ),
     );
   }

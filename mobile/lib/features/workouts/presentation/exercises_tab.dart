@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -8,6 +9,8 @@ import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../../shared/widgets/ds/list_group.dart';
 import '../application/exercise_controller.dart';
 import '../domain/exercise.dart';
 import '../domain/exercise_enums.dart';
@@ -99,6 +102,7 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
 
           return CustomScrollView(
             slivers: [
+              const OverlapInsetSliver(),
               const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s8)),
               if (widget.categoryFilter != null)
                 _FlatList(
@@ -341,29 +345,22 @@ class _ExerciseCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final subtitle = _subtitle();
 
-    final Color badgeBg;
-    final Color badgeIconColor;
-    if (exercise.category != null) {
-      final mc = muscleGroupColor(exercise.category!, context);
-      badgeBg = mc.withValues(alpha: 0.15);
-      badgeIconColor = mc;
-    } else {
-      badgeBg = scheme.primaryContainer;
-      badgeIconColor = scheme.onPrimaryContainer;
-    }
+    final p = context.palette;
+    final badgeColor =
+        exercise.category != null ? muscleGroupColor(exercise.category!, context) : scheme.primary;
 
     return Dismissible(
       key: ValueKey(exercise.clientId),
       direction: DismissDirection.endToStart,
       background: Container(
         decoration: BoxDecoration(
-          color: scheme.errorContainer,
-          borderRadius: BorderRadius.circular(AppRadius.card),
+          color: context.metricColors.negative.withValues(alpha: 0.16),
+          borderRadius: AppRadius.cardAll,
         ),
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 10),
-        child: Icon(Icons.delete, color: scheme.onErrorContainer),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
+        margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+        child: Icon(Icons.delete_rounded, color: context.metricColors.negative),
       ),
       confirmDismiss: (_) async {
         final confirmed = await showConfirmDeleteDialog(
@@ -374,47 +371,28 @@ class _ExerciseCard extends StatelessWidget {
         if (confirmed) onDelete();
         return false;
       },
-      child: Card(
-        elevation: 0,
-        color: scheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        margin: const EdgeInsets.only(bottom: 10),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+        child: LifeyCard(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s12),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
+          child: Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: badgeBg,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      _badgeIcon(),
-                      size: 22,
-                      color: badgeIconColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
+                ListIconHolder(icon: _badgeIcon(), color: badgeColor),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(exercise.name, style: theme.textTheme.bodyLarge),
+                      Text(
+                        exercise.name,
+                        style: theme.textTheme.titleMedium!.copyWith(fontSize: 15, height: 1.3, color: p.text),
+                      ),
                       if (subtitle != null) ...[
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           subtitle,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall!.copyWith(height: 1.4, color: p.text2),
                         ),
                       ],
                     ],
@@ -423,7 +401,7 @@ class _ExerciseCard extends StatelessWidget {
                 SyncStatusIndicator(clientId: exercise.clientId),
                 const SizedBox(width: 4),
                 PopupMenuButton<_Action>(
-                  icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                  icon: Icon(Icons.more_vert_rounded, color: p.text2),
                   onSelected: (action) {
                     switch (action) {
                       case _Action.edit:
@@ -441,14 +419,13 @@ class _ExerciseCard extends StatelessWidget {
                       value: _Action.delete,
                       child: Text(
                         l10n.deleteButton,
-                        style: TextStyle(color: scheme.error),
+                        style: TextStyle(color: context.metricColors.negative),
                       ),
                     ),
                   ],
                 ),
               ],
             ),
-          ),
         ),
       ),
     );

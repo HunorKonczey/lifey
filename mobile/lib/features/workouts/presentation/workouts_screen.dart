@@ -56,6 +56,13 @@ class WorkoutsScreen extends ConsumerStatefulWidget {
 class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+
+  /// One page-storage bucket per tab. Keyless scrollables all save their offset
+  /// under the same empty identifier, so a shared bucket makes a tab open
+  /// scrolled to wherever the *previous* tab was — with a short list that is
+  /// past its end, the header collapsed and the list out of sight.
+  final _tabBuckets = List.generate(3, (_) => PageStorageBucket());
+
   /// 46 px pill bar + 8 px above and below (`PillTabBar`).
   static const double _tabBarExtent = 62;
 
@@ -104,7 +111,8 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
       // Templates/Exercises tabs' FABs create different things entirely,
       // and a long-press there would open a sheet unrelated to what the
       // button says it does.
-      onLongPress: _tabController.index == 0 ? () => showQuickStartSheet(context) : null,
+      onLongPress:
+          _tabController.index == 0 ? () => showQuickStartSheet(context) : null,
     ));
   }
 
@@ -130,14 +138,27 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     );
   }
 
-  ({IconData icon, String label, VoidCallback onPressed}) _fab(AppLocalizations l10n) {
+  ({IconData icon, String label, VoidCallback onPressed}) _fab(
+      AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
-        return (icon: Icons.play_arrow_rounded, label: l10n.startWorkoutButtonLabel, onPressed: _logSession);
+        return (
+          icon: Icons.play_arrow_rounded,
+          label: l10n.startWorkoutButtonLabel,
+          onPressed: _logSession
+        );
       case 1:
-        return (icon: Icons.add, label: l10n.templateFabLabel, onPressed: _newTemplate);
+        return (
+          icon: Icons.add,
+          label: l10n.templateFabLabel,
+          onPressed: _newTemplate
+        );
       default:
-        return (icon: Icons.add, label: l10n.exerciseFabLabel, onPressed: _addExercise);
+        return (
+          icon: Icons.add,
+          label: l10n.exerciseFabLabel,
+          onPressed: _addExercise
+        );
     }
   }
 
@@ -155,7 +176,8 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
   /// Whether a filter other than the default is active on the current tab —
   /// the dot on the header's filter button.
   bool get _filterActive => switch (_tabController.index) {
-        0 => _sessionFilter != DateRangeFilter.week || _sessionKindFilterValue.isNotEmpty,
+        0 => _sessionFilter != DateRangeFilter.week ||
+            _sessionKindFilterValue.isNotEmpty,
         2 => _exerciseCategoryFilter != null,
         _ => false,
       };
@@ -177,7 +199,8 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
         category: _exerciseCategoryFilter,
         categories: [
           for (final c in kMuscleGroups)
-            if (exercises.any((e) => e.category == c)) (value: c, label: muscleGroupLabel(l10n, c)),
+            if (exercises.any((e) => e.category == c))
+              (value: c, label: muscleGroupLabel(l10n, c)),
         ],
         onCategory: (c) => setState(() => _exerciseCategoryFilter = c),
       );
@@ -209,42 +232,63 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
             Positioned.fill(
               child: NestedScrollView(
                 headerSliverBuilder: (context, _) => [
-                  LifeyHeader(
-                    title: l10n.workoutsTitle,
-                    actions: [
-                      if (_tabController.index != 1)
-                        HeaderIconButton(
-                          icon: Icons.tune_rounded,
-                          tooltip: l10n.workoutsFilterTitle,
-                          showDot: _filterActive,
-                          onPressed: _openFilterSheet,
-                        ),
-                    ],
-                  ),
-                  LifeyPinnedSliver(
-                    height: _tabBarExtent,
-                    child: PillTabBar(
-                      controller: _tabController,
-                      horizontalMargin: AppSpacing.screen,
-                      tabs: [
-                        Tab(text: l10n.sessionsTabLabel),
-                        Tab(text: l10n.templatesTabLabel),
-                        Tab(text: l10n.exercisesLabel),
+                  // One pinned sliver — the title with the tab bar under it —
+                  // absorbed as a whole, so each tab's list can leave room for
+                  // it (OverlapInsetScope) instead of starting behind it.
+                  SliverOverlapAbsorber(
+                    handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                        context),
+                    sliver: LifeyHeader(
+                      title: l10n.workoutsTitle,
+                      actions: [
+                        if (_tabController.index != 1)
+                          HeaderIconButton(
+                            icon: Icons.tune_rounded,
+                            tooltip: l10n.workoutsFilterTitle,
+                            showDot: _filterActive,
+                            onPressed: _openFilterSheet,
+                          ),
                       ],
+                      bottomHeight: _tabBarExtent,
+                      bottom: PillTabBar(
+                        controller: _tabController,
+                        horizontalMargin: AppSpacing.screen,
+                        tabs: [
+                          Tab(text: l10n.sessionsTabLabel),
+                          Tab(text: l10n.templatesTabLabel),
+                          Tab(text: l10n.exercisesLabel),
+                        ],
+                      ),
                     ),
                   ),
                 ],
-                body: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    SessionsTab(
-                      filter: _sessionFilter,
-                      kindFilter: _sessionKindFilter.kind,
-                      activityTypeFilter: _sessionKindFilter.activityType,
+                body: Builder(
+                  builder: (context) => OverlapInsetScope(
+                    handles: [
+                      NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+                    ],
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        PageStorage(
+                          bucket: _tabBuckets[0],
+                          child: SessionsTab(
+                            filter: _sessionFilter,
+                            kindFilter: _sessionKindFilter.kind,
+                            activityTypeFilter: _sessionKindFilter.activityType,
+                          ),
+                        ),
+                        PageStorage(
+                            bucket: _tabBuckets[1],
+                            child: const TemplatesTab()),
+                        PageStorage(
+                          bucket: _tabBuckets[2],
+                          child: ExercisesTab(
+                              categoryFilter: _exerciseCategoryFilter),
+                        ),
+                      ],
                     ),
-                    const TemplatesTab(),
-                    ExercisesTab(categoryFilter: _exerciseCategoryFilter),
-                  ],
+                  ),
                 ),
               ),
             ),
