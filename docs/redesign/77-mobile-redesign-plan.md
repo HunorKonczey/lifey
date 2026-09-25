@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 done (R4.1–R4.7 + review fixes R4.fix-1…3, reviewed 2026-09-25); R5 in progress (R5.1–R5.8 done; emulator review pending)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 done (R4.1–R4.7 + review fixes R4.fix-1…3, reviewed 2026-09-25); R5 done (R5.1–R5.8 + review fixes R5.fix-1…3, reviewed 2026-09-25)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -2274,3 +2274,41 @@ the last 30 days). Matrix covered: Weight dark HU, light HU, light HU ×1.3 and 
   chip row did not scroll to a selected chip (it is a plain scroll view now and reveals the selection).
 
 **Not exercised on the emulator** (widget tests only): steps, water, cardio metrics and the locked ranges (no such history / entitlement in the seed), the goal band with a goal, Health import from the ⋮ menu.
+
+### R5 — 2026-09-25 — Pixel_10 AVD (1080 × 2424, 420 dpi = 411 × 923 dp, API 37)
+
+Scope: Auth, onboarding, chat, settings against `Lifey 5 Onboarding Chat Settings.dc.html` — 6 login, 6 onboarding steps 4 and 5, 7 chat thread, 8 settings and the log-out dialog — canvas frames rendered with
+Playwright and put next to emulator screenshots, plus **the full flow on a throwaway local account**: Settings → Log out (confirmation, R5.6 copy) → login screen → Create account (typing through the form with the keyboard
+up) → dashboard → "Continue setup" → the six wizard steps (welcome, gender + date of birth, height + weight, activity + goal, suggested plan, Health "Not now") → dashboard with the plan applied (2 950 kcal, 150 g / 403 g / 82 g,
+3 L, weight 75 kg) → Settings (Health still **Off**, goals as applied) → Body & goals → the chat list. Also the seeded `anna.r1@lifey.test` for Settings and the log-out dialog. Matrix covered: dark EN (login,
+register, wizard, settings, dialog), light HU ×1.3 (settings top to bottom, Body & goals), dark EN with the default step goal and Pro chip; the register form with the **keyboard up** (the focused field scrolls into view).
+
+**Matches**
+- Login: the 64 dp "L" tile, "Welcome back" and the one-line promise, labelled fields with the mail / lock icons and the primary ring, "Forgot password?", the filled "Sign in" as the only primary button, "or", the outlined
+  Google button, "New to Lifey? **Create account**" at the foot — the same layout as the canvas. Register and the reset flow share the kit.
+- Onboarding: the six segments, "Skip", "Step n of 6" on every step including welcome and Health, "How active are you?" as five radio cards (icon holder, title, description, radio / check, primary tint + ring for the
+  chosen one), "PRIMARY GOAL" tiles, Back + Next; the plan step — subtitle "Built for building muscle at a moderate activity level.", the 60 px calorie hero, BMR / TDEE / surplus chips, the macro ratio bar with
+  Protein / Carbs / Fat in their colours, the water tile, the footnote, "Apply these goals" full width with Back and "Not now" under it. **"Not now" on the Health step left Health off** (checked afterwards in Settings).
+- Settings: large title with the round back button, the profile card ("AK"-style monogram from the *name*, the Pro chip, the camera badge), PREFERENCES with the pill segments and "System ›", DAILY GOALS with "Edit" and
+  six tiles (steps at 10,000 by default), INTEGRATIONS with **"Off · weight and steps are logged by hand"** and the switch, "Notifications 6 on ›", ACCOUNT with Log out in the heart colour last — dark and light, EN and HU.
+  The log-out dialog is the canvas' (icon holder, 22/800 title, body, Cancel / Log out), with the honest body "Everything is saved to your account. Your data on this phone is removed."
+- The chat list is a large-title screen with the empty state in the card; the thread's bubbles, header and composer follow the canvas (verified by widget tests — see below).
+
+**Deviations (intended)**
+- The chat thread's subtitle is "Your trainer" without "· online": presence is never reported to the client, so "online" would be invented — R5.5. No blur scrim behind the composer: nothing scrolls under it.
+- The Google button keeps the "G" mark (branding guidelines) — R5.1. "Edit" next to DAILY GOALS opens Body & goals (recalculates the goals) — the canvas names no other target; each tile still edits its own number — R5.7.
+- The log-out copy drops "from the last 2 minutes" (the outbox has no such window) and counts the real number of queued changes — R5.6. The Theme pill's third option reads "System", the canvas "Auto".
+- The theme's "System" and the language's "System" share one string (`optionSystem`).
+
+**Bugs (fixed on `feature/mobile-redesign`)**
+- The three gender tiles were not the same height ("Prefer not to say" wraps to two lines) and the goal tiles wrapped "Lose weight" → **R5.fix-1** (`OptionRow` = intrinsic height, 12 dp side padding).
+- Body-step fields showed no unit until focused (`suffixText` hides on an empty, unfocused field) → **R5.fix-1** (`UnitSuffix`, always drawn). "Skip" was the primary colour, the canvas' is grey; the plan's grams were in the small
+  unit style ("129 g" is one size on the canvas); "Not now" was the accent colour → **R5.fix-1**. The Hungarian "Nem szeretném megadni" broke mid-word in a tile at ×1.3 → shortened to "Nem adom meg".
+- Settings at Hungarian ×1.3: "Mértékegységek" was squeezed to four lines beside the Units pill; the goal label "Szénhidrát" ended in "…"; the e-mail row read "anna.r5@life…"; the goal units were the small hero-unit style;
+  an empty My-trainers section left a double gap → **R5.fix-2** (`SettingsChoiceRow`: above 115 % the pill drops under its title; labels scale down; the address is the row's subline; one gap).
+- "Forgot password?" sat 12 dp inside the field's edge → **R5.fix-3**.
+- Found by tests, before the review: the conversation-list row overflowed at ×1.3 with the role and archived labels beside a long name (a `Wrap` now); the typing band clipped its line at ×1.3.
+
+**Not exercised on the emulator**: the chat thread with messages and the composer (a thread needs a trainer relationship and the chat service — covered by `message_bubble_test`, `chat_composer_test` and the R5.5 layout
+tests at 360 dp × 1.3 in EN / HU, dark and light), the offline "N changes will be lost" dialog and the upload progress (unit-tested; the emulator was online with an empty outbox), the forgot-password and change-password
+screens, imperial units in the wizard, Google sign-in. The suggested-plan step and the Body-step fields were only seen in EN (the HU strings are covered by the ×1.3 no-overflow tests).
