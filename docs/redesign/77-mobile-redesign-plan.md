@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.7 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.8 done; emulator review next)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1020,9 +1020,29 @@ deleted. Tests: `water_ui_test.dart` (header + tiles in EN / HU, no-goal, one-ta
 amount with a decimal comma and the error path, sources screen list / ⋮ menu / confirm / edit / new /
 empty, HU × 100 / 130 % × dark / light).
 
-**R1 derived screens:** weekly recap (`streaks/presentation/weekly_recap_screen.dart`) → subpage
+**R1 derived screens (R1.8 ✅):** weekly recap (`streaks/presentation/weekly_recap_screen.dart`) → subpage
 header + `LifeyCard`s + `MetricValue` (R1.8 if it doesn't fit in R1.2). Onboarding banner and
 sponsorship card → `LifeyCard` with primary / clay accents.
+
+*As built (R1.8):* the four contextual cards of the Today screen — onboarding banner, weekly-recap-ready,
+recommended workout, sponsorship-ended — are one new component, `NoticeCard`
+(`shared/widgets/ds/notice_card.dart`, gallery section "Notice cards"): a `LifeyCard` whose surface is
+tinted 12 % (10 % light) with the accent, a 44 px icon holder, title 15/700 and body 13 text-2, the
+call-to-action as a 48 dp text button **under** the text (not squeezed beside it, so HU at 130 % wraps),
+a 48 dp close button, optional overline / trailing / whole-card tap. No border any more. Accents: brand
+olive for the app's own nudges, **clay (`palette.role`) for the trainer's sponsorship notice**. The
+recommended workout keeps its play icon as `trailing` and its overline in sentence case (caps are for
+section labels only). The old tests tap `Icons.close_rounded` now.
+The **weekly recap** screen: `LifeySubpageHeader` (it is pushed outside the shell, so no nav-collapse
+listener), the week pager as two `HeaderIconButton`s around a 20/800 range that is finally locale-aware
+(`LifeyFormat.shortDate`: "szept. 14. – szept. 20." — the old bare `DateFormat('MMM d')` printed English in
+HU), each section a caps `SectionLabel` over a `LifeyCard`: workouts (count + minutes + km, the dot strip now
+with weekday letters and `control`-coloured empty dots), nutrition (average as a 28 px `MetricValue`, then a
+`LifeyBarChart` — axis and weekday letters — instead of the hand-rolled stubs; an unlogged day is an empty
+column), weight (start → end as `MetricValue` with a direction-coloured `DeltaChip`, the old green/orange
+"good/bad" convention dropped as on the dashboard), goals (one `ListGroup` with a row per goal). Decimals
+and the km figure follow the locale. Tests: `notice_card_test.dart`, `weekly_recap_screen_test.dart`
+(updated formats; HU range and weekday letters; a full week at 360 dp × 100 / 130 % × both themes).
 
 **R1 acceptance** (plus the §4.1 emulator review logged in §12)**:** 1.1 / 1.2 / 1.3 canvases reproduced; no card-in-card; scrolled state shows the
 scrim; nothing truncated in HU at 1.3.
