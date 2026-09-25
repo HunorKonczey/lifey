@@ -76,7 +76,7 @@ class DashboardTiles extends StatelessWidget {
       color: mc.water,
       progress: hasWaterGoal ? stats.water / waterGoal : null,
       onAction: onAddWater,
-      actionTooltip: l10n.logWaterTitle,
+      actionTooltip: l10n.addWaterTitle,
     );
 
     final steps = todaySteps;

@@ -10,9 +10,6 @@ import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/ds/list_group.dart';
 
-// Thursday 24 Sep 2026.
-final _today = DateTime(2026, 9, 24, 9, 41);
-
 Widget _app(
   Widget child, {
   Locale locale = const Locale('en'),

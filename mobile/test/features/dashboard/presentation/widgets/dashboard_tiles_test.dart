@@ -113,7 +113,7 @@ void main() {
     testWidgets('the 48 dp + button opens the add sheet', (tester) async {
       var taps = 0;
       await _pump(tester, onAddWater: () => taps++);
-      final button = find.byTooltip('Log water');
+      final button = find.byTooltip('Add water');
       final size = tester.getSize(button);
       expect(size.width, greaterThanOrEqualTo(48));
       expect(size.height, greaterThanOrEqualTo(48));
@@ -133,13 +133,13 @@ void main() {
       await _pump(tester, steps: null);
       expect(find.text('Steps'), findsNothing);
       // Full width: the + button sits at the far right of the content area.
-      expect(tester.getTopRight(find.byTooltip('Log water')).dx, greaterThan(411 - 40));
+      expect(tester.getTopRight(find.byTooltip('Add water')).dx, greaterThan(411 - 40));
     });
 
     testWidgets('with step data the water tile is half width', (tester) async {
       await _pump(tester);
       expect(find.text('Steps'), findsOneWidget);
-      expect(tester.getTopRight(find.byTooltip('Log water')).dx, lessThan(411 / 2 + 20));
+      expect(tester.getTopRight(find.byTooltip('Add water')).dx, lessThan(411 / 2 + 20));
     });
   });
 

@@ -16,12 +16,17 @@ Future<T?> showLifeySheet<T>({
   Widget? trailing,
   bool showClose = false,
   bool isDismissible = true,
+
+  /// Cover the bottom navigation (a sheet opened from a tab of the shell) —
+  /// what the old `showModalBottomSheet(useRootNavigator: true)` calls did.
+  bool useRootNavigator = false,
 }) {
   final duration = AppMotion.of(context, AppMotion.sheet);
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    useRootNavigator: useRootNavigator,
     isDismissible: isDismissible,
     sheetAnimationStyle: AnimationStyle(
       duration: duration,

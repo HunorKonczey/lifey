@@ -1099,9 +1099,9 @@
   "@exerciseFabLabel": {
     "description": "FAB label when on the Exercises tab"
   },
-  "logWaterTitle": "Log water",
-  "@logWaterTitle": {
-    "description": "Title of the log-water sheet, and the tooltip on the dashboard's add-water button"
+  "addWaterTitle": "Add water",
+  "@addWaterTitle": {
+    "description": "Title of the add-water bottom sheet, and the tooltip / label of the dashboard water tile's + button (docs/redesign/77-mobile-redesign-plan.md R1.7)"
   },
   "setDailyGoalMessage": "Set a daily goal in Settings",
   "@setDailyGoalMessage": {
@@ -1142,15 +1142,6 @@
   "enterValidAmountError": "Enter a valid amount in liters",
   "@enterValidAmountError": {
     "description": "Validation error for the custom water amount field"
-  },
-  "amountLitersLabel": "{amount}L",
-  "@amountLitersLabel": {
-    "description": "A quick-add amount in liters",
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
   },
   "sourceChipLabel": "{name} · {volume}L",
   "@sourceChipLabel": {

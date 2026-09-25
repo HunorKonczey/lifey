@@ -46,16 +46,6 @@ import 'widgets/today_meals_section.dart';
 import 'widgets/weekly_calories_card.dart';
 import 'widgets/sponsorship_ended_card.dart';
 
-Future<void> _openAddWaterSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (_) => const AddWaterSheet(),
-  );
-}
-
 /// Opens the matching session straight into edit mode, falling back to the
 /// "Workouts" tab if the session isn't in the local cache (e.g. mid-sync).
 Future<void> _openWorkout(BuildContext context, WidgetRef ref, String clientId) async {
@@ -272,7 +262,7 @@ class _DashboardBody extends ConsumerWidget {
           settings: settings,
           todaySteps: todaySteps,
           weights: weights,
-          onAddWater: () => _openAddWaterSheet(context),
+          onAddWater: () => showAddWaterSheet(context),
           onWeightTap: () => context.go('/weight'),
         ),
         const SizedBox(height: 16),

@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.6 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.7 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -995,11 +995,30 @@ foods max, empty states, callbacks, touch boxes, per-type tint, plural, moving t
 rates without opening, kcal fallback, in progress, HU × 360 / 411 dp × 100 / 130 % × dark / light),
 `lifey_format_test.dart` (`weekdayTime`).
 
-### R1.7 — Mobile UI: add-water sheet + water sources screen
+### R1.7 — Mobile UI: add-water sheet + water sources screen ✅
 - Files: `water/presentation/widgets/add_water_sheet.dart` (canvas "Add water": 3 × 64 px
   tinted amount tiles 0.25 / 0.5 / 1.0 L, header "0.99 / 2.60 L" in water colour),
   `add_water_source_sheet.dart`, `water_sources_screen.dart` (`AppBar` → `LifeySubpageHeader`).
 - **Verify:** add 0.25 L from the dashboard tile; tile count-up animates.
+
+*As built:* `showAddWaterSheet` (in `add_water_sheet.dart`) opens the design-system `showLifeySheet` —
+title "Add water" / "Víz hozzáadása" (`addWaterTitle`, which replaces `logWaterTitle`; the dashboard tile's
++ tooltip reads the same), today's total in the water colour on the right, live from
+`todayWaterTotalProvider` ("0.99 / 2.60 L", two decimals in the sheet as the canvas draws it; "0.99 L"
+without a goal). The body: **three 64 px tiles** 0.25 / 0.5 / 1.0 L (water at its chip tint, radius 14 —
+the concentric step for a sheet of 30 with 20 padding, the canvas draws 18 — value 18/800, "L" 12/600
+under it; one tap logs and closes, a spinner replaces the value while it saves), then the saved sources
+(caps label + chips) and the custom amount (v2 in-sheet field, "L" suffix, an "Add" button), which the
+canvas doesn't draw but which are existing features and stay. Amounts follow the locale (0,25 / 0,5 /
+1,0). `showLifeySheet` gained `useRootNavigator` so the sheet still covers the bottom nav as the old
+`showModalBottomSheet(useRootNavigator: true)` did. `showAddWaterSourceSheet` does the same for the
+water-source form: title from the sheet, the forced `OutlineInputBorder`s removed so the v2 fields show.
+`WaterSourcesScreen`: `LifeySubpageHeader`, the sources as one `ListGroup` (water-tinted holder, name,
+"0.75 L"), the sync marker kept, and **Delete moved into a ⋮ menu** (Edit / Delete, delete still asks)
+instead of a bare trash button beside the edit target (§1 point 5); the FAB uses the v2 theme. `amountLitersLabel`
+deleted. Tests: `water_ui_test.dart` (header + tiles in EN / HU, no-goal, one-tap log, sources, custom
+amount with a decimal comma and the error path, sources screen list / ⋮ menu / confirm / edit / new /
+empty, HU × 100 / 130 % × dark / light).
 
 **R1 derived screens:** weekly recap (`streaks/presentation/weekly_recap_screen.dart`) → subpage
 header + `LifeyCard`s + `MetricValue` (R1.8 if it doesn't fit in R1.2). Onboarding banner and
