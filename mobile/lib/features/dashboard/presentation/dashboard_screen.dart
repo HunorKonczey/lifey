@@ -44,12 +44,11 @@ import '../application/today_steps_controller.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import '../domain/today_meal_group.dart';
+import 'widgets/calorie_hero_card.dart';
 import 'widgets/calorie_sparkline_card.dart';
 import 'widgets/dashboard_avatar_menu.dart';
 import 'widgets/sponsorship_ended_card.dart';
 import 'widgets/stat_card.dart';
-
-final _intFmt = NumberFormat.decimalPattern();
 
 Future<void> _openAddWaterSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -238,34 +237,12 @@ class _DashboardBody extends ConsumerWidget {
   final VoidCallback onMealsTap;
   final ValueChanged<WorkoutTemplate> onStartRecommended;
 
-  double? _ratio(double actual, int? goal) =>
-      (goal == null || goal <= 0) ? null : actual / goal;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = data.stats;
     final weight = stats.latestWeight;
     final l10n = AppLocalizations.of(context)!;
     final mc = context.metricColors;
-
-    final calorieRatio = _ratio(stats.calories, settings.dailyCalorieGoal);
-    final proteinRatio = _ratio(stats.protein, settings.dailyProteinGoal);
-    final carbsRatio = _ratio(stats.carbs, settings.dailyCarbsGoal);
-    final fatRatio = _ratio(stats.fat, settings.dailyFatGoal);
-
-    // ── Badge texts ───────────────────────────────────────────────────────
-    final calGoal = settings.dailyCalorieGoal;
-    final String? calorieBadge = calGoal == null
-        ? null
-        : stats.calories < calGoal
-            ? l10n.kcalLeftBadge((calGoal - stats.calories).round())
-            : l10n.kcalOverBadge((stats.calories - calGoal).round());
-    final Color calorieBadgeColor = (calorieRatio ?? 0) >= 1 ? mc.negative : mc.positive;
-
-    final protGoal = settings.dailyProteinGoal;
-    final String? proteinBadge = (protGoal == null || stats.protein >= protGoal)
-        ? null
-        : l10n.proteinMoreBadge((protGoal - stats.protein).round());
 
     final bannerHeight = ref.watch(bannerAdSlotHeightProvider(0));
     // The body extends behind the bottom nav, so the safe-area bottom already
@@ -308,70 +285,13 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
 
-        // ── Calories — hero metric, full width ────────────────────────
-        StatCard(
-          label: l10n.todaysCaloriesLabel,
-          value: stats.calories.toStringAsFixed(0),
-          unit: 'kcal',
-          icon: Icons.local_fire_department,
-          color: mc.calories,
-          ratio: calorieRatio,
-          goalReached: (calorieRatio ?? 0) >= 1,
-          goalTone: GoalTone.negative,
+        // ── Calories + macros — the one hero of the screen ────────────
+        CalorieHeroCard(
+          stats: stats,
+          settings: settings,
           onTap: () => context.go('/nutrition'),
-          subtitle: calGoal == null ? null : '/ ${_intFmt.format(calGoal)}',
-          badgeText: calorieBadge,
-          badgeColor: calorieBadgeColor,
         ),
-        const SizedBox(height: 12),
-
-        // ── Macro row: protein | carbs | fat ──────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                label: l10n.proteinLabel,
-                value: stats.protein.toStringAsFixed(0),
-                unit: 'g',
-                icon: Icons.egg_alt,
-                color: mc.protein,
-                ratio: proteinRatio,
-                goalReached: (proteinRatio ?? 0) >= 1,
-                goalTone: GoalTone.positive,
-                compact: true,
-                subtitle: protGoal == null ? null : '/ ${_intFmt.format(protGoal)}',
-                badgeText: proteinBadge,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: StatCard(
-                label: l10n.carbsLabel,
-                value: stats.carbs.toStringAsFixed(0),
-                unit: 'g',
-                icon: Icons.bakery_dining,
-                color: mc.carbs,
-                ratio: carbsRatio,
-                goalReached: (carbsRatio ?? 0) >= 1,
-                compact: true,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: StatCard(
-                label: l10n.fatLabel,
-                value: stats.fat.toStringAsFixed(0),
-                unit: 'g',
-                icon: Icons.water_drop,
-                color: mc.fat,
-                ratio: fatRatio,
-                goalReached: (fatRatio ?? 0) >= 1,
-                compact: true,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
         // ── Steps + Weight row ────────────────────────────────────────
         Row(

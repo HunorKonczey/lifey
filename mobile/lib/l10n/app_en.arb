@@ -1946,14 +1946,45 @@
       }
     }
   },
-  "proteinMoreBadge": "{count}g more",
-  "@proteinMoreBadge": {
-    "description": "Badge on the protein card showing remaining grams to reach goal",
+  "dashboardHeroKcalLeft": "kcal left",
+  "@dashboardHeroKcalLeft": {
+    "description": "Caption under the big number in the dashboard calorie ring: the number is the calories remaining today (docs/redesign/77-mobile-redesign-plan.md R1.3)"
+  },
+  "dashboardHeroKcalOver": "kcal over",
+  "@dashboardHeroKcalOver": {
+    "description": "Caption under the big number in the dashboard calorie ring once the goal is exceeded: the number is how many calories over the goal"
+  },
+  "dashboardHeroKcalEaten": "kcal eaten",
+  "@dashboardHeroKcalEaten": {
+    "description": "Caption under the big number in the dashboard calorie ring when no daily calorie goal is set: the number is what was eaten today"
+  },
+  "dashboardHeroEatenGoal": "Eaten {eaten} · Goal {goal}",
+  "@dashboardHeroEatenGoal": {
+    "description": "Line under the dashboard calorie ring. Both numbers are shown in bold, so keep the placeholders as they are (docs/redesign/77-mobile-redesign-plan.md R1.3)",
     "placeholders": {
-      "count": {
-        "type": "int"
-      }
+      "eaten": {"type": "String"},
+      "goal": {"type": "String"}
     }
+  },
+  "dashboardHeroProteinToGo": "{grams} g to go",
+  "@dashboardHeroProteinToGo": {
+    "description": "Chip under the protein bar on the dashboard: grams of protein still missing to reach today's goal. {grams} is already formatted",
+    "placeholders": {"grams": {"type": "String"}}
+  },
+  "dashboardHeroKcalLeftSemantics": "{value} kilocalories left",
+  "@dashboardHeroKcalLeftSemantics": {
+    "description": "Screen-reader text of the dashboard calorie ring when under the goal. {value} is already formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dashboardHeroKcalOverSemantics": "{value} kilocalories over the goal",
+  "@dashboardHeroKcalOverSemantics": {
+    "description": "Screen-reader text of the dashboard calorie ring when over the goal. {value} is already formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dashboardHeroKcalEatenSemantics": "{value} kilocalories eaten",
+  "@dashboardHeroKcalEatenSemantics": {
+    "description": "Screen-reader text of the dashboard calorie ring when no calorie goal is set. {value} is already formatted",
+    "placeholders": {"value": {"type": "String"}}
   },
   "dateFilterToday": "Today",
   "@dateFilterToday": {

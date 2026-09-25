@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.2 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 in progress (R1.1–R1.3 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -873,13 +873,32 @@ header; the recommended-workout card, onboarding banner and sponsorship card fol
 100/130 %), `dashboard_avatar_menu_test.dart` (monogram, fallback, 48 dp target, client vs trainer
 items, HU label).
 
-### R1.3 — Mobile UI: hero calorie card
+### R1.3 — Mobile UI: hero calorie card ✅
 - Files: new `dashboard/presentation/widgets/calorie_hero_card.dart`, remove the calorie/macro
   `StatCard` usages from `dashboard_screen.dart`.
 - Protein "to go" chip uses `TintedChip` (protein); count-up + ring/bars animate from previous
   values; only the delta animates after logging a meal.
 - **Verify:** widget tests — remaining vs over-budget states; HU "Szénhidrát 88 / 313 g" fits at
   1.3 (value wraps under the label instead of truncating).
+
+*As built:* `CalorieHeroCard` (`dashboard/presentation/widgets/calorie_hero_card.dart`) on
+`LifeyCard.hero`: a 144 px `ProgressRing` (calories) whose centre is an `AnimatedNumber` →
+`MetricValue` 34, the "Eaten **621** · Goal **2 360**" line under it (one ARB sentence with real
+placeholders, split at render time so the two numbers can be bold — `dashboardHeroEatenGoal`), and
+three macro rows to the right (`Wrap` label ↔ `29 / 129 g`, `MetricBar` in the macro colour,
+`AppMotion.staggered(i)` between the bars) with the protein `TintedChip` ("100 g to go" / "még 100 g").
+The macro row's value drops under the label instead of truncating (verified at 360 dp × 130 % in HU).
+Whole card taps to `/nutrition` (the old calorie card did). Extras beyond the canvas, decided here:
+- **Over budget:** the ring closes and runs its second lap (R0.9), the number becomes the overage and
+  the caption "kcal over" takes the `negative` colour; on exactly the goal it is "0 kcal left".
+- **No calorie goal** (a fresh account): empty ring, the number is what was eaten, caption "kcal
+  eaten", no "Eaten · Goal" line. A macro without a goal shows just its value, no bar, no chip.
+- Screen readers get one sentence ("1,739 kilocalories left" / "… over the goal" / "… eaten"), not the
+  counting digits.
+Removed with the old cards: `proteinMoreBadge` (`kcalLeftBadge` / `kcalOverBadge` stay — the meal
+editor still uses them until R2). Tests: `calorie_hero_card_test.dart` (canvas numbers in EN and HU,
+over / exactly-on-goal, no goals, semantics, tap, HU × 360 / 411 dp × 100 / 130 % × dark / light with no
+ellipsis).
 
 ### R1.4 — Mobile UI: water / steps / weight tiles + effective step goal
 - Files: `water_card.dart` → restyled as `MetricTile` (or replaced; keep the file if other
