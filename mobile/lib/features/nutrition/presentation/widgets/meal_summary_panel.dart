@@ -27,6 +27,7 @@ class MealSummaryPanel extends StatelessWidget {
     required this.fat,
     this.preview,
     this.day,
+    this.label,
   });
 
   final double calories;
@@ -39,6 +40,9 @@ class MealSummaryPanel extends StatelessWidget {
 
   /// The meal's day when it isn't today; the label names it.
   final DateTime? day;
+
+  /// Overrides "Meal total" (the recipe editor says "Recipe total").
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +71,7 @@ class MealSummaryPanel extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(child: Text(l10n.mealTotalLabel, style: small)),
+              Expanded(child: Text(label ?? l10n.mealTotalLabel, style: small)),
               AnimatedNumber(
                 value: calories,
                 builder: (context, v) => Text(

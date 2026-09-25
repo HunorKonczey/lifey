@@ -1364,5 +1364,7 @@
   "recipeFavoriteTooltip": "Hozzáadás a kedvencekhez",
   "recipeUnfavoriteTooltip": "Eltávolítás a kedvencek közül",
   "noRecipesMatchMessage": "Próbálj másik szűrőt",
-  "macrosLastDaysTitle": "Utolsó 7 nap"
+  "macrosLastDaysTitle": "Utolsó 7 nap",
+  "recipeIngredientsSectionCount": "Hozzávalók · {count}",
+  "recipeTotalLabel": "Recept összesen"
 }

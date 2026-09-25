@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.8 done; R2.9 derived screens next)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.9 done; emulator review next)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1237,11 +1237,25 @@ its header button (R2.1). The free-history window still cuts the list with the b
 `macrosTodayProteinLeft/Over`, `noMacroDataInRangeTitle`; new `macrosLastDaysTitle`. Test: `macros_tab_test` (rings vs goals, over-goal lap, no goals,
 no data, week window, HU letters, 360/411 dp × 1.3 light). The canvas bars stop short of the track's end (mock proportions); ours split the whole bar.
 
-**R2 derived screens (R2.9, may split):** `foods_tab.dart` (ListGroup rows, FAB),
+**R2 derived screens (R2.9, may split) ✅:** `foods_tab.dart` (ListGroup rows, FAB),
 `add_macros_sheet.dart`, `meal_estimate_sheet.dart`, `ai_credit_chip.dart` (TintedChip),
 `barcode_scanner_screen.dart` (subpage header over camera, scrim), `create_recipe_screen.dart`,
 `generated_recipe_screen.dart` ("Recipe proposal" — the canvas explicitly names it as a subpage
 header user), `recipe_wizard_sheet.dart`.
+
+*As built (R2.9, one commit):* **Foods tab** — the paged list is now one grouped card (each lazily built `_FoodRow` carries the card surface,
+the first / last round the group's corners, hairlines between), a `ListIconHolder`, "89 kcal · 1 P · 23 C · 0 F (per 100 g)" with the locale
+formatting and F / Sz / Zs letters, the round `+` (tinted, 48 dp target) that logs it into a new meal; swipe-to-delete with its confirmation
+kept. **`AiCreditChip`** is a `TintedChip` (heart at zero credits, the clay role colour at one, secondary text colour otherwise; still
+tappable → paywall only at zero). **Copy-a-day sheet** — one `ListGroup` of day rows with `LifeyFormat` day labels (was an English-only
+`DateFormat`). **Barcode scanner** — `LifeySubpageHeader` on its scrim over the camera (`extendBodyBehindAppBar`). **Recipe editor
+(`CreateRecipeScreen`)** — rebuilt like the meal editor: `LifeySubpageHeader` with Save (autosave stays; Save flushes a pending text edit and
+closes), themed name / description fields, the servings stepper and favourite switch as `LifeyCard`s, "INGREDIENTS · n" over a `ListGroup` with
+a ⋮ menu (Edit / Remove), the *Add food* / *Macros only* tiles, and the floating `MealSummaryPanel` ("Recipe total"; `label` parameter);
+the dashed placeholder and the frosted floating header are gone. **Generated recipe** — subpage header ("Recipe proposal"), 20 px margins,
+`SectionLabel`s, tokenised radii. `MealEstimateSheet` / `RecipeWizardSheet` got their radius literals moved to tokens; `AddMacrosSheet` and
+`AddFoodSheet` needed nothing. New tests: `create_recipe_screen_test`. Not exercised on the emulator: the barcode camera, the estimate and
+wizard sheets, the generated-recipe screen (their behaviour is unchanged and covered by the existing widget tests).
 
 **R2 acceptance** (plus the §4.1 emulator review logged in §12)**:** log a meal from the week strip through the add-food sheet to Save without
 leaving the new UI; 2.1–2.4 reproduced in dark and light.

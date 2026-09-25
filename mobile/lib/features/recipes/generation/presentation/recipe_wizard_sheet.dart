@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../domain/recipe_wizard.dart';
 
@@ -92,7 +93,7 @@ class _RecipeWizardSheetState extends State<RecipeWizardSheet> {
           const SizedBox(height: 4),
           LinearProgressIndicator(
             value: (_step + 1) / _stepCount,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: AppRadius.pill,
           ),
           const SizedBox(height: 16),
           _stepBody(l10n),

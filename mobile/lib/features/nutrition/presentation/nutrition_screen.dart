@@ -40,10 +40,11 @@ final nutritionPendingTabProvider =
       _NutritionPendingTabNotifier.new,
     );
 
-/// Nutrition: "Foods" (catalogue), "Meals" (logged meals) and "Recipes" tabs.
+/// Nutrition: the Meals, Recipes, Foods and Macros tabs (docs/redesign/
+/// 77-mobile-redesign-plan.md R2).
 ///
-/// The AdaptiveAppBar + PillTabBar form a single floating header unit that
-/// collapses together on scroll, matching the dashboard's header behaviour.
+/// A `NestedScrollView`: the large-title `LifeyHeader` collapses as the active
+/// tab scrolls, the `PillTabBar` under it stays pinned.
 class NutritionScreen extends ConsumerStatefulWidget {
   const NutritionScreen({super.key});
 

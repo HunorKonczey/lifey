@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 import '../../../../core/entitlements/entitlement_providers.dart';
 import '../../../../core/entitlements/paywall_navigation.dart';
 import '../../../../core/entitlements/paywall_trigger.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/tinted_chip.dart';
 
 /// The `--r-pill` chip beside an AI action (`docs/landing_page/67-mobile-free-pro-plan.md`
 /// §3.4, `69` §4.3): `aiCreditsRemaining` as a bare number, turning
@@ -27,20 +29,17 @@ class AiCreditChip extends ConsumerWidget {
     if (remaining == null) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final exhausted = remaining == 0;
 
-    final Color background;
-    final Color foreground;
+    // A design-system tinted chip (R2.9): the theme's heart at zero, the clay
+    // role mark at one credit, plain secondary text colour otherwise.
+    final Color color;
     if (exhausted) {
-      background = scheme.errorContainer;
-      foreground = scheme.onErrorContainer;
+      color = context.metricColors.heart;
     } else if (remaining == 1) {
-      background = scheme.secondaryContainer;
-      foreground = scheme.onSecondaryContainer;
+      color = context.palette.role;
     } else {
-      background = scheme.surfaceContainer;
-      foreground = scheme.onSurfaceVariant;
+      color = context.palette.text2;
     }
 
     final label = exhausted
@@ -49,37 +48,22 @@ class AiCreditChip extends ConsumerWidget {
 
     // One clean semantics node with the full sentence, rather than a screen
     // reader announcing the bare visible number (e.g. "3") on top of it —
-    // ExcludeSemantics hides the Text/InkWell's own nodes; `button`/`onTap`
-    // here re-adds the "tappable" announcement for the exhausted state that
+    // ExcludeSemantics hides the chip's own nodes; `button`/`onTap` here
+    // re-adds the "tappable" announcement for the exhausted state that
     // ExcludeSemantics would otherwise also hide.
+    final chip = ExcludeSemantics(child: TintedChip(label: label, color: color));
     return Semantics(
       label: l10n.aiCreditsRemainingSemanticsLabel(remaining),
       button: exhausted,
       onTap: exhausted ? () => openPaywall(context, PaywallTrigger.aiCredits) : null,
-      child: ExcludeSemantics(
-        child: Material(
-          color: background,
-          borderRadius: BorderRadius.circular(999),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            // Only the exhausted state is a real control — see class doc.
-            onTap: exhausted ? () => openPaywall(context, PaywallTrigger.aiCredits) : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: foreground,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      // Only the exhausted state is a real control — see class doc.
+      child: exhausted
+          ? GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => openPaywall(context, PaywallTrigger.aiCredits),
+              child: chip,
+            )
+          : chip,
     );
   }
 

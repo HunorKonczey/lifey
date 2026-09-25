@@ -6252,5 +6252,14 @@
   "macrosLastDaysTitle": "Last 7 days",
   "@macrosLastDaysTitle": {
     "description": "Section label above the list of the previous days on the Macros tab (shown in capitals) (docs/redesign/77-mobile-redesign-plan.md R2.8)"
+  },
+  "recipeIngredientsSectionCount": "Ingredients · {count}",
+  "@recipeIngredientsSectionCount": {
+    "description": "Section label above the ingredient rows of the recipe editor, with how many there are (shown in capitals) (docs/redesign/77-mobile-redesign-plan.md R2.9)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "recipeTotalLabel": "Recipe total",
+  "@recipeTotalLabel": {
+    "description": "Label of the floating summary panel of the recipe editor (the meal editor's says 'Meal total')"
   }
 }
