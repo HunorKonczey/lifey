@@ -15,6 +15,8 @@ import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/nutrition/domain/remaining_budget.dart';
 import 'package:lifey/features/nutrition/presentation/log_meal_screen.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/add_meal_entry_sheet.dart';
+import 'package:lifey/features/settings/application/settings_controller.dart';
+import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 const _chicken =
@@ -47,6 +49,11 @@ class _FakeMealController extends MealController {
   }) async {}
 }
 
+class _NoGoalSettings extends SettingsController {
+  @override
+  Stream<UserSettings> build() => Stream.value(const UserSettings.defaults());
+}
+
 class _NoAds extends InterstitialManager {
   _NoAds(super.ref);
 
@@ -63,6 +70,8 @@ void main() {
       ProviderScope(
         overrides: [
           mealControllerProvider.overrideWith(() => meals),
+          // The editor's "after this meal" line reads the goal.
+          settingsControllerProvider.overrideWith(_NoGoalSettings.new),
           interstitialManagerProvider.overrideWith(_NoAds.new),
           // The "Estimate from a photo" button's offline state and credit chip.
           isOfflineProvider.overrideWith((ref) => Stream.value(false)),

@@ -294,7 +294,6 @@
   "lifeyProLabel": "Lifey Pro",
   "aiCreditsRemainingSemanticsLabel": "{count, plural, =0{Nincs AI kredited ebben a hónapban} one{1 AI kredited maradt ebben a hónapban} other{{count} AI kredited maradt ebben a hónapban}}",
   "aiCreditsRefillDateMessage": "Feltöltődik: {date}",
-  "estimateFromPhotoButton": "Becslés fotóról",
   "mealEstimateOfflineMessage": "Offline vagy — a fotós becsléshez internet kell.",
   "mealEstimateLoadingMessage": "Nézem, mi van a tányéron…",
   "mealEstimateFailedMessage": "A becslés most nem sikerült. Kreditet nem használtál el.",
@@ -430,8 +429,6 @@
   "greetingEveningName": "Jó estét, {name}",
   "streakStripWeekInReview": "Heti összefoglaló",
   "dashboardProfileMenuLabel": "Profil és beállítások",
-  "kcalLeftBadge": "{count} maradt",
-  "kcalOverBadge": "+{count} túl",
   "dashboardSeeAll": "Összes",
   "dashboardAddMealAction": "Étkezés",
   "dashboardPhotoAction": "Fotó",
@@ -1353,5 +1350,14 @@
   "mealsEmptyMessage": "Add hozzá, amit eszel, és a keret mutatja, mennyi maradt.",
   "mealsEmptyAddAction": "Étkezés hozzáadása",
   "mealsEmptyCopyAction": "Nap másolása",
-  "allMealsTitle": "Összes étkezés"
+  "allMealsTitle": "Összes étkezés",
+  "mealSummaryAfterToday": "Ma az étkezés után",
+  "mealSummaryAfterDay": "{date} az étkezés után",
+  "mealSummaryKcalLeft": "{value} kcal maradt",
+  "mealSummaryKcalOver": "{value} kcal túllépés",
+  "mealActionMacrosOnly": "Csak makrók",
+  "mealActionFromPhoto": "Fotóból",
+  "mealFoodRowSubtitle": "{grams} g · {protein} g fehérje",
+  "mealFoodsSectionCount": "Ételek · {count}",
+  "mealFoodMenuTooltip": "Étel opciói"
 }

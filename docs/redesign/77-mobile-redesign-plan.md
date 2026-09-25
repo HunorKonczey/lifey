@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.3 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.5 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1150,14 +1150,30 @@ Tests: `meal_days_test`, `week_strip_test`, `day_budget_card_test`, `meal_list_r
 - **Verify:** 0-meal day shows the R0 empty state ("No meals yet today" + Add meal / Copy a
   day); long ingredient lists wrap to 2 lines.
 
-### R2.4 — Mobile UI: meal edit screen layout
+### R2.4 — Mobile UI: meal edit screen layout ✅
 - `log_meal_screen.dart`: subpage header with Save, type chips, date-time row, food rows with ⋮,
   three action tiles.
 - Keep the existing opt-in behaviour of the ingredient editor (hidden by default, opens on
   button press) — do not auto-expand it.
 - **Verify:** edit and save an existing meal; delete a food via ⋮.
 
-### R2.5 — Mobile UI: floating meal summary with "after this meal" preview
+*As built (R2.4 and R2.5 landed together):* `LogMealScreen` is a `Scaffold` with `LifeySubpageHeader` (back, 20/800 "Edit meal" / "Log meal",
+**Save** as a filled button) over a 20 px `ListView`: the four meal types as `ChoiceChip`s (the R0.8 chip theme: olive fill and a check on
+the selected one), the date-time as a 56 px `LifeyCard` row ("Thu, 24 Sep · 07:15" + a chevron, tap = the pickers), `SectionLabel`
+"FOODS · 3" over a `ListGroup` of food rows (name, "60 g · 8 g protein", "227 kcal", and a **⋮ menu — Edit / Remove**; the × is gone,
+tapping the row still edits the amount), then three equal `_ActionTile`s: **Add food** (primary tint), **Macros only**, **From photo**
+(the AI credit chip sits under its label; dimmed offline, tapping explains why, as before). The screen still **autosaves** every change
+(unchanged behaviour — an empty meal is never persisted, the estimate / initial-food flows rely on it), so **Save = finish**: it waits for
+a save in flight and closes. The floating summary is `MealSummaryPanel` in `bottomNavigationBar` (so it rides above the keyboard and the
+safe area): "Meal total" with the count-up kcal, three tinted macro tiles, and "Today after this meal · 1,739 kcal left" over a `RatioBar`
+whose first segment is the day's other meals and the second — paler — this meal. **Deviation:** the canvas shows 1 356 kcal left for the
+383 kcal breakfast (2 360 − 621 − 383), i.e. it counts the meal twice; the plan's §9 risk 3 asks for the correct 1 739, so the meal's saved
+version is excluded (`MealBudgetPreview.othersKcalOf(excludeClientId:)`, unit-tested for a new and an edited meal). The line names the day
+when the meal is not on today's date, and needs a calorie goal (without one the panel is just the total). The old protein "left" bar is
+dropped (the canvas has none). Removed ARB keys: `estimateFromPhotoButton`, `kcalLeftBadge`, `kcalOverBadge`. Tests:
+`meal_budget_preview_test`, `log_meal_screen_layout_test`; `log_meal_screen_estimate_test` finds "From photo".
+
+### R2.5 — Mobile UI: floating meal summary with "after this meal" preview ✅ (built with R2.4, see its notes)
 - `log_meal_screen.dart`, new `widgets/meal_summary_panel.dart`. "Today after this meal" =
   day's other meals + this meal's current draft (exclude the meal's saved version to avoid
   counting it twice — see §9 risk 3).

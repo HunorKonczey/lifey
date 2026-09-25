@@ -1325,10 +1325,6 @@
     "description": "Shown in the AI credit chip once credits are exhausted, naming the calendar-month refill date (69 DV-11); {date} is already formatted (e.g. \"September 1\")",
     "placeholders": {"date": {"type": "String"}}
   },
-  "estimateFromPhotoButton": "Estimate from a photo",
-  "@estimateFromPhotoButton": {
-    "description": "Log meal screen: button that photographs a meal and lets AI estimate its foods, calories and macros (docs/23-ai-calorie-estimation-plan.md); the AI credit chip sits beside it"
-  },
   "mealEstimateOfflineMessage": "You're offline — photo estimates need a connection.",
   "@mealEstimateOfflineMessage": {
     "description": "Snackbar / sheet message when an AI meal-photo estimate is attempted without connectivity (docs/23)"
@@ -1885,24 +1881,6 @@
   "dashboardProfileMenuLabel": "Profile & settings",
   "@dashboardProfileMenuLabel": {
     "description": "Item of the dashboard avatar menu that opens Settings, and the avatar button's tooltip (docs/redesign/77-mobile-redesign-plan.md R1.2)"
-  },
-  "kcalLeftBadge": "{count} left",
-  "@kcalLeftBadge": {
-    "description": "Badge on the calorie card showing remaining kcal to reach goal",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "kcalOverBadge": "+{count} over",
-  "@kcalOverBadge": {
-    "description": "Badge on the calorie card showing how many kcal over goal",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "dashboardSeeAll": "See all",
   "@dashboardSeeAll": {
@@ -6264,5 +6242,44 @@
   "allMealsTitle": "All meals",
   "@allMealsTitle": {
     "description": "Title of the screen listing every logged meal, day by day, and tooltip of the calendar button on the Meals tab that opens it (docs/redesign/77-mobile-redesign-plan.md R2.2)"
+  },
+  "mealSummaryAfterToday": "Today after this meal",
+  "@mealSummaryAfterToday": {
+    "description": "Label in the floating summary panel of the meal editor, left of the remaining kcal, when the meal is on today's date (docs/redesign/77-mobile-redesign-plan.md R2.5)"
+  },
+  "mealSummaryAfterDay": "{date} after this meal",
+  "@mealSummaryAfterDay": {
+    "description": "Same label when the meal is on another day; {date} is a short day label such as 'Wed, 23 Sep'",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "mealSummaryKcalLeft": "{value} kcal left",
+  "@mealSummaryKcalLeft": {
+    "description": "Calories left of the day's goal once this meal is counted, in the meal editor's summary panel; {value} is formatted"
+  },
+  "mealSummaryKcalOver": "{value} kcal over",
+  "@mealSummaryKcalOver": {
+    "description": "Calories over the day's goal once this meal is counted, in the meal editor's summary panel; {value} is formatted"
+  },
+  "mealActionMacrosOnly": "Macros only",
+  "@mealActionMacrosOnly": {
+    "description": "Action tile in the meal editor: add calories and macros without choosing a food (docs/redesign/77-mobile-redesign-plan.md R2.4)"
+  },
+  "mealActionFromPhoto": "From photo",
+  "@mealActionFromPhoto": {
+    "description": "Action tile in the meal editor: estimate the meal from a photo (AI)"
+  },
+  "mealFoodRowSubtitle": "{grams} g · {protein} g protein",
+  "@mealFoodRowSubtitle": {
+    "description": "Second line of a food row in the meal editor: the amount and its protein",
+    "placeholders": {"grams": {"type": "String"}, "protein": {"type": "String"}}
+  },
+  "mealFoodsSectionCount": "Foods · {count}",
+  "@mealFoodsSectionCount": {
+    "description": "Section label above the food rows of the meal editor, with how many there are (shown in capitals)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "mealFoodMenuTooltip": "Food options",
+  "@mealFoodMenuTooltip": {
+    "description": "Tooltip of the three-dots button on a food row in the meal editor"
   }
 }

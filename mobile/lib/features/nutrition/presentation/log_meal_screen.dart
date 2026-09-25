@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/ads/interstitial_manager.dart';
 import '../../../core/entitlements/ai_credit_gate.dart';
@@ -13,20 +11,28 @@ import '../../../core/entitlements/paywall_navigation.dart';
 import '../../../core/entitlements/paywall_trigger.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/sync/connectivity_status_provider.dart';
+import '../../../core/format/lifey_format.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../shared/widgets/ds/list_group.dart';
+import '../../../shared/widgets/ds/section_label.dart';
+import '../../settings/application/settings_controller.dart';
 import '../application/meal_controller.dart';
 import '../application/meal_estimation_controller.dart';
-import '../application/remaining_budget_provider.dart';
+import '../application/selected_meal_day_provider.dart';
 import '../data/meal_repository.dart';
 import '../domain/food.dart';
 import '../domain/meal.dart';
-import '../domain/remaining_budget.dart';
+import '../domain/meal_budget_preview.dart';
+import '../domain/meal_days.dart';
 import 'widgets/add_macros_sheet.dart';
 import 'widgets/add_meal_entry_sheet.dart';
 import 'widgets/ai_credit_chip.dart';
 import 'widgets/meal_estimate_sheet.dart';
+import 'widgets/meal_summary_panel.dart';
 
 /// Full-screen form for logging a meal, or editing one when [meal] is provided.
 ///
@@ -65,8 +71,6 @@ class LogMealScreen extends ConsumerStatefulWidget {
 enum _PhotoOutcome { added, dismissed, paywall }
 
 class _LogMealScreenState extends ConsumerState<LogMealScreen> {
-  static final _dateTimeLabel = DateFormat('EEE, MMM d · HH:mm');
-
   late MealType _mealType;
   late DateTime _dateTime;
   final List<({Food food, double grams})> _entries = [];
@@ -347,389 +351,180 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     }
   }
 
+  /// "Save": the meal is autosaved on every change, so this finishes any save
+  /// still in flight and closes the screen.
+  Future<void> _saveAndClose() async {
+    while (mounted && (_saving || _pendingSave)) {
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+    }
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  /// The day's other meals + this draft against the calorie goal — null
+  /// without a goal, or while the day's meals are still loading.
+  MealBudgetPreview? _budgetPreview() {
+    final goal = ref.watch(settingsControllerProvider).value?.dailyCalorieGoal;
+    if (goal == null || goal <= 0) return null;
+    final dayMeals = ref.watch(mealsOnDayProvider(dateOnly(_dateTime.toLocal()))).value;
+    if (dayMeals == null) return null;
+    return MealBudgetPreview(
+      goal: goal,
+      othersKcal: MealBudgetPreview.othersKcalOf(
+        dayMeals,
+        excludeClientId: _isEditing ? widget.meal!.clientId : _mealClientId,
+      ),
+      draftKcal: _totalCalories,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final scheme = Theme.of(context).colorScheme;
-    final mc = context.metricColors;
-    final RemainingBudget? dayBudget = ref.watch(remainingBudgetProvider).value;
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final offline = ref.watch(isOfflineProvider).value ?? false;
+    final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      body: Stack(
+      appBar: LifeySubpageHeader(
+        title: _isEditing ? l10n.editMealTitle : l10n.logMealTitle,
+        actions: [
+          FilledButton(
+            onPressed: _saveAndClose,
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 44), tapTargetSize: MaterialTapTargetSize.padded),
+            child: Text(l10n.saveButton),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
         children: [
-          // ── Scrollable content ──────────────────────────────────────────
-          ListView(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              statusTop + 8 + 58 + 12, // clear the floating header
-              16,
-              bottomPad + 24,
-            ),
+          // Meal type — choice chips.
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
             children: [
-              // ── Section: Meal type ──────────────────────────────────────
-              _SectionLabel(label: l10n.mealTypeLabel),
-              const SizedBox(height: 8),
-              _MealTypeRow(
-                selected: _mealType,
-                onChanged: (t) {
-                  setState(() => _mealType = t);
-                  _autoSave();
-                },
-                l10n: l10n,
-              ),
-
-              const SizedBox(height: 20),
-
-              // ── Section: When ───────────────────────────────────────────
-              _SectionLabel(label: l10n.whenLabel),
-              const SizedBox(height: 8),
-              _WhenTile(
-                dateTime: _dateTime,
-                label: _dateTimeLabel.format(_dateTime.toLocal()),
-                onTap: _pickDateTime,
-              ),
-
-              const SizedBox(height: 20),
-
-              // ── Section: Foods ──────────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              for (final type in MealType.values)
+                ChoiceChip(
+                  label: Text(type.label(l10n)),
+                  selected: _mealType == type,
+                  onSelected: (_) {
+                    setState(() => _mealType = type);
+                    _autoSave();
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          // When.
+          LifeyCard(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+            onTap: _pickDateTime,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Row(
                 children: [
-                  _SectionLabel(label: l10n.foodsLabel),
-                  Row(
-                    children: [
-                      _SectionActionButton(
-                        label: l10n.addMacrosButton,
-                        icon: Icons.speed,
-                        color: scheme.tertiary,
-                        onTap: _addMacros,
-                      ),
-                      const SizedBox(width: 12),
-                      _SectionActionButton(
-                        label: l10n.addFoodButton,
-                        icon: Icons.add,
-                        color: scheme.primary,
-                        onTap: _addEntry,
-                      ),
-                    ],
+                  Icon(Icons.schedule_rounded, size: 22, color: p.text2),
+                  const SizedBox(width: AppSpacing.s12),
+                  Expanded(
+                    child: Text(
+                      '${f.shortDayLabel(_dateTime.toLocal())} · ${f.time(_dateTime.toLocal())}',
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontSize: 16, color: p.text),
+                    ),
                   ),
+                  Icon(Icons.expand_more_rounded, size: 24, color: p.text2),
                 ],
               ),
-              const SizedBox(height: 8),
-
-              // Food entries
-              ..._entries.asMap().entries.map((e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _FoodEntryCard(
-                      food: e.value.food,
-                      grams: e.value.grams,
-                      onTap: () => _editEntry(e.key),
-                      onRemove: () => _removeEntry(e.key),
-                    ),
-                  )),
-
-              // Dashed "add another food" placeholder
-              _AddAnotherFoodButton(
-                label: l10n.addFoodButton,
-                onTap: _addEntry,
-              ),
-              const SizedBox(height: 8),
-              _EstimateFromPhotoButton(
-                label: l10n.estimateFromPhotoButton,
-                offline: ref.watch(isOfflineProvider).value ?? false,
-                onTap: _estimateFromPhoto,
-              ),
-
-              // ── Meal total ──────────────────────────────────────────────
-              if (_hasMacroData) ...[
-                const SizedBox(height: 12),
-                _MealTotalCard(
-                  label: l10n.mealTotalLabel,
-                  calories: _totalCalories,
-                  protein: _totalProtein,
-                  carbs: _totalCarbs,
-                  fat: _totalFat,
-                  proteinLabel: l10n.proteinLabel,
-                  carbsLabel: l10n.carbsLabel,
-                  fatLabel: l10n.fatLabel,
-                  mc: mc,
-                ),
+            ),
+          ),
+          if (_entries.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s16),
+            SectionLabel(l10n.mealFoodsSectionCount(_entries.length)),
+            const SizedBox(height: AppSpacing.s8),
+            ListGroup(
+              dividerInset: AppSpacing.s16,
+              children: [
+                for (final (i, entry) in _entries.indexed)
+                  _FoodRow(
+                    food: entry.food,
+                    grams: entry.grams,
+                    onTap: () => _editEntry(i),
+                    onRemove: () => _removeEntry(i),
+                  ),
               ],
-
-              // ── Day budget — only meaningful while logging for today ────
-              if (_isToday && dayBudget != null && dayBudget.hasAnyGoal) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _DayBudgetBar(
-                    todayLabel: l10n.weightHistoryTodayLabel,
-                    leftText: l10n.kcalLeftBadge,
-                    overText: l10n.kcalOverBadge,
-                    proteinLabel: l10n.proteinLabel,
-                    budget: dayBudget,
-                    mc: mc,
+            ),
+          ],
+          const SizedBox(height: AppSpacing.s16),
+          // Three equal actions.
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _ActionTile(
+                    icon: Icons.add_rounded,
+                    label: l10n.addFoodButton,
+                    background: p.primaryTint,
+                    foreground: primary,
+                    onTap: _addEntry,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: _ActionTile(
+                    icon: Icons.tune_rounded,
+                    label: l10n.mealActionMacrosOnly,
+                    background: p.nested,
+                    foreground: p.text,
+                    onTap: _addMacros,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: _ActionTile(
+                    icon: Icons.photo_camera_outlined,
+                    label: l10n.mealActionFromPhoto,
+                    // Dimmed, not disabled: tapping it offline explains why it
+                    // can't run.
+                    background: p.nested,
+                    foreground: offline ? p.text2 : p.text,
+                    onTap: _estimateFromPhoto,
+                    footer: const AiCreditChip(),
                   ),
                 ),
               ],
-            ],
-          ),
-
-          // ── Floating header ─────────────────────────────────────────────
-          Positioned(
-            top: statusTop + 8,
-            left: 12,
-            right: 12,
-            child: _DetailBar(
-              title: _isEditing ? l10n.editMealTitle : l10n.logMealTitle,
-              onBack: () => Navigator.of(context).pop(),
-              saving: _saving,
             ),
           ),
         ],
       ),
+      // Pinned above the keyboard and the bottom edge, outside the list.
+      bottomNavigationBar: _hasMacroData || _entries.isNotEmpty
+          ? Padding(
+              padding: EdgeInsets.fromLTRB(
+                  AppSpacing.s12, AppSpacing.s8, AppSpacing.s12, math.max(bottomInset, AppSpacing.s12)),
+              child: MealSummaryPanel(
+                calories: _totalCalories,
+                protein: _totalProtein,
+                carbs: _totalCarbs,
+                fat: _totalFat,
+                preview: _budgetPreview(),
+                day: _isToday ? null : _dateTime.toLocal(),
+              ),
+            )
+          : null,
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Floating detail header — frosted pill, no collapse
+// Food row — name, "60 g · 8 g protein", kcal and the ⋮ menu
 // ---------------------------------------------------------------------------
 
-class _DetailBar extends StatelessWidget {
-  const _DetailBar({
-    required this.title,
-    required this.onBack,
-    required this.saving,
-  });
+enum _FoodAction { edit, remove }
 
-  final String title;
-  final VoidCallback onBack;
-  final bool saving;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          height: 58,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainer.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.30),
-                blurRadius: 22,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            children: [
-              // Back button
-              GestureDetector(
-                onTap: onBack,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.arrow_back,
-                      size: 21,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Title
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurface,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-              ),
-              // Auto-save indicator
-              if (saving)
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: scheme.primary,
-                  ),
-                )
-              else
-                const SizedBox(width: 18),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Meal type selector row
-// ---------------------------------------------------------------------------
-
-class _MealTypeRow extends StatelessWidget {
-  const _MealTypeRow({
-    required this.selected,
-    required this.onChanged,
-    required this.l10n,
-  });
-
-  final MealType selected;
-  final ValueChanged<MealType> onChanged;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Row(
-      children: [
-        for (int i = 0; i < MealType.values.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          Expanded(
-            child: _MealTypeButton(
-              type: MealType.values[i],
-              selected: selected == MealType.values[i],
-              label: MealType.values[i].label(l10n),
-              onTap: () => onChanged(MealType.values[i]),
-              scheme: scheme,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _MealTypeButton extends StatelessWidget {
-  const _MealTypeButton({
-    required this.type,
-    required this.selected,
-    required this.label,
-    required this.onTap,
-    required this.scheme,
-  });
-
-  final MealType type;
-  final bool selected;
-  final String label;
-  final VoidCallback onTap;
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        decoration: BoxDecoration(
-          color: selected ? scheme.secondary : scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (selected) ...[
-              Icon(Icons.check, size: 15, color: scheme.onSecondary),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 12.5,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                color: selected ? scheme.onSecondary : scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// When tile
-// ---------------------------------------------------------------------------
-
-class _WhenTile extends StatelessWidget {
-  const _WhenTile({
-    required this.dateTime,
-    required this.label,
-    required this.onTap,
-  });
-
-  final DateTime dateTime;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 54,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.schedule, size: 21, color: scheme.primary),
-            const SizedBox(width: 9),
-            Text(
-              label,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Food entry card
-// ---------------------------------------------------------------------------
-
-class _FoodEntryCard extends StatelessWidget {
-  const _FoodEntryCard({
+class _FoodRow extends StatelessWidget {
+  const _FoodRow({
     required this.food,
     required this.grams,
     required this.onTap,
@@ -741,127 +536,56 @@ class _FoodEntryCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onRemove;
 
-  String _kcalLabel() {
-    if (food.caloriesPer100g <= 0) return '${grams.toStringAsFixed(0)} g';
-    final kcal = (food.caloriesPer100g * grams / 100).round();
-    final protein = (food.proteinPer100g * grams / 100).round();
-    return '${grams.toStringAsFixed(0)} g · $kcal kcal · ${protein}g P';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-    final mc = context.metricColors;
+    final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final hasMacros = food.caloriesPer100g > 0;
+    final kcal = food.caloriesPer100g * grams / 100;
+    final protein = food.proteinPer100g * grams / 100;
+    final subtitle =
+        hasMacros ? l10n.mealFoodRowSubtitle(f.grams(grams), f.grams(protein)) : '${f.grams(grams)} g';
 
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          children: [
-            // Icon badge
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(13),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 64),
+        child: Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.s16, top: AppSpacing.s8, bottom: AppSpacing.s8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(food.name, style: t.titleMedium!.copyWith(fontSize: 16, height: 1.25, color: p.text)),
+                    const SizedBox(height: 3),
+                    Text(subtitle, style: t.bodySmall!.copyWith(fontSize: 13, height: 1.4, color: p.text2)),
+                  ],
+                ),
               ),
-              child: Center(
-                child: Icon(Icons.restaurant, size: 22, color: mc.carbs),
-              ),
-            ),
-            const SizedBox(width: 13),
-            // Name + quantity
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    food.name,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _kcalLabel(),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+              if (hasMacros) ...[
+                const SizedBox(width: AppSpacing.s8),
+                ListRowValue(value: f.kcal(kcal), unit: 'kcal', size: 16),
+              ],
+              PopupMenuButton<_FoodAction>(
+                tooltip: l10n.mealFoodMenuTooltip,
+                icon: Icon(Icons.more_vert_rounded, color: p.text2),
+                onSelected: (a) => switch (a) {
+                  _FoodAction.edit => onTap(),
+                  _FoodAction.remove => onRemove(),
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(value: _FoodAction.edit, child: Text(l10n.editMenuItem)),
+                  PopupMenuItem(
+                    value: _FoodAction.remove,
+                    child: Text(l10n.removeButton, style: TextStyle(color: context.metricColors.heart)),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            // Remove button
-            GestureDetector(
-              onTap: onRemove,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Center(
-                  child: Icon(Icons.close, size: 19, color: scheme.onSurfaceVariant),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// "Add another food" dashed placeholder
-// ---------------------------------------------------------------------------
-
-class _AddAnotherFoodButton extends StatelessWidget {
-  const _AddAnotherFoodButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(
-          color: scheme.outline.withValues(alpha: 0.5),
-          radius: 18,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add, size: 21, color: scheme.onSurfaceVariant),
-              const SizedBox(width: 7),
-              Text(
-                label,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
             ],
           ),
         ),
@@ -871,450 +595,59 @@ class _AddAnotherFoodButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// "Estimate from a photo" — the AI entry point, with its credit chip
+// Action tile — "Add food" / "Macros only" / "From photo"
 // ---------------------------------------------------------------------------
 
-class _EstimateFromPhotoButton extends StatelessWidget {
-  const _EstimateFromPhotoButton({
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
     required this.label,
-    required this.offline,
+    required this.background,
+    required this.foreground,
     required this.onTap,
+    this.footer,
   });
 
+  final IconData icon;
   final String label;
-
-  /// Dimmed, not disabled: tapping it offline explains why it can't run.
-  final bool offline;
+  final Color background;
+  final Color foreground;
   final VoidCallback onTap;
+
+  /// Under the label — the AI credit chip on "From photo".
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-    final color = offline ? scheme.onSurfaceVariant : scheme.primary;
-
+    final radius = BorderRadius.circular(AppRadius.control);
     return Material(
-      color: scheme.primaryContainer.withValues(alpha: offline ? 0.2 : 0.45),
-      borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
+      color: background,
+      borderRadius: radius,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(Icons.auto_awesome, size: 21, color: color),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
+        borderRadius: radius,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 84),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s8, vertical: AppSpacing.s12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 24, color: foreground),
+                const SizedBox(height: AppSpacing.s4),
+                Text(
                   label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelLarge!
+                      .copyWith(fontWeight: FontWeight.w700, height: 1.2, color: foreground),
                 ),
-              ),
-              const AiCreditChip(),
-            ],
+                if (footer != null) ...[const SizedBox(height: AppSpacing.s4), footer!],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    const dashLen = 6.0;
-    const gapLen = 4.0;
-    final rr = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rr);
-    final metrics = path.computeMetrics().first;
-    double dist = 0;
-    while (dist < metrics.length) {
-      final end = math.min(dist + dashLen, metrics.length);
-      canvas.drawPath(metrics.extractPath(dist, end), paint);
-      dist += dashLen + gapLen;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter old) =>
-      old.color != color || old.radius != radius;
-}
-
-// ---------------------------------------------------------------------------
-// Meal total card
-// ---------------------------------------------------------------------------
-
-class _MealTotalCard extends StatelessWidget {
-  const _MealTotalCard({
-    required this.label,
-    required this.calories,
-    required this.protein,
-    required this.carbs,
-    required this.fat,
-    required this.proteinLabel,
-    required this.carbsLabel,
-    required this.fatLabel,
-    required this.mc,
-  });
-
-  final String label;
-  final double calories;
-  final double protein;
-  final double carbs;
-  final double fat;
-  final String proteinLabel;
-  final String carbsLabel;
-  final String fatLabel;
-  final AppMetricColors mc;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          // Calorie total row
-          Row(
-            children: [
-              Text(
-                label,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              Icon(Icons.local_fire_department, size: 18, color: mc.calories),
-              const SizedBox(width: 5),
-              Text(
-                calories.round().toString(),
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: scheme.onSurface,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                'kcal',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Macro pills
-          Row(
-            children: [
-              Expanded(
-                child: _MacroMiniPill(
-                  value: protein,
-                  label: proteinLabel,
-                  color: mc.protein,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MacroMiniPill(
-                  value: carbs,
-                  label: carbsLabel,
-                  color: mc.carbs,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MacroMiniPill(
-                  value: fat,
-                  label: fatLabel,
-                  color: mc.fat,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MacroMiniPill extends StatelessWidget {
-  const _MacroMiniPill({
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  final double value;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Column(
-        children: [
-          Text(
-            '${value.round()} g',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: color,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Day budget bar — "what's left today" while logging a meal for today.
-// Reflects entries already autosaved to this meal, since remainingBudgetProvider
-// derives from the same Drift-backed meal stream.
-// ---------------------------------------------------------------------------
-
-class _DayBudgetBar extends StatelessWidget {
-  const _DayBudgetBar({
-    required this.todayLabel,
-    required this.leftText,
-    required this.overText,
-    required this.proteinLabel,
-    required this.budget,
-    required this.mc,
-  });
-
-  final String todayLabel;
-  final String Function(int) leftText;
-  final String Function(int) overText;
-  final String proteinLabel;
-  final RemainingBudget budget;
-  final AppMetricColors mc;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            todayLabel,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (budget.calories.hasGoal) ...[
-            const SizedBox(height: 10),
-            _BudgetMetricRow(
-              icon: Icons.local_fire_department,
-              accent: mc.calories,
-              consumed: budget.calories.consumed,
-              goal: budget.calories.goal!,
-              unit: 'kcal',
-              isOver: budget.calories.isOver,
-              remainingText: budget.calories.isOver
-                  ? overText(budget.calories.remaining!.abs().round())
-                  : leftText(budget.calories.remaining!.round()),
-              negative: mc.negative,
-            ),
-          ],
-          if (budget.protein.hasGoal) ...[
-            const SizedBox(height: 10),
-            _BudgetMetricRow(
-              icon: Icons.egg_alt,
-              accent: mc.protein,
-              consumed: budget.protein.consumed,
-              goal: budget.protein.goal!,
-              unit: 'g',
-              isOver: budget.protein.isOver,
-              remainingText: budget.protein.isOver
-                  ? overText(budget.protein.remaining!.abs().round())
-                  : leftText(budget.protein.remaining!.round()),
-              negative: mc.negative,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _BudgetMetricRow extends StatelessWidget {
-  const _BudgetMetricRow({
-    required this.icon,
-    required this.accent,
-    required this.consumed,
-    required this.goal,
-    required this.unit,
-    required this.isOver,
-    required this.remainingText,
-    required this.negative,
-  });
-
-  final IconData icon;
-  final Color accent;
-  final double consumed;
-  final int goal;
-  final String unit;
-  final bool isOver;
-  final String remainingText;
-  final Color negative;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final barColor = isOver ? negative : accent;
-    final ratio = goal > 0 ? (consumed / goal).clamp(0.0, 1.0) : 0.0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: accent),
-            const SizedBox(width: 6),
-            Text(
-              '${consumed.round()} / $goal $unit',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: scheme.onSurface,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            const Spacer(),
-            Text(
-              remainingText,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: barColor,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(
-            value: ratio,
-            minHeight: 5,
-            backgroundColor: barColor.withValues(alpha: 0.12),
-            valueColor: AlwaysStoppedAnimation<Color>(barColor),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Section label
-// ---------------------------------------------------------------------------
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label.toUpperCase(),
-      style: TextStyle(
-        fontFamily: 'PlusJakartaSans',
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.0,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Section action button (small icon + label, used in header rows)
-// ---------------------------------------------------------------------------
-
-class _SectionActionButton extends StatelessWidget {
-  const _SectionActionButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
       ),
     );
   }
