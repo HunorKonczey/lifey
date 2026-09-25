@@ -53,6 +53,29 @@ void main() {
       expect(AppType.sectionLabel().letterSpacing, closeTo(0.96, 0.001));
       expect(text.labelSmall!.letterSpacing ?? 0, 0);
     });
+
+    // Theme.of() localizes the text theme by merging Material's geometry
+    // under it; an untracked slot left null picked up +0.25–0.5 px there
+    // (R0 emulator review). Read through Theme.of, as widgets do.
+    for (final (name, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+      testWidgets('untracked slots stay at 0 through Theme.of ($name)', (tester) async {
+        late TextTheme resolved;
+        await tester.pumpWidget(MaterialApp(
+          theme: theme,
+          home: Builder(builder: (context) {
+            resolved = Theme.of(context).textTheme;
+            return const SizedBox();
+          }),
+        ));
+        final untracked = {
+          'titleMedium': resolved.titleMedium, 'titleSmall': resolved.titleSmall,
+          'bodyLarge': resolved.bodyLarge, 'bodyMedium': resolved.bodyMedium, 'bodySmall': resolved.bodySmall,
+          'labelLarge': resolved.labelLarge, 'labelMedium': resolved.labelMedium, 'labelSmall': resolved.labelSmall,
+        };
+        untracked.forEach((slot, s) => expect(s!.letterSpacing, 0, reason: slot));
+        expect(resolved.displayLarge!.letterSpacing, closeTo(-0.03 * 72, 0.001));
+      });
+    }
   });
 
   group('AppType.number', () {
@@ -65,6 +88,12 @@ void main() {
 
     test('unit is ~42 % of the number', () {
       expect(AppType.unit(50).fontSize, closeTo(21, 0.001));
+    });
+
+    test('unit resets the tracking it would inherit from the number', () {
+      // A child span of the number: without an explicit 0 it inherits
+      // −3 % and the space before it all but disappears ("621/2 360kcal").
+      expect(AppType.unit(28).letterSpacing, 0);
     });
   });
 
@@ -111,6 +140,7 @@ void main() {
       final unit = span.children!.last as TextSpan;
       expect(unit.style!.color, const Color(0xFFB6B5A5));
       expect(unit.style!.fontSize, closeTo(21, 0.001));
+      expect(unit.style!.letterSpacing, 0);
     });
   });
 }

@@ -32,12 +32,15 @@ abstract final class AppType {
         color: color,
       );
 
-  /// The unit beside a [number] of [numberSize].
+  /// The unit beside a [number] of [numberSize]. Tracking is reset to 0: the
+  /// unit is usually a child span of the number and would otherwise inherit
+  /// its −3 %, which at 28–34 px eats the space ("1 739kcal").
   static TextStyle unit(double numberSize, {Color? color}) => TextStyle(
         fontFamily: fontFamily,
         fontSize: numberSize * unitScale,
         fontWeight: FontWeight.w600,
         height: 1,
+        letterSpacing: 0,
         color: color,
       );
 

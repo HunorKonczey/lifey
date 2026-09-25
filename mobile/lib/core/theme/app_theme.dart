@@ -221,6 +221,10 @@ TextStyle _ts(
       fontSize: size,
       height: lineHeight / size,
       fontWeight: weight,
-      letterSpacing: tracking == 0 ? null : tracking * size,
+      // Always explicit, 0 included: Theme.of() merges the M3 English
+      // geometry under this theme, so a null here would pick up Material's
+      // own tracking (+0.25–0.5 px on body and label roles) — found in the
+      // R0 emulator review.
+      letterSpacing: tracking * size,
       fontFeatures: tabular ? AppType.tabular : null,
     );
