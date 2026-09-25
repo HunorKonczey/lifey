@@ -121,7 +121,7 @@ void main() {
   testWidgets('Add puts the entry on the meal and saves it once', (tester) async {
     await pumpAndOpen(tester);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Add to meal'));
     await tester.pumpAndSettle();
 
     expect(find.byType(AddMealEntrySheet), findsNothing);
@@ -143,7 +143,7 @@ void main() {
 
   testWidgets('dismissing a later add-food sheet keeps the screen open', (tester) async {
     await pumpAndOpen(tester);
-    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Add to meal'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Add food').last);

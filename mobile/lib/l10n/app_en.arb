@@ -260,7 +260,7 @@
   "@passwordChangedSuccessMessage": {
     "description": "Snackbar shown after a successful password change"
   },
-  "addFoodToMealTitle": "Add food to meal",
+  "addFoodToMealTitle": "Add food",
   "@addFoodToMealTitle": {
     "description": "Title of the add-meal-entry bottom sheet"
   },
@@ -268,17 +268,9 @@
   "@addToMealTooltip": {
     "description": "Tooltip of the add-to-meal icon button on each food card in the Foods tab; opens a new meal with this food pre-selected (docs/75 §2.6)"
   },
-  "recentFoodsLabel": "Recent",
-  "@recentFoodsLabel": {
-    "description": "Label above the recent-foods quick-pick chips in the add-meal-entry sheet"
-  },
   "editFoodEntryTitle": "Edit food",
   "@editFoodEntryTitle": {
     "description": "Title of the meal-entry edit bottom sheet"
-  },
-  "foodFieldLabel": "Food",
-  "@foodFieldLabel": {
-    "description": "Label for the food autocomplete field"
   },
   "pickAFoodError": "Pick a food",
   "@pickAFoodError": {
@@ -3170,36 +3162,6 @@
   "liveActivityDefaultExerciseName": "Exercise",
   "@liveActivityDefaultExerciseName": {
     "description": "Live Activity exercise name fallback before any exercise has a resolved name"
-  },
-  "mealEntryImpactPreview": "+{kcal} kcal · {protein} g protein",
-  "@mealEntryImpactPreview": {
-    "description": "Live preview in the add-entry sheet showing the macro impact of the selected food + quantity",
-    "placeholders": {
-      "kcal": {
-        "type": "int"
-      },
-      "protein": {
-        "type": "int"
-      }
-    }
-  },
-  "mealEntryBudgetLeft": "→ {count} kcal left",
-  "@mealEntryBudgetLeft": {
-    "description": "Appended to the add-entry sheet impact preview: remaining daily calories after adding this entry",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "mealEntryBudgetOver": "→ {count} kcal over",
-  "@mealEntryBudgetOver": {
-    "description": "Appended to the add-entry sheet impact preview: daily calories exceeded after adding this entry",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "macrosTodayKcalLeft": "{count} kcal left",
   "@macrosTodayKcalLeft": {
@@ -6281,5 +6243,46 @@
   "mealFoodMenuTooltip": "Food options",
   "@mealFoodMenuTooltip": {
     "description": "Tooltip of the three-dots button on a food row in the meal editor"
+  },
+  "addToMealButton": "Add to meal",
+  "@addToMealButton": {
+    "description": "Full-width confirm button of the add-food sheet (docs/redesign/77-mobile-redesign-plan.md R2.6)"
+  },
+  "entryFoodPer100": "per 100 g · {kcal} kcal",
+  "@entryFoodPer100": {
+    "description": "Second line of the picked food's card in the add-food sheet: its energy per 100 g; {kcal} is formatted",
+    "placeholders": {"kcal": {"type": "String"}}
+  },
+  "entryFoodPer100NoKcal": "per 100 g",
+  "@entryFoodPer100NoKcal": {
+    "description": "Second line of the picked food's card when the food has no calorie value"
+  },
+  "quantityDecreaseTooltip": "Less",
+  "@quantityDecreaseTooltip": {
+    "description": "Tooltip / screen-reader label of the − button of the quantity stepper in the add-food sheet"
+  },
+  "quantityIncreaseTooltip": "More",
+  "@quantityIncreaseTooltip": {
+    "description": "Tooltip / screen-reader label of the + button of the quantity stepper in the add-food sheet"
+  },
+  "entryPreviewKcal": "+{kcal} kcal",
+  "@entryPreviewKcal": {
+    "description": "Live preview in the add-food sheet: the calories this amount of the food adds; {kcal} is formatted",
+    "placeholders": {"kcal": {"type": "String"}}
+  },
+  "entryPreviewProtein": "{protein} g protein",
+  "@entryPreviewProtein": {
+    "description": "Live preview in the add-food sheet, under the calories: the protein this amount adds; {protein} is formatted",
+    "placeholders": {"protein": {"type": "String"}}
+  },
+  "entryBudgetLeft": "→ {value} kcal left",
+  "@entryBudgetLeft": {
+    "description": "Live preview in the add-food sheet: calories left of the day's goal once this amount is counted; {value} is formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "entryBudgetOver": "→ {value} kcal over",
+  "@entryBudgetOver": {
+    "description": "Live preview in the add-food sheet: calories over the day's goal once this amount is counted; {value} is formatted",
+    "placeholders": {"value": {"type": "String"}}
   }
 }

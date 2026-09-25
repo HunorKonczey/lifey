@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.5 done)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 in progress (R2.1–R2.6 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1179,10 +1179,27 @@ dropped (the canvas has none). Removed ARB keys: `estimateFromPhotoButton`, `kca
   counting it twice — see §9 risk 3).
 - **Verify:** unit test for the remaining-after-meal calculation for a new and an edited meal.
 
-### R2.6 — Mobile UI: add-food sheet with quantity hero
+### R2.6 — Mobile UI: add-food sheet with quantity hero ✅
 - `widgets/add_food_sheet.dart` (and `add_meal_entry_sheet.dart` if it shares the layout);
   barcode icon inside the search field.
 - **Verify:** stepper ± and chips update "+N kcal → M kcal left" live; barcode path unchanged.
+
+*As built:* `AddMealEntrySheet` (also used by the recipe editor) is now: title "Add food" + close ×, a search field (search icon, the
+**barcode scanner inside it** — a scanned code that matches a food already in the catalogue picks it, an unknown one goes through the
+existing `AddFoodSheet(initialBarcode)` lookup / create), the recent foods as `ActionChip`s, and — once a food is picked — its card with a
+primary outline: name, "per 100 g · 89 kcal", the **quantity hero** (44/800 number that is still a real text field, so an exact amount can be
+typed, flanked by two 56 dp − / + buttons in 10 g steps, never below 1 g), quick chips (100 g, 150 g and the food's last-used amount, the one
+equal to the current value selected), and a live "**+95 kcal** / 1 g protein → 1,643 kcal left" line. The remaining-after figure is now
+the meal **day's** goal minus that day's saved meals minus what this entry adds (the change only when editing an entry) — not just today,
+via `mealsOnDayProvider`; without a calorie goal only the "+N kcal" part shows. Full-width "Add to meal" (Save in edit mode).
+The suggestion list opens only once something is typed (the recents are the empty-field shortcut; an open list would sit on top of them and
+on the card) and is restyled (`_FoodOptions`, name + kcal rows). Behaviour kept: edit mode locks the food, `preselectedFood` prefills the
+last-used grams once and hides the recents, hand-typed grams are never overwritten by a chip. **Not built:** the ☆ favourite on a food (a
+`Food` has no favourite flag) and the piece chips "½ pc / 1 pc" (no per-food piece weight — §6 non-goal). ARB: `addFoodToMealTitle` is
+now "Add food", new `addToMealButton`, `entryFoodPer100(NoKcal)`, `quantityDecrease/IncreaseTooltip`, `entryPreviewKcal/Protein`,
+`entryBudgetLeft/Over` (locale-formatted numbers); removed `foodFieldLabel`, `recentFoodsLabel`, `mealEntryImpactPreview`,
+`mealEntryBudgetLeft/Over`. Tests: `add_meal_entry_sheet_test` (stepper, clamp, chips, per-100 g line, plus the prefill cases) and
+the initial-food / foods-tab tests use "Add to meal".
 
 ### R2.7 — Mobile UI: recipes grid, AI entry card, filter chips
 - `recipes_tab.dart`, `log_recipe_sheet.dart`; placeholder painter for image-less recipes.
