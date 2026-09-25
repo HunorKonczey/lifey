@@ -9,6 +9,7 @@ import '../../../core/format/lifey_format.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/theme/app_type.dart';
 import '../../../core/utils/unit_converters.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -275,7 +276,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 children: [
                   Expanded(child: _StepProgress(step: _step, count: _stepCount)),
                   const SizedBox(width: AppSpacing.s8),
-                  TextButton(onPressed: _skip, child: Text(l10n.onboardingSkipButton)),
+                  TextButton(
+                    onPressed: _skip,
+                    style: TextButton.styleFrom(foregroundColor: p.text2),
+                    child: Text(l10n.onboardingSkipButton),
+                  ),
                 ],
               ),
             ),
@@ -375,7 +380,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               Expanded(
                                 child: TextButton(
                                   onPressed: _finishing ? null : () => _finish(applyGoals: false),
-                                  style: TextButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+                                  style: TextButton.styleFrom(minimumSize: const Size.fromHeight(56), foregroundColor: p.text),
                                   child: Text(l10n.onboardingNotNowButton),
                                 ),
                               ),
@@ -547,7 +552,7 @@ class _AboutYouStep extends StatelessWidget {
           const SizedBox(height: AppSpacing.s24),
           SectionLabel(l10n.onboardingGenderLabel),
           const SizedBox(height: 8),
-          Row(
+          OptionRow(
             children: [
               Expanded(
                 child: OptionCard(
@@ -649,7 +654,7 @@ class _BodyStep extends StatelessWidget {
                     controller: feetController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      suffixText: l10n.onboardingFeetSuffix,
+                      suffixIcon: UnitSuffix(l10n.onboardingFeetSuffix), suffixIconConstraints: const BoxConstraints(),
                     ),
                     onChanged: (_) => _onFeetInchesChanged(),
                   ),
@@ -660,7 +665,7 @@ class _BodyStep extends StatelessWidget {
                     controller: inchesController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      suffixText: l10n.onboardingInchesSuffix,
+                      suffixIcon: UnitSuffix(l10n.onboardingInchesSuffix), suffixIconConstraints: const BoxConstraints(),
                     ),
                     onChanged: (_) => _onFeetInchesChanged(),
                   ),
@@ -671,7 +676,7 @@ class _BodyStep extends StatelessWidget {
             TextField(
               controller: heightCmController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(suffixText: 'cm'),
+              decoration: const InputDecoration(suffixIcon: UnitSuffix('cm'), suffixIconConstraints: BoxConstraints()),
               onChanged: (v) => onHeightChanged(double.tryParse(v.replaceAll(',', '.'))),
             ),
           const SizedBox(height: 24),
@@ -681,7 +686,7 @@ class _BodyStep extends StatelessWidget {
             TextField(
               controller: weightLbController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(suffixText: 'lb'),
+              decoration: const InputDecoration(suffixIcon: UnitSuffix('lb'), suffixIconConstraints: BoxConstraints()),
               onChanged: (v) {
                 final lb = double.tryParse(v.replaceAll(',', '.'));
                 onWeightChanged(lb == null ? null : lbToKg(lb));
@@ -691,7 +696,7 @@ class _BodyStep extends StatelessWidget {
             TextField(
               controller: weightKgController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(suffixText: 'kg'),
+              decoration: const InputDecoration(suffixIcon: UnitSuffix('kg'), suffixIconConstraints: BoxConstraints()),
               onChanged: (v) => onWeightChanged(double.tryParse(v.replaceAll(',', '.'))),
             ),
         ],
@@ -785,7 +790,7 @@ class _LifestyleStep extends StatelessWidget {
           const SizedBox(height: AppSpacing.s24),
           SectionLabel(l10n.onboardingPrimaryGoalLabel),
           const SizedBox(height: AppSpacing.s12),
-          Row(
+          OptionRow(
             children: [
               for (final g in PrimaryGoal.values) ...[
                 Expanded(
@@ -808,7 +813,7 @@ class _LifestyleStep extends StatelessWidget {
               TextField(
                 controller: targetLbController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(suffixText: 'lb'),
+                decoration: const InputDecoration(suffixIcon: UnitSuffix('lb'), suffixIconConstraints: BoxConstraints()),
                 onChanged: (v) {
                   final lb = double.tryParse(v.replaceAll(',', '.'));
                   onTargetWeightChanged(lb == null ? null : lbToKg(lb));
@@ -818,7 +823,7 @@ class _LifestyleStep extends StatelessWidget {
               TextField(
                 controller: targetKgController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(suffixText: 'kg'),
+                decoration: const InputDecoration(suffixIcon: UnitSuffix('kg'), suffixIconConstraints: BoxConstraints()),
                 onChanged: (v) => onTargetWeightChanged(
                   v.trim().isEmpty ? null : double.tryParse(v.replaceAll(',', '.')),
                 ),
@@ -945,7 +950,13 @@ class _SuggestedPlanStep extends StatelessWidget {
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
-                              child: MetricValue(value: f.integer(m.$2), unit: 'g', size: 26),
+                              // The unit at the number's own size — "129 g".
+                              child: Text(
+                                '${f.integer(m.$2)} g',
+                                maxLines: 1,
+                                textScaler: AppType.noScale(context),
+                                style: AppType.number(26, color: p.text),
+                              ),
                             ),
                             const SizedBox(height: AppSpacing.s4),
                             Text('${m.$3}%', style: t.bodyMedium!.copyWith(color: p.text2)),
@@ -1057,7 +1068,7 @@ class _HealthStepState extends ConsumerState<_HealthStep> {
               // Leaves the connection off: nothing is requested or stored.
               TextButton(
                 onPressed: _enabling ? null : widget.onFinish,
-                style: TextButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+                style: TextButton.styleFrom(minimumSize: const Size.fromHeight(56), foregroundColor: context.palette.text),
                 child: Text(l10n.onboardingNotNowButton),
               ),
             ],

@@ -38,7 +38,7 @@ class OptionCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: AppMotion.of(context, AppMotion.page),
           curve: AppMotion.standard,
-          padding: const EdgeInsets.all(AppSpacing.s16),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s16),
           decoration: BoxDecoration(
             color: active ? Color.alphaBlend(scheme.primary.withValues(alpha: 0.16), p.card) : p.card,
             borderRadius: AppRadius.cardAll,
@@ -153,4 +153,33 @@ class _RadioMark extends StatelessWidget {
       child: selected ? Icon(Icons.check_rounded, size: 16, color: scheme.onPrimary) : null,
     );
   }
+}
+
+/// A row of [OptionCard]s (each already in an `Expanded`) that are all as tall
+/// as the tallest — "Prefer not to say" wraps to two lines at phone width and
+/// must not leave its neighbours shorter.
+class OptionRow extends StatelessWidget {
+  const OptionRow({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+      );
+}
+
+/// The unit at the right of a number field ("cm", "kg"). A `suffixText` only
+/// shows once the field is focused or filled; this is always there, so an
+/// empty field still says what it wants.
+class UnitSuffix extends StatelessWidget {
+  const UnitSuffix(this.unit, {super.key});
+
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(right: AppSpacing.s16),
+        child: Text(unit, style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: context.palette.text2)),
+      );
 }

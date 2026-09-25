@@ -207,7 +207,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
         children: [
           SectionLabel(l10n.onboardingGenderLabel),
           const SizedBox(height: 8),
-          Row(
+          OptionRow(
             children: [
               Expanded(
                 child: OptionCard(
@@ -257,7 +257,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
                   child: TextField(
                     controller: _feetController,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(suffixText: l10n.onboardingFeetSuffix),
+                    decoration: InputDecoration(suffixIcon: UnitSuffix(l10n.onboardingFeetSuffix), suffixIconConstraints: const BoxConstraints()),
                     onChanged: (_) => _onFeetInchesChanged(),
                   ),
                 ),
@@ -266,7 +266,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
                   child: TextField(
                     controller: _inchesController,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(suffixText: l10n.onboardingInchesSuffix),
+                    decoration: InputDecoration(suffixIcon: UnitSuffix(l10n.onboardingInchesSuffix), suffixIconConstraints: const BoxConstraints()),
                     onChanged: (_) => _onFeetInchesChanged(),
                   ),
                 ),
@@ -276,7 +276,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
             TextField(
               controller: _heightCmController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(suffixText: 'cm'),
+              decoration: const InputDecoration(suffixIcon: UnitSuffix('cm'), suffixIconConstraints: BoxConstraints()),
               onChanged: (v) => setState(() => _heightCm = double.tryParse(v.replaceAll(',', '.'))),
             ),
           const SizedBox(height: 24),
@@ -295,7 +295,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
           const SizedBox(height: 24),
           SectionLabel(l10n.onboardingPrimaryGoalLabel),
           const SizedBox(height: 8),
-          Row(
+          OptionRow(
             children: [
               for (final g in PrimaryGoal.values) ...[
                 Expanded(
@@ -318,7 +318,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
               TextField(
                 controller: _targetLbController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(suffixText: 'lb'),
+                decoration: const InputDecoration(suffixIcon: UnitSuffix('lb'), suffixIconConstraints: BoxConstraints()),
                 onChanged: (v) {
                   final lb = double.tryParse(v.replaceAll(',', '.'));
                   setState(() => _targetWeightKg = lb == null ? null : lbToKg(lb));
@@ -328,7 +328,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
               TextField(
                 controller: _targetKgController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(suffixText: 'kg'),
+                decoration: const InputDecoration(suffixIcon: UnitSuffix('kg'), suffixIconConstraints: BoxConstraints()),
                 onChanged: (v) => setState(
                   () => _targetWeightKg = v.trim().isEmpty ? null : double.tryParse(v.replaceAll(',', '.')),
                 ),

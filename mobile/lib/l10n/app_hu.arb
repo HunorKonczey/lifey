@@ -601,7 +601,7 @@
   "onboardingGenderLabel": "Nem",
   "onboardingGenderMale": "Férfi",
   "onboardingGenderFemale": "Nő",
-  "onboardingGenderUnspecified": "Nem szeretném megadni",
+  "onboardingGenderUnspecified": "Nem adom meg",
   "onboardingBirthDateLabel": "Születési dátum",
   "onboardingRequiredFieldError": "Válassz minden mezőnél egy lehetőséget",
   "onboardingInvalidBirthDateError": "Adj meg egy érvényes születési dátumot (13–120 év)",
