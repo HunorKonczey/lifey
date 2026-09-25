@@ -2,11 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
+import 'package:lifey/features/onboarding/data/user_details_repository.dart';
+import 'package:lifey/features/onboarding/domain/user_details.dart';
 import 'package:lifey/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:lifey/features/onboarding/presentation/widgets/option_card.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+
+class _FakeRepo implements UserDetailsRepository {
+  @override
+  Future<SuggestGoalsResult> suggestGoals({
+    required Gender gender,
+    required DateTime birthDate,
+    required double heightCm,
+    required double weightKg,
+    required ActivityLevel activityLevel,
+    required PrimaryGoal primaryGoal,
+  }) async =>
+      const SuggestGoalsResult(
+        bmr: 1384,
+        tdee: 2145,
+        calories: 2360,
+        proteinGrams: 129,
+        carbsGrams: 313,
+        fatGrams: 66,
+        waterLiters: 2.6,
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class _FakeSettings extends SettingsController {
   @override
@@ -25,7 +51,10 @@ Future<void> _pump(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [settingsControllerProvider.overrideWith(_FakeSettings.new)],
+      overrides: [
+        settingsControllerProvider.overrideWith(_FakeSettings.new),
+        userDetailsRepositoryProvider.overrideWithValue(_FakeRepo()),
+      ],
       child: MaterialApp(
         theme: theme ?? AppTheme.dark,
         locale: locale,
@@ -98,6 +127,36 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Next'));
     await tester.pumpAndSettle();
     expect(find.text('Please choose an option for every field'), findsOneWidget);
+  });
+
+  testWidgets('the plan step is a calorie hero with its working, the macro split and water', (tester) async {
+    await _pump(tester);
+    await _toLifestyle(tester);
+    await tester.tap(find.text('Moderate'));
+    await tester.ensureVisible(find.text('Build muscle'));
+    await tester.tap(find.text('Build muscle'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Next'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Step 5 of 5'), findsOneWidget);
+    expect(find.text('Your suggested plan'), findsOneWidget);
+    expect(find.text('Built for building muscle at a moderate activity level.'), findsOneWidget);
+    expect(find.text('Daily calories'), findsOneWidget);
+    expect(find.textContaining('2,360'), findsOneWidget);
+    expect(find.text('BMR 1,384'), findsOneWidget);
+    expect(find.text('TDEE 2,145'), findsOneWidget);
+    expect(find.text('+10% surplus'), findsOneWidget);
+    for (final share in ['22%', '53%', '25%']) {
+      expect(find.text(share), findsOneWidget);
+    }
+    expect(find.textContaining('2.6'), findsOneWidget);
+    expect(find.text('You can change these anytime in Settings → Body & goals.'), findsOneWidget);
+    // Apply is the one filled button; Back and Not now weigh less.
+    expect(find.widgetWithText(FilledButton, 'Apply these goals'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Back'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Not now'), findsOneWidget);
   });
 
   testWidgets('long Hungarian answers wrap inside their card at 360 dp × 1.3', (tester) async {

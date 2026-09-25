@@ -628,8 +628,6 @@
   "onboardingTargetWeightOptionalLabel": "Célsúly (opcionális)",
   "onboardingSuggestedTitle": "Javasolt terved",
   "onboardingCalculatingMessage": "Javasolt céljaid kiszámítása…",
-  "onboardingSuggestedFromMessage": "{bmr} kcal BMR és {tdee} kcal TDEE alapján",
-  "onboardingChangeLaterMessage": "Ezt bármikor módosíthatod a Beállításokban.",
   "onboardingApplyGoalsButton": "Célok alkalmazása",
   "onboardingNotNowButton": "Most nem",
   "onboardingSavingMessage": "Mentés…",
@@ -1433,5 +1431,14 @@
   "onboardingActivityDescriptionModerate": "Mozgás heti 3–5 napon",
   "onboardingActivityDescriptionActive": "Kemény edzés heti 6–7 napon",
   "onboardingActivityDescriptionVeryActive": "Kemény edzés és fizikai munka",
-  "onboardingLifestyleQuestion": "Milyen aktív vagy?"
+  "onboardingLifestyleQuestion": "Milyen aktív vagy?",
+  "onboardingChangeLaterMessage": "Ezeket bármikor módosíthatod a Beállítások → Testadatok és célok alatt.",
+  "onboardingSuggestedSubtitle": "{goal, select, loseWeight{Fogyásra} maintain{Súlytartásra} gainMuscle{Izomépítésre} other{A céljaidra}} szabva, {activity, select, sedentary{ülő} light{enyhén aktív} moderate{mérsékelten aktív} active{aktív} veryActive{nagyon aktív} other{aktív}} életmódot feltételezve.",
+  "onboardingDailyCaloriesLabel": "Napi kalória",
+  "onboardingChipBmr": "BMR {value}",
+  "onboardingChipTdee": "TDEE {value}",
+  "onboardingChipSurplus": "+{percent}% többlet",
+  "onboardingChipDeficit": "−{percent}% hiány",
+  "onboardingChipMaintenance": "Szinten tartás",
+  "onboardingWaterPerDay": "naponta"
 }

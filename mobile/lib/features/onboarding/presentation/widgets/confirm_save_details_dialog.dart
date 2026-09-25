@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/user_details_repository.dart';
 import '../../domain/user_details.dart';
-
-const _kScrim = Color(0x72080906);
 
 /// Confirmation popup shown after editing "Body & goals": lists only the
 /// fields that actually changed (each with a checkbox, default checked),
@@ -22,7 +21,6 @@ Future<Set<UserDetailsField>?> showConfirmSaveDetailsDialog(
 }) {
   return showDialog<Set<UserDetailsField>>(
     context: context,
-    barrierColor: _kScrim,
     builder: (ctx) => _ConfirmSaveDetailsDialog(
       original: original,
       pending: pending,
@@ -171,11 +169,8 @@ class _ConfirmSaveDetailsDialogState extends ConsumerState<_ConfirmSaveDetailsDi
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    const dialogBg = Color(0xFF22241B);
-    const titleColor = Color(0xFFF1F0E4);
-    const subtitleColor = Color(0xFFA8A899);
-    const cardBg = Color(0xFF2B2D22);
-    const cancelBg = Color(0xFF161611);
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
     // AlertDialog (rather than a hand-rolled Dialog+Flexible+ScrollView) so
@@ -183,16 +178,14 @@ class _ConfirmSaveDetailsDialogState extends ConsumerState<_ConfirmSaveDetailsDi
     // content against the fixed title/actions, which is what was making the
     // action buttons unreliable to tap (they could end up laid out outside
     // their actual hit-test area when content overflowed the guessed height).
+    // Surface, radius, title and body styles come from the dialog theme
+    // (canvas: logout dialog).
     return AlertDialog(
-      backgroundColor: dialogBg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      titlePadding: const EdgeInsets.fromLTRB(22, 24, 22, 0),
-      contentPadding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
-      actionsPadding: const EdgeInsets.fromLTRB(22, 14, 22, 20),
+      insetPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20, vertical: AppSpacing.s24),
+      titlePadding: const EdgeInsets.fromLTRB(AppSpacing.s24, AppSpacing.s24, AppSpacing.s24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(AppSpacing.s24, AppSpacing.s12, AppSpacing.s24, 0),
       scrollable: true,
-      title: Text(l10n.onboardingConfirmSaveTitle,
-          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: titleColor)),
+      title: Text(l10n.onboardingConfirmSaveTitle),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -200,15 +193,13 @@ class _ConfirmSaveDetailsDialogState extends ConsumerState<_ConfirmSaveDetailsDi
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_diffs.isEmpty)
-              Text(l10n.onboardingConfirmSaveNoChangesMessage,
-                  style: const TextStyle(color: subtitleColor, fontSize: 13.5))
+              Text(l10n.onboardingConfirmSaveNoChangesMessage)
             else ...[
-              Text(l10n.onboardingConfirmSaveIntroMessage,
-                  style: const TextStyle(color: subtitleColor, fontSize: 12.5, height: 1.4)),
-              const SizedBox(height: 12),
+              Text(l10n.onboardingConfirmSaveIntroMessage),
+              const SizedBox(height: AppSpacing.s16),
               for (final diff in _diffs)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.s8),
                   // Material (not a colored Container/DecoratedBox) so
                   // ListTile's own background/ink-splash painting has a
                   // Material ancestor to paint onto directly — a colored
@@ -217,40 +208,35 @@ class _ConfirmSaveDetailsDialogState extends ConsumerState<_ConfirmSaveDetailsDi
                   // transition), which was aborting the pop and making the
                   // action buttons look unresponsive.
                   child: Material(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(14),
+                    color: p.nested,
+                    borderRadius: AppRadius.controlAll,
                     clipBehavior: Clip.antiAlias,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s8, vertical: AppSpacing.s4),
                       child: CheckboxListTile(
                         value: _selected.contains(diff.field),
                         onChanged: (_) => _toggle(diff.field),
                         contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
                         activeColor: scheme.primary,
-                        title: Text(diff.label,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: subtitleColor)),
-                        subtitle: Text('${diff.from} → ${diff.to}',
-                            style: const TextStyle(fontSize: 13.5, color: titleColor)),
+                        title: Text(diff.label, style: t.labelMedium!.copyWith(color: p.text2)),
+                        subtitle: Text('${diff.from} → ${diff.to}', style: t.titleSmall!.copyWith(color: p.text)),
                       ),
                     ),
                   ),
                 ),
-              const SizedBox(height: 8),
-              Text(l10n.onboardingRecalculatedGoalsLabel,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: subtitleColor)),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s8),
+              Text(l10n.onboardingRecalculatedGoalsLabel, style: t.labelLarge!.copyWith(color: p.text2)),
+              const SizedBox(height: AppSpacing.s8),
               if (_previewLoading || _preview == null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(l10n.onboardingCalculatingMessage,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: subtitleColor, fontSize: 13)),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s16),
+                  child: Text(l10n.onboardingCalculatingMessage, textAlign: TextAlign.center),
                 )
               else
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: AppSpacing.s8,
+                  runSpacing: AppSpacing.s8,
                   children: [
                     _GoalChip(label: l10n.caloriesLabel, value: '${_preview!.calories} kcal'),
                     _GoalChip(label: l10n.proteinLabel, value: '${_preview!.proteinGrams} g'),
@@ -268,30 +254,25 @@ class _ConfirmSaveDetailsDialogState extends ConsumerState<_ConfirmSaveDetailsDi
           children: [
             Expanded(
               child: SizedBox(
-                height: 48,
-                child: FilledButton(
+                height: 52,
+                child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(null),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: cancelBg,
-                    foregroundColor: titleColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: p.nested,
+                    foregroundColor: p.text,
+                    side: BorderSide(color: context.elevation.border),
                   ),
                   child: Text(l10n.cancelButton),
                 ),
               ),
             ),
             if (_diffs.isNotEmpty) ...[
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: SizedBox(
-                  height: 48,
+                  height: 52,
                   child: FilledButton(
                     onPressed: _selected.isEmpty ? null : () => Navigator.of(context).pop(_selected),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: scheme.primary,
-                      foregroundColor: const Color(0xFF1E1F18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                    ),
                     child: Text(l10n.saveButton),
                   ),
                 ),
@@ -332,15 +313,17 @@ class _GoalChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(color: const Color(0xFF2B2D22), borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+      decoration: BoxDecoration(color: p.nested, borderRadius: AppRadius.controlAll),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFA8A899))),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFFF1F0E4))),
+          Text(label, style: t.labelSmall!.copyWith(color: p.text2)),
+          Text(value, style: t.titleSmall!.copyWith(color: p.text)),
         ],
       ),
     );

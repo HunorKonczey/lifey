@@ -2762,7 +2762,7 @@
   "@onboardingGoalMaintain": {
     "description": "Onboarding wizard: primary goal option"
   },
-  "onboardingGoalGainMuscle": "Gain muscle",
+  "onboardingGoalGainMuscle": "Build muscle",
   "@onboardingGoalGainMuscle": {
     "description": "Onboarding wizard: primary goal option"
   },
@@ -2777,22 +2777,6 @@
   "onboardingCalculatingMessage": "Calculating your suggested goals…",
   "@onboardingCalculatingMessage": {
     "description": "Onboarding wizard: loading state while suggest-goals is in flight"
-  },
-  "onboardingSuggestedFromMessage": "Based on a BMR of {bmr} kcal and a TDEE of {tdee} kcal",
-  "@onboardingSuggestedFromMessage": {
-    "description": "Onboarding wizard: transparency note under the suggested goals",
-    "placeholders": {
-      "bmr": {
-        "type": "int"
-      },
-      "tdee": {
-        "type": "int"
-      }
-    }
-  },
-  "onboardingChangeLaterMessage": "You can change this anytime in Settings.",
-  "@onboardingChangeLaterMessage": {
-    "description": "Onboarding wizard: note under the suggested goals"
   },
   "onboardingApplyGoalsButton": "Apply these goals",
   "@onboardingApplyGoalsButton": {
@@ -6537,5 +6521,46 @@
   "onboardingLifestyleQuestion": "How active are you?",
   "@onboardingLifestyleQuestion": {
     "description": "Title of the wizard step that asks for the activity level and the primary goal"
+  },
+  "onboardingChangeLaterMessage": "You can change these anytime in Settings → Body & goals.",
+  "@onboardingChangeLaterMessage": {
+    "description": "Footnote under the suggested plan in the onboarding wizard (docs/redesign/77-mobile-redesign-plan.md R5.4)"
+  },
+  "onboardingSuggestedSubtitle": "Built for {goal, select, loseWeight{losing weight} maintain{maintaining your weight} gainMuscle{building muscle} other{your goal}} at {activity, select, sedentary{a sedentary} light{a light} moderate{a moderate} active{an active} veryActive{a very active} other{an}} activity level.",
+  "@onboardingSuggestedSubtitle": {
+    "description": "Line under the 'Your suggested plan' title: what the plan was built for. {goal} is loseWeight, maintain or gainMuscle; {activity} is sedentary, light, moderate, active or veryActive (ICU select)",
+    "placeholders": {"goal": {"type": "String"}, "activity": {"type": "String"}}
+  },
+  "onboardingDailyCaloriesLabel": "Daily calories",
+  "@onboardingDailyCaloriesLabel": {
+    "description": "Overline of the calorie hero in the suggested plan"
+  },
+  "onboardingChipBmr": "BMR {value}",
+  "@onboardingChipBmr": {
+    "description": "Chip under the suggested calories: the basal metabolic rate in kcal",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "onboardingChipTdee": "TDEE {value}",
+  "@onboardingChipTdee": {
+    "description": "Chip under the suggested calories: total daily energy expenditure in kcal",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "onboardingChipSurplus": "+{percent}% surplus",
+  "@onboardingChipSurplus": {
+    "description": "Chip: the suggested calories are this many percent above the TDEE",
+    "placeholders": {"percent": {"type": "int"}}
+  },
+  "onboardingChipDeficit": "−{percent}% deficit",
+  "@onboardingChipDeficit": {
+    "description": "Chip: the suggested calories are this many percent below the TDEE",
+    "placeholders": {"percent": {"type": "int"}}
+  },
+  "onboardingChipMaintenance": "At maintenance",
+  "@onboardingChipMaintenance": {
+    "description": "Chip: the suggested calories equal the TDEE"
+  },
+  "onboardingWaterPerDay": "per day",
+  "@onboardingWaterPerDay": {
+    "description": "Unit suffix after the suggested water amount, e.g. '2.6 L per day'"
   }
 }
