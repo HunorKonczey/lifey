@@ -1473,5 +1473,7 @@
   "trainerKpiRpeVeryHard": "nagyon nehéz",
   "trainerKpiRpeMaximal": "maximális megterhelés",
   "trainerWeightChangeChip": "{delta} kg · {days} nap",
-  "trainerWeightLatestLabel": "Legutóbbi: {weight} kg · {date}"
+  "trainerWeightLatestLabel": "Legutóbbi: {weight} kg · {date}",
+  "trainerClientsSearchHint": "Ügyfél keresése",
+  "trainerUpcomingCardTitle": "Következő alkalmak"
 }

@@ -13,10 +13,14 @@ import '../../../../../core/theme/app_type.dart';
 /// moves it the same way a tap does. Labels are never shortened: Hungarian
 /// "Táplálkozás" and "Ütemezés" scroll into view instead.
 class ClientTabBar extends StatelessWidget {
-  const ClientTabBar({super.key, required this.controller, required this.labels});
+  const ClientTabBar({super.key, required this.controller, required this.labels, this.edge = AppSpacing.screen});
 
   final TabController controller;
   final List<String> labels;
+
+  /// The screen margin the row's first label lines up with; the wide pane's
+  /// content sits further in than a phone's.
+  final double edge;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +31,7 @@ class ClientTabBar extends StatelessWidget {
         controller: controller,
         isScrollable: true,
         tabAlignment: TabAlignment.start,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen - AppSpacing.s12),
+        padding: EdgeInsets.symmetric(horizontal: edge - AppSpacing.s12),
         labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),

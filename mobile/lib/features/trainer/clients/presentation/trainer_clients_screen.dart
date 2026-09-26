@@ -15,11 +15,13 @@ import '../../../chat/application/conversation_list_controller.dart';
 import '../../client_detail/presentation/client_detail_screen.dart';
 import '../../shared/trainer_layout.dart';
 import '../../shared/trainer_view_badge.dart';
+import '../application/client_search_controller.dart';
 import '../application/selected_client_controller.dart';
 import '../application/trainer_clients_controller.dart';
 import '../domain/compliance.dart';
 import '../domain/trainer_client.dart';
 import 'widgets/client_card.dart';
+import 'widgets/client_list_row.dart';
 import 'widgets/client_sort_chips.dart';
 
 /// The trainer's daily entry point: who am I coaching, and who needs me today
@@ -159,26 +161,36 @@ List<Widget> _clientSlivers(
 }) {
   final l10n = AppLocalizations.of(context)!;
   final sort = ref.watch(clientSortControllerProvider);
-  final bottomPad = MediaQuery.paddingOf(context).bottom + 96;
+  // The rail replaces the floating bar on a tablet, so there is no bar to clear.
+  final bottomPad = MediaQuery.paddingOf(context).bottom + (twoPane ? AppSpacing.s24 : 96);
+  // The filter belongs to the tablet's search field; a phone has none.
+  final query = twoPane ? ref.watch(clientSearchControllerProvider) : '';
+  final shown = filterClients(clients, query);
 
   // One instant for the whole build: sorting, chips and "days ago" must not
   // disagree because they each called DateTime.now() a millisecond apart.
   final now = DateTime.now();
-  final sorted = sortClients(clients, sort, now: now);
+  final sorted = sortClients(shown, sort, now: now);
   final needsAttention = sorted.where((c) => complianceFor(c, now: now).needsAttention).toList();
   final rest = sorted.where((c) => !complianceFor(c, now: now).needsAttention).toList();
   final selected = ref.watch(selectedClientControllerProvider);
 
   Widget card(TrainerClient client) => Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s12),
-        child: ClientCard(
-          client: client,
-          now: now,
-          selected: twoPane && client.userId == selected,
-          onTap: () => twoPane
-              ? ref.read(selectedClientControllerProvider.notifier).select(client.userId)
-              : context.push('$trainerShellLocation/${client.userId}'),
-        ),
+        padding: EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, twoPane ? AppSpacing.s4 : AppSpacing.s12),
+        child: twoPane
+            // The detail beside the list carries the figures; the pane only
+            // needs to say who, and how they are doing.
+            ? ClientListRow(
+                client: client,
+                now: now,
+                selected: client.userId == selected,
+                onTap: () => ref.read(selectedClientControllerProvider.notifier).select(client.userId),
+              )
+            : ClientCard(
+                client: client,
+                now: now,
+                onTap: () => context.push('$trainerShellLocation/${client.userId}'),
+              ),
       );
 
   Widget section(String title) => Padding(
@@ -187,6 +199,13 @@ List<Widget> _clientSlivers(
       );
 
   return [
+    if (twoPane)
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, 0),
+          child: _ClientSearchField(query: query),
+        ),
+      ),
     SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.only(top: AppSpacing.s8, bottom: AppSpacing.s16),
@@ -207,9 +226,79 @@ List<Widget> _clientSlivers(
       ),
       SliverToBoxAdapter(child: section(l10n.trainerClientsAllClientsTitle)),
     ],
+    if (shown.isEmpty)
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s32),
+          // Not an EmptyView: that one fills its viewport, and this sits in a
+          // sliver of a list that keeps its header and search above it.
+          child: Column(
+            children: [
+              Text(l10n.noSearchResultsTitle, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: AppSpacing.s4),
+              Text(
+                l10n.tryDifferentSearchMessage,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.palette.text2),
+              ),
+            ],
+          ),
+        ),
+      ),
     SliverList.builder(itemCount: rest.length, itemBuilder: (context, i) => card(rest[i])),
     SliverToBoxAdapter(child: SizedBox(height: bottomPad)),
   ];
+}
+
+/// The "Search clients" field at the top of the tablet's list pane: the theme's
+/// own input style, a search icon, and a clear button once there is text.
+class _ClientSearchField extends ConsumerStatefulWidget {
+  const _ClientSearchField({required this.query});
+
+  final String query;
+
+  @override
+  ConsumerState<_ClientSearchField> createState() => _ClientSearchFieldState();
+}
+
+class _ClientSearchFieldState extends ConsumerState<_ClientSearchField> {
+  late final TextEditingController _controller = TextEditingController(text: widget.query);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final p = context.palette;
+    return TextField(
+      controller: _controller,
+      onChanged: (value) {
+        ref.read(clientSearchControllerProvider.notifier).set(value);
+        // Rebuild for the clear button; the query itself lives in the provider.
+        setState(() {});
+      },
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: l10n.trainerClientsSearchHint,
+        prefixIcon: const Icon(Icons.search_rounded, size: 22),
+        suffixIcon: _controller.text.isEmpty
+            ? null
+            : IconButton(
+                icon: Icon(Icons.close_rounded, size: 22, color: p.text2),
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () {
+                  _controller.clear();
+                  ref.read(clientSearchControllerProvider.notifier).clear();
+                  setState(() {});
+                },
+              ),
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

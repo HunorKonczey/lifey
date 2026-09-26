@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lifey/core/sync/connectivity_status_provider.dart';
 import 'package:lifey/features/chat/application/conversation_list_controller.dart';
 import 'package:lifey/features/trainer/clients/presentation/widgets/client_card.dart';
+import 'package:lifey/features/trainer/clients/presentation/widgets/client_list_row.dart';
 import 'package:lifey/features/trainer/clients/application/selected_client_controller.dart';
 import 'package:lifey/features/trainer/clients/application/trainer_clients_controller.dart';
 import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
@@ -100,7 +101,7 @@ void main() {
   Future<void> tapCard(WidgetTester tester, String name) async {
     await tester.tap(find.ancestor(
       of: find.text(name),
-      matching: find.byType(ClientCard),
+      matching: find.byWidgetPredicate((w) => w is ClientCard || w is ClientListRow),
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));

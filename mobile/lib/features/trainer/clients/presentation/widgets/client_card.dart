@@ -8,6 +8,7 @@ import '../../../../../shared/widgets/ds/lifey_card.dart';
 import '../../../shared/client_avatar.dart';
 import '../../domain/compliance.dart';
 import '../../domain/trainer_client.dart';
+import 'client_status.dart';
 import 'compliance_badges.dart';
 import 'weight_sparkline.dart';
 
@@ -59,24 +60,13 @@ class ClientCard extends StatelessWidget {
       if (change != null) _Kpi(l10n.trainerClientKpiWeight, '${f.signedDelta(change)} kg', color: mc.weight),
     ];
 
-    final lastActivityAt = client.lastActivityAt;
-    final days = lastActivityAt == null ? null : _wholeDaysBetween(lastActivityAt, now);
-    final statusLabel = days == null
-        ? l10n.trainerClientNoActivityLabel
-        : days == 0
-            ? l10n.trainerClientActiveTodayLabel
-            : days == 1
-                ? l10n.trainerClientActiveYesterdayLabel
-                : l10n.trainerClientLastSeenLabel(days);
-    // Green while they are around, the warning colour once they have gone quiet
-    // (the compliance threshold), grey when there is nothing to judge yet.
-    final statusColor = flags.inactive ? mc.calories : (days == null ? p.text2 : mc.improvement);
+    final status = clientStatusOf(context, client, now);
     final chips = ComplianceBadges(flags: flags, prCount: client.prCount7d);
 
     final card = LifeyCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.s16),
-      semanticsLabel: '${client.displayName}, $statusLabel',
+      semanticsLabel: '${client.displayName}, ${status.label}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -97,14 +87,14 @@ class ClientCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.s4),
                     Row(
                       children: [
-                        Container(width: 8, height: 8, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+                        Container(width: 8, height: 8, decoration: BoxDecoration(color: status.color, shape: BoxShape.circle)),
                         const SizedBox(width: AppSpacing.s8),
                         Flexible(
                           child: Text(
-                            statusLabel,
+                            status.label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: statusColor),
+                            style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: status.color),
                           ),
                         ),
                       ],
@@ -190,10 +180,4 @@ class _KpiTile extends StatelessWidget {
       ),
     );
   }
-}
-
-int _wholeDaysBetween(DateTime from, DateTime to) {
-  final elapsedMs = to.millisecondsSinceEpoch - from.millisecondsSinceEpoch;
-  if (elapsedMs < 0) return 0;
-  return elapsedMs ~/ const Duration(days: 1).inMilliseconds;
 }

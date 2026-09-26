@@ -6701,5 +6701,13 @@
   "@trainerWeightLatestLabel": {
     "description": "Line under the weight trend card's title: the client's latest weigh-in and when it was",
     "placeholders": {"weight": {"type": "String"}, "date": {"type": "String"}}
+  },
+  "trainerClientsSearchHint": "Search clients",
+  "@trainerClientsSearchHint": {
+    "description": "Placeholder of the search field above the client list in the tablet layout (canvas Lifey 6, Trainer tablet)"
+  },
+  "trainerUpcomingCardTitle": "Upcoming",
+  "@trainerUpcomingCardTitle": {
+    "description": "Title of the card listing the client's next scheduled sessions on the tablet client overview"
   }
 }

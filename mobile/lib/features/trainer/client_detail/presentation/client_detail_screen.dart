@@ -14,6 +14,7 @@ import '../../clients/application/trainer_clients_controller.dart';
 import '../../programs/application/programs_controller.dart';
 import '../../schedule/application/client_schedules_controller.dart';
 import '../../schedule/presentation/widgets/create_schedule_sheet.dart';
+import '../../shared/trainer_layout.dart';
 import '../application/client_detail_entry.dart';
 import '../application/client_detail_tab_preference.dart';
 import '../domain/client_detail_tab.dart';
@@ -158,44 +159,97 @@ class _LoadedState extends ConsumerState<_Loaded>
           ClientDetailTab.schedule => l10n.trainerTabScheduleLabel,
         };
 
-    return Scaffold(
-      appBar: ClientDetailHeader(
-        client: widget.client.client,
-        showBack: !widget.embedded,
-        onMessage: _openChat,
-        openingChat: _openingChat,
-      ),
-      body: Column(
+    final tabLabels = [for (final tab in ClientDetailTab.values) label(tab)];
+
+    Widget tabs({required bool wide}) {
+      final pages = <Widget>[
+        ClientOverviewTab(
+          clientId: clientId,
+          onOpenTab: _openTab,
+          offline: offline,
+          missedWorkoutCount: widget.client.client.missedWorkoutCount,
+          wide: wide,
+        ),
+        ClientStatisticsTab(clientId: clientId, offline: offline),
+        ClientWorkoutsTab(clientId: clientId, offline: offline),
+        ClientNutritionTab(clientId: clientId, offline: offline),
+        ClientStepsTab(clientId: clientId, offline: offline),
+        ClientWeightTab(clientId: clientId, offline: offline),
+        ClientScheduleTab(clientId: clientId, offline: offline),
+      ];
+      return TabBarView(
+        controller: _controller,
         children: [
-          // Seven tabs do not fit a phone's width as text, and two rows would
-          // push the content below the fold. A scrolling row keeps every label
-          // readable and the first tabs visible where the thumb is.
-          ClientTabBar(
-            controller: _controller,
-            labels: [for (final tab in ClientDetailTab.values) label(tab)],
-          ),
-          ClientActionBar(onMessage: _openChat, onSchedule: _schedule, busy: _openingChat),
-          Expanded(
-            child: TabBarView(
-              controller: _controller,
-              children: [
-                ClientOverviewTab(
-                  clientId: clientId,
-                  onOpenTab: _openTab,
-                  offline: offline,
-                  missedWorkoutCount: widget.client.client.missedWorkoutCount,
-                ),
-                ClientStatisticsTab(clientId: clientId, offline: offline),
-                ClientWorkoutsTab(clientId: clientId, offline: offline),
-                ClientNutritionTab(clientId: clientId, offline: offline),
-                ClientStepsTab(clientId: clientId, offline: offline),
-                ClientWeightTab(clientId: clientId, offline: offline),
-                ClientScheduleTab(clientId: clientId, offline: offline),
-              ],
-            ),
-          ),
+          for (final (i, page) in pages.indexed)
+            // On the wide pane the overview fills the width; the list-shaped
+            // tabs stop at a readable column, lined up with the header.
+            wide && i != ClientDetailTab.overview.index
+                ? Align(
+                    alignment: Alignment.topLeft,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: trainerContentMaxWidth + 2 * _wideInset),
+                      child: Padding(padding: const EdgeInsets.symmetric(horizontal: _wideInset), child: page),
+                    ),
+                  )
+                : wide
+                    ? Padding(padding: const EdgeInsets.symmetric(horizontal: _wideInset), child: page)
+                    : page,
         ],
-      ),
+      );
+    }
+
+    // The tablet's detail pane is wide enough for the canvas's own layout —
+    // the big header with the actions in it, four KPIs in a row — but only once
+    // the pane really is (a 900 dp window leaves it about 400).
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = widget.embedded && constraints.maxWidth >= clientDetailWideBreakpoint;
+        if (wide) {
+          return Scaffold(
+            body: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  ClientDetailWideHeader(
+                    client: widget.client.client,
+                    onMessage: _openChat,
+                    onSchedule: _schedule,
+                    openingChat: _openingChat,
+                  ),
+                  ClientTabBar(controller: _controller, labels: tabLabels, edge: ClientDetailWideHeader.edge),
+                  Expanded(child: tabs(wide: true)),
+                ],
+              ),
+            ),
+          );
+        }
+        return Scaffold(
+          appBar: ClientDetailHeader(
+            client: widget.client.client,
+            showBack: !widget.embedded,
+            onMessage: _openChat,
+            openingChat: _openingChat,
+          ),
+          body: Column(
+            children: [
+              // Seven tabs do not fit a phone's width as text, and two rows
+              // would push the content below the fold. A scrolling row keeps
+              // every label readable and the first tabs visible where the
+              // thumb is.
+              ClientTabBar(controller: _controller, labels: tabLabels),
+              ClientActionBar(onMessage: _openChat, onSchedule: _schedule, busy: _openingChat),
+              Expanded(child: tabs(wide: false)),
+            ],
+          ),
+        );
+      },
     );
   }
 }
+
+/// The detail pane width from which the tablet's wide layout applies.
+const double clientDetailWideBreakpoint = 640;
+
+/// How far the wide layout's tab content sits in from the pane edge: the
+/// header's 32 dp margin less the tabs' own 20.
+const double _wideInset = 12;

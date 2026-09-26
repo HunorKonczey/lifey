@@ -14,6 +14,7 @@ import '../../domain/client_workout_session.dart';
 import '../widgets/client_tab_body.dart';
 import '../widgets/kpi_grid.dart';
 import '../widgets/trend_chart_card.dart';
+import '../widgets/upcoming_card.dart';
 
 /// "What is going on with this client?", answerable in about three seconds
 /// (canvas Lifey 6, client overview): four KPI tiles for the last 7 days, each
@@ -27,6 +28,7 @@ class ClientOverviewTab extends ConsumerWidget {
     required this.onOpenTab,
     required this.offline,
     this.missedWorkoutCount = 0,
+    this.wide = false,
   });
 
   final int clientId;
@@ -36,6 +38,10 @@ class ClientOverviewTab extends ConsumerWidget {
   /// Planned sessions the client skipped in the last 14 days, from the client
   /// list's summary — the one place that is counted.
   final int missedWorkoutCount;
+
+  /// The tablet's wide pane: four KPIs in a row, and the weight trend beside
+  /// the client's upcoming sessions (canvas Lifey 6 › Trainer tablet).
+  final bool wide;
 
   static const _period = ClientStatisticsPeriod.weekly;
 
@@ -71,6 +77,8 @@ class ClientOverviewTab extends ConsumerWidget {
         ]);
       },
       builder: (context) => _Content(
+        clientId: clientId,
+        wide: wide,
         statistics: stats.requireValue,
         stepDays: steps.requireValue,
         weights: weights.requireValue,
@@ -85,6 +93,8 @@ class ClientOverviewTab extends ConsumerWidget {
 
 class _Content extends StatelessWidget {
   const _Content({
+    required this.clientId,
+    required this.wide,
     required this.statistics,
     required this.stepDays,
     required this.weights,
@@ -94,6 +104,8 @@ class _Content extends StatelessWidget {
     required this.onOpenTab,
   });
 
+  final int clientId;
+  final bool wide;
   final ClientStatistics statistics;
   final List<ClientStepDay> stepDays;
   final List<ClientWeightEntry> weights;
@@ -176,6 +188,25 @@ class _Content extends StatelessWidget {
       ),
     ];
 
+    final weightCard = TrendChartCard(
+      title: l10n.trainerWeightTrendTitle,
+      subtitle: latest == null
+          ? null
+          : l10n.trainerWeightLatestLabel(f.weight(latest.weight), f.shortDate(latest.date.toLocal())),
+      trailing: weightChange == null
+          ? null
+          : TintedChip(
+              label: l10n.trainerWeightChangeChip(f.signedDelta(weightChange), ClientOverviewTab.weightWindowDays),
+              color: mc.weight,
+            ),
+      points: [for (final w in windowed) (date: w.date, value: w.weight)],
+      accentColor: mc.weight,
+      emptyMessage: l10n.trainerNoWeightEntriesMessage,
+      valueLabelBuilder: (value) => l10n.trainerKgValue(f.weight(value)),
+      chartHeight: wide ? 180 : 140,
+      onTap: () => onOpenTab(ClientDetailTab.weight),
+    );
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s16, AppSpacing.screen, AppSpacing.s24),
@@ -188,26 +219,21 @@ class _Content extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.s12),
-        KpiGrid(tiles: tiles),
-        const SizedBox(height: 10),
-        TrendChartCard(
-          title: l10n.trainerWeightTrendTitle,
-          subtitle: latest == null
-              ? null
-              : l10n.trainerWeightLatestLabel(f.weight(latest.weight), f.shortDate(latest.date.toLocal())),
-          trailing: weightChange == null
-              ? null
-              : TintedChip(
-                  label: l10n.trainerWeightChangeChip(f.signedDelta(weightChange), ClientOverviewTab.weightWindowDays),
-                  color: mc.weight,
-                ),
-          points: [for (final w in windowed) (date: w.date, value: w.weight)],
-          accentColor: mc.weight,
-          emptyMessage: l10n.trainerNoWeightEntriesMessage,
-          valueLabelBuilder: (value) => l10n.trainerKgValue(f.weight(value)),
-          chartHeight: 140,
-          onTap: () => onOpenTab(ClientDetailTab.weight),
-        ),
+        KpiGrid(tiles: tiles, columns: wide ? 4 : 2, gap: wide ? AppSpacing.s12 : 10),
+        SizedBox(height: wide ? AppSpacing.s12 : 10),
+        if (wide)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 3, child: weightCard),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(flex: 2, child: UpcomingCard(clientId: clientId, onTap: () => onOpenTab(ClientDetailTab.schedule))),
+              ],
+            ),
+          )
+        else
+          weightCard,
       ],
     );
   }

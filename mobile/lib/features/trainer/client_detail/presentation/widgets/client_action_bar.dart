@@ -23,28 +23,52 @@ class ClientActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s12, AppSpacing.screen, AppSpacing.s4),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: busy ? null : onMessage,
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-              label: _Label(l10n.trainerMessageClientButton),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: FilledButton.icon(
-              onPressed: onSchedule,
-              icon: const Icon(Icons.event_outlined, size: 22),
-              label: _Label(l10n.trainerScheduleWorkoutAction),
-            ),
-          ),
-        ],
-      ),
+      child: ClientActionButtons(onMessage: onMessage, onSchedule: onSchedule, busy: busy),
+    );
+  }
+}
+
+/// The two buttons themselves. [expand] shares the row between them (the
+/// phone's bar); without it each keeps its natural width, at least 140 / 150 dp
+/// as in the tablet canvas, so they sit at the end of the wide header.
+class ClientActionButtons extends StatelessWidget {
+  const ClientActionButtons({
+    super.key,
+    required this.onMessage,
+    required this.onSchedule,
+    this.busy = false,
+    this.expand = true,
+  });
+
+  final VoidCallback onMessage;
+  final VoidCallback onSchedule;
+  final bool busy;
+  final bool expand;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final message = OutlinedButton.icon(
+      onPressed: busy ? null : onMessage,
+      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+      label: _Label(l10n.trainerMessageClientButton),
+      style: expand ? null : OutlinedButton.styleFrom(minimumSize: const Size(140, 48)),
+    );
+    final schedule = FilledButton.icon(
+      onPressed: onSchedule,
+      icon: const Icon(Icons.event_outlined, size: 22),
+      label: _Label(l10n.trainerScheduleWorkoutAction),
+      style: expand ? null : FilledButton.styleFrom(minimumSize: const Size(150, 48)),
+    );
+    return Row(
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        expand ? Expanded(child: message) : message,
+        const SizedBox(width: 10),
+        expand ? Expanded(child: schedule) : schedule,
+      ],
     );
   }
 }

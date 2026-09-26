@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_tokens.dart';
 import '../../features/trainer/application/trainer_view_preference.dart';
+import '../../features/trainer/shared/trainer_layout.dart';
 import '../../l10n/app_localizations.dart';
 import 'ds/lifey_sheet.dart';
 import 'adaptive_bottom_nav.dart';
 import 'nav_collapse_controller.dart';
+import 'trainer_nav_rail.dart';
 
 /// The trainer's own shell, living beside [MainShell] rather than replacing
 /// it (docs/chat/41-trainer-mobile-v2-plan.md §2.1, option 3).
@@ -119,12 +121,29 @@ class _TrainerShellState extends ConsumerState<TrainerShell> {
       ),
     ];
 
+    // A tablet gets the rail beside the content instead of the floating bar
+    // under it (canvas Lifey 6 › Trainer tablet).
+    final rail = isTrainerTwoPane(context);
+    final showNav = destinations.length >= 2;
+
     return NavCollapseScope(
       controller: _collapseController,
       child: Scaffold(
-        extendBody: true,
-        body: widget.navigationShell,
-        bottomNavigationBar: destinations.length < 2
+        extendBody: !rail,
+        body: rail && showNav
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TrainerNavRail(
+                    selectedIndex: widget.navigationShell.currentIndex,
+                    onDestinationSelected: _onTap,
+                    destinations: destinations,
+                  ),
+                  Expanded(child: widget.navigationShell),
+                ],
+              )
+            : widget.navigationShell,
+        bottomNavigationBar: rail || !showNav
             ? null
             : AdaptiveBottomNav(
                 selectedIndex: widget.navigationShell.currentIndex,
