@@ -151,8 +151,8 @@ class SessionRow extends StatelessWidget {
     // GPS trail (C4a.6).
     final polyline = isCardio && session.family == ActivityFamily.distance ? session.cardio?.routePolyline : null;
 
-    final metricStyle = t.bodyMedium!.copyWith(fontSize: 14, height: 1.4, fontWeight: FontWeight.w600, color: p.text);
-    final detailStyle = t.bodySmall!.copyWith(fontSize: 14, height: 1.4, fontWeight: FontWeight.w500, color: p.text2);
+    final metricStyle = t.titleSmall!.copyWith(height: 1.4, fontWeight: FontWeight.w600, color: p.text);
+    final detailStyle = t.titleSmall!.copyWith(height: 1.4, fontWeight: FontWeight.w500, color: p.text2);
 
     return InkWell(
       onTap: onTap,
@@ -176,7 +176,7 @@ class SessionRow extends StatelessWidget {
                           title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: t.titleMedium!.copyWith(fontSize: 16, height: 1.25, color: p.text),
+                          style: t.titleMedium!.copyWith(height: 1.25, color: p.text),
                         ),
                       ),
                       SyncStatusIndicator(clientId: session.clientId),

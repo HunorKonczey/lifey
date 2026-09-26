@@ -97,7 +97,7 @@ class IntervalPlanPickerSheet extends ConsumerWidget {
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(borderRadius: AppRadius.controlAll),
-                    textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    textStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w800),
                   ),
                   child: Text(l10n.intervalPlanPickerWithoutPlan),
                 ),
@@ -144,18 +144,14 @@ class _PlanRow extends StatelessWidget {
                   children: [
                     Text(
                       plan.name,
-                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
+                      style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800),
                     ),
                     Text(
                       l10n.intervalPlanSummaryLabel(
                         CardioFormatter.duration(Duration(seconds: plan.totalSeconds)),
                         plan.sectionCount,
                       ),
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -192,7 +188,7 @@ class _AddRow extends StatelessWidget {
             children: [
               Icon(icon, size: 18, color: scheme.onSurfaceVariant),
               const SizedBox(width: 8),
-              Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+              Text(label, style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700)),
             ],
           ),
         ),

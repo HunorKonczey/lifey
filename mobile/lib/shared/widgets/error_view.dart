@@ -74,13 +74,13 @@ class ErrorView extends StatelessWidget {
                         header: true,
                         child: Text(
                           title ?? l10n.somethingWentWrongTitle,
-                          style: t.titleMedium!.copyWith(fontSize: 15, height: 1.3, color: p.text),
+                          style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w700, height: 1.3, color: p.text),
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         message ?? friendlyError(error),
-                        style: t.bodyMedium!.copyWith(fontSize: 14, height: 1.45, color: p.text2),
+                        style: t.titleSmall!.copyWith(fontWeight: FontWeight.w500, height: 1.45, color: p.text2),
                       ),
                       if (onRetry != null)
                         Padding(

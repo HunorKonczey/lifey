@@ -59,13 +59,7 @@ class RecipeGridCard extends ConsumerWidget {
           .value;
     }
 
-    const macroStyle = TextStyle(
-      fontFamily: AppType.fontFamily,
-      fontSize: 13,
-      height: 1.2,
-      fontWeight: FontWeight.w700,
-      fontFeatures: AppType.tabular,
-    );
+    final macroStyle = Theme.of(context).textTheme.bodySmall!.copyWith(height: 1.2, fontWeight: FontWeight.w700, fontFeatures: AppType.tabular);
 
     return LifeyCard(
       padding: const EdgeInsets.all(AppSpacing.s8),
@@ -117,7 +111,7 @@ class RecipeGridCard extends ConsumerWidget {
                   recipe.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: t.titleMedium!.copyWith(fontSize: 16, height: 1.25, color: p.text),
+                  style: t.titleMedium!.copyWith(height: 1.25, color: p.text),
                 ),
                 const SizedBox(height: AppSpacing.s4),
                 Wrap(

@@ -44,23 +44,8 @@ class DayBudgetCard extends StatelessWidget {
     final hasGoal = goal != null && goal > 0;
     final over = hasGoal && calories > goal;
 
-    final bigStyle = TextStyle(
-      fontFamily: AppType.fontFamily,
-      fontSize: 28,
-      height: 1,
-      letterSpacing: -0.02 * 28,
-      fontWeight: FontWeight.w800,
-      color: p.text,
-      fontFeatures: AppType.tabular,
-    );
-    final unitStyle = TextStyle(
-      fontFamily: AppType.fontFamily,
-      fontSize: 14,
-      height: 1,
-      fontWeight: FontWeight.w600,
-      color: p.text2,
-      fontFeatures: AppType.tabular,
-    );
+    final bigStyle = AppType.number(28, weight: FontWeight.w800, color: p.text);
+    final unitStyle = Theme.of(context).textTheme.titleSmall!.copyWith(height: 1, fontWeight: FontWeight.w600, color: p.text2, fontFeatures: AppType.tabular);
 
     final remaining = hasGoal ? (goal - calories).abs() : 0.0;
     final chip = !hasGoal
@@ -135,14 +120,7 @@ class _MacroLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final f = LifeyFormat.of(context);
     final p = context.palette;
-    final base = TextStyle(
-      fontFamily: AppType.fontFamily,
-      fontSize: 13,
-      height: 1.2,
-      fontWeight: FontWeight.w600,
-      color: p.text2,
-      fontFeatures: AppType.tabular,
-    );
+    final base = Theme.of(context).textTheme.bodySmall!.copyWith(height: 1.2, fontWeight: FontWeight.w600, color: p.text2, fontFeatures: AppType.tabular);
     final hasGoal = goal != null && goal! > 0;
     return Text.rich(
       TextSpan(style: base, children: [

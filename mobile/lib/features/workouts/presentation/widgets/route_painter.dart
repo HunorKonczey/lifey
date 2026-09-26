@@ -302,7 +302,7 @@ class _RouteDelegate extends CustomPainter {
     final painter = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color),
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color),  // design-audit: ok - canvas label: a painter has no BuildContext or theme
       ),
       textDirection: TextDirection.ltr,
     )..layout();

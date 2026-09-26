@@ -48,13 +48,7 @@ class OriginTrainerBadge extends ConsumerWidget {
             const SizedBox(width: 4),
             Text(
               l10n.originTrainerBadgeLabel,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                color: context.palette.role,
-                height: 1.0,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: context.palette.role, height: 1.0),
             ),
           ],
         ),
@@ -82,12 +76,7 @@ class OriginTrainerBadge extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       l10n.originTrainerSheetTitle,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface),
                     ),
                   ),
                 ],
@@ -97,13 +86,7 @@ class OriginTrainerBadge extends ConsumerWidget {
                 email != null
                     ? l10n.originTrainerSheetBody(email)
                     : l10n.originTrainerUnknown,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  color: scheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant, height: 1.4),
               ),
             ],
           ),

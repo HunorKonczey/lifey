@@ -158,10 +158,7 @@ class _QuickAction extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       label,
-                      style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                            fontSize: 13,
-                            color: foreground,
-                          ),
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: foreground),
                     ),
                   ],
                 ),

@@ -172,12 +172,7 @@ class BannerAdChrome extends StatelessWidget {
             ExcludeSemantics(
               child: Text(
                 l10n.bannerAdLabel,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
               ),
             ),
             IconButton(

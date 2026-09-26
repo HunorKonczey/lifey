@@ -136,7 +136,7 @@ class _DayRow extends StatelessWidget {
                   children: [
                     Text(
                       LifeyFormat.of(context).shortDayLabel(summary.day),
-                      style: t.titleMedium!.copyWith(fontSize: 15, height: 1.3, color: p.text),
+                      style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w700, height: 1.3, color: p.text),
                     ),
                     const SizedBox(height: 3),
                     Text(

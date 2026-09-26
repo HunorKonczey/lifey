@@ -124,7 +124,7 @@ class _UpcomingCard extends StatelessWidget {
                 children: [
                   Text(
                     session.templateName ?? l10n.freeWorkoutLabel,
-                    style: theme.textTheme.titleMedium!.copyWith(fontSize: 15, height: 1.3, color: p.text),
+                    style: theme.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w700, height: 1.3, color: p.text),
                   ),
                   const SizedBox(height: AppSpacing.s4),
                   Wrap(

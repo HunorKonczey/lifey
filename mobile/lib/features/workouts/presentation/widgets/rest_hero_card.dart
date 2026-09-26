@@ -151,15 +151,7 @@ class RestHeroCard extends StatelessWidget {
                           child: Text(
                             text,
                             maxLines: 1,
-                            style: TextStyle(
-                              fontFamily: AppType.fontFamily,
-                              fontSize: 44,
-                              height: 1.05,
-                              letterSpacing: -0.02 * 44,
-                              fontWeight: FontWeight.w800,
-                              color: numberColor,
-                              fontFeatures: AppType.tabular,
-                            ),
+                            style: AppType.number(44, weight: FontWeight.w800, color: numberColor),
                           ),
                         ),
                       ),
@@ -211,7 +203,7 @@ class RestHeroCard extends StatelessWidget {
             ],
             if (nextLine != null) ...[
               const SizedBox(height: AppSpacing.s12),
-              Text(nextLine!, style: t.bodyMedium!.copyWith(fontSize: 14, height: 1.3, color: p.text2)),
+              Text(nextLine!, style: t.titleSmall!.copyWith(fontWeight: FontWeight.w500, height: 1.3, color: p.text2)),
             ],
           ],
         ),

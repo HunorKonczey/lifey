@@ -229,20 +229,11 @@ class _DetailBody extends StatelessWidget {
                       text: TextSpan(children: [
                         TextSpan(
                           text: weightFormat.format(prSet.weight),
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.onSurface,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
+                          style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface),
                         ),
                         TextSpan(
                           text: ' kg × ${prSet.reps}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: scheme.onSurfaceVariant,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(color: scheme.onSurfaceVariant),
                         ),
                       ]),
                     ),
@@ -259,20 +250,11 @@ class _DetailBody extends StatelessWidget {
                       text: TextSpan(children: [
                         TextSpan(
                           text: weightFormat.format(bestOneRM),
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.primary,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
+                          style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.primary),
                         ),
                         TextSpan(
                           text: ' kg',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: scheme.onSurfaceVariant,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(color: scheme.onSurfaceVariant),
                         ),
                       ]),
                     ),
@@ -299,11 +281,7 @@ class _DetailBody extends StatelessWidget {
                       Expanded(
                         child: Text(
                           l10n.trendLast8WeeksLabel,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
                         ),
                       ),
                       if (trendPct != null)
@@ -438,7 +416,7 @@ class _CategoryChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, height: 1.0)
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, height: 1.0)
                 .copyWith(color: color),
           ),
         ],
@@ -472,12 +450,7 @@ class _EquipmentChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 1.0,
-              color: color,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, height: 1.0, color: color),
           ),
         ],
       ),
@@ -520,11 +493,7 @@ class _StatCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -537,10 +506,7 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               subtitle!,
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-              ).copyWith(color: scheme.onSurfaceVariant),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600).copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ],
@@ -565,12 +531,7 @@ class _TrendPill extends StatelessWidget {
       decoration: BoxDecoration(color: bg, borderRadius: AppRadius.pill),
       child: Text(
         pct,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: fg,
-          height: 1.0,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: fg, height: 1.0),
       ),
     );
   }
@@ -614,23 +575,19 @@ class _PrHistoryRow extends StatelessWidget {
                 children: [
                   Text(
                     typeLabel,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700)
                         .copyWith(color: scheme.onSurface),
                   ),
                   Text(
                     dateLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
             Text(
               valueLabel,
-              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800)
                   .copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
@@ -674,12 +631,12 @@ class _DaySetRow extends StatelessWidget {
           children: [
             Text(
               dayLabel,
-              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700)
                   .copyWith(color: scheme.onSurface),
             ),
             Text(
               summary,
-              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700)
                   .copyWith(color: scheme.onSurfaceVariant),
             ),
           ],

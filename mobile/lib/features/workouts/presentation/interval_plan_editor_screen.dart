@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_type.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/format/cardio_formatter.dart';
@@ -311,25 +312,20 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
       children: [
         Text(
           l10n.intervalPlanNameLabel,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _name,
           textCapitalization: TextCapitalization.sentences,
-          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800),
           decoration: InputDecoration(
             hintText: l10n.intervalPlanNameHint,
             filled: true,
             fillColor: scheme.surfaceContainerHigh,
             suffixIcon: Icon(Icons.edit_outlined, size: 18, color: scheme.onSurfaceVariant),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: AppRadius.controlAll,
               borderSide: BorderSide.none,
             ),
           ),
@@ -370,28 +366,18 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.controlAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.6,
-              color: accent ?? scheme.onSurface,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+            style: AppType.number(20, weight: FontWeight.w800, color: accent ?? scheme.onSurface),
           ),
           Text(
             caption,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -410,7 +396,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: AppRadius.cardAll,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,30 +405,25 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
               const SizedBox(height: 10),
               Text(
                 l10n.intervalEmptyTitle,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(
                 l10n.intervalEmptyBody,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.45,
-                  fontWeight: FontWeight.w500,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.45, fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
               ),
             ],
           ),
         ),
         const SizedBox(height: 10),
         InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: AppRadius.cardAll,
           onTap: () => _useStarterPlan(l10n),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: scheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: AppRadius.cardAll,
               border: Border.all(color: accent.withValues(alpha: 0.28)),
             ),
             child: Row(
@@ -455,15 +436,11 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
                     children: [
                       Text(
                         l10n.intervalStarterTitle,
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800),
                       ),
                       Text(
                         l10n.intervalStarterSubtitle,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -490,9 +467,9 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
   }) {
     return Material(
       color: nested ? scheme.surfaceContainerHigh : scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(nested ? 14 : 18),
+      borderRadius: (nested ? AppRadius.controlAll : AppRadius.cardAll),
       child: InkWell(
-        borderRadius: BorderRadius.circular(nested ? 14 : 18),
+        borderRadius: (nested ? AppRadius.controlAll : AppRadius.cardAll),
         onTap: () => _editSection(item, onRemove: onRemove),
         child: Padding(
           padding: EdgeInsets.fromLTRB(nested ? 12 : 8, 11, 14, 11),
@@ -510,10 +487,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
                   children: [
                     Text(
                       item.name ?? _intensityLabel(item.intensity, l10n),
-                      style: TextStyle(
-                        fontSize: nested ? 14 : 14.5,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 3),
                     _intensityTag(item.intensity, l10n, scheme),
@@ -522,11 +496,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
               ),
               Text(
                 CardioFormatter.duration(Duration(seconds: item.durationSeconds)),
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
               ),
             ],
           ),
@@ -551,18 +521,14 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(color: dot, borderRadius: BorderRadius.circular(3)),
+          decoration: BoxDecoration(color: dot, borderRadius: AppRadius.tagAll),
         ),
         const SizedBox(width: 7),
         Text(
           // The RPE hint rides along on the hard level only: it's the one
           // level "hard" alone doesn't pin down (docs/cardio/61 §3 M37).
           isHard ? '${l10n.intervalIntensityHard} · 9–10/10' : _intensityLabel(intensity, l10n),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: isHard ? accent : scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: isHard ? accent : scheme.onSurfaceVariant),
         ),
       ],
     );
@@ -583,14 +549,14 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
     if (block.collapsed) {
       return Material(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: AppRadius.cardAll,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: AppRadius.cardAll,
           onTap: () => setState(() => block.collapsed = false),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: AppRadius.cardAll,
               border: Border.all(color: accent.withValues(alpha: 0.28)),
             ),
             child: Row(
@@ -603,15 +569,11 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
                     children: [
                       Text(
                         _collapsedSummary(block, l10n),
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800),
                       ),
                       Text(
                         CardioFormatter.duration(Duration(seconds: block.totalSeconds)),
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -627,7 +589,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
     return Container(
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: AppRadius.cardAll,
         border: Border.all(color: accent.withValues(alpha: 0.22)),
       ),
       padding: const EdgeInsets.fromLTRB(8, 10, 12, 12),
@@ -646,12 +608,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
               Expanded(
                 child: Text(
                   l10n.intervalRepeatBlockLabel,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.1,
-                    color: accent,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.1, color: accent),
                 ),
               ),
               // Edit-in-place counter (−/number/+): the repeat count is the
@@ -688,18 +645,13 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
               Text(
                 '${block.repeatCount} × ${CardioFormatter.duration(Duration(seconds: block.onePassSeconds))}'
                 ' = ${CardioFormatter.duration(Duration(seconds: block.totalSeconds))}',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
               ),
               TextButton(
                 onPressed: () => setState(() => _items.remove(block)),
                 child: Text(
                   l10n.intervalRemoveBlockButton,
-                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -713,7 +665,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
     return Container(
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -727,12 +679,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
           ),
           Text(
             '×${block.repeatCount}',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: accent,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: accent, fontFeatures: const [FontFeature.tabularFigures()]),
           ),
           _counterButton(
             Icons.add,
@@ -749,7 +696,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
 
   Widget _counterButton(IconData icon, ColorScheme scheme, {VoidCallback? onTap}) {
     return InkWell(
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: AppRadius.pill,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -816,8 +763,8 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
               label: Text(l10n.intervalSaveAndStartButton),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.cardAll),
+                textStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -839,9 +786,9 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
   }) {
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.controlAll,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -850,7 +797,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
             children: [
               Icon(icon, size: 18, color: scheme.onSurfaceVariant),
               const SizedBox(width: 8),
-              Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+              Text(label, style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700)),
             ],
           ),
         ),
@@ -915,17 +862,12 @@ class _SectionEditorSheetState extends State<_SectionEditorSheet> {
           children: [
             Text(
               l10n.intervalSectionEditorTitle(_label(_intensity)),
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 18),
             Text(
               l10n.intervalDurationLabel,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Row(
@@ -938,12 +880,7 @@ class _SectionEditorSheetState extends State<_SectionEditorSheet> {
                 }),
                 Text(
                   CardioFormatter.duration(Duration(seconds: _duration)),
-                  style: const TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(30, weight: FontWeight.w800),
                 ),
                 _stepperButton(Icons.add, scheme, onTap: () {
                   if (_duration + widget.step > widget.maxSeconds) return;
@@ -955,12 +892,7 @@ class _SectionEditorSheetState extends State<_SectionEditorSheet> {
             const SizedBox(height: 20),
             Text(
               l10n.intervalTargetIntensityLabel,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Row(
@@ -974,12 +906,7 @@ class _SectionEditorSheetState extends State<_SectionEditorSheet> {
             const SizedBox(height: 14),
             Text(
               l10n.intervalResistanceNote,
-              style: TextStyle(
-                fontSize: 10.5,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.5, fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
             Align(
@@ -1000,9 +927,9 @@ class _SectionEditorSheetState extends State<_SectionEditorSheet> {
   Widget _stepperButton(IconData icon, ColorScheme scheme, {required VoidCallback onTap}) {
     return Material(
       color: scheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.controlAll,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -1020,7 +947,7 @@ class _SectionEditorSheetState extends State<_SectionEditorSheet> {
       IntervalIntensity.easy => accent.withValues(alpha: 0.35),
     };
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.controlAll,
       onTap: () {
         setState(() => _intensity = level);
         _apply();
@@ -1031,7 +958,7 @@ class _SectionEditorSheetState extends State<_SectionEditorSheet> {
           color: selected && level == IntervalIntensity.hard
               ? accent
               : scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.controlAll,
           border: selected
               ? Border.all(color: accent, width: 2)
               : Border.all(color: Colors.transparent, width: 2),
@@ -1044,19 +971,15 @@ class _SectionEditorSheetState extends State<_SectionEditorSheet> {
               height: 6,
               decoration: BoxDecoration(
                 color: selected && level == IntervalIntensity.hard ? scheme.surface : fill,
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: AppRadius.tagAll,
               ),
             ),
             const SizedBox(height: 5),
             Text(
               _label(level),
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
-                color: selected && level == IntervalIntensity.hard
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: selected ? FontWeight.w800 : FontWeight.w700, color: selected && level == IntervalIntensity.hard
                     ? scheme.surface
-                    : scheme.onSurfaceVariant,
-              ),
+                    : scheme.onSurfaceVariant),
             ),
           ],
         ),

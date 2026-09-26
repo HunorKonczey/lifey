@@ -74,7 +74,7 @@ class LifeySegmented<T> extends StatelessWidget {
                       color: pillColor,
                       borderRadius: AppRadius.pill,
                       boxShadow: Theme.of(context).brightness == Brightness.dark
-                          ? const [BoxShadow(color: Color(0x66000000), offset: Offset(0, 2), blurRadius: 8)]
+                          ? AppElevation.pillThumbDark
                           : context.elevation.e1,
                     ),
                   ),

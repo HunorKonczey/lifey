@@ -65,23 +65,12 @@ class _MusicProviderPickerSheetState extends ConsumerState<MusicProviderPickerSh
           children: [
             Text(
               l10n.musicPickerTitle,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurface,
-                letterSpacing: -0.3,
-              ),
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, letterSpacing: -0.3),
             ),
             const SizedBox(height: 3),
             Text(
               l10n.musicPickerSubtitle,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 18),
             for (final id in providers) ...[
@@ -103,13 +92,7 @@ class _MusicProviderPickerSheetState extends ConsumerState<MusicProviderPickerSh
                 Expanded(
                   child: Text(
                     l10n.musicPickerFooterNote,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurfaceVariant,
-                      height: 1.45,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant, height: 1.45),
                   ),
                 ),
               ],
@@ -171,22 +154,12 @@ class _ProviderRow extends StatelessWidget {
               children: [
                 Text(
                   provider.displayName,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface),
                 ),
                 const SizedBox(height: 1),
                 Text(
                   statusLabel,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: selected ? scheme.primary : scheme.onSurfaceVariant),
                 ),
               ],
             ),

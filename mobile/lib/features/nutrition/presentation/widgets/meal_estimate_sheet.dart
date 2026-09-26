@@ -487,7 +487,7 @@ class _Thumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(size / 6),
+      borderRadius: BorderRadius.circular(size / 6), // design-audit: ok - proportional to the thumbnail
       child: Image.file(
         File(imagePath),
         width: size,

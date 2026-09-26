@@ -218,12 +218,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                         child: Text(
                           widget.axisLabelBuilder!(v),
                           maxLines: 1,
-                          style: theme.textTheme.labelSmall!.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            height: 1,
-                            color: p.text3,
-                          ),
+                          style: theme.textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, height: 1, color: p.text3),
                         ),
                       ),
                     ),
@@ -244,7 +239,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
     final legend = widget.legend;
     if (legend == null) return chart;
     final hasTrend = widget.trendValues?.any((v) => v != null) ?? false;
-    final legendStyle = theme.textTheme.labelMedium!.copyWith(fontSize: 12, color: p.text2);
+    final legendStyle = theme.textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: p.text2);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -255,7 +250,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
             swatch: Container(
               width: 14,
               height: 3,
-              decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: accent, borderRadius: AppRadius.tagAll),
             ),
             label: legend.daily,
             style: legendStyle,
@@ -345,7 +340,7 @@ class _PointTooltip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: theme.colorScheme.inverseSurface,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.tagAll,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

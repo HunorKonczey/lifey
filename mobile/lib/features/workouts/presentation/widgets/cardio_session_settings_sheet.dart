@@ -217,12 +217,7 @@ class _SectionLabel extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Text(
       label,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-        color: scheme.onSurfaceVariant,
-      ),
+      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
     );
   }
 }
@@ -281,11 +276,7 @@ class _ComingSoonRow extends StatelessWidget {
                         ),
                         child: Text(
                           badge,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
                         ),
                       ),
                     ],

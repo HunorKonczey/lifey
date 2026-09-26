@@ -52,7 +52,7 @@ class WeightHeroHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(overline, style: t.bodyMedium!.copyWith(fontSize: 15, fontWeight: FontWeight.w500, color: p.text2)),
+            Text(overline, style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w500, color: p.text2)),
             const SizedBox(height: AppSpacing.s8),
             MetricValue(value: f.decimal(latest.weight, 1), unit: 'kg', size: 64),
           ],

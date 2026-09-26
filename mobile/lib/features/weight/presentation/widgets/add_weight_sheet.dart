@@ -227,10 +227,10 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
           Text(
             l10n.enterANumberError,
             textAlign: TextAlign.center,
-            style: t.bodyMedium!.copyWith(fontSize: 15, color: context.metricColors.negative),
+            style: t.bodyMedium!.copyWith(color: context.metricColors.negative),
           )
         else if (reference != null)
-          Text(reference, textAlign: TextAlign.center, style: t.bodyMedium!.copyWith(fontSize: 15, color: p.text2)),
+          Text(reference, textAlign: TextAlign.center, style: t.bodyMedium!.copyWith(color: p.text2)),
         const SizedBox(height: AppSpacing.s24),
         LifeyCard.nested(
           onTap: _submitting ? null : _pickDate,
@@ -242,7 +242,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
               Expanded(
                 child: Text(
                   dateLabel,
-                  style: t.titleMedium!.copyWith(fontSize: 17, fontWeight: FontWeight.w700, color: p.text),
+                  style: t.titleMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text),
                 ),
               ),
               Icon(Icons.keyboard_arrow_down_rounded, size: 24, color: p.text2),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_type.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 
@@ -74,12 +75,7 @@ class BoxScoreStepper extends StatelessWidget {
               Expanded(
                 child: Text(
                   l10n.boxScoreCircleLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
                 ),
               ),
               const SizedBox(width: 8),
@@ -87,7 +83,7 @@ class BoxScoreStepper extends StatelessWidget {
                 child: Text(
                   l10n.boxScoreAutoCloseHint,
                   textAlign: TextAlign.right,
-                  style: TextStyle(fontSize: 10, color: scheme.outline),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.outline),
                 ),
               ),
             ],
@@ -130,12 +126,7 @@ class _Column extends StatelessWidget {
           column.label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 9.5,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.8, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 6),
         Row(
@@ -149,11 +140,7 @@ class _Column extends StatelessWidget {
               child: Text(
                 '${column.value}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
+                style: AppType.number(20, weight: FontWeight.w800),
               ),
             ),
             _StepButton(

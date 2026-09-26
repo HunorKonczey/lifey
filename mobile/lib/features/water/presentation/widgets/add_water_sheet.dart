@@ -44,13 +44,7 @@ class _TodayTotal extends ConsumerWidget {
         : '${f.decimal(total, 2)} L';
     return Text(
       text,
-      style: Theme.of(context).textTheme.labelLarge!.copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            height: 1,
-            fontFeatures: AppType.tabular,
-            color: context.metricColors.water,
-          ),
+      style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600, height: 1, fontFeatures: AppType.tabular, color: context.metricColors.water),
     );
   }
 }

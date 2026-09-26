@@ -246,7 +246,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                         header: true,
                         child: Text(
                           _isEditing ? l10n.editFoodEntryTitle : l10n.addFoodToMealTitle,
-                          style: t.headlineSmall!.copyWith(fontSize: 22, height: 1.2, color: p.text),
+                          style: t.headlineSmall!.copyWith(height: 1.2, color: p.text),
                         ),
                       ),
                     ),
@@ -406,12 +406,12 @@ class _FoodOptions extends StatelessWidget {
                       child: Row(
                         children: [
                           Expanded(
-                            child: Text(food.name, style: t.titleMedium!.copyWith(fontSize: 15, color: p.text)),
+                            child: Text(food.name, style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text)),
                           ),
                           const SizedBox(width: AppSpacing.s8),
                           Text(
                             '${f.kcal(food.caloriesPer100g)} kcal',
-                            style: t.bodySmall!.copyWith(fontSize: 13, color: p.text2),
+                            style: t.bodySmall!.copyWith(color: p.text2),
                           ),
                         ],
                       ),
@@ -490,13 +490,13 @@ class _SelectedFoodCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(food.name, style: t.titleLarge!.copyWith(fontSize: 18, color: p.text)),
+            Text(food.name, style: t.titleLarge!.copyWith(color: p.text)),
             const SizedBox(height: 2),
             Text(
               food.caloriesPer100g > 0
                   ? l10n.entryFoodPer100(f.kcal(food.caloriesPer100g))
                   : l10n.entryFoodPer100NoKcal,
-              style: t.bodyMedium!.copyWith(fontSize: 14, color: p.text2),
+              style: t.titleSmall!.copyWith(fontWeight: FontWeight.w500, color: p.text2),
             ),
             const SizedBox(height: AppSpacing.s16),
             Row(
@@ -529,15 +529,7 @@ class _SelectedFoodCard extends ConsumerWidget {
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
                                 textInputAction: TextInputAction.done,
-                                style: TextStyle(
-                                  fontFamily: AppType.fontFamily,
-                                  fontSize: 44,
-                                  height: 1.1,
-                                  letterSpacing: -0.02 * 44,
-                                  fontWeight: FontWeight.w800,
-                                  color: p.text,
-                                  fontFeatures: AppType.tabular,
-                                ),
+                                style: AppType.number(44, weight: FontWeight.w800, color: p.text),
                                 decoration: decoration,
                                 onChanged: (_) => onTyped(),
                                 validator: (v) {
@@ -554,7 +546,7 @@ class _SelectedFoodCard extends ConsumerWidget {
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           'g',
-                          style: t.titleLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: p.text2),
+                          style: t.titleLarge!.copyWith(fontWeight: FontWeight.w700, color: p.text2),
                         ),
                       ],
                     ),
@@ -612,16 +604,11 @@ class _SelectedFoodCard extends ConsumerWidget {
                         children: [
                           Text(
                             l10n.entryPreviewKcal(f.kcal(kcal)),
-                            style: t.titleLarge!.copyWith(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: mc.calories,
-                              fontFeatures: AppType.tabular,
-                            ),
+                            style: t.headlineSmall!.copyWith(fontWeight: FontWeight.w800, color: mc.calories, fontFeatures: AppType.tabular),
                           ),
                           Text(
                             l10n.entryPreviewProtein(f.grams(protein)),
-                            style: t.bodySmall!.copyWith(fontSize: 13, color: mc.protein, fontWeight: FontWeight.w600),
+                            style: t.bodySmall!.copyWith(color: mc.protein, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -630,12 +617,7 @@ class _SelectedFoodCard extends ConsumerWidget {
                           remaining < 0
                               ? l10n.entryBudgetOver(f.kcal(-remaining))
                               : l10n.entryBudgetLeft(f.kcal(remaining)),
-                          style: t.titleMedium!.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: remaining < 0 ? mc.negative : p.text,
-                            fontFeatures: AppType.tabular,
-                          ),
+                          style: t.titleMedium!.copyWith(fontWeight: FontWeight.w700, color: remaining < 0 ? mc.negative : p.text, fontFeatures: AppType.tabular),
                         ),
                     ],
                   );

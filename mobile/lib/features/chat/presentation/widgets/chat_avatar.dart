@@ -40,7 +40,7 @@ class ChatAvatar extends ConsumerWidget {
               monogram,
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: size * 0.34,
+                fontSize: size * 0.34,  // design-audit: ok - monogram proportional to the avatar
                 fontWeight: FontWeight.w800,
                 color: color,
                 letterSpacing: 0.2,

@@ -48,7 +48,7 @@ class ChatAttachmentView extends ConsumerWidget {
             ? null
             : () => _openFullScreen(context, ref, message.serverId!),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadius.controlAll,
           child: SizedBox(
             width: size.width,
             height: size.height,

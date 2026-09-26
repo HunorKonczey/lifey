@@ -66,11 +66,7 @@ class HrZonePanel extends StatelessWidget {
                 child: Text(
                   toBeginningOfSentenceCase(
                       l10n.hrZonesSectionLabel.toLowerCase(), l10n.localeName),
-                  style: t.titleLarge!.copyWith(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      height: 1.2,
-                      color: p.text),
+                  style: t.titleLarge!.copyWith(fontWeight: FontWeight.w800, height: 1.2, color: p.text),
                 ),
               ),
               TintedChip(
@@ -108,8 +104,7 @@ class HrZonePanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.s4),
           Text(
             l10n.hrZoneSourceNote,
-            style: t.bodySmall!
-                .copyWith(fontSize: 13, height: 1.4, color: p.text3),
+            style: t.bodySmall!.copyWith(height: 1.4, color: p.text3),
           ),
         ],
       ),
@@ -224,32 +219,26 @@ class _ZoneRow extends StatelessWidget {
               width: 34,
               child: Text(
                 'Z${slice.zone}',
-                style: t.titleSmall!.copyWith(
-                    fontSize: 15, fontWeight: FontWeight.w800, color: color),
+                style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w800, color: color),
               ),
             ),
             Expanded(
               child: Text(name,
-                  style: t.bodyLarge!.copyWith(fontSize: 17, color: p.text2)),
+                  style: t.titleMedium!.copyWith(fontWeight: FontWeight.w600, color: p.text2)),
             ),
             const SizedBox(width: AppSpacing.s8),
             // Full contrast even for an untouched zone: the number is the fact,
             // the colour is decoration (M43).
             Text(
               time,
-              style: t.titleSmall!.copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: p.text,
-                  fontFeatures: tabular),
+              style: t.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: p.text, fontFeatures: tabular),
             ),
             SizedBox(
               width: 56,
               child: Text(
                 '$percent%',
                 textAlign: TextAlign.right,
-                style: t.bodyLarge!.copyWith(
-                    fontSize: 17, color: p.text2, fontFeatures: tabular),
+                style: t.titleMedium!.copyWith(fontWeight: FontWeight.w600, color: p.text2, fontFeatures: tabular),
               ),
             ),
           ],

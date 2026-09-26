@@ -446,8 +446,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                       '${f.shortDayLabel(_dateTime.toLocal())} · ${f.time(_dateTime.toLocal())}',
                       style: Theme.of(context)
                           .textTheme
-                          .titleMedium!
-                          .copyWith(fontSize: 16, color: p.text),
+                          .titleMedium!.copyWith(color: p.text),
                     ),
                   ),
                   Icon(Icons.expand_more_rounded, size: 24, color: p.text2),
@@ -581,12 +580,10 @@ class _FoodRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(food.name,
-                        style: t.titleMedium!.copyWith(
-                            fontSize: 16, height: 1.25, color: p.text)),
+                        style: t.titleMedium!.copyWith(height: 1.25, color: p.text)),
                     const SizedBox(height: 3),
                     Text(subtitle,
-                        style: t.bodySmall!.copyWith(
-                            fontSize: 13, height: 1.4, color: p.text2)),
+                        style: t.bodySmall!.copyWith(height: 1.4, color: p.text2)),
                   ],
                 ),
               ),

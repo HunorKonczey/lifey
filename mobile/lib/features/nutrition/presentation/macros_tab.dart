@@ -149,29 +149,14 @@ class _TodayCard extends StatelessWidget {
                       value: calories,
                       builder: (context, v) => Text(
                         f.kcal(v),
-                        style: TextStyle(
-                          fontFamily: AppType.fontFamily,
-                          fontSize: 44,
-                          height: 1.1,
-                          letterSpacing: -0.02 * 44,
-                          fontWeight: FontWeight.w800,
-                          color: p.text,
-                          fontFeatures: AppType.tabular,
-                        ),
+                        style: AppType.number(44, weight: FontWeight.w800, color: p.text),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Text(
                         hasGoal ? ' ${l10n.dayBudgetOfGoal(f.kcal(goal))}' : ' kcal',
-                        style: TextStyle(
-                          fontFamily: AppType.fontFamily,
-                          fontSize: 16,
-                          height: 1.2,
-                          fontWeight: FontWeight.w600,
-                          color: p.text2,
-                          fontFeatures: AppType.tabular,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium!.copyWith(height: 1.2, fontWeight: FontWeight.w600, color: p.text2, fontFeatures: AppType.tabular),
                       ),
                     ),
                   ],
@@ -254,25 +239,11 @@ class _MacroRing extends StatelessWidget {
                 children: [
                   Text(
                     f.grams(value),
-                    style: TextStyle(
-                      fontFamily: AppType.fontFamily,
-                      fontSize: 22,
-                      height: 1.1,
-                      fontWeight: FontWeight.w800,
-                      color: p.text,
-                      fontFeatures: AppType.tabular,
-                    ),
+                    style: AppType.number(22, weight: FontWeight.w800, color: p.text),
                   ),
                   Text(
                     hasGoal ? '/ ${f.grams(goal!)} g' : 'g',
-                    style: TextStyle(
-                      fontFamily: AppType.fontFamily,
-                      fontSize: 12,
-                      height: 1.2,
-                      fontWeight: FontWeight.w600,
-                      color: p.text2,
-                      fontFeatures: AppType.tabular,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.2, fontWeight: FontWeight.w600, color: p.text2, fontFeatures: AppType.tabular),
                   ),
                 ],
               ),
@@ -284,13 +255,7 @@ class _MacroRing extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: AppType.fontFamily,
-            fontSize: 15,
-            height: 1.2,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(height: 1.2, fontWeight: FontWeight.w700, color: color),
         ),
       ],
     );
@@ -316,14 +281,7 @@ class _DayRow extends StatelessWidget {
     final t = Theme.of(context).textTheme;
 
     // Grey like the canvas: the bar above carries the colours.
-    final macroStyle = TextStyle(
-      fontFamily: AppType.fontFamily,
-      fontSize: 13,
-      height: 1.2,
-      fontWeight: FontWeight.w600,
-      color: p.text2,
-      fontFeatures: AppType.tabular,
-    );
+    final macroStyle = Theme.of(context).textTheme.bodySmall!.copyWith(height: 1.2, fontWeight: FontWeight.w600, color: p.text2, fontFeatures: AppType.tabular);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: 14),
@@ -333,29 +291,18 @@ class _DayRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(label, style: t.titleMedium!.copyWith(fontSize: 16, height: 1.25, color: p.text)),
+                child: Text(label, style: t.titleMedium!.copyWith(height: 1.25, color: p.text)),
               ),
               const SizedBox(width: AppSpacing.s8),
               Text.rich(
                 TextSpan(children: [
                   TextSpan(
                     text: f.kcal(day.calories),
-                    style: TextStyle(
-                      fontFamily: AppType.fontFamily,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: p.text,
-                      fontFeatures: AppType.tabular,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: p.text, fontFeatures: AppType.tabular),
                   ),
                   TextSpan(
                     text: ' kcal',
-                    style: TextStyle(
-                      fontFamily: AppType.fontFamily,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: p.text2,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: p.text2),
                   ),
                 ]),
                 maxLines: 1,

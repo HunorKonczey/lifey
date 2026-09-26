@@ -127,6 +127,8 @@ bool _hasNumericArgument(String line, int from) {
     if (c == ')') depth--;
   }
   final argument = line.substring(from, depth == 0 ? i - 1 : line.length);
+  // Derived from the tokens (`AppRadius.nested(AppRadius.card, 12)`): in use.
+  if (argument.trimLeft().startsWith('AppRadius.')) return false;
   final withoutIdentifiers = argument.replaceAll(RegExp(r'[A-Za-z_][A-Za-z0-9_.]*'), '');
   return RegExp(r'\d').hasMatch(withoutIdentifiers);
 }

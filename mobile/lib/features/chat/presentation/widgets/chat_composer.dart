@@ -188,7 +188,7 @@ class _ChatComposerState extends State<ChatComposer> {
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
                     decoration: BoxDecoration(
                       color: p.card,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: AppRadius.cardAll,
                       border: Border.all(color: context.elevation.border),
                     ),
                     alignment: Alignment.center,
@@ -382,19 +382,14 @@ class _PendingImageStrip extends StatelessWidget {
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadius.controlAll,
             child: Image.file(image, width: 56, height: 56, fit: BoxFit.cover),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               l10n.chatImageReady,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
             ),
           ),
           IconButton(

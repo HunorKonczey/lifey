@@ -274,11 +274,7 @@ class _PaywallBody extends ConsumerWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium!.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
@@ -286,12 +282,7 @@ class _PaywallBody extends ConsumerWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
           _BenefitsList(
@@ -477,22 +468,13 @@ class _BenefitRow extends StatelessWidget {
               children: [
                 Text(
                   benefit.title,
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600),
                 ),
                 if (showDescription) ...[
                   const SizedBox(height: 2),
                   Text(
                     benefit.description,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ],
@@ -573,11 +555,7 @@ class _PlanCard extends StatelessWidget {
                         children: [
                           Text(
                             label,
-                            style: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w700),
                           ),
                           if (discountBadge != null)
                             Container(
@@ -588,12 +566,7 @@ class _PlanCard extends StatelessWidget {
                               ),
                               child: Text(
                                 discountBadge!,
-                                style: TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.onSecondary,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSecondary),
                               ),
                             ),
                         ],
@@ -602,12 +575,7 @@ class _PlanCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           perMonthLabel!,
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: scheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                         ),
                       ],
                     ],
@@ -619,11 +587,7 @@ class _PlanCard extends StatelessWidget {
                     product.formattedPrice,
                     textAlign: TextAlign.right,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800),
                   ),
                 ),
               ],
@@ -681,11 +645,7 @@ class _CtaButton extends StatelessWidget {
           disabledBackgroundColor: scheme.primary.withValues(alpha: 0.5),
           disabledForegroundColor: scheme.onPrimary.withValues(alpha: 0.7),
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w700),
         ),
         child: loading
             ? SizedBox(
@@ -720,12 +680,7 @@ class _PendingCard extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: scheme.onTertiaryContainer,
-              ),
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onTertiaryContainer),
             ),
           ),
         ],
@@ -742,12 +697,7 @@ class _LegalLine extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final languageCode = Localizations.localeOf(context).languageCode;
-    final style = TextStyle(
-      fontFamily: 'PlusJakartaSans',
-      fontSize: 11,
-      fontWeight: FontWeight.w500,
-      color: scheme.onSurfaceVariant,
-    );
+    final style = Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant);
     return Column(
       children: [
         Text(l10n.paywallLegalDisclaimer, textAlign: TextAlign.center, style: style),
@@ -829,11 +779,7 @@ class _InfoPaywallView extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium!.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 24),
           Column(
@@ -858,11 +804,7 @@ class _InfoPaywallView extends StatelessWidget {
                 backgroundColor: scheme.primary,
                 foregroundColor: scheme.onPrimary,
                 shape: const StadiumBorder(),
-                textStyle: const TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+                textStyle: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w700),
               ),
               child: Text(buttonLabel),
             ),

@@ -115,7 +115,7 @@ class _DuplicateMealDialogState extends State<_DuplicateMealDialog> {
                         Expanded(
                           child: Text(
                             '${f.shortDayLabel(_dateTime)} · ${f.time(_dateTime)}',
-                            style: theme.textTheme.titleMedium!.copyWith(fontSize: 15, color: p.text),
+                            style: theme.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text),
                           ),
                         ),
                         Icon(Icons.expand_more_rounded, size: 22, color: p.text2),

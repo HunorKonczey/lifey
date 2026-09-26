@@ -59,7 +59,7 @@ class WorkoutActionBar extends StatelessWidget {
                 onPressed: saving ? null : onFinish,
                 style: FilledButton.styleFrom(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.card)),
-                  textStyle: Theme.of(context).textTheme.labelLarge!.copyWith(fontSize: 17, fontWeight: FontWeight.w800),
+                  textStyle: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800),
                   elevation: 0,
                 ),
                 icon: saving

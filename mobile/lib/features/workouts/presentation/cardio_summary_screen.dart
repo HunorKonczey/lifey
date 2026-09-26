@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/theme/app_type.dart';
 import 'dart:math' as math;
 
 import 'package:drift/drift.dart' show Value;
@@ -510,12 +511,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             children: [
               Text(
                 l10n.gameFormatSectionLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
               GameFormatSelector(
@@ -528,12 +524,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
               const SizedBox(height: 16),
               Text(
                 l10n.venueSectionLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
               GameVenueSelector(
@@ -1395,12 +1386,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   ],
                   Text(
                     '+${CardioFormatter.elevation(_elevationGainMeters!, unitSystem)}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
                   ),
                 ],
               ),
@@ -1631,12 +1617,7 @@ class _SectionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
                 ),
               ),
               if (trailingWidget != null)
@@ -1644,12 +1625,7 @@ class _SectionCard extends StatelessWidget {
               else if (trailing != null)
                 Text(
                   trailing!,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
                 ),
             ],
           ),
@@ -1676,7 +1652,7 @@ class _NoRouteCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Row(
         children: [
@@ -1685,7 +1661,7 @@ class _NoRouteCard extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               color: scheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: AppRadius.cardAll,
             ),
             child: Icon(Icons.route, size: 28, color: scheme.outlineVariant),
           ),
@@ -1696,16 +1672,12 @@ class _NoRouteCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   body,
-                  style: TextStyle(fontSize: 11.5, height: 1.5, color: scheme.outline),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.5, color: scheme.outline),
                 ),
               ],
             ),
@@ -1750,7 +1722,7 @@ class _PrimaryMetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(26),
+      borderRadius: AppRadius.heroAll,
       clipBehavior: Clip.antiAlias,
       child: Container(
         width: double.infinity,
@@ -1760,12 +1732,7 @@ class _PrimaryMetricCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.6,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.6, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 2),
             FittedBox(
@@ -1773,13 +1740,7 @@ class _PrimaryMetricCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 56,
-                  height: 1.1,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -2,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
+                style: AppType.number(56, weight: FontWeight.w800),
               ),
             ),
             if (inner.isNotEmpty) ...[
@@ -1813,10 +1774,10 @@ class _InnerMetricTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
         onTap: metric.onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.controlAll,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           child: Column(
@@ -1828,11 +1789,7 @@ class _InnerMetricTile extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   metric.value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(20, weight: FontWeight.w800),
                 ),
               ),
               Row(
@@ -1842,11 +1799,7 @@ class _InnerMetricTile extends StatelessWidget {
                       metric.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                     ),
                   ),
                   if (metric.edited) ...[
@@ -1980,11 +1933,7 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
                         children: [
                           Text(
                             _format(type, value),
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              fontFeatures: [FontFeature.tabularFigures()],
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
                           ),
                           if (delta != null)
                             Text(
@@ -2060,7 +2009,7 @@ class _BestEffortTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: row.isRecord ? context.metricColors.record.withValues(alpha: 0.12) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.controlAll,
         border: row.isRecord ? Border.all(color: context.metricColors.record.withValues(alpha: 0.34)) : null,
       ),
       child: Row(
@@ -2069,7 +2018,7 @@ class _BestEffortTile extends StatelessWidget {
             width: 44,
             child: Text(
               row.label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 10),
@@ -2079,11 +2028,7 @@ class _BestEffortTile extends StatelessWidget {
               children: [
                 Text(
                   CardioFormatter.duration(row.duration),
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
                 ),
                 const SizedBox(height: 1),
                 // The trophy pill sits on the subtitle line rather than
@@ -2096,7 +2041,7 @@ class _BestEffortTile extends StatelessWidget {
                       child: Text(
                         subtitle,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 10, color: scheme.outline),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.outline),
                       ),
                     ),
                     if (row.isRecord) ...[
@@ -2105,15 +2050,11 @@ class _BestEffortTile extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                         decoration: BoxDecoration(
                           color: context.metricColors.record,
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: AppRadius.pill,
                         ),
                         child: Text(
                           recordBadge,
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: context.palette.bg,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: context.palette.bg),
                         ),
                       ),
                     ],
@@ -2126,12 +2067,7 @@ class _BestEffortTile extends StatelessWidget {
           if (row.pace != null)
             Text(
               row.pace!,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: row.isRecord ? context.metricColors.record : scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: row.isRecord ? context.metricColors.record : scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
         ],
       ),
@@ -2248,23 +2184,14 @@ class _MetricTile extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(26, weight: FontWeight.w800),
                 ),
               ),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -2433,7 +2360,7 @@ class _SplitRow extends StatelessWidget {
         decoration: selected
             ? BoxDecoration(
                 color: scheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.controlAll,
               )
             : null,
         child: Row(
@@ -2442,20 +2369,15 @@ class _SplitRow extends StatelessWidget {
               width: 16,
               child: Text(
                 '${split.splitIndex + 1}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: selected
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: selected
                       ? accent
-                      : (partial ? scheme.outline : scheme.onSurfaceVariant),
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                      : (partial ? scheme.outline : scheme.onSurfaceVariant), fontFeatures: const [FontFeature.tabularFigures()]),
               ),
             ),
             const SizedBox(width: 11),
             Expanded(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: AppRadius.tagAll,
                 child: Container(
                   height: 12,
                   color: scheme.surfaceContainer,
@@ -2474,12 +2396,7 @@ class _SplitRow extends StatelessWidget {
               partial
                   ? CardioFormatter.distance(split.distanceMeters ?? 0, unitSystem)
                   : CardioFormatter.duration(duration),
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: selected ? accent : (partial ? scheme.outline : scheme.onSurface),
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: selected ? accent : (partial ? scheme.outline : scheme.onSurface), fontFeatures: const [FontFeature.tabularFigures()]),
             ),
             if (showElevation) ...[
               const SizedBox(width: 10),
@@ -2494,12 +2411,7 @@ class _SplitRow extends StatelessWidget {
                       : (elevation >= 0 ? '+' : '−') +
                           CardioFormatter.elevation(elevation.abs(), unitSystem),
                   textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
                 ),
               ),
             ],
@@ -2525,7 +2437,7 @@ class _FasterPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2534,11 +2446,7 @@ class _FasterPill extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -2557,12 +2465,7 @@ class _PaceChartAxis extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final style = TextStyle(
-      fontSize: 10,
-      fontWeight: FontWeight.w600,
-      color: scheme.onSurfaceVariant,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
+    final style = Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -2592,7 +2495,7 @@ class _SplitSelectionHint extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontSize: 10.5, height: 1.35, color: scheme.outline),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.35, color: scheme.outline),
           ),
         ),
       ],
@@ -2625,7 +2528,7 @@ class _TotalWorkCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2638,25 +2541,15 @@ class _TotalWorkCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   '$totalWorkKj',
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1.6,
-                    height: 1.05,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(40, weight: FontWeight.w800),
                 ),
                 Text(
                   'kJ ${l10n.totalWorkLabel}',
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700),
                 ),
                 Text(
                   l10n.totalWorkSourceHint,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -2670,26 +2563,16 @@ class _TotalWorkCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   '${avgWatts.round()}',
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1.6,
-                    height: 1.05,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(40, weight: FontWeight.w800),
                 ),
                 Text(
                   l10n.avgWattsFieldLabel,
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700),
                 ),
                 if (maxWatts != null)
                   Text(
                     l10n.maxWattsShortLabel(maxWatts!.round()),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                   ),
               ],
             ),
@@ -2733,7 +2616,7 @@ class _CalorieCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2759,7 +2642,7 @@ class _CalorieCard extends StatelessWidget {
                 Expanded(
                   child: InkWell(
                     onTap: onEditMachine,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.controlAll,
                     child: _CalorieSide(
                       icon: Icons.monitor,
                       label: l10n.machineCaloriesLabel,
@@ -2784,12 +2667,7 @@ class _CalorieCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   l10n.machineCaloriesFootnote,
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 1.45,
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.45, fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                 ),
               ),
             ],
@@ -2834,19 +2712,14 @@ class _CalorieSide extends StatelessWidget {
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.1,
-                  color: labelColor,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.1, color: labelColor),
               ),
             ),
             if (badge != null) ...[
               const SizedBox(width: 5),
               Text(
                 badge!,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: hintColor),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: hintColor),
               ),
             ],
           ],
@@ -2854,23 +2727,11 @@ class _CalorieSide extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value == null ? '—' : '${value!.round()}',
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1.2,
-            height: 1.1,
-            color: valueColor,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+          style: AppType.number(30, weight: FontWeight.w800, color: valueColor),
         ),
         Text(
           hint,
-          style: TextStyle(
-            fontSize: 10.5,
-            height: 1.4,
-            fontWeight: FontWeight.w500,
-            color: hintColor,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.4, fontWeight: FontWeight.w500, color: hintColor),
         ),
       ],
     );
@@ -2919,7 +2780,7 @@ class _WeatherCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: AppRadius.cardAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -2933,18 +2794,12 @@ class _WeatherCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       l10n.weatherSectionLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
                     ),
                   ),
                   Text(
                     l10n.weatherSnapshotCaption(_timeLabel.format(snapshotTime.toLocal())),
-                    style: TextStyle(
-                        fontSize: 10.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -2956,7 +2811,7 @@ class _WeatherCard extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       color: scheme.secondary.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: AppRadius.cardAll,
                     ),
                     child: Icon(weatherConditionIcon(condition), color: scheme.secondary, size: 28),
                   ),
@@ -3012,15 +2867,11 @@ class _WeatherReadout extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
+          style: AppType.number(20, weight: FontWeight.w800),
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
         ),
       ],
     );
@@ -3040,7 +2891,7 @@ class _WeatherEmptyRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: AppRadius.cardAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -3053,7 +2904,7 @@ class _WeatherEmptyRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   message,
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                 ),
               ),
             ],
@@ -3090,22 +2941,13 @@ class _WaypointRow extends StatelessWidget {
             width: 22,
             child: Text(
               '${matched.waypoint.waypointIndex + 1}',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
           Expanded(
             child: Text(
               '$distance · $altitude · $elapsed',
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
         ],
@@ -3151,12 +2993,7 @@ class _IntervalSectionRow extends StatelessWidget {
             width: 16,
             child: Text(
               '$number',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
           SizedBox(
@@ -3164,16 +3001,12 @@ class _IntervalSectionRow extends StatelessWidget {
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: hard ? accent : scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: hard ? accent : scheme.onSurfaceVariant),
             ),
           ),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: AppRadius.tagAll,
               child: LinearProgressIndicator(
                 value: fraction,
                 minHeight: 10,
@@ -3190,11 +3023,7 @@ class _IntervalSectionRow extends StatelessWidget {
             child: Text(
               CardioFormatter.duration(Duration(seconds: split.durationSeconds)),
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
           if (split.avgWatts != null)
@@ -3203,12 +3032,7 @@ class _IntervalSectionRow extends StatelessWidget {
               child: Text(
                 '${split.avgWatts!.round()} W',
                 textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
               ),
             ),
         ],
@@ -3231,7 +3055,7 @@ class _IntervalCountChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3240,7 +3064,7 @@ class _IntervalCountChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: accent),
           ),
         ],
       ),
@@ -3290,12 +3114,7 @@ class _ElevationProfileCard extends StatelessWidget {
             )
           : Text(
               '+${CardioFormatter.elevation(elevationGainMeters, unitSystem)}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3312,11 +3131,7 @@ class _ElevationProfileCard extends StatelessWidget {
               CardioFormatter.elevation(peak.altitudeMeters, unitSystem),
               CardioFormatter.distance(peak.cumulativeDistanceMeters, unitSystem),
             ),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
           ),
           if (selected != null) ...[
             const SizedBox(height: 12),
@@ -3373,17 +3188,13 @@ class _ElevationReadout extends StatelessWidget {
             ],
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ],
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
         ),
       ],
     );
@@ -3404,7 +3215,7 @@ class _SelectedPointChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3413,7 +3224,7 @@ class _SelectedPointChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: accent),
           ),
         ],
       ),
@@ -3437,16 +3248,11 @@ class _SimplifiedBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-          color: scheme.onSurfaceVariant,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.4, color: scheme.onSurfaceVariant),
       ),
     );
   }

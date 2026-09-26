@@ -86,8 +86,7 @@ class DateRangeFilterButton extends StatelessWidget {
             child: Text(
               value.label(l10n),
               key: ValueKey(value),
-              style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                fontSize: collapsed ? 12.0 : 13.0,
+              style: (collapsed ? Theme.of(context).textTheme.labelSmall! : Theme.of(context).textTheme.labelMedium!).copyWith(
                 color: context.palette.text2,
               ),
             ),
@@ -153,8 +152,7 @@ class LabeledFilterButton extends StatelessWidget {
             child: Text(
               label,
               key: ValueKey(label),
-              style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                fontSize: collapsed ? 12.0 : 13.0,
+              style: (collapsed ? Theme.of(context).textTheme.labelSmall! : Theme.of(context).textTheme.labelMedium!).copyWith(
                 color: context.palette.text2,
               ),
             ),

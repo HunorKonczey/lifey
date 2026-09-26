@@ -169,7 +169,7 @@ class _RateChip extends StatelessWidget {
                     const SizedBox(width: AppSpacing.s4),
                     Text(
                       label,
-                      style: Theme.of(context).textTheme.labelLarge!.copyWith(fontSize: 13, color: p.text),
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: p.text),
                     ),
                   ],
                 ),

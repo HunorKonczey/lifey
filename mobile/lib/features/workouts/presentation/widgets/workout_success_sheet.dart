@@ -435,20 +435,14 @@ class _WorkoutSuccessSheetState extends State<WorkoutSuccessSheet>
                     child: Text(
                       hasRecords ? l10n.workoutDonePrTitle(entryCount) : l10n.workoutSuccessTitle,
                       textAlign: TextAlign.center,
-                      style: t.headlineMedium!.copyWith(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        height: 1.15,
-                        letterSpacing: -0.56,
-                        color: p.text,
-                      ),
+                      style: t.headlineMedium!.copyWith(fontWeight: FontWeight.w800, height: 1.15, letterSpacing: -0.56, color: p.text),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s8),
                   Text(
                     (hasRecords ? summaryLine : null) ?? l10n.workoutSuccessSubtitle(result.improvements.length),
                     textAlign: TextAlign.center,
-                    style: t.bodyLarge!.copyWith(fontSize: 15, height: 1.4, color: p.text2),
+                    style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w600, height: 1.4, color: p.text2),
                   ),
                   if (rows.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.s20),

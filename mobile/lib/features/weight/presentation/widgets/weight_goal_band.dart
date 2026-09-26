@@ -50,7 +50,7 @@ class WeightGoalBand extends ConsumerWidget {
 
     final projection = ref.watch(weightGoalProjectionProvider);
     final reached = headline.reached;
-    final labelStyle = t.bodyMedium!.copyWith(fontSize: 15, color: p.text2, height: 1.3);
+    final labelStyle = t.bodyMedium!.copyWith(color: p.text2, height: 1.3);
     final strong = labelStyle.copyWith(fontWeight: FontWeight.w800, color: p.text);
     final message = _projectionNote(context, l10n, projection);
     final rate = projection?.kgPerWeek;

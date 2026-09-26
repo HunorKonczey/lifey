@@ -2014,11 +2014,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                   child: Text(
                     '${_resistanceLevel ?? 0}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
                   ),
                 ),
                 _StepperButton(
@@ -2602,7 +2598,7 @@ class _LocationStatusCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2618,7 +2614,7 @@ class _LocationStatusCard extends StatelessWidget {
                   children: [
                     Text(content.title, style: const TextStyle(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 3),
-                    Text(content.body, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                    Text(content.body, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant)),
                   ],
                 ),
               ),
@@ -2684,7 +2680,7 @@ class _ActivityHeaderBar extends StatelessWidget {
     final p = context.palette;
     final t = Theme.of(context).textTheme;
     final color = statusColor ?? p.text2;
-    final statusStyle = t.bodyMedium!.copyWith(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3, color: color);
+    final statusStyle = t.bodySmall!.copyWith(fontWeight: FontWeight.w600, height: 1.3, color: color);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
       child: Row(
@@ -2699,7 +2695,7 @@ class _ActivityHeaderBar extends StatelessWidget {
                   header: true,
                   child: Text(
                     title,
-                    style: t.titleLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w800, height: 1.2, color: p.text),
+                    style: t.titleLarge!.copyWith(fontWeight: FontWeight.w800, height: 1.2, color: p.text),
                   ),
                 ),
                 if (statusLabel != null)
@@ -2762,7 +2758,7 @@ class _WeakSignalBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.secondary.withValues(alpha: 0.12),
         border: Border.all(color: scheme.secondary.withValues(alpha: 0.34)),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2770,7 +2766,7 @@ class _WeakSignalBanner extends StatelessWidget {
           Icon(Icons.satellite_alt, size: 20, color: scheme.secondary),
           const SizedBox(width: 11),
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+            child: Text(text, style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant)),
           ),
         ],
       ),
@@ -2802,7 +2798,7 @@ class _PauseStatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: auto ? context.autoAccent.withValues(alpha: 0.14) : scheme.surfaceContainer,
         border: auto ? Border.all(color: context.autoAccent.withValues(alpha: 0.5), width: 1.5) : null,
-        borderRadius: BorderRadius.circular(auto ? 22 : 20),
+        borderRadius: (auto ? AppRadius.cardAll : AppRadius.cardAll),
       ),
       child: Row(
         crossAxisAlignment: auto ? CrossAxisAlignment.start : CrossAxisAlignment.center,
@@ -2819,8 +2815,7 @@ class _PauseStatusCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: auto ? 15 : 13.5,
+                  style: Theme.of(context).textTheme.titleSmall!.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.2,
                   ),
@@ -2831,8 +2826,7 @@ class _PauseStatusCard extends StatelessWidget {
                       ? l10n.autoPauseCardMessage
                       : l10n.manualPauseCardSubtitle(
                           elapsed == null ? '—' : CardioFormatter.duration(elapsed!)),
-                  style: TextStyle(
-                    fontSize: auto ? 12 : 11,
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(
                     height: auto ? 1.5 : 1.3,
                     fontWeight: FontWeight.w600,
                     color: auto ? context.autoAccent : scheme.onSurfaceVariant,
@@ -2868,7 +2862,7 @@ class _AutoPauseResumeButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: AppRadius.heroAll,
         child: CustomPaint(
           painter: _DashedBorderPainter(color: context.autoAccent, radius: 32),
           child: SizedBox(
@@ -2878,21 +2872,12 @@ class _AutoPauseResumeButton extends StatelessWidget {
               children: [
                 Text(
                   titleLabel,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2,
-                    color: context.autoAccent,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.2, color: context.autoAccent),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   subtitleLabel,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: context.autoAccent.withValues(alpha: 0.72),
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: context.autoAccent.withValues(alpha: 0.72)),
                 ),
               ],
             ),
@@ -3076,11 +3061,7 @@ class _SlideToFinishBarState extends State<_SlideToFinishBar> {
                                 textAlign: TextAlign.center,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: t.titleSmall!.copyWith(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: released ? p.bg : p.text2,
-                                ),
+                                style: t.titleMedium!.copyWith(fontWeight: FontWeight.w700, color: released ? p.bg : p.text2),
                               ),
                             ),
                             const SizedBox(width: AppSpacing.s4),
@@ -3175,38 +3156,25 @@ class _FinishConfirmationOverlay extends StatelessWidget {
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
+                    style: AppType.number(24, weight: FontWeight.w800),
                   ),
                   const SizedBox(height: 8),
                   if (summary.isNotEmpty)
                     Text(
                       summary,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                      style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface, fontFeatures: const [FontFeature.tabularFigures()]),
                     ),
                   const SizedBox(height: 4),
                   Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, height: 1.5, color: scheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.titleSmall!.copyWith(height: 1.5, color: scheme.onSurfaceVariant),
                   ),
                       const SizedBox(height: 14),
                       Text(
                         progressHint(remainingPercent),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: scheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.primary, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -3219,10 +3187,10 @@ class _FinishConfirmationOverlay extends StatelessWidget {
                 bottom: 98,
                 child: Material(
                   color: scheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: AppRadius.cardAll,
                   child: InkWell(
                     onTap: () => progress.value = 0,
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: AppRadius.cardAll,
                     child: SizedBox(
                       height: 58,
                       child: Row(
@@ -3232,11 +3200,7 @@ class _FinishConfirmationOverlay extends StatelessWidget {
                           const SizedBox(width: 9),
                           Text(
                             cancelLabel,
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                              color: scheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -3300,7 +3264,7 @@ class _DominantMetric extends StatelessWidget {
                   child: Text(
                     label,
                     textAlign: TextAlign.center,
-                    style: AppType.sectionLabel(color: labelColor ?? p.text2).copyWith(fontSize: 13, letterSpacing: 1.6),
+                    style: AppType.sectionLabel(color: labelColor ?? p.text2).copyWith(letterSpacing: 1.6),
                   ),
                 ),
               ],
@@ -3451,7 +3415,7 @@ class _BenchedNoticeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.autoAccent.withValues(alpha: 0.12),
         border: Border.all(color: context.autoAccent.withValues(alpha: 0.32)),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3462,11 +3426,11 @@ class _BenchedNoticeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)),
+                Text(title, style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 3),
                 Text(
                   body,
-                  style: TextStyle(fontSize: 11.5, height: 1.5, color: scheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.5, color: scheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -3508,7 +3472,7 @@ class _CourtSwitch extends StatelessWidget {
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: AppRadius.heroAll,
           ),
           child: Row(
             children: [
@@ -3543,11 +3507,7 @@ class _CourtSwitch extends StatelessWidget {
         Text(
           hint,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w600,
-            color: onCourt ? scheme.onSurfaceVariant : context.autoAccent,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: onCourt ? scheme.onSurfaceVariant : context.autoAccent),
         ),
       ],
     );
@@ -3577,10 +3537,10 @@ class _CourtSwitchHalf extends StatelessWidget {
     final fg = selected ? onSelectedColor : scheme.onSurfaceVariant;
     return Material(
       color: selected ? selectedColor : Colors.transparent,
-      borderRadius: BorderRadius.circular(21),
+      borderRadius: AppRadius.cardAll,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(21),
+        borderRadius: AppRadius.cardAll,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -3588,7 +3548,7 @@ class _CourtSwitchHalf extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               label,
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: fg),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w800, color: fg),
             ),
           ],
         ),
@@ -3709,10 +3669,10 @@ class _ResumeButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.primary,
-      borderRadius: BorderRadius.circular(32),
+      borderRadius: AppRadius.heroAll,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: AppRadius.heroAll,
         child: SizedBox(
           height: 104,
           child: Row(
@@ -3722,12 +3682,7 @@ class _ResumeButton extends StatelessWidget {
               const SizedBox(width: 11),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                  color: scheme.onPrimary,
-                ),
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3, color: scheme.onPrimary),
               ),
             ],
           ),
@@ -3764,11 +3719,11 @@ class _WaypointMarkerButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: available ? scheme.tertiaryContainer : scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: AppRadius.cardAll,
       child: InkWell(
         key: const Key('waypointMarkButton'),
         onTap: available ? onPressed : onUnavailableTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.cardAll,
         child: SizedBox(
           height: 88,
           child: Row(
@@ -3786,22 +3741,13 @@ class _WaypointMarkerButton extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.2,
-                      color: available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.2, color: available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     available ? subtitleLabel : unavailableLabel,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: (available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant)
-                          .withValues(alpha: 0.72),
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: (available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant)
+                          .withValues(alpha: 0.72)),
                   ),
                 ],
               ),
@@ -3837,7 +3783,7 @@ class _WaypointMarkedBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Row(
         children: [
@@ -3847,16 +3793,11 @@ class _WaypointMarkedBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(message, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                Text(message, style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800)),
                 if (detail.isNotEmpty)
                   Text(
                     detail,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
                   ),
               ],
             ),
@@ -3881,10 +3822,10 @@ class _WideActionButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: AppRadius.cardAll,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.cardAll,
         child: SizedBox(
           height: 64,
           child: Row(
@@ -3892,7 +3833,7 @@ class _WideActionButton extends StatelessWidget {
             children: [
               Icon(icon, size: 22, color: scheme.primary),
               const SizedBox(width: 9),
-              Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+              Text(label, style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w800)),
             ],
           ),
         ),
@@ -3938,7 +3879,7 @@ class _IntervalPlayerBlock extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 13),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: AppRadius.cardAll,
           border: hard && !paused ? Border.all(color: accent.withValues(alpha: 0.35)) : null,
         ),
         child: Column(
@@ -3948,23 +3889,13 @@ class _IntervalPlayerBlock extends StatelessWidget {
               children: [
                 Text(
                   l10n.intervalSectionCounterLabel(state.sectionNumber, state.totalSections),
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.4, color: scheme.onSurfaceVariant),
                 ),
                 if (paused) ...[
                   const SizedBox(width: 8),
                   Text(
                     l10n.intervalPausedSectionLabel,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.4,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.4, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ],
@@ -3973,20 +3904,14 @@ class _IntervalPlayerBlock extends StatelessWidget {
             if (state.finished)
               Text(
                 l10n.intervalPlanFinishedLabel,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.w800),
               )
             else if (countingDown)
               _UpNext(state: state, accent: accent, l10n: l10n, label: _intensityLabel)
             else ...[
               Text(
                 _intensityLabel(state.intensity).toUpperCase(),
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1,
-                  height: 1.1,
-                  color: hard ? accent : scheme.onSurface,
-                ),
+                style: AppType.number(30, weight: FontWeight.w800, color: hard ? accent : scheme.onSurface),
               ),
               const SizedBox(height: 4),
               Row(
@@ -3995,21 +3920,12 @@ class _IntervalPlayerBlock extends StatelessWidget {
                 children: [
                   Text(
                     CardioFormatter.duration(Duration(seconds: state.secondsRemaining)),
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.8,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
+                    style: AppType.number(26, weight: FontWeight.w800),
                   ),
                   const SizedBox(width: 7),
                   Text(
                     l10n.intervalRemainingLabel,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -4026,11 +3942,7 @@ class _IntervalPlayerBlock extends StatelessWidget {
                               Duration(seconds: state.nextDurationSeconds ?? 0)),
                           _intensityLabel(state.nextIntensity!),
                         ),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
                       ),
                     ),
                   ],
@@ -4041,12 +3953,7 @@ class _IntervalPlayerBlock extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 l10n.intervalPausedSectionBody,
-                style: TextStyle(
-                  fontSize: 11,
-                  height: 1.45,
-                  fontWeight: FontWeight.w500,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.45, fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
               ),
             ],
           ],
@@ -4086,36 +3993,20 @@ class _UpNext extends StatelessWidget {
             children: [
               Text(
                 l10n.intervalUpNextLabel,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                  color: accent,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.4, color: accent),
               ),
               Text(
                 next == null
                     ? l10n.intervalPlanFinishedLabel
                     : '$nextDuration ${label(next).toUpperCase()}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.8,
-                  height: 1.2,
-                ),
+                style: AppType.number(24, weight: FontWeight.w800),
               ),
             ],
           ),
         ),
         Text(
           '${state.secondsRemaining}',
-          style: TextStyle(
-            fontSize: 44,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -2,
-            color: accent,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+          style: AppType.number(44, weight: FontWeight.w800, color: accent),
         ),
       ],
     );

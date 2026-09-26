@@ -232,8 +232,7 @@ class _TemplateCard extends StatelessWidget {
                           children: [
                             Text(
                               template.name,
-                              style: theme.textTheme.titleMedium!
-                                  .copyWith(fontSize: 17, fontWeight: FontWeight.w800, height: 1.25, color: p.text),
+                              style: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, height: 1.25, color: p.text),
                             ),
                             const SizedBox(height: 3),
                             Text(

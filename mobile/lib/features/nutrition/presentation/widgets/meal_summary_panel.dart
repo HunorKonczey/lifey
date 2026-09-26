@@ -52,13 +52,7 @@ class MealSummaryPanel extends StatelessWidget {
     final mc = context.metricColors;
     final preview = this.preview;
 
-    final small = TextStyle(
-      fontFamily: AppType.fontFamily,
-      fontSize: 14,
-      height: 1.2,
-      fontWeight: FontWeight.w600,
-      color: p.text2,
-    );
+    final small = Theme.of(context).textTheme.titleSmall!.copyWith(height: 1.2, fontWeight: FontWeight.w600, color: p.text2);
 
     return LifeyCard(
       radius: AppRadius.hero,
@@ -77,15 +71,7 @@ class MealSummaryPanel extends StatelessWidget {
                 value: calories,
                 builder: (context, v) => Text(
                   f.kcal(v),
-                  style: TextStyle(
-                    fontFamily: AppType.fontFamily,
-                    fontSize: 34,
-                    height: 1.1,
-                    letterSpacing: -0.02 * 34,
-                    fontWeight: FontWeight.w800,
-                    color: p.text,
-                    fontFeatures: AppType.tabular,
-                  ),
+                  style: AppType.number(34, weight: FontWeight.w800, color: p.text),
                 ),
               ),
               Expanded(
@@ -121,14 +107,13 @@ class MealSummaryPanel extends StatelessWidget {
                   day == null
                       ? l10n.mealSummaryAfterToday
                       : l10n.mealSummaryAfterDay(f.shortDayLabel(day!)),
-                  style: small.copyWith(fontSize: 13),
+                  style: small,
                 ),
                 Text(
                   preview.isOver
                       ? l10n.mealSummaryKcalOver(f.kcal(-preview.remaining))
                       : l10n.mealSummaryKcalLeft(f.kcal(preview.remaining)),
                   style: small.copyWith(
-                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: preview.isOver ? mc.negative : mc.calories,
                     fontFeatures: AppType.tabular,
@@ -182,14 +167,7 @@ class _MacroTile extends StatelessWidget {
           Text(
             '${f.grams(value)} g',
             maxLines: 1,
-            style: TextStyle(
-              fontFamily: AppType.fontFamily,
-              fontSize: 20,
-              height: 1.1,
-              fontWeight: FontWeight.w800,
-              color: color,
-              fontFeatures: AppType.tabular,
-            ),
+            style: AppType.number(20, weight: FontWeight.w800, color: color),
           ),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -197,13 +175,7 @@ class _MacroTile extends StatelessWidget {
             child: Text(
               label,
               maxLines: 1,
-              style: TextStyle(
-                fontFamily: AppType.fontFamily,
-                fontSize: 14,
-                height: 1.2,
-                fontWeight: FontWeight.w500,
-                color: color,
-              ),
+              style: Theme.of(context).textTheme.titleSmall!.copyWith(height: 1.2, fontWeight: FontWeight.w500, color: color),
             ),
           ),
         ],

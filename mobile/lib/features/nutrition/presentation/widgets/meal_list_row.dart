@@ -41,15 +41,8 @@ class MealListRow extends StatelessWidget {
     final meta = named ? '$typeLabel · $time' : time;
     final foods = meal.entries.map((e) => e.foodName).join(', ');
 
-    final secondary = t.bodySmall!.copyWith(fontSize: 13, height: 1.4, fontWeight: FontWeight.w500, color: p.text2);
-    TextStyle macroStyle(Color c) => TextStyle(
-          fontFamily: AppType.fontFamily,
-          fontSize: 12,
-          height: 1,
-          fontWeight: FontWeight.w700,
-          color: c,
-          fontFeatures: AppType.tabular,
-        );
+    final secondary = t.bodySmall!.copyWith(height: 1.4, fontWeight: FontWeight.w500, color: p.text2);
+    TextStyle macroStyle(Color c) => Theme.of(context).textTheme.labelSmall!.copyWith(height: 1, fontWeight: FontWeight.w700, color: c, fontFeatures: AppType.tabular);
 
     return InkWell(
       onTap: onTap,
@@ -75,7 +68,7 @@ class MealListRow extends StatelessWidget {
                           title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: t.titleMedium!.copyWith(fontSize: 16, height: 1.25, color: p.text),
+                          style: t.titleMedium!.copyWith(height: 1.25, color: p.text),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.s8),

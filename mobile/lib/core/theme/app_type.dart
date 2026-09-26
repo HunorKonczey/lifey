@@ -34,10 +34,12 @@ abstract final class AppType {
 
   /// The unit beside a [number] of [numberSize]. Tracking is reset to 0: the
   /// unit is usually a child span of the number and would otherwise inherit
-  /// its −3 %, which at 28–34 px eats the space ("1 739kcal").
-  static TextStyle unit(double numberSize, {Color? color}) => TextStyle(
+  /// its −3 %, which at 28–34 px eats the space ("1 739kcal"). A canvas that
+  /// sets a unit off the 42 % rule (the cardio hero's 14 px "bpm" after a 24 px
+  /// number) passes its [size] explicitly.
+  static TextStyle unit(double numberSize, {Color? color, double? size}) => TextStyle(
         fontFamily: fontFamily,
-        fontSize: numberSize * unitScale,
+        fontSize: size ?? numberSize * unitScale,
         fontWeight: FontWeight.w600,
         height: 1,
         letterSpacing: 0,

@@ -211,7 +211,7 @@ class _Equalizer extends StatelessWidget {
               builder: (context, _) => Container(
                 width: 3,
                 height: minHeight + (maxHeight - minHeight) * controllers[i].value,
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: color, borderRadius: AppRadius.tagAll),
               ),
             ),
           ],

@@ -64,8 +64,7 @@ class CardioDetailHero extends StatelessWidget {
                       if (unit != null)
                         TextSpan(
                             text: ' $unit',
-                            style: AppType.unit(52, color: p.text2)
-                                .copyWith(fontSize: 22)),
+                            style: AppType.unit(52, color: p.text2)),
                     ]),
                     maxLines: 1,
                     textScaler: noScale,
@@ -92,8 +91,7 @@ class CardioDetailHero extends StatelessWidget {
             const SizedBox(height: AppSpacing.s4),
             Text(
               durationLabel,
-              style: t.bodyMedium!.copyWith(
-                  fontSize: 15, fontWeight: FontWeight.w500, color: p.text2),
+              style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w500, color: p.text2),
             ),
           ],
         ),
@@ -193,8 +191,7 @@ class _Cell extends StatelessWidget {
                 if (unit != null)
                   TextSpan(
                       text: ' $unit',
-                      style: AppType.unit(24, color: color)
-                          .copyWith(fontSize: 14)),
+                      style: AppType.unit(24, color: color, size: 14)),
               ]),
               maxLines: 1,
               textScaler: AppType.noScale(context),
@@ -204,11 +201,7 @@ class _Cell extends StatelessWidget {
         const SizedBox(height: AppSpacing.s4),
         Text(
           labelCase(context, metric.label),
-          style: t.bodyMedium!.copyWith(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              height: 1.2,
-              color: p.text2),
+          style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w500, height: 1.2, color: p.text2),
         ),
       ],
     );

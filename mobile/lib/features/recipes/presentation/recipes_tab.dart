@@ -325,12 +325,12 @@ class _GenerateCard extends StatelessWidget {
               children: [
                 Text(
                   l10n.generateRecipeWithAiButton,
-                  style: t.titleMedium!.copyWith(fontSize: 17, height: 1.3, color: p.text),
+                  style: t.titleMedium!.copyWith(height: 1.3, color: p.text),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   l10n.generateRecipeSubtitle,
-                  style: t.bodyMedium!.copyWith(fontSize: 14, height: 1.4, color: p.text2),
+                  style: t.titleSmall!.copyWith(fontWeight: FontWeight.w500, height: 1.4, color: p.text2),
                 ),
                 const AiCreditChip(margin: EdgeInsets.only(top: AppSpacing.s8)),
               ],

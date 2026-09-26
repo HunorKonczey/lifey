@@ -116,12 +116,7 @@ class LiveMetricCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context)
                                 .textTheme
-                                .titleSmall!
-                                .copyWith(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: color ?? p.text2,
-                                ),
+                                .bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: color ?? p.text2),
                           ),
                         ),
                         if (badge != null) ...[
@@ -235,8 +230,7 @@ class LiveHeartRateCard extends StatelessWidget {
                             style: AppType.number(32, color: p.text)),
                         TextSpan(
                             text: ' ${l10n.statUnitBpm}',
-                            style: AppType.unit(32, color: p.text2)
-                                .copyWith(fontSize: 15)),
+                            style: AppType.unit(32, color: p.text2, size: 15)),
                       ]),
                       maxLines: 1,
                       textScaler: noScale,

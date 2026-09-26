@@ -412,13 +412,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                   child: Center(
                     child: Text(
                       f.integer(_servings),
-                      style: TextStyle(
-                        fontFamily: AppType.fontFamily,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: p.text,
-                        fontFeatures: AppType.tabular,
-                      ),
+                      style: AppType.number(24, weight: FontWeight.w800, color: p.text),
                     ),
                   ),
                 ),
@@ -452,8 +446,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                       _favorite ? l10n.removeFavorite : l10n.markFavorite,
                       style: Theme.of(context)
                           .textTheme
-                          .titleMedium!
-                          .copyWith(fontSize: 15, color: p.text),
+                          .bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text),
                     ),
                   ),
                   Switch(
@@ -670,12 +663,10 @@ class _IngredientRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(food.name,
-                        style: t.titleMedium!.copyWith(
-                            fontSize: 16, height: 1.25, color: p.text)),
+                        style: t.titleMedium!.copyWith(height: 1.25, color: p.text)),
                     const SizedBox(height: 3),
                     Text(subtitle,
-                        style: t.bodySmall!.copyWith(
-                            fontSize: 13, height: 1.4, color: p.text2)),
+                        style: t.bodySmall!.copyWith(height: 1.4, color: p.text2)),
                   ],
                 ),
               ),

@@ -75,21 +75,13 @@ class _Tile extends StatelessWidget {
               child: Text(
                 value,
                 maxLines: 1,
-                style: TextStyle(
-                  fontFamily: AppType.fontFamily,
-                  fontSize: 30,
-                  height: 1.1,
-                  letterSpacing: -0.02 * 30,
-                  fontWeight: FontWeight.w800,
-                  color: p.text,
-                  fontFeatures: AppType.tabular,
-                ),
+                style: AppType.number(30, weight: FontWeight.w800, color: p.text),
               ),
             ),
             const SizedBox(height: AppSpacing.s4),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 13, height: 1.3, color: p.text2),
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(height: 1.3, color: p.text2),
             ),
           ],
         ),

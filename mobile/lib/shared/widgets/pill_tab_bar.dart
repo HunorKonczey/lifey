@@ -57,7 +57,7 @@ class PillTabBar extends StatelessWidget {
             color: p.control,
             borderRadius: AppRadius.pill,
             boxShadow: dark
-                ? const [BoxShadow(color: Color(0x66000000), offset: Offset(0, 2), blurRadius: 8)]
+                ? AppElevation.pillThumbDark
                 : context.elevation.e1,
           ),
           indicatorSize: TabBarIndicatorSize.tab,

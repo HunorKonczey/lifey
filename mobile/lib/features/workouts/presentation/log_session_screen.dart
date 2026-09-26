@@ -1905,12 +1905,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                 ),
                 child: Text(
                   '$rpe',
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onPrimaryContainer,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onPrimaryContainer),
                 ),
               )
             else
@@ -1926,12 +1921,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                     rpe != null
                         ? l10n.postWorkoutFeedbackSectionTitle
                         : l10n.postWorkoutFeedbackEmptyState,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
                   ),
                   if (note != null && note.isNotEmpty)
                     Padding(
@@ -1940,11 +1930,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                         note,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 11.5,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant),
                       ),
                     ),
                 ],
@@ -1988,22 +1974,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
               children: [
                 Text(
                   l10n.trainerCommentLabel,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
                     comment,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 11.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ),
                 if (commentAt != null)
@@ -2011,11 +1988,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       _label.format(commentAt),
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 10.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ),
               ],
@@ -2325,12 +2298,7 @@ class _AddExerciseButton extends StatelessWidget {
               const SizedBox(width: 7),
               Text(
                 AppLocalizations.of(context)!.addExerciseTitle,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -2415,13 +2383,7 @@ class _HeaderPill extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               text!,
-              style: TextStyle(
-                fontFamily: AppType.fontFamily,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: p.text,
-                fontFeatures: AppType.tabular,
-              ),
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: p.text, fontFeatures: AppType.tabular),
             ),
           ],
         ],
@@ -2467,22 +2429,11 @@ class _HealthStatCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: scheme.onSurface,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, fontFeatures: const [FontFeature.tabularFigures()]),
               ),
               Text(
                 label,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
               ),
             ],
           ),

@@ -187,6 +187,12 @@ abstract final class AppCurve {
 
 @immutable
 class AppElevation extends ThemeExtension<AppElevation> {
+  /// The lifted thumb of a segmented control / pill tab bar in the dark theme
+  /// (the light theme uses [e1]): a soft black drop, 66 % opaque.
+  static const List<BoxShadow> pillThumbDark = [
+    BoxShadow(color: Color(0x66000000), offset: Offset(0, 2), blurRadius: 8),
+  ];
+
   const AppElevation({
     required this.border,
     required this.cardEdge,

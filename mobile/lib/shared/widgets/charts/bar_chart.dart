@@ -80,12 +80,7 @@ class LifeyBarChart extends StatelessWidget {
         bars.fold<double>(0, (m, b) => (b.value ?? 0) > m ? b.value! : m);
     final ticks = yAxisTicks(dataMax, goal: goal, integer: integer);
     final top = ticks.first;
-    final labelStyle = Theme.of(context).textTheme.labelSmall!.copyWith(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          height: 1,
-          color: p.text3,
-        );
+    final labelStyle = Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, height: 1, color: p.text3);
 
     String tick(double v) {
       if (v >= 1000) return f.compactAxis(v);

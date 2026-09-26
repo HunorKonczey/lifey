@@ -168,11 +168,7 @@ class _AddExerciseToSessionSheetState
                   Expanded(
                     child: Text(
                       l10n.setsLabel,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurface),
                     ),
                   ),
                   // Decrement
@@ -190,13 +186,9 @@ class _AddExerciseToSessionSheetState
                     child: Text(
                       _targetSets?.toString() ?? '—',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: _targetSets != null
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w700, color: _targetSets != null
                             ? scheme.primary
-                            : scheme.onSurfaceVariant,
-                      ),
+                            : scheme.onSurfaceVariant),
                     ),
                   ),
                   // Increment

@@ -101,7 +101,7 @@ class EmptyStateCard extends StatelessWidget {
             child: Text(
               title,
               textAlign: TextAlign.center,
-              style: t.titleMedium!.copyWith(fontSize: 17, height: 1.3, color: p.text),
+              style: t.titleMedium!.copyWith(height: 1.3, color: p.text),
             ),
           ),
           if (subtitle != null) ...[
@@ -111,7 +111,7 @@ class EmptyStateCard extends StatelessWidget {
               child: Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: t.bodyMedium!.copyWith(fontSize: 14, height: 1.45, color: p.text2),
+                style: t.titleSmall!.copyWith(fontWeight: FontWeight.w500, height: 1.45, color: p.text2),
               ),
             ),
           ],

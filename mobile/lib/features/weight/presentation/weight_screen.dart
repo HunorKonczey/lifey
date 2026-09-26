@@ -331,7 +331,7 @@ class _HistoryRow extends StatelessWidget {
                 const SizedBox(height: AppSpacing.s4),
                 Text(
                   _relativeDate(context, l10n),
-                  style: t.bodyMedium!.copyWith(fontSize: 15, fontWeight: FontWeight.w500, color: p.text2),
+                  style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w500, color: p.text2),
                 ),
               ],
             ),

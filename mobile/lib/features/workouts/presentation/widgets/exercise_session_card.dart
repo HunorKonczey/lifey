@@ -317,10 +317,10 @@ class _CardHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.titleLarge!.copyWith(fontSize: 20, height: 1.2, color: p.text)),
+              Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.titleLarge!.copyWith(height: 1.2, color: p.text)),
               if (best != null) ...[
                 const SizedBox(height: 2),
-                Text(best!, style: t.bodyMedium!.copyWith(fontSize: 14, height: 1.3, color: p.text2)),
+                Text(best!, style: t.titleSmall!.copyWith(fontWeight: FontWeight.w500, height: 1.3, color: p.text2)),
               ],
             ],
           ),
@@ -465,13 +465,7 @@ class _SetRowTile extends StatelessWidget {
                 padding: const EdgeInsets.only(left: AppSpacing.s12),
                 child: Text(
                   '${index + 1}',
-                  style: TextStyle(
-                    fontFamily: AppType.fontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: isDone ? improvement : p.text2,
-                    fontFeatures: AppType.tabular,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: isDone ? improvement : p.text2, fontFeatures: AppType.tabular),
                 ),
               ),
             ),
@@ -492,9 +486,7 @@ class _SetRowTile extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           previousText,
-                          style: TextStyle(
-                            fontFamily: AppType.fontFamily,
-                            fontSize: 14,
+                          style: Theme.of(context).textTheme.titleSmall!.copyWith(
                             fontWeight: FontWeight.w600,
                             // Faint, and it stays faint on a done row.
                             color: p.text3,
@@ -620,13 +612,7 @@ class _ValuePill extends StatelessWidget {
                   children: [
                     Text(
                       text,
-                      style: TextStyle(
-                        fontFamily: AppType.fontFamily,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: done ? p.text : (hint ? p.text3 : p.text2),
-                        fontFeatures: AppType.tabular,
-                      ),
+                      style: AppType.number(20, weight: FontWeight.w800, color: done ? p.text : (hint ? p.text3 : p.text2)),
                     ),
                     if (trailing != null) ...[const SizedBox(width: 4), trailing!],
                   ],

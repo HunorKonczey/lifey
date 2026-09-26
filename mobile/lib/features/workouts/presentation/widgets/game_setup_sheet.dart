@@ -84,11 +84,7 @@ class _FormatOption extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-              color: selected ? scheme.primary : scheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: selected ? scheme.primary : scheme.onSurface),
           ),
         ),
       ),
@@ -177,11 +173,7 @@ class _VenueOption extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: selected ? scheme.primary : scheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: selected ? scheme.primary : scheme.onSurface),
                 ),
               ),
             ],
@@ -338,12 +330,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
+      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
   }
 }

@@ -110,13 +110,7 @@ class _DayCell extends StatelessWidget {
                 Text(
                   f.weekdayShort(day),
                   maxLines: 1,
-                  style: TextStyle(
-                    fontFamily: AppType.fontFamily,
-                    fontSize: 11,
-                    height: 1,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? primary : p.text3,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1, fontWeight: FontWeight.w600, color: selected ? primary : p.text3),
                 ),
                 const SizedBox(height: AppSpacing.s4),
                 ProgressRing(
@@ -125,14 +119,7 @@ class _DayCell extends StatelessWidget {
                   color: context.metricColors.calories,
                   child: Text(
                     '${day.day}',
-                    style: TextStyle(
-                      fontFamily: AppType.fontFamily,
-                      fontSize: 12,
-                      height: 1,
-                      fontWeight: FontWeight.w800,
-                      color: selected ? p.text : p.text2,
-                      fontFeatures: AppType.tabular,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1, fontWeight: FontWeight.w800, color: selected ? p.text : p.text2, fontFeatures: AppType.tabular),
                   ),
                 ),
               ],

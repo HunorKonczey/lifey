@@ -247,34 +247,25 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
         // NAME label
         Text(
           l10n.templateNameLabel.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.0,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.0, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
         // Name input
         TextField(
           controller: _name,
           textCapitalization: TextCapitalization.sentences,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
             filled: true,
             fillColor: scheme.surfaceContainerLow,
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: AppRadius.controlAll,
               borderSide: BorderSide(color: scheme.outlineVariant, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: AppRadius.controlAll,
               borderSide: BorderSide(color: scheme.primary, width: 1.5),
             ),
           ),
@@ -286,12 +277,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
           children: [
             Text(
               l10n.exercisesLabel.toUpperCase(),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.0, color: scheme.onSurfaceVariant),
             ),
             GestureDetector(
               onTap: () => _openExercisePicker(allExercises),
@@ -304,11 +290,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
                     const SizedBox(width: 4),
                     Text(
                       l10n.addButton,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.primary,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.primary),
                     ),
                   ],
                 ),
@@ -354,7 +336,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.controlAll,
         ),
         child: Row(
           children: [
@@ -370,7 +352,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
               height: 38,
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.controlAll,
               ),
               child: Center(child: Icon(badgeIcon, size: 20, color: scheme.primary)),
             ),
@@ -385,21 +367,13 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
                   children: [
                     Text(
                       ex?.name ?? entry.clientId,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface),
                     ),
                     if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                       ),
                     ],
                   ],
@@ -415,7 +389,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
                 height: 32,
                 decoration: BoxDecoration(
                   color: scheme.surface,
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: AppRadius.controlAll,
                 ),
                 child: Center(
                   child: Icon(Icons.close, size: 19, color: scheme.onSurfaceVariant),
@@ -447,11 +421,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
               const SizedBox(width: 7),
               Text(
                 l10n.addExerciseTitle,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -610,7 +580,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                     onTap: () => widget.onPick(ex),
                     title: Text(ex.name),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.controlAll,
                     ),
                   );
                 },

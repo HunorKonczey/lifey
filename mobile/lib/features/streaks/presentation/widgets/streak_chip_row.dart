@@ -65,11 +65,7 @@ class StreakChipRow extends StatelessWidget {
                                       l10n.streakStripWeekInReview,
                                       maxLines: 2,
                                       textAlign: TextAlign.end,
-                                      style: t.labelLarge!.copyWith(
-                                        fontSize: 13,
-                                        height: 1.2,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
+                                      style: t.bodySmall!.copyWith(fontWeight: FontWeight.w700, height: 1.2, color: Theme.of(context).colorScheme.primary),
                                     ),
                                   ),
                                   Icon(Icons.chevron_right_rounded,

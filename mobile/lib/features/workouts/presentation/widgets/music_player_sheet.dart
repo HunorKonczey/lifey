@@ -92,12 +92,7 @@ class _ChromeSheet extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         provider?.displayName ?? '',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
                       ),
                     ],
                   ),
@@ -112,12 +107,7 @@ class _ChromeSheet extends StatelessWidget {
                       const SizedBox(width: 5),
                       Text(
                         l10n.musicSwitchProvider,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.primary,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.primary),
                       ),
                     ],
                   ),
@@ -156,12 +146,7 @@ class _LoadingBody extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             l10n.musicConnectingMessage,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -191,12 +176,7 @@ class _EmptyBody extends ConsumerWidget {
         Text(
           l10n.musicNoActiveSessionMessage(name),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 16),
         _FilledCta(
@@ -233,12 +213,7 @@ class _ErrorBody extends ConsumerWidget {
         Text(
           l10n.musicErrorMessage(provider?.displayName ?? ''),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 16),
         _TonalCta(
@@ -288,25 +263,14 @@ class _PlayingBody extends ConsumerWidget {
                     playback?.title ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onSurface,
-                      letterSpacing: -0.3,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, letterSpacing: -0.3),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     playback?.artist ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -423,26 +387,14 @@ class _PermissionSheet extends ConsumerWidget {
             Text(
               l10n.musicPermissionTitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurface,
-                letterSpacing: -0.3,
-              ),
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, letterSpacing: -0.3),
             ),
             const SizedBox(height: 10),
             for (final line in explanationLines) ...[
               Text(
                 line,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  color: scheme.onSurfaceVariant,
-                  height: 1.55,
-                ),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant, height: 1.55),
               ),
               if (line != explanationLines.last) const SizedBox(height: 4),
             ],
@@ -490,25 +442,13 @@ class _ConnectPromptSheet extends ConsumerWidget {
             Text(
               l10n.musicConnectTitle(name),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurface,
-                letterSpacing: -0.3,
-              ),
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, letterSpacing: -0.3),
             ),
             const SizedBox(height: 10),
             Text(
               l10n.musicConnectBody(name),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant,
-                height: 1.55,
-              ),
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant, height: 1.55),
             ),
             const SizedBox(height: 18),
             _FilledCta(
@@ -537,12 +477,7 @@ class _NotNowLink extends StatelessWidget {
       onTap: () => Navigator.of(context).pop(),
       child: Text(
         label,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 13.5,
-          fontWeight: FontWeight.w700,
-          color: scheme.onSurfaceVariant,
-        ),
+        style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
       ),
     );
   }
@@ -575,7 +510,7 @@ class _FilledCta extends StatelessWidget {
         icon: Icon(icon, size: 20),
         label: Text(
           label,
-          style: const TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 14, fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -605,7 +540,7 @@ class _TonalCta extends StatelessWidget {
         icon: Icon(icon, size: 20),
         label: Text(
           label,
-          style: const TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 14, fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
     );

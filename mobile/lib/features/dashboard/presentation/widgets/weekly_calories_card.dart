@@ -68,12 +68,7 @@ class WeeklyCaloriesCard extends StatelessWidget {
         ),
     ];
 
-    final captionStyle = t.bodySmall!.copyWith(
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-      height: 1,
-      color: p.text2,
-    );
+    final captionStyle = t.bodySmall!.copyWith(fontWeight: FontWeight.w600, height: 1, color: p.text2);
 
     return LifeyCard(
       child: Column(

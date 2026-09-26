@@ -379,7 +379,7 @@ class _ExerciseCard extends StatelessWidget {
                     children: [
                       Text(
                         exercise.name,
-                        style: theme.textTheme.titleMedium!.copyWith(fontSize: 15, height: 1.3, color: p.text),
+                        style: theme.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w700, height: 1.3, color: p.text),
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 3),

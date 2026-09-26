@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_tokens.dart';
-import '../../core/theme/app_type.dart';
 
 // The snackbar is an *inverse* surface: the v2 dark palette in both themes
 // (as Material's inverse snackbar), so it reads as a transient layer above
@@ -189,25 +188,13 @@ class _SnackbarContent extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
-                        fontFamily: AppType.fontFamily,
-                        fontSize: 14,
-                        height: 1.3,
-                        fontWeight: FontWeight.w700,
-                        color: _p.text,
-                      ),
+                      style: Theme.of(context).textTheme.titleSmall!.copyWith(height: 1.3, fontWeight: FontWeight.w700, color: _p.text),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         subtitle!,
-                        style: TextStyle(
-                          fontFamily: AppType.fontFamily,
-                          fontSize: 12,
-                          height: 1.35,
-                          fontWeight: FontWeight.w500,
-                          color: _p.text2,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.35, fontWeight: FontWeight.w500, color: _p.text2),
                       ),
                     ],
                   ],
@@ -226,7 +213,7 @@ class _SnackbarContent extends StatelessWidget {
                   tapTargetSize: MaterialTapTargetSize.padded,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.controlAll),
-                  textStyle: const TextStyle(fontFamily: AppType.fontFamily, fontSize: 13.5, fontWeight: FontWeight.w800),
+                  textStyle: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800),
                 ),
                 child: Text(actionLabel!),
               )

@@ -240,7 +240,7 @@ class _DotStrip extends StatelessWidget {
     final f = LifeyFormat.of(context);
     // Any Monday gives the same seven letters.
     final monday = WeeklyRecap.lastCompletedWeekStart();
-    final label = Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 11, height: 1, color: p.text3);
+    final label = Theme.of(context).textTheme.labelSmall!.copyWith(height: 1, color: p.text3);
     return Row(
       children: [
         for (var i = 0; i < filled.length; i++)
