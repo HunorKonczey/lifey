@@ -66,43 +66,6 @@ abstract final class AppRadius {
   /// so the two curves stay concentric.
   static double nested(double parent, double inset) =>
       parent - inset > 0 ? parent - inset : 0;
-
-  // --- Legacy names ---------------------------------------------------------
-  // The v1 scale (8 / 16 / 18 / 20 / 24 / 28), each now pointing at the nearest
-  // v2 step so unmigrated screens already get the new corners. Each redesign
-  // iteration moves its own files to the names above; R7.3 deletes these.
-  // Deliberately not @Deprecated: CI runs `flutter analyze` with fatal infos,
-  // and ~140 call sites would fail it until the last iteration lands.
-
-  /// Legacy — use [tag].
-  static const double sm = tag;
-
-  /// Legacy — use [control].
-  static const double md = control;
-
-  /// Legacy — use [control].
-  static const double input = control;
-
-  /// Legacy — use [card].
-  static const double lg = card;
-
-  /// Legacy — use [hero].
-  static const double nav = hero;
-
-  /// Legacy — use [tagAll].
-  static BorderRadius get smAll => tagAll;
-
-  /// Legacy — use [controlAll].
-  static BorderRadius get mdAll => controlAll;
-
-  /// Legacy — use [controlAll].
-  static BorderRadius get inputAll => controlAll;
-
-  /// Legacy — use [cardAll].
-  static BorderRadius get lgAll => cardAll;
-
-  /// Legacy — use [heroAll].
-  static BorderRadius get navAll => heroAll;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,28 +115,6 @@ abstract final class AppMotion {
   /// value. Every v2 animation reads its duration through this.
   static Duration of(BuildContext context, Duration duration) =>
       (MediaQuery.maybeDisableAnimationsOf(context) ?? false) ? Duration.zero : duration;
-}
-
-// --- Legacy motion (v1) ------------------------------------------------------
-// Still driving the v1 floating bars; replaced by [AppMotion] when the header
-// and bottom nav are rebuilt (R0.10 / R0.11), deleted in R7.3.
-
-abstract final class AppDuration {
-  static const Duration fast = Duration(milliseconds: 150);
-  static const Duration base = Duration(milliseconds: 250);
-  static const Duration slow = Duration(milliseconds: 350);
-
-  /// Nav collapse — slightly longer for the spring feel
-  static const Duration collapse = Duration(milliseconds: 380);
-}
-
-abstract final class AppCurve {
-  /// Standard emphasized easing for most transitions
-  static const Curve standard = Curves.easeInOut;
-
-  /// Spring-like easing for the nav collapse/expand
-  /// Matches: cubic-bezier(.2,.8,.2,1) from the design prototype
-  static const Curve collapse = Cubic(0.2, 0.8, 0.2, 1.0);
 }
 
 // ---------------------------------------------------------------------------

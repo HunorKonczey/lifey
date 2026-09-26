@@ -43,14 +43,6 @@ void main() {
       expect([AppRadius.tag, AppRadius.control, AppRadius.card, AppRadius.hero], [8, 14, 22, 30]);
     });
 
-    test('legacy names point at the nearest v2 step', () {
-      expect(AppRadius.sm, AppRadius.tag);
-      expect(AppRadius.md, AppRadius.control);
-      expect(AppRadius.input, AppRadius.control);
-      expect(AppRadius.lg, AppRadius.card);
-      expect(AppRadius.nav, AppRadius.hero);
-    });
-
     test('nested radius = parent − inset, never negative', () {
       expect(AppRadius.nested(AppRadius.hero, 16), 14);
       expect(AppRadius.nested(AppRadius.tag, 12), 0);

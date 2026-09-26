@@ -147,7 +147,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final l10n = AppLocalizations.of(context)!;
     if (_step > 0 && !_validateStep(l10n)) return;
     if (_step >= _stepCount - 1) return;
-    await _pageController.nextPage(duration: AppDuration.base, curve: AppCurve.standard);
+    await _pageController.nextPage(duration: AppMotion.of(context, AppMotion.page), curve: AppMotion.standard);
     if (_step == _suggestedPlanIndex && !_suggestRequested) {
       _suggestRequested = true;
       unawaited(_fetchSuggestion());
@@ -156,7 +156,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _back() async {
     if (_step == 0) return;
-    await _pageController.previousPage(duration: AppDuration.base, curve: AppCurve.standard);
+    await _pageController.previousPage(duration: AppMotion.of(context, AppMotion.page), curve: AppMotion.standard);
   }
 
   Future<void> _fetchSuggestion() async {
@@ -240,7 +240,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (Platform.isIOS || Platform.isAndroid) {
         // One more step (Health) still needs to run before we're actually
         // done — it drives its own exit to /dashboard.
-        await _pageController.nextPage(duration: AppDuration.base, curve: AppCurve.standard);
+        await _pageController.nextPage(duration: AppMotion.of(context, AppMotion.page), curve: AppMotion.standard);
       } else {
         _goToDashboard();
       }

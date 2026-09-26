@@ -438,7 +438,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
 // ---------------------------------------------------------------------------
 
 /// The header of every pushed screen — a drop-in `Scaffold.appBar`
-/// (replaces the plain Material `AppBar`s and, later, `AdaptiveAppBar`).
+/// (replaced the plain Material `AppBar`s and the floating `AdaptiveAppBar`).
 ///
 /// Round back button (auto when the route can pop), optional [leading]
 /// (e.g. the chat partner's avatar), a 20/800 [title] — 18/800 with a

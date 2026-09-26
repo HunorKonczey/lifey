@@ -10,8 +10,7 @@ import 'scroll_fill.dart';
 /// main one filled, the other a secondary button ("Add meal" / "Copy a day").
 ///
 /// Stays scrollable (inside [ScrollFill]) so it works under pull-to-refresh.
-/// Pass the actions as ready buttons; [action] alone keeps the v1 call sites
-/// working unchanged.
+/// Pass the actions as ready buttons; [action] alone is the single-button form.
 class EmptyView extends StatelessWidget {
   const EmptyView({
     super.key,

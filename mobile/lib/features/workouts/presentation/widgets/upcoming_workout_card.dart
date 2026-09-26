@@ -123,12 +123,12 @@ class _UpcomingWorkoutCardState extends ConsumerState<UpcomingWorkoutCard>
       ignoring: current == null,
       child: AnimatedSlide(
         offset: current == null ? const Offset(0, 0.3) : Offset.zero,
-        duration: AppDuration.slow,
-        curve: AppCurve.collapse,
+        duration: AppMotion.of(context, AppMotion.sheet),
+        curve: AppMotion.enter,
         child: AnimatedOpacity(
           opacity: current == null ? 0.0 : 1.0,
-          duration: AppDuration.base,
-          curve: AppCurve.standard,
+          duration: AppMotion.of(context, AppMotion.page),
+          curve: AppMotion.standard,
           child: current == null
               ? const SizedBox.shrink()
               : _CardContent(
