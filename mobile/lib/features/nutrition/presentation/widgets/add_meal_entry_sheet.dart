@@ -210,8 +210,16 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
     final t = Theme.of(context).textTheme;
     final p = context.palette;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s4, AppSpacing.screen, AppSpacing.s20 + viewInsets),
+    // The fields scroll; the "Add to meal" button does not. With the keyboard up
+    // the sheet is short, and a button at the end of the scroll view sat under the
+    // keyboard until the user scrolled to it (R7 follow-up).
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.screen,
+        AppSpacing.s4,
+        AppSpacing.screen,
+        AppSpacing.s16 + (viewInsets > 0 ? viewInsets : MediaQuery.paddingOf(context).bottom),
+      ),
       child: foodsState.when(
         loading: () => const Padding(
           padding: EdgeInsets.all(24),
@@ -233,7 +241,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
           // already chose; clearing it brings the row back.
           final hideRecents = _isEditing || (_isPreselected && _food?.clientId == widget.preselectedFood!.clientId);
           final recents = hideRecents ? const <Food>[] : recentFoodsByUsage(foods, usage);
-          return Form(
+          final fields = Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -349,15 +357,22 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                     onSubmit: _submit,
                   ),
                 ],
-                const SizedBox(height: AppSpacing.s16),
-                FilledButton.icon(
-                  onPressed: _submit,
-                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
-                  icon: _isEditing ? null : const Icon(Icons.add_rounded),
-                  label: Text(_isEditing ? l10n.saveButton : l10n.addToMealButton),
-                ),
               ],
             ),
+          );
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Flexible(child: SingleChildScrollView(child: fields)),
+              const SizedBox(height: AppSpacing.s12),
+              FilledButton.icon(
+                onPressed: _submit,
+                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+                icon: _isEditing ? null : const Icon(Icons.add_rounded),
+                label: Text(_isEditing ? l10n.saveButton : l10n.addToMealButton),
+              ),
+            ],
           );
         },
       ),

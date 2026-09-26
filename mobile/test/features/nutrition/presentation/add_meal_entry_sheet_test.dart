@@ -318,4 +318,37 @@ void main() {
       expect(result?.grams, 200);
     });
   });
+
+  testWidgets('the Add button stays above the keyboard on a small phone', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+    addTearDown(tester.view.reset);
+    addTearDown(tester.view.resetViewInsets);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          foodSearchProvider.overrideWith((ref) => Stream.value(_foods)),
+          foodUsageProvider.overrideWith((ref) => Stream.value(_usage)),
+          settingsControllerProvider.overrideWith(_NoGoal.new),
+          mealsOnDayProvider.overrideWith((ref, day) => Stream.value(const <Meal>[])),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          // No Scaffold: like showModalBottomSheet, the sheet sees the keyboard inset itself.
+          home: Material(child: AddMealEntrySheet(preselectedFood: _foods[1])),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final button = find.widgetWithText(FilledButton, 'Add to meal');
+    expect(button, findsOneWidget);
+    expect(tester.takeException(), isNull);
+    final rect = tester.getRect(button);
+    expect(rect.bottom, lessThanOrEqualTo(640 - 280), reason: 'the button sits above the keyboard');
+    expect(rect.top, greaterThanOrEqualTo(0));
+  });
 }
