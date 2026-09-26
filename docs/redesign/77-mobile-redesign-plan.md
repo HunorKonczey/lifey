@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 done (R4.1–R4.7 + review fixes R4.fix-1…3, reviewed 2026-09-25); R5 done (R5.1–R5.8 + review fixes R5.fix-1…3, reviewed 2026-09-25); R6 done (R6.1–R6.8 + review fixes R6.fix-1…4, reviewed 2026-09-26); R7 in progress (R7.1–R7.3 done)
+Status: done — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 done (R4.1–R4.7 + review fixes R4.fix-1…3, reviewed 2026-09-25); R5 done (R5.1–R5.8 + review fixes R5.fix-1…3, reviewed 2026-09-25); R6 done (R6.1–R6.8 + review fixes R6.fix-1…4, reviewed 2026-09-26); R7 done (R7.1–R7.4 + review fix R7.fix-1, reviewed 2026-09-26)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1915,11 +1915,13 @@ mark; no second green.
 
 *As built:* **deleted:** `shared/widgets/adaptive_app_bar.dart` (nothing imported it any more after R6), the five legacy `AppRadius` doubles and their `…All` getters (`sm` / `md` / `input` / `lg` / `nav`; their test went with them), the v1 motion tokens `AppDuration` and `AppCurve` — their last callers (the onboarding pager, the trainer-invite card and the upcoming-workout card) now read `AppMotion.of(context, AppMotion.page)` / `.sheet` with `AppMotion.standard` / `.enter`, so they also stop animating under "Remove animations" — and `PillTabBar.legacyMargin` (the bar's side margin now defaults to the design's 20). Two files found by a "nothing imports this" sweep of `lib/` went too: `placeholder_screen.dart` (its only mention was a stale comment in `paywall_navigation.dart`, now corrected) and `statistics/domain/daily_stat_point.dart`. `stat_card.dart` no longer exists. **Verify:** `flutter analyze` is clean — no deprecation infos, and none were suppressed — the audit reads **0** (6 allowed by marker), and core / shared tests pass.
 
-### R7.4 — Docs: close the loop
+### R7.4 — Docs: close the loop ✅
 - Update this plan's Status and mark finished steps ✅; update `docs/04-mobile-app.md` UI
   section and `docs/design/README` pointers (20 superseded by 77); note in
   `docs/REMAINING-WORK.md` the deferred items from §6; update the tinted-chip backlog note as
   resolved.
+
+*As built:* the docs are closed out. **`docs/04-mobile-app.md`**: the navigation list matches the app (the five client tabs and the trainer view with its bottom bar / tablet rail) and the "UI Priorities" stub is now "UI and theme" — tokens (`core/theme/`), components (`shared/widgets/ds/`, the debug Design gallery), the four rules, and the two guard rails (`tool/design_audit.dart`, `contrast_test`). **`docs/design/20-design-implementation-tasks.md`** carries a "felülírta" line pointing at this plan. **`docs/REMAINING-WORK.md`**: a new §2.1 with the §6 deferrals (web palette, chat result card, piece portions, Health write-back, native surfaces, icon font / goldens / max-HR) and what the redesign left open (the trainer step goal and planned-session count, the header goal, 40 `showModalBottomSheet` calls, the audit as a CI gate, the emulator flows not seen); the chip-contrast row was deleted — it is resolved: every metric colour is AA on its own 12 / 16 % tint and `contrast_test` keeps it so. The memory note of that backlog item was updated the same way (mobile resolved, web still open).
 
 **R7 acceptance** (plus the §4.1 emulator review logged in §12)**:** audit clean, one header system, one nav, one card, one chip; docs current.
 
@@ -2359,3 +2361,19 @@ Walked: the clients list, the client detail (Overview, Statistics, Workouts, Nut
 - Found by tests before the review: the daily-goals value and a meal-type header overflowed at × 1.3 (R6.6); the month grid's day cells overflowed by 2 px at × 1.3 (R6.8).
 
 **Not exercised on the emulator**: Message / Schedule sheets and the session comment flow (no chat service was running; the create-schedule sheet, the session sheets and the assign flows are covered by widget tests, incl. × 1.3 in EN / HU), the month view and the client filter on a device, the tablet in light / Hungarian (covered by the 1184 × 800 × 1.3 matrix in `trainer_tablet_layout_test`), tablet calendar / assigned / programs panes, the offline states, and dark HU. The emulator's guest clock stalled once and the AVD was cold-booted; a "Pixel Watch keeps stopping" system dialog on the AVD was disabled with `pm disable-user`.
+
+### R7 — 2026-09-26 — Pixel_10 AVD (1080 × 2424, 420 dpi = 411 × 923 dp, API 37)
+
+Scope: the sweep touched almost every screen (233 raw text styles became theme roles, 76 radii became tokens, the confirm dialog was rebuilt, the floating `AdaptiveAppBar` and the v1 motion tokens were deleted), so this pass is a regression check against the canvases the earlier iterations were reviewed on — there is no R7 canvas. Walked with the seeded `anna.r1` (Today, Workouts with its sessions and a run, Nutrition with a meal day, the row menu, the delete confirmation) and the trainer account from the R6 review (clients list, trainer view switch, log-out and log-in), dark EN, plus the delete confirmation in light at × 1.3.
+
+**Matches**
+- Today: the greeting, streak chips, "Recommended workout" card, the calorie hero (2 360 kcal left, 129 g protein to go), water / steps tiles — as at the end of R1/R2. Workouts: the segmented Sessions / Templates / Exercises, the three week tiles, the grouped session rows with the "2 PRs" chip and the running rows in the calorie colour. Nutrition (Fri 25): 623 / 2 360 kcal, the macro bar and P / C / F line, the two meal rows — the canvas 2.1 values.
+- The type sweep did not move anything visibly: the labels that were 9–11.5 px are now 12 and nothing overflowed on the screens above; the ×1.3 layout tests of the cardio, interval-plan and music screens all pass.
+- **The delete confirmation** now follows the theme: dark on the dark theme, white with the heart-tinted holder in the light theme (it used to be a dark card on the light theme), the title 22/800, Cancel / Delete, and at × 1.3 the buttons stack.
+- Auth round trip (log out → log in → trainer view) unchanged; no screen has an `AppBar` or a floating app bar left.
+
+**Bugs (fixed, R7.fix-1)**
+- Stacked at large text, the dialog's two buttons took their natural width and sat left-aligned (the same in the log-out dialog) → each takes the dialog's full width now; the test checks equal widths.
+- Not a bug but worth knowing: tapping "Delete" one pixel too low in the confirmation deleted the seeded snack meal of the test account; it was recreated through the API (the flow itself — row menu, confirmation, delete, totals recomputed 623 → 383 kcal — works).
+
+**Not exercised on the emulator**: the live cardio session and a full cardio summary (no GPS / recorded route on the AVD; the seeded run has a duration only) — covered by the ×1.3 layout tests, which pass; the interval-plan editor and the music sheets; the paywall; Hungarian light on the client screens (the app language of the test account stayed English; the trainer screens were checked in Hungarian in R6).
