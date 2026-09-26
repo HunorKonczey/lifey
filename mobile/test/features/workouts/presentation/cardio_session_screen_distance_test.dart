@@ -136,32 +136,32 @@ Future<_RecordingSessionController> _pump(
 }
 
 void main() {
-  testWidgets('no distance recorded: moving time is dominant, distance shows the placeholder',
+  testWidgets('no distance recorded: the moving time is the hero, distance shows the placeholder',
       (tester) async {
     await _pump(tester, _distanceSession(movingSeconds: 754));
 
     expect(tester.takeException(), isNull);
     expect(find.text('MOVING TIME'), findsOneWidget);
     expect(find.text('12:34'), findsOneWidget);
-    expect(find.text('DISTANCE'), findsOneWidget);
+    expect(find.text('Distance'), findsOneWidget);
     // The never-show-a-big-zero guarantee: no "0.00 km" anywhere, dominant or not.
     expect(find.textContaining('0.00 km'), findsNothing);
-    expect(find.text('PACE'), findsOneWidget);
-    expect(find.text('HEART RATE'), findsOneWidget);
+    expect(find.text('Pace'), findsOneWidget);
+    expect(find.text('Heart rate'), findsNothing); // no reading, no heart-rate row
   });
 
-  testWidgets('a recorded distance becomes dominant; moving time and pace move to secondary',
+  testWidgets('a recorded distance sits in its own card; the moving time stays the hero',
       (tester) async {
     await _pump(
       tester,
       _distanceSession(distanceMeters: 5000, movingSeconds: 1500), // 25:00 -> 5:00 /km
     );
 
-    expect(find.text('DISTANCE'), findsOneWidget);
+    expect(find.text('Distance'), findsOneWidget);
     expect(find.text('5.00 km'), findsOneWidget);
     expect(find.text('MOVING TIME'), findsOneWidget);
     expect(find.text('25:00'), findsOneWidget);
-    expect(find.text('PACE'), findsOneWidget);
+    expect(find.text('Pace'), findsOneWidget);
     expect(find.text('5:00 /km'), findsOneWidget);
   });
 
@@ -177,9 +177,9 @@ void main() {
       ),
     );
 
-    expect(find.text('SPEED'), findsOneWidget);
+    expect(find.text('Speed'), findsOneWidget);
     expect(find.text('30.0 km/h'), findsOneWidget);
-    expect(find.text('PACE'), findsNothing);
+    expect(find.text('Pace'), findsNothing);
     expect(find.textContaining('/km'), findsNothing);
   });
 
@@ -195,7 +195,7 @@ void main() {
       (tester) async {
     final controller = await _pump(tester, _distanceSession(movingSeconds: 60));
 
-    await tester.tap(find.text('DISTANCE'));
+    await tester.tap(find.text('Distance'));
     await tester.pumpAndSettle();
     expect(find.text('Update distance'), findsOneWidget);
 
@@ -223,7 +223,7 @@ void main() {
   testWidgets('cancelling the edit dialog leaves the distance unchanged', (tester) async {
     final controller = await _pump(tester, _distanceSession(movingSeconds: 60));
 
-    await tester.tap(find.text('DISTANCE'));
+    await tester.tap(find.text('Distance'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '4.20');
     await tester.tap(find.text('Cancel'));
@@ -237,7 +237,7 @@ void main() {
       (tester) async {
     final controller = await _pump(tester, _distanceSession(movingSeconds: 60), imperial: true);
 
-    await tester.tap(find.text('DISTANCE'));
+    await tester.tap(find.text('Distance'));
     await tester.pumpAndSettle();
     expect(find.text('mi'), findsWidgets);
 
@@ -247,6 +247,61 @@ void main() {
 
     final cardio = controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
     expect(cardio.distanceMeters, closeTo(1609.344, 0.01));
+  });
+
+  group('the live layout (docs/redesign/77-mobile-redesign-plan.md R3.8)', () {
+    double numberSize(WidgetTester tester, String value) {
+      final text = tester.widgetList<Text>(find.byType(Text)).firstWhere(
+            (t) => t.textSpan?.toPlainText() == value,
+          );
+      return ((text.textSpan! as TextSpan).children!.first as TextSpan).style!.fontSize!;
+    }
+
+    testWidgets('a 104 px moving-time hero over distance and pace cards with 40 px numbers', (tester) async {
+      await _pump(tester, _distanceSession(distanceMeters: 5000, movingSeconds: 1500));
+
+      expect(numberSize(tester, '25:00'), 104);
+      expect(numberSize(tester, '5.00 km'), 40);
+      expect(numberSize(tester, '5:00 /km'), 40);
+      // the hero is centred over the two cards
+      final hero = tester.getCenter(find.text('25:00'));
+      expect(hero.dx, closeTo(tester.view.physicalSize.width / tester.view.devicePixelRatio / 2, 1));
+      expect(tester.getTopLeft(find.text('Distance')).dy, greaterThan(tester.getBottomLeft(find.text('25:00')).dy));
+      // side by side: same row
+      expect(tester.getTopLeft(find.text('Pace')).dy, tester.getTopLeft(find.text('Distance')).dy);
+    });
+
+    testWidgets('the header names the activity and says whether auto-pause is on', (tester) async {
+      await _pump(tester, _distanceSession(movingSeconds: 60));
+      await tester.pump();
+
+      expect(find.text('Running'), findsOneWidget);
+      // no fix yet, so no GPS part — just whether auto-pause is on
+      expect(find.text('Auto-pause on'), findsOneWidget);
+      expect(find.byTooltip('Auto-pause settings'), findsOneWidget);
+    });
+
+    testWidgets('one big pause disc in the middle, no side circles while running', (tester) async {
+      await _pump(tester, _distanceSession(movingSeconds: 60, movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch));
+
+      final pause = find.byTooltip('Pause');
+      expect(pause, findsOneWidget);
+      expect(tester.getSize(pause).width, greaterThanOrEqualTo(96));
+      expect(find.byIcon(Icons.pause_rounded), findsOneWidget);
+      expect(tester.getCenter(pause).dx, closeTo(tester.view.physicalSize.width / tester.view.devicePixelRatio / 2, 1));
+    });
+
+    testWidgets('slide to finish: a red stop knob on a pill track, a tap finishes nothing', (tester) async {
+      await _pump(tester, _distanceSession(movingSeconds: 60));
+
+      expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+      expect(find.text('Slide to finish'), findsOneWidget);
+      final bar = find.byKey(const Key('slideToFinishBar'));
+      expect(tester.getSize(bar).height, 64);
+      await tester.tap(bar);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Slide to finish'), findsOneWidget);
+    });
   });
 
   // A "GAME still shows the generic placeholder" cross-family check used to

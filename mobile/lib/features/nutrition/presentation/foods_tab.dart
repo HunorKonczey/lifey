@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
+import '../../../core/format/lifey_format.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/search_normalize.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/ds/grouped_list_item.dart';
+import '../../../shared/widgets/ds/list_group.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -18,9 +22,8 @@ import 'widgets/add_food_sheet.dart';
 /// scroll-triggered pagination over the local cache (see
 /// docs/14-pagination-plan.md).
 class FoodsTab extends ConsumerStatefulWidget {
-  const FoodsTab({super.key, this.topPadding = 0, this.searchQuery});
+  const FoodsTab({super.key, this.searchQuery});
 
-  final double topPadding;
 
   /// When non-empty, the tab shows the full food catalog (via
   /// [foodSearchProvider], bypassing pagination) filtered by name instead of
@@ -72,15 +75,16 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
 
   String _macroLine(BuildContext context, Food food) {
     final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
     final parts = <String>[
-      '${food.caloriesPer100g.toStringAsFixed(0)} kcal',
-      '${food.proteinPer100g.toStringAsFixed(0)} P',
+      '${f.kcal(food.caloriesPer100g)} kcal',
+      '${f.grams(food.proteinPer100g)} ${l10n.macroLetterProtein}',
     ];
     if (food.carbsPer100g != null) {
-      parts.add('${food.carbsPer100g!.toStringAsFixed(0)} C');
+      parts.add('${f.grams(food.carbsPer100g!)} ${l10n.macroLetterCarbs}');
     }
     if (food.fatPer100g != null) {
-      parts.add('${food.fatPer100g!.toStringAsFixed(0)} F');
+      parts.add('${f.grams(food.fatPer100g!)} ${l10n.macroLetterFat}');
     }
     return '${parts.join(' · ')}  ${l10n.perHundredGramsSuffix}';
   }
@@ -118,7 +122,6 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return RefreshIndicator(
-      displacement: widget.topPadding,
       onRefresh: () => ref.read(foodControllerProvider.notifier).refresh(),
       child: state.when(
         data: (foods) {
@@ -132,10 +135,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
           final itemCount = foods.length + (hasMore ? 1 : 0);
           return NotificationListener<ScrollNotification>(
             onNotification: _handleScrollNotification,
-            child: ListView.builder(
-              padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
-              itemCount: itemCount,
-              itemBuilder: (context, index) {
+            child: CustomScrollView(slivers: [const OverlapInsetSliver(), SliverPadding(padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88), sliver: SliverList.builder(itemCount: itemCount, itemBuilder: (context, index) {
                 if (index >= foods.length) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -149,15 +149,16 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
                   );
                 }
                 final food = foods[index];
-                return _FoodCard(
+                return _FoodRow(
+                  first: index == 0,
+                  last: index == foods.length - 1,
                   food: food,
                   macroLine: _macroLine(context, food),
                   onTap: () => _edit(context, food),
                   onAddToMeal: () => _addToMeal(context, food),
                   onDelete: () => _delete(context, ref, food),
                 );
-              },
-            ),
+              }))]),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -190,20 +191,18 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
             subtitle: l10n.tryDifferentSearchMessage,
           );
         }
-        return ListView.builder(
-          padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
-          itemCount: matches.length,
-          itemBuilder: (context, index) {
+        return CustomScrollView(slivers: [const OverlapInsetSliver(), SliverPadding(padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88), sliver: SliverList.builder(itemCount: matches.length, itemBuilder: (context, index) {
             final food = matches[index];
-            return _FoodCard(
+            return _FoodRow(
+              first: index == 0,
+              last: index == matches.length - 1,
               food: food,
               macroLine: _macroLine(context, food),
               onTap: () => _edit(context, food),
               onAddToMeal: () => _addToMeal(context, food),
               onDelete: () => _delete(context, ref, food),
             );
-          },
-        );
+          }))]);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => ErrorView(
@@ -215,11 +214,19 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
 }
 
 // ---------------------------------------------------------------------------
-// Food card
+// Food row — one lazily built row of a grouped card
 // ---------------------------------------------------------------------------
 
-class _FoodCard extends StatelessWidget {
-  const _FoodCard({
+/// A food as one row of the tab's grouped list (docs/redesign/77-mobile-
+/// redesign-plan.md R2.9; the "fewer boxes" rule). The list is paged, so the
+/// rows are built lazily rather than inside one [ListGroup]: each carries the
+/// card surface, the first and last round the group's corners, and a hairline
+/// separates it from the row above. Tap edits, the round + logs it into a new
+/// meal, swipe deletes after a confirmation.
+class _FoodRow extends StatelessWidget {
+  const _FoodRow({
+    required this.first,
+    required this.last,
     required this.food,
     required this.macroLine,
     required this.onTap,
@@ -227,6 +234,8 @@ class _FoodCard extends StatelessWidget {
     required this.onDelete,
   });
 
+  final bool first;
+  final bool last;
   final Food food;
   final String macroLine;
   final VoidCallback onTap;
@@ -235,94 +244,48 @@ class _FoodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
+    final primary = Theme.of(context).colorScheme.primary;
 
-    return Dismissible(
-      key: ValueKey(food.clientId),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        decoration: BoxDecoration(
-          color: scheme.errorContainer,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 8),
-        child: Icon(Icons.delete, color: scheme.onErrorContainer),
-      ),
-      confirmDismiss: (_) async {
+    return GroupedListItem(
+      first: first,
+      last: last,
+      dismissKey: ValueKey(food.clientId),
+      confirmDismiss: () async {
         final confirmed = await showConfirmDeleteDialog(
           context,
           title: l10n.deleteFoodQuestionTitle,
           message: l10n.deleteFoodConfirmMessage(food.name),
         );
         if (confirmed) onDelete();
-        // The local cache stream removes the tile on its own once
-        // the delete lands; don't let Dismissible do it too.
+        // The local cache stream removes the row on its own once the delete
+        // lands; don't let Dismissible do it too.
         return false;
       },
-      child: Card(
-        elevation: 0,
-        color: scheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        margin: const EdgeInsets.only(bottom: 8),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                // Icon badge
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.restaurant,
-                      size: 22,
-                      color: scheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Text
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(food.name, style: theme.textTheme.bodyLarge),
-                      const SizedBox(height: 2),
-                      Text(
-                        macroLine,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SyncStatusIndicator(clientId: food.clientId),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  color: scheme.primary,
-                  tooltip: l10n.addToMealTooltip,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onAddToMeal,
-                ),
-              ],
+      child: ListRow(
+        leading: ListIconHolder(icon: Icons.restaurant_menu_rounded, color: primary),
+        title: food.name,
+        subtitle: macroLine,
+        onTap: onTap,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SyncStatusIndicator(clientId: food.clientId),
+            IconButton(
+              icon: const Icon(Icons.add_rounded),
+              tooltip: l10n.addToMealTooltip,
+              onPressed: onAddToMeal,
+              style: IconButton.styleFrom(
+                fixedSize: const Size.square(44),
+                minimumSize: const Size.square(44),
+                backgroundColor: p.primaryTint,
+                foregroundColor: primary,
+                shape: const CircleBorder(),
+                tapTargetSize: MaterialTapTargetSize.padded,
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

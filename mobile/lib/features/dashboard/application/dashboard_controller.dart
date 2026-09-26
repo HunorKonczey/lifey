@@ -22,7 +22,9 @@ List<TimeSeriesPoint> _buildWeeklyCalories(List<Meal> meals) {
   final today = DateTime(now.year, now.month, now.day);
   final result = <TimeSeriesPoint>[];
   for (var i = 6; i >= 0; i--) {
-    final day = today.subtract(Duration(days: i));
+    // Field arithmetic, not `subtract(Duration)`: across a DST change the
+    // latter lands an hour off and would pick the wrong calendar day.
+    final day = DateTime(today.year, today.month, today.day - i);
     final total = meals
         .where((m) {
           final d = m.dateTime.toLocal();
@@ -111,6 +113,8 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
       rpe: session.rpe,
       sessionKind: session.sessionKind,
       activityType: session.activityType,
+      distanceMeters: session.cardio?.distanceMeters,
+      movingSeconds: session.movingSeconds,
     );
   }).toList();
 

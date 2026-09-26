@@ -53,8 +53,8 @@ class StepGoalNotifier with WidgetsBindingObserver {
     if (!await prefs.isStepGoalNotificationEnabled()) return;
 
     final settings = _ref.read(settingsControllerProvider).value;
-    final goal = settings?.dailyStepGoal;
-    if (goal == null || goal <= 0) return;
+    // The account's own goal, else the 10 000 default the dashboard shows.
+    final goal = (settings ?? const UserSettings.defaults()).effectiveDailyStepGoal;
 
     final steps = await _ref.read(healthServiceProvider).stepsForDay(DateTime.now());
     if (steps == null || steps < goal) return;

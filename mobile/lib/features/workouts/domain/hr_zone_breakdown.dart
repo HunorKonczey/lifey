@@ -119,6 +119,29 @@ class HrZoneBreakdown {
 
   int secondsIn(int zone) => slices[zone - 1].seconds;
 
+  /// Each zone's share of the measured time as whole percent, **always summing
+  /// to 100** — plain rounding of 10.4 / 29.6 / 34.6 / 20.2 / 5.2 gives 10 + 30
+  /// + 35 + 20 + 5 here but 99 or 101 on other splits, and a card that says
+  /// "35 % · 20 % · …" is read as a sum. The largest-remainder method: floor
+  /// every share, then hand the missing points to the biggest remainders (ties
+  /// go to the higher zone, the one worked harder).
+  List<int> get percents {
+    final exact = [for (final s in slices) s.fraction * 100];
+    final result = [for (final e in exact) e.floor()];
+    var missing = 100 - result.fold(0, (a, b) => a + b);
+    final order = List.generate(exact.length, (i) => i)
+      ..sort((a, b) {
+        final byRemainder = (exact[b] - result[b]).compareTo(exact[a] - result[a]);
+        return byRemainder != 0 ? byRemainder : b.compareTo(a);
+      });
+    for (final i in order) {
+      if (missing <= 0) break;
+      result[i]++;
+      missing--;
+    }
+    return result;
+  }
+
   /// Z4+Z5's share of the measured time. The one number M43's headline chip
   /// is derived from.
   double get hardFraction => slices[3].fraction + slices[4].fraction;

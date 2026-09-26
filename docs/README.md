@@ -5,7 +5,7 @@ the code cites those plans by section — migrations, entity javadoc and Dart
 comments all refer back to them.
 
 **Numbering.** Root docs and most topic folders share one global sequence
-(currently up to `76`). Take the next free number, never reuse a
+(currently up to `77`). Take the next free number, never reuse a
 gap, and keep the `NN-<kebab-topic>-plan.md` shape. Two exceptions exist for
 historical reasons: `web/` runs its own `01–09` series, and a few early numbers
 are duplicated at the root (`05`, `06`, `15`, `16`).
@@ -52,6 +52,7 @@ iterations.
 | [`chat/`](chat) | Trainer ↔ client chat (40–44), including the extraction of the chat into its own service (44) |
 | [`watch/`](watch) | Apple Watch + Wear OS app (40–50): set logging, standalone sessions, template and session sync |
 | [`design/`](design) | Design system prompt, design implementation tasks, workout-tab redesigns |
+| [`redesign/`](redesign) | Mobile redesign v2 (77): the Claude Design canvases (design system + 6 screen canvases) and the iteration plan R0–R7 — has its own README |
 | [`music/`](music) | In-workout music controls (46–47) |
 | [`landing_page/`](landing_page) | Monetization and the public marketing surface (63–71): trainer subscriptions, mobile free/Pro, ads, the landing page, and the design specs for both — has its own README with a reading order |
 | [`postman/`](postman) | Postman collection for the API |
@@ -93,6 +94,7 @@ iterations.
 | 39 | [Rest timer](39-rest-timer-plan.md) | done |
 | 75 | [Log a food from the Foods tab](75-log-food-from-foods-tab-plan.md) | mobile done, web in review |
 | 76 | [Smarter weight trend (roadmap #11)](76-smarter-weight-trend-plan.md) | built |
+| 77 | [Mobile redesign v2](redesign/77-mobile-redesign-plan.md) (in `redesign/`) | not started |
 
 Plans 40–74 live in the topic folders above.
 

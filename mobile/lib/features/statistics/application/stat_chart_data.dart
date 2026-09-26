@@ -16,35 +16,121 @@ import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/domain/activity_type.dart';
 import '../../workouts/domain/hr_zone_breakdown.dart';
 import '../../workouts/domain/workout_session.dart';
+import '../../settings/application/settings_controller.dart';
+import '../domain/metric_summary.dart';
 import '../domain/stat_kind_filter.dart';
 import '../domain/stat_metric.dart';
 import 'stat_kind_filter_controller.dart';
 import 'stat_metric_controller.dart';
 import 'stats_range_controller.dart';
 
-/// Derives the chart-ready series for the selected [StatMetric] + [StatsRange]
-/// from the already-migrated feature repositories (meals, sessions, water,
-/// weight) — the same local-first sources `dashboardControllerProvider`
-/// combines for today's snapshot, here aggregated per day across a range.
-/// No new repository: each branch only watches the one controller/stream the
-/// selected metric actually needs.
-final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) {
+/// How many days a [StatsRange] spans, null for "all".
+int? statRangeDays(StatsRange range) => switch (range) {
+      StatsRange.week => 7,
+      StatsRange.month => 30,
+      StatsRange.quarter => 90,
+      StatsRange.all => null,
+    };
+
+DateTime _today() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+}
+
+/// First day of the period *before* [range]: as many days again as the range
+/// spans, ending the day before the range starts. Calendar arithmetic (see
+/// [StatsRange.cutoff]). Null for "all".
+DateTime? _priorStart(StatsRange range) {
+  final cutoff = range.cutoff();
+  final days = statRangeDays(range);
+  if (cutoff == null || days == null) return null;
+  return DateTime(cutoff.year, cutoff.month, cutoff.day - days);
+}
+
+/// The series of the selected metric from the start of the period before the
+/// selected range (or of the entitlement's history window, whichever is
+/// later), to today — one fetch that the range and its prior period are cut
+/// from ([statCurrentSeriesProvider], [statPriorSeriesProvider]).
+final statFullSeriesProvider = Provider<AsyncValue<StatSeries>>((ref) {
   final metric = ref.watch(statMetricControllerProvider);
   final range = ref.watch(statsRangeControllerProvider);
   final kindFilter = ref.watch(statKindFilterControllerProvider);
   // The entitlement cutoff (`67` §3.2, D-P6) applies regardless of which
-  // range is selected — the range popup already locks a range beyond it
+  // range is selected — the range control already locks a range beyond it
   // (statistics_screen.dart), but a selection made before the entitlement
   // decayed to free must not keep showing gated data for the rest of the
   // session (D-P5: the gate reads the field, not the UI's own state).
-  final cutoff = combineHistoryCutoffs(range.cutoff(), ref.watch(historyCutoffProvider));
+  final from = combineHistoryCutoffs(_priorStart(range) ?? range.cutoff(), ref.watch(historyCutoffProvider));
+  return _seriesFor(ref, metric, kindFilter, from);
+});
+
+/// The selected range's own days, cut to the entitlement's history window.
+final statCurrentSeriesProvider = Provider<AsyncValue<StatSeries>>((ref) {
+  final range = ref.watch(statsRangeControllerProvider);
+  final from = combineHistoryCutoffs(range.cutoff(), ref.watch(historyCutoffProvider));
+  return ref.watch(statFullSeriesProvider).whenData((all) => all.window(from: from));
+});
+
+/// The period before the range, of the same length — null for "all", and null
+/// when the entitlement's history window cuts into it (comparing a whole range
+/// with part of another would be a made-up trend).
+final statPriorSeriesProvider = Provider<AsyncValue<StatSeries?>>((ref) {
+  final range = ref.watch(statsRangeControllerProvider);
+  final priorStart = _priorStart(range);
+  final rangeStart = range.cutoff();
+  final entitlement = ref.watch(historyCutoffProvider);
+  return ref.watch(statFullSeriesProvider).whenData((all) {
+    if (priorStart == null || rangeStart == null) return null;
+    if (entitlement != null && priorStart.isBefore(entitlement)) return null;
+    return all.window(from: priorStart, to: rangeStart);
+  });
+});
+
+/// The selected range's chart-ready days (one point per day with a value).
+final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) {
+  return ref.watch(statCurrentSeriesProvider).whenData((s) => s.points);
+});
+
+/// The daily goals the statistics compare days against — the user's settings.
+final statGoalsProvider = Provider<StatGoals>((ref) {
+  final settings = ref.watch(settingsControllerProvider).value;
+  return StatGoals(
+    calories: settings?.dailyCalorieGoal?.toDouble(),
+    protein: settings?.dailyProteinGoal?.toDouble(),
+    carbs: settings?.dailyCarbsGoal?.toDouble(),
+    fat: settings?.dailyFatGoal?.toDouble(),
+    waterLiters: settings?.dailyWaterGoalLiters,
+  );
+});
+
+/// The summary of the selected metric over the selected range: hero, trend,
+/// side stats ([summaryFor]).
+final statSummaryProvider = Provider<AsyncValue<MetricSummary>>((ref) {
+  final metric = ref.watch(statMetricControllerProvider);
+  final range = ref.watch(statsRangeControllerProvider);
+  final goals = ref.watch(statGoalsProvider);
+  final prior = ref.watch(statPriorSeriesProvider);
+  return ref.watch(statCurrentSeriesProvider).whenData((current) => summaryFor(
+        metric,
+        current: current,
+        prior: prior.value,
+        today: _today(),
+        rangeDays: statRangeDays(range),
+        goals: goals,
+      ));
+});
+
+AsyncValue<StatSeries> _seriesFor(Ref ref, StatMetric metric, StatKindFilter kindFilter, DateTime? cutoff) {
+  StatSeries onlyPoints(List<TimeSeriesPoint> p) => StatSeries(points: p);
 
   switch (metric) {
     case StatMetric.calories:
     case StatMetric.protein:
     case StatMetric.carbs:
     case StatMetric.fat:
-      return ref.watch(mealControllerProvider).whenData((all) => _mealPoints(all, metric, cutoff));
+      return ref
+          .watch(mealControllerProvider)
+          .whenData((all) => onlyPoints(_mealPoints(all, metric, cutoff)));
     // "edzés jellegű" (D-C3.4) — re-scoped to whichever kind is selected,
     // not just filtered out entirely under `strength`/`cardio` like the six
     // cardio-only metrics below are.
@@ -52,7 +138,7 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
     case StatMetric.workoutCount:
     case StatMetric.activeCalories:
       return ref.watch(workoutSessionControllerProvider).whenData(
-          (all) => _sessionPoints(_filterByKind(all, kindFilter), metric, cutoff));
+          (all) => _sessionSeries(_filterByKind(all, kindFilter), metric, cutoff));
     // Cardio-only metrics only ever contain cardio sessions regardless of
     // the filter — under `strength` there's nothing to show at all.
     case StatMetric.cardioDistance:
@@ -61,24 +147,26 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
     case StatMetric.cardioSessions:
     case StatMetric.cardioHardZoneMinutes:
       return ref.watch(workoutSessionControllerProvider).whenData((all) =>
-          kindFilter == StatKindFilter.strength ? const [] : _sessionPoints(all, metric, cutoff));
+          kindFilter == StatKindFilter.strength ? StatSeries.empty : _sessionSeries(all, metric, cutoff));
     case StatMetric.cardioAvgPace:
       return ref.watch(workoutSessionControllerProvider).whenData((all) =>
-          kindFilter == StatKindFilter.strength ? const [] : _cardioAvgPacePoints(all, cutoff));
+          kindFilter == StatKindFilter.strength ? StatSeries.empty : _cardioAvgPaceSeries(all, cutoff));
     case StatMetric.maxHeartRate:
-      return ref.watch(workoutSessionControllerProvider).whenData((all) =>
-          kindFilter == StatKindFilter.strength ? const [] : _maxHeartRatePoints(all, cutoff));
+      return ref.watch(workoutSessionControllerProvider).whenData((all) => kindFilter == StatKindFilter.strength
+          ? StatSeries.empty
+          : onlyPoints(_maxHeartRatePoints(all, cutoff)));
     case StatMetric.cardioMaxAltitude:
-      return ref.watch(workoutSessionControllerProvider).whenData((all) =>
-          kindFilter == StatKindFilter.strength ? const [] : _maxAltitudePoints(all, cutoff));
+      return ref.watch(workoutSessionControllerProvider).whenData((all) => kindFilter == StatKindFilter.strength
+          ? StatSeries.empty
+          : onlyPoints(_maxAltitudePoints(all, cutoff)));
     case StatMetric.water:
-      return ref.watch(allWaterEntriesProvider).whenData((all) => _waterPoints(all, cutoff));
+      return ref.watch(allWaterEntriesProvider).whenData((all) => onlyPoints(_waterPoints(all, cutoff)));
     case StatMetric.weight:
-      return ref.watch(weightControllerProvider).whenData((all) => _weightPoints(all, cutoff));
+      return ref.watch(weightControllerProvider).whenData((all) => onlyPoints(_weightPoints(all, cutoff)));
     case StatMetric.steps:
-      return ref.watch(allStepCountsProvider).whenData((all) => _stepsPoints(all, cutoff));
+      return ref.watch(allStepCountsProvider).whenData((all) => onlyPoints(_stepsPoints(all, cutoff)));
   }
-});
+}
 
 List<WorkoutSession> _filterByKind(List<WorkoutSession> sessions, StatKindFilter filter) {
   return switch (filter) {
@@ -178,12 +266,15 @@ List<TimeSeriesPoint> _mealPoints(List<Meal> meals, StatMetric metric, DateTime?
   return _pointsFromSums(sumsByDay);
 }
 
-List<TimeSeriesPoint> _sessionPoints(
+StatSeries _sessionSeries(
   List<WorkoutSession> sessions,
   StatMetric metric,
   DateTime? cutoff,
 ) {
   final sumsByDay = <DateTime, double>{};
+  // One value per session, for "longest" / "average per workout": minutes for
+  // the workout metrics, kilometres / metres for the cardio ones.
+  final samples = <TimeSeriesPoint>[];
   for (final session in sessions) {
     // Upcoming (not-yet-started) sessions aren't "workouts that happened" —
     // excluded the same way the backend excludes them from statistics.
@@ -236,8 +327,18 @@ List<TimeSeriesPoint> _sessionPoints(
     };
     if (value == null) continue;
     sumsByDay.update(day, (sum) => sum + value, ifAbsent: () => value);
+    final sample = switch (metric) {
+      StatMetric.workoutCount => session.effectiveDuration?.inMinutes.toDouble(),
+      StatMetric.workoutMinutes ||
+      StatMetric.cardioMovingMinutes ||
+      StatMetric.cardioDistance ||
+      StatMetric.cardioElevationGain =>
+        value,
+      _ => null,
+    };
+    if (sample != null) samples.add(TimeSeriesPoint(date: day, value: sample));
   }
-  return _pointsFromSums(sumsByDay);
+  return StatSeries(points: _pointsFromSums(sumsByDay), samples: samples);
 }
 
 /// D-C3.6 (docs/cardio/56-cardio-statistics-plan.md): each day's pace is
@@ -263,7 +364,7 @@ double? _hardZoneMinutes(WorkoutSession session) {
   return (breakdown.secondsIn(4) + breakdown.secondsIn(5)) / 60.0;
 }
 
-List<TimeSeriesPoint> _cardioAvgPacePoints(List<WorkoutSession> sessions, DateTime? cutoff) {
+StatSeries _cardioAvgPaceSeries(List<WorkoutSession> sessions, DateTime? cutoff) {
   final secondsByDay = <DateTime, double>{};
   final metersByDay = <DateTime, double>{};
   for (final session in sessions) {
@@ -278,13 +379,17 @@ List<TimeSeriesPoint> _cardioAvgPacePoints(List<WorkoutSession> sessions, DateTi
     metersByDay.update(day, (m) => m + meters, ifAbsent: () => meters);
   }
   final days = secondsByDay.keys.toList()..sort();
-  return [
-    for (final day in days)
-      TimeSeriesPoint(
-        date: day,
-        value: (secondsByDay[day]! / 60.0) / (metersByDay[day]! / 1000.0),
-      ),
-  ];
+  return StatSeries(
+    points: [
+      for (final day in days)
+        TimeSeriesPoint(
+          date: day,
+          value: (secondsByDay[day]! / 60.0) / (metersByDay[day]! / 1000.0),
+        ),
+    ],
+    // The day's kilometres: the range's pace is Σ time / Σ distance.
+    weights: {for (final day in days) day: metersByDay[day]! / 1000.0},
+  );
 }
 
 /// Each day's point is that day's *highest* recorded max heart rate across

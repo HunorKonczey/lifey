@@ -8,6 +8,7 @@ import '../../../../core/network/error_message.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/ds/lifey_segmented.dart';
 
 /// The message input.
 ///
@@ -149,87 +150,99 @@ class _ChatComposerState extends State<ChatComposer> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context)!;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _TypingBand(name: widget.peerTypingName),
-        if (_image != null) _PendingImageStrip(
-          image: _image!,
-          onRemove: () => setState(() => _image = null),
-        ),
-        Container(
-      margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+    // The bar sits on the page colour under a hairline, so the bubbles above
+    // it never run through it (canvas: "blur scrim" — nothing scrolls under
+    // this bar, so there is nothing to blur).
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        color: p.bg,
+        border: Border(top: BorderSide(color: p.hairline)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: IconButton(
-              onPressed: () => _showImageSourceSheet(l10n),
-              tooltip: l10n.chatAttachImageTooltip,
-              icon: const Icon(Icons.image_outlined, size: 21),
-              style: IconButton.styleFrom(foregroundColor: scheme.onSurfaceVariant),
+          _TypingBand(name: widget.peerTypingName),
+          if (_image != null)
+            _PendingImageStrip(
+              image: _image!,
+              onRemove: () => setState(() => _image = null),
             ),
-          ),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              minLines: 1,
-              // Grows to five lines, then scrolls inside itself rather than
-              // eating the thread.
-              maxLines: 5,
-              maxLength: widget.maxLength,
-              textCapitalization: TextCapitalization.sentences,
-              keyboardType: TextInputType.multiline,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 14.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                // The counter only earns its space near the limit.
-                counterText: '',
-                hintText: l10n.chatComposerHint,
-                hintStyle: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w500,
-                  color: scheme.onSurfaceVariant,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: IconButton(
-              onPressed: _canSend ? _send : null,
-              tooltip: l10n.chatSendTooltip,
-              icon: const Icon(Icons.send_rounded, size: 20),
-              style: IconButton.styleFrom(
-                backgroundColor: _canSend ? scheme.primary : scheme.surfaceContainerHighest,
-                foregroundColor: _canSend ? scheme.onPrimary : scheme.onSurfaceVariant,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s8, AppSpacing.s16, AppSpacing.s12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SquareIconButton(
+                  icon: Icons.add_photo_alternate_outlined,
+                  tooltip: l10n.chatAttachImageTooltip,
+                  onPressed: () => _showImageSourceSheet(l10n),
                 ),
-              ),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+                    decoration: BoxDecoration(
+                      color: p.card,
+                      borderRadius: AppRadius.cardAll,
+                      border: Border.all(color: context.elevation.border),
+                    ),
+                    alignment: Alignment.center,
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      // Grows to five lines, then scrolls inside itself rather
+                      // than eating the thread.
+                      maxLines: 5,
+                      maxLength: widget.maxLength,
+                      // The counter only earns its space near the limit — and
+                      // even then not inside a 48 dp pill.
+                      buildCounter: (_, {required currentLength, required isFocused, required maxLength}) => null,
+                      textCapitalization: TextCapitalization.sentences,
+                      keyboardType: TextInputType.multiline,
+                      style: t.bodyMedium!.copyWith(color: p.text),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        // Transparent: it sits inside its own container; the v2
+                        // theme fills fields by default (redesign R0.fix-3).
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        hintText: l10n.chatComposerHint,
+                        hintStyle: t.bodyMedium!.copyWith(color: p.text2),
+                        // The theme's 52 dp minimum is for filled fields; this one
+                        // lives in a 48 dp pill.
+                        constraints: const BoxConstraints(),
+                        contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.s12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s8),
+                IconButton(
+                  onPressed: _canSend ? _send : null,
+                  tooltip: l10n.chatSendTooltip,
+                  icon: const Icon(Icons.arrow_upward_rounded, size: 24),
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size.square(48),
+                    minimumSize: const Size.square(48),
+                    shape: const CircleBorder(),
+                    backgroundColor: _canSend ? scheme.primary : p.control,
+                    foregroundColor: _canSend ? scheme.onPrimary : p.text3,
+                    disabledBackgroundColor: p.control,
+                    disabledForegroundColor: p.text3,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-        ),
-      ],
     );
   }
 }
@@ -249,31 +262,34 @@ class _TypingBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final active = name != null;
 
     return SizedBox(
-      height: _height,
+      // Grows with the text size so the line is never clipped, but is always
+      // there — the thread must not jump as the peer starts and stops typing.
+      height: MediaQuery.textScalerOf(context).scale(_height),
       child: AnimatedOpacity(
         opacity: active ? 1 : 0,
         duration: const Duration(milliseconds: 150),
         child: !active
             ? const SizedBox.shrink()
             : Padding(
-                padding: const EdgeInsets.only(left: 20),
+                padding: const EdgeInsets.only(left: AppSpacing.screen, right: AppSpacing.screen),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const _TypingDots(),
                     const SizedBox(width: 7),
-                    Text(
-                      l10n.chatIsTyping(name!),
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant,
+                    Flexible(
+                      child: Text(
+                        l10n.chatIsTyping(name!),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: context.palette.text2,
+                            ),
                       ),
                     ),
                   ],
@@ -366,19 +382,14 @@ class _PendingImageStrip extends StatelessWidget {
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadius.controlAll,
             child: Image.file(image, width: 56, height: 56, fit: BoxFit.cover),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               l10n.chatImageReady,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
             ),
           ),
           IconButton(
@@ -400,31 +411,19 @@ class ArchivedComposerNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
+      margin: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s8, AppSpacing.s16, AppSpacing.s12),
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(color: p.card, borderRadius: AppRadius.cardAll),
       child: Row(
         children: [
-          Icon(Icons.lock_outline, size: 18, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 10),
+          Icon(Icons.lock_outline, size: 20, color: p.text2),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
-            child: Text(
-              l10n.chatArchivedNotice,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant,
-                height: 1.3,
-              ),
-            ),
+            child: Text(l10n.chatArchivedNotice, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.text2)),
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/theme/app_type.dart';
 import 'dart:math' as math;
 
 import 'package:drift/drift.dart' show Value;
@@ -9,13 +10,15 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/format/cardio_formatter.dart';
+import '../../../core/format/lifey_format.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/charts/pace_bar_chart.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../shared/widgets/ds/tinted_chip.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/game_setup_preferences.dart';
@@ -31,6 +34,8 @@ import '../domain/track_filter.dart';
 import '../domain/waypoint_track_match.dart';
 import '../domain/weather_condition.dart';
 import '../domain/workout_session.dart';
+import 'widgets/cardio_detail_hero.dart';
+import 'widgets/cardio_live_cards.dart';
 import 'widgets/elevation_profile_chart.dart';
 import 'widgets/game_setup_sheet.dart';
 import 'widgets/hr_zone_panel.dart';
@@ -97,7 +102,6 @@ class CardioSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
-  static final _dateLabel = DateFormat('EEE, MMM d · HH:mm');
 
   late final String _clientId;
   late final DateTime _startedAt;
@@ -507,12 +511,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             children: [
               Text(
                 l10n.gameFormatSectionLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
               GameFormatSelector(
@@ -525,12 +524,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
               const SizedBox(height: 16),
               Text(
                 l10n.venueSectionLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Theme.of(sheetContext).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
               GameVenueSelector(
@@ -759,71 +753,61 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     final polyline = _routePolyline;
     final hasRoute = polyline != null && polyline.isNotEmpty;
 
+    final p = context.palette;
+    final watchLabel = widget.session.healthWorkoutId != null ? l10n.watchChipLabel : null;
+
     return Scaffold(
-      backgroundColor: scheme.surface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // M13's floating header capsule instead of an AppBar — the route
-            // card below it is the hero, and a docked app bar would put a
-            // hard edge above it.
+      // The canvas's subpage header: back, "Running" over "Tue, 22 Sep · 07:45",
+      // and the ⌚ chip when the numbers came from the wrist (M13). The frame's
+      // ⋮ menu has nothing behind it here — every metric is edited by tapping
+      // it — so it isn't drawn.
+      appBar: LifeySubpageHeader(
+        title: activityTypeLabel(l10n, _activityType),
+        subtitle: _subtitleLine(l10n),
+        onBack: _done,
+        actions: [
+          if (watchLabel != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-              child: _SummaryHeaderBar(
-                title: activityTypeLabel(l10n, _activityType),
-                onBack: _done,
+              padding: const EdgeInsets.only(right: AppSpacing.s4),
+              child: TintedChip(label: watchLabel, color: context.metricColors.protein, icon: Icons.watch_rounded),
+            ),
+        ],
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s12, AppSpacing.screen, MediaQuery.paddingOf(context).bottom + AppSpacing.s16),
+        children: [
+          // The route leads (M13) — inset card, not full-bleed.
+          if (hasRoute) ...[
+            ClipRRect(
+              borderRadius: AppRadius.heroAll,
+              child: Container(
+                color: p.nested,
+                child: RoutePainter(
+                  polyline: polyline,
+                  height: 262,
+                  waypoints: _activityType == 'HIKING' ? widget.session.waypoints : const [],
+                ),
               ),
             ),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(14, 12, 14, MediaQuery.paddingOf(context).bottom + 12),
-                children: [
-                  // The route leads (M13) — inset card, not full-bleed.
-                  if (hasRoute) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(26),
-                      child: Container(
-                        color: scheme.surfaceContainerLow,
-                        child: RoutePainter(
-                          polyline: polyline,
-                          height: 262,
-                          waypoints: _activityType == 'HIKING' ? widget.session.waypoints : const [],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _IdentityRow(
-                    activityType: _activityType,
-                    title: activityTypeLabel(l10n, _activityType),
-                    subtitle: _subtitleLine(l10n),
-                    // M13's ⌚ pill: this session carries a Health/watch id,
-                    // so its numbers came from the wrist, not the phone.
-                    watchLabel: widget.session.healthWorkoutId != null ? l10n.watchChipLabel : null,
-                  ),
-                  if (widget.newRecords.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    _NewRecordBanner(
-                        types: widget.newRecords, l10n: l10n, theme: theme, scheme: scheme),
-                  ],
-                  const SizedBox(height: 16),
-                  ..._metricSections(l10n, theme, scheme, unitSystem),
-                  const SizedBox(height: 14),
-                  _FeedbackCard(
-                    l10n: l10n,
-                    scheme: scheme,
-                    theme: theme,
-                    rpe: _rpe,
-                    noteController: _noteController,
-                    noteFocusNode: _noteFocusNode,
-                    busy: _busy,
-                    onRpeChanged: _busy ? (_) {} : _setRpe,
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: AppSpacing.s16),
           ],
-        ),
+          if (widget.newRecords.isNotEmpty) ...[
+            _NewRecordBanner(types: widget.newRecords, l10n: l10n, theme: theme, scheme: scheme),
+            const SizedBox(height: AppSpacing.s16),
+          ],
+          ..._metricSections(l10n, theme, scheme, unitSystem),
+          const SizedBox(height: AppSpacing.s16),
+          _FeedbackCard(
+            l10n: l10n,
+            scheme: scheme,
+            theme: theme,
+            rpe: _rpe,
+            noteController: _noteController,
+            noteFocusNode: _noteFocusNode,
+            busy: _busy,
+            onRpeChanged: _busy ? (_) {} : _setRpe,
+          ),
+        ],
       ),
     );
   }
@@ -831,7 +815,9 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   /// M13/M15's second header line: when it happened, plus the venue when the
   /// session has one ("Tegnap 19:24 · beltéri").
   String _subtitleLine(AppLocalizations l10n) {
-    final date = _dateLabel.format(_startedAt.toLocal());
+    final f = LifeyFormat.of(context);
+    final started = _startedAt.toLocal();
+    final date = '${f.weekdayShort(started)}, ${f.shortDate(started)} · ${f.time(started)}';
     final venue = switch (_venue) {
       'INDOOR' => l10n.venueIndoorLabel,
       'OUTDOOR' => l10n.venueOutdoorLabel,
@@ -866,94 +852,78 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                 ? CardioFormatter.speed(_distanceMeters!, _duration, unitSystem)
                 : CardioFormatter.pace(_distanceMeters!, _duration, unitSystem))
             : null;
+        // Canvas 3.3: the distance is the hero (52 px) with the duration beside
+        // it, then one card of the four numbers people compare — pace,
+        // elevation, average heart rate, calories — under uniform labels.
+        // What is left (highest point, backpack, cadence) keeps its tiles.
+        final strip = [
+          if (pace != null)
+            CardioStripMetric(label: isCycling ? l10n.speedLabel : l10n.paceLabel, value: pace),
+          if (_elevationGainMeters != null)
+            CardioStripMetric(
+              label: l10n.elevationGainFieldLabel,
+              value: CardioFormatter.elevation(_elevationGainMeters!, unitSystem),
+            ),
+          if (heartRate != null)
+            CardioStripMetric(
+              label: l10n.heartRateFieldLabel,
+              value: '${heartRate.round()} bpm',
+              color: metrics?.heart,
+            ),
+          if (activeCalories != null)
+            CardioStripMetric(
+              label: l10n.caloriesLabel,
+              value: '${activeCalories.round()} kcal',
+              color: metrics?.calories,
+            ),
+        ];
+        final extraTiles = [
+          // Q-D6: the peak marker+caption already lives inside the
+          // elevation profile chart (C8.3) — this is the number's *other*
+          // home, the one that survives the degraded (no local track)
+          // view where the chart itself falls back to the old
+          // approximation and has no peak to mark.
+          if (_maxAltitudeMeters != null)
+            _MetricTile(
+              label: l10n.maxAltitudeFieldLabel,
+              value: CardioFormatter.elevation(_maxAltitudeMeters!, unitSystem),
+            ),
+          // M42: backpack weight is hike-only, and the only field the
+          // user is the sole source for — always tappable, even before
+          // anything's been entered (M11's "koppints" affordance).
+          if (_activityType == 'HIKING')
+            _MetricTile(
+              label: l10n.backpackWeightFieldLabel,
+              value: _backpackWeightKg == null ? '—' : CardioFormatter.weight(_backpackWeightKg!, unitSystem),
+              edited: _backpackWeightKg != null,
+              editedLabel: l10n.handEnteredBadgeLabel,
+              onTap: _busy ? null : _editBackpackWeightKg,
+            ),
+          // Cadence is running's metric only (C6.5): a walk or a hike
+          // never shows it, even when a watch happened to measure steps —
+          // the tile appears solely when a sensor genuinely reported it
+          // for a run. Steps per minute here, not the indoor bike's rpm
+          // (the MACHINE branch below keeps that one).
+          if (_activityType == 'RUNNING' && _avgCadence != null)
+            _MetricTile(label: l10n.avgCadenceFieldLabel, value: '${_avgCadence!.round()} spm'),
+        ];
         return [
-          _MetricGrid(
-            children: [
-              _MetricTile(
-                icon: Icons.straighten,
-                iconColor: accent,
-                label: l10n.distanceFieldLabel,
-                value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
-                edited: hasDistance && _distanceSource == 'MANUAL',
-                editedLabel: l10n.manuallyEditedBadgeLabel,
-                onTap: _busy ? null : _editDistance,
-              ),
-              _MetricTile(
-                icon: Icons.schedule,
-                iconColor: metrics?.protein,
-                label: l10n.durationSectionLabel,
-                value: durationValue,
-              ),
-              if (pace != null)
-                _MetricTile(
-                  icon: Icons.speed,
-                  iconColor: metrics?.calories,
-                  label: isCycling ? l10n.speedLabel : l10n.paceLabel,
-                  value: pace,
-                ),
-              if (_elevationGainMeters != null)
-                _MetricTile(
-                  icon: Icons.terrain,
-                  iconColor: metrics?.weight,
-                  label: l10n.elevationGainFieldLabel,
-                  value: CardioFormatter.elevation(_elevationGainMeters!, unitSystem),
-                ),
-              // Q-D6: the peak marker+caption already lives inside the
-              // elevation profile chart (C8.3) — this is the number's *other*
-              // home, the one that survives the degraded (no local track)
-              // view where the chart itself falls back to the old
-              // approximation and has no peak to mark.
-              if (_maxAltitudeMeters != null)
-                _MetricTile(
-                  icon: Icons.landscape,
-                  iconColor: metrics?.weight,
-                  label: l10n.maxAltitudeFieldLabel,
-                  value: CardioFormatter.elevation(_maxAltitudeMeters!, unitSystem),
-                ),
-              // M42: backpack weight is hike-only, and the only field the
-              // user is the sole source for — always tappable, even before
-              // anything's been entered (M11's "koppints" affordance, same
-              // shape as the distance tile above it).
-              if (_activityType == 'HIKING')
-                _MetricTile(
-                  icon: Icons.backpack,
-                  iconColor: accent,
-                  label: l10n.backpackWeightFieldLabel,
-                  value: _backpackWeightKg == null
-                      ? '—'
-                      : CardioFormatter.weight(_backpackWeightKg!, unitSystem),
-                  edited: _backpackWeightKg != null,
-                  editedLabel: l10n.handEnteredBadgeLabel,
-                  onTap: _busy ? null : _editBackpackWeightKg,
-                ),
-              // Cadence is running's metric only (C6.5): a walk or a hike
-              // never shows it, even when a watch happened to measure steps —
-              // the tile appears solely when a sensor genuinely reported it
-              // for a run. Steps per minute here, not the indoor bike's rpm
-              // (the MACHINE branch below keeps that one).
-              if (_activityType == 'RUNNING' && _avgCadence != null)
-                _MetricTile(
-                  icon: Icons.directions_run,
-                  iconColor: accent,
-                  label: l10n.avgCadenceFieldLabel,
-                  value: '${_avgCadence!.round()} spm',
-                ),
-              if (heartRate != null)
-                _MetricTile(
-                  icon: Icons.favorite,
-                  iconColor: metrics?.heart,
-                  label: l10n.heartRateFieldLabel,
-                  value: '${heartRate.round()} bpm',
-                ),
-              if (activeCalories != null)
-                _MetricTile(
-                  icon: Icons.local_fire_department,
-                  iconColor: metrics?.calories,
-                  label: l10n.caloriesLabel,
-                  value: '${activeCalories.round()} kcal',
-                ),
-            ],
+          CardioDetailHero(
+            distance: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
+            duration: durationValue,
+            durationLabel: labelCase(context, l10n.durationSectionLabel),
+            edited: hasDistance && _distanceSource == 'MANUAL',
+            editedLabel: l10n.manuallyEditedBadgeLabel,
+            onEditDistance: _busy ? null : _editDistance,
           ),
+          if (strip.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s16),
+            CardioMetricStrip(metrics: strip),
+          ],
+          if (extraTiles.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s12),
+            _MetricGrid(children: extraTiles),
+          ],
           ..._bestEffortSection(l10n, theme, unitSystem),
           ..._weatherSection(l10n, unitSystem),
           ..._routeSections(l10n, theme, scheme, unitSystem),
@@ -1238,15 +1208,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     if (breakdown == null) return const [];
     return [
       const SizedBox(height: 12),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: HrZonePanel(breakdown: breakdown),
-      ),
+      HrZonePanel(breakdown: breakdown),
     ];
   }
 
@@ -1424,12 +1386,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   ],
                   Text(
                     '+${CardioFormatter.elevation(_elevationGainMeters!, unitSystem)}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
                   ),
                 ],
               ),
@@ -1589,130 +1546,9 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   }
 }
 
-/// M13/M15/M16's header capsule — back button, title, and nothing else the
-/// app can't actually do (the frames also draw share/edit buttons; sharing
-/// isn't built, and every metric here is edited by tapping it directly).
-class _SummaryHeaderBar extends StatelessWidget {
-  const _SummaryHeaderBar({required this.title, required this.onBack});
 
-  final String title;
-  final VoidCallback onBack;
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      height: 54,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        children: [
-          Material(
-            color: scheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              onTap: onBack,
-              borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                width: 42,
-                height: 42,
-                child: Icon(Icons.arrow_back, size: 22, color: scheme.onSurfaceVariant),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              title,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.3,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
-/// M13's identity row under the route: chip, activity, when/where, and the
-/// watch pill when the numbers came from the wrist.
-class _IdentityRow extends StatelessWidget {
-  const _IdentityRow({
-    required this.activityType,
-    required this.title,
-    required this.subtitle,
-    this.watchLabel,
-  });
-
-  final String activityType;
-  final String title;
-  final String subtitle;
-  final String? watchLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        ActivityChip(activityType: activityType, size: 44),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (watchLabel != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-            decoration: BoxDecoration(
-              color: scheme.primary.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.watch, size: 14, color: scheme.primary),
-                const SizedBox(width: 5),
-                Text(
-                  watchLabel!,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
 
 /// The three-across metric grid (M13/M16) — fixed columns, so the numbers
 /// line up in a grid instead of reflowing like a `Wrap`.
@@ -1770,8 +1606,8 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(22),
+        color: context.palette.card,
+        borderRadius: AppRadius.cardAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1781,12 +1617,7 @@ class _SectionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
                 ),
               ),
               if (trailingWidget != null)
@@ -1794,12 +1625,7 @@ class _SectionCard extends StatelessWidget {
               else if (trailing != null)
                 Text(
                   trailing!,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
                 ),
             ],
           ),
@@ -1826,7 +1652,7 @@ class _NoRouteCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Row(
         children: [
@@ -1835,7 +1661,7 @@ class _NoRouteCard extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               color: scheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: AppRadius.cardAll,
             ),
             child: Icon(Icons.route, size: 28, color: scheme.outlineVariant),
           ),
@@ -1846,16 +1672,12 @@ class _NoRouteCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   body,
-                  style: TextStyle(fontSize: 11.5, height: 1.5, color: scheme.outline),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.5, color: scheme.outline),
                 ),
               ],
             ),
@@ -1900,7 +1722,7 @@ class _PrimaryMetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(26),
+      borderRadius: AppRadius.heroAll,
       clipBehavior: Clip.antiAlias,
       child: Container(
         width: double.infinity,
@@ -1910,12 +1732,7 @@ class _PrimaryMetricCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.6,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.6, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 2),
             FittedBox(
@@ -1923,13 +1740,7 @@ class _PrimaryMetricCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 56,
-                  height: 1.1,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -2,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
+                style: AppType.number(56, weight: FontWeight.w800),
               ),
             ),
             if (inner.isNotEmpty) ...[
@@ -1963,10 +1774,10 @@ class _InnerMetricTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
         onTap: metric.onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.controlAll,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           child: Column(
@@ -1978,11 +1789,7 @@ class _InnerMetricTile extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   metric.value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(20, weight: FontWeight.w800),
                 ),
               ),
               Row(
@@ -1992,16 +1799,12 @@ class _InnerMetricTile extends StatelessWidget {
                       metric.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                     ),
                   ),
                   if (metric.edited) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.edit, size: 11, color: Color(0xFFC49A6C)),
+                    Icon(Icons.edit_rounded, size: 11, color: context.palette.text2),
                   ],
                 ],
               ),
@@ -2042,7 +1845,6 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
   final UnitSystem unitSystem;
   final String Function(CardioPrType type) label;
 
-  static const _amber = Color(0xFFD8B35A);
   static final _previousDate = DateFormat.MMMMd();
 
   /// Each type's own unit — a distance record reads in km, a time record in
@@ -2082,7 +1884,7 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     return AlertDialog(
-      icon: const Icon(Icons.emoji_events, color: _amber, size: 32),
+      icon: Icon(Icons.emoji_events_rounded, color: context.metricColors.record, size: 32),
       title: Text(
         l10n.cardioRecordCelebrationTitle(types.length),
         textAlign: TextAlign.center,
@@ -2131,11 +1933,7 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
                         children: [
                           Text(
                             _format(type, value),
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              fontFeatures: [FontFeature.tabularFigures()],
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
                           ),
                           if (delta != null)
                             Text(
@@ -2202,7 +2000,6 @@ class _BestEffortTile extends StatelessWidget {
   final String recordBadge;
   final ThemeData theme;
 
-  static const _amber = Color(0xFFD8B35A);
 
   @override
   Widget build(BuildContext context) {
@@ -2211,9 +2008,9 @@ class _BestEffortTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: row.isRecord ? _amber.withValues(alpha: 0.12) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: row.isRecord ? Border.all(color: _amber.withValues(alpha: 0.34)) : null,
+        color: row.isRecord ? context.metricColors.record.withValues(alpha: 0.12) : Colors.transparent,
+        borderRadius: AppRadius.controlAll,
+        border: row.isRecord ? Border.all(color: context.metricColors.record.withValues(alpha: 0.34)) : null,
       ),
       child: Row(
         children: [
@@ -2221,7 +2018,7 @@ class _BestEffortTile extends StatelessWidget {
             width: 44,
             child: Text(
               row.label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 10),
@@ -2231,11 +2028,7 @@ class _BestEffortTile extends StatelessWidget {
               children: [
                 Text(
                   CardioFormatter.duration(row.duration),
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
                 ),
                 const SizedBox(height: 1),
                 // The trophy pill sits on the subtitle line rather than
@@ -2248,7 +2041,7 @@ class _BestEffortTile extends StatelessWidget {
                       child: Text(
                         subtitle,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 10, color: scheme.outline),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.outline),
                       ),
                     ),
                     if (row.isRecord) ...[
@@ -2256,16 +2049,12 @@ class _BestEffortTile extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                         decoration: BoxDecoration(
-                          color: _amber,
-                          borderRadius: BorderRadius.circular(999),
+                          color: context.metricColors.record,
+                          borderRadius: AppRadius.pill,
                         ),
                         child: Text(
                           recordBadge,
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF161611),
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: context.palette.bg),
                         ),
                       ),
                     ],
@@ -2278,12 +2067,7 @@ class _BestEffortTile extends StatelessWidget {
           if (row.pace != null)
             Text(
               row.pace!,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: row.isRecord ? _amber : scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: row.isRecord ? context.metricColors.record : scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
         ],
       ),
@@ -2304,7 +2088,6 @@ class _NewRecordBanner extends StatelessWidget {
   final ThemeData theme;
   final ColorScheme scheme;
 
-  static const _amber = Color(0xFFD8B35A);
 
   String _label(CardioPrType type) => switch (type) {
         CardioPrType.longestDistance => l10n.cardioRecordLongestDistance,
@@ -2320,14 +2103,14 @@ class _NewRecordBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: _amber.withValues(alpha: 0.14),
+      color: context.metricColors.record.withValues(alpha: 0.14),
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.emoji_events, color: _amber),
+            Icon(Icons.emoji_events_rounded, color: context.metricColors.record),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -2375,8 +2158,8 @@ class _MetricTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
+      color: context.palette.card,
+      borderRadius: AppRadius.cardAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -2401,23 +2184,14 @@ class _MetricTile extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(26, weight: FontWeight.w800),
                 ),
               ),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -2441,21 +2215,7 @@ class _EditedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFFC49A6C);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.edit, size: 12, color: accent),
-          const SizedBox(width: 4),
-          Text(label,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
-        ],
-      ),
-    );
+    return TintedChip(label: label, color: context.palette.text2, icon: Icons.edit_rounded);
   }
 }
 
@@ -2600,7 +2360,7 @@ class _SplitRow extends StatelessWidget {
         decoration: selected
             ? BoxDecoration(
                 color: scheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.controlAll,
               )
             : null,
         child: Row(
@@ -2609,20 +2369,15 @@ class _SplitRow extends StatelessWidget {
               width: 16,
               child: Text(
                 '${split.splitIndex + 1}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: selected
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: selected
                       ? accent
-                      : (partial ? scheme.outline : scheme.onSurfaceVariant),
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                      : (partial ? scheme.outline : scheme.onSurfaceVariant), fontFeatures: const [FontFeature.tabularFigures()]),
               ),
             ),
             const SizedBox(width: 11),
             Expanded(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: AppRadius.tagAll,
                 child: Container(
                   height: 12,
                   color: scheme.surfaceContainer,
@@ -2641,12 +2396,7 @@ class _SplitRow extends StatelessWidget {
               partial
                   ? CardioFormatter.distance(split.distanceMeters ?? 0, unitSystem)
                   : CardioFormatter.duration(duration),
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: selected ? accent : (partial ? scheme.outline : scheme.onSurface),
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: selected ? accent : (partial ? scheme.outline : scheme.onSurface), fontFeatures: const [FontFeature.tabularFigures()]),
             ),
             if (showElevation) ...[
               const SizedBox(width: 10),
@@ -2661,12 +2411,7 @@ class _SplitRow extends StatelessWidget {
                       : (elevation >= 0 ? '+' : '−') +
                           CardioFormatter.elevation(elevation.abs(), unitSystem),
                   textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
                 ),
               ),
             ],
@@ -2692,7 +2437,7 @@ class _FasterPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2701,11 +2446,7 @@ class _FasterPill extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -2724,12 +2465,7 @@ class _PaceChartAxis extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final style = TextStyle(
-      fontSize: 10,
-      fontWeight: FontWeight.w600,
-      color: scheme.onSurfaceVariant,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
+    final style = Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -2759,7 +2495,7 @@ class _SplitSelectionHint extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontSize: 10.5, height: 1.35, color: scheme.outline),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.35, color: scheme.outline),
           ),
         ),
       ],
@@ -2792,7 +2528,7 @@ class _TotalWorkCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2805,25 +2541,15 @@ class _TotalWorkCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   '$totalWorkKj',
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1.6,
-                    height: 1.05,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(40, weight: FontWeight.w800),
                 ),
                 Text(
                   'kJ ${l10n.totalWorkLabel}',
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700),
                 ),
                 Text(
                   l10n.totalWorkSourceHint,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -2837,26 +2563,16 @@ class _TotalWorkCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   '${avgWatts.round()}',
-                  style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1.6,
-                    height: 1.05,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
+                  style: AppType.number(40, weight: FontWeight.w800),
                 ),
                 Text(
                   l10n.avgWattsFieldLabel,
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700),
                 ),
                 if (maxWatts != null)
                   Text(
                     l10n.maxWattsShortLabel(maxWatts!.round()),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                   ),
               ],
             ),
@@ -2900,7 +2616,7 @@ class _CalorieCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2926,7 +2642,7 @@ class _CalorieCard extends StatelessWidget {
                 Expanded(
                   child: InkWell(
                     onTap: onEditMachine,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.controlAll,
                     child: _CalorieSide(
                       icon: Icons.monitor,
                       label: l10n.machineCaloriesLabel,
@@ -2951,12 +2667,7 @@ class _CalorieCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   l10n.machineCaloriesFootnote,
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 1.45,
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.45, fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant),
                 ),
               ),
             ],
@@ -3001,19 +2712,14 @@ class _CalorieSide extends StatelessWidget {
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.1,
-                  color: labelColor,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.1, color: labelColor),
               ),
             ),
             if (badge != null) ...[
               const SizedBox(width: 5),
               Text(
                 badge!,
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: hintColor),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: hintColor),
               ),
             ],
           ],
@@ -3021,23 +2727,11 @@ class _CalorieSide extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value == null ? '—' : '${value!.round()}',
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1.2,
-            height: 1.1,
-            color: valueColor,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+          style: AppType.number(30, weight: FontWeight.w800, color: valueColor),
         ),
         Text(
           hint,
-          style: TextStyle(
-            fontSize: 10.5,
-            height: 1.4,
-            fontWeight: FontWeight.w500,
-            color: hintColor,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.4, fontWeight: FontWeight.w500, color: hintColor),
         ),
       ],
     );
@@ -3086,7 +2780,7 @@ class _WeatherCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: AppRadius.cardAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -3100,18 +2794,12 @@ class _WeatherCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       l10n.weatherSectionLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
                     ),
                   ),
                   Text(
                     l10n.weatherSnapshotCaption(_timeLabel.format(snapshotTime.toLocal())),
-                    style: TextStyle(
-                        fontSize: 10.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -3123,7 +2811,7 @@ class _WeatherCard extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       color: scheme.secondary.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: AppRadius.cardAll,
                     ),
                     child: Icon(weatherConditionIcon(condition), color: scheme.secondary, size: 28),
                   ),
@@ -3179,15 +2867,11 @@ class _WeatherReadout extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
+          style: AppType.number(20, weight: FontWeight.w800),
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
         ),
       ],
     );
@@ -3207,7 +2891,7 @@ class _WeatherEmptyRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: AppRadius.cardAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -3220,7 +2904,7 @@ class _WeatherEmptyRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   message,
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                 ),
               ),
             ],
@@ -3257,22 +2941,13 @@ class _WaypointRow extends StatelessWidget {
             width: 22,
             child: Text(
               '${matched.waypoint.waypointIndex + 1}',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
           Expanded(
             child: Text(
               '$distance · $altitude · $elapsed',
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
         ],
@@ -3318,12 +2993,7 @@ class _IntervalSectionRow extends StatelessWidget {
             width: 16,
             child: Text(
               '$number',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
           SizedBox(
@@ -3331,16 +3001,12 @@ class _IntervalSectionRow extends StatelessWidget {
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: hard ? accent : scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: hard ? accent : scheme.onSurfaceVariant),
             ),
           ),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: AppRadius.tagAll,
               child: LinearProgressIndicator(
                 value: fraction,
                 minHeight: 10,
@@ -3357,11 +3023,7 @@ class _IntervalSectionRow extends StatelessWidget {
             child: Text(
               CardioFormatter.duration(Duration(seconds: split.durationSeconds)),
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ),
           if (split.avgWatts != null)
@@ -3370,12 +3032,7 @@ class _IntervalSectionRow extends StatelessWidget {
               child: Text(
                 '${split.avgWatts!.round()} W',
                 textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
               ),
             ),
         ],
@@ -3398,7 +3055,7 @@ class _IntervalCountChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3407,7 +3064,7 @@ class _IntervalCountChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: accent),
           ),
         ],
       ),
@@ -3457,12 +3114,7 @@ class _ElevationProfileCard extends StatelessWidget {
             )
           : Text(
               '+${CardioFormatter.elevation(elevationGainMeters, unitSystem)}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3479,11 +3131,7 @@ class _ElevationProfileCard extends StatelessWidget {
               CardioFormatter.elevation(peak.altitudeMeters, unitSystem),
               CardioFormatter.distance(peak.cumulativeDistanceMeters, unitSystem),
             ),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
           ),
           if (selected != null) ...[
             const SizedBox(height: 12),
@@ -3540,17 +3188,13 @@ class _ElevationReadout extends StatelessWidget {
             ],
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+              style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ],
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
         ),
       ],
     );
@@ -3571,7 +3215,7 @@ class _SelectedPointChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3580,7 +3224,7 @@ class _SelectedPointChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: accent),
           ),
         ],
       ),
@@ -3604,16 +3248,11 @@ class _SimplifiedBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pill,
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-          color: scheme.onSurfaceVariant,
-        ),
+        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.4, color: scheme.onSurfaceVariant),
       ),
     );
   }

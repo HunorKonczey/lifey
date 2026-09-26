@@ -120,7 +120,7 @@ void main() {
     );
     expect(find.text('Your weekly recap is ready'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
 
     expect(find.text('Your weekly recap is ready'), findsNothing);

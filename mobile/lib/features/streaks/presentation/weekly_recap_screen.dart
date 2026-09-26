@@ -2,18 +2,21 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../core/format/lifey_format.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
-import '../../../shared/widgets/nav_collapse_controller.dart';
+import '../../../shared/widgets/charts/bar_chart.dart';
+import '../../../shared/widgets/ds/delta_chip.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../shared/widgets/ds/list_group.dart';
+import '../../../shared/widgets/ds/metric_value.dart';
+import '../../../shared/widgets/ds/section_label.dart';
 import '../application/weekly_recap_provider.dart';
 import '../data/recap_preferences.dart';
 import '../domain/streak.dart';
 import '../domain/weekly_recap.dart';
-
-final _rangeFmt = DateFormat('MMM d');
 
 /// "Your week in review" — workouts, nutrition, weight trend and goal
 /// consistency for a Monday–Sunday week, paged backwards from the most
@@ -55,51 +58,32 @@ class _WeeklyRecapScreenState extends ConsumerState<WeeklyRecapScreen> {
     final recap = ref.watch(weeklyRecapProvider(_weekStart));
     final l10n = AppLocalizations.of(context)!;
 
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
-    final contentTop = barTop + 58.0 + 12.0;
-    final bottomPad = MediaQuery.paddingOf(context).bottom + 16;
+    final bottomPad = MediaQuery.paddingOf(context).bottom + AppSpacing.s32;
 
     return Scaffold(
-      body: ScrollCollapseListener(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad),
-                children: [
-                  _WeekHeader(
-                    weekStart: _weekStart,
-                    canGoForward: _weekStart != _latestWeekStart,
-                    onPrevious: _goToPreviousWeek,
-                    onNext: _goToNextWeek,
-                  ),
-                  const SizedBox(height: 16),
-                  _WorkoutsSection(recap: recap),
-                  const SizedBox(height: 16),
-                  _NutritionSection(recap: recap),
-                  if (recap.weightStart != null || recap.weightEnd != null) ...[
-                    const SizedBox(height: 16),
-                    _WeightSection(recap: recap),
-                  ],
-                  if (recap.calorieGoalSet || recap.stepGoalSet || recap.waterGoalSet) ...[
-                    const SizedBox(height: 16),
-                    _GoalsSection(recap: recap),
-                  ],
-                ],
-              ),
-            ),
-            Positioned(
-              top: barTop,
-              left: 12,
-              right: 12,
-              child: AdaptiveAppBar(
-                title: l10n.recapScreenTitle,
-                onBack: () => Navigator.of(context).pop(),
-              ),
-            ),
+      appBar: LifeySubpageHeader(title: l10n.recapScreenTitle),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s8, AppSpacing.s20, bottomPad),
+        children: [
+          _WeekHeader(
+            weekStart: _weekStart,
+            canGoForward: _weekStart != _latestWeekStart,
+            onPrevious: _goToPreviousWeek,
+            onNext: _goToNextWeek,
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          _WorkoutsSection(recap: recap),
+          const SizedBox(height: AppSpacing.s24),
+          _NutritionSection(recap: recap),
+          if (recap.weightStart != null || recap.weightEnd != null) ...[
+            const SizedBox(height: AppSpacing.s24),
+            _WeightSection(recap: recap),
           ],
-        ),
+          if (recap.calorieGoalSet || recap.stepGoalSet || recap.waterGoalSet) ...[
+            const SizedBox(height: AppSpacing.s24),
+            _GoalsSection(recap: recap),
+          ],
+        ],
       ),
     );
   }
@@ -124,31 +108,29 @@ class _WeekHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
     final weekEnd = weekStart.add(const Duration(days: 6));
-    final rangeLabel = '${_rangeFmt.format(weekStart)} – ${_rangeFmt.format(weekEnd)}';
+    final rangeLabel = '${f.shortDate(weekStart)} – ${f.shortDate(weekEnd)}';
 
     return Row(
       children: [
-        IconButton(
+        HeaderIconButton(
+          icon: Icons.chevron_left_rounded,
           onPressed: onPrevious,
-          icon: const Icon(Icons.chevron_left),
           tooltip: l10n.recapPreviousWeekTooltip,
         ),
         Expanded(
           child: Text(
             rangeLabel,
             textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: t.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: context.palette.text),
           ),
         ),
-        IconButton(
+        HeaderIconButton(
+          icon: Icons.chevron_right_rounded,
           onPressed: canGoForward ? onNext : null,
-          icon: const Icon(Icons.chevron_right),
           tooltip: l10n.recapNextWeekTooltip,
         ),
       ],
@@ -160,6 +142,8 @@ class _WeekHeader extends StatelessWidget {
 // Shared card shell
 // ---------------------------------------------------------------------------
 
+/// The caps section label over one card — the same pattern as the
+/// dashboard's sections.
 class _RecapCard extends StatelessWidget {
   const _RecapCard({required this.title, required this.child});
 
@@ -168,31 +152,13 @@ class _RecapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.card)),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            child,
-          ],
-        ),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionLabel(title),
+        const SizedBox(height: AppSpacing.s8),
+        LifeyCard(child: child),
+      ],
     );
   }
 }
@@ -204,10 +170,7 @@ class _EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-    );
+    return Text(text, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: context.palette.text2));
   }
 }
 
@@ -222,8 +185,11 @@ class _WorkoutsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = Theme.of(context).textTheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
+    final meta = t.labelMedium!.copyWith(color: p.text2);
 
     return _RecapCard(
       title: l10n.recapWorkoutsSectionTitle,
@@ -232,51 +198,36 @@ class _WorkoutsSection extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  spacing: AppSpacing.s12,
+                  runSpacing: AppSpacing.s4,
                   children: [
                     Text(
                       l10n.recapWorkoutsCount(recap.workoutsDone),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: t.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: p.text),
                     ),
-                    if (recap.workoutMinutes > 0) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.recapWorkoutsMinutes(recap.workoutMinutes),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                    if (recap.workoutMinutes > 0) Text(l10n.recapWorkoutsMinutes(recap.workoutMinutes), style: meta),
                     // Only when there was cardio this week (D-C3.5's
                     // "missing, not zero" — weeklyCardioDistanceMeters is
                     // null, not 0, on a cardio-free week).
-                    if (recap.weeklyCardioDistanceMeters != null) ...[
-                      const SizedBox(width: 8),
+                    if (recap.weeklyCardioDistanceMeters != null)
                       Text(
-                        l10n.recapWorkoutsDistance(
-                          (recap.weeklyCardioDistanceMeters! / 1000.0).toStringAsFixed(1),
-                        ),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                        l10n.recapWorkoutsDistance(f.decimal(recap.weeklyCardioDistanceMeters! / 1000.0, 1)),
+                        style: meta,
                       ),
-                    ],
                   ],
                 ),
-                const SizedBox(height: 10),
-                _DotStrip(filled: recap.workoutDays, color: theme.colorScheme.primary),
+                const SizedBox(height: AppSpacing.s12),
+                _DotStrip(filled: recap.workoutDays, color: Theme.of(context).colorScheme.primary),
               ],
             ),
     );
   }
 }
 
-/// Seven small dots, Monday first — filled where [filled] is true.
+/// Seven dots, Monday first — filled where [filled] is true — each with its
+/// weekday letter underneath.
 class _DotStrip extends StatelessWidget {
   const _DotStrip({required this.filled, required this.color});
 
@@ -285,27 +236,37 @@ class _DotStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.2);
+    final p = context.palette;
+    final f = LifeyFormat.of(context);
+    // Any Monday gives the same seven letters.
+    final monday = WeeklyRecap.lastCompletedWeekStart();
+    final label = Theme.of(context).textTheme.labelSmall!.copyWith(height: 1, color: p.text3);
     return Row(
       children: [
-        for (var i = 0; i < filled.length; i++) ...[
-          if (i > 0) const SizedBox(width: 6),
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: filled[i] ? color : mutedColor,
+        for (var i = 0; i < filled.length; i++)
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: filled[i] ? color : p.control),
+                ),
+                const SizedBox(height: 6),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(f.weekdayNarrow(monday.add(Duration(days: i))), style: label),
+                ),
+              ],
             ),
           ),
-        ],
       ],
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Nutrition section — avg calories over logged days + mini bar chart
+// Nutrition section — avg calories over logged days + bar chart
 // ---------------------------------------------------------------------------
 
 class _NutritionSection extends StatelessWidget {
@@ -315,8 +276,10 @@ class _NutritionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = Theme.of(context).textTheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
     final mc = context.metricColors;
 
     if (recap.loggedDayCount == 0) {
@@ -326,129 +289,52 @@ class _NutritionSection extends StatelessWidget {
       );
     }
 
+    // Any Monday gives the same seven letters.
+    final monday = WeeklyRecap.lastCompletedWeekStart();
+
     return _RecapCard(
       title: l10n.recapNutritionSectionTitle,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: AppSpacing.s8,
             children: [
-              Text(
-                l10n.recapAvgCaloriesLabel,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              if (recap.calorieGoalSet) ...[
-                const Spacer(),
-                Text(
-                  l10n.recapDaysWithinGoal(recap.caloriesDaysMet),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+              Text(l10n.recapAvgCaloriesLabel, style: t.labelMedium!.copyWith(color: p.text2)),
+              if (recap.calorieGoalSet)
+                Text(l10n.recapDaysWithinGoal(recap.caloriesDaysMet), style: t.labelSmall!.copyWith(color: p.text2)),
             ],
           ),
-          const SizedBox(height: 6),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                recap.avgCalories!.round().toString(),
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: theme.colorScheme.onSurface,
+          const SizedBox(height: AppSpacing.s8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: MetricValue(value: f.kcal(recap.avgCalories!), unit: 'kcal', size: 28),
+          ),
+          const SizedBox(height: AppSpacing.s4),
+          Text(l10n.recapLoggedDaysCaption(recap.loggedDayCount), style: t.labelSmall!.copyWith(color: p.text3)),
+          const SizedBox(height: AppSpacing.s16),
+          // An unlogged day is an empty column, not a zero.
+          LifeyBarChart(
+            height: 80,
+            color: mc.calories,
+            bars: [
+              for (var i = 0; i < recap.dailyCalories.length; i++)
+                BarDatum(
+                  label: f.weekdayNarrow(monday.add(Duration(days: i))),
+                  value: recap.dailyCalories[i],
+                  highlighted: true,
                 ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'kcal',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
             ],
           ),
-          Text(
-            l10n.recapLoggedDaysCaption(recap.loggedDayCount),
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _DailyCaloriesBars(values: recap.dailyCalories, color: mc.calories),
         ],
-      ),
-    );
-  }
-}
-
-/// Seven bars, Monday first — height proportional to that day's calories,
-/// scaled against the week's own max so a light week still reads clearly.
-/// An unlogged day (null) renders as a flat muted stub, not a missing bar.
-class _DailyCaloriesBars extends StatelessWidget {
-  const _DailyCaloriesBars({required this.values, required this.color});
-
-  final List<double?> values;
-  final Color color;
-
-  static const _maxHeight = 56.0;
-  static const _minHeight = 4.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.15);
-    final maxValue = values.whereType<double>().fold<double>(0, (m, v) => v > m ? v : m);
-
-    return SizedBox(
-      height: _maxHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (var i = 0; i < values.length; i++) ...[
-            if (i > 0) const SizedBox(width: 5),
-            Expanded(
-              child: _Bar(
-                fraction: (values[i] == null || maxValue == 0) ? null : values[i]! / maxValue,
-                color: color,
-                mutedColor: mutedColor,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Bar extends StatelessWidget {
-  const _Bar({required this.fraction, required this.color, required this.mutedColor});
-
-  /// Null when the day had no meal logged — renders as the flat muted stub.
-  final double? fraction;
-  final Color color;
-  final Color mutedColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final height = fraction == null
-        ? _DailyCaloriesBars._minHeight
-        : (fraction! * (_DailyCaloriesBars._maxHeight - _DailyCaloriesBars._minHeight)) +
-            _DailyCaloriesBars._minHeight;
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: fraction == null ? mutedColor : color,
-        borderRadius: BorderRadius.circular(3),
       ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Weight section — start → end with a delta badge
+// Weight section — start → end with a delta chip
 // ---------------------------------------------------------------------------
 
 class _WeightSection extends StatelessWidget {
@@ -458,74 +344,31 @@ class _WeightSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = Theme.of(context).textTheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
 
     return _RecapCard(
       title: l10n.recapWeightSectionTitle,
       child: recap.weightEnd == null
           ? _EmptyHint(l10n.recapNoWeighInMessage)
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+          : Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
               children: [
                 if (recap.weightStart != null) ...[
-                  Text(
-                    '${recap.weightStart!.toStringAsFixed(1)} kg',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(Icons.arrow_forward, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 6),
+                  Text('${f.weight(recap.weightStart!)} kg', style: t.bodyLarge!.copyWith(color: p.text2)),
+                  Icon(Icons.arrow_forward_rounded, size: 16, color: p.text3),
                 ],
-                Text(
-                  '${recap.weightEnd!.toStringAsFixed(1)} kg',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                if (recap.weightDelta != null && recap.weightDelta != 0) ...[
-                  const SizedBox(width: 8),
-                  _WeightDeltaBadge(delta: recap.weightDelta!),
-                ],
+                MetricValue(value: f.weight(recap.weightEnd!), unit: 'kg', size: 28),
+                // Direction colour, not good/bad: whether a change is good
+                // depends on the user's goal (same rule as the dashboard tile).
+                if (recap.weightDelta != null && recap.weightDelta != 0)
+                  DeltaChip.arrow(value: recap.weightDelta!, unit: 'kg'),
               ],
             ),
-    );
-  }
-}
-
-/// Positive [delta] means gained. Weight going down is framed as positive
-/// (green) and up as a mild warning (orange) — same convention the
-/// dashboard's own weight-delta badge uses.
-class _WeightDeltaBadge extends StatelessWidget {
-  const _WeightDeltaBadge({required this.delta});
-
-  final double delta;
-
-  @override
-  Widget build(BuildContext context) {
-    final mc = context.metricColors;
-    final isDown = delta < 0;
-    final color = isDown ? mc.positive : mc.negative;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(isDown ? Icons.arrow_downward : Icons.arrow_upward, size: 13, color: color),
-        Text(
-          delta.abs().toStringAsFixed(1),
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: color,
-            height: 1.0,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -550,38 +393,35 @@ class _GoalsSection extends StatelessWidget {
     final rows = <Widget>[
       if (recap.calorieGoalSet)
         _GoalRow(
-          icon: Icons.local_fire_department,
+          icon: Icons.local_fire_department_rounded,
           color: mc.calories,
           daysMetText: l10n.recapDaysWithinGoal(recap.caloriesDaysMet),
           streak: _streakFor(StreakMetric.calories),
         ),
       if (recap.stepGoalSet)
         _GoalRow(
-          icon: Icons.directions_walk,
+          icon: Icons.directions_walk_rounded,
           color: mc.steps,
           daysMetText: l10n.recapDaysMet(recap.stepsDaysMet),
           streak: _streakFor(StreakMetric.steps),
         ),
       if (recap.waterGoalSet)
         _GoalRow(
-          icon: Icons.water_drop,
+          icon: Icons.water_drop_rounded,
           color: mc.water,
           daysMetText: l10n.recapDaysMet(recap.waterDaysMet),
           streak: _streakFor(StreakMetric.water),
         ),
     ];
 
-    return _RecapCard(
-      title: l10n.recapGoalsSectionTitle,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            rows[i],
-          ],
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionLabel(l10n.recapGoalsSectionTitle),
+        const SizedBox(height: AppSpacing.s8),
+        // One card, a row per goal — not a card of loose rows.
+        ListGroup(children: rows),
+      ],
     );
   }
 }
@@ -613,7 +453,6 @@ class _GoalRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final currentStreak = streak;
     final streakText = currentStreak == null
@@ -622,34 +461,10 @@ class _GoalRow extends StatelessWidget {
             ? l10n.streakActiveTooltip(currentStreak.current, _metricLabel(l10n, currentStreak.metric))
             : l10n.streakNotStartedTooltip(_metricLabel(l10n, currentStreak.metric));
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                daysMetText,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              if (streakText != null)
-                Text(
-                  streakText,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
+    return ListRow(
+      leading: ListIconHolder(icon: icon, color: color),
+      title: daysMetText,
+      subtitle: streakText,
     );
   }
 }

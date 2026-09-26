@@ -102,14 +102,15 @@ IconData activityTypeIcon(String code) {
 /// matches `design/Lifey Cardio Design.dc.html` M01 §1 exactly, including
 /// the deliberate departures from the raw metric-color mapping:
 /// - Hiking uses `colorScheme.tertiary` (forest green), not
-///   `metricColors.protein` — the suggested protein-green *is* the app's
-///   primary accent (`app_theme.dart`'s `inversePrimary` is the same hex as
-///   `AppMetricColors.light.protein`), so a hiking chip would look like every
-///   primary action button instead of standing out.
+///   `metricColors.protein`. The original reason — protein-green *was* the
+///   app's primary accent — went away with the v2 palette
+///   (docs/redesign/77-mobile-redesign-plan.md D-R0.3), but protein-green is
+///   now also the "improvement" ↑ mark, so a hiking chip would still read as
+///   a progress signal.
 /// - Cycling (docs/cardio/62-cardio-cycling-plan.md §3) uses
-///   `colorScheme.secondary` (warm brown) for the same reason — every
-///   `AppMetricColors` slot is already claimed by another activity type or,
-///   like `protein`, collides with the primary accent.
+///   `colorScheme.secondary` (warm brown) — every `AppMetricColors` slot is
+///   already claimed by another activity type or, like `protein`, carries a
+///   second meaning.
 /// - `OTHER_CARDIO` uses `colorScheme.onSurfaceVariant` (neutral grey) —
 ///   deliberately colorless, so the escape-hatch type never competes
 ///   visually with the other types in a mixed list.

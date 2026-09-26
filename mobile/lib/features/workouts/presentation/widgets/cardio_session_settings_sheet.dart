@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../settings/application/settings_controller.dart';
 import '../../../settings/domain/user_settings.dart';
@@ -216,12 +217,7 @@ class _SectionLabel extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Text(
       label,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-        color: scheme.onSurfaceVariant,
-      ),
+      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
     );
   }
 }
@@ -276,15 +272,11 @@ class _ComingSoonRow extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: scheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: AppRadius.pill,
                         ),
                         child: Text(
                           badge,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
                         ),
                       ),
                     ],

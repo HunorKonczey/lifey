@@ -10,6 +10,7 @@ import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
 import 'package:lifey/features/trainer/invites/data/trainer_invites_repository.dart';
 import 'package:lifey/features/trainer/invites/domain/sent_invite.dart';
 import 'package:lifey/features/trainer/invites/presentation/trainer_invites_screen.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 class _FakeAdapter implements HttpClientAdapter {
@@ -87,6 +88,9 @@ SentInvite _invite({int id = 1, String email = 'anna@example.com', int hoursLeft
 Future<void> _pump(
   WidgetTester tester, {
   required _FakeInvitesRepository repo,
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -94,11 +98,16 @@ Future<void> _pump(
         trainerInvitesRepositoryProvider.overrideWithValue(repo),
         trainerClientsControllerProvider.overrideWith(_FakeClientsController.new),
       ],
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: TrainerInvitesScreen(),
+        home: const TrainerInvitesScreen(),
       ),
     ),
   );
@@ -279,5 +288,25 @@ void main() {
       expect(repo.cancelled, [1]);
       expect(find.text('Invite taken back.'), findsOneWidget);
     });
+  });
+
+  group('layout (canvas Lifey 6 family)', () {
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('the invite form with pending invites fits 360 dp at x 1.3 in $name, $mode', (tester) async {
+          tester.view.physicalSize = const Size(360, 900);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          await _pump(
+            tester,
+            repo: _FakeInvitesRepository(invites: [_invite(), _invite(id: 2, email: 'a.very.long.address@example-domain.com')]),
+            locale: locale,
+            textScale: 1.3,
+            theme: theme,
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 }

@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/current_roles_provider.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../core/theme/app_tokens.dart';
+import '../../../shared/widgets/ds/grouped_list_item.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../application/conversation_list_controller.dart';
@@ -75,9 +77,18 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
     final currentUserId = ref.watch(currentUserIdProvider);
     final state = ref.watch(conversationListControllerProvider);
 
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
-    final contentTop = barTop + 58.0 + 12.0;
+    final header = LifeyHeader(
+      title: isTrainer ? l10n.chatTrainerListTitle : l10n.chatClientListTitle,
+      onBack: () => context.pop(),
+      actions: [
+        if (!_searching && _showSearchAction(state.value))
+          HeaderIconButton(
+            icon: Icons.search_rounded,
+            tooltip: l10n.chatSearchHint,
+            onPressed: () => setState(() => _searching = true),
+          ),
+      ],
+    );
 
     return Scaffold(
       floatingActionButton: isTrainer
@@ -87,11 +98,26 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
               child: const Icon(Icons.add_comment_outlined),
             )
           : null,
-      body: Stack(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(top: contentTop),
-            child: state.when(
+      body: RefreshIndicator(
+        edgeOffset: MediaQuery.paddingOf(context).top + 52,
+        onRefresh: () => ref.read(conversationListControllerProvider.notifier).refresh(),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            header,
+            if (_searching)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s4),
+                  child: _SearchField(
+                    controller: _searchController,
+                    hint: l10n.chatSearchHint,
+                    onChanged: (value) => setState(() => _query = value),
+                    onClose: _closeSearch,
+                  ),
+                ),
+              ),
+            ...state.when(
               data: (conversations) => _buildList(
                 context,
                 l10n,
@@ -99,36 +125,15 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                 isTrainer: isTrainer,
                 currentUserId: currentUserId,
               ),
-              loading: () => const _ConversationListSkeleton(),
-              error: (error, _) => ErrorView(
-                error: error,
-                onRetry: () => ref.invalidate(conversationListControllerProvider),
-              ),
-            ),
-          ),
-          Positioned(
-            top: barTop,
-            left: 12,
-            right: 12,
-            child: AdaptiveAppBar(
-              title: isTrainer ? l10n.chatTrainerListTitle : l10n.chatClientListTitle,
-              onBack: () => context.pop(),
-              searching: _searching,
-              searchController: _searchController,
-              searchHint: l10n.chatSearchHint,
-              onSearchChanged: (value) => setState(() => _query = value),
-              onSearchClose: _closeSearch,
-              actions: [
-                if (!_searching && _showSearchAction(state.value))
-                  AdaptiveAppBarAction(
-                    icon: Icons.search,
-                    tooltip: l10n.chatSearchHint,
-                    onPressed: () => setState(() => _searching = true),
-                  ),
+              loading: () => const [SliverToBoxAdapter(child: _ConversationListSkeleton())],
+              error: (error, _) => [
+                SliverFillRemaining(
+                  child: ErrorView(error: error, onRetry: () => ref.invalidate(conversationListControllerProvider)),
+                ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -137,7 +142,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
     return (conversations?.length ?? 0) >= _searchThreshold;
   }
 
-  Widget _buildList(
+  List<Widget> _buildList(
     BuildContext context,
     AppLocalizations l10n,
     List<ChatConversation> conversations, {
@@ -145,14 +150,15 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
     required int? currentUserId,
   }) {
     if (conversations.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: () => ref.read(conversationListControllerProvider.notifier).refresh(),
-        child: EmptyView(
-          icon: isTrainer ? Icons.group_outlined : Icons.forum_outlined,
-          title: isTrainer ? l10n.chatTrainerEmptyTitle : l10n.chatClientEmptyTitle,
-          subtitle: isTrainer ? l10n.chatTrainerEmptyBody : l10n.chatClientEmptyBody,
+      return [
+        SliverFillRemaining(
+          child: EmptyView(
+            icon: isTrainer ? Icons.group_outlined : Icons.forum_outlined,
+            title: isTrainer ? l10n.chatTrainerEmptyTitle : l10n.chatClientEmptyTitle,
+            subtitle: isTrainer ? l10n.chatTrainerEmptyBody : l10n.chatClientEmptyBody,
+          ),
         ),
-      );
+      ];
     }
 
     // Only a dual-role account sees both kinds of peer at once; on a uniform
@@ -161,24 +167,59 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
     final showRoleLabels = roles.length > 1;
 
     final visible = _filter(conversations);
+    final bottom = MediaQuery.paddingOf(context).bottom + 88;
 
-    return RefreshIndicator(
-      onRefresh: () => ref.read(conversationListControllerProvider.notifier).refresh(),
-      child: ListView.builder(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.paddingOf(context).bottom + 88,
+    return [
+      SliverPadding(
+        padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottom),
+        sliver: SliverList.builder(
+          itemCount: visible.length,
+          itemBuilder: (context, index) {
+            final conversation = visible[index];
+            return GroupedListItem(
+              first: index == 0,
+              last: index == visible.length - 1,
+              dividerInset: 80,
+              child: ConversationTile(
+                conversation: conversation,
+                isOwnLastMessage: conversation.lastMessageSenderId != null &&
+                    conversation.lastMessageSenderId == currentUserId,
+                showRoleLabel: showRoleLabels,
+                onTap: () => context.push('/chat/${conversation.id}'),
+              ),
+            );
+          },
         ),
-        itemCount: visible.length,
-        itemBuilder: (context, index) {
-          final conversation = visible[index];
-          return ConversationTile(
-            conversation: conversation,
-            isOwnLastMessage: conversation.lastMessageSenderId != null &&
-                conversation.lastMessageSenderId == currentUserId,
-            showRoleLabel: showRoleLabels,
-            onTap: () => context.push('/chat/${conversation.id}'),
-          );
-        },
+      ),
+    ];
+  }
+}
+
+/// The inline filter of a long list: a pill with the query and a close button.
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.hint, required this.onChanged, required this.onClose});
+
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return TextField(
+      controller: controller,
+      autofocus: true,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: const Icon(Icons.search_rounded, size: 22),
+        suffixIcon: IconButton(
+          icon: Icon(Icons.close_rounded, size: 22, color: p.text2),
+          tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+          onPressed: onClose,
+        ),
       ),
     );
   }
@@ -191,35 +232,35 @@ class _ConversationListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      children: List.generate(
-        3,
-        (_) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHigh,
-                  shape: BoxShape.circle,
-                ),
+    final p = context.palette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, 0),
+      child: Column(
+        children: List.generate(
+          3,
+          (i) => GroupedListItem(
+            first: i == 0,
+            last: i == 2,
+            dividerInset: 80,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+              child: Row(
+                children: [
+                  Container(width: 48, height: 48, decoration: BoxDecoration(color: p.control, shape: BoxShape.circle)),
+                  const SizedBox(width: AppSpacing.s16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _Bar(width: 120, color: p.control),
+                        const SizedBox(height: AppSpacing.s8),
+                        _Bar(width: 200, color: p.control),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _Bar(width: 120, color: scheme.surfaceContainerHigh),
-                    const SizedBox(height: 8),
-                    _Bar(width: 200, color: scheme.surfaceContainerHigh),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -235,10 +276,6 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: 10,
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(5)),
-    );
+    return Container(width: width, height: 10, decoration: BoxDecoration(color: color, borderRadius: AppRadius.pill));
   }
 }

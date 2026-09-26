@@ -123,12 +123,12 @@ class _UpcomingWorkoutCardState extends ConsumerState<UpcomingWorkoutCard>
       ignoring: current == null,
       child: AnimatedSlide(
         offset: current == null ? const Offset(0, 0.3) : Offset.zero,
-        duration: AppDuration.slow,
-        curve: AppCurve.collapse,
+        duration: AppMotion.of(context, AppMotion.sheet),
+        curve: AppMotion.enter,
         child: AnimatedOpacity(
           opacity: current == null ? 0.0 : 1.0,
-          duration: AppDuration.base,
-          curve: AppCurve.standard,
+          duration: AppMotion.of(context, AppMotion.page),
+          curve: AppMotion.standard,
           child: current == null
               ? const SizedBox.shrink()
               : _CardContent(
@@ -174,13 +174,13 @@ class _CardContent extends StatelessWidget {
         direction: DismissDirection.horizontal,
         onDismissed: (_) => onDismiss(),
         child: ClipRRect(
-          borderRadius: AppRadius.lgAll,
+          borderRadius: AppRadius.cardAll,
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHigh.withValues(alpha: 0.92),
-                borderRadius: AppRadius.lgAll,
+                borderRadius: AppRadius.cardAll,
                 border: Border.all(color: scheme.outline.withValues(alpha: 0.16)),
                 boxShadow: [
                   BoxShadow(

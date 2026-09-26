@@ -2,12 +2,15 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/trainer/client_detail/presentation/tabs/schedule_tab.dart';
+import 'package:lifey/features/trainer/client_detail/presentation/widgets/client_action_bar.dart';
 import 'package:lifey/features/trainer/programs/data/programs_repository.dart';
 import 'package:lifey/features/trainer/programs/domain/program.dart';
 import 'package:lifey/features/trainer/schedule/application/calendar_controller.dart';
 import 'package:lifey/features/trainer/schedule/data/schedule_repository.dart';
 import 'package:lifey/features/trainer/schedule/domain/schedule.dart';
+import 'package:lifey/features/trainer/schedule/presentation/widgets/create_schedule_sheet.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_template.dart';
 import 'package:lifey/l10n/app_localizations.dart';
@@ -144,13 +147,19 @@ class _FakeScheduleRepository extends ScheduleRepository {
       cancelledSchedules.add(scheduleId);
 }
 
+void _noop() {}
+
 Future<void> _pump(
   WidgetTester tester, {
   required _FakeScheduleRepository repo,
   _FakeProgramsRepository? programs,
   List<WorkoutTemplate> templates = const [],
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+  ThemeData? theme,
+  Size size = const Size(420, 1000),
 }) async {
-  tester.view.physicalSize = const Size(420, 1000);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
@@ -163,11 +172,30 @@ Future<void> _pump(
         workoutTemplateControllerProvider
             .overrideWith(() => _FakeTemplateController(templates)),
       ],
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(body: ClientScheduleTab(clientId: 7, offline: false)),
+        // The "Schedule" button lives under the client detail's tabs now, not
+        // on this tab; the same bar stands in for it here.
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Column(
+              children: [
+                ClientActionBar(
+                  onMessage: _noop,
+                  onSchedule: () => CreateScheduleSheet.show(context, clientId: 7),
+                ),
+                const Expanded(child: ClientScheduleTab(clientId: 7, offline: false)),
+              ],
+            ),
+          ),
+        ),
       ),
     ),
   );
@@ -186,8 +214,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Schedules'), findsOneWidget);
-      expect(find.text('Coming up'), findsOneWidget);
+      expect(find.text('SCHEDULES'), findsOneWidget);
+      expect(find.text('COMING UP'), findsOneWidget);
       expect(find.textContaining('Every Mon'), findsOneWidget);
       expect(find.textContaining('18:00'), findsWidgets);
       expect(find.text('4 done · 1 missed · 13 to go'), findsOneWidget);
@@ -213,6 +241,25 @@ void main() {
     });
   });
 
+  group('layout (canvas Lifey 6 family)', () {
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('a full tab fits 360 dp at x 1.3 in $name, $mode', (tester) async {
+          await _pump(
+            tester,
+            repo: _FakeScheduleRepository(schedules: [_schedule()], occurrences: [_occurrence(), _occurrence(sessionId: 56, daysFromToday: 2)]),
+            programs: _FakeProgramsRepository(runs: [_run()]),
+            locale: locale,
+            textScale: 1.3,
+            theme: theme,
+            size: const Size(360, 1400),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  });
+
   group('program runs', () {
     testWidgets('lead the tab, with where the client is in them',
         (tester) async {
@@ -222,12 +269,12 @@ void main() {
         programs: _FakeProgramsRepository(runs: [_run()]),
       );
 
-      expect(find.text('Programs'), findsOneWidget);
+      expect(find.text('PROGRAMS'), findsOneWidget);
       expect(find.text('12-week base'), findsOneWidget);
       expect(find.textContaining('of 4'), findsOneWidget);
       // The bigger commitment reads first; the loose schedules follow.
-      final programsY = tester.getTopLeft(find.text('Programs')).dy;
-      final schedulesY = tester.getTopLeft(find.text('Schedules')).dy;
+      final programsY = tester.getTopLeft(find.text('PROGRAMS')).dy;
+      final schedulesY = tester.getTopLeft(find.text('SCHEDULES')).dy;
       expect(programsY, lessThan(schedulesY));
     });
 

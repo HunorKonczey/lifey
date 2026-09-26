@@ -2,103 +2,54 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/delta_chip.dart';
+import '../../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../domain/compliance.dart';
 
-/// The compliance flags of one client, as icon + short number chips
-/// (frame B1: "ikon + rövid szám, nem hosszú szöveg").
+/// The chips under a client card's KPIs (canvas Lifey 6 › 9.1): a warning per
+/// thing that needs the trainer — "Missed 2 sessions" in the calorie tint,
+/// "Weigh-in due" in the weight blue — and, when there is one, the gold
+/// "🏆 2 PRs this week".
 ///
-/// Each chip carries the full sentence as its semantics label, so a screen
-/// reader gets "No log for 5 days" where the eye gets a clock and "5d".
-/// Renders nothing when the client is fully compliant.
+/// A client who has gone quiet is *not* a chip: the status line under their
+/// name says "Last seen 4 days ago" in the warning colour, and saying it twice
+/// would only make the card louder. Each chip carries the full sentence as its
+/// semantics label. Renders nothing when there is nothing to say.
 class ComplianceBadges extends StatelessWidget {
-  const ComplianceBadges({super.key, required this.flags});
+  const ComplianceBadges({super.key, required this.flags, this.prCount});
 
   final ComplianceFlags flags;
 
+  /// Records set in the last 7 days; null (unknown) and 0 draw nothing.
+  final int? prCount;
+
+  /// Whether there is any chip to draw.
+  bool get hasContent => flags.hasMissedWorkouts || flags.weightStale || (prCount ?? 0) > 0;
+
   @override
   Widget build(BuildContext context) {
+    if (!hasContent) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
+    final mc = context.metricColors;
 
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: AppSpacing.s8,
+      runSpacing: AppSpacing.s8,
       children: [
-        if (flags.inactive)
-          _Badge(
-            icon: Icons.schedule,
-            text: l10n.trainerComplianceDaysShortLabel(flags.daysSinceLastLog),
-            semanticsLabel:
-                l10n.trainerComplianceInactiveSemanticsLabel(flags.daysSinceLastLog),
-            background: scheme.errorContainer,
-            foreground: scheme.onErrorContainer,
-          ),
         if (flags.hasMissedWorkouts)
-          _Badge(
-            icon: Icons.fitness_center,
-            text: l10n.trainerComplianceMissedShortLabel(flags.missedWorkouts),
-            semanticsLabel:
-                l10n.trainerComplianceMissedSemanticsLabel(flags.missedWorkouts),
-            background: scheme.errorContainer,
-            foreground: scheme.onErrorContainer,
+          TintedChip(
+            label: l10n.trainerClientChipMissed(flags.missedWorkouts),
+            color: mc.calories,
+            semanticsLabel: l10n.trainerComplianceMissedSemanticsLabel(flags.missedWorkouts),
           ),
         if (flags.weightStale)
-          _Badge(
-            icon: Icons.monitor_weight_outlined,
-            text: l10n.trainerComplianceDaysShortLabel(flags.daysSinceWeight),
-            semanticsLabel:
-                l10n.trainerComplianceWeightStaleSemanticsLabel(flags.daysSinceWeight),
-            // A missed weigh-in is a nudge, not an alarm — it gets the
-            // quieter surface so the two error-coloured chips keep meaning
-            // something when they appear next to it.
-            background: scheme.surfaceContainerHighest,
-            foreground: scheme.onSurfaceVariant,
+          TintedChip(
+            label: l10n.trainerClientChipWeighInDue,
+            color: mc.weight,
+            semanticsLabel: l10n.trainerComplianceWeightStaleSemanticsLabel(flags.daysSinceWeight),
           ),
+        if ((prCount ?? 0) > 0) RecordChip(label: l10n.trainerClientChipPrs(prCount!)),
       ],
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.icon,
-    required this.text,
-    required this.semanticsLabel,
-    required this.background,
-    required this.foreground,
-  });
-
-  final IconData icon;
-  final String text;
-  final String semanticsLabel;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticsLabel,
-      excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: background, borderRadius: AppRadius.pill),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 13, color: foreground),
-            const SizedBox(width: 4),
-            Text(
-              text,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: foreground,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

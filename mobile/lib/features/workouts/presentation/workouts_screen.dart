@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ads/banner_ad_slot.dart';
 import '../../../core/ads/nav_reserved_space.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../../shared/widgets/shell_fab.dart';
 import '../application/exercise_controller.dart';
-import '../domain/activity_type.dart';
 import '../domain/exercise_enums.dart';
 import 'create_template_screen.dart';
 import 'exercises_tab.dart';
@@ -19,6 +19,7 @@ import 'sessions_tab.dart';
 import 'template_picker_screen.dart';
 import 'templates_tab.dart';
 import 'widgets/add_exercise_sheet.dart';
+import 'widgets/workouts_filter_sheet.dart';
 
 /// Bumped to force [WorkoutsScreen] back onto its "Sessions" sub-tab —
 /// `CardioSessionScreen._finish` requests this so the summary screen's
@@ -42,8 +43,9 @@ final workoutsSessionsTabRequestProvider =
 
 /// Workouts: "Sessions" (logged workouts), "Templates", and "Exercises" tabs.
 ///
-/// The AdaptiveAppBar + PillTabBar form a single floating header unit that
-/// collapses together on scroll, matching the dashboard's header behaviour.
+/// A `NestedScrollView`: the large-title `LifeyHeader` (with the filter
+/// button) collapses as the active tab scrolls, the `PillTabBar` under it stays
+/// pinned (docs/redesign/77-mobile-redesign-plan.md R3.1).
 class WorkoutsScreen extends ConsumerStatefulWidget {
   const WorkoutsScreen({super.key});
 
@@ -54,6 +56,16 @@ class WorkoutsScreen extends ConsumerStatefulWidget {
 class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+
+  /// One page-storage bucket per tab. Keyless scrollables all save their offset
+  /// under the same empty identifier, so a shared bucket makes a tab open
+  /// scrolled to wherever the *previous* tab was — with a short list that is
+  /// past its end, the header collapsed and the list out of sight.
+  final _tabBuckets = List.generate(3, (_) => PageStorageBucket());
+
+  /// 46 px pill bar + 8 px above and below (`PillTabBar`).
+  static const double _tabBarExtent = 62;
+
   DateRangeFilter _sessionFilter = DateRangeFilter.week;
   String? _exerciseCategoryFilter;
 
@@ -99,7 +111,8 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
       // Templates/Exercises tabs' FABs create different things entirely,
       // and a long-press there would open a sheet unrelated to what the
       // button says it does.
-      onLongPress: _tabController.index == 0 ? () => showQuickStartSheet(context) : null,
+      onLongPress:
+          _tabController.index == 0 ? () => showQuickStartSheet(context) : null,
     ));
   }
 
@@ -125,20 +138,29 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     );
   }
 
-  ({IconData icon, String label, VoidCallback onPressed}) _fab(AppLocalizations l10n) {
+  ({IconData icon, String label, VoidCallback onPressed}) _fab(
+      AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
-        return (icon: Icons.add, label: l10n.logFabLabel, onPressed: _logSession);
+        return (
+          icon: Icons.play_arrow_rounded,
+          label: l10n.startWorkoutButtonLabel,
+          onPressed: _logSession
+        );
       case 1:
-        return (icon: Icons.add, label: l10n.templateFabLabel, onPressed: _newTemplate);
+        return (
+          icon: Icons.add,
+          label: l10n.templateFabLabel,
+          onPressed: _newTemplate
+        );
       default:
-        return (icon: Icons.add, label: l10n.exerciseFabLabel, onPressed: _addExercise);
+        return (
+          icon: Icons.add,
+          label: l10n.exerciseFabLabel,
+          onPressed: _addExercise
+        );
     }
   }
-
-  // Empty-string sentinel represents "All" for the exercises category filter
-  // (PopupMenuButton<String> doesn't fire onSelected for null values).
-  static const _kCategoryAll = '';
 
   /// Decodes [_sessionKindFilterValue] into the `(kind, activityType)` pair
   /// `SessionsTab` filters on — see `matchesSessionKindFilter`.
@@ -151,119 +173,43 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     };
   }
 
-  String _sessionKindFilterLabel(AppLocalizations l10n) {
-    return switch (_sessionKindFilterValue) {
-      '' => l10n.allFilterLabel,
-      'STRENGTH' => l10n.activityTypeStrength,
-      'CARDIO' => l10n.sessionKindCardioLabel,
-      final type => activityTypeLabel(l10n, type),
-    };
-  }
+  /// Whether a filter other than the default is active on the current tab —
+  /// the dot on the header's filter button.
+  bool get _filterActive => switch (_tabController.index) {
+        0 => _sessionFilter != DateRangeFilter.week ||
+            _sessionKindFilterValue.isNotEmpty,
+        2 => _exerciseCategoryFilter != null,
+        _ => false,
+      };
 
-  PopupMenuItem<String> _sessionKindFilterMenuItem(
-    BuildContext context, {
-    required String value,
-    required String label,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return PopupMenuItem<String>(
-      value: value,
-      child: Row(children: [
-        SizedBox(
-          width: 20,
-          child: _sessionKindFilterValue == value
-              ? Icon(Icons.check, size: 16, color: scheme.primary)
-              : null,
-        ),
-        const SizedBox(width: 4),
-        Text(label),
-      ]),
-    );
-  }
-
-  Widget? _buildTrailingFilter(BuildContext context, AppLocalizations l10n) {
-    switch (_tabController.index) {
-      case 0:
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LabeledFilterButton(
-              label: _sessionKindFilterLabel(l10n),
-              onSelected: (v) => setState(() => _sessionKindFilterValue = v),
-              items: [
-                _sessionKindFilterMenuItem(context, value: '', label: l10n.allFilterLabel),
-                _sessionKindFilterMenuItem(context,
-                    value: 'STRENGTH', label: l10n.activityTypeStrength),
-                const PopupMenuDivider(),
-                _sessionKindFilterMenuItem(context,
-                    value: 'CARDIO', label: l10n.sessionKindCardioLabel),
-                for (final type in kActivityTypes)
-                  _sessionKindFilterMenuItem(context,
-                      value: type, label: activityTypeLabel(l10n, type)),
-              ],
-            ),
-            const SizedBox(width: 4),
-            DateRangeFilterButton(
-              value: _sessionFilter,
-              onChanged: (f) => setState(() => _sessionFilter = f),
-            ),
-          ],
-        );
-      case 2:
-        final exercises =
-            ref.watch(exerciseControllerProvider).value ?? const [];
-        final categories = kMuscleGroups
-            .where((c) => exercises.any((e) => e.category == c))
-            .toList();
-        final scheme = Theme.of(context).colorScheme;
-        final label = _exerciseCategoryFilter == null
-            ? l10n.allFilterLabel
-            : muscleGroupLabel(l10n, _exerciseCategoryFilter!);
-        return LabeledFilterButton(
-          label: label,
-          onSelected: (v) => setState(
-              () => _exerciseCategoryFilter = v == _kCategoryAll ? null : v),
-          items: [
-            PopupMenuItem<String>(
-              value: _kCategoryAll,
-              child: Row(children: [
-                SizedBox(
-                  width: 20,
-                  child: _exerciseCategoryFilter == null
-                      ? Icon(Icons.check, size: 16, color: scheme.primary)
-                      : null,
-                ),
-                const SizedBox(width: 4),
-                Text(l10n.allFilterLabel),
-              ]),
-            ),
-            ...categories.map((c) => PopupMenuItem<String>(
-                  value: c,
-                  child: Row(children: [
-                    SizedBox(
-                      width: 20,
-                      child: _exerciseCategoryFilter == c
-                          ? Icon(Icons.check, size: 16, color: scheme.primary)
-                          : null,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(muscleGroupLabel(l10n, c)),
-                  ]),
-                )),
-          ],
-        );
-      default:
-        return null;
+  void _openFilterSheet() {
+    final l10n = AppLocalizations.of(context)!;
+    if (_tabController.index == 0) {
+      showSessionsFilterSheet(
+        context,
+        range: _sessionFilter,
+        kind: _sessionKindFilterValue,
+        onRange: (r) => setState(() => _sessionFilter = r),
+        onKind: (k) => setState(() => _sessionKindFilterValue = k),
+      );
+    } else {
+      final exercises = ref.read(exerciseControllerProvider).value ?? const [];
+      showExercisesFilterSheet(
+        context,
+        category: _exerciseCategoryFilter,
+        categories: [
+          for (final c in kMuscleGroups)
+            if (exercises.any((e) => e.category == c))
+              (value: c, label: muscleGroupLabel(l10n, c)),
+        ],
+        onCategory: (c) => setState(() => _exerciseCategoryFilter = c),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
-    // AppBar expanded height + PillTabBar height (38 content + 8*2 padding)
-    final contentTop = barTop + 58.0 + 54.0;
 
     ref.listen(activeShellTabProvider, (_, next) {
       if (next != 2) return;
@@ -281,50 +227,69 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
       body: ScrollCollapseListener(
         child: Stack(
           children: [
-            // ── Content fills the screen; each tab handles its own top padding ─
+            // The large title collapses as the active tab scrolls; the pill
+            // tab bar stays pinned under it (canvas Lifey 3 › 3.1).
             Positioned.fill(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  SessionsTab(
-                    topPadding: contentTop,
-                    filter: _sessionFilter,
-                    kindFilter: _sessionKindFilter.kind,
-                    activityTypeFilter: _sessionKindFilter.activityType,
-                  ),
-                  TemplatesTab(topPadding: contentTop),
-                  ExercisesTab(
-                    topPadding: contentTop,
-                    categoryFilter: _exerciseCategoryFilter,
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Floating combined header (AppBar + PillTabBar as one unit) ─
-            Positioned(
-              top: barTop,
-              left: 0,
-              right: 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: AdaptiveAppBar(
+              child: NestedScrollView(
+                headerSliverBuilder: (context, _) => [
+                  // One pinned sliver — the title with the tab bar under it —
+                  // absorbed as a whole, so each tab's list can leave room for
+                  // it (OverlapInsetScope) instead of starting behind it.
+                  SliverOverlapAbsorber(
+                    handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                        context),
+                    sliver: LifeyHeader(
                       title: l10n.workoutsTitle,
-                      trailing: _buildTrailingFilter(context, l10n),
+                      actions: [
+                        if (_tabController.index != 1)
+                          HeaderIconButton(
+                            icon: Icons.tune_rounded,
+                            tooltip: l10n.workoutsFilterTitle,
+                            showDot: _filterActive,
+                            onPressed: _openFilterSheet,
+                          ),
+                      ],
+                      bottomHeight: _tabBarExtent,
+                      bottom: PillTabBar(
+                        controller: _tabController,
+                        horizontalMargin: AppSpacing.screen,
+                        tabs: [
+                          Tab(text: l10n.sessionsTabLabel),
+                          Tab(text: l10n.templatesTabLabel),
+                          Tab(text: l10n.exercisesLabel),
+                        ],
+                      ),
                     ),
                   ),
-                  PillTabBar(
-                    controller: _tabController,
-                    tabs: [
-                      Tab(text: l10n.sessionsTabLabel),
-                      Tab(text: l10n.templatesTabLabel),
-                      Tab(text: l10n.exercisesLabel),
-                    ],
-                  ),
                 ],
+                body: Builder(
+                  builder: (context) => OverlapInsetScope(
+                    handles: [
+                      NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+                    ],
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        PageStorage(
+                          bucket: _tabBuckets[0],
+                          child: SessionsTab(
+                            filter: _sessionFilter,
+                            kindFilter: _sessionKindFilter.kind,
+                            activityTypeFilter: _sessionKindFilter.activityType,
+                          ),
+                        ),
+                        PageStorage(
+                            bucket: _tabBuckets[1],
+                            child: const TemplatesTab()),
+                        PageStorage(
+                          bucket: _tabBuckets[2],
+                          child: ExercisesTab(
+                              categoryFilter: _exerciseCategoryFilter),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
             Positioned(

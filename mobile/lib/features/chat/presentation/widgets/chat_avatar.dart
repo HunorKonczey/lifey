@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../shared/widgets/ds/monogram_avatar.dart';
 import '../../application/peer_avatar_controller.dart';
 
 /// The peer's profile picture, falling back to a monogram.
@@ -20,27 +22,27 @@ class ChatAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final id = userId;
     final bytes = id == null ? null : ref.watch(peerAvatarProvider(id)).value;
+    // The tint follows the person, the same way in the list and in the header
+    // (canvas: "MT" in the weight blue).
+    final color = MonogramAvatar.colorFor(id?.toString() ?? monogram, context.metricColors);
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color.withValues(alpha: dark ? 0.16 : 0.12), shape: BoxShape.circle),
       child: bytes == null
           ? Text(
               monogram,
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: size * 0.36,
-                fontWeight: FontWeight.w700,
-                color: scheme.onPrimaryContainer,
+                fontSize: size * 0.34,  // design-audit: ok - monogram proportional to the avatar
+                fontWeight: FontWeight.w800,
+                color: color,
                 letterSpacing: 0.2,
               ),
             )

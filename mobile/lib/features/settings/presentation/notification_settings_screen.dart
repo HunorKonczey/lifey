@@ -3,9 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/error_message.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../shared/widgets/ds/list_group.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../application/notification_settings_controller.dart';
+import 'widgets/settings_kit.dart';
 
 /// Per-type notification toggles + a master switch
 /// (docs/30-push-notifications-plan.md, M5). Reached from a "Notifications"
@@ -148,7 +152,7 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
     final async = ref.watch(notificationSettingsControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.notificationSettingsTitle)),
+      appBar: LifeySubpageHeader(title: l10n.notificationSettingsTitle),
       body: async.when(
         data: (state) => _buildList(context, l10n, state),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -161,107 +165,75 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
   }
 
   Widget _buildList(BuildContext context, AppLocalizations l10n, NotificationSettingsState state) {
-    final scheme = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+
+    Widget toggle(IconData icon, String title, String subtitle, bool value, ValueChanged<bool> onChanged) => SettingsRow(
+          icon: icon,
+          title: title,
+          subtitle: subtitle,
+          trailing: SettingsSwitch(value: value, onChanged: onChanged),
+        );
+
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s32),
       children: [
-        SwitchListTile(
-          title: Text(
-            l10n.allNotificationsLabel,
-            style: const TextStyle(fontWeight: FontWeight.w700),
+        // The master switch reflects "any one is on" — no separate stored flag.
+        ListGroup(children: [
+          SettingsRow(
+            icon: Icons.notifications_active_outlined,
+            title: l10n.allNotificationsLabel,
+            trailing: SettingsSwitch(value: state.anyEnabled, onChanged: _setAll),
           ),
-          value: state.anyEnabled,
-          onChanged: _setAll,
-        ),
-        const Divider(height: 1),
-        SwitchListTile(
-          title: Text(l10n.workoutReminderToggleLabel),
-          subtitle: Text(l10n.workoutReminderToggleSubtitle),
-          value: state.workoutReminderEnabled,
-          onChanged: _setWorkoutReminder,
-        ),
-        SwitchListTile(
-          title: Text(l10n.weighInReminderToggleLabel),
-          subtitle: Text(l10n.weighInReminderToggleSubtitle),
-          value: state.weighInReminderEnabled,
-          onChanged: (v) => _setWeighInReminder(v),
-        ),
-        if (state.weighInReminderEnabled)
-          ListTile(
-            contentPadding: const EdgeInsets.only(left: 32, right: 16),
-            title: Text(l10n.reminderTimeLabel),
-            trailing: Text(_formatTime(state.weighInReminderHour, state.weighInReminderMinute)),
-            onTap: () => _pickTime(state),
-          ),
-        SwitchListTile(
-          title: Text(l10n.stepGoalNotificationToggleLabel),
-          subtitle: Text(l10n.stepGoalNotificationToggleSubtitle),
-          value: state.stepGoalNotificationEnabled,
-          onChanged: _setStepGoal,
-        ),
-        SwitchListTile(
-          title: Text(l10n.trainerCommentPushToggleLabel),
-          subtitle: Text(l10n.trainerCommentPushToggleSubtitle),
-          value: state.trainerCommentPushEnabled,
-          onChanged: _setTrainerCommentPush,
-        ),
-        SwitchListTile(
-          title: Text(l10n.trainerGoalsPushToggleLabel),
-          subtitle: Text(l10n.trainerGoalsPushToggleSubtitle),
-          value: state.trainerGoalsPushEnabled,
-          onChanged: _setTrainerGoalsPush,
-        ),
-        SwitchListTile(
-          title: Text(l10n.programAssignedPushToggleLabel),
-          subtitle: Text(l10n.programAssignedPushToggleSubtitle),
-          value: state.programAssignedPushEnabled,
-          onChanged: _setProgramAssignedPush,
-        ),
-        SwitchListTile(
-          title: Text(l10n.chatPushToggleLabel),
-          subtitle: Text(l10n.chatPushToggleSubtitle),
-          value: state.chatPushEnabled,
-          onChanged: _setChatPush,
-        ),
-        SwitchListTile(
-          title: Text(l10n.chatQuietHoursLabel),
-          subtitle: Text(l10n.chatQuietHoursSubtitle),
-          value: state.quietHoursEnabled,
-          onChanged: (value) => _setQuietHoursEnabled(value, state),
-        ),
-        if (state.quietHoursEnabled)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pickQuietHour(state, start: true),
-                    icon: const Icon(Icons.bedtime_outlined, size: 18),
-                    label: Text(
-                      '${l10n.chatQuietHoursFrom} ${_formatApiTime(state.chatQuietHoursStart)}',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pickQuietHour(state, start: false),
-                    icon: const Icon(Icons.wb_sunny_outlined, size: 18),
-                    label: Text(
-                      '${l10n.chatQuietHoursTo} ${_formatApiTime(state.chatQuietHoursEnd)}',
-                    ),
-                  ),
-                ),
-              ],
+        ]),
+        const SizedBox(height: AppSpacing.s24),
+        ListGroup(children: [
+          toggle(Icons.fitness_center_rounded, l10n.workoutReminderToggleLabel, l10n.workoutReminderToggleSubtitle,
+              state.workoutReminderEnabled, _setWorkoutReminder),
+          toggle(Icons.monitor_weight_outlined, l10n.weighInReminderToggleLabel, l10n.weighInReminderToggleSubtitle,
+              state.weighInReminderEnabled, (v) => _setWeighInReminder(v)),
+          if (state.weighInReminderEnabled)
+            SettingsRow(
+              icon: Icons.schedule_rounded,
+              title: l10n.reminderTimeLabel,
+              onTap: () => _pickTime(state),
+              trailing: SettingsValue(_formatTime(state.weighInReminderHour, state.weighInReminderMinute)),
             ),
-          ),
+          toggle(Icons.directions_walk_rounded, l10n.stepGoalNotificationToggleLabel, l10n.stepGoalNotificationToggleSubtitle,
+              state.stepGoalNotificationEnabled, _setStepGoal),
+        ]),
+        const SizedBox(height: AppSpacing.s24),
+        ListGroup(children: [
+          toggle(Icons.rate_review_outlined, l10n.trainerCommentPushToggleLabel, l10n.trainerCommentPushToggleSubtitle,
+              state.trainerCommentPushEnabled, _setTrainerCommentPush),
+          toggle(Icons.flag_outlined, l10n.trainerGoalsPushToggleLabel, l10n.trainerGoalsPushToggleSubtitle,
+              state.trainerGoalsPushEnabled, _setTrainerGoalsPush),
+          toggle(Icons.assignment_outlined, l10n.programAssignedPushToggleLabel, l10n.programAssignedPushToggleSubtitle,
+              state.programAssignedPushEnabled, _setProgramAssignedPush),
+          toggle(Icons.chat_bubble_outline_rounded, l10n.chatPushToggleLabel, l10n.chatPushToggleSubtitle,
+              state.chatPushEnabled, _setChatPush),
+          toggle(Icons.bedtime_outlined, l10n.chatQuietHoursLabel, l10n.chatQuietHoursSubtitle, state.quietHoursEnabled,
+              (value) => _setQuietHoursEnabled(value, state)),
+          if (state.quietHoursEnabled)
+            SettingsRow(
+              icon: Icons.nights_stay_outlined,
+              title: l10n.chatQuietHoursFrom,
+              onTap: () => _pickQuietHour(state, start: true),
+              trailing: SettingsValue(_formatApiTime(state.chatQuietHoursStart)),
+            ),
+          if (state.quietHoursEnabled)
+            SettingsRow(
+              icon: Icons.wb_sunny_outlined,
+              title: l10n.chatQuietHoursTo,
+              onTap: () => _pickQuietHour(state, start: false),
+              trailing: SettingsValue(_formatApiTime(state.chatQuietHoursEnd)),
+            ),
+        ]),
         if (_permissionDenied)
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(top: AppSpacing.s16, left: AppSpacing.s4, right: AppSpacing.s4),
             child: Text(
               l10n.notificationPermissionDeniedHint,
-              style: TextStyle(color: scheme.error),
+              style: t.bodyMedium!.copyWith(color: context.metricColors.heart),
             ),
           ),
       ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// "Today" / "Yesterday" / "1 Aug" chip separating days in the stream.
@@ -32,25 +33,17 @@ class DayDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(10),
-        ),
+        margin: const EdgeInsets.symmetric(vertical: AppSpacing.s12),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s8),
+        decoration: BoxDecoration(color: p.control, borderRadius: AppRadius.pill),
         child: Text(
           _label(context, l10n),
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 11.5,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelMedium!.copyWith(color: p.text2),
         ),
       ),
     );

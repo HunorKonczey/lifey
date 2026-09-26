@@ -172,10 +172,10 @@ void main() {
     expect(_dominantFontSize(tester, '1:00'), 82);
   });
 
-  testWidgets('the moving time keeps its 96 px without a plan', (tester) async {
+  testWidgets('the moving time is 104 px without a plan', (tester) async {
     await _pump(tester, _bikeSession(movingSeconds: 60));
 
-    expect(_dominantFontSize(tester, '1:00'), 96);
+    expect(_dominantFontSize(tester, '1:00'), 104);
   });
 
   testWidgets('the skip circle replaces the trailing circle and steps the section',
@@ -187,7 +187,7 @@ void main() {
     );
 
     expect(find.byKey(const Key('intervalSkipCircle')), findsOneWidget);
-    expect(find.text('Skip'), findsOneWidget);
+    expect(find.byTooltip('Skip'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('intervalSkipCircle')));
     await tester.pump();

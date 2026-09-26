@@ -7,6 +7,7 @@ import 'package:lifey/features/chat/application/conversation_list_controller.dar
 import 'package:lifey/features/chat/domain/chat_conversation.dart';
 import 'package:lifey/features/chat/domain/chat_peer.dart';
 import 'package:lifey/features/chat/presentation/conversation_list_screen.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 class _FakeAuthController extends AuthController {
@@ -217,7 +218,7 @@ void main() {
         ],
       );
 
-      expect(find.byIcon(Icons.search), findsNothing);
+      expect(find.byIcon(Icons.search_rounded), findsNothing);
     });
 
     testWidgets('appears once a trainer has enough clients to need it', (tester) async {
@@ -230,7 +231,7 @@ void main() {
         ],
       );
 
-      expect(find.byIcon(Icons.search), findsOneWidget);
+      expect(find.byIcon(Icons.search_rounded), findsOneWidget);
     });
 
     testWidgets('filters the list by name', (tester) async {
@@ -244,7 +245,7 @@ void main() {
         ],
       );
 
-      await tester.tap(find.byIcon(Icons.search));
+      await tester.tap(find.byIcon(Icons.search_rounded));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'Eszter');
       await tester.pumpAndSettle();
@@ -252,5 +253,45 @@ void main() {
       expect(find.text('Tóth Eszter'), findsOneWidget);
       expect(find.text('Client 1'), findsNothing);
     });
+  });
+
+  group('layout (R5.8)', () {
+    for (final locale in [const Locale('en'), const Locale('hu')]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('a mixed list with unread, muted and archived rows fits 360 dp at × 1.3 in ${locale.languageCode}, $mode',
+            (tester) async {
+          tester.view.physicalSize = const Size(360 * 2, 740 * 2);
+          tester.view.devicePixelRatio = 2;
+          addTearDown(tester.view.reset);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authControllerProvider.overrideWith(() => _FakeAuthController(['ROLE_USER', 'ROLE_TRAINER'])),
+                conversationListControllerProvider.overrideWith(() => _FakeConversationListController([
+                      _conversation(id: 1, name: 'Kovács Anna Zsuzsanna', role: ChatPeerRole.client, unreadCount: 3),
+                      _conversation(id: 2, name: 'Mark Trainer', role: ChatPeerRole.trainer, lastSenderId: 7),
+                      _conversation(id: 3, name: 'Régi Kliens', role: ChatPeerRole.client, archivedAt: DateTime(2026, 7, 1)),
+                    ])),
+              ],
+              child: MaterialApp(
+                theme: theme,
+                locale: locale,
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)),
+                  child: child!,
+                ),
+                home: const ConversationListScreen(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(find.text('Kovács Anna Zsuzsanna'), findsOneWidget);
+        });
+      }
+    }
   });
 }

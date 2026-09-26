@@ -17,10 +17,11 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/charts/stats_range.dart';
+import 'package:lifey/shared/widgets/ds/lifey_segmented.dart';
 
-/// Covers the range popup's two locked rows (frame P11, `69` §4.1) at both
-/// `historyDays: 30` and `historyDays: null` — the DV-9 fix (exactly one
-/// check mark) and the locked-row tap opening the paywall instead of
+/// Covers the range switcher's two locked segments (frame P11, `69` §4.1) at
+/// both `historyDays: 30` and `historyDays: null` — the lock glyph, the reason
+/// a screen reader hears, and a locked tap opening the paywall instead of
 /// changing the selection.
 
 class _FakeMealController extends MealController {
@@ -120,36 +121,29 @@ DateTime _thirtyDaysAgo() {
   return today.subtract(const Duration(days: 30));
 }
 
-Future<void> _openRangeMenu(WidgetTester tester) async {
-  await tester.tap(find.byType(PopupMenuButton<StatsRange>));
-  await tester.pumpAndSettle();
-}
-
 void main() {
   final cutoff30Days = _thirtyDaysAgo();
 
-  testWidgets('historyDays: 30 locks "90 days" and "All" with a lock glyph', (tester) async {
+  testWidgets('historyDays: 30 locks "90 d" and "All" with a lock glyph', (tester) async {
     await _pumpStatisticsScreen(tester, historyCutoff: cutoff30Days);
-    await _openRangeMenu(tester);
 
-    expect(find.byIcon(Icons.lock), findsNWidgets(2));
-    // Exactly one check mark — the DV-9 fix (`69` §11.2): the frame drew two.
-    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(2));
+    expect(
+      find.descendant(of: find.byType(LifeySegmented<StatsRange>), matching: find.byIcon(Icons.lock_rounded)),
+      findsNWidgets(2),
+    );
   });
 
   testWidgets('historyDays: null (Pro, or unresolved and fail-open) locks nothing', (tester) async {
     await _pumpStatisticsScreen(tester, historyCutoff: null);
-    await _openRangeMenu(tester);
 
-    expect(find.byIcon(Icons.lock), findsNothing);
-    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(find.byIcon(Icons.lock_rounded), findsNothing);
   });
 
-  testWidgets('tapping a locked row opens the paywall instead of selecting it', (tester) async {
+  testWidgets('tapping a locked range opens the paywall instead of selecting it', (tester) async {
     final container = await _pumpStatisticsScreen(tester, historyCutoff: cutoff30Days);
-    await _openRangeMenu(tester);
 
-    await tester.tap(find.text('All').last);
+    await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
 
     // Unchanged from StatsRangeController's default.
@@ -157,40 +151,24 @@ void main() {
     expect(find.text('paywall'), findsOneWidget);
   });
 
-  testWidgets('tapping an unlocked row selects it normally, without opening the paywall',
+  testWidgets('tapping an unlocked range selects it normally, without opening the paywall',
       (tester) async {
     final container = await _pumpStatisticsScreen(tester, historyCutoff: cutoff30Days);
-    await _openRangeMenu(tester);
 
-    await tester.tap(find.text('7 days').last);
+    await tester.tap(find.text('7 d'));
     await tester.pumpAndSettle();
 
     expect(container.read(statsRangeControllerProvider), StatsRange.week);
     expect(find.text('paywall'), findsNothing);
   });
 
-  testWidgets("a locked row's label is drawn at full alpha (`72` D-F4)", (tester) async {
-    await _pumpStatisticsScreen(tester, historyCutoff: cutoff30Days);
-    await _openRangeMenu(tester);
-
-    // `69` §4.1 asked for 60 % opacity here; that is the pattern commit
-    // 1c252fd removed app-wide for failing WCAG AA, and the `lock` glyph
-    // plus the row's semantics label already carry the state. No `Opacity`
-    // may reappear inside the menu rows.
-    expect(
-      find.descendant(of: find.byType(PopupMenuItem<StatsRange>), matching: find.byType(Opacity)),
-      findsNothing,
-    );
-  });
-
-  testWidgets('a locked row explains *why* it is locked to a screen reader', (tester) async {
+  testWidgets('a locked range explains *why* it is locked to a screen reader', (tester) async {
     final handle = tester.ensureSemantics();
     await _pumpStatisticsScreen(tester, historyCutoff: cutoff30Days);
-    await _openRangeMenu(tester);
 
     // `69` §8: "states the reason, not just 'locked'".
     expect(find.bySemanticsLabel('All — Pro required'), findsOneWidget);
-    expect(find.bySemanticsLabel('90 days — Pro required'), findsOneWidget);
+    expect(find.bySemanticsLabel('90 d — Pro required'), findsOneWidget);
     handle.dispose();
   });
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/notice_card.dart';
 import '../../application/weekly_recap_provider.dart';
 import '../../data/recap_preferences.dart';
 import '../../domain/weekly_recap.dart';
@@ -68,43 +69,17 @@ class _RecapReadyCardState extends ConsumerState<RecapReadyCard> {
     if (!recap.hasAnyData) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(scheme.primary.withValues(alpha: 0.14), scheme.surfaceContainer),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.auto_awesome, color: scheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              l10n.recapReadyCardTitle,
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton(
-            onPressed: () => context.push('/recap'),
-            child: Text(l10n.recapReadyCardCta),
-          ),
-          IconButton(
-            onPressed: () => _dismiss(weekStart),
-            icon: const Icon(Icons.close, size: 18),
-            tooltip: l10n.recapReadyCardDismissTooltip,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ],
+    return Padding(
+      // Space above, not below: the section label that follows brings its own.
+      padding: const EdgeInsets.only(top: AppSpacing.s16),
+      child: NoticeCard(
+        icon: Icons.auto_awesome_rounded,
+        title: l10n.recapReadyCardTitle,
+        actionLabel: l10n.recapReadyCardCta,
+        onAction: () => context.push('/recap'),
+        onDismiss: () => _dismiss(weekStart),
+        dismissTooltip: l10n.recapReadyCardDismissTooltip,
       ),
     );
   }

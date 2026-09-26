@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/food_controller.dart';
 import '../../application/meal_estimation_controller.dart';
@@ -317,7 +318,7 @@ class _ItemCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -486,7 +487,7 @@ class _Thumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(size / 6),
+      borderRadius: BorderRadius.circular(size / 6), // design-audit: ok - proportional to the thumbnail
       child: Image.file(
         File(imagePath),
         width: size,

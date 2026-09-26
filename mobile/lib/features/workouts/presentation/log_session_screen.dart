@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,9 +14,11 @@ import '../../../core/notifications/notification_service.dart';
 import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/theme/app_type.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/exercise_controller.dart';
@@ -35,9 +36,10 @@ import 'watch_session_plan.dart';
 import 'watch_set_log_decision.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/exercise_session_card.dart';
-import 'widgets/music_sticky_button.dart';
+import 'widgets/workout_action_bar.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
-import 'widgets/workout_success_dialog.dart';
+import 'widgets/rest_hero_card.dart';
+import 'widgets/workout_success_sheet.dart';
 
 /// Full-screen form for logging a session, or editing one when [session] is given.
 ///
@@ -1302,7 +1304,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
         confirmLabel: l10n.removeButton,
         cancelLabel: l10n.cancelButton,
         icon: Icons.remove_circle_rounded,
-        accentColor: const Color(0xFFD66B5A),
+        accentColor: context.metricColors.negative,
       );
       if (confirmed != true || !mounted) return;
     }
@@ -1749,7 +1751,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     unawaited(_autoSave());
   }
 
-  /// Shows the celebration dialog if the just-finished session improved on
+  /// Shows the celebration sheet if the just-finished session improved on
   /// at least 2 metrics net vs. the previous one for each exercise. No-op
   /// (and returns immediately) otherwise. Awaited so callers navigate away
   /// only after the user dismisses it.
@@ -1757,7 +1759,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     final l10n = AppLocalizations.of(context)!;
     final progress = computeWorkoutProgress(_blocks, l10n);
     if (!progress.isSuccess) return;
-    await showWorkoutSuccessDialog(context, progress);
+    final startedAt = _startedAt;
+    await showWorkoutSuccessSheet(
+      context,
+      progress,
+      summary: WorkoutSummary(
+        title: widget.session?.templateName ?? widget.template?.name,
+        duration: startedAt == null ? null : (_finishedAt ?? DateTime.now()).difference(startedAt),
+        volume: computeWorkoutVolume(_blocks),
+      ),
+    );
   }
 
   /// Stamps finishedAt = now, stops the ticker, and persists.
@@ -1873,13 +1884,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     final note = _feedbackNote;
     return InkWell(
       onTap: _editFeedback,
-      borderRadius: BorderRadius.circular(AppRadius.input),
+      borderRadius: BorderRadius.circular(AppRadius.control),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppRadius.input),
+          borderRadius: BorderRadius.circular(AppRadius.control),
         ),
         child: Row(
           children: [
@@ -1894,12 +1905,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                 ),
                 child: Text(
                   '$rpe',
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onPrimaryContainer,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: scheme.onPrimaryContainer),
                 ),
               )
             else
@@ -1915,12 +1921,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                     rpe != null
                         ? l10n.postWorkoutFeedbackSectionTitle
                         : l10n.postWorkoutFeedbackEmptyState,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
                   ),
                   if (note != null && note.isNotEmpty)
                     Padding(
@@ -1929,11 +1930,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                         note,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 11.5,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant),
                       ),
                     ),
                 ],
@@ -1962,7 +1959,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderRadius: BorderRadius.circular(AppRadius.control),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1977,22 +1974,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
               children: [
                 Text(
                   l10n.trainerCommentLabel,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
                     comment,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 11.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ),
                 if (commentAt != null)
@@ -2000,11 +1988,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       _label.format(commentAt),
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 10.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ),
               ],
@@ -2015,178 +1999,70 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     );
   }
 
-  Widget _buildTopBar(BuildContext context, ColorScheme scheme,
-      AppLocalizations l10n, String title) {
-    return Container(
-      height: 58,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.30),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            color: scheme.surfaceContainer.withValues(alpha: 0.92),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Center(
-                      child: Icon(Icons.arrow_back,
-                          size: 22, color: scheme.onSurfaceVariant),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onSurface,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ),
-                if (_startedAt != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.timer, size: 18, color: scheme.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatElapsed(),
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.onSurface,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                // "Measuring" pill (docs/40-watch-app-plan.md §12.4 B14):
-                // the watch confirmed its own session started, until it ends
-                // or reachability is lost. Icon-only — the label is still
-                // exposed via the tooltip/semantics for accessibility.
-                if (_measuringOnWatch && _finishedAt == null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.all(9),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Tooltip(
-                      message: l10n.watchMeasuringPillLabel,
-                      child: Icon(
-                        Icons.watch,
-                        size: 18,
-                        color: scheme.primary,
-                        semanticLabel: l10n.watchMeasuringPillLabel,
-                      ),
-                    ),
-                  ),
-                ],
-                // Near-live heart rate, shown while a fresh sample is arriving.
-                if (_showHeartRate && _currentHeartRate != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.favorite,
-                            size: 18, color: context.metricColors.heart),
-                        const SizedBox(width: 6),
-                        Text(
-                          '$_currentHeartRate',
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.onSurface,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                // Live calories burned, pushed from the watch's own session
-                // — only ever available while a connected watch is actively
-                // measuring (see [WatchLiveMetrics]).
-                if (_watchActiveCalories != null && _finishedAt == null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.local_fire_department,
-                            size: 18, color: context.metricColors.calories),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${_watchActiveCalories!.round()}',
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.onSurface,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+  /// The pills at the right of the header: the elapsed workout time, and —
+  /// while a watch is measuring — the watch, the near-live heart rate and the
+  /// calories burned (docs/40-watch-app-plan.md §12.4 B14).
+  List<Widget> _headerActions(BuildContext context, AppLocalizations l10n) {
+    final mc = context.metricColors;
+    return [
+      if (_startedAt != null)
+        _HeaderPill(icon: Icons.timer_outlined, iconColor: Theme.of(context).colorScheme.primary, text: _formatElapsed()),
+      // "Measuring" pill: the watch confirmed its own session started, until
+      // it ends or reachability is lost. Icon-only — the label is still
+      // exposed via the tooltip/semantics for accessibility.
+      if (_measuringOnWatch && _finishedAt == null)
+        _HeaderPill(
+          icon: Icons.watch_rounded,
+          iconColor: Theme.of(context).colorScheme.primary,
+          tooltip: l10n.watchMeasuringPillLabel,
         ),
-      ),
-    );
+      // Near-live heart rate, shown while a fresh sample is arriving.
+      if (_showHeartRate && _currentHeartRate != null)
+        _HeaderPill(icon: Icons.favorite_rounded, iconColor: mc.heart, text: '$_currentHeartRate'),
+      // Live calories burned, pushed from the watch's own session — only ever
+      // available while a connected watch is actively measuring (see
+      // [WatchLiveMetrics]).
+      if (_watchActiveCalories != null && _finishedAt == null)
+        _HeaderPill(
+          icon: Icons.local_fire_department_rounded,
+          iconColor: mc.calories,
+          text: '${_watchActiveCalories!.round()}',
+        ),
+    ];
+  }
+
+  /// "2 of 3 exercises": the exercise being worked on out of all of them —
+  /// the first one that is not complete yet (every planned row done). Null
+  /// while there is nothing to count.
+  String? _exerciseProgressLabel(AppLocalizations l10n) {
+    if (_blocks.isEmpty || _finishedAt != null) return null;
+    final complete = _blocks.where((b) => b.rows.isNotEmpty && b.rows.every((r) => r.isDone)).length;
+    return l10n.workoutExerciseProgress((complete + 1).clamp(1, _blocks.length), _blocks.length);
+  }
+
+  /// "Next: Bench Press · set 2 · 47.5 kg × 8" — the first row not done yet,
+  /// looking from the exercise of the last logged set onwards and then from the
+  /// start. The load is the row's own (the plan or the carried-over values),
+  /// else last time's; without either only the set is named.
+  String? _nextSetLine(AppLocalizations l10n, ExerciseBlock lastBlock) {
+    final order = [
+      ..._blocks.sublist(_blocks.indexOf(lastBlock)),
+      ..._blocks.sublist(0, _blocks.indexOf(lastBlock)),
+    ];
+    for (final block in order) {
+      for (var i = 0; i < block.rows.length; i++) {
+        final row = block.rows[i];
+        if (row.isDone) continue;
+        final previous = i < block.previousSets.length ? block.previousSets[i] : null;
+        final weight = row.weight ?? previous?.weight;
+        final reps = row.reps ?? previous?.reps;
+        final name = block.exerciseName;
+        if (weight == null || reps == null) return l10n.restNextSet(name, i + 1);
+        final kg = NumberFormat('0.#', l10n.localeName).format(weight);
+        return l10n.restNextSetLoad(name, i + 1, '$kg ${l10n.statUnitKg} × $reps');
+      }
+    }
+    return null;
   }
 
   // ---------------------------------------------------------------------------
@@ -2241,33 +2117,66 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     }
 
     final safeBottom = MediaQuery.paddingOf(context).bottom;
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
     final restBannerVisible =
         _finishedAt == null && lastDoneAt != null && !restIsSkipped;
-    final restBannerHeight =
-        (restBannerVisible && restSettings.restTimerEnabled) ? 74.0 : 50.0;
-    final restBannerTop = barTop + 58.0 + 8.0;
-    final contentTop = restBannerVisible
-        ? restBannerTop + restBannerHeight + 8.0
-        : barTop + 58.0 + 8.0;
 
     // Finish button is only shown for running (not-yet-finished) sessions.
     final showFinishButton = _finishedAt == null;
     // ListView needs extra bottom room so content isn't hidden behind the sticky button.
     final listBottomPad =
-        showFinishButton ? (safeBottom + 24 + 54 + 16) : (safeBottom + 16);
+        showFinishButton ? WorkoutActionBar.reservedHeight(safeBottom) : (safeBottom + 16);
 
     final title = _isEditing
         ? (widget.session!.templateName ?? l10n.editWorkoutTitle)
         : (template != null ? template.name : l10n.logWorkoutTitle);
 
     return Scaffold(
+      appBar: LifeySubpageHeader(
+        title: title,
+        subtitle: _exerciseProgressLabel(l10n),
+        actions: _headerActions(context, l10n),
+      ),
       body: Stack(
         children: [
-          // ── Scrollable content ──
-          ListView(
-            padding: EdgeInsets.fromLTRB(16, contentTop, 16, listBottomPad),
+          Column(
+            children: [
+              // ── Rest hero (pinned above the list) ──
+              if (restBannerVisible)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, 0),
+                  child: RestHeroCard(
+                    lastSetAt: lastDoneAt,
+                    now: _now,
+                    enabled: restSettings.restTimerEnabled,
+                    targetSeconds: restTargetSeconds,
+                    adjustment: _restAdjustment,
+                    nextLine: _nextSetLine(l10n, lastDoneEntry!.block),
+                    onAddFifteen: () {
+                      setState(
+                          () => _restAdjustment += const Duration(seconds: 15));
+                      unawaited(_rescheduleRestNotification());
+                      // Keep the native Live Activity / Android chronometer
+                      // countdown in sync (docs/39-rest-timer-plan.md, Prompt
+                      // 5) — otherwise it'd only pick up the new target on the
+                      // next autosave.
+                      if (_sessionNotifierStarted) {
+                        unawaited(_updateSessionNotifier());
+                      }
+                    },
+                    onSkip: () {
+                      setState(() => _restSkippedAt = lastDoneAt);
+                      unawaited(NotificationService.cancelRestEnd());
+                      if (_sessionNotifierStarted) {
+                        unawaited(_updateSessionNotifier());
+                      }
+                    },
+                  ),
+                ),
+              Expanded(
+                child: ListView(
+            padding: EdgeInsets.fromLTRB(
+                AppSpacing.screen, AppSpacing.s12, AppSpacing.screen, listBottomPad),
             children: [
               // Health stat cards (watch-enriched finished sessions only).
               if (widget.session?.finishedAt != null &&
@@ -2337,101 +2246,19 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
               _AddExerciseButton(onTap: _handleAddExercise, scheme: scheme),
             ],
           ),
-
-          // ── Floating top bar ──
-          Positioned(
-            top: barTop,
-            left: 12,
-            right: 12,
-            child: _buildTopBar(context, scheme, l10n, title),
+              ),
+            ],
           ),
 
-          // ── Pinned rest banner ──
-          if (restBannerVisible)
-            Positioned(
-              top: restBannerTop,
-              left: 16,
-              right: 16,
-              child: _RestBanner(
-                lastSetAt: lastDoneAt,
-                now: _now,
-                enabled: restSettings.restTimerEnabled,
-                targetSeconds: restTargetSeconds,
-                adjustment: _restAdjustment,
-                isOvertime: restIsOvertime,
-                onAddFifteen: () {
-                  setState(
-                      () => _restAdjustment += const Duration(seconds: 15));
-                  unawaited(_rescheduleRestNotification());
-                  // Keep the native Live Activity / Android chronometer
-                  // countdown in sync (docs/39-rest-timer-plan.md, Prompt 5)
-                  // — otherwise it'd only pick up the new target on the next
-                  // autosave.
-                  if (_sessionNotifierStarted) {
-                    unawaited(_updateSessionNotifier());
-                  }
-                },
-                onSkip: () {
-                  setState(() => _restSkippedAt = lastDoneAt);
-                  unawaited(NotificationService.cancelRestEnd());
-                  if (_sessionNotifierStarted) {
-                    unawaited(_updateSessionNotifier());
-                  }
-                },
-              ),
-            ),
-
-          // ── Sticky music button + "Finish workout" button ──
-          // The music button only shows alongside Finish — both gated on
-          // "running session" (docs/music/46-workout-music-controls-plan.md
-          // §3.4); it never grows the sticky zone's height (listBottomPad
-          // above stays keyed to the Finish button's own 54px alone).
+          // ── Floating bar: music + "Finish workout" (running sessions only) ──
+          // Both are gated on "running session" (docs/music/46-workout-music-
+          // controls-plan.md §3.4); it sits where the nav bar would be.
           if (showFinishButton)
             Positioned(
-              bottom: safeBottom + 24,
-              left: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  const MusicStickyButton(),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 54,
-                      child: FilledButton.icon(
-                        onPressed: _saving ? null : _finishWorkout,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: scheme.primary,
-                          foregroundColor: scheme.onPrimary,
-                          disabledBackgroundColor:
-                              scheme.primary.withValues(alpha: 0.6),
-                          disabledForegroundColor:
-                              scheme.onPrimary.withValues(alpha: 0.7),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          textStyle: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        icon: _saving
-                            ? SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: scheme.onPrimary.withValues(alpha: 0.7),
-                                ),
-                              )
-                            : const Icon(Icons.check, size: 20),
-                        label: Text(l10n.finishWorkoutButton),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: WorkoutActionBar(saving: _saving, onFinish: _finishWorkout),
             ),
         ],
       ),
@@ -2456,13 +2283,13 @@ class _AddExerciseButton extends StatelessWidget {
       child: CustomPaint(
         painter: _DashedBorderPainter(
           color: scheme.outline,
-          radius: AppRadius.input,
+          radius: AppRadius.control,
           strokeWidth: 1.5,
         ),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.input),
+            borderRadius: BorderRadius.circular(AppRadius.control),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2471,12 +2298,7 @@ class _AddExerciseButton extends StatelessWidget {
               const SizedBox(width: 7),
               Text(
                 AppLocalizations.of(context)!.addExerciseTitle,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -2535,279 +2357,39 @@ class _DashedBorderPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Rest banner
+// Header pill (elapsed time, watch, heart rate, calories)
 // ---------------------------------------------------------------------------
 
-class _RestBanner extends StatelessWidget {
-  const _RestBanner({
-    required this.lastSetAt,
-    required this.now,
-    required this.enabled,
-    required this.targetSeconds,
-    required this.adjustment,
-    required this.isOvertime,
-    required this.onAddFifteen,
-    required this.onSkip,
-  });
-
-  final DateTime lastSetAt;
-  final DateTime now;
-
-  /// Whether the rest-timer feature is on (`UserSettings.restTimerEnabled`).
-  /// When false, this renders today's plain elapsed-since-last-set count-up
-  /// with no buttons — the feature degrades, it never disappears.
-  final bool enabled;
-
-  /// The effective rest duration for the last-done set's exercise, seconds.
-  /// Null when [enabled] is false (unused in that branch).
-  final int? targetSeconds;
-
-  /// Accumulated +15s taps for the current rest.
-  final Duration adjustment;
-  final bool isOvertime;
-  final VoidCallback onAddFifteen;
-  final VoidCallback onSkip;
-
-  static const _warnColor = Color(0xFFD66B5A);
-
-  String _mmss(Duration d) {
-    final m = d.inMinutes;
-    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final elapsed = now.difference(lastSetAt);
-
-    if (!enabled) {
-      return _container(
-        scheme: scheme,
-        child: _headerRow(
-          context: context,
-          icon: Icons.hourglass_top,
-          iconColor: scheme.primary,
-          timeText: _mmss(elapsed),
-          timeColor: scheme.primary,
-          l10n: l10n,
-        ),
-      );
-    }
-
-    final target = Duration(seconds: targetSeconds!) + adjustment;
-
-    if (isOvertime) {
-      final overage = elapsed - target;
-      return _container(
-        scheme: scheme,
-        accentColor: _warnColor,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _headerRow(
-              context: context,
-              icon: Icons.hourglass_bottom,
-              iconColor: _warnColor,
-              timeText: '+${_mmss(overage)}',
-              timeColor: _warnColor,
-              l10n: l10n,
-              trailing: _RestIconButton(
-                icon: Icons.close,
-                color: _warnColor,
-                tooltip: l10n.restTimerSkipButton,
-                onTap: onSkip,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _progressBar(color: _warnColor, value: 1),
-          ],
-        ),
-      );
-    }
-
-    final remaining = target - elapsed;
-    final progress = target.inMilliseconds == 0
-        ? 1.0
-        : (elapsed.inMilliseconds / target.inMilliseconds).clamp(0.0, 1.0);
-
-    return _container(
-      scheme: scheme,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _headerRow(
-            context: context,
-            icon: Icons.hourglass_top,
-            iconColor: scheme.primary,
-            timeText: _mmss(remaining),
-            timeColor: scheme.primary,
-            l10n: l10n,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _RestActionChip(
-                  label: l10n.restTimerAddSecondsButton,
-                  color: scheme.primary,
-                  onTap: onAddFifteen,
-                ),
-                const SizedBox(width: 6),
-                _RestIconButton(
-                  icon: Icons.close,
-                  color: scheme.onSurfaceVariant,
-                  tooltip: l10n.restTimerSkipButton,
-                  onTap: onSkip,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          _progressBar(color: scheme.primary, value: progress),
-        ],
-      ),
-    );
-  }
-
-  Widget _container({
-    required ColorScheme scheme,
-    required Widget child,
-    Color? accentColor,
-  }) {
-    final accent = accentColor ?? scheme.primary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(AppRadius.input),
-        border: Border.all(color: accent.withValues(alpha: 0.40)),
-      ),
-      child: child,
-    );
-  }
-
-  Widget _headerRow({
-    required BuildContext context,
-    required IconData icon,
-    required Color iconColor,
-    required String timeText,
-    required Color timeColor,
-    required AppLocalizations l10n,
-    Widget? trailing,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Icon(icon, size: 22, color: iconColor),
-        const SizedBox(width: 10),
-        Text(
-          l10n.restLabel,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface,
-          ),
-        ),
-        const Spacer(),
-        Text(
-          timeText,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: timeColor,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-        if (trailing != null) ...[
-          const SizedBox(width: 8),
-          trailing,
-        ],
-      ],
-    );
-  }
-
-  Widget _progressBar({required Color color, required double value}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: LinearProgressIndicator(
-        value: value,
-        minHeight: 4,
-        backgroundColor: color.withValues(alpha: 0.2),
-        valueColor: AlwaysStoppedAnimation(color),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Rest banner action buttons
-// ---------------------------------------------------------------------------
-
-class _RestActionChip extends StatelessWidget {
-  const _RestActionChip(
-      {required this.label, required this.color, required this.onTap});
-
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RestIconButton extends StatelessWidget {
-  const _RestIconButton({
-    required this.icon,
-    required this.color,
-    required this.tooltip,
-    required this.onTap,
-  });
+class _HeaderPill extends StatelessWidget {
+  const _HeaderPill({required this.icon, required this.iconColor, this.text, this.tooltip});
 
   final IconData icon;
-  final Color color;
-  final String tooltip;
-  final VoidCallback onTap;
+  final Color iconColor;
+  final String? text;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 14, color: color),
-        ),
+    final p = context.palette;
+    final pill = Container(
+      height: 44,
+      padding: EdgeInsets.symmetric(horizontal: text == null ? 12 : 14),
+      decoration: BoxDecoration(color: p.nested, borderRadius: AppRadius.pill),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20, color: iconColor, semanticLabel: tooltip),
+          if (text != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              text!,
+              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: p.text, fontFeatures: AppType.tabular),
+            ),
+          ],
+        ],
       ),
     );
+    return tooltip == null ? pill : Tooltip(message: tooltip!, child: pill);
   }
 }
 
@@ -2835,7 +2417,7 @@ class _HealthStatCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderRadius: BorderRadius.circular(AppRadius.control),
       ),
       child: Row(
         children: [
@@ -2847,22 +2429,11 @@ class _HealthStatCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: scheme.onSurface,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, fontFeatures: const [FontFeature.tabularFigures()]),
               ),
               Text(
                 label,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
               ),
             ],
           ),

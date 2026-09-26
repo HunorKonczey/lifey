@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
-// Design tokens from Lifey Snackbar & Dialog.dc.html
-const _kGreen = Color(0xFF9DAE6B);
-const _kRed = Color(0xFFD66B5A);
-const _kBlue = Color(0xFF6FA8C4);
-const _kBg = Color(0xFF2A2C20);
-const _kTitle = Color(0xFFF1F0E4);
-const _kSubtitle = Color(0xFFA8A899);
-// Was 0xFF777264 — 2.96:1 against [_kBg], under the 3:1 WCAG asks of an
-// interactive control's icon (this is the dismiss button). Lightened to the
-// same tone the theme's muted tier uses.
-const _kIconDim = Color(0xFF918B7A);
+import '../../core/theme/app_tokens.dart';
+
+// The snackbar is an *inverse* surface: the v2 dark palette in both themes
+// (as Material's inverse snackbar), so it reads as a transient layer above
+// light content too. Tones are the dark metric set — success is the
+// `positive` green (not brand olive, which is for controls), error the heart
+// red, info the water blue (docs/redesign/77-mobile-redesign-plan.md R0.8).
+const _p = AppPalette.dark;
+const _m = AppMetricColors.dark;
+final _kGreen = _m.positive;
+final _kRed = _m.heart;
+final _kBlue = _m.water;
 
 /// Styled snackbar helper matching the Lifey Snackbar & Dialog design.
 ///
@@ -154,89 +155,76 @@ class _SnackbarContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _kBg,
-        borderRadius: BorderRadius.circular(18),
+        color: _p.control,
+        borderRadius: AppRadius.cardAll,
         border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.55),
-            blurRadius: 34,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        boxShadow: context.elevation.e3,
       ),
-      padding: const EdgeInsets.fromLTRB(16, 13, 14, 13),
-      child: Row(
-        children: [
-          // Icon badge
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(11),
+      // Tight vertical padding: the trailing action / close button carries
+      // its own 48 dp touch target.
+      padding: const EdgeInsets.fromLTRB(AppSpacing.s16, 6, 6, 6),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(
+          children: [
+            // Icon badge
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(AppRadius.nested(AppRadius.card, 12)),
+              ),
+              child: Icon(icon, size: 20, color: iconColor),
             ),
-            child: Icon(icon, size: 21, color: iconColor),
-          ),
-          const SizedBox(width: 12),
-          // Text
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: _kTitle,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 1),
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: _kSubtitle,
-                      fontFamily: 'PlusJakartaSans',
+            const SizedBox(width: AppSpacing.s12),
+            // Text
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall!.copyWith(height: 1.3, fontWeight: FontWeight.w700, color: _p.text),
                     ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Action button or close icon
-          if (actionLabel != null)
-            GestureDetector(
-              onTap: onAction,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: actionBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  actionLabel!,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: actionColor,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(height: 1.35, fontWeight: FontWeight.w500, color: _p.text2),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            )
-          else
-            GestureDetector(
-              onTap: onDismiss,
-              child: const Icon(Icons.close, size: 20, color: _kIconDim),
             ),
-        ],
+            const SizedBox(width: AppSpacing.s4),
+            // Action button or close icon — both 48 dp targets.
+            if (actionLabel != null)
+              TextButton(
+                onPressed: onAction,
+                style: TextButton.styleFrom(
+                  foregroundColor: actionColor,
+                  backgroundColor: actionBg,
+                  minimumSize: const Size(48, 36),
+                  tapTargetSize: MaterialTapTargetSize.padded,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.controlAll),
+                  textStyle: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800),
+                ),
+                child: Text(actionLabel!),
+              )
+            else
+              IconButton(
+                onPressed: onDismiss,
+                icon: Icon(Icons.close_rounded, size: 20, color: _p.text2),
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              ),
+          ],
+        ),
       ),
     );
   }

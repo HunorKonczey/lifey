@@ -33,11 +33,7 @@ class HistoryBoundaryRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     l10n.historyBoundaryRowMessage,
-                    style: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
                 Icon(Icons.chevron_right, size: 20, color: scheme.onSurfaceVariant),

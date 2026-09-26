@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_type.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -86,27 +87,19 @@ class QuickStartSheet extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       l10n.quickStartSheetTitle,
-                      style: const TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.4,
-                      ),
+                      style: AppType.number(21, weight: FontWeight.w800),
                     ),
                   ),
                   Text(
                     l10n.quickStartOrderHint,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
                 l10n.quickStartSheetSubtitle,
-                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant),
               ),
               if (coldStart) ...[
                 const SizedBox(height: AppSpacing.s12),
@@ -149,7 +142,7 @@ class _ColdStartBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.primary.withValues(alpha: 0.12),
         border: Border.all(color: scheme.primary.withValues(alpha: 0.34)),
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.control),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,7 +151,7 @@ class _ColdStartBanner extends StatelessWidget {
           const SizedBox(width: 9),
           Expanded(
             child: Text(text,
-                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant, height: 1.4)),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.onSurfaceVariant, height: 1.4)),
           ),
         ],
       ),
@@ -176,7 +169,7 @@ class _AllActivityTypesRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(AppRadius.input),
+      borderRadius: BorderRadius.circular(AppRadius.control),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
@@ -193,7 +186,7 @@ class _AllActivityTypesRow extends StatelessWidget {
               const SizedBox(width: AppSpacing.s12),
               Expanded(
                   child: Text(label,
-                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700))),
+                      style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w700))),
               Icon(Icons.chevron_right, size: 20, color: scheme.onSurfaceVariant),
             ],
           ),
@@ -266,19 +259,14 @@ class _QuickStartTile extends ConsumerWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),

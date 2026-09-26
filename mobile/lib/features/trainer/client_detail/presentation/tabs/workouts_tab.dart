@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/widgets/empty_view.dart';
 import '../../../../../shared/widgets/error_view.dart';
@@ -66,7 +67,7 @@ class ClientWorkoutsTab extends ConsumerWidget {
         },
         child: ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
           itemCount: state.sessions.length + (state.hasMore ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == state.sessions.length) {
@@ -83,7 +84,7 @@ class ClientWorkoutsTab extends ConsumerWidget {
                 onTap: () => SessionDetailSheet.show(
                   context,
                   clientId: clientId,
-                  sessionId: session.id,
+                  session: session,
                 ),
               ),
             );

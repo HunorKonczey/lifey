@@ -9,6 +9,8 @@ import '../../../../core/entitlements/entitlement_providers.dart';
 import '../../../../core/entitlements/paywall_navigation.dart';
 import '../../../../core/entitlements/paywall_trigger.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../shared/widgets/ds/list_group.dart';
+import '../../../../shared/widgets/ds/section_label.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../subscription/application/subscription_controller.dart';
 
@@ -30,34 +32,18 @@ class SubscriptionSection extends ConsumerWidget {
     final entitlement = ref.watch(entitlementProvider).value;
     final resolved = entitlement != null && entitlement.resolved ? entitlement : null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 0),
-          child: Text(
-            l10n.settingsSubscriptionSectionLabel.toUpperCase(),
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              letterSpacing: 1.2,
-              height: 1.0,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Material(
-          color: Theme.of(context).colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            child: SubscriptionTile(entitlement: resolved),
-          ),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.s24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SectionLabel(l10n.settingsSubscriptionSectionLabel),
+          const SizedBox(height: AppSpacing.s8),
+          // One grouped card, like every other group in Settings; the tile
+          // carries its own divider before "Restore purchases".
+          ListGroup(children: [SubscriptionTile(entitlement: resolved)]),
+        ],
+      ),
     );
   }
 }
@@ -81,7 +67,6 @@ class SubscriptionTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final languageCode = Localizations.localeOf(context).languageCode;
 
     final isPro = entitlement?.tier == EntitlementTier.pro;
@@ -133,49 +118,13 @@ class SubscriptionTile extends ConsumerWidget {
       };
     }
 
-    final row = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          Icon(Icons.workspace_premium, size: 22, color: scheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                if (subtitle.isNotEmpty)
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (onTap != null) ...[
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right, size: 22, color: scheme.onSurfaceVariant),
-          ],
-        ],
-      ),
+    final row = ListRow(
+      leading: ListIconHolder(icon: Icons.workspace_premium_rounded, color: context.metricColors.record, size: 40),
+      title: title,
+      subtitle: subtitle.isEmpty ? null : subtitle,
+      subtitleMaxLines: 2,
+      trailing: onTap == null ? null : Icon(Icons.chevron_right_rounded, size: 22, color: context.palette.text2),
+      onTap: onTap,
     );
 
     // Restore purchases (67 §4.4) sits below the tile itself, offered
@@ -190,22 +139,11 @@ class SubscriptionTile extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        onTap != null
-            ? InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(AppRadius.card - 4),
-                child: row,
-              )
-            : row,
+        row,
         if (showRestore) ...[
-          Divider(
-            height: 1,
-            indent: 14,
-            endIndent: 14,
-            color: scheme.surfaceContainerHighest,
-          ),
+          Divider(height: 1, thickness: 1, indent: 74, color: context.palette.hairline),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: TextButton(

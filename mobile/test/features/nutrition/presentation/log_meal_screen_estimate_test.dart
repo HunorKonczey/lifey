@@ -56,14 +56,14 @@ void main() {
   testWidgets('shows the entry point with the remaining credits', (tester) async {
     await _pump(tester, offline: false, credits: 2);
 
-    expect(find.text('Estimate from a photo'), findsOneWidget);
+    expect(find.text('From photo'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
   });
 
   testWidgets('offline, it explains instead of opening the camera', (tester) async {
     await _pump(tester, offline: true, credits: 3);
 
-    await tester.tap(find.text('Estimate from a photo'));
+    await tester.tap(find.text('From photo'));
     await tester.pump();
 
     expect(find.textContaining('photo estimates need a connection'), findsOneWidget);
@@ -73,7 +73,7 @@ void main() {
   testWidgets('out of credits, it opens the paywall instead', (tester) async {
     await _pump(tester, offline: false, credits: 0);
 
-    await tester.tap(find.text('Estimate from a photo'));
+    await tester.tap(find.text('From photo'));
     await tester.pumpAndSettle();
 
     expect(find.text('paywall'), findsOneWidget);
@@ -82,7 +82,7 @@ void main() {
   testWidgets('with credits, it asks for the photo source', (tester) async {
     await _pump(tester, offline: false, credits: 3);
 
-    await tester.tap(find.text('Estimate from a photo'));
+    await tester.tap(find.text('From photo'));
     await tester.pumpAndSettle();
 
     expect(find.text('Take photo'), findsOneWidget);

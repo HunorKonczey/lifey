@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/game_setup_preferences.dart';
 
@@ -68,26 +69,22 @@ class _FormatOption extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: selected ? scheme.primary.withValues(alpha: 0.18) : scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.controlAll,
         child: Container(
           height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: AppRadius.controlAll,
             border: selected ? Border.all(color: scheme.primary, width: 1.5) : null,
           ),
           child: Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-              color: selected ? scheme.primary : scheme.onSurface,
-            ),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: selected ? scheme.primary : scheme.onSurface),
           ),
         ),
       ),
@@ -155,15 +152,15 @@ class _VenueOption extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: selected ? scheme.primary.withValues(alpha: 0.18) : scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: AppRadius.controlAll,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.controlAll,
         child: Container(
           height: 52,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: AppRadius.controlAll,
             border: selected ? Border.all(color: scheme.primary, width: 1.5) : null,
           ),
           child: Row(
@@ -176,11 +173,7 @@ class _VenueOption extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: selected ? scheme.primary : scheme.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w800, color: selected ? scheme.primary : scheme.onSurface),
                 ),
               ),
             ],
@@ -337,12 +330,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
+      style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
   }
 }

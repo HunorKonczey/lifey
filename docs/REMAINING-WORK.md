@@ -5,7 +5,7 @@ felvett vagy elvetett tételnél változik. A landing page / monetizáció sajá
 [`landing_page/REMAINING-WORK.md`](landing_page/REMAINING-WORK.md) — ez a fájl arra hivatkozik,
 nem ismétli meg.
 
-Utolsó átnézés: **2026-09-23** (a teljes `docs/` státuszsorai + kódellenőrzés alapján).
+Utolsó átnézés: **2026-09-26** (a teljes `docs/` státuszsorai + kódellenőrzés alapján).
 
 **Használat:** ha egy tételt felveszel, csináld meg, **töröld a sorát**, és a landolt állapotot
 a hozzá tartozó számozott tervbe írd.
@@ -81,7 +81,26 @@ Nincs integráció. A HealthKit és a Health Connect kész.
 | Zene M4 | Spotify iOS-en (App Remote) — Spotify Developer regisztráció kell | [`music/46`](music/46-workout-music-controls-plan.md) |
 | Chat kiszervezése | `com.lifey.chat` → önálló `lifey-chat` szolgáltatás; terv jóváhagyásra vár, csak skálázási igény esetén sürgős | [`chat/44`](chat/44-chat-service-extraction-plan.md) |
 | Design-backlog | a redesign mockupjaiból adódó extra UI-elemek — egyenként ellenőrizni, mi készült el (a kalória-sparkline pl. már kész) | [`design/19`](design/19-new-features.md) |
-| Chip-kontraszt | a színezett chip + azonos színű szöveg az app egészén AA alatt van — design-döntés kell, nem folt | — |
+
+### 2.1 A mobil-redesign (`77`) után
+
+A redesign lezárult (R0–R7); ami szándékosan kimaradt, vagy közben kiderült. A landolt állapot a
+[`redesign/77-mobile-redesign-plan.md`](redesign/77-mobile-redesign-plan.md)-ben van (a chip-kontraszt
+is ott oldódott meg: a metrikaszínek AA-k a saját 12 / 16 %-os tintájukon, a `contrast_test` őrzi).
+
+| Tétel | Mi | Hol |
+|---|---|---|
+| Web palettaillesztés | a Next.js app még a régi palettát használja; külön terv kell a `web/`-re | `77` §6 |
+| Chat-eredménykártya | edzés / PR megosztása chat-kártyaként — a csatolmány jelenleg csak kép, a chat-szolgáltatáson is változtatni kell | `77` §6 |
+| Darabos adagok | „½ db", „1 db" chipek az étel hozzáadása lapon — étel-modellbe darabsúly + sync kell | `77` §6 |
+| Health Connect / HealthKit írás | a súly visszaírása; amíg nincs írási út, a „Health Connect-ben is mentve" sor rejtve marad | `77` §6 |
+| Natív felületek | Watch, iOS widget / Live Activity, Android widget színillesztése | `77` §6 |
+| Material Symbols ikonfont, golden-tesztek, max-HR beállítás | tudatosan kimaradt | `77` §6 |
+| Edzői kliensnézet: lépéscél, tervezett alkalmak | a trainer API-ban nincs kliens-lépéscél és „tervezett / teljesített" darabszám, ezért a KPI-csempék sorai szerényebbek a canvasnál („7 nap átlaga", kihagyott alkalom) | `77` R6.5 |
+| Edzői kliensnézet: cél a fejlécben | a canvas „Goal: build muscle" sora mögött nincs tárolt cél | `77` R6.7 |
+| `showModalBottomSheet` → `showLifeySheet` | 40 hívás használja még a nyers API-t (témázott lap, de egyedi görgetéssel / `DraggableScrollableSheet`-tel); az egységes keret az összetett lapokra külön kört kér | `77` R7.2 |
+| Design-audit a CI-ban | `dart run tool/design_audit.dart --strict` — most 0, érdemes kapuzni | `77` R7.1 |
+| Emulátoros végpróbák | a chat-szolgáltatást igénylő edzői folyamatok (üzenet / ütemezés lapok, kommentelés), a naptár hónapnézete, a tablet világos / magyar módja eszközön még nem látott | `77` §12 R6 |
 
 ---
 

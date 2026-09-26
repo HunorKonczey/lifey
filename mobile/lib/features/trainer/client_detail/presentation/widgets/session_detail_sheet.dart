@@ -7,8 +7,9 @@ import '../../../../../core/network/error_message.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/widgets/app_snackbar.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../../../chat/data/chat_repository.dart';
-import '../../../../workouts/domain/activity_type.dart' show activityTypeLabel;
 import '../../application/client_sessions_controller.dart';
 import '../../domain/client_workout_session.dart';
 import 'session_card.dart';
@@ -34,24 +35,20 @@ class SessionDetailSheet extends ConsumerWidget {
   static Future<void> show(
     BuildContext context, {
     required int clientId,
-    required int sessionId,
+    required ClientWorkoutSession session,
   }) {
-    return showModalBottomSheet<void>(
+    return showLifeySheet<void>(
       context: context,
+      title: sessionTitle(AppLocalizations.of(context)!, session),
       useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.88,
-        child: SessionDetailSheet(clientId: clientId, sessionId: sessionId),
-      ),
+      builder: (_) => SessionDetailSheet(clientId: clientId, sessionId: session.id),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
 
@@ -66,26 +63,16 @@ class SessionDetailSheet extends ConsumerWidget {
 
     if (session == null) return const SizedBox.shrink();
 
-    final title = session.isCardio
-        ? activityTypeLabel(l10n, session.activityType ?? 'OTHER_CARDIO')
-        : (session.templateName?.isNotEmpty ?? false)
-            ? session.templateName!
-            : l10n.trainerFreeWorkoutLabel;
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          title,
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 2),
         Text(
           '${DateFormat.yMMMEd(locale).format(session.startedAt.toLocal())}'
           ' · ${summaryLine(l10n, session)}',
-          style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.s16),
 
         // ── What the client said about it ───────────────────────────────
         if (session.rpe != null || (session.feedbackNote ?? '').isNotEmpty) ...[
@@ -124,8 +111,7 @@ class SessionDetailSheet extends ConsumerWidget {
           if (session.performedExercises.isEmpty)
             Text(
               l10n.trainerNoSessionDetailsLabel,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
             ),
           const SizedBox(height: 6),
         ],
@@ -152,55 +138,50 @@ class _ExerciseBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: AppRadius.cardAll,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            exercise.exerciseName,
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          if (sets.isEmpty)
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+      child: LifeyCard.nested(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              l10n.trainerNoSetsLoggedLabel,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
-            )
-          else
-            for (var i = 0; i < sets.length; i++)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 26,
-                      child: Text(
-                        '${i + 1}.',
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
+              exercise.exerciseName,
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            if (sets.isEmpty)
+              Text(
+                l10n.trainerNoSetsLoggedLabel,
+                style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
+              )
+            else
+              for (var i = 0; i < sets.length; i++)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 26,
+                        child: Text(
+                          '${i + 1}.',
+                          style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
+                        ),
                       ),
-                    ),
-                    Text(
-                      l10n.trainerSetLabel(
-                        sets[i].reps ?? 0,
-                        (sets[i].weight ?? 0).toStringAsFixed(1),
+                      Text(
+                        l10n.trainerSetLabel(
+                          sets[i].reps ?? 0,
+                          (sets[i].weight ?? 0).toStringAsFixed(1),
+                        ),
+                        style: theme.textTheme.bodySmall,
                       ),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -239,7 +220,7 @@ class _CommentBlock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
 
@@ -258,8 +239,7 @@ class _CommentBlock extends ConsumerWidget {
                   DateFormat.yMMMd(locale)
                       .add_Hm()
                       .format(session.trainerCommentAt!.toLocal()),
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
                 ),
               ),
             const SizedBox(height: 8),
@@ -274,8 +254,7 @@ class _CommentBlock extends ConsumerWidget {
           ] else ...[
             Text(
               l10n.trainerNoCommentYetMessage,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
             ),
             const SizedBox(height: 8),
             Align(
@@ -364,29 +343,20 @@ class _Block extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: AppRadius.cardAll,
-      ),
+    return LifeyCard.nested(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 17, color: scheme.onSurfaceVariant),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: theme.textTheme.labelLarge
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
+              Icon(icon, size: 17, color: p.text2),
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(child: Text(title, style: theme.textTheme.titleSmall)),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.s8),
           child,
         ],
       ),

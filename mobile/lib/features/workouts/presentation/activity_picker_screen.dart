@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/activity_chip.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../shared/widgets/ds/list_group.dart';
+import '../../../shared/widgets/ds/section_label.dart';
 import '../application/workout_template_controller.dart';
 import '../domain/activity_type.dart';
 import 'quick_start_sheet.dart';
@@ -24,195 +28,71 @@ class ActivityPickerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final templates = ref.watch(workoutTemplateControllerProvider).value ?? const [];
+    final p = context.palette;
+    final templates =
+        ref.watch(workoutTemplateControllerProvider).value ?? const [];
 
-    final scheme = Theme.of(context).colorScheme;
-
-    // M03 reads as a sheet that grew to full height, not as a page: the
-    // whole surface sits one step up from the app background, and the title
-    // row carries its own close button instead of an app bar.
+    // M03 reads as a sheet that grew to full height, not as a page: no back
+    // arrow, the header carries its own close button instead
+    // (docs/redesign/77-mobile-redesign-plan.md R3.10).
     return Scaffold(
-      backgroundColor: scheme.surfaceContainerLow,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.activityPickerTitle,
-                      style: const TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                  ),
-                  Material(
-                    color: scheme.surfaceContainer,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      onTap: () => Navigator.of(context).pop(),
-                      customBorder: const CircleBorder(),
-                      child: SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Icon(Icons.close, size: 20, color: scheme.onSurfaceVariant),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.s16,
-                  0,
-                  AppSpacing.s16,
-                  MediaQuery.paddingOf(context).bottom + AppSpacing.s16,
-                ),
-                children: [
-                  // "A cardio blokk van felül: aki idáig eljutott, jó
-                  // eséllyel olyat keres, ami nincs a négy csempén" (M03).
-                  _SectionLabel(l10n.cardioSectionLabel),
-                  _RowGroup(
-                    children: [
-                      for (final type in kActivityTypes)
-                        _PickerRow(
-                          icon: activityTypeIcon(type),
-                          color: activityTypeColor(type, context),
-                          title: activityTypeLabel(l10n, type),
-                          subtitle: activityModalitySubtitle(l10n, activityFamilyOf(type)),
-                          onTap: () => startCardioQuickly(context, ref, type),
-                        ),
-                    ],
-                  ),
-                  if (templates.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.s24),
-                    _SectionLabel(l10n.strengthTemplatesSectionLabel),
-                    _RowGroup(
-                      children: [
-                        for (final template in templates)
-                          _PickerRow(
-                            icon: activityTypeIcon('STRENGTH'),
-                            color: activityTypeColor('STRENGTH', context),
-                            title: template.name,
-                            subtitle: l10n.exercisesCountLabel(template.exercises.length),
-                            onTap: () => startStrengthQuickly(context, template: template),
-                          ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 9),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 10.5,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.3,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-class _RowGroup extends StatelessWidget {
-  const _RowGroup({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) Divider(height: 1, indent: 62, color: scheme.surfaceContainerHigh),
-            children[i],
-          ],
+      appBar: LifeySubpageHeader(
+        title: l10n.activityPickerTitle,
+        showBack: false,
+        actions: [
+          HeaderIconButton(
+            icon: Icons.close_rounded,
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ],
       ),
-    );
-  }
-}
-
-class _PickerRow extends StatelessWidget {
-  const _PickerRow({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration:
-                  BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.16)),
-              child: Icon(icon, size: 22, color: color),
-            ),
-            const SizedBox(width: AppSpacing.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                  Text(subtitle,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant)),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, size: 19, color: scheme.onSurfaceVariant),
-          ],
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.screen,
+          AppSpacing.s8,
+          AppSpacing.screen,
+          MediaQuery.paddingOf(context).bottom + AppSpacing.s16,
         ),
+        children: [
+          // "A cardio blokk van felül: aki idáig eljutott, jó
+          // eséllyel olyat keres, ami nincs a négy csempén" (M03).
+          SectionLabel(l10n.cardioSectionLabel),
+          const SizedBox(height: AppSpacing.s8),
+          ListGroup(
+            children: [
+              for (final type in kActivityTypes)
+                ListRow(
+                  leading: ActivityChip(activityType: type, size: 44),
+                  title: activityTypeLabel(l10n, type),
+                  subtitle:
+                      activityModalitySubtitle(l10n, activityFamilyOf(type)),
+                  trailing: Icon(Icons.chevron_right_rounded, color: p.text3),
+                  onTap: () => startCardioQuickly(context, ref, type),
+                ),
+            ],
+          ),
+          if (templates.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s24),
+            SectionLabel(l10n.strengthTemplatesSectionLabel),
+            const SizedBox(height: AppSpacing.s8),
+            ListGroup(
+              children: [
+                for (final template in templates)
+                  ListRow(
+                    leading:
+                        const ActivityChip(activityType: 'STRENGTH', size: 44),
+                    title: template.name,
+                    subtitle:
+                        l10n.exercisesCountLabel(template.exercises.length),
+                    trailing: Icon(Icons.chevron_right_rounded, color: p.text3),
+                    onTap: () =>
+                        startStrengthQuickly(context, template: template),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

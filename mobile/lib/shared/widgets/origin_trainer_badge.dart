@@ -27,7 +27,6 @@ class OriginTrainerBadge extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
 
     // Watched (not just read on tap) so the provider is already resolved by
     // the time the badge is tapped — otherwise this would be the first
@@ -39,23 +38,17 @@ class OriginTrainerBadge extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          color: scheme.tertiaryContainer,
+          color: context.palette.role.withValues(alpha: 0.16),
           borderRadius: AppRadius.pill,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.school, size: 12, color: scheme.onTertiaryContainer),
+            Icon(Icons.school, size: 12, color: context.palette.role),
             const SizedBox(width: 4),
             Text(
               l10n.originTrainerBadgeLabel,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                color: scheme.onTertiaryContainer,
-                height: 1.0,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: context.palette.role, height: 1.0),
             ),
           ],
         ),
@@ -78,17 +71,12 @@ class OriginTrainerBadge extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.school, color: scheme.tertiary),
+                  Icon(Icons.school, color: context.palette.role),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       l10n.originTrainerSheetTitle,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface),
                     ),
                   ),
                 ],
@@ -98,13 +86,7 @@ class OriginTrainerBadge extends ConsumerWidget {
                 email != null
                     ? l10n.originTrainerSheetBody(email)
                     : l10n.originTrainerUnknown,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  color: scheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant, height: 1.4),
               ),
             ],
           ),

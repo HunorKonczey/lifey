@@ -124,10 +124,6 @@
   "@healthIntegrationLabel": {
     "description": "Section heading for the Health integration (Apple Health on iOS, Health Connect on Android)"
   },
-  "signInSubtitle": "Sign in to continue",
-  "@signInSubtitle": {
-    "description": "Subtitle on the login screen"
-  },
   "emailLabel": "Email",
   "@emailLabel": {
     "description": "Label for the email field"
@@ -156,10 +152,6 @@
   "@signInButton": {
     "description": "Button to submit the login form"
   },
-  "registerPromptButton": "Don't have an account? Register",
-  "@registerPromptButton": {
-    "description": "Button on the login screen that navigates to registration"
-  },
   "createAccountTitle": "Create account",
   "@createAccountTitle": {
     "description": "Title of the registration screen and its submit button"
@@ -179,10 +171,6 @@
   "passwordsDoNotMatchError": "Passwords do not match",
   "@passwordsDoNotMatchError": {
     "description": "Validation error when password and confirmation differ"
-  },
-  "signInPromptButton": "Already have an account? Sign in",
-  "@signInPromptButton": {
-    "description": "Button on the registration screen that navigates back to login"
   },
   "forgotPasswordButton": "Forgot password?",
   "@forgotPasswordButton": {
@@ -260,7 +248,7 @@
   "@passwordChangedSuccessMessage": {
     "description": "Snackbar shown after a successful password change"
   },
-  "addFoodToMealTitle": "Add food to meal",
+  "addFoodToMealTitle": "Add food",
   "@addFoodToMealTitle": {
     "description": "Title of the add-meal-entry bottom sheet"
   },
@@ -268,17 +256,9 @@
   "@addToMealTooltip": {
     "description": "Tooltip of the add-to-meal icon button on each food card in the Foods tab; opens a new meal with this food pre-selected (docs/75 §2.6)"
   },
-  "recentFoodsLabel": "Recent",
-  "@recentFoodsLabel": {
-    "description": "Label above the recent-foods quick-pick chips in the add-meal-entry sheet"
-  },
   "editFoodEntryTitle": "Edit food",
   "@editFoodEntryTitle": {
     "description": "Title of the meal-entry edit bottom sheet"
-  },
-  "foodFieldLabel": "Food",
-  "@foodFieldLabel": {
-    "description": "Label for the food autocomplete field"
   },
   "pickAFoodError": "Pick a food",
   "@pickAFoodError": {
@@ -423,10 +403,6 @@
   "@tapPlusToLogOneMessage": {
     "description": "Empty state subtitle on the Meals tab"
   },
-  "noMealsInRangeTitle": "No meals in this range",
-  "@noMealsInRangeTitle": {
-    "description": "Empty state title when a date filter excludes all meals"
-  },
   "tryWiderDateFilterMessage": "Try a wider date filter",
   "@tryWiderDateFilterMessage": {
     "description": "Empty state subtitle when a date filter excludes all meals"
@@ -458,10 +434,6 @@
   "couldNotDuplicateMealMessage": "Couldn't duplicate the meal",
   "@couldNotDuplicateMealMessage": {
     "description": "Snackbar shown when duplicating a meal fails"
-  },
-  "copyYesterdayButton": "Copy yesterday",
-  "@copyYesterdayButton": {
-    "description": "Empty-state action button that copies yesterday's meals to today"
   },
   "copyPreviousDayAria": "Copy a previous day",
   "@copyPreviousDayAria": {
@@ -579,10 +551,6 @@
   "noMacroDataTitle": "No macros logged yet",
   "@noMacroDataTitle": {
     "description": "Empty state title on the Macros tab when no meals have been logged at all"
-  },
-  "noMacroDataInRangeTitle": "No macros in this range",
-  "@noMacroDataInRangeTitle": {
-    "description": "Empty state title on the Macros tab when a date filter excludes all days"
   },
   "foodFabLabel": "Food",
   "@foodFabLabel": {
@@ -912,7 +880,7 @@
   "@tapPlusToCreateOneMessage": {
     "description": "Empty state subtitle on the Templates tab"
   },
-  "exercisesCountLabel": "{count} exercises",
+  "exercisesCountLabel": "{count, plural, =1{1 exercise} other{{count} exercises}}",
   "@exercisesCountLabel": {
     "description": "Fallback subtitle showing a template's exercise count",
     "placeholders": {
@@ -1015,7 +983,7 @@
   "@upcomingWorkoutDismissTooltip": {
     "description": "Tooltip for the close button on the upcoming-workout pop-up card"
   },
-  "setsCountLabel": "{count} sets",
+  "setsCountLabel": "{count, plural, =1{1 set} other{{count} sets}}",
   "@setsCountLabel": {
     "description": "Number of sets in a workout session",
     "placeholders": {
@@ -1099,30 +1067,9 @@
   "@exerciseFabLabel": {
     "description": "FAB label when on the Exercises tab"
   },
-  "waterAmountLabel": "{current} / {goal} L",
-  "@waterAmountLabel": {
-    "description": "Current water intake vs. daily goal",
-    "placeholders": {
-      "current": {
-        "type": "String"
-      },
-      "goal": {
-        "type": "String"
-      }
-    }
-  },
-  "waterAmountNoGoalLabel": "{current} L",
-  "@waterAmountNoGoalLabel": {
-    "description": "Current water intake when no daily goal is set",
-    "placeholders": {
-      "current": {
-        "type": "String"
-      }
-    }
-  },
-  "logWaterTitle": "Log water",
-  "@logWaterTitle": {
-    "description": "Title of the log-water sheet, and the tooltip on the dashboard's add-water button"
+  "addWaterTitle": "Add water",
+  "@addWaterTitle": {
+    "description": "Title of the add-water bottom sheet, and the tooltip / label of the dashboard water tile's + button (docs/redesign/77-mobile-redesign-plan.md R1.7)"
   },
   "setDailyGoalMessage": "Set a daily goal in Settings",
   "@setDailyGoalMessage": {
@@ -1163,15 +1110,6 @@
   "enterValidAmountError": "Enter a valid amount in liters",
   "@enterValidAmountError": {
     "description": "Validation error for the custom water amount field"
-  },
-  "amountLitersLabel": "{amount}L",
-  "@amountLitersLabel": {
-    "description": "A quick-add amount in liters",
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
   },
   "sourceChipLabel": "{name} · {volume}L",
   "@sourceChipLabel": {
@@ -1223,10 +1161,6 @@
   "@couldNotSaveEntryMessage": {
     "description": "Error shown when saving a weight entry fails"
   },
-  "addWeightTitle": "Add weight",
-  "@addWeightTitle": {
-    "description": "Title of the add-weight-entry sheet"
-  },
   "weightTitle": "Weight",
   "@weightTitle": {
     "description": "Title of the weight screen, and label for the weight field"
@@ -1256,15 +1190,15 @@
       }
     }
   },
-  "weightRangeWeekLabel": "7 days",
+  "weightRangeWeekLabel": "7 d",
   "@weightRangeWeekLabel": {
     "description": "Weight chart range selector: last 7 days"
   },
-  "weightRangeMonthLabel": "30 days",
+  "weightRangeMonthLabel": "30 d",
   "@weightRangeMonthLabel": {
     "description": "Weight chart range selector: last 30 days"
   },
-  "weightRangeQuarterLabel": "90 days",
+  "weightRangeQuarterLabel": "90 d",
   "@weightRangeQuarterLabel": {
     "description": "Weight chart range selector: last 90 days"
   },
@@ -1320,19 +1254,19 @@
   "@statMetricCardioMaxAltitudeLabel": {
     "description": "Statistics metric (docs/cardio/60 C8.7): the highest point reached per day, DISTANCE family only — a daily maximum, same shape as max heart rate, not a sum"
   },
-  "statisticsTitle": "Statistics",
+  "statisticsTitle": "Stats",
   "@statisticsTitle": {
     "description": "Title of the statistics screen"
   },
-  "statRangeWeekLabel": "7 days",
+  "statRangeWeekLabel": "7 d",
   "@statRangeWeekLabel": {
     "description": "Statistics chart range selector: last 7 days"
   },
-  "statRangeMonthLabel": "30 days",
+  "statRangeMonthLabel": "30 d",
   "@statRangeMonthLabel": {
     "description": "Statistics chart range selector: last 30 days"
   },
-  "statRangeQuarterLabel": "90 days",
+  "statRangeQuarterLabel": "90 d",
   "@statRangeQuarterLabel": {
     "description": "Statistics chart range selector: last 90 days"
   },
@@ -1362,10 +1296,6 @@
   "@aiCreditsRefillDateMessage": {
     "description": "Shown in the AI credit chip once credits are exhausted, naming the calendar-month refill date (69 DV-11); {date} is already formatted (e.g. \"September 1\")",
     "placeholders": {"date": {"type": "String"}}
-  },
-  "estimateFromPhotoButton": "Estimate from a photo",
-  "@estimateFromPhotoButton": {
-    "description": "Log meal screen: button that photographs a meal and lets AI estimate its foods, calories and macros (docs/23-ai-calorie-estimation-plan.md); the AI credit chip sits beside it"
   },
   "mealEstimateOfflineMessage": "You're offline — photo estimates need a connection.",
   "@mealEstimateOfflineMessage": {
@@ -1416,7 +1346,7 @@
     "description": "Confirm button of the AI estimate review sheet; adds the reviewed foods to the meal (docs/23)",
     "placeholders": {"count": {"type": "int"}}
   },
-  "generateRecipeWithAiButton": "Generate with AI",
+  "generateRecipeWithAiButton": "Generate a recipe",
   "@generateRecipeWithAiButton": {
     "description": "Recipes tab: opens the AI recipe wizard; the AI credit chip sits beside it (docs/23 Phase 2)"
   },
@@ -1564,10 +1494,6 @@
   "weightTrendCaption": "7-day average",
   "@weightTrendCaption": {
     "description": "Legend under the weight chart for the smoothed trend line (docs/76-smarter-weight-trend-plan.md)"
-  },
-  "weightGoalCardTitle": "Goal weight",
-  "@weightGoalCardTitle": {
-    "description": "Title of the goal card on the Weight tab (docs/76 §4)"
   },
   "weightGoalRemainingValue": "{kg} kg to go",
   "@weightGoalRemainingValue": {
@@ -1792,22 +1718,6 @@
   "@noStatsDataForRangeTitle": {
     "description": "Empty state on the statistics chart when the selected metric has no data in the selected range"
   },
-  "statSumLabel": "Total",
-  "@statSumLabel": {
-    "description": "Statistics KPI card label: sum of the selected metric over the range"
-  },
-  "statAverageLabel": "Average",
-  "@statAverageLabel": {
-    "description": "Statistics KPI card label: average of the selected metric over the range"
-  },
-  "statMinLabel": "Min",
-  "@statMinLabel": {
-    "description": "Statistics KPI card label: minimum daily value over the range"
-  },
-  "statMaxLabel": "Max",
-  "@statMaxLabel": {
-    "description": "Statistics KPI card label: maximum daily value over the range"
-  },
   "statUnitKcal": "kcal",
   "@statUnitKcal": {
     "description": "Unit suffix for calorie-based statistics metrics"
@@ -1885,13 +1795,9 @@
   "@waitingToSyncTooltip": {
     "description": "Tooltip shown while a record is queued to sync"
   },
-  "dashboardTabLabel": "Dashboard",
+  "dashboardTabLabel": "Today",
   "@dashboardTabLabel": {
     "description": "Bottom navigation label for the dashboard tab"
-  },
-  "dashboardTodayTitle": "Today",
-  "@dashboardTodayTitle": {
-    "description": "Title shown in the dashboard floating app bar"
   },
   "greetingMorning": "Good morning",
   "@greetingMorning": {
@@ -1905,32 +1811,130 @@
   "@greetingEvening": {
     "description": "Greeting shown on the dashboard in the evening (18:00–04:59)"
   },
-  "kcalLeftBadge": "{count} left",
-  "@kcalLeftBadge": {
-    "description": "Badge on the calorie card showing remaining kcal to reach goal",
+  "greetingMorningName": "Good morning, {name}",
+  "@greetingMorningName": {
+    "description": "Dashboard header title in the morning (05:00–11:59) when the user's first name is known (docs/redesign/77-mobile-redesign-plan.md R1.2)",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "greetingAfternoonName": "Good afternoon, {name}",
+  "@greetingAfternoonName": {
+    "description": "Dashboard header title in the afternoon (12:00–17:59) when the user's first name is known",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "greetingEveningName": "Good evening, {name}",
+  "@greetingEveningName": {
+    "description": "Dashboard header title in the evening (18:00–04:59) when the user's first name is known",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "streakStripWeekInReview": "Week in review",
+  "@streakStripWeekInReview": {
+    "description": "Tappable label at the end of the dashboard streak strip; opens the weekly recap screen (docs/redesign/77-mobile-redesign-plan.md R1.2)"
+  },
+  "dashboardProfileMenuLabel": "Profile & settings",
+  "@dashboardProfileMenuLabel": {
+    "description": "Item of the dashboard avatar menu that opens Settings, and the avatar button's tooltip (docs/redesign/77-mobile-redesign-plan.md R1.2)"
+  },
+  "dashboardSeeAll": "See all",
+  "@dashboardSeeAll": {
+    "description": "Text button at the right of a dashboard section label ('Today's meals', 'Recent workouts') that opens the full list (docs/redesign/77-mobile-redesign-plan.md R1.6)"
+  },
+  "dashboardAddMealAction": "Meal",
+  "@dashboardAddMealAction": {
+    "description": "Label of the '+ Meal' quick action under today's meals on the dashboard; the plus is a separate icon"
+  },
+  "dashboardPhotoAction": "Photo",
+  "@dashboardPhotoAction": {
+    "description": "Label of the camera quick action under today's meals on the dashboard: estimate a meal from a photo"
+  },
+  "dashboardRateChip": "Rate",
+  "@dashboardRateChip": {
+    "description": "Short chip, with a star, on a recent finished workout that has no rating yet; opens the feedback sheet"
+  },
+  "dashboardWeekTitle": "This week",
+  "@dashboardWeekTitle": {
+    "description": "Title of the weekly calorie bar chart card on the dashboard (docs/redesign/77-mobile-redesign-plan.md R1.5)"
+  },
+  "dashboardWeekAvg": "avg {value} kcal",
+  "@dashboardWeekAvg": {
+    "description": "Average daily calories of the past complete days, top right of the weekly chart card. {value} is shown in bold — keep it as a placeholder",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dashboardWeekBarSemantics": "{day}, {value} kcal",
+  "@dashboardWeekBarSemantics": {
+    "description": "Screen-reader text for one bar of the weekly calorie chart. {day} is a weekday name such as 'Monday'",
+    "placeholders": {"day": {"type": "String"}, "value": {"type": "String"}}
+  },
+  "dashboardWeekChartSemantics": "This week, average {value} kcal",
+  "@dashboardWeekChartSemantics": {
+    "description": "Screen-reader summary of the weekly calorie chart",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dashboardStepsTileLabel": "Steps",
+  "@dashboardStepsTileLabel": {
+    "description": "Label of the steps tile on the dashboard (docs/redesign/77-mobile-redesign-plan.md R1.4)"
+  },
+  "dashboardWaterOfGoal": "/ {goal} L",
+  "@dashboardWaterOfGoal": {
+    "description": "Unit text beside today's water total in the dashboard water tile, e.g. '0.99 / 2.6 L' — this is the '/ 2.6 L' part. {goal} is the formatted daily goal in litres (docs/redesign/77-mobile-redesign-plan.md R1.4)",
+    "placeholders": {"goal": {"type": "String"}}
+  },
+  "dashboardStepsOfGoal": "of {goal}",
+  "@dashboardStepsOfGoal": {
+    "description": "Text beside today's step count in the dashboard steps tile, e.g. '6,412 of 10,000' — this is the 'of 10,000' part. {goal} is the formatted daily goal",
+    "placeholders": {"goal": {"type": "String"}}
+  },
+  "dashboardWeightLatestEntry": "Latest entry · {when}",
+  "@dashboardWeightLatestEntry": {
+    "description": "Line under the weight in the dashboard weight tile. {when} is 'today', 'yesterday' or a short date",
+    "placeholders": {"when": {"type": "String"}}
+  },
+  "dashboardDayToday": "today",
+  "@dashboardDayToday": {
+    "description": "Lower-case 'today', used inside a sentence such as 'Latest entry · today'"
+  },
+  "dashboardDayYesterday": "yesterday",
+  "@dashboardDayYesterday": {
+    "description": "Lower-case 'yesterday', used inside a sentence such as 'Latest entry · yesterday'"
+  },
+  "dashboardHeroKcalLeft": "kcal left",
+  "@dashboardHeroKcalLeft": {
+    "description": "Caption under the big number in the dashboard calorie ring: the number is the calories remaining today (docs/redesign/77-mobile-redesign-plan.md R1.3)"
+  },
+  "dashboardHeroKcalOver": "kcal over",
+  "@dashboardHeroKcalOver": {
+    "description": "Caption under the big number in the dashboard calorie ring once the goal is exceeded: the number is how many calories over the goal"
+  },
+  "dashboardHeroKcalEaten": "kcal eaten",
+  "@dashboardHeroKcalEaten": {
+    "description": "Caption under the big number in the dashboard calorie ring when no daily calorie goal is set: the number is what was eaten today"
+  },
+  "dashboardHeroEatenGoal": "Eaten {eaten} · Goal {goal}",
+  "@dashboardHeroEatenGoal": {
+    "description": "Line under the dashboard calorie ring. Both numbers are shown in bold, so keep the placeholders as they are (docs/redesign/77-mobile-redesign-plan.md R1.3)",
     "placeholders": {
-      "count": {
-        "type": "int"
-      }
+      "eaten": {"type": "String"},
+      "goal": {"type": "String"}
     }
   },
-  "kcalOverBadge": "+{count} over",
-  "@kcalOverBadge": {
-    "description": "Badge on the calorie card showing how many kcal over goal",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
+  "dashboardHeroProteinToGo": "{grams} g to go",
+  "@dashboardHeroProteinToGo": {
+    "description": "Chip under the protein bar on the dashboard: grams of protein still missing to reach today's goal. {grams} is already formatted",
+    "placeholders": {"grams": {"type": "String"}}
   },
-  "proteinMoreBadge": "{count}g more",
-  "@proteinMoreBadge": {
-    "description": "Badge on the protein card showing remaining grams to reach goal",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
+  "dashboardHeroKcalLeftSemantics": "{value} kilocalories left",
+  "@dashboardHeroKcalLeftSemantics": {
+    "description": "Screen-reader text of the dashboard calorie ring when under the goal. {value} is already formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dashboardHeroKcalOverSemantics": "{value} kilocalories over the goal",
+  "@dashboardHeroKcalOverSemantics": {
+    "description": "Screen-reader text of the dashboard calorie ring when over the goal. {value} is already formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dashboardHeroKcalEatenSemantics": "{value} kilocalories eaten",
+  "@dashboardHeroKcalEatenSemantics": {
+    "description": "Screen-reader text of the dashboard calorie ring when no calorie goal is set. {value} is already formatted",
+    "placeholders": {"value": {"type": "String"}}
   },
   "dateFilterToday": "Today",
   "@dateFilterToday": {
@@ -2038,34 +2042,6 @@
   "@noIngredientsMessage": {
     "description": "Shown on a recipe card when it has no ingredients"
   },
-  "totalCaloriesProteinLabel": "≈ {calories} kcal · {protein} g protein",
-  "@totalCaloriesProteinLabel": {
-    "description": "A recipe's total calories and protein",
-    "placeholders": {
-      "calories": {
-        "type": "String"
-      },
-      "protein": {
-        "type": "String"
-      }
-    }
-  },
-  "perServingCaloriesProteinLabel": "≈ {calories} kcal · {protein} g protein / serving",
-  "@perServingCaloriesProteinLabel": {
-    "description": "A recipe's per-serving calories and protein (shown when servings > 1)",
-    "placeholders": {
-      "calories": {
-        "type": "String"
-      },
-      "protein": {
-        "type": "String"
-      }
-    }
-  },
-  "logAsMealButton": "Log as meal",
-  "@logAsMealButton": {
-    "description": "Button on a recipe card to log it as a meal"
-  },
   "copyOfName": "{name} (Copy)",
   "@copyOfName": {
     "description": "Name given to a duplicated recipe/template, derived from the original's name",
@@ -2074,10 +2050,6 @@
         "type": "String"
       }
     }
-  },
-  "duplicateRecipeAria": "Duplicate recipe",
-  "@duplicateRecipeAria": {
-    "description": "Button/tooltip to duplicate a recipe"
   },
   "duplicateRecipeQuestionTitle": "Duplicate this recipe?",
   "@duplicateRecipeQuestionTitle": {
@@ -2150,29 +2122,21 @@
   "@resetIngredientTooltip": {
     "description": "Tooltip on the per-ingredient reset button in the log-recipe sheet, restoring the recipe's own amount"
   },
-  "logOutTooltip": "Log out",
-  "@logOutTooltip": {
-    "description": "Tooltip for the logout button on the dashboard"
+  "logOutLabel": "Log out",
+  "@logOutLabel": {
+    "description": "Log out row at the bottom of Settings (Account group) and the confirm button of the log-out dialog (docs/redesign/77-mobile-redesign-plan.md R1.1)"
+  },
+  "logOutDialogTitle": "Log out of Lifey?",
+  "@logOutDialogTitle": {
+    "description": "Title of the confirmation dialog shown before logging out (docs/redesign/77-mobile-redesign-plan.md R1.1)"
   },
   "todaySectionTitle": "Today",
   "@todaySectionTitle": {
     "description": "Dashboard section heading for today's nutrition stats"
   },
-  "todaysCaloriesLabel": "Today's calories",
-  "@todaysCaloriesLabel": {
-    "description": "Stat card label for today's calorie total"
-  },
   "currentWeightSectionTitle": "Current weight",
   "@currentWeightSectionTitle": {
     "description": "Dashboard section heading for the latest weight entry"
-  },
-  "latestEntryLabel": "Latest entry",
-  "@latestEntryLabel": {
-    "description": "Stat card label for the most recent weight entry"
-  },
-  "weightCurrentLabel": "Current",
-  "@weightCurrentLabel": {
-    "description": "Small label above the current weight reading in the weight chart card header"
   },
   "weightHistoryLabel": "History",
   "@weightHistoryLabel": {
@@ -2185,19 +2149,6 @@
   "weightHistoryYesterdayLabel": "Yesterday",
   "@weightHistoryYesterdayLabel": {
     "description": "Relative date shown on a weight history row recorded yesterday"
-  },
-  "thisWeekCaloriesLabel": "This week · calories",
-  "@thisWeekCaloriesLabel": {
-    "description": "Header label on the dashboard weekly calorie sparkline card"
-  },
-  "avgCaloriesBadge": "avg {count}",
-  "@avgCaloriesBadge": {
-    "description": "Average daily calorie badge on the sparkline card",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "todaysMealsSectionTitle": "Today's meals",
   "@todaysMealsSectionTitle": {
@@ -2214,22 +2165,6 @@
   "noWorkoutsLoggedYetPeriodMessage": "No workouts logged yet.",
   "@noWorkoutsLoggedYetPeriodMessage": {
     "description": "Shown on the dashboard when there are no recent workouts"
-  },
-  "enrichedFromWatchTooltip": "Measured by watch",
-  "@enrichedFromWatchTooltip": {
-    "description": "Tooltip/semantics label for the watch badge on a session card whose metrics were enriched from a paired watch's workout summary"
-  },
-  "healthStatsLine": "{calories} kcal · {heartRate} bpm avg (Health)",
-  "@healthStatsLine": {
-    "description": "Line showing active calories and average heart rate imported from Health on a session card",
-    "placeholders": {
-      "calories": {
-        "type": "String"
-      },
-      "heartRate": {
-        "type": "String"
-      }
-    }
   },
   "importFromHealthButton": "Import from Health",
   "@importFromHealthButton": {
@@ -2257,7 +2192,7 @@
       }
     }
   },
-  "workoutExerciseCount": "{count} exercises",
+  "workoutExerciseCount": "{count, plural, =1{1 exercise} other{{count} exercises}}",
   "@workoutExerciseCount": {
     "description": "Number of distinct exercises on the recent workout tile",
     "placeholders": {
@@ -2274,10 +2209,6 @@
         "type": "int"
       }
     }
-  },
-  "todaysStepsLabel": "Today's steps",
-  "@todaysStepsLabel": {
-    "description": "Dashboard stat card label for today's HealthKit step count"
   },
   "stepsLabel": "Steps",
   "@stepsLabel": {
@@ -2641,7 +2572,7 @@
   "@workoutSuccessTitle": {
     "description": "Title of the celebration dialog shown when a workout finishes with a net improvement in at least 2 metrics"
   },
-  "workoutSuccessSubtitle": "You improved in {count} areas since last time",
+  "workoutSuccessSubtitle": "{count, plural, =1{You improved in 1 area since last time} other{You improved in {count} areas since last time}}",
   "@workoutSuccessSubtitle": {
     "description": "Subtitle of the workout-success celebration dialog",
     "placeholders": {
@@ -2666,32 +2597,6 @@
   "workoutSuccessRepsAbbrev": "reps",
   "@workoutSuccessRepsAbbrev": {
     "description": "Abbreviated unit for a reps-gain chip in the workout-success dialog, e.g. '+2 reps'"
-  },
-  "workoutSuccessPrTitle": "{count, plural, one{New personal record!} other{New personal records!}}",
-  "@workoutSuccessPrTitle": {
-    "description": "Title of the celebration dialog when the session included at least one personal record",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "workoutSuccessPrSubtitle": "{count, plural, one{You hit a new personal record} other{You hit {count} new personal records}}",
-  "@workoutSuccessPrSubtitle": {
-    "description": "Subtitle of the celebration dialog when the session included at least one personal record",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "workoutSuccessPrSectionLabel": "Personal records",
-  "@workoutSuccessPrSectionLabel": {
-    "description": "Caption above the PR rows in the celebration dialog, shown only when both PR rows and regular improvement rows are present"
-  },
-  "workoutSuccessImprovementsSectionLabel": "Improvements",
-  "@workoutSuccessImprovementsSectionLabel": {
-    "description": "Caption above the improvement rows in the celebration dialog, shown only when both PR rows and regular improvement rows are present"
   },
   "postWorkoutFeedbackTitle": "How hard was this workout?",
   "@postWorkoutFeedbackTitle": {
@@ -2841,22 +2746,6 @@
   "@onboardingActivityDescriptionSedentary": {
     "description": "Onboarding wizard: activity level description"
   },
-  "onboardingActivityDescriptionLight": "Light exercise 1–3 days/week",
-  "@onboardingActivityDescriptionLight": {
-    "description": "Onboarding wizard: activity level description"
-  },
-  "onboardingActivityDescriptionModerate": "Moderate exercise 3–5 days/week",
-  "@onboardingActivityDescriptionModerate": {
-    "description": "Onboarding wizard: activity level description"
-  },
-  "onboardingActivityDescriptionActive": "Hard exercise 6–7 days/week",
-  "@onboardingActivityDescriptionActive": {
-    "description": "Onboarding wizard: activity level description"
-  },
-  "onboardingActivityDescriptionVeryActive": "Very hard exercise + physical job",
-  "@onboardingActivityDescriptionVeryActive": {
-    "description": "Onboarding wizard: activity level description"
-  },
   "onboardingPrimaryGoalLabel": "Primary goal",
   "@onboardingPrimaryGoalLabel": {
     "description": "Onboarding wizard: primary goal field label"
@@ -2869,7 +2758,7 @@
   "@onboardingGoalMaintain": {
     "description": "Onboarding wizard: primary goal option"
   },
-  "onboardingGoalGainMuscle": "Gain muscle",
+  "onboardingGoalGainMuscle": "Build muscle",
   "@onboardingGoalGainMuscle": {
     "description": "Onboarding wizard: primary goal option"
   },
@@ -2884,22 +2773,6 @@
   "onboardingCalculatingMessage": "Calculating your suggested goals…",
   "@onboardingCalculatingMessage": {
     "description": "Onboarding wizard: loading state while suggest-goals is in flight"
-  },
-  "onboardingSuggestedFromMessage": "Based on a BMR of {bmr} kcal and a TDEE of {tdee} kcal",
-  "@onboardingSuggestedFromMessage": {
-    "description": "Onboarding wizard: transparency note under the suggested goals",
-    "placeholders": {
-      "bmr": {
-        "type": "int"
-      },
-      "tdee": {
-        "type": "int"
-      }
-    }
-  },
-  "onboardingChangeLaterMessage": "You can change this anytime in Settings.",
-  "@onboardingChangeLaterMessage": {
-    "description": "Onboarding wizard: note under the suggested goals"
   },
   "onboardingApplyGoalsButton": "Apply these goals",
   "@onboardingApplyGoalsButton": {
@@ -3136,72 +3009,6 @@
   "@liveActivityDefaultExerciseName": {
     "description": "Live Activity exercise name fallback before any exercise has a resolved name"
   },
-  "mealEntryImpactPreview": "+{kcal} kcal · {protein} g protein",
-  "@mealEntryImpactPreview": {
-    "description": "Live preview in the add-entry sheet showing the macro impact of the selected food + quantity",
-    "placeholders": {
-      "kcal": {
-        "type": "int"
-      },
-      "protein": {
-        "type": "int"
-      }
-    }
-  },
-  "mealEntryBudgetLeft": "→ {count} kcal left",
-  "@mealEntryBudgetLeft": {
-    "description": "Appended to the add-entry sheet impact preview: remaining daily calories after adding this entry",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "mealEntryBudgetOver": "→ {count} kcal over",
-  "@mealEntryBudgetOver": {
-    "description": "Appended to the add-entry sheet impact preview: daily calories exceeded after adding this entry",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "macrosTodayKcalLeft": "{count} kcal left",
-  "@macrosTodayKcalLeft": {
-    "description": "Fragment of the remaining-budget line on today's featured macros card: calories still under goal",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "macrosTodayKcalOver": "{count} kcal over",
-  "@macrosTodayKcalOver": {
-    "description": "Fragment of the remaining-budget line on today's featured macros card: calorie goal exceeded",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "macrosTodayProteinLeft": "{count} g protein left",
-  "@macrosTodayProteinLeft": {
-    "description": "Fragment of the remaining-budget line on today's featured macros card: protein still under goal",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "macrosTodayProteinOver": "{count} g protein over",
-  "@macrosTodayProteinOver": {
-    "description": "Fragment of the remaining-budget line on today's featured macros card: protein goal exceeded",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "streakMetricCalories": "calorie",
   "@streakMetricCalories": {
     "description": "Lowercase noun for the calorie goal, used inside the streak chip tooltip sentence"
@@ -3257,7 +3064,7 @@
   "@recapWorkoutsSectionTitle": {
     "description": "Recap screen section heading for the week's workouts"
   },
-  "recapWorkoutsCount": "{count} workouts",
+  "recapWorkoutsCount": "{count, plural, =1{1 workout} other{{count} workouts}}",
   "@recapWorkoutsCount": {
     "description": "Number of workouts done during the recap week",
     "placeholders": {
@@ -4161,14 +3968,6 @@
   "@hrZonesSectionLabel": {
     "description": "Header of the heart-rate zone panel on the cardio summary screen (C9.1, M43). One component for every cardio type — only its position differs by family."
   },
-  "hrZoneEasyEndLabel": "easy",
-  "@hrZoneEasyEndLabel": {
-    "description": "Label at the left end of the stacked zone bar (C9.1, M43)"
-  },
-  "hrZoneHardEndLabel": "hard",
-  "@hrZoneHardEndLabel": {
-    "description": "Label at the right end of the stacked zone bar (C9.1, M43)"
-  },
   "hrZoneVerdictHard": "hard session",
   "@hrZoneVerdictHard": {
     "description": "Headline chip when zones 4-5 dominate (C9.1, M43). Said in words because the bar's colours alone are not accessible to a colour-blind reader."
@@ -4481,14 +4280,6 @@
   "@benchSwitchHint": {
     "description": "Hint under the court/bench switch while benched (M07)"
   },
-  "autoPauseCircleLabel": "Auto",
-  "@autoPauseCircleLabel": {
-    "description": "Label of the small auto-pause settings circle on the live screen (M04)"
-  },
-  "distanceCircleLabel": "Dist.",
-  "@distanceCircleLabel": {
-    "description": "Label of the small distance-entry circle on the live screen (M11)"
-  },
   "playingTimeRunningLabel": "PLAYING TIME — ON COURT",
   "@playingTimeRunningLabel": {
     "description": "Dominant metric label while on court (M06)"
@@ -4730,7 +4521,7 @@
   "@intervalPlanPickerWithoutPlan": {
     "description": "Starts the indoor-bike session with no interval plan — the screen then looks exactly as it always has (M38)"
   },
-  "intervalPlanSummaryLabel": "{duration} · {sections} sections",
+  "intervalPlanSummaryLabel": "{duration} · {sections, plural, =1{1 section} other{{sections} sections}}",
   "@intervalPlanSummaryLabel": {
     "description": "Subtitle of a saved plan in the picker: total length and section count",
     "placeholders": {
@@ -4763,7 +4554,7 @@
   "@intervalSectionsSectionLabel": {
     "description": "Header of the executed interval sections card on the machine summary (M39)"
   },
-  "intervalSectionsCountChip": "{count} sections",
+  "intervalSectionsCountChip": "{count, plural, =1{1 section} other{{count} sections}}",
   "@intervalSectionsCountChip": {
     "description": "Chip in the interval sections card header (M39)",
     "placeholders": {
@@ -4875,7 +4666,7 @@
   "@waypointsSectionLabel": {
     "description": "Header of the waypoint list card on the hike summary screen (docs/cardio/60 C8.4, M42)"
   },
-  "waypointsCountChip": "{count} waypoints",
+  "waypointsCountChip": "{count, plural, =1{1 waypoint} other{{count} waypoints}}",
   "@waypointsCountChip": {
     "description": "Chip in the waypoint list card header (M42)",
     "placeholders": {
@@ -5168,26 +4959,6 @@
   "@trainerTabNutritionLabel": {
     "description": "Client detail tab: one day of the client's food log against their goals"
   },
-  "trainerMetricAvgCaloriesLabel": "Avg. daily calories",
-  "@trainerMetricAvgCaloriesLabel": {
-    "description": "Overview metric card: the client's average calorie intake per day over the last week (frame C3)"
-  },
-  "trainerMetricCurrentWeightLabel": "Current weight",
-  "@trainerMetricCurrentWeightLabel": {
-    "description": "Overview metric card: the client's most recent weigh-in"
-  },
-  "trainerMetricWorkoutsThisWeekLabel": "Workouts this week",
-  "@trainerMetricWorkoutsThisWeekLabel": {
-    "description": "Overview metric card: how many sessions the client logged in the last 7 days"
-  },
-  "trainerMetricAvgStepsLabel": "Avg. daily steps",
-  "@trainerMetricAvgStepsLabel": {
-    "description": "Overview metric card: the client's average step count per day over the last week"
-  },
-  "trainerOverviewPeriodHint": "Figures cover the last 7 days.",
-  "@trainerOverviewPeriodHint": {
-    "description": "Footnote under the overview metric cards, naming the window they are calculated over so the numbers can't be misread as all-time"
-  },
   "trainerPeriodDailyLabel": "Today",
   "@trainerPeriodDailyLabel": {
     "description": "Statistics tab period chip: today's totals only"
@@ -5279,15 +5050,6 @@
     "description": "A body-weight figure with its unit. {value} is already formatted",
     "placeholders": {
       "value": {
-        "type": "String"
-      }
-    }
-  },
-  "trainerKgDeltaValue": "{delta} kg",
-  "@trainerKgDeltaValue": {
-    "description": "The change since the previous weigh-in, on the overview card. {delta} already carries its sign (e.g. '+0.3', '-1.2')",
-    "placeholders": {
-      "delta": {
         "type": "String"
       }
     }
@@ -5801,7 +5563,7 @@
       }
     }
   },
-  "trainerOccurrenceCountSummary": "This creates {count} sessions, {from} – {to}",
+  "trainerOccurrenceCountSummary": "This creates {count, plural, =1{1 session} other{{count} sessions}}, {from} – {to}",
   "@trainerOccurrenceCountSummary": {
     "description": "The create-schedule form's answer to \"how many sessions is this\", shown before anything is sent (frame F4). Dates are already formatted",
     "placeholders": {
@@ -6133,5 +5895,823 @@
   "trainerGoalsSavedMessage": "Goals saved.",
   "@trainerGoalsSavedMessage": {
     "description": "Confirmation after saving goals that turned out identical. Nothing was notified, so nothing is claimed"
+  },
+  "deltaDownSemantics": "down {value}",
+  "@deltaDownSemantics": {
+    "description": "Screen-reader text for a change chip showing a decrease, e.g. 'down 0.1 kg'. {value} is the formatted amount with its unit. The chip itself shows an arrow and the number (docs/redesign/77-mobile-redesign-plan.md R0.7)",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "deltaUpSemantics": "up {value}",
+  "@deltaUpSemantics": {
+    "description": "Screen-reader text for a change chip showing an increase, e.g. 'up 0.3 kg'. {value} is the formatted amount with its unit (docs/redesign/77-mobile-redesign-plan.md R0.7)",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "searchTooltip": "Search",
+  "@searchTooltip": {
+    "description": "Tooltip of the round search button in a screen header, e.g. on the Nutrition Recipes and Foods tabs (docs/redesign/77-mobile-redesign-plan.md R2.1)"
+  },
+  "closeSearchTooltip": "Close search",
+  "@closeSearchTooltip": {
+    "description": "Tooltip of the round button that closes the open search field in a screen header (docs/redesign/77-mobile-redesign-plan.md R2.1)"
+  },
+  "macroLetterProtein": "P",
+  "@macroLetterProtein": {
+    "description": "One-letter abbreviation of protein next to a gram amount, e.g. '29 / 129 g P' (docs/redesign/77-mobile-redesign-plan.md R2.3). Hungarian: F (fehérje)"
+  },
+  "macroLetterCarbs": "C",
+  "@macroLetterCarbs": {
+    "description": "One-letter abbreviation of carbs next to a gram amount, e.g. '88 / 313 g C'. Hungarian: Sz (szénhidrát)"
+  },
+  "macroLetterFat": "F",
+  "@macroLetterFat": {
+    "description": "One-letter abbreviation of fat next to a gram amount, e.g. '20 / 66 g F'. Hungarian: Zs (zsír)"
+  },
+  "weekStripDaySemantics": "{date}: {kcal} kcal",
+  "@weekStripDaySemantics": {
+    "description": "Screen-reader label of one day in the Meals tab's week strip: the day and the calories eaten that day (docs/redesign/77-mobile-redesign-plan.md R2.2)",
+    "placeholders": {"date": {"type": "String"}, "kcal": {"type": "String"}}
+  },
+  "dayBudgetOfGoal": "/ {goal} kcal",
+  "@dayBudgetOfGoal": {
+    "description": "The goal after the big eaten number on the day budget card: '621 / 2,360 kcal'; {goal} is the formatted daily goal (docs/redesign/77-mobile-redesign-plan.md R2.3)",
+    "placeholders": {"goal": {"type": "String"}}
+  },
+  "dayBudgetKcalLeft": "{value} left",
+  "@dayBudgetKcalLeft": {
+    "description": "Badge on the day budget card: calories still available today, e.g. '1,739 left'; {value} is formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "dayBudgetKcalOver": "{value} over",
+  "@dayBudgetKcalOver": {
+    "description": "Badge on the day budget card once the calorie goal is exceeded, e.g. '212 over'; {value} is formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "mealsEmptyTodayTitle": "No meals yet today",
+  "@mealsEmptyTodayTitle": {
+    "description": "Title of the empty state on the Meals tab when today has no meals (docs/redesign/77-mobile-redesign-plan.md R2.3)"
+  },
+  "mealsEmptyDayTitle": "No meals on this day",
+  "@mealsEmptyDayTitle": {
+    "description": "Title of the empty state on the Meals tab when a past day chosen in the week strip has no meals"
+  },
+  "mealsEmptyMessage": "Log what you eat and the budget above shows what is left.",
+  "@mealsEmptyMessage": {
+    "description": "Body of the empty state on the Meals tab"
+  },
+  "mealsEmptyAddAction": "Add meal",
+  "@mealsEmptyAddAction": {
+    "description": "Main button of the empty state on the Meals tab; opens the meal editor"
+  },
+  "mealsEmptyCopyAction": "Copy a day",
+  "@mealsEmptyCopyAction": {
+    "description": "Secondary button of today's empty state on the Meals tab; opens the copy-a-previous-day sheet"
+  },
+  "allMealsTitle": "All meals",
+  "@allMealsTitle": {
+    "description": "Title of the screen listing every logged meal, day by day, and tooltip of the calendar button on the Meals tab that opens it (docs/redesign/77-mobile-redesign-plan.md R2.2)"
+  },
+  "mealSummaryAfterToday": "Today after this meal",
+  "@mealSummaryAfterToday": {
+    "description": "Label in the floating summary panel of the meal editor, left of the remaining kcal, when the meal is on today's date (docs/redesign/77-mobile-redesign-plan.md R2.5)"
+  },
+  "mealSummaryAfterDay": "{date} after this meal",
+  "@mealSummaryAfterDay": {
+    "description": "Same label when the meal is on another day; {date} is a short day label such as 'Wed, 23 Sep'",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "mealSummaryKcalLeft": "{value} kcal left",
+  "@mealSummaryKcalLeft": {
+    "description": "Calories left of the day's goal once this meal is counted, in the meal editor's summary panel; {value} is formatted"
+  },
+  "mealSummaryKcalOver": "{value} kcal over",
+  "@mealSummaryKcalOver": {
+    "description": "Calories over the day's goal once this meal is counted, in the meal editor's summary panel; {value} is formatted"
+  },
+  "mealActionMacrosOnly": "Macros only",
+  "@mealActionMacrosOnly": {
+    "description": "Action tile in the meal editor: add calories and macros without choosing a food (docs/redesign/77-mobile-redesign-plan.md R2.4)"
+  },
+  "mealActionFromPhoto": "From photo",
+  "@mealActionFromPhoto": {
+    "description": "Action tile in the meal editor: estimate the meal from a photo (AI)"
+  },
+  "mealFoodRowSubtitle": "{grams} g · {protein} g protein",
+  "@mealFoodRowSubtitle": {
+    "description": "Second line of a food row in the meal editor: the amount and its protein",
+    "placeholders": {"grams": {"type": "String"}, "protein": {"type": "String"}}
+  },
+  "mealFoodsSectionCount": "Foods · {count}",
+  "@mealFoodsSectionCount": {
+    "description": "Section label above the food rows of the meal editor, with how many there are (shown in capitals)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "mealFoodMenuTooltip": "Food options",
+  "@mealFoodMenuTooltip": {
+    "description": "Tooltip of the three-dots button on a food row in the meal editor"
+  },
+  "addToMealButton": "Add to meal",
+  "@addToMealButton": {
+    "description": "Full-width confirm button of the add-food sheet (docs/redesign/77-mobile-redesign-plan.md R2.6)"
+  },
+  "entryFoodPer100": "per 100 g · {kcal} kcal",
+  "@entryFoodPer100": {
+    "description": "Second line of the picked food's card in the add-food sheet: its energy per 100 g; {kcal} is formatted",
+    "placeholders": {"kcal": {"type": "String"}}
+  },
+  "entryFoodPer100NoKcal": "per 100 g",
+  "@entryFoodPer100NoKcal": {
+    "description": "Second line of the picked food's card when the food has no calorie value"
+  },
+  "quantityDecreaseTooltip": "Less",
+  "@quantityDecreaseTooltip": {
+    "description": "Tooltip / screen-reader label of the − button of the quantity stepper in the add-food sheet"
+  },
+  "quantityIncreaseTooltip": "More",
+  "@quantityIncreaseTooltip": {
+    "description": "Tooltip / screen-reader label of the + button of the quantity stepper in the add-food sheet"
+  },
+  "entryPreviewKcal": "+{kcal} kcal",
+  "@entryPreviewKcal": {
+    "description": "Live preview in the add-food sheet: the calories this amount of the food adds; {kcal} is formatted",
+    "placeholders": {"kcal": {"type": "String"}}
+  },
+  "entryPreviewProtein": "{protein} g protein",
+  "@entryPreviewProtein": {
+    "description": "Live preview in the add-food sheet, under the calories: the protein this amount adds; {protein} is formatted",
+    "placeholders": {"protein": {"type": "String"}}
+  },
+  "entryBudgetLeft": "→ {value} kcal left",
+  "@entryBudgetLeft": {
+    "description": "Live preview in the add-food sheet: calories left of the day's goal once this amount is counted; {value} is formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "entryBudgetOver": "→ {value} kcal over",
+  "@entryBudgetOver": {
+    "description": "Live preview in the add-food sheet: calories over the day's goal once this amount is counted; {value} is formatted",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "generateRecipeSubtitle": "From what's in your fridge, sized to your goals",
+  "@generateRecipeSubtitle": {
+    "description": "Second line of the 'Generate a recipe' entry card on the Recipes tab (docs/redesign/77-mobile-redesign-plan.md R2.7)"
+  },
+  "recipeFilterAll": "All",
+  "@recipeFilterAll": {
+    "description": "Filter chip on the Recipes tab: every recipe"
+  },
+  "recipeFilterFavourites": "Favourites",
+  "@recipeFilterFavourites": {
+    "description": "Filter chip on the Recipes tab: starred recipes only"
+  },
+  "recipeFilterHighProtein": "High protein",
+  "@recipeFilterHighProtein": {
+    "description": "Filter chip on the Recipes tab: recipes where protein gives at least 30 % of the calories"
+  },
+  "recipeFilterUnder400": "< 400 kcal",
+  "@recipeFilterUnder400": {
+    "description": "Filter chip on the Recipes tab: recipes under 400 kcal per serving"
+  },
+  "recipeLogAction": "Log",
+  "@recipeLogAction": {
+    "description": "The '+ Log' button on a recipe card: logs the recipe as a meal"
+  },
+  "recipeFavoriteTooltip": "Add to favourites",
+  "@recipeFavoriteTooltip": {
+    "description": "Tooltip / screen-reader label of the star on a recipe card that is not a favourite yet"
+  },
+  "recipeUnfavoriteTooltip": "Remove from favourites",
+  "@recipeUnfavoriteTooltip": {
+    "description": "Tooltip / screen-reader label of the star on a favourite recipe card"
+  },
+  "noRecipesMatchMessage": "Try another filter",
+  "@noRecipesMatchMessage": {
+    "description": "Hint of the empty state on the Recipes tab when the chosen filter chip leaves no recipe"
+  },
+  "macrosLastDaysTitle": "Last 7 days",
+  "@macrosLastDaysTitle": {
+    "description": "Section label above the list of the previous days on the Macros tab (shown in capitals) (docs/redesign/77-mobile-redesign-plan.md R2.8)"
+  },
+  "recipeIngredientsSectionCount": "Ingredients · {count}",
+  "@recipeIngredientsSectionCount": {
+    "description": "Section label above the ingredient rows of the recipe editor, with how many there are (shown in capitals) (docs/redesign/77-mobile-redesign-plan.md R2.9)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "recipeTotalLabel": "Recipe total",
+  "@recipeTotalLabel": {
+    "description": "Label of the floating summary panel of the recipe editor (the meal editor's says 'Meal total')"
+  },
+  "weekSummaryWorkoutsLabel": "{count, plural, one{workout this week} other{workouts this week}}",
+  "@weekSummaryWorkoutsLabel": {
+    "description": "Label under the number of workouts in the week summary above the Sessions list (docs/redesign/77-mobile-redesign-plan.md R3.1)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "weekSummaryMinutesLabel": "min this week",
+  "@weekSummaryMinutesLabel": {
+    "description": "Label under the workout minutes of the week in the week summary above the Sessions list"
+  },
+  "weekSummaryKmLabel": "km this week",
+  "@weekSummaryKmLabel": {
+    "description": "Label under the distance of the week in kilometres in the week summary above the Sessions list"
+  },
+  "weekSummaryMilesLabel": "mi this week",
+  "@weekSummaryMilesLabel": {
+    "description": "Label under the distance of the week in miles (imperial units) in the week summary above the Sessions list"
+  },
+  "workoutsFilterTitle": "Filter",
+  "@workoutsFilterTitle": {
+    "description": "Title of the filter sheet and tooltip of the tune button in the Workouts header"
+  },
+  "workoutsFilterPeriod": "Period",
+  "@workoutsFilterPeriod": {
+    "description": "Section label in the Sessions filter sheet: today / week / all"
+  },
+  "workoutsFilterType": "Type",
+  "@workoutsFilterType": {
+    "description": "Section label in the Sessions filter sheet: all / strength / cardio / one activity"
+  },
+  "workoutsFilterMuscleGroup": "Muscle group",
+  "@workoutsFilterMuscleGroup": {
+    "description": "Section label in the Exercises filter sheet"
+  },
+  "sessionsGroupToday": "Today",
+  "@sessionsGroupToday": {
+    "description": "Header of the group of today's sessions in the Sessions list (docs/redesign/77-mobile-redesign-plan.md R3.3)"
+  },
+  "sessionsGroupEarlierThisWeek": "Earlier this week",
+  "@sessionsGroupEarlierThisWeek": {
+    "description": "Header of the sessions of this calendar week before today in the Sessions list"
+  },
+  "sessionsGroupLastWeek": "Last week",
+  "@sessionsGroupLastWeek": {
+    "description": "Header of the previous calendar week's sessions in the Sessions list"
+  },
+  "sessionPrChip": "{count, plural, one{1 PR} other{{count} PRs}}",
+  "@sessionPrChip": {
+    "description": "Trophy chip on a session row: how many personal records the session set",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "sessionHeartRateFromSource": "Heart rate from {source}",
+  "@sessionHeartRateFromSource": {
+    "description": "Line under a cardio session row whose heart rate came from the phone's health platform; {source} is the platform's name (Health Connect / Apple Health), not translated",
+    "placeholders": {"source": {"type": "String"}}
+  },
+  "sessionMenuOpen": "Open",
+  "@sessionMenuOpen": {
+    "description": "Action in a session row's long-press menu: opens the session"
+  },
+  "workoutExerciseProgress": "{current} of {total, plural, one{1 exercise} other{{total} exercises}}",
+  "@workoutExerciseProgress": {
+    "description": "Subtitle of the live strength workout header: the exercise being worked on out of all of them, e.g. '2 of 3 exercises' (docs/redesign/77-mobile-redesign-plan.md R3.4)",
+    "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "restSkipLabel": "Skip",
+  "@restSkipLabel": {
+    "description": "Visible label of the button that ends the rest countdown early on the rest card (the tooltip says 'Skip rest')"
+  },
+  "restNextSet": "Next: {exercise} · set {set}",
+  "@restNextSet": {
+    "description": "Line on the rest card naming the next set to do when its weight and reps are not known",
+    "placeholders": {"exercise": {"type": "String"}, "set": {"type": "int"}}
+  },
+  "restNextSetLoad": "Next: {exercise} · set {set} · {load}",
+  "@restNextSetLoad": {
+    "description": "Line on the rest card naming the next set with its load; {load} is e.g. '47.5 kg × 8'",
+    "placeholders": {"exercise": {"type": "String"}, "set": {"type": "int"}, "load": {"type": "String"}}
+  },
+  "setNumberLabel": "Set {number}",
+  "@setNumberLabel": {
+    "description": "Name of one set of an exercise in a workout, e.g. the title of a set's long-press menu (docs/redesign/77-mobile-redesign-plan.md R3.5)",
+    "placeholders": {"number": {"type": "int"}}
+  },
+  "exerciseBestLine": "Best {best}",
+  "@exerciseBestLine": {
+    "description": "Line under an exercise's name on the live strength screen: the heaviest set so far, e.g. 'Best 50 kg × 8'",
+    "placeholders": {"best": {"type": "String"}}
+  },
+  "exerciseBestLineWithOneRm": "Best {best} · e1RM {oneRm}",
+  "@exerciseBestLineWithOneRm": {
+    "description": "Same line with the best estimated one-rep max, e.g. 'Best 50 kg × 8 · e1RM 63.3 kg'",
+    "placeholders": {"best": {"type": "String"}, "oneRm": {"type": "String"}}
+  },
+  "setDoneLabel": "Set done",
+  "@setDoneLabel": {
+    "description": "Screen-reader label of the check button of a set row"
+  },
+  "workoutDonePrTitle": "{count, plural, one{1 new personal record} other{{count} new personal records}}",
+  "@workoutDonePrTitle": {
+    "description": "Title of the celebration sheet shown when a strength workout finishes with personal records (docs/redesign/77-mobile-redesign-plan.md R3.7)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "workoutDoneVolume": "{volume} kg volume",
+  "@workoutDoneVolume": {
+    "description": "Total weight lifted (sets x reps x kg) in the celebration sheet's summary line, e.g. 'Push day · 58 min · 4,280 kg volume'",
+    "placeholders": {"volume": {"type": "String"}}
+  },
+  "workoutDonePrKindHeaviest": "Heaviest set",
+  "@workoutDonePrKindHeaviest": {
+    "description": "Kind of a personal record on the celebration sheet: the most weight ever lifted for the exercise"
+  },
+  "workoutDonePrKindOneRm": "Estimated 1RM",
+  "@workoutDonePrKindOneRm": {
+    "description": "Kind of a personal record on the celebration sheet: the best estimated one-rep max"
+  },
+  "workoutDonePrKindReps": "Most reps at {weight} kg",
+  "@workoutDonePrKindReps": {
+    "description": "Kind of a personal record on the celebration sheet: the most reps ever done at one weight",
+    "placeholders": {"weight": {"type": "String"}}
+  },
+  "workoutDoneBetterThanLast": "Better than last time",
+  "@workoutDoneBetterThanLast": {
+    "description": "Line under an exercise on the celebration sheet that got heavier or more reps than the last session without setting a record"
+  },
+  "liveHeartRateZoneChip": "Zone {zone} · {name}",
+  "@liveHeartRateZoneChip": {
+    "description": "Chip on the live cardio screen's heart-rate row naming the current zone, e.g. 'Zone 3 · Tempo' (docs/redesign/77-mobile-redesign-plan.md R3.8)",
+    "placeholders": {"zone": {"type": "int"}, "name": {"type": "String"}}
+  },
+  "cardioStatusAutoPauseOn": "Auto-pause on",
+  "@cardioStatusAutoPauseOn": {
+    "description": "Part of the live cardio header's status line, e.g. 'GPS · Auto-pause on': the phone pauses the session by itself when the runner stops"
+  },
+  "cardioStatusAutoPauseOff": "Auto-pause off",
+  "@cardioStatusAutoPauseOff": {
+    "description": "Part of the live cardio header's status line, e.g. 'GPS · Auto-pause off'"
+  },
+  "weightCurrentToday": "Current · today {time}",
+  "@weightCurrentToday": {
+    "description": "Overline over the weight hero when the latest weigh-in is today, with the time it was logged (docs/redesign/77-mobile-redesign-plan.md R4.1)",
+    "placeholders": {"time": {"type": "String"}}
+  },
+  "weightCurrentOn": "Current · {date}",
+  "@weightCurrentOn": {
+    "description": "Overline over the weight hero when the latest weigh-in is from an earlier day, e.g. 'Current · Sep 21'",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "weightDeltaToday": "today",
+  "@weightDeltaToday": {
+    "description": "After the change chip on the weight hero, e.g. '↓ 0.1 today': the change since the previous weigh-in, when the latest one is from today"
+  },
+  "weightDeltaSinceLast": "since last",
+  "@weightDeltaSinceLast": {
+    "description": "After the change chip on the weight hero when the latest weigh-in is not from today, e.g. '↓ 0.4 since last'"
+  },
+  "weightDelta30d": "in 30 d",
+  "@weightDelta30d": {
+    "description": "After the 30-day change chip on the weight hero, e.g. '↓ 1.4 in 30 d'"
+  },
+  "weightGoalStart": "Start {kg}",
+  "@weightGoalStart": {
+    "description": "Left end of the goal band under the weight hero: the first weight ever recorded",
+    "placeholders": {"kg": {"type": "String"}}
+  },
+  "weightGoalBandGoal": "Goal",
+  "@weightGoalBandGoal": {
+    "description": "Label before the goal weight in the goal band, e.g. 'Goal 62.0 kg · 2.5 kg to go'"
+  },
+  "weightGoalBandReached": "Goal reached",
+  "@weightGoalBandReached": {
+    "description": "Replaces the 'kg to go' part of the goal band once the goal weight is reached"
+  },
+  "weightSetGoalAction": "Set a goal weight",
+  "@weightSetGoalAction": {
+    "description": "Action in place of the goal band when no goal weight is set; opens the profile editor"
+  },
+  "weightChartLegendDaily": "Daily",
+  "@weightChartLegendDaily": {
+    "description": "Legend entry of the weight chart's daily line, before '7-day average'"
+  },
+  "weightMoreTooltip": "More",
+  "@weightMoreTooltip": {
+    "description": "Tooltip of the ⋮ button in the weight screen's header"
+  },
+  "logWeightTitle": "Log weight",
+  "@logWeightTitle": {
+    "description": "Title of the log-weight sheet (docs/redesign/77-mobile-redesign-plan.md R4.4)"
+  },
+  "weightSheetYesterday": "Yesterday {kg} kg",
+  "@weightSheetYesterday": {
+    "description": "Reference under the number in the log-weight sheet: the weigh-in of the day before the selected date",
+    "placeholders": {"kg": {"type": "String"}}
+  },
+  "weightSheetLast": "Last {kg} kg · {date}",
+  "@weightSheetLast": {
+    "description": "Reference under the number in the log-weight sheet when there was no weigh-in the day before: the most recent earlier one",
+    "placeholders": {"kg": {"type": "String"}, "date": {"type": "String"}}
+  },
+  "weightSheetDecrease": "Lower by 0.1 kg",
+  "@weightSheetDecrease": {
+    "description": "Screen-reader label of the minus button of the log-weight sheet"
+  },
+  "weightSheetIncrease": "Raise by 0.1 kg",
+  "@weightSheetIncrease": {
+    "description": "Screen-reader label of the plus button of the log-weight sheet"
+  },
+  "weightSheetTypeTooltip": "Type a weight",
+  "@weightSheetTypeTooltip": {
+    "description": "Tooltip / screen-reader hint of the big number in the log-weight sheet, which becomes a text field when tapped"
+  },
+  "statHeroDailyAverage": "Daily average",
+  "@statHeroDailyAverage": {
+    "description": "Overline of the statistics hero for a metric whose hero is the mean of the days, e.g. 'Daily average · last 30 days' (docs/redesign/77-mobile-redesign-plan.md R4.6/R4.7)"
+  },
+  "statHeroLatest": "Latest",
+  "@statHeroLatest": {
+    "description": "Overline of the statistics hero for the newest reading (weight), before the period"
+  },
+  "statHeroHighest": "Highest",
+  "@statHeroHighest": {
+    "description": "Overline of the statistics hero for a peak (max heart rate, highest altitude)"
+  },
+  "statHeroAveragePace": "Average pace",
+  "@statHeroAveragePace": {
+    "description": "Overline of the statistics hero for the pace, weighted by distance"
+  },
+  "statPeriodWeek": "last 7 days",
+  "@statPeriodWeek": {
+    "description": "The period a statistics hero covers, after the overline's label"
+  },
+  "statPeriodMonth": "last 30 days",
+  "@statPeriodMonth": {
+    "description": "The period a statistics hero covers, after the overline's label"
+  },
+  "statPeriodQuarter": "last 90 days",
+  "@statPeriodQuarter": {
+    "description": "The period a statistics hero covers, after the overline's label"
+  },
+  "statPeriodAll": "all time",
+  "@statPeriodAll": {
+    "description": "The period a statistics hero covers when the range is 'All'"
+  },
+  "statUnitWorkouts": "{count, plural, one{workout} other{workouts}}",
+  "@statUnitWorkouts": {
+    "description": "Unit after the workout count hero, e.g. '22 workouts'",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "statUnitSessions": "{count, plural, one{session} other{sessions}}",
+  "@statUnitSessions": {
+    "description": "Unit after the cardio session count hero",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "statTrendVsPrior": "vs prior {days} d",
+  "@statTrendVsPrior": {
+    "description": "After the trend chip of the statistics hero, e.g. '↓ 4% vs prior 30 d': the previous period of the same length",
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "statPerWeekValue": "{value} / week",
+  "@statPerWeekValue": {
+    "description": "Chip on the statistics hero for counted events, e.g. '5.1 / week'",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "statSideLowest": "Lowest",
+  "@statSideLowest": {
+    "description": "Label of a side stat under the statistics chart: the lowest day"
+  },
+  "statSideHighest": "Highest",
+  "@statSideHighest": {
+    "description": "Label of a side stat under the statistics chart: the highest day"
+  },
+  "statSideTotal": "Total",
+  "@statSideTotal": {
+    "description": "Label of a side stat under the statistics chart: the sum over the range"
+  },
+  "statSideDaysOnTarget": "Days on target",
+  "@statSideDaysOnTarget": {
+    "description": "Label of a side stat: days within 10 % of the calorie goal"
+  },
+  "statSideDaysAtGoal": "Days at goal",
+  "@statSideDaysAtGoal": {
+    "description": "Label of a side stat: days at or above the goal"
+  },
+  "statSideChange": "Change",
+  "@statSideChange": {
+    "description": "Label of a side stat: how much the weight changed over the range"
+  },
+  "statSidePerWeek": "Per week",
+  "@statSidePerWeek": {
+    "description": "Label of a side stat: the range's total per week"
+  },
+  "statSideMostInWeek": "Most in a week",
+  "@statSideMostInWeek": {
+    "description": "Label of a side stat: the busiest calendar week"
+  },
+  "statSideTotalTime": "Total time",
+  "@statSideTotalTime": {
+    "description": "Label of a side stat: the time of all workouts of the range"
+  },
+  "statSideAvgPerWorkout": "Avg per workout",
+  "@statSideAvgPerWorkout": {
+    "description": "Label of a side stat: mean workout time"
+  },
+  "statSideAvgPerSession": "Avg per session",
+  "@statSideAvgPerSession": {
+    "description": "Label of a side stat: mean per cardio session"
+  },
+  "statSideLongest": "Longest",
+  "@statSideLongest": {
+    "description": "Label of a side stat: the longest single workout or session"
+  },
+  "statSideHighestSession": "Highest session",
+  "@statSideHighestSession": {
+    "description": "Label of a side stat: the session with the most elevation gain"
+  },
+  "statSideFastest": "Fastest",
+  "@statSideFastest": {
+    "description": "Label of a side stat: the fastest day's pace"
+  },
+  "statSideSlowest": "Slowest",
+  "@statSideSlowest": {
+    "description": "Label of a side stat: the slowest day's pace"
+  },
+  "statSideAvgOfMaxima": "Avg of maxima",
+  "@statSideAvgOfMaxima": {
+    "description": "Label of a side stat: mean of the daily maximum heart rates"
+  },
+  "statDaysValue": "{count, plural, one{{count} day} other{{count} days}}",
+  "@statDaysValue": {
+    "description": "A number of days in a statistics side stat",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "statDurationHoursMinutes": "{hours} h {minutes}",
+  "@statDurationHoursMinutes": {
+    "description": "A duration of an hour or more in statistics, e.g. '23 h 40'",
+    "placeholders": {"hours": {"type": "int"}, "minutes": {"type": "String"}}
+  },
+  "statWeeklyFootnote": "Grouped by week so a single day never looks like a spike.",
+  "@statWeeklyFootnote": {
+    "description": "Footnote under the weekly bar chart on the statistics screen"
+  },
+  "statLegendAverageDays": "{days}-day average",
+  "@statLegendAverageDays": {
+    "description": "Legend of the dotted average line on a statistics line chart",
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "statKindFilterSemantics": "Kind of workouts",
+  "@statKindFilterSemantics": {
+    "description": "Screen-reader label of the strength / cardio switch on the statistics screen"
+  },
+  "signInWelcomeTitle": "Welcome back",
+  "@signInWelcomeTitle": {
+    "description": "Large title of the sign-in screen (docs/redesign/77-mobile-redesign-plan.md R5.1)"
+  },
+  "signInSubtitle": "Sign in to pick up where you left off. Your logs stay on this phone, even offline.",
+  "@signInSubtitle": {
+    "description": "One-line promise under the sign-in title"
+  },
+  "registerPromptLead": "New to Lifey?",
+  "@registerPromptLead": {
+    "description": "Grey lead-in of the line at the foot of the sign-in screen; followed by the 'Create account' action in the accent colour"
+  },
+  "signInPromptLead": "Already have an account?",
+  "@signInPromptLead": {
+    "description": "Grey lead-in of the line at the foot of the register screen; followed by the 'Sign in' action in the accent colour"
+  },
+  "onboardingStepOfLabel": "Step {step} of {total}",
+  "@onboardingStepOfLabel": {
+    "description": "Under the segmented progress bar of the onboarding wizard, e.g. 'Step 4 of 6' (docs/redesign/77-mobile-redesign-plan.md R5.2)",
+    "placeholders": {"step": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "onboardingActivityDescriptionLight": "Exercise 1–3 days a week",
+  "@onboardingActivityDescriptionLight": {
+    "description": "Description of the 'Light' activity level in the onboarding wizard and Body & goals (docs/redesign/77-mobile-redesign-plan.md R5.3)"
+  },
+  "onboardingActivityDescriptionModerate": "Exercise 3–5 days a week",
+  "@onboardingActivityDescriptionModerate": {
+    "description": "Description of the 'Moderate' activity level"
+  },
+  "onboardingActivityDescriptionActive": "Hard exercise 6–7 days a week",
+  "@onboardingActivityDescriptionActive": {
+    "description": "Description of the 'Active' activity level"
+  },
+  "onboardingActivityDescriptionVeryActive": "Hard exercise and a physical job",
+  "@onboardingActivityDescriptionVeryActive": {
+    "description": "Description of the 'Very active' activity level"
+  },
+  "onboardingLifestyleQuestion": "How active are you?",
+  "@onboardingLifestyleQuestion": {
+    "description": "Title of the wizard step that asks for the activity level and the primary goal"
+  },
+  "onboardingChangeLaterMessage": "You can change these anytime in Settings → Body & goals.",
+  "@onboardingChangeLaterMessage": {
+    "description": "Footnote under the suggested plan in the onboarding wizard (docs/redesign/77-mobile-redesign-plan.md R5.4)"
+  },
+  "onboardingSuggestedSubtitle": "Built for {goal, select, loseWeight{losing weight} maintain{maintaining your weight} gainMuscle{building muscle} other{your goal}} at {activity, select, sedentary{a sedentary} light{a light} moderate{a moderate} active{an active} veryActive{a very active} other{an}} activity level.",
+  "@onboardingSuggestedSubtitle": {
+    "description": "Line under the 'Your suggested plan' title: what the plan was built for. {goal} is loseWeight, maintain or gainMuscle; {activity} is sedentary, light, moderate, active or veryActive (ICU select)",
+    "placeholders": {"goal": {"type": "String"}, "activity": {"type": "String"}}
+  },
+  "onboardingDailyCaloriesLabel": "Daily calories",
+  "@onboardingDailyCaloriesLabel": {
+    "description": "Overline of the calorie hero in the suggested plan"
+  },
+  "onboardingChipBmr": "BMR {value}",
+  "@onboardingChipBmr": {
+    "description": "Chip under the suggested calories: the basal metabolic rate in kcal",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "onboardingChipTdee": "TDEE {value}",
+  "@onboardingChipTdee": {
+    "description": "Chip under the suggested calories: total daily energy expenditure in kcal",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "onboardingChipSurplus": "+{percent}% surplus",
+  "@onboardingChipSurplus": {
+    "description": "Chip: the suggested calories are this many percent above the TDEE",
+    "placeholders": {"percent": {"type": "int"}}
+  },
+  "onboardingChipDeficit": "−{percent}% deficit",
+  "@onboardingChipDeficit": {
+    "description": "Chip: the suggested calories are this many percent below the TDEE",
+    "placeholders": {"percent": {"type": "int"}}
+  },
+  "onboardingChipMaintenance": "At maintenance",
+  "@onboardingChipMaintenance": {
+    "description": "Chip: the suggested calories equal the TDEE"
+  },
+  "onboardingWaterPerDay": "per day",
+  "@onboardingWaterPerDay": {
+    "description": "Unit suffix after the suggested water amount, e.g. '2.6 L per day'"
+  },
+  "chatPeerRoleTrainer": "Your trainer",
+  "@chatPeerRoleTrainer": {
+    "description": "Under the name in a chat header when the other person is the user's trainer (docs/redesign/77-mobile-redesign-plan.md R5.5)"
+  },
+  "chatPeerRoleClient": "Your client",
+  "@chatPeerRoleClient": {
+    "description": "Under the name in a chat header when the other person is the trainer's client"
+  },
+  "chatMoreTooltip": "More",
+  "@chatMoreTooltip": {
+    "description": "Tooltip of the ⋮ button in the chat header, which holds mute / unmute"
+  },
+  "logOutDialogMessage": "Everything is saved to your account. Your data on this phone is removed.",
+  "@logOutDialogMessage": {
+    "description": "Body of the log-out dialog when there is nothing left to upload (docs/redesign/77-mobile-redesign-plan.md R5.6)"
+  },
+  "logOutDialogMessageUpload": "{count, plural, one{1 unsynced change will be uploaded first.} other{{count} unsynced changes will be uploaded first.}} Your data on this phone is removed.",
+  "@logOutDialogMessageUpload": {
+    "description": "Body of the log-out dialog when there are queued changes and the device is online: they are uploaded before the data is wiped",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "logOutDialogMessageLoss": "{count, plural, one{1 change couldn't be uploaded and will be lost.} other{{count} changes couldn't be uploaded and will be lost.}} You're offline. Your data on this phone is removed.",
+  "@logOutDialogMessageLoss": {
+    "description": "Warning body of the log-out dialog when there are queued changes and the device is offline: they cannot be uploaded and will be lost",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "logOutUploadingMessage": "Uploading your changes…",
+  "@logOutUploadingMessage": {
+    "description": "Shown in a small progress dialog while the queued changes are uploaded before logging out"
+  },
+  "settingsGoalsEditAction": "Edit",
+  "@settingsGoalsEditAction": {
+    "description": "Action at the right of the DAILY GOALS label in Settings; opens Body & goals, which recalculates the goals (docs/redesign/77-mobile-redesign-plan.md R5.7)"
+  },
+  "settingsProChip": "Pro",
+  "@settingsProChip": {
+    "description": "Chip on the profile card in Settings when the account is on the Pro tier"
+  },
+  "settingsHealthOnSubtitle": "On · weight and steps are imported automatically",
+  "@settingsHealthOnSubtitle": {
+    "description": "Subline of the Health row in Settings while the connection is on"
+  },
+  "settingsHealthOffSubtitle": "Off · weight and steps are logged by hand",
+  "@settingsHealthOffSubtitle": {
+    "description": "Subline of the Health row in Settings while the connection is off — says what off means"
+  },
+  "settingsNotificationsOnCount": "{count} on",
+  "@settingsNotificationsOnCount": {
+    "description": "Value of the Notifications row in Settings: how many notification types are switched on, e.g. '3 on'",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "settingsNotificationsAllOff": "Off",
+  "@settingsNotificationsAllOff": {
+    "description": "Value of the Notifications row in Settings when no notification type is on"
+  },
+  "trainerClientActiveYesterdayLabel": "Active yesterday",
+  "@trainerClientActiveYesterdayLabel": {
+    "description": "Status line of a client card: the client last logged something yesterday (docs/redesign/77-mobile-redesign-plan.md R6.4)"
+  },
+  "trainerClientLastSeenLabel": "{days, plural, one{Last seen 1 day ago} other{Last seen {days} days ago}}",
+  "@trainerClientLastSeenLabel": {
+    "description": "Status line of a client card for a client who has not logged anything for a few days",
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "trainerClientKpiAvgKcal": "Avg kcal",
+  "@trainerClientKpiAvgKcal": {
+    "description": "Label of the first KPI tile of a client card: the client's mean daily calories over the last 7 days"
+  },
+  "trainerClientKpiWorkouts": "Workouts",
+  "@trainerClientKpiWorkouts": {
+    "description": "Label of the second KPI tile of a client card"
+  },
+  "trainerClientKpiPerWeek": "{count} / wk",
+  "@trainerClientKpiPerWeek": {
+    "description": "Value of the workouts KPI: workouts per week",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerClientKpiWeight": "Weight",
+  "@trainerClientKpiWeight": {
+    "description": "Label of the third KPI tile of a client card: how the weight moved over the sparkline's window"
+  },
+  "trainerClientChipMissed": "{count, plural, one{Missed 1 session} other{Missed {count} sessions}}",
+  "@trainerClientChipMissed": {
+    "description": "Warning chip on a client card: scheduled sessions the client did not do",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerClientChipWeighInDue": "Weigh-in due",
+  "@trainerClientChipWeighInDue": {
+    "description": "Chip on a client card: the client has not logged their weight for a week"
+  },
+  "trainerClientChipPrs": "{count, plural, one{1 PR this week} other{{count} PRs this week}}",
+  "@trainerClientChipPrs": {
+    "description": "Record chip on a client card: personal records the client set in the last 7 days",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerClientFallbackTitle": "Client",
+  "@trainerClientFallbackTitle": {
+    "description": "Title of the client detail header while the client is still loading or could not be found (canvas Lifey 6, client overview)"
+  },
+  "trainerMessageClientButton": "Message",
+  "@trainerMessageClientButton": {
+    "description": "Outlined button right under the client detail tabs that opens the chat with this client (canvas Lifey 6, client overview)"
+  },
+  "trainerOverviewLast7DaysLabel": "Last 7 days",
+  "@trainerOverviewLast7DaysLabel": {
+    "description": "Small heading above the four KPI tiles on the client overview tab"
+  },
+  "trainerKpiAvgCalories": "Avg calories",
+  "@trainerKpiAvgCalories": {
+    "description": "Label of the average daily calories KPI tile on the client overview (short, sits beside a 18 px icon)"
+  },
+  "trainerKpiWorkouts": "Workouts",
+  "@trainerKpiWorkouts": {
+    "description": "Label of the workouts-in-the-last-7-days KPI tile on the client overview"
+  },
+  "trainerKpiAvgSteps": "Avg steps",
+  "@trainerKpiAvgSteps": {
+    "description": "Label of the average daily steps KPI tile on the client overview"
+  },
+  "trainerKpiAvgRpe": "Avg RPE",
+  "@trainerKpiAvgRpe": {
+    "description": "Label of the average perceived-exertion (RPE) KPI tile on the client overview"
+  },
+  "trainerKpiRpeScale": "/ 10",
+  "@trainerKpiRpeScale": {
+    "description": "Unit written after the average RPE value: the scale it is rated on"
+  },
+  "trainerKpiCalorieGoal": "{percent} of goal",
+  "@trainerKpiCalorieGoal": {
+    "description": "Line under the average calories KPI: how much of the client's daily calorie goal the average is, e.g. '69% of goal'",
+    "placeholders": {"percent": {"type": "String"}}
+  },
+  "trainerKpiWorkoutsMissed": "{count, plural, one{1 session missed · 14 d} other{{count} sessions missed · 14 d}}",
+  "@trainerKpiWorkoutsMissed": {
+    "description": "Line under the workouts KPI when planned sessions were missed in the last 14 days",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerKpiStepsDays": "{count, plural, one{over 1 day} other{over {count} days}}",
+  "@trainerKpiStepsDays": {
+    "description": "Line under the average steps KPI: how many days with recorded steps the average is taken over",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "trainerKpiRpeLight": "light effort",
+  "@trainerKpiRpeLight": {
+    "description": "Line under the average RPE KPI when the average is below 4"
+  },
+  "trainerKpiRpeModerate": "moderate effort",
+  "@trainerKpiRpeModerate": {
+    "description": "Line under the average RPE KPI when the average is from 4 up to 6"
+  },
+  "trainerKpiRpeHard": "hard, not maximal",
+  "@trainerKpiRpeHard": {
+    "description": "Line under the average RPE KPI when the average is from 6 up to 8"
+  },
+  "trainerKpiRpeVeryHard": "very hard",
+  "@trainerKpiRpeVeryHard": {
+    "description": "Line under the average RPE KPI when the average is from 8 up to 9.5"
+  },
+  "trainerKpiRpeMaximal": "maximal effort",
+  "@trainerKpiRpeMaximal": {
+    "description": "Line under the average RPE KPI when the average is 9.5 or more"
+  },
+  "trainerWeightChangeChip": "{delta} kg · {days} d",
+  "@trainerWeightChangeChip": {
+    "description": "Chip on the weight trend card: the change in weight over the last N days, e.g. '−1.4 kg · 30 d'. The delta already carries its sign",
+    "placeholders": {"delta": {"type": "String"}, "days": {"type": "int"}}
+  },
+  "trainerWeightLatestLabel": "Latest: {weight} kg · {date}",
+  "@trainerWeightLatestLabel": {
+    "description": "Line under the weight trend card's title: the client's latest weigh-in and when it was",
+    "placeholders": {"weight": {"type": "String"}, "date": {"type": "String"}}
+  },
+  "trainerClientsSearchHint": "Search clients",
+  "@trainerClientsSearchHint": {
+    "description": "Placeholder of the search field above the client list in the tablet layout (canvas Lifey 6, Trainer tablet)"
+  },
+  "trainerUpcomingCardTitle": "Upcoming",
+  "@trainerUpcomingCardTitle": {
+    "description": "Title of the card listing the client's next scheduled sessions on the tablet client overview"
+  },
+  "trainerNavClientsLabel": "Clients",
+  "@trainerNavClientsLabel": {
+    "description": "Label of the Clients destination in the trainer navigation bar and rail (the screen itself is titled My clients)"
   }
 }

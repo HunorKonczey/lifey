@@ -15,27 +15,29 @@ class ReadOnlyBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
 
+    // Neutral on purpose: it is a fact about the screen, not a status, so it
+    // takes no metric colour — the nested surface and the secondary text are
+    // enough to be seen without competing with the data beside it.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      constraints: const BoxConstraints(minHeight: 26),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: AppSpacing.s4),
       decoration: BoxDecoration(
+        color: p.nested,
         borderRadius: AppRadius.pill,
-        border: Border.all(color: scheme.outlineVariant),
+        border: Border.all(color: p.hairline),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.visibility_outlined, size: 13, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 5),
-          Text(
-            l10n.trainerReadOnlyLabel,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurfaceVariant,
+          Icon(Icons.visibility_outlined, size: 14, color: p.text2),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              l10n.trainerReadOnlyLabel,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: p.text2),
             ),
           ),
         ],
