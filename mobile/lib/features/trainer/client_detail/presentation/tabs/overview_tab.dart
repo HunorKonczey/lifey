@@ -12,6 +12,7 @@ import '../../domain/client_data.dart';
 import '../../domain/client_detail_tab.dart';
 import '../../domain/client_workout_session.dart';
 import '../widgets/client_tab_body.dart';
+import '../widgets/kpi_grid.dart';
 import '../widgets/trend_chart_card.dart';
 
 /// "What is going on with this client?", answerable in about three seconds
@@ -187,21 +188,7 @@ class _Content extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.s12),
-        // Two tiles a row, both as tall as the taller — a tile with a subline
-        // beside one without must not leave a ragged edge.
-        for (var row = 0; row < tiles.length; row += 2) ...[
-          if (row > 0) const SizedBox(height: 10),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: tiles[row]),
-                const SizedBox(width: 10),
-                Expanded(child: tiles[row + 1]),
-              ],
-            ),
-          ),
-        ],
+        KpiGrid(tiles: tiles),
         const SizedBox(height: 10),
         TrendChartCard(
           title: l10n.trainerWeightTrendTitle,

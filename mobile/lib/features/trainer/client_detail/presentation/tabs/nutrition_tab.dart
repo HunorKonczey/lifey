@@ -2,22 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/widgets/app_snackbar.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../../shared/widgets/ds/metric_bar.dart';
+import '../../../../../shared/widgets/ds/section_label.dart';
 import '../../../../nutrition/domain/meal.dart' show MealType;
+import '../../../../nutrition/presentation/widgets/meal_type_style.dart';
 import '../../application/client_detail_providers.dart';
 import '../../domain/client_data.dart';
 import '../widgets/client_tab_body.dart';
 import '../widgets/nutrition_goals_sheet.dart';
 import '../widgets/read_only_badge.dart';
-
-const _mealIcons = {
-  MealType.breakfast: Icons.bakery_dining_outlined,
-  MealType.lunch: Icons.lunch_dining_outlined,
-  MealType.dinner: Icons.dinner_dining_outlined,
-  MealType.snack: Icons.icecream_outlined,
-};
 
 /// One day of the client's food log, against their goals.
 ///
@@ -48,8 +46,8 @@ class _ClientNutritionTabState extends ConsumerState<ClientNutritionTab> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final locale = Localizations.localeOf(context).toString();
-    final integer = NumberFormat.decimalPattern(locale);
+    final p = context.palette;
+    final f = LifeyFormat.of(context);
 
     final mealsKey = (clientId: widget.clientId, day: _day);
     final meals = ref.watch(clientMealsProvider(mealsKey));
@@ -74,7 +72,7 @@ class _ClientNutritionTabState extends ConsumerState<ClientNutritionTab> {
         return ListView(
           key: const ValueKey('trainerNutritionList'),
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
           children: [
             _DayNavigator(
               day: _day,
@@ -87,20 +85,14 @@ class _ClientNutritionTabState extends ConsumerState<ClientNutritionTab> {
               goals: dayGoals,
               clientId: widget.clientId,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.s24),
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    l10n.trainerMealLogTitle,
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w800),
-                  ),
-                ),
+                Expanded(child: SectionLabel(l10n.trainerMealLogTitle)),
                 const ReadOnlyBadge(),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.s12),
             for (final type in MealType.values) ...[
               _MealGroup(
                 type: type,
@@ -114,8 +106,7 @@ class _ClientNutritionTabState extends ConsumerState<ClientNutritionTab> {
                 child: Text(
                   l10n.trainerNoMealsLoggedMessage,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
                 ),
               )
             else
@@ -123,11 +114,10 @@ class _ClientNutritionTabState extends ConsumerState<ClientNutritionTab> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   l10n.trainerDayTotalLabel(
-                    l10n.trainerKcalValue(integer.format(totalCalories.round())),
+                    l10n.trainerKcalValue(f.kcal(totalCalories)),
                   ),
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
                 ),
               ),
           ],
@@ -157,11 +147,15 @@ class _DayNavigator extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
+    final p = context.palette;
 
+    // The same pill as the segmented control: a card-coloured track with a
+    // hairline ring.
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
+        color: p.card,
         borderRadius: AppRadius.pill,
+        border: Border.all(color: context.elevation.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -177,8 +171,7 @@ class _DayNavigator extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelLarge
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleSmall,
             ),
           ),
           IconButton(
@@ -234,31 +227,22 @@ class _TotalsCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final metrics = context.metricColors;
-    final integer =
-        NumberFormat.decimalPattern(Localizations.localeOf(context).toString());
+    final p = context.palette;
+    final f = LifeyFormat.of(context);
 
     final calories = meals.fold<double>(0, (sum, m) => sum + m.calories);
     final protein = meals.fold<double>(0, (sum, m) => sum + m.protein);
     final carbs = meals.fold<double>(0, (sum, m) => sum + m.carbs);
     final fat = meals.fold<double>(0, (sum, m) => sum + m.fat);
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: AppRadius.lgAll,
-      ),
+    return LifeyCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Expanded(
-                child: Text(
-                  l10n.trainerDailyGoalsTitle,
-                  style: theme.textTheme.labelLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
-                ),
+                child: Text(l10n.trainerDailyGoalsTitle, style: theme.textTheme.titleSmall),
               ),
               TextButton.icon(
                 onPressed: () => _editGoals(context, l10n),
@@ -275,7 +259,7 @@ class _TotalsCard extends ConsumerWidget {
             value: calories,
             goal: goals.dailyCalorieGoal,
             color: metrics.calories,
-            formatValue: (v) => l10n.trainerKcalValue(integer.format(v.round())),
+            formatValue: (v) => l10n.trainerKcalValue(f.kcal(v)),
           ),
           const SizedBox(height: 10),
           _GoalRow(
@@ -283,7 +267,7 @@ class _TotalsCard extends ConsumerWidget {
             value: protein,
             goal: goals.dailyProteinGoal,
             color: metrics.protein,
-            formatValue: (v) => l10n.trainerGramsValue(integer.format(v.round())),
+            formatValue: (v) => l10n.trainerGramsValue(f.grams(v)),
           ),
           const SizedBox(height: 10),
           _GoalRow(
@@ -291,7 +275,7 @@ class _TotalsCard extends ConsumerWidget {
             value: carbs,
             goal: goals.dailyCarbsGoal,
             color: metrics.carbs,
-            formatValue: (v) => l10n.trainerGramsValue(integer.format(v.round())),
+            formatValue: (v) => l10n.trainerGramsValue(f.grams(v)),
           ),
           const SizedBox(height: 10),
           _GoalRow(
@@ -299,14 +283,13 @@ class _TotalsCard extends ConsumerWidget {
             value: fat,
             goal: goals.dailyFatGoal,
             color: metrics.fat,
-            formatValue: (v) => l10n.trainerGramsValue(integer.format(v.round())),
+            formatValue: (v) => l10n.trainerGramsValue(f.grams(v)),
           ),
           if (goals.isEmpty) ...[
             const SizedBox(height: 12),
             Text(
               l10n.trainerNoNutritionGoalsMessage,
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
             ),
           ],
         ],
@@ -333,6 +316,7 @@ class _GoalRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final p = context.palette;
     final goal = this.goal;
     // No goal means no bar at all — a full-width empty track would read as
     // "zero progress" rather than "nothing to progress towards".
@@ -343,32 +327,27 @@ class _GoalRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Text(
-                label,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
+            Flexible(
+              child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: p.text2)),
             ),
-            Text(
-              goal == null
-                  ? formatValue(value)
-                  : '${formatValue(value)} / ${formatValue(goal)}',
-              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+            const SizedBox(width: AppSpacing.s8),
+            // "2,000 kcal / 2,100 kcal" is the long one: it wraps under
+            // itself at 130 % rather than pushing the label out.
+            Flexible(
+              flex: 2,
+              child: Text(
+                goal == null
+                    ? formatValue(value)
+                    : '${formatValue(value)} / ${formatValue(goal)}',
+                textAlign: TextAlign.end,
+                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),
         if (progress != null) ...[
-          const SizedBox(height: 5),
-          ClipRRect(
-            borderRadius: AppRadius.pill,
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 5,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation(color),
-            ),
-          ),
+          const SizedBox(height: 6),
+          MetricBar(progress: progress, color: color),
         ],
       ],
     );
@@ -389,9 +368,9 @@ class _MealGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final metrics = context.metricColors;
-    final integer =
-        NumberFormat.decimalPattern(Localizations.localeOf(context).toString());
+    final p = context.palette;
+    final f = LifeyFormat.of(context);
+    final (icon, color) = mealTypeStyle(context, type);
     final groupCalories = meals.fold<double>(0, (sum, m) => sum + m.calories);
 
     return Column(
@@ -401,21 +380,14 @@ class _MealGroup extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Row(
             children: [
-              Icon(_mealIcons[type], size: 18, color: metrics.calories),
-              const SizedBox(width: 8),
-              Text(
-                type.label(l10n),
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: AppSpacing.s8),
+              Flexible(child: Text(type.label(l10n), style: theme.textTheme.titleSmall)),
               const Spacer(),
               if (meals.isNotEmpty)
                 Text(
-                  l10n.trainerKcalValue(integer.format(groupCalories.round())),
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: metrics.calories,
-                  ),
+                  l10n.trainerKcalValue(f.kcal(groupCalories)),
+                  style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700, color: p.text2),
                 ),
             ],
           ),
@@ -425,8 +397,7 @@ class _MealGroup extends StatelessWidget {
             padding: const EdgeInsets.only(left: 4),
             child: Text(
               l10n.trainerNothingLoggedLabel,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(color: p.text3),
             ),
           )
         else
@@ -445,57 +416,48 @@ class _MealCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final integer =
-        NumberFormat.decimalPattern(Localizations.localeOf(context).toString());
+    final p = context.palette;
+    final f = LifeyFormat.of(context);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: AppRadius.cardAll,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (meal.name.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                meal.name,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+      child: LifeyCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (meal.name.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(meal.name, style: theme.textTheme.titleSmall),
               ),
-            ),
-          for (final entry in meal.entries)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      entry.foodName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
+            for (final entry in meal.entries)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        entry.foodName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.trainerGramsValue(integer.format(entry.quantityInGrams.round())),
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    l10n.trainerKcalValue(integer.format(entry.calories.round())),
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ],
+                    const SizedBox(width: AppSpacing.s8),
+                    Text(
+                      l10n.trainerGramsValue(f.grams(entry.quantityInGrams)),
+                      style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      l10n.trainerKcalValue(f.kcal(entry.calories)),
+                      style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

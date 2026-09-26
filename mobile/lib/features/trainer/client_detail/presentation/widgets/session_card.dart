@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../../shared/widgets/ds/list_group.dart';
+import '../../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../../../workouts/domain/activity_type.dart' show activityTypeLabel;
 import '../../domain/client_workout_session.dart';
 
@@ -21,102 +24,78 @@ class SessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
+    final mc = context.metricColors;
     final l10n = AppLocalizations.of(context)!;
-    final locale = Localizations.localeOf(context).toString();
+    final f = LifeyFormat.of(context);
 
-    final title = session.isCardio
-        ? activityTypeLabel(l10n, session.activityType ?? 'OTHER_CARDIO')
-        : (session.templateName?.isNotEmpty ?? false)
-            ? session.templateName!
-            : l10n.trainerFreeWorkoutLabel;
-
-    return Material(
-      color: scheme.surfaceContainer,
-      borderRadius: AppRadius.cardAll,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return LifeyCard(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(
-                    session.isCardio ? Icons.directions_run : Icons.fitness_center,
-                    size: 18,
-                    color: scheme.primary,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    DateFormat.MMMd(locale).format(session.startedAt.toLocal()),
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-                ],
+              ListIconHolder(
+                icon: session.isCardio ? Icons.directions_run_rounded : Icons.fitness_center_rounded,
+                color: theme.colorScheme.primary,
               ),
-              const SizedBox(height: 6),
-              Text(
-                summaryLine(l10n, session),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-              if (session.rpe != null ||
-                  (session.feedbackNote ?? '').isNotEmpty ||
-                  session.hasTrainerComment) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (session.rpe != null)
-                      _Chip(
-                        icon: Icons.speed,
-                        label: l10n.trainerRpeShortLabel(session.rpe!),
-                        background: scheme.surfaceContainerHighest,
-                        foreground: scheme.onSurfaceVariant,
-                      ),
-                    if ((session.feedbackNote ?? '').isNotEmpty)
-                      _Chip(
-                        icon: Icons.sticky_note_2_outlined,
-                        label: l10n.trainerClientNoteLabel,
-                        background: scheme.surfaceContainerHighest,
-                        foreground: scheme.onSurfaceVariant,
-                      ),
-                    if (session.hasTrainerComment)
-                      _Chip(
-                        icon: Icons.chat_bubble,
-                        label: l10n.trainerYourCommentLabel,
-                        background: scheme.primaryContainer,
-                        foreground: scheme.onPrimaryContainer,
-                      ),
+                    Text(sessionTitle(l10n, session), maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 2),
+                    Text(
+                      summaryLine(l10n, session),
+                      style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
+                    ),
                   ],
                 ),
-              ],
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Text(
+                f.shortDate(session.startedAt.toLocal()),
+                style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
+              ),
             ],
           ),
-        ),
+          if (session.rpe != null || (session.feedbackNote ?? '').isNotEmpty || session.hasTrainerComment) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Wrap(
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: [
+                if (session.rpe != null)
+                  TintedChip(icon: Icons.speed_rounded, label: l10n.trainerRpeShortLabel(session.rpe!), color: mc.heart),
+                if ((session.feedbackNote ?? '').isNotEmpty)
+                  TintedChip(icon: Icons.sticky_note_2_outlined, label: l10n.trainerClientNoteLabel, color: p.text2),
+                // The trainer's own words: the one chip in the primary colour,
+                // so "already answered" reads at a glance down the list.
+                if (session.hasTrainerComment)
+                  TintedChip(
+                    icon: Icons.chat_bubble_rounded,
+                    label: l10n.trainerYourCommentLabel,
+                    color: theme.colorScheme.primary,
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-/// "5 exercises · 18 sets · 52 min", or the cardio equivalent. Public so the
-/// detail sheet can head itself with the same line the card carried.
+/// What a session is called on a card and in its sheet: the activity for
+/// cardio, the template for strength, "Free workout" when there is none.
+String sessionTitle(AppLocalizations l10n, ClientWorkoutSession session) => session.isCardio
+    ? activityTypeLabel(l10n, session.activityType ?? 'OTHER_CARDIO')
+    : (session.templateName?.isNotEmpty ?? false)
+        ? session.templateName!
+        : l10n.trainerFreeWorkoutLabel;
+
 String summaryLine(AppLocalizations l10n, ClientWorkoutSession session) {
   final parts = <String>[];
   if (session.isCardio) {
@@ -147,42 +126,4 @@ String formatSessionDuration(AppLocalizations l10n, Duration duration) {
   final minutes = duration.inMinutes.remainder(60);
   if (hours == 0) return l10n.trainerDurationMinutesLabel(duration.inMinutes);
   return l10n.trainerDurationHoursMinutesLabel(hours, minutes);
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.icon,
-    required this.label,
-    required this.background,
-    required this.foreground,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: background, borderRadius: AppRadius.pill),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: foreground),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: foreground,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

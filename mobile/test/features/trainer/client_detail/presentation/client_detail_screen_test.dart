@@ -16,6 +16,7 @@ import 'package:lifey/features/trainer/client_detail/presentation/client_detail_
 import 'package:lifey/features/trainer/clients/application/trainer_clients_controller.dart';
 import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
 import 'package:lifey/core/theme/app_theme.dart';
+import 'package:lifey/shared/widgets/ds/lifey_segmented.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -414,7 +415,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Last 30 days'), findsOneWidget);
-      expect(find.text('History'), findsOneWidget);
+      expect(find.text('HISTORY'), findsOneWidget);
       expect(find.text('8,214'), findsOneWidget);
       expect(find.text('10,500'), findsOneWidget);
     });
@@ -463,6 +464,75 @@ void main() {
       await _scrollNutritionTo(tester, find.text('Nothing logged on this day.'));
       expect(find.text('Nothing logged on this day.'), findsOneWidget);
     });
+  });
+
+  group('every tab, in both themes and languages (R6.6)', () {
+    testWidgets('weight history shows the change since the reading before it', (tester) async {
+      await _pump(
+        tester,
+        repository: _FakeDetailRepository(weights: [_weight(20, 72.0), _weight(10, 71.5), _weight(0, 71.9)]),
+      );
+
+      await tester.tap(find.text('Weight'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('READ-ONLY'), findsNothing); // not caps: it is a badge, not a label
+      expect(find.text('Read-only'), findsOneWidget);
+      expect(find.text('HISTORY'), findsOneWidget);
+      expect(find.text('+0.4'), findsOneWidget); // 71.5 -> 71.9
+      expect(find.text('−0.5'), findsOneWidget); // 72.0 -> 71.5
+    });
+
+    testWidgets('statistics switches its window with the segmented control', (tester) async {
+      await _pump(tester, repository: _FakeDetailRepository(statistics: const ClientStatistics(totalCalories: 900)));
+
+      await tester.tap(find.text('Statistics'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LifeySegmented<ClientStatisticsPeriod>), findsOneWidget);
+      await tester.tap(find.text('30 days'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('the data tabs fit 360 dp at x 1.3 in $name, $mode', (tester) async {
+          await _pump(
+            tester,
+            locale: locale,
+            textScale: 1.3,
+            size: const Size(360, 900),
+            theme: theme,
+            repository: _FakeDetailRepository(
+              statistics: const ClientStatistics(totalCalories: 17000, workoutCount: 5, latestWeight: 70.6),
+              goals: const ClientNutritionGoals(dailyCalorieGoal: 2100, dailyProteinGoal: 140),
+              steps: [_step(2, 12000), _step(1, 8000), _step(0, 10500)],
+              weights: [_weight(20, 72.0), _weight(10, 71.5), _weight(0, 70.6)],
+              meals: [_meal(MealType.breakfast, 'Oats with blueberries and milk', 390)],
+              sessions: [
+                ClientWorkoutSession(
+                  id: 1,
+                  startedAt: DateTime.now().subtract(const Duration(days: 1)),
+                  templateName: 'Upper body strength',
+                  rpe: 8,
+                  feedbackNote: 'Heavy',
+                  trainerComment: 'Nice work',
+                ),
+              ],
+            ),
+          );
+
+          final controller = tester.widget<TabBar>(find.byType(TabBar)).controller!;
+          for (var i = 0; i < ClientDetailTab.values.length; i++) {
+            // The schedule tab has its own test file and fakes.
+            if (ClientDetailTab.values[i] == ClientDetailTab.schedule) continue;
+            controller.animateTo(i, duration: Duration.zero);
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull, reason: 'tab $i');
+          }
+        });
+      }
+    }
   });
 
   group('failure states', () {

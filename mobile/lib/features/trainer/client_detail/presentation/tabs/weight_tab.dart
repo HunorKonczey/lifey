@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/delta_chip.dart';
 import '../../../../../shared/widgets/empty_view.dart';
 import '../../application/client_detail_providers.dart';
 import '../widgets/client_tab_body.dart';
@@ -29,8 +30,7 @@ class ClientWeightTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final metrics = context.metricColors;
-    final locale = Localizations.localeOf(context).toString();
-    final dateFormat = DateFormat.yMMMd(locale);
+    final f = LifeyFormat.of(context);
 
     final key = (clientId: clientId, days: _windowDays);
     final weights = ref.watch(clientWeightsProvider(key));
@@ -54,7 +54,7 @@ class ClientWeightTab extends ConsumerWidget {
 
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
           children: [
             const Align(alignment: Alignment.centerRight, child: ReadOnlyBadge()),
             const SizedBox(height: 10),
@@ -65,17 +65,20 @@ class ClientWeightTab extends ConsumerWidget {
               ],
               accentColor: metrics.weight,
               emptyMessage: l10n.trainerNoWeightEntriesMessage,
-              valueLabelBuilder: (value) =>
-                  l10n.trainerKgValue(value.toStringAsFixed(1)),
+              valueLabelBuilder: (value) => l10n.trainerKgValue(f.weight(value)),
             ),
             const SizedBox(height: 12),
             HistoryCard(
               title: l10n.trainerHistoryTitle,
               rows: [
-                for (final entry in entries.reversed)
-                  (
-                    label: dateFormat.format(entry.date.toLocal()),
-                    value: l10n.trainerKgValue(entry.weight.toStringAsFixed(1)),
+                // Newest first, each with its change since the reading before
+                // it (the oldest has nothing to be compared with).
+                for (var i = entries.length - 1; i >= 0; i--)
+                  HistoryRow(
+                    label: f.fullDate(entries[i].date.toLocal()),
+                    value: f.weight(entries[i].weight),
+                    unit: l10n.statUnitKg,
+                    trailing: i == 0 ? null : DeltaChip.signed(value: entries[i].weight - entries[i - 1].weight),
                   ),
               ],
             ),

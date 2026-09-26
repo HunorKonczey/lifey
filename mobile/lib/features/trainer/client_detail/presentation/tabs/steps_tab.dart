@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/widgets/empty_view.dart';
@@ -26,9 +26,7 @@ class ClientStepsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final metrics = context.metricColors;
-    final locale = Localizations.localeOf(context).toString();
-    final integer = NumberFormat.decimalPattern(locale);
-    final dateFormat = DateFormat.yMMMd(locale);
+    final f = LifeyFormat.of(context);
 
     final key = (clientId: clientId, days: _windowDays);
     final steps = ref.watch(clientStepsProvider(key));
@@ -52,7 +50,7 @@ class ClientStepsTab extends ConsumerWidget {
 
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
           children: [
             const Align(alignment: Alignment.centerRight, child: ReadOnlyBadge()),
             const SizedBox(height: 10),
@@ -63,16 +61,16 @@ class ClientStepsTab extends ConsumerWidget {
               ],
               accentColor: metrics.steps,
               emptyMessage: l10n.trainerNoStepsTitle,
-              valueLabelBuilder: (value) => integer.format(value.round()),
+              valueLabelBuilder: f.integer,
             ),
             const SizedBox(height: 12),
             HistoryCard(
               title: l10n.trainerHistoryTitle,
               rows: [
                 for (final day in days.reversed)
-                  (
-                    label: dateFormat.format(day.date.toLocal()),
-                    value: integer.format(day.steps),
+                  HistoryRow(
+                    label: f.fullDate(day.date.toLocal()),
+                    value: f.integer(day.steps),
                   ),
               ],
             ),

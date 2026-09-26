@@ -7,6 +7,9 @@ import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/widgets/app_snackbar.dart';
 import '../../../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../../shared/widgets/ds/list_group.dart';
+import '../../../../../shared/widgets/ds/section_label.dart';
 import '../../../../../shared/widgets/empty_view.dart';
 import '../../../programs/application/programs_controller.dart';
 import '../../../programs/domain/program.dart';
@@ -72,7 +75,7 @@ class ClientScheduleTab extends ConsumerWidget {
 
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
           children: [
             // Program runs first: they are the bigger commitment, and
             // the loose schedules below them are usually the extras
@@ -94,12 +97,17 @@ class ClientScheduleTab extends ConsumerWidget {
             ],
             if (occurrences.isNotEmpty) ...[
               _SectionHeader(title: l10n.trainerUpcomingSectionTitle),
-              for (final occurrence in occurrences)
-                _OccurrenceRow(
-                  occurrence: occurrence,
-                  schedule: _seriesOf(series, occurrence),
-                  onChanged: refresh,
-                ),
+              ListGroup(
+                dividerInset: AppSpacing.s16,
+                children: [
+                  for (final occurrence in occurrences)
+                    _OccurrenceRow(
+                      occurrence: occurrence,
+                      schedule: _seriesOf(series, occurrence),
+                      onChanged: refresh,
+                    ),
+                ],
+              ),
             ],
           ],
         );
@@ -125,16 +133,9 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title,
-        style: theme.textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+      child: SectionLabel(title),
     );
   }
 }
@@ -176,75 +177,73 @@ class _ScheduleCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: AppRadius.cardAll,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        schedule.templateName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: LifeyCard(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s12, AppSpacing.s4, AppSpacing.s12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListIconHolder(icon: Icons.event_repeat_rounded, color: scheme.primary),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          schedule.templateName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall,
+                        ),
                       ),
-                    ),
-                    if (schedule.isCancelled) ...[
-                      const SizedBox(width: 8),
-                      const OccurrenceStatusChip(status: OccurrenceStatus.cancelled),
+                      if (schedule.isCancelled) ...[
+                        const SizedBox(width: 8),
+                        const OccurrenceStatusChip(status: OccurrenceStatus.cancelled),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  recurrenceSummary(
-                    l10n,
-                    locale,
-                    recurrence: schedule.recurrence,
-                    daysOfWeek: schedule.daysOfWeek,
-                    startDate: schedule.startDate,
-                    endDate: schedule.endDate,
-                    timeOfDay: schedule.timeOfDay,
                   ),
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.trainerScheduleCountsLabel(
-                    schedule.doneCount,
-                    schedule.missedCount,
-                    schedule.remainingCount,
+                  const SizedBox(height: 3),
+                  Text(
+                    recurrenceSummary(
+                      l10n,
+                      locale,
+                      recurrence: schedule.recurrence,
+                      daysOfWeek: schedule.daysOfWeek,
+                      startDate: schedule.startDate,
+                      endDate: schedule.endDate,
+                      timeOfDay: schedule.timeOfDay,
+                    ),
+                    style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
                   ),
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.trainerScheduleCountsLabel(
+                      schedule.doneCount,
+                      schedule.missedCount,
+                      schedule.remainingCount,
+                    ),
+                    style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (!schedule.isCancelled)
-            IconButton(
-              icon: const Icon(Icons.event_busy),
-              color: scheme.error,
-              tooltip: l10n.trainerCancelScheduleTooltip,
-              onPressed: () => _cancel(context, ref, l10n),
-            ),
-        ],
+            if (!schedule.isCancelled)
+              IconButton(
+                icon: const Icon(Icons.event_busy),
+                color: scheme.error,
+                tooltip: l10n.trainerCancelScheduleTooltip,
+                onPressed: () => _cancel(context, ref, l10n),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -291,81 +290,75 @@ class _ProgramRunCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
     final dateFormat = DateFormat.MMMd(locale);
     final weeks = weeksBetween(run.startDate, run.endDate);
     final currentWeek = currentProgramWeek(run.startDate, weeks);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: AppRadius.cardAll,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2, right: 10),
-            child: Icon(Icons.calendar_view_week, size: 18, color: scheme.primary),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        run.programName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: LifeyCard(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s12, AppSpacing.s4, AppSpacing.s12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListIconHolder(icon: Icons.calendar_view_week_rounded, color: scheme.primary),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          run.programName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall,
+                        ),
                       ),
-                    ),
-                    if (run.isCancelled) ...[
-                      const SizedBox(width: 8),
-                      const OccurrenceStatusChip(status: OccurrenceStatus.cancelled),
+                      if (run.isCancelled) ...[
+                        const SizedBox(width: 8),
+                        const OccurrenceStatusChip(status: OccurrenceStatus.cancelled),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  [
-                    if (!run.isCancelled)
-                      l10n.trainerProgramWeekOfLabel(currentWeek, weeks),
-                    l10n.trainerDateRangeLabel(
-                      dateFormat.format(run.startDate),
-                      dateFormat.format(run.endDate),
-                    ),
-                  ].join(' · '),
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.trainerScheduleCountsLabel(
-                    run.doneCount,
-                    run.missedCount,
-                    run.remainingCount,
                   ),
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ],
+                  const SizedBox(height: 3),
+                  Text(
+                    [
+                      if (!run.isCancelled)
+                        l10n.trainerProgramWeekOfLabel(currentWeek, weeks),
+                      l10n.trainerDateRangeLabel(
+                        dateFormat.format(run.startDate),
+                        dateFormat.format(run.endDate),
+                      ),
+                    ].join(' · '),
+                    style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.trainerScheduleCountsLabel(
+                      run.doneCount,
+                      run.missedCount,
+                      run.remainingCount,
+                    ),
+                    style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (!run.isCancelled)
-            IconButton(
-              icon: const Icon(Icons.event_busy),
-              color: scheme.error,
-              tooltip: l10n.trainerCancelProgramRunTooltip,
-              onPressed: () => _cancel(context, ref, l10n),
-            ),
-        ],
+            if (!run.isCancelled)
+              IconButton(
+                icon: const Icon(Icons.event_busy),
+                color: scheme.error,
+                tooltip: l10n.trainerCancelProgramRunTooltip,
+                onPressed: () => _cancel(context, ref, l10n),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -384,59 +377,25 @@ class _OccurrenceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
 
-    return Material(
-      color: scheme.surfaceContainerLow,
-      borderRadius: AppRadius.cardAll,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () async {
-          final cancelled = await SessionPeekSheet.show(
-            context,
-            session: occurrence,
-            client: null,
-            scheduleRule: schedule,
-          );
-          if (cancelled ?? false) await onChanged();
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      [
-                        DateFormat.MMMEd(locale)
-                            .format(occurrence.scheduledFor.toLocal()),
-                        if (occurrence.scheduledTime != null)
-                          formatScheduleTime(occurrence.scheduledTime!),
-                      ].join(' · '),
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      occurrence.templateName ?? l10n.trainerFreeWorkoutLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              OccurrenceStatusChip(status: occurrence.status),
-            ],
-          ),
-        ),
-      ),
+    return ListRow(
+      title: [
+        DateFormat.MMMEd(locale).format(occurrence.scheduledFor.toLocal()),
+        if (occurrence.scheduledTime != null) formatScheduleTime(occurrence.scheduledTime!),
+      ].join(' · '),
+      subtitle: occurrence.templateName ?? l10n.trainerFreeWorkoutLabel,
+      trailing: OccurrenceStatusChip(status: occurrence.status),
+      onTap: () async {
+        final cancelled = await SessionPeekSheet.show(
+          context,
+          session: occurrence,
+          client: null,
+          scheduleRule: schedule,
+        );
+        if (cancelled ?? false) await onChanged();
+      },
     );
   }
 }
