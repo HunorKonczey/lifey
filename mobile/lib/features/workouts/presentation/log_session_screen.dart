@@ -1884,13 +1884,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     final note = _feedbackNote;
     return InkWell(
       onTap: _editFeedback,
-      borderRadius: BorderRadius.circular(AppRadius.input),
+      borderRadius: BorderRadius.circular(AppRadius.control),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppRadius.input),
+          borderRadius: BorderRadius.circular(AppRadius.control),
         ),
         child: Row(
           children: [
@@ -1973,7 +1973,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderRadius: BorderRadius.circular(AppRadius.control),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2310,13 +2310,13 @@ class _AddExerciseButton extends StatelessWidget {
       child: CustomPaint(
         painter: _DashedBorderPainter(
           color: scheme.outline,
-          radius: AppRadius.input,
+          radius: AppRadius.control,
           strokeWidth: 1.5,
         ),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.input),
+            borderRadius: BorderRadius.circular(AppRadius.control),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2455,7 +2455,7 @@ class _HealthStatCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderRadius: BorderRadius.circular(AppRadius.control),
       ),
       child: Row(
         children: [

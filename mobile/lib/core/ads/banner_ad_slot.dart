@@ -193,7 +193,7 @@ class BannerAdChrome extends StatelessWidget {
               style: IconButton.styleFrom(
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  borderRadius: BorderRadius.circular(AppRadius.tag),
                 ),
               ),
               onPressed: () => openPaywall(context, PaywallTrigger.adRemoval),

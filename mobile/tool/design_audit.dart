@@ -64,7 +64,12 @@ void main(List<String> args) {
       if (trimmed.startsWith('//')) continue;
       final ok = line.contains(_allowMarker);
       for (final e in patterns.entries) {
-        final hits = e.value.allMatches(line).length;
+        var hits = 0;
+        for (final match in e.value.allMatches(line)) {
+          // `BorderRadius.circular(AppRadius.card)` is the token in use, not debt.
+          if (e.key == 'BorderRadius.circular' && !_hasNumericArgument(line, match.end)) continue;
+          hits++;
+        }
         if (hits == 0) continue;
         if (ok) {
           allowed += hits;
@@ -109,3 +114,19 @@ void main(List<String> args) {
 }
 
 int _sum(Map<String, int> counts) => counts.values.fold<int>(0, (a, b) => a + b);
+
+/// True when the argument that starts at [from] (just after `circular(`)
+/// contains a number once identifiers — `AppRadius.card`, `AppSpacing.s16`,
+/// `height` — are taken out: `18`, `size / 6`, `nested ? 14 : 18`.
+bool _hasNumericArgument(String line, int from) {
+  var depth = 1;
+  var i = from;
+  for (; i < line.length && depth > 0; i++) {
+    final c = line[i];
+    if (c == '(') depth++;
+    if (c == ')') depth--;
+  }
+  final argument = line.substring(from, depth == 0 ? i - 1 : line.length);
+  final withoutIdentifiers = argument.replaceAll(RegExp(r'[A-Za-z_][A-Za-z0-9_.]*'), '');
+  return RegExp(r'\d').hasMatch(withoutIdentifiers);
+}

@@ -268,7 +268,7 @@ class _PlayingBody extends ConsumerWidget {
         Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: BorderRadius.circular(AppRadius.control),
               child: artwork != null
                   ? Image.memory(artwork, width: 64, height: 64, fit: BoxFit.cover)
                   : Container(
@@ -345,7 +345,7 @@ class _TransportButton extends StatelessWidget {
         height: 48,
         decoration: BoxDecoration(
           color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(AppRadius.control),
         ),
         child: Icon(icon, size: 26, color: scheme.onSurface),
       ),
@@ -415,7 +415,7 @@ class _PermissionSheet extends ConsumerWidget {
               height: 64,
               decoration: BoxDecoration(
                 color: scheme.primary.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderRadius: BorderRadius.circular(AppRadius.control),
               ),
               child: Icon(Icons.graphic_eq_rounded, size: 32, color: scheme.primary),
             ),
@@ -482,7 +482,7 @@ class _ConnectPromptSheet extends ConsumerWidget {
               height: 64,
               decoration: BoxDecoration(
                 color: scheme.primary.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderRadius: BorderRadius.circular(AppRadius.control),
               ),
               child: Icon(Icons.link_rounded, size: 32, color: scheme.primary),
             ),
@@ -570,7 +570,7 @@ class _FilledCta extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.control)),
         ),
         icon: Icon(icon, size: 20),
         label: Text(
@@ -600,7 +600,7 @@ class _TonalCta extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: scheme.surfaceContainerHigh,
           foregroundColor: scheme.onSurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.control)),
         ),
         icon: Icon(icon, size: 20),
         label: Text(

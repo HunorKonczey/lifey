@@ -116,7 +116,7 @@ class AdaptiveAppBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(
-          collapsed ? AppRadius.input : AppRadius.lg,
+          collapsed ? AppRadius.control : AppRadius.card,
         ),
         boxShadow: [
           BoxShadow(

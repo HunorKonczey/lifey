@@ -150,7 +150,7 @@ class _ProviderRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       decoration: BoxDecoration(
         color: selected ? scheme.primary.withValues(alpha: 0.14) : scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.input),
+        borderRadius: BorderRadius.circular(AppRadius.control),
         border: selected
             ? Border.all(color: scheme.primary.withValues(alpha: 0.45), width: 1.5)
             : Border.all(color: Colors.transparent, width: 1.5),

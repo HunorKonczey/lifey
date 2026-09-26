@@ -149,7 +149,7 @@ class _ColdStartBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.primary.withValues(alpha: 0.12),
         border: Border.all(color: scheme.primary.withValues(alpha: 0.34)),
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.control),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,7 +176,7 @@ class _AllActivityTypesRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(AppRadius.input),
+      borderRadius: BorderRadius.circular(AppRadius.control),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {

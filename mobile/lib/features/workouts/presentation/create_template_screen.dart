@@ -593,7 +593,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                 filled: true,
                 fillColor: scheme.surfaceContainerHigh,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
