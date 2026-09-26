@@ -1,6 +1,6 @@
 # 77 – Mobile Redesign (Design System v2)
 
-Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 done (R4.1–R4.7 + review fixes R4.fix-1…3, reviewed 2026-09-25); R5 done (R5.1–R5.8 + review fixes R5.fix-1…3, reviewed 2026-09-25); R6 done (R6.1–R6.8 + review fixes R6.fix-1…4, reviewed 2026-09-26)
+Status: in progress — R0 done (R0.1–R0.14 + review fixes R0.fix-1…7, reviewed 2026-09-25); R1 done (R1.1–R1.8 + review fixes R1.fix-1…3, reviewed 2026-09-25); R2 done (R2.1–R2.9 + review fix R2.fix-1, reviewed 2026-09-25); R3 done (R3.1–R3.11 + review fixes R3.fix-1…5, reviewed 2026-09-25); R4 done (R4.1–R4.7 + review fixes R4.fix-1…3, reviewed 2026-09-25); R5 done (R5.1–R5.8 + review fixes R5.fix-1…3, reviewed 2026-09-25); R6 done (R6.1–R6.8 + review fixes R6.fix-1…4, reviewed 2026-09-26); R7 in progress (R7.1 done)
 Scope: mobile (all screens) · design system · one optional backend step (R6.2) · docs
 Depends on: the Claude Design output in this folder (`Lifey Design System.dc.html` + six screen
 canvases), commissioned by [docs/design/21-design-modernization-prompt.md](../design/21-design-modernization-prompt.md).
@@ -1891,12 +1891,14 @@ mark; no second green.
 
 **Goal:** nothing left on the old system; the old system deleted.
 
-### R7.1 — Tooling: style-debt audit script
+### R7.1 — Tooling: style-debt audit script ✅
 - `mobile/tool/design_audit.dart` (or `.sh`): counts per file `fontSize:`, `Color(0x`,
   `BorderRadius.circular(`, `AppBar(`, `AdaptiveAppBar(`, deprecated `AppRadius` aliases outside
   `core/theme/` and `shared/widgets/ds/`. Run it at the end of every iteration and paste the
   totals in the PR (the §2 baseline: 396 / 70 / 348 / 14 / 16).
 - **Verify:** script output matches a manual grep.
+
+*As built:* `mobile/tool/design_audit.dart` (pure Dart; `dart run tool/design_audit.dart` from `mobile/`). It counts, per file under `lib/`, `fontSize:` literals, `Color(0x…)`, `BorderRadius.circular(`, plain `AppBar(` (SliverAppBar and the like are not matched), `AdaptiveAppBar(` and the legacy `AppRadius` aliases (`sm` / `md` / `input` / `lg` / `nav` and their `…All`), skipping `core/theme/`, `shared/widgets/ds/`, generated files and comment-only lines. Output: the totals, then the 25 worst files (`--files` for all; `--strict` exits 1 while anything is left, so CI can gate on it once the count is zero). A literal that is meant to stay carries `// design-audit: ok` on its line and is reported as "allowed" instead. **Baseline at the start of R7** (the §2 numbers were 396 / 70 / 348 / 14 / 16): `fontSize` 322, `Color(0x` 7, `BorderRadius.circular` 142, `AppBar` 0, `AdaptiveAppBar` 1 (its own file), legacy `AppRadius` 28 — **500 in 79 files**; the worst are the cardio summary / session and interval-plan editor screens (R3 left their inner painting), `music_player_sheet`, `log_session_screen` and `exercise_detail_screen`. Verified against a manual `grep -rEo` per pattern (322 / 7 / 142 / 1 / 28 — identical).
 
 ### R7.2 — Mobile UI: remaining undesigned screens
 - Whatever the audit still lists (expected: `placeholder_screen`, `offline_banner`,
