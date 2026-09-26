@@ -80,6 +80,7 @@ void main() {
         final cancel = tester.getTopLeft(find.byType(OutlinedButton));
         expect(cancel.dy, greaterThan(confirm.dy));
         expect(cancel.dx, confirm.dx);
+        expect(tester.getSize(find.byType(OutlinedButton)).width, tester.getSize(find.byType(FilledButton)).width);
       });
     }
   }

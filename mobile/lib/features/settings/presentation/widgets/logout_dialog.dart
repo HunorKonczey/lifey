@@ -94,11 +94,13 @@ class LogoutDialog extends StatelessWidget {
               style: theme.dialogTheme.contentTextStyle?.copyWith(color: plan.willLose ? heart : null),
             ),
             const SizedBox(height: 20),
-            if (stack) ...[
-              confirm,
-              const SizedBox(height: 10),
-              cancel,
-            ] else
+            if (stack)
+              // Stacked, each button takes the dialog's full width.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [confirm, const SizedBox(height: 10), cancel],
+              )
+            else
               Row(
                 children: [
                   Expanded(child: cancel),

@@ -139,11 +139,13 @@ class _AppDialog extends StatelessWidget {
             const SizedBox(height: 14),
             Text(message, style: theme.dialogTheme.contentTextStyle),
             const SizedBox(height: 20),
-            if (stack) ...[
-              confirm,
-              const SizedBox(height: 10),
-              cancel,
-            ] else
+            if (stack)
+              // Stacked, each button takes the dialog's full width.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [confirm, const SizedBox(height: 10), cancel],
+              )
+            else
               Row(
                 children: [
                   Expanded(child: cancel),
