@@ -58,7 +58,7 @@ class ClientListRow extends StatelessWidget {
                     children: [
                       Text(
                         client.displayName,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: t.titleSmall!.copyWith(color: p.text),
                       ),
@@ -74,8 +74,7 @@ class ClientListRow extends StatelessWidget {
                           Flexible(
                             child: Text(
                               status.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
                               style: t.bodySmall!.copyWith(fontWeight: FontWeight.w600, color: status.color),
                             ),
                           ),

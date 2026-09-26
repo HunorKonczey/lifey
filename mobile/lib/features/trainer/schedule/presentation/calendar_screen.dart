@@ -193,7 +193,7 @@ class _TrainerCalendarScreenState extends ConsumerState<TrainerCalendarScreen> {
       if (filterChip != null) filterChip,
       SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s8),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s8),
           child: WeekStrip(
             weekStart: weekStart,
             selectedDay: _selectedDay,

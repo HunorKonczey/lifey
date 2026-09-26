@@ -31,8 +31,11 @@ class TrainerNavRail extends StatelessWidget {
     final p = context.palette;
     final scheme = Theme.of(context).colorScheme;
 
+    // A cutout or system bar on the left edge (a phone or tablet held in
+    // landscape) sits *inside* the rail: the rail grows by that inset instead of
+    // losing it from its 96 dp — otherwise the labels wrap letter by letter.
     return Container(
-      width: width,
+      width: width + MediaQuery.paddingOf(context).left,
       decoration: BoxDecoration(border: Border(right: BorderSide(color: p.hairline))),
       child: SafeArea(
         right: false,

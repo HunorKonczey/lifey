@@ -29,6 +29,7 @@ class TrendChartCard extends StatelessWidget {
     this.trailing,
     this.chartHeight = 220,
     this.onTap,
+    this.axisLabelBuilder,
   });
 
   final String title;
@@ -52,6 +53,9 @@ class TrendChartCard extends StatelessWidget {
   /// Makes the whole card a door to the tab that explains it.
   final VoidCallback? onTap;
 
+  /// The value axis labels ("66.0" / "64.3" — the canvas's min and max).
+  final String Function(double value)? axisLabelBuilder;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -72,6 +76,7 @@ class TrendChartCard extends StatelessWidget {
         ],
         dateLabelBuilder: (date) => dateFormat.format(date.toLocal()),
         valueLabelBuilder: valueLabelBuilder,
+        axisLabelBuilder: axisLabelBuilder,
         accentColor: accentColor,
         goalValue: goalValue,
         height: chartHeight,

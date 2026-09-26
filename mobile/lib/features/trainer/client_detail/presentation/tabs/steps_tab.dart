@@ -62,6 +62,7 @@ class ClientStepsTab extends ConsumerWidget {
               accentColor: metrics.steps,
               emptyMessage: l10n.trainerNoStepsTitle,
               valueLabelBuilder: f.integer,
+              axisLabelBuilder: f.compactAxis,
             ),
             const SizedBox(height: 12),
             HistoryCard(

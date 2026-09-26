@@ -6709,5 +6709,9 @@
   "trainerUpcomingCardTitle": "Upcoming",
   "@trainerUpcomingCardTitle": {
     "description": "Title of the card listing the client's next scheduled sessions on the tablet client overview"
+  },
+  "trainerNavClientsLabel": "Clients",
+  "@trainerNavClientsLabel": {
+    "description": "Label of the Clients destination in the trainer navigation bar and rail (the screen itself is titled My clients)"
   }
 }

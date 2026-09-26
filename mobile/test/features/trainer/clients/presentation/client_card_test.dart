@@ -136,6 +136,24 @@ void main() {
       expect(find.text('No activity yet'), findsOneWidget);
     });
 
+    testWidgets('a long Hungarian status wraps beside the sparkline instead of ending in an ellipsis', (tester) async {
+      await _pump(
+        tester,
+        _client(lastActivityAt: _now.subtract(const Duration(days: 3)), weights: [64.0, 64.3, 65.0]),
+        locale: const Locale('hu'),
+        textScale: 1.3,
+        size: const Size(360, 900),
+      );
+
+      final status = find.textContaining('napja');
+      expect(status, findsOneWidget);
+      // (The test host's font is wider than the real one, so the rule is asserted, not a line count.)
+      final text = tester.widget<Text>(status);
+      expect(text.maxLines, 2);
+      expect(text.overflow, isNot(TextOverflow.ellipsis));
+      expect(tester.takeException(), isNull);
+    });
+
     for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
       for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
         testWidgets('fits 360 dp at × 1.3 in $name, $mode, with everything on it', (tester) async {

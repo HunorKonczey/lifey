@@ -116,6 +116,7 @@ class _ClientStatisticsTabState extends ConsumerState<ClientStatisticsTab> {
               accentColor: metrics.weight,
               emptyMessage: l10n.trainerNoWeightEntriesMessage,
               valueLabelBuilder: (value) => l10n.trainerKgValue(f.weight(value)),
+              axisLabelBuilder: f.weight,
             ),
           ],
         );

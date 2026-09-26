@@ -92,8 +92,9 @@ class ClientCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             status.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            // Two lines at most and never an ellipsis: Hungarian "Utoljára 3
+                            // napja volt aktív" is longer than the room beside the sparkline.
+                            maxLines: 2,
                             style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: status.color),
                           ),
                         ),

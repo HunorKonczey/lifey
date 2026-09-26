@@ -570,15 +570,21 @@ class _LifeySubpageHeaderState extends State<LifeySubpageHeader> {
                               ),
                             ),
                           ),
+                          // Shrinks to fit like the title — "Kliensed 2026. márc.
+                          // 10. óta" at 130 % must not end in "…".
                           if (hasSubtitle)
-                            Text(
-                              widget.subtitle!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: t.bodySmall!.copyWith(
-                                fontWeight: FontWeight.w600,
-                                height: 1.3,
-                                color: widget.subtitleColor ?? p.text2,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                widget.subtitle!,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: t.bodySmall!.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.3,
+                                  color: widget.subtitleColor ?? p.text2,
+                                ),
                               ),
                             ),
                         ],

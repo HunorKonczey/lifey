@@ -1475,5 +1475,6 @@
   "trainerWeightChangeChip": "{delta} kg · {days} nap",
   "trainerWeightLatestLabel": "Legutóbbi: {weight} kg · {date}",
   "trainerClientsSearchHint": "Ügyfél keresése",
-  "trainerUpcomingCardTitle": "Következő alkalmak"
+  "trainerUpcomingCardTitle": "Következő alkalmak",
+  "trainerNavClientsLabel": "Kliensek"
 }

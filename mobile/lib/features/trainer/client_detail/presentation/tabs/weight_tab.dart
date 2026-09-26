@@ -66,6 +66,7 @@ class ClientWeightTab extends ConsumerWidget {
               accentColor: metrics.weight,
               emptyMessage: l10n.trainerNoWeightEntriesMessage,
               valueLabelBuilder: (value) => l10n.trainerKgValue(f.weight(value)),
+              axisLabelBuilder: f.weight,
             ),
             const SizedBox(height: 12),
             HistoryCard(

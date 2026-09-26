@@ -59,7 +59,7 @@ class MonthOverview extends StatelessWidget {
     final weekdayFormat = DateFormat.E(locale);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s24),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
       child: LifeyCard(
         padding: const EdgeInsets.all(AppSpacing.s12),
         child: Column(

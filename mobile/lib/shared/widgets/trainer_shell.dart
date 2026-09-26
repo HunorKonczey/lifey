@@ -102,7 +102,7 @@ class _TrainerShellState extends ConsumerState<TrainerShell> {
       AdaptiveNavDestination(
         icon: Icons.group_outlined,
         selectedIcon: Icons.group,
-        label: l10n.trainerClientsTitle,
+        label: l10n.trainerNavClientsLabel,
       ),
       AdaptiveNavDestination(
         icon: Icons.calendar_month_outlined,
@@ -115,8 +115,8 @@ class _TrainerShellState extends ConsumerState<TrainerShell> {
         label: l10n.trainerAssignmentsTitle,
       ),
       AdaptiveNavDestination(
-        icon: Icons.calendar_view_week_outlined,
-        selectedIcon: Icons.calendar_view_week,
+        icon: Icons.view_list_outlined,
+        selectedIcon: Icons.view_list,
         label: l10n.trainerProgramsTitle,
       ),
     ];

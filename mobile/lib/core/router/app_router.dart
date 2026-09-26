@@ -259,11 +259,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: trainerShellLocation,
                 builder: (context, state) => const TrainerClientsScreen(),
                 routes: [
-                  // A child of the branch, so pushing it keeps the trainer
-                  // shell around it — and so a deep link from a chat thread
+                  // A child of the branch, so a deep link from a chat thread
                   // or a notification lands somewhere with a way back
-                  // (docs/chat/41 T2).
+                  // (docs/chat/41 T2) — but pushed on the *root* navigator, so
+                  // the floating bar does not sit over the client's tabs: the
+                  // canvas's client overview (Lifey 6) has none, and the last
+                  // rows of a list would hide under it (R6.fix-2).
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: ':clientId',
                     builder: (context, state) => ClientDetailScreen(
                       clientId: int.parse(state.pathParameters['clientId']!),

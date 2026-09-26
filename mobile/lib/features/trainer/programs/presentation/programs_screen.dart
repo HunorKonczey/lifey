@@ -89,11 +89,16 @@ class ProgramsScreen extends ConsumerWidget {
                     ),
                   ]
                 : [
-                    SliverList.builder(
-                      itemCount: list.length,
-                      itemBuilder: (context, i) => Padding(
-                        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s12),
-                        child: _ProgramCard(program: list[i], twoPane: twoPane),
+                    SliverPadding(
+                      // Air between the header and the first card, as under
+                      // the clients' sort pills.
+                      padding: const EdgeInsets.only(top: AppSpacing.s8),
+                      sliver: SliverList.builder(
+                        itemCount: list.length,
+                        itemBuilder: (context, i) => Padding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s12),
+                          child: _ProgramCard(program: list[i], twoPane: twoPane),
+                        ),
                       ),
                     ),
                     const SliverToBoxAdapter(

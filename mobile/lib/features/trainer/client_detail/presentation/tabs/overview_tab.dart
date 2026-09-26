@@ -203,6 +203,7 @@ class _Content extends StatelessWidget {
       accentColor: mc.weight,
       emptyMessage: l10n.trainerNoWeightEntriesMessage,
       valueLabelBuilder: (value) => l10n.trainerKgValue(f.weight(value)),
+      axisLabelBuilder: f.weight,
       chartHeight: wide ? 180 : 140,
       onTap: () => onOpenTab(ClientDetailTab.weight),
     );

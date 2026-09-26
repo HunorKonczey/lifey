@@ -55,6 +55,29 @@ void main() {
     }
   });
 
+  testWidgets('a cutout on the left edge widens the rail instead of squeezing its labels', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(left: 60);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: Scaffold(
+          body: Row(children: [
+            TrainerNavRail(selectedIndex: 0, onDestinationSelected: (_) {}, destinations: _destinations),
+            const Expanded(child: SizedBox.expand()),
+          ]),
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(TrainerNavRail)).width, 96 + 60);
+    // "Ügyfelek" stays on one line: its box is wider than it is tall.
+    final label = tester.getSize(find.text('Ügyfelek'));
+    expect(label.width, greaterThan(label.height * 2));
+  });
+
   testWidgets('the active destination is a filled primary pill with the filled icon', (tester) async {
     await _pump(tester, selected: 1);
 
