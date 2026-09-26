@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../shared/trainer_fab.dart';
+import '../../shared/trainer_layout.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../shared/widgets/ds/lifey_header.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../schedule/application/recurrence_text.dart';
 import '../application/programs_controller.dart';
@@ -33,16 +36,17 @@ class ProgramDetailScreen extends ConsumerWidget {
     final program = ref.watch(programProvider(programId));
 
     return Scaffold(
-      appBar: embedded
-          ? null
-          : AppBar(title: Text(program.value?.name ?? l10n.trainerProgramsTitle)),
+      // The subpage header — with no back button in the tablet's pane, where
+      // nothing was pushed.
+      appBar: LifeySubpageHeader(
+        title: program.value?.name ?? l10n.trainerProgramsTitle,
+        showBack: !embedded,
+      ),
       floatingActionButton: program.hasValue
           ? TrainerFabPadding(
               child: FloatingActionButton.extended(
                 heroTag: null,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                icon: const Icon(Icons.person_add_alt),
+                icon: const Icon(Icons.person_add_alt_rounded),
                 label: Text(l10n.trainerStartProgramButton),
                 onPressed: () => _assign(context, ref, program.requireValue),
               ),
@@ -93,32 +97,35 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    final wide = isTrainerTwoPane(context);
+
     return ListView(
       padding: EdgeInsets.only(
-        top: 8,
-        bottom: MediaQuery.paddingOf(context).bottom + 96,
+        top: AppSpacing.s8,
+        bottom: MediaQuery.paddingOf(context).bottom + (wide ? AppSpacing.s24 : 96),
       ),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s12),
           child: Text(
             l10n.trainerProgramWeeksLabel(program.weeksCount),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(color: context.palette.text2),
           ),
         ),
         for (var week = 1; week <= program.weeksCount; week++)
-          _WeekSection(
-            weekNumber: week,
-            slots: program.slotsOfWeek(week),
-            // The first week opens by default — it is the one being read most
-            // of the time, and twelve collapsed rows with nothing showing is
-            // a screen that tells you nothing.
-            initiallyExpanded: week == 1,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s12),
+            child: _WeekSection(
+              weekNumber: week,
+              slots: program.slotsOfWeek(week),
+              // The first week opens by default — it is the one being read most
+              // of the time, and twelve collapsed rows with nothing showing is
+              // a screen that tells you nothing.
+              initiallyExpanded: week == 1,
+            ),
           ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s4, AppSpacing.screen, 0),
           child: EditOnWebNotice(programId: program.id),
         ),
       ],
@@ -140,98 +147,82 @@ class _WeekSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
     final weekdayFormat = DateFormat.EEEE(locale);
 
-    return Theme(
-      // The default divider on an ExpansionTile draws a line across every
-      // week; the sections are already separated by their own headers.
-      data: theme.copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        initiallyExpanded: initiallyExpanded,
-        title: Text(
-          l10n.trainerProgramWeekLabel(weekNumber),
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        subtitle: Text(
-          slots.isEmpty
-              ? l10n.trainerProgramRestWeekLabel
-              : l10n.trainerProgramSessionCountLabel(slots.length),
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: scheme.onSurfaceVariant),
-        ),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-        children: [
-          if (slots.isEmpty)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  l10n.trainerProgramRestWeekMessage,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+    return LifeyCard(
+      padding: EdgeInsets.zero,
+      clip: true,
+      child: Theme(
+        // The default divider on an ExpansionTile draws a line across every
+        // week; the sections are already separated by their own cards.
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          shape: const Border(),
+          collapsedShape: const Border(),
+          title: Text(l10n.trainerProgramWeekLabel(weekNumber), style: theme.textTheme.titleSmall),
+          subtitle: Text(
+            slots.isEmpty ? l10n.trainerProgramRestWeekLabel : l10n.trainerProgramSessionCountLabel(slots.length),
+            style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(AppSpacing.s12, 0, AppSpacing.s12, AppSpacing.s12),
+          children: [
+            if (slots.isEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.s4, bottom: AppSpacing.s8),
+                  child: Text(l10n.trainerProgramRestWeekMessage, style: theme.textTheme.bodySmall?.copyWith(color: p.text2)),
                 ),
-              ),
-            )
-          else
-            for (final slot in slots)
-              Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainer,
-                  borderRadius: AppRadius.cardAll,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 92,
-                      child: Text(
-                        weekdayFormat
-                            .format(DateTime(2024, 1, slot.dayOfWeek.isoNumber)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            slot.templateName,
-                            style: theme.textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
+              )
+            else
+              for (final slot in slots)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                  child: LifeyCard.nested(
+                    padding: const EdgeInsets.all(AppSpacing.s12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 96,
+                          child: Text(
+                            weekdayFormat.format(DateTime(2024, 1, slot.dayOfWeek.isoNumber)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelMedium?.copyWith(color: p.text2),
                           ),
-                          if (slot.timeOfDay != null)
-                            Text(
-                              formatScheduleTime(slot.timeOfDay!),
-                              style: theme.textTheme.labelSmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
-                          if ((slot.note ?? '').isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                slot.note!,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                  fontStyle: FontStyle.italic,
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(slot.templateName, style: theme.textTheme.titleSmall),
+                              if (slot.timeOfDay != null)
+                                Text(
+                                  formatScheduleTime(slot.timeOfDay!),
+                                  style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
                                 ),
-                              ),
-                            ),
-                        ],
-                      ),
+                              if ((slot.note ?? '').isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    slot.note!,
+                                    style: theme.textTheme.bodySmall?.copyWith(color: p.text2, fontStyle: FontStyle.italic),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-        ],
+          ],
+        ),
       ),
     );
   }

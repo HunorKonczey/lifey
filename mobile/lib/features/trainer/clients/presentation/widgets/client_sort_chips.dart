@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../shared/filter_pill_row.dart';
 import '../../domain/compliance.dart';
 
 /// The four sort options as a horizontally scrolling pill row (canvas Lifey 6:
@@ -24,9 +24,6 @@ class ClientSortChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final p = context.palette;
-    final scheme = Theme.of(context).colorScheme;
-    final t = Theme.of(context).textTheme;
 
     String label(ClientSortOption option) => switch (option) {
           ClientSortOption.recent => l10n.trainerClientsSortRecentLabel,
@@ -35,45 +32,11 @@ class ClientSortChips extends StatelessWidget {
           ClientSortOption.weightOverdue => l10n.trainerClientsSortWeightOverdueLabel,
         };
 
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
-        itemCount: ClientSortOption.values.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.s8),
-        itemBuilder: (context, index) {
-          final option = ClientSortOption.values[index];
-          final on = option == selected;
-          return Semantics(
-            button: true,
-            selected: on,
-            label: label(option),
-            excludeSemantics: true,
-            child: Material(
-              color: on ? scheme.primary : p.card,
-              shape: StadiumBorder(side: BorderSide(color: on ? scheme.primary : context.elevation.border)),
-              child: InkWell(
-                customBorder: const StadiumBorder(),
-                onTap: () => onSelected(option),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
-                  child: Center(
-                    child: Text(
-                      label(option),
-                      maxLines: 1,
-                      style: t.labelLarge!.copyWith(
-                        fontWeight: on ? FontWeight.w800 : FontWeight.w700,
-                        color: on ? scheme.onPrimary : p.text,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+    return FilterPillRow(
+      pills: [
+        for (final option in ClientSortOption.values)
+          (label: label(option), selected: option == selected, onTap: () => onSelected(option)),
+      ],
     );
   }
 }

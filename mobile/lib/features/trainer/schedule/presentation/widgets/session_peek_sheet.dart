@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/network/error_message.dart';
+import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/widgets/app_snackbar.dart';
 import '../../../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../../../../shared/widgets/trainer_view_menu.dart';
 import '../../../clients/domain/trainer_client.dart';
 import '../../../shared/client_avatar.dart';
@@ -49,10 +52,11 @@ class SessionPeekSheet extends ConsumerStatefulWidget {
     required TrainerClient? client,
     ScheduleSummary? scheduleRule,
   }) {
-    return showModalBottomSheet<bool>(
+    final l10n = AppLocalizations.of(context)!;
+    return showLifeySheet<bool>(
       context: context,
+      title: client?.displayName ?? session.clientEmail ?? l10n.trainerUnknownClientLabel,
       useRootNavigator: true,
-      showDragHandle: true,
       builder: (_) => SessionPeekSheet(
         session: session,
         client: client,
@@ -125,101 +129,89 @@ class _SessionPeekSheetState extends ConsumerState<SessionPeekSheet> {
       if (session.scheduledTime != null) formatScheduleTime(session.scheduledTime!),
     ].join(' · ');
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        bottom: MediaQuery.paddingOf(context).bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (client != null) ...[
-                ClientAvatar(client: client, size: 40),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      client?.displayName ??
-                          session.clientEmail ??
-                          l10n.trainerUnknownClientLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                    Text(
-                      session.templateName ?? l10n.trainerFreeWorkoutLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
+    // The sheet's own frame (title = who, handle, safe area) comes from
+    // showLifeySheet; this is what the session is.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            if (client != null) ...[
+              ClientAvatar(client: client, size: 44),
+              const SizedBox(width: AppSpacing.s12),
+            ],
+            Expanded(
+              child: Text(
+                session.templateName ?? l10n.trainerFreeWorkoutLabel,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall,
               ),
-              OccurrenceStatusChip(status: session.status),
+            ),
+            const SizedBox(width: AppSpacing.s8),
+            OccurrenceStatusChip(status: session.status),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.s16),
+        LifeyCard.nested(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Line(icon: Icons.event_rounded, text: when),
+              if (rule != null)
+                _Line(
+                  icon: Icons.repeat_rounded,
+                  text: recurrenceSummary(
+                    l10n,
+                    locale,
+                    recurrence: rule.recurrence,
+                    daysOfWeek: rule.daysOfWeek,
+                    startDate: rule.startDate,
+                    endDate: rule.endDate,
+                    timeOfDay: rule.timeOfDay,
+                  ),
+                ),
+              if (session.isFromProgram)
+                _Line(
+                  icon: Icons.calendar_view_week_rounded,
+                  text: session.programName ?? l10n.trainerFromProgramLabel,
+                ),
             ],
           ),
-          const SizedBox(height: 14),
-          _Line(icon: Icons.event, text: when),
-          if (rule != null)
-            _Line(
-              icon: Icons.repeat,
-              text: recurrenceSummary(
-                l10n,
-                locale,
-                recurrence: rule.recurrence,
-                daysOfWeek: rule.daysOfWeek,
-                startDate: rule.startDate,
-                endDate: rule.endDate,
-                timeOfDay: rule.timeOfDay,
-              ),
+        ),
+        const SizedBox(height: AppSpacing.s16),
+        if (client != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.push('$trainerShellLocation/${client.userId}');
+              },
+              icon: const Icon(Icons.person_outline_rounded, size: 18),
+              label: Text(l10n.trainerOpenClientAction),
             ),
-          if (session.isFromProgram)
-            _Line(
-              icon: Icons.calendar_view_week,
-              text: session.programName ?? l10n.trainerFromProgramLabel,
+          ),
+        // Offered only where the backend will accept it: anything already
+        // started, past or called off answers 409.
+        if (session.isCancellable)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _cancelling ? null : () => _cancel(l10n),
+              icon: _cancelling
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.event_busy_rounded, size: 18),
+              label: Text(l10n.trainerCancelOccurrenceAction),
+              style: TextButton.styleFrom(foregroundColor: scheme.error),
             ),
-          const SizedBox(height: 16),
-          if (client != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.push('$trainerShellLocation/${client.userId}');
-                },
-                icon: const Icon(Icons.person_outline, size: 18),
-                label: Text(l10n.trainerOpenClientAction),
-              ),
-            ),
-          // Offered only where the backend will accept it: anything already
-          // started, past or called off answers 409.
-          if (session.isCancellable)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _cancelling ? null : () => _cancel(l10n),
-                icon: _cancelling
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.event_busy, size: 18),
-                label: Text(l10n.trainerCancelOccurrenceAction),
-                style: TextButton.styleFrom(foregroundColor: scheme.error),
-              ),
-            ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -238,9 +230,9 @@ class _Line extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
+          Icon(icon, size: 18, color: context.palette.text2),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
         ],
       ),
     );

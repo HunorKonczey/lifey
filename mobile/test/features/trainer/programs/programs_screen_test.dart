@@ -17,6 +17,7 @@ import 'package:lifey/features/trainer/programs/domain/program_dates.dart';
 import 'package:lifey/features/trainer/programs/presentation/program_detail_screen.dart';
 import 'package:lifey/features/trainer/programs/presentation/programs_screen.dart';
 import 'package:lifey/features/trainer/schedule/domain/schedule.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 TrainerClient _client(int id, String firstName) => TrainerClient(
@@ -139,6 +140,9 @@ Future<void> _pumpList(
   WidgetTester tester, {
   required _FakeProgramsRepository repo,
   bool offline = false,
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -150,11 +154,16 @@ Future<void> _pumpList(
         isOfflineProvider.overrideWith((ref) => Stream.value(offline)),
         unreadBadgeProvider.overrideWith((ref) => Stream.value(0)),
       ],
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: ProgramsScreen(),
+        home: const ProgramsScreen(),
       ),
     ),
   );
@@ -165,8 +174,12 @@ Future<void> _pumpDetail(
   WidgetTester tester, {
   required _FakeProgramsRepository repo,
   List<TrainerClient> clients = const [],
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+  ThemeData? theme,
+  Size size = const Size(420, 1000),
 }) async {
-  tester.view.physicalSize = const Size(420, 1000);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
@@ -180,11 +193,16 @@ Future<void> _pumpDetail(
         isOfflineProvider.overrideWith((ref) => Stream.value(false)),
         unreadBadgeProvider.overrideWith((ref) => Stream.value(0)),
       ],
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: ProgramDetailScreen(programId: 1),
+        home: const ProgramDetailScreen(programId: 1),
       ),
     ),
   );
@@ -434,5 +452,55 @@ void main() {
       expect(repo.lastAssign!.startDate.weekday, DateTime.monday);
       expect(find.text('8 sessions added to their calendar'), findsOneWidget);
     });
+  });
+
+  group('layout (canvas Lifey 6 family)', () {
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('the program library fits 360 dp at x 1.3 in $name, $mode', (tester) async {
+          tester.view.physicalSize = const Size(360, 900);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          await _pumpList(
+            tester,
+            repo: _FakeProgramsRepository(
+              summaries: const [
+                ProgramSummary(id: 1, name: '12-week base building programme', weeksCount: 12, slotsPerWeek: 3, activeAssignmentCount: 2),
+                ProgramSummary(id: 2, name: 'Strength', weeksCount: 8, slotsPerWeek: 4),
+              ],
+            ),
+            locale: locale,
+            textScale: 1.3,
+            theme: theme,
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('a program with its weeks fits 360 dp at x 1.3 in $name, $mode', (tester) async {
+          await _pumpDetail(
+            tester,
+            repo: _FakeProgramsRepository(
+              program: Program(
+                id: 1,
+                name: '12-week base building programme',
+                weeksCount: 3,
+                workouts: [
+                  _slot(1, ScheduleWeekday.monday, 'Push day', note: 'Keep it light'),
+                  _slot(1, ScheduleWeekday.wednesday, 'Leg day'),
+                ],
+              ),
+            ),
+            locale: locale,
+            textScale: 1.3,
+            theme: theme,
+            size: const Size(360, 1400),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 }

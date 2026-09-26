@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../domain/schedule.dart';
 
 /// The status of one occurrence, in the colour language the rest of the
@@ -18,56 +19,28 @@ class OccurrenceStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-
-    final (label, background, foreground) = switch (status) {
-      OccurrenceStatus.upcoming => (
-          l10n.trainerOccurrenceUpcomingLabel,
-          scheme.primaryContainer,
-          scheme.onPrimaryContainer,
-        ),
-      OccurrenceStatus.done => (
-          l10n.trainerOccurrenceDoneLabel,
-          scheme.secondaryContainer,
-          scheme.onSecondaryContainer,
-        ),
-      OccurrenceStatus.missed => (
-          l10n.trainerOccurrenceMissedLabel,
-          scheme.errorContainer,
-          scheme.onErrorContainer,
-        ),
-      OccurrenceStatus.cancelled => (
-          l10n.trainerOccurrenceCancelledLabel,
-          scheme.surfaceContainerHighest,
-          scheme.onSurfaceVariant,
-        ),
+    final label = switch (status) {
+      OccurrenceStatus.upcoming => l10n.trainerOccurrenceUpcomingLabel,
+      OccurrenceStatus.done => l10n.trainerOccurrenceDoneLabel,
+      OccurrenceStatus.missed => l10n.trainerOccurrenceMissedLabel,
+      OccurrenceStatus.cancelled => l10n.trainerOccurrenceCancelledLabel,
     };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: background, borderRadius: AppRadius.pill),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: foreground,
-        ),
-      ),
-    );
+    return TintedChip(label: label, color: occurrenceStatusColor(context, status));
   }
 }
 
-/// The dot that marks a day carrying occurrences, in the week strip and the
-/// month overview. Same colour language, minus the words.
+/// The colour of a status — the chip's tint and the dot that marks a day
+/// carrying occurrences in the week strip and the month overview. Upcoming is
+/// the primary colour, done the improvement green, missed the warning orange
+/// (the same one the client card's "Missed 2 sessions" uses) and cancelled a
+/// neutral grey.
 Color occurrenceStatusColor(BuildContext context, OccurrenceStatus status) {
-  final scheme = Theme.of(context).colorScheme;
+  final mc = context.metricColors;
   return switch (status) {
-    OccurrenceStatus.upcoming => scheme.primary,
-    OccurrenceStatus.done => scheme.secondary,
-    OccurrenceStatus.missed => scheme.error,
-    OccurrenceStatus.cancelled => scheme.outlineVariant,
+    OccurrenceStatus.upcoming => Theme.of(context).colorScheme.primary,
+    OccurrenceStatus.done => mc.improvement,
+    OccurrenceStatus.missed => mc.calories,
+    OccurrenceStatus.cancelled => context.palette.text3,
   };
 }

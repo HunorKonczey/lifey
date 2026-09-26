@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../../core/network/error_message.dart';
 import '../../../../../core/theme/app_tokens.dart';
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../../../shared/widgets/ds/list_group.dart';
 import '../../../clients/application/trainer_clients_controller.dart';
 import '../../../shared/client_avatar.dart';
 import '../../application/programs_controller.dart';
@@ -37,13 +40,14 @@ class AssignProgramSheet extends ConsumerStatefulWidget {
     required String programName,
     required int weeksCount,
   }) {
-    return showModalBottomSheet<ProgramAssignmentResult>(
+    return showLifeySheet<ProgramAssignmentResult>(
       context: context,
+      title: AppLocalizations.of(context)!.trainerAssignProgramTitle(programName),
       useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.85,
+      builder: (context) => SizedBox(
+        // The client list scrolls inside a fixed frame, so the sheet does not
+        // change height as the trainer picks.
+        height: MediaQuery.sizeOf(context).height * 0.6,
         child: AssignProgramSheet(
           programId: programId,
           programName: programName,
@@ -113,129 +117,107 @@ class _AssignProgramSheetState extends ConsumerState<AssignProgramSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
-    final locale = Localizations.localeOf(context).toString();
-    final dateFormat = DateFormat.yMMMd(locale);
+    final f = LifeyFormat.of(context);
     final clients = ref.watch(trainerClientsControllerProvider).value ?? const [];
     final endDate = programEndDate(_startDate, widget.weeksCount);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l10n.trainerAssignProgramTitle(widget.programName),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: clients.isEmpty
-                ? Center(
-                    child: Text(
-                      l10n.trainerClientsEmptyTitle,
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  )
-                : ListView(
+    // The sheet's own frame (title, handle, keyboard inset) comes from
+    // showLifeySheet; this is only what goes in it.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: clients.isEmpty
+              ? Center(
+                  child: Text(
+                    l10n.trainerClientsEmptyTitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(color: p.text2),
+                  ),
+                )
+              : SingleChildScrollView(
+                  child: ListGroup(
+                    dividerInset: 76,
                     children: [
                       for (final client in clients)
                         // A plain selectable row rather than a radio: one
                         // client at a time is the endpoint's shape, and the
                         // tick says which one without a second control.
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          selected: _clientId == client.userId,
-                          leading: ClientAvatar(client: client, size: 36),
-                          title: Text(client.displayName),
+                        ListRow(
+                          leading: ClientAvatar(client: client, size: 44),
+                          title: client.displayName,
                           trailing: _clientId == client.userId
-                              ? Icon(Icons.check_circle, color: scheme.primary)
+                              ? Icon(Icons.check_circle_rounded, color: scheme.primary)
                               : null,
-                          onTap: _submitting
-                              ? null
-                              : () => setState(() => _clientId = client.userId),
+                          onTap: _submitting ? null : () => setState(() => _clientId = client.userId),
                         ),
                     ],
                   ),
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.event, color: scheme.onSurfaceVariant),
-            title: Text(l10n.trainerProgramStartsLabel,
-                style: theme.textTheme.bodySmall),
-            subtitle: Text(
-              dateFormat.format(_startDate),
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            onTap: _submitting ? null : _pickStart,
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHigh,
-              borderRadius: AppRadius.mdAll,
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.event_available, size: 18, color: scheme.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    l10n.trainerProgramRunSummary(
-                      dateFormat.format(_startDate),
-                      dateFormat.format(endDate),
-                      widget.weeksCount,
-                    ),
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
                 ),
-              ],
+        ),
+        const SizedBox(height: AppSpacing.s12),
+        ListGroup(
+          dividerInset: 72,
+          children: [
+            ListRow(
+              leading: ListIconHolder(icon: Icons.event_rounded, color: scheme.primary, size: 40),
+              title: l10n.trainerProgramStartsLabel,
+              subtitle: f.fullDate(_startDate),
+              trailing: Icon(Icons.chevron_right_rounded, size: 20, color: p.text3),
+              onTap: _submitting ? null : _pickStart,
             ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.s12),
+        LifeyCard.nested(
+          padding: const EdgeInsets.all(AppSpacing.s12),
+          child: Row(
+            children: [
+              Icon(Icons.event_available_rounded, size: 18, color: scheme.primary),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: Text(
+                  l10n.trainerProgramRunSummary(
+                    f.fullDate(_startDate),
+                    f.fullDate(endDate),
+                    widget.weeksCount,
+                  ),
+                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: p.text),
+                ),
+              ),
+            ],
           ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Text(
-                _error!,
-                style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.s12),
+            child: Text(_error!, style: theme.textTheme.bodySmall?.copyWith(color: scheme.error)),
+          ),
+        const SizedBox(height: AppSpacing.s16),
+        Row(
+          children: [
+            if (_submitting)
+              const Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            Expanded(
+              child: SizedBox(
+                height: 56,
+                child: FilledButton(
+                  onPressed: _canSubmit ? _submit : null,
+                  child: Text(l10n.trainerStartProgramButton),
+                ),
               ),
             ),
-          Padding(
-            padding: EdgeInsets.only(
-              top: 12,
-              bottom: MediaQuery.paddingOf(context).bottom + 12,
-            ),
-            child: Row(
-              children: [
-                if (_submitting)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 12),
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _canSubmit ? _submit : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: scheme.primary,
-                      foregroundColor: scheme.onPrimary,
-                    ),
-                    child: Text(l10n.trainerStartProgramButton),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/network/error_message.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../../shared/widgets/ds/lifey_segmented.dart';
+import '../../../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../../../shared/widgets/ds/list_group.dart';
+import '../../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../../../workouts/application/workout_template_controller.dart';
 import '../../../../workouts/domain/workout_template.dart';
 import '../../application/recurrence_text.dart';
@@ -25,15 +31,11 @@ class CreateScheduleSheet extends ConsumerStatefulWidget {
 
   /// Returns true when a schedule was created.
   static Future<bool?> show(BuildContext context, {required int clientId}) {
-    return showModalBottomSheet<bool>(
+    return showLifeySheet<bool>(
       context: context,
+      title: AppLocalizations.of(context)!.trainerScheduleWorkoutTitle,
       useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.9,
-        child: CreateScheduleSheet(clientId: clientId),
-      ),
+      builder: (_) => CreateScheduleSheet(clientId: clientId),
     );
   }
 
@@ -133,163 +135,132 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
-    final locale = Localizations.localeOf(context).toString();
-    final dateFormat = DateFormat.yMMMd(locale);
+    final f = LifeyFormat.of(context);
     final templates = ref.watch(workoutTemplateControllerProvider).value ?? const [];
     final assignable = templates.where((t) => t.id != null).toList();
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    String recurrenceLabel(ScheduleRecurrence recurrence) => switch (recurrence) {
+          ScheduleRecurrence.once => l10n.trainerRecurrenceOnceLabel,
+          ScheduleRecurrence.daily => l10n.trainerRecurrenceDailyLabel,
+          ScheduleRecurrence.weekly => l10n.trainerRecurrenceWeeklyLabel,
+        };
+
+    // The sheet's own frame (title, handle, keyboard inset, scrolling) comes
+    // from showLifeySheet; this is only what goes in it.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // -- Template
+        if (assignable.isEmpty)
           Text(
-            l10n.trainerScheduleWorkoutTitle,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            l10n.trainerNoTemplatesToScheduleMessage,
+            style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
+          )
+        else
+          DropdownButtonFormField<WorkoutTemplate>(
+            initialValue: _template,
+            isExpanded: true,
+            decoration: InputDecoration(labelText: l10n.trainerScheduleTemplateLabel),
+            items: [
+              for (final template in assignable)
+                DropdownMenuItem(
+                  value: template,
+                  child: Text(template.name, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: (value) => setState(() => _template = value),
           ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: ListView(
-              children: [
-                // ── Template ───────────────────────────────────────────
-                if (assignable.isEmpty)
-                  Text(
-                    l10n.trainerNoTemplatesToScheduleMessage,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
-                  )
-                else
-                  DropdownButtonFormField<WorkoutTemplate>(
-                    initialValue: _template,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.trainerScheduleTemplateLabel,
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: [
-                      for (final template in assignable)
-                        DropdownMenuItem(
-                          value: template,
-                          child: Text(template.name, overflow: TextOverflow.ellipsis),
-                        ),
-                    ],
-                    onChanged: (value) => setState(() => _template = value),
-                  ),
-                const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.s16),
 
-                // ── Recurrence ─────────────────────────────────────────
-                Text(
-                  l10n.trainerScheduleRepeatLabel,
-                  style: theme.textTheme.labelLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final recurrence in ScheduleRecurrence.values)
-                      ChoiceChip(
-                        label: Text(switch (recurrence) {
-                          ScheduleRecurrence.once => l10n.trainerRecurrenceOnceLabel,
-                          ScheduleRecurrence.daily => l10n.trainerRecurrenceDailyLabel,
-                          ScheduleRecurrence.weekly => l10n.trainerRecurrenceWeeklyLabel,
-                        }),
-                        selected: _recurrence == recurrence,
-                        showCheckmark: false,
-                        selectedColor: scheme.primaryContainer,
-                        onSelected: (_) => setState(() => _recurrence = recurrence),
-                      ),
-                  ],
-                ),
-                if (_recurrence == ScheduleRecurrence.weekly) ...[
-                  const SizedBox(height: 10),
-                  _WeekdayChips(
-                    selected: _days,
-                    onToggle: (day) => setState(() {
-                      if (!_days.remove(day)) _days.add(day);
-                    }),
-                  ),
-                ],
-                const SizedBox(height: 14),
-
-                // ── When ───────────────────────────────────────────────
-                _FieldRow(
-                  icon: Icons.event,
-                  label: l10n.trainerScheduleStartsLabel,
-                  value: dateFormat.format(_startDate),
-                  onTap: () => _pickDate(start: true),
-                ),
-                if (_recurrence != ScheduleRecurrence.once)
-                  _FieldRow(
-                    icon: Icons.event_repeat,
-                    label: l10n.trainerScheduleUntilLabel,
-                    value: dateFormat.format(_endDate),
-                    onTap: () => _pickDate(start: false),
-                  ),
-                _FieldRow(
-                  icon: Icons.schedule,
-                  label: l10n.trainerScheduleTimeLabel,
-                  value: _time == null
-                      ? l10n.trainerScheduleNoTimeLabel
-                      : formatScheduleTime(_time!),
-                  onTap: _pickTime,
-                  onClear: _time == null ? null : () => setState(() => _time = null),
-                ),
-                const SizedBox(height: 14),
-
-                // ── What this will create ──────────────────────────────
-                _Summary(preview: _preview, recurrence: _recurrence, days: _days),
-                if (_error != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    _error!,
-                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
-                  ),
-                ],
-              ],
-            ),
+        // -- Recurrence
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+          child: Text(
+            l10n.trainerScheduleRepeatLabel,
+            style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700, color: p.text2),
           ),
-          Padding(
-            padding: EdgeInsets.only(
-              top: 8,
-              bottom: MediaQuery.paddingOf(context).bottom + 12,
-            ),
-            child: Row(
-              children: [
-                if (_submitting)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 12),
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _canSubmit ? _submit : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: scheme.primary,
-                      foregroundColor: scheme.onPrimary,
-                    ),
-                    child: Text(l10n.trainerScheduleCreateButton),
-                  ),
-                ),
-              ],
-            ),
+        ),
+        LifeySegmented<ScheduleRecurrence>(
+          segments: [for (final recurrence in ScheduleRecurrence.values) (recurrence, recurrenceLabel(recurrence))],
+          selected: _recurrence,
+          onChanged: (recurrence) => setState(() => _recurrence = recurrence),
+        ),
+        if (_recurrence == ScheduleRecurrence.weekly) ...[
+          const SizedBox(height: AppSpacing.s12),
+          _WeekdayChips(
+            selected: _days,
+            onToggle: (day) => setState(() {
+              if (!_days.remove(day)) _days.add(day);
+            }),
           ),
         ],
-      ),
+        const SizedBox(height: AppSpacing.s16),
+
+        // -- When
+        ListGroup(
+          dividerInset: 72,
+          children: [
+            _FieldRow(
+              icon: Icons.event_rounded,
+              label: l10n.trainerScheduleStartsLabel,
+              value: f.fullDate(_startDate),
+              onTap: () => _pickDate(start: true),
+            ),
+            if (_recurrence != ScheduleRecurrence.once)
+              _FieldRow(
+                icon: Icons.event_repeat_rounded,
+                label: l10n.trainerScheduleUntilLabel,
+                value: f.fullDate(_endDate),
+                onTap: () => _pickDate(start: false),
+              ),
+            _FieldRow(
+              icon: Icons.schedule_rounded,
+              label: l10n.trainerScheduleTimeLabel,
+              value: _time == null ? l10n.trainerScheduleNoTimeLabel : formatScheduleTime(_time!),
+              onTap: _pickTime,
+              onClear: _time == null ? null : () => setState(() => _time = null),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.s16),
+
+        // -- What this will create
+        _Summary(preview: _preview, recurrence: _recurrence, days: _days),
+        if (_error != null) ...[
+          const SizedBox(height: AppSpacing.s12),
+          Text(_error!, style: theme.textTheme.bodySmall?.copyWith(color: scheme.error)),
+        ],
+        const SizedBox(height: AppSpacing.s20),
+        Row(
+          children: [
+            if (_submitting)
+              const Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            Expanded(
+              child: SizedBox(
+                height: 56,
+                child: FilledButton(
+                  onPressed: _canSubmit ? _submit : null,
+                  child: Text(l10n.trainerScheduleCreateButton),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-/// Mon–Sun as chips, in the locale's own short names (frame F4).
 class _WeekdayChips extends StatelessWidget {
   const _WeekdayChips({required this.selected, required this.onToggle});
 
@@ -298,7 +269,6 @@ class _WeekdayChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final locale = Localizations.localeOf(context).toString();
     final format = DateFormat.E(locale);
 
@@ -310,7 +280,6 @@ class _WeekdayChips extends StatelessWidget {
             label: Text(format.format(DateTime(2024, 1, day.isoNumber))),
             selected: selected.contains(day),
             showCheckmark: false,
-            selectedColor: scheme.primaryContainer,
             onSelected: (_) => onToggle(day),
           ),
       ],
@@ -335,24 +304,22 @@ class _FieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: theme.colorScheme.onSurfaceVariant),
-      title: Text(label, style: theme.textTheme.bodySmall),
-      subtitle: Text(
-        value,
-        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-      ),
+    return ListRow(
+      leading: ListIconHolder(icon: icon, color: Theme.of(context).colorScheme.primary, size: 40),
+      title: label,
+      subtitle: value,
       trailing: onClear == null
-          ? null
-          : IconButton(icon: const Icon(Icons.close, size: 18), onPressed: onClear),
+          ? Icon(Icons.chevron_right_rounded, size: 20, color: context.palette.text3)
+          : IconButton(
+              icon: const Icon(Icons.close_rounded, size: 18),
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              onPressed: onClear,
+            ),
       onTap: onTap,
     );
   }
 }
 
-/// "This creates 12 sessions, Aug 5 – Oct 28", or why it creates none.
 class _Summary extends StatelessWidget {
   const _Summary({
     required this.preview,
@@ -367,7 +334,8 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
+    final mc = context.metricColors;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
     final dateFormat = DateFormat.MMMd(locale);
@@ -398,27 +366,23 @@ class _Summary extends StatelessWidget {
         ),
     };
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isProblem ? scheme.errorContainer : scheme.surfaceContainerHigh,
-        borderRadius: AppRadius.mdAll,
-      ),
+    // A problem is the warning tint (the same one "missed" uses); a fine plan
+    // is just a quiet line on the nested surface.
+    return LifeyCard.nested(
+      color: isProblem ? mc.calories.withValues(alpha: TintedChip.tintAlpha(theme.brightness)) : null,
+      padding: const EdgeInsets.all(AppSpacing.s12),
       child: Row(
         children: [
           Icon(
-            isProblem ? Icons.error_outline : Icons.event_available,
+            isProblem ? Icons.error_outline_rounded : Icons.event_available_rounded,
             size: 18,
-            color: isProblem ? scheme.onErrorContainer : scheme.primary,
+            color: isProblem ? mc.calories : theme.colorScheme.primary,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Text(
               text,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: isProblem ? scheme.onErrorContainer : scheme.onSurface,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: p.text),
             ),
           ),
         ],

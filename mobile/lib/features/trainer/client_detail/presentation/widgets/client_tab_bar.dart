@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_tokens.dart';
-import '../../../../../core/theme/app_type.dart';
 
 /// The client detail's tab row (canvas Lifey 6, client overview): text-only
 /// 14/700 labels on a scrolling row, the active one in the primary text
@@ -25,6 +24,8 @@ class ClientTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    // titleSmall is the canvas's 14/700; a tab keeps its line tight.
+    final style = Theme.of(context).textTheme.titleSmall!.copyWith(height: 1.1);
     return DecoratedBox(
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: p.hairline))),
       child: TabBar(
@@ -39,8 +40,8 @@ class ClientTabBar extends StatelessWidget {
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: p.text,
         unselectedLabelColor: p.text2,
-        labelStyle: _style,
-        unselectedLabelStyle: _style,
+        labelStyle: style,
+        unselectedLabelStyle: style,
         dividerColor: Colors.transparent,
         // A pressed tab is one surface step lighter elsewhere; a ripple on a
         // row this thin only smears the underline.
@@ -50,11 +51,4 @@ class ClientTabBar extends StatelessWidget {
       ),
     );
   }
-
-  static const TextStyle _style = TextStyle(
-    fontFamily: AppType.fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
-    height: 1.1,
-  );
 }

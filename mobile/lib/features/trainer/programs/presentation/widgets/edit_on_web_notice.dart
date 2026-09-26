@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/constants/web_links.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/notice_card.dart';
 
 /// Says plainly where programs get built (frame G4's second outcome).
 ///
@@ -26,54 +27,29 @@ import '../../../../../l10n/app_localizations.dart';
 class EditOnWebNotice extends StatelessWidget {
   const EditOnWebNotice({super.key, this.programId});
 
-  /// When set, the link opens this program rather than the library.
   final int? programId;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: AppRadius.mdAll,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.desktop_windows_outlined,
-                  size: 18, color: scheme.onSurfaceVariant),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.trainerProgramsEditOnWebTitle,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            l10n.trainerProgramsEditOnWebMessage,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: EditOnWebButton(programId: programId),
-          ),
-        ],
-      ),
+    // A trainer thing, so the clay accent: the notice explains what this role
+    // cannot do on the phone.
+    return NoticeCard(
+      icon: Icons.desktop_windows_outlined,
+      accent: context.palette.role,
+      title: l10n.trainerProgramsEditOnWebTitle,
+      body: l10n.trainerProgramsEditOnWebMessage,
+      actionLabel: l10n.trainerOpenOnWebAction,
+      onAction: () => _openOnWeb(programId),
     );
   }
 }
+
+void _openOnWeb(int? programId) => launchUrl(
+      Uri.parse(programId == null ? WebLinks.adminPrograms : WebLinks.adminProgram(programId)),
+      mode: LaunchMode.externalApplication,
+    );
 
 /// The link on its own, for places that have already said why.
 class EditOnWebButton extends StatelessWidget {
@@ -86,15 +62,8 @@ class EditOnWebButton extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return TextButton.icon(
-      onPressed: () => launchUrl(
-        Uri.parse(
-          programId == null
-              ? WebLinks.adminPrograms
-              : WebLinks.adminProgram(programId!),
-        ),
-        mode: LaunchMode.externalApplication,
-      ),
-      icon: const Icon(Icons.open_in_new, size: 18),
+      onPressed: () => _openOnWeb(programId),
+      icon: const Icon(Icons.open_in_new_rounded, size: 18),
       label: Text(l10n.trainerOpenOnWebAction),
     );
   }

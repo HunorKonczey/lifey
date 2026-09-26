@@ -129,7 +129,7 @@ class _Note extends StatelessWidget {
           text,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ?.copyWith(color: context.palette.text2),
         ),
       ),
     );

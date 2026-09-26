@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
 import '../../domain/schedule.dart';
+import '../../../../../shared/widgets/ds/tinted_chip.dart';
 import 'occurrence_status_chip.dart';
 
 /// Below this width the month is drawn as dot density only; at or above it
@@ -36,8 +38,8 @@ class MonthOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final t = Theme.of(context).textTheme;
+    final p = context.palette;
     final locale = Localizations.localeOf(context).toString();
     final wide = MediaQuery.sizeOf(context).width >= monthGridMinWidth;
 
@@ -56,51 +58,49 @@ class MonthOverview extends StatelessWidget {
 
     final weekdayFormat = DateFormat.E(locale);
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-      children: [
-        Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s24),
+      child: LifeyCard(
+        padding: const EdgeInsets.all(AppSpacing.s12),
+        child: Column(
           children: [
-            for (var i = 0; i < 7; i++)
-              Expanded(
-                child: Center(
-                  child: Text(
-                    weekdayFormat.format(DateTime(2024, 1, i + 1)),
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurfaceVariant,
+            Row(
+              children: [
+                for (var i = 0; i < 7; i++)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        weekdayFormat.format(DateTime(2024, 1, i + 1)),
+                        style: t.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: p.text2),
+                      ),
                     ),
                   ),
-                ),
-              ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            GridView.count(
+              crossAxisCount: 7,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              // Taller cells as the text grows: the day number scales, the dots do not.
+              childAspectRatio: (wide ? 1.0 : 0.78) / MediaQuery.textScalerOf(context).scale(1),
+              children: [
+                for (var i = 0; i < leadingBlanks; i++) const SizedBox.shrink(),
+                for (var day = 1; day <= daysInMonth; day++)
+                  _DayCell(
+                    date: DateTime(month.year, month.month, day),
+                    sessions: byDay[day] ?? const [],
+                    isToday: today.year == month.year && today.month == month.month && today.day == day,
+                    wide: wide,
+                    onTap: onSelectDay,
+                  ),
+              ],
+            ),
           ],
         ),
-        const SizedBox(height: 6),
-        GridView.count(
-          crossAxisCount: 7,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
-          childAspectRatio: wide ? 1.0 : 0.78,
-          children: [
-            for (var i = 0; i < leadingBlanks; i++) const SizedBox.shrink(),
-            for (var day = 1; day <= daysInMonth; day++)
-              _DayCell(
-                date: DateTime(month.year, month.month, day),
-                sessions: byDay[day] ?? const [],
-                isToday: today.year == month.year &&
-                    today.month == month.month &&
-                    today.day == day,
-                wide: wide,
-                onTap: onSelectDay,
-              ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }
@@ -122,10 +122,12 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final t = Theme.of(context).textTheme;
+    final p = context.palette;
+    final primary = Theme.of(context).colorScheme.primary;
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
+    final radius = BorderRadius.circular(AppRadius.nested(AppRadius.control, AppSpacing.s4));
 
     return Semantics(
       button: true,
@@ -134,8 +136,8 @@ class _DayCell extends StatelessWidget {
       label: '${DateFormat.MMMd(locale).format(date)}, '
           '${l10n.trainerProgramSessionCountLabel(sessions.length)}',
       child: Material(
-        color: sessions.isEmpty ? Colors.transparent : scheme.surfaceContainer,
-        borderRadius: AppRadius.smAll,
+        color: sessions.isEmpty ? Colors.transparent : p.nested,
+        borderRadius: radius,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => onTap(date),
@@ -143,22 +145,14 @@ class _DayCell extends StatelessWidget {
             padding: const EdgeInsets.all(4),
             decoration: isToday
                 ? BoxDecoration(
-                    borderRadius: AppRadius.smAll,
-                    border: Border.all(color: scheme.primary, width: 1.5),
+                    borderRadius: radius,
+                    border: Border.all(color: primary, width: 1.5),
                   )
                 : null,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
+                Text('${date.day}', style: t.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: p.text)),
                 const SizedBox(height: 2),
                 Expanded(
                   child: wide
@@ -208,8 +202,8 @@ class _Names extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final t = Theme.of(context).textTheme;
+    final p = context.palette;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -220,30 +214,21 @@ class _Names extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: occurrenceStatusColor(context, session.status)
-                    .withValues(alpha: 0.18),
-                borderRadius: AppRadius.smAll,
+                color: occurrenceStatusColor(context, session.status).withValues(alpha: TintedChip.tintAlpha(Theme.of(context).brightness)),
+                borderRadius: AppRadius.tagAll,
               ),
               child: Text(
                 session.templateName ?? '',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: t.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: p.text),
               ),
             ),
           ),
         if (sessions.length > 2)
           Text(
             '+${sessions.length - 2}',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 9,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: t.labelSmall?.copyWith(color: p.text2),
           ),
       ],
     );
