@@ -44,7 +44,7 @@ class ProviderGlyph extends StatelessWidget {
         provider!.monogram,
         style: TextStyle(
           fontFamily: 'PlusJakartaSans',
-          fontSize: diameter * 0.46,
+          fontSize: diameter * 0.46,  // design-audit: ok - glyph proportional to its disc
           fontWeight: FontWeight.w800,
           color: fg,
         ),

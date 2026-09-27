@@ -34,7 +34,7 @@ class TrainerClientControllerTest {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
                 new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
                         Instant.parse("2026-06-01T00:00:00Z"),
-                        List.of(), 0, 0, null, null, 0)));
+                        List.of(), 0, 0, null, null, 0, null, null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())
@@ -42,6 +42,32 @@ class TrainerClientControllerTest {
                 // Name feeds the mobile "new conversation" picker's person row.
                 .andExpect(jsonPath("$[0].clientFirstName").value("Kiss"))
                 .andExpect(jsonPath("$[0].clientLastName").value("Anna"));
+    }
+
+    @Test
+    void findActiveClients_reportsTheCardFiguresWhenThereIsSomethingToReport() throws Exception {
+        when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
+                new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
+                        Instant.parse("2026-06-01T00:00:00Z"),
+                        List.of(), 0, 6, null, null, 0, 1631, 2)));
+
+        mockMvc.perform(get("/api/v1/trainer/clients"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].avgCalories7d").value(1631))
+                .andExpect(jsonPath("$[0].prCount7d").value(2));
+    }
+
+    @Test
+    void findActiveClients_aClientWithoutMealsHasNoAverageButZeroRecordsIsARealAnswer() throws Exception {
+        when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
+                new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
+                        Instant.parse("2026-06-01T00:00:00Z"),
+                        List.of(), 0, 0, null, null, 0, null, 0)));
+
+        mockMvc.perform(get("/api/v1/trainer/clients"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].avgCalories7d").doesNotExist())
+                .andExpect(jsonPath("$[0].prCount7d").value(0));
     }
 
     @Test

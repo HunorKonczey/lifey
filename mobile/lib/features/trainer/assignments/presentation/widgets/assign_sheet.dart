@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/network/error_message.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../../../shared/widgets/ds/list_group.dart';
 import '../../../clients/application/trainer_clients_controller.dart';
+import '../../../clients/domain/trainer_client.dart';
 import '../../../shared/client_avatar.dart';
 import '../../application/assignable_content.dart';
 import '../../application/assignments_controller.dart';
@@ -20,13 +23,14 @@ class AssignSheet extends ConsumerStatefulWidget {
   const AssignSheet({super.key});
 
   static Future<BulkAssignmentResult?> show(BuildContext context) {
-    return showModalBottomSheet<BulkAssignmentResult>(
+    return showLifeySheet<BulkAssignmentResult>(
       context: context,
+      title: AppLocalizations.of(context)!.trainerAssignButton,
       useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.85,
+      // The two steps scroll inside a fixed frame, so the sheet does not jump
+      // in height when the trainer moves from the content list to the clients.
+      builder: (context) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.6,
         child: const AssignSheet(),
       ),
     );
@@ -116,52 +120,46 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              if (_content != null)
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  onPressed: () => setState(() {
-                    _content = null;
-                    _alreadyHolding = null;
-                    _error = null;
-                  }),
-                ),
-              Expanded(
-                child: Text(
-                  _content == null
-                      ? l10n.trainerAssignPickContentTitle
-                      : l10n.trainerAssignPickClientsTitle(_content!.name),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w800),
-                ),
+    // The sheet's own frame (title, handle, keyboard inset) comes from
+    // showLifeySheet; the step's heading, with its way back, is part of this.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            if (_content != null)
+              IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: () => setState(() {
+                  _content = null;
+                  _alreadyHolding = null;
+                  _error = null;
+                }),
               ),
-            ],
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
+            Expanded(
               child: Text(
-                _error!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.error),
+                _content == null
+                    ? l10n.trainerAssignPickContentTitle
+                    : l10n.trainerAssignPickClientsTitle(_content!.name),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall,
               ),
             ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _content == null ? _contentStep(l10n) : _clientStep(l10n),
+          ],
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.s8),
+            child: Text(_error!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
           ),
-          if (_content != null) _footer(l10n),
-        ],
-      ),
+        const SizedBox(height: AppSpacing.s12),
+        Expanded(
+          child: _content == null ? _contentStep(l10n) : _clientStep(l10n),
+        ),
+        if (_content != null) _footer(l10n),
+      ],
     );
   }
 
@@ -178,10 +176,7 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
         child: Text(
           l10n.trainerNoAssignableContentMessage,
           textAlign: TextAlign.center,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.palette.text2),
         ),
       );
     }
@@ -192,35 +187,35 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
           controller: _searchController,
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.search),
+            prefixIcon: const Icon(Icons.search_rounded, size: 22),
             hintText: l10n.trainerAssignSearchHint,
-            isDense: true,
-            border: const OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.s12),
         Expanded(
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  item.type == AssignableContentType.template
-                      ? Icons.fitness_center
-                      : Icons.restaurant,
-                  color: Theme.of(context).colorScheme.tertiary,
-                ),
-                title: Text(item.name),
-                subtitle: Text(
-                  item.type == AssignableContentType.template
-                      ? l10n.trainerContentTypeTemplateLabel
-                      : l10n.trainerContentTypeRecipeLabel,
-                ),
-                onTap: () => _pickContent(item),
-              );
-            },
+          child: SingleChildScrollView(
+            child: ListGroup(
+              dividerInset: 72,
+              children: [
+                for (final item in items)
+                  ListRow(
+                    leading: ListIconHolder(
+                      icon: item.type == AssignableContentType.template
+                          ? Icons.fitness_center_rounded
+                          : Icons.restaurant_rounded,
+                      color: item.type == AssignableContentType.template
+                          ? Theme.of(context).colorScheme.primary
+                          : context.metricColors.protein,
+                      size: 40,
+                    ),
+                    title: item.name,
+                    subtitle: item.type == AssignableContentType.template
+                        ? l10n.trainerContentTypeTemplateLabel
+                        : l10n.trainerContentTypeRecipeLabel,
+                    onTap: () => _pickContent(item),
+                  ),
+              ],
+            ),
           ),
         ),
       ],
@@ -236,47 +231,49 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return ListView.builder(
-      itemCount: clients.length,
-      itemBuilder: (context, index) {
-        final client = clients[index];
-        final alreadyHas = holding.contains(client.userId);
-        return CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          value: alreadyHas || _selected.contains(client.userId),
-          // Locked rather than hidden: the trainer should see that this
-          // client is covered, not wonder where they went.
-          onChanged: alreadyHas || _submitting
-              ? null
-              : (checked) => setState(() {
-                    if (checked ?? false) {
-                      _selected.add(client.userId);
-                    } else {
-                      _selected.remove(client.userId);
-                    }
-                  }),
-          secondary: ClientAvatar(client: client, size: 36),
-          title: Text(client.displayName),
-          subtitle: alreadyHas ? Text(l10n.trainerAlreadyHasItLabel) : null,
-        );
-      },
+    return SingleChildScrollView(
+      child: ListGroup(
+        dividerInset: 76,
+        children: [
+          for (final client in clients)
+            _clientRow(l10n, client, holding.contains(client.userId)),
+        ],
+      ),
+    );
+  }
+
+  Widget _clientRow(AppLocalizations l10n, TrainerClient client, bool alreadyHas) {
+    void toggle(bool? checked) => setState(() {
+          if (checked ?? false) {
+            _selected.add(client.userId);
+          } else {
+            _selected.remove(client.userId);
+          }
+        });
+
+    // Locked rather than hidden: the trainer should see that this client is
+    // covered, not wonder where they went.
+    final locked = alreadyHas || _submitting;
+    final checked = alreadyHas || _selected.contains(client.userId);
+    return ListRow(
+      leading: ClientAvatar(client: client, size: 44),
+      title: client.displayName,
+      subtitle: alreadyHas ? l10n.trainerAlreadyHasItLabel : null,
+      trailing: Checkbox(value: checked, onChanged: locked ? null : toggle),
+      onTap: locked ? null : () => toggle(!checked),
     );
   }
 
   Widget _footer(AppLocalizations l10n) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.only(
-        top: 8,
-        bottom: MediaQuery.paddingOf(context).bottom + 12,
-      ),
+      padding: const EdgeInsets.only(top: AppSpacing.s12),
       child: Row(
         children: [
           Expanded(
             child: Text(
               l10n.trainerSelectedClientsCount(_selected.length),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(color: context.palette.text2),
             ),
           ),
           if (_submitting)
@@ -290,13 +287,6 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
             ),
           FilledButton(
             onPressed: _selected.isEmpty || _submitting ? null : _submit,
-            style: FilledButton.styleFrom(
-              backgroundColor: theme.colorScheme.tertiary,
-              foregroundColor: theme.colorScheme.onTertiary,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(AppRadius.input)),
-              ),
-            ),
             child: Text(l10n.trainerAssignButton),
           ),
         ],

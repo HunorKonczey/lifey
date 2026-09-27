@@ -1,32 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/format/lifey_format.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/theme/app_type.dart';
 import '../../../../core/utils/search_normalize.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../settings/application/settings_controller.dart';
 import '../../application/food_controller.dart';
 import '../../application/food_usage_provider.dart';
-import '../../application/remaining_budget_provider.dart';
+import '../../application/selected_meal_day_provider.dart';
 import '../../domain/food.dart';
 import '../../domain/food_usage.dart';
-import '../../domain/remaining_budget.dart';
+import '../../domain/meal_days.dart';
+import '../barcode_scanner_screen.dart';
+import 'add_food_sheet.dart';
 
 /// Result of picking a food + quantity for a meal entry.
 typedef MealEntryDraft = ({Food food, double grams});
 
-/// Bottom sheet to pick a food and enter grams. Pops with a [MealEntryDraft].
+/// Bottom sheet to pick a food and set how much of it. Pops with a
+/// [MealEntryDraft].
 ///
-/// Pass [initialFood] and [initialGrams] to open in edit mode — the food field
-/// is pre-filled and locked to the existing food, only the quantity is editable.
+/// The canvas' "Add food" (docs/redesign/77-mobile-redesign-plan.md R2.6;
+/// Lifey 2 › 2.2): a search field with the barcode scanner inside it, the
+/// recent foods as chips, and — once a food is picked — its card with the
+/// **quantity as the hero**: a big number between two 56 dp − / + buttons
+/// (tap the number to type an exact amount), quick chips (100 g, 150 g, the
+/// last amount used) and a live "+145 kcal → 1,594 kcal left" line.
+///
+/// Pass [initialFood] and [initialGrams] to open in edit mode — the food is
+/// locked to the existing one, only the quantity is editable.
 ///
 /// Pass [preselectedFood] to open in add mode with that food already picked
 /// (docs/75-log-food-from-foods-tab-plan.md §2.2): unlike edit mode the food
-/// stays changeable, but the quantity field is focused and prefilled with the
+/// stays changeable, but the quantity is focused and prefilled with the
 /// food's last-used grams, and the recents row is hidden.
 ///
-/// Pass [mealDateTime] so the sheet can show a live "what this does to
-/// today's budget" preview under the quantity field — only rendered when the
-/// meal being built/edited is dated today and a calorie goal is set.
+/// Pass [mealDateTime] so the sheet can show what this does to that day's
+/// budget — only when a calorie goal is set.
 class AddMealEntrySheet extends ConsumerStatefulWidget {
   const AddMealEntrySheet({
     super.key,
@@ -48,6 +62,12 @@ class AddMealEntrySheet extends ConsumerStatefulWidget {
 /// Cap on how many matching foods are shown at once, so the suggestion list
 /// stays short even as the food catalog grows.
 const _maxSuggestions = 20;
+
+/// What the − and + buttons change the quantity by.
+const _gramsStep = 10.0;
+
+/// The fixed quick amounts next to the last-used one (canvas: 100 g, 150 g).
+const _quickGrams = [100.0, 150.0];
 
 class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   final _formKey = GlobalKey<FormState>();
@@ -72,11 +92,6 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   /// Set once the pre-selected food's last-used grams have been applied, so
   /// later [foodUsageProvider] emissions don't prefill again (docs/75 §2.3).
   bool _preselectPrefillApplied = false;
-
-  bool get _isMealToday {
-    final mealDateTime = widget.mealDateTime;
-    return mealDateTime != null && DateUtils.isSameDay(mealDateTime, DateTime.now());
-  }
 
   @override
   void initState() {
@@ -132,51 +147,49 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
     _gramsFocus.requestFocus();
   }
 
-  /// Live "+320 kcal · 28 g protein" line under the grams field, with an
-  /// optional "→ 420 kcal left" outcome appended when [mealDateTime] is today
-  /// and a calorie goal is set. In edit mode, subtracts the entry's original
-  /// contribution first so the outcome reflects the *change*, not a
-  /// double-count of an entry already folded into [budget].
-  Widget? _buildImpactPreview(BuildContext context, RemainingBudget? budget) {
-    final food = _food;
-    if (food == null || food.caloriesPer100g <= 0) return null;
-    final grams = double.tryParse(_grams.text.replaceAll(',', '.'));
-    if (grams == null || grams <= 0) return null;
+  double? get _gramsValue => double.tryParse(_grams.text.replaceAll(',', '.'));
 
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final mc = context.metricColors;
+  /// Puts [grams] into the field as the user's own choice (a − / + press or a
+  /// quick chip), so a later recent-chip tap never overwrites it.
+  void _setGrams(double grams) {
+    final value = grams < 1 ? 1.0 : grams;
+    final text = value == value.roundToDouble() ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
+    setState(() {
+      _grams.text = text;
+      _grams.selection = TextSelection.collapsed(offset: text.length);
+      _gramsAutoFilled = false;
+    });
+  }
 
-    final newKcal = food.caloriesPer100g * grams / 100;
-    final newProtein = food.proteinPer100g * grams / 100;
+  void _nudge(double delta) => _setGrams((_gramsValue ?? 0) + delta);
 
-    final children = <Widget>[
-      Text(
-        l10n.mealEntryImpactPreview(newKcal.round(), newProtein.round()),
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-    ];
-
-    if (_isMealToday && budget != null && budget.calories.hasGoal) {
-      final oldKcal = widget.initialFood != null
-          ? widget.initialFood!.caloriesPer100g * (widget.initialGrams ?? 0) / 100
-          : 0.0;
-      final remainingAfter = budget.calories.remaining! - (newKcal - oldKcal);
-      final over = remainingAfter < 0;
-      children.add(Text(
-        over
-            ? l10n.mealEntryBudgetOver(remainingAfter.abs().round())
-            : l10n.mealEntryBudgetLeft(remainingAfter.round()),
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: over ? mc.negative : mc.calories,
-          fontWeight: FontWeight.w700,
-        ),
-      ));
+  /// The scanner inside the search field: a food already in the catalogue
+  /// with that barcode is picked right away; an unknown code goes through the
+  /// same lookup / create sheet as the Nutrition header's scanner.
+  Future<void> _scan(List<Food> foods, Map<String, FoodUsage> usage) async {
+    final barcode = await Navigator.of(context, rootNavigator: true).push<String>(
+      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+    );
+    if (barcode == null || !mounted) return;
+    final match = foods.where((f) => f.barcode == barcode).firstOrNull;
+    if (match != null) {
+      _foodFieldController?.text = match.name;
+      setState(() {
+        _food = match;
+        _foodError = null;
+      });
+      final stats = usage[match.clientId];
+      if (stats != null) _prefillGrams(stats);
+      _gramsFocus.requestFocus();
+      return;
     }
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children);
+    await showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddFoodSheet(initialBarcode: barcode),
+    );
   }
 
   void _submit() {
@@ -194,9 +207,19 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
     final usage = ref.watch(foodUsageProvider).value ?? const <String, FoodUsage>{};
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final l10n = AppLocalizations.of(context)!;
+    final t = Theme.of(context).textTheme;
+    final p = context.palette;
 
+    // The fields scroll; the "Add to meal" button does not. With the keyboard up
+    // the sheet is short, and a button at the end of the scroll view sat under the
+    // keyboard until the user scrolled to it (R7 follow-up).
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.screen,
+        AppSpacing.s4,
+        AppSpacing.screen,
+        AppSpacing.s16 + (viewInsets > 0 ? viewInsets : MediaQuery.paddingOf(context).bottom),
+      ),
       child: foodsState.when(
         loading: () => const Padding(
           padding: EdgeInsets.all(24),
@@ -216,133 +239,140 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
           final ranked = rankFoodsByUsage(foods, usage);
           // Hidden while the pre-selected food is still picked — the user
           // already chose; clearing it brings the row back.
-          final hideRecents = _isEditing ||
-              (_isPreselected && _food?.clientId == widget.preselectedFood!.clientId);
+          final hideRecents = _isEditing || (_isPreselected && _food?.clientId == widget.preselectedFood!.clientId);
           final recents = hideRecents ? const <Food>[] : recentFoodsByUsage(foods, usage);
-          return Form(
+          final fields = Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  _isEditing ? l10n.editFoodEntryTitle : l10n.addFoodToMealTitle,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                if (recents.isNotEmpty) ...[
-                  _RecentFoodsRow(
-                    label: l10n.recentFoodsLabel,
-                    recents: recents,
-                    onPick: (food) => _pickRecent(food, usage[food.clientId]!),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (_isEditing)
-                  TextFormField(
-                    initialValue: widget.initialFood!.name,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.foodFieldLabel,
-                      border: const OutlineInputBorder(),
-                    ),
-                  )
-                else
-                  Autocomplete<Food>(
-                    displayStringForOption: (f) => f.name,
-                    initialValue: _isPreselected
-                        ? TextEditingValue(text: widget.preselectedFood!.name)
-                        : null,
-                    optionsBuilder: (textEditingValue) {
-                      final query = normalizeForSearch(textEditingValue.text.trim());
-                      final matches = query.isEmpty
-                          ? ranked
-                          : ranked.where((f) => normalizeForSearch(f.name).contains(query));
-                      return matches.take(_maxSuggestions);
-                    },
-                    fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-                      _foodFieldController = controller;
-                      return TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        autofocus: !_isPreselected,
-                        decoration: InputDecoration(
-                          labelText: l10n.foodFieldLabel,
-                          border: const OutlineInputBorder(),
-                          errorText: _foodError,
-                          suffixIcon: _food == null
-                              ? const Icon(Icons.search)
-                              : IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    controller.clear();
-                                    setState(() => _food = null);
-                                  },
-                                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          _isEditing ? l10n.editFoodEntryTitle : l10n.addFoodToMealTitle,
+                          style: t.headlineSmall!.copyWith(height: 1.2, color: p.text),
                         ),
-                        onChanged: (_) {
-                          if (_food != null) setState(() => _food = null);
-                        },
-                      );
-                    },
-                    onSelected: (food) {
-                      setState(() {
-                        _food = food;
-                        _foodError = null;
-                      });
-                      final stats = usage[food.clientId];
-                      if (stats != null) _prefillGrams(stats);
-                      _gramsFocus.requestFocus();
-                    },
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(Icons.close_rounded, color: p.text2),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.s12),
+                if (!_isEditing)
+                  LayoutBuilder(
+                    builder: (context, constraints) => Autocomplete<Food>(
+                      displayStringForOption: (f) => f.name,
+                      initialValue: _isPreselected ? TextEditingValue(text: widget.preselectedFood!.name) : null,
+                      optionsBuilder: (textEditingValue) {
+                        final query = normalizeForSearch(textEditingValue.text.trim());
+                        // Nothing until the user types: the recent chips are
+                        // the empty-field shortcut, and an open list would sit
+                        // on top of them (and on the picked food's card).
+                        if (query.isEmpty) return const Iterable<Food>.empty();
+                        return ranked.where((f) => normalizeForSearch(f.name).contains(query)).take(_maxSuggestions);
+                      },
+                      fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                        _foodFieldController = controller;
+                        return TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          autofocus: !_isPreselected,
+                          decoration: InputDecoration(
+                            hintText: l10n.searchFoodsHint,
+                            errorText: _foodError,
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            suffixIcon: _food == null
+                                ? IconButton(
+                                    tooltip: l10n.scanBarcodeButton,
+                                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                                    onPressed: () => _scan(foods, usage),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      controller.clear();
+                                      setState(() => _food = null);
+                                    },
+                                  ),
+                          ),
+                          onChanged: (_) {
+                            if (_food != null) setState(() => _food = null);
+                          },
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) => _FoodOptions(
+                        options: options.toList(),
+                        width: constraints.maxWidth,
+                        onSelected: onSelected,
+                      ),
+                      onSelected: (food) {
+                        setState(() {
+                          _food = food;
+                          _foodError = null;
+                        });
+                        final stats = usage[food.clientId];
+                        if (stats != null) _prefillGrams(stats);
+                        _gramsFocus.requestFocus();
+                      },
+                    ),
                   ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _grams,
-                  focusNode: _gramsFocus,
-                  autofocus: _isEditing || _isPreselected,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    labelText: l10n.quantityLabel,
-                    suffixText: 'g',
-                    border: const OutlineInputBorder(),
+                if (recents.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.s12),
+                  SizedBox(
+                    height: 40,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: recents.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.s8),
+                      itemBuilder: (context, i) => ActionChip(
+                        label: Text(recents[i].name),
+                        onPressed: () => _pickRecent(recents[i], usage[recents[i].clientId]!),
+                      ),
+                    ),
                   ),
-                  onChanged: (_) => _gramsAutoFilled = false,
-                  validator: (v) {
-                    final parsed = double.tryParse((v ?? '').replaceAll(',', '.'));
-                    if (parsed == null) return l10n.enterANumberError;
-                    if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
-                    return null;
-                  },
-                  onFieldSubmitted: (_) => _submit(),
-                ),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _grams,
-                  builder: (context, _, __) {
-                    // Only watch the budget provider (and its settings/meal
-                    // dependencies) when it could actually matter — keeps the
-                    // sheet cheap to open for a past-dated meal, and avoids
-                    // depending on repositories the sheet doesn't otherwise
-                    // need when logging for a non-today date.
-                    final budget = _isMealToday
-                        ? ref.watch(remainingBudgetProvider).value
-                        : null;
-                    final preview = _buildImpactPreview(context, budget);
-                    if (preview == null) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: preview,
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _submit,
-                  child: Text(_isEditing ? l10n.saveButton : l10n.addButton),
-                ),
+                ],
+                if (_food != null) ...[
+                  const SizedBox(height: AppSpacing.s16),
+                  _SelectedFoodCard(
+                    food: _food!,
+                    grams: _grams,
+                    gramsFocus: _gramsFocus,
+                    lastGrams: usage[_food!.clientId]?.lastGrams,
+                    autofocus: _isEditing || _isPreselected,
+                    mealDateTime: widget.mealDateTime,
+                    replacedKcal: widget.initialFood == null
+                        ? 0
+                        : widget.initialFood!.caloriesPer100g * (widget.initialGrams ?? 0) / 100,
+                    onNudge: _nudge,
+                    onSetGrams: _setGrams,
+                    onTyped: () => _gramsAutoFilled = false,
+                    onSubmit: _submit,
+                  ),
+                ],
               ],
             ),
+          );
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Flexible(child: SingleChildScrollView(child: fields)),
+              const SizedBox(height: AppSpacing.s12),
+              FilledButton.icon(
+                onPressed: _submit,
+                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+                icon: _isEditing ? null : const Icon(Icons.add_rounded),
+                label: Text(_isEditing ? l10n.saveButton : l10n.addToMealButton),
+              ),
+            ],
           );
         },
       ),
@@ -350,85 +380,308 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Recent foods quick-pick row
-// ---------------------------------------------------------------------------
+/// The autocomplete's suggestion list: a card of name + kcal per 100 g rows,
+/// as wide as the search field.
+class _FoodOptions extends StatelessWidget {
+  const _FoodOptions({required this.options, required this.width, required this.onSelected});
 
-class _RecentFoodsRow extends StatelessWidget {
-  const _RecentFoodsRow({
-    required this.label,
-    required this.recents,
-    required this.onPick,
-  });
-
-  final String label;
-  final List<Food> recents;
-  final ValueChanged<Food> onPick;
+  final List<Food> options;
+  final double width;
+  final ValueChanged<Food> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.0,
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 36,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: recents.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, i) => _RecentFoodChip(
-              food: recents[i],
-              onTap: () => onPick(recents[i]),
+    final p = context.palette;
+    final f = LifeyFormat.of(context);
+    final t = Theme.of(context).textTheme;
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.s4),
+        child: Material(
+          color: p.nested,
+          elevation: 4,
+          shadowColor: Colors.black,
+          borderRadius: BorderRadius.circular(AppRadius.control),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: 240, maxWidth: width, minWidth: width),
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: options.length,
+              itemBuilder: (context, i) {
+                final food = options[i];
+                return InkWell(
+                  onTap: () => onSelected(food),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(food.name, style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text)),
+                          ),
+                          const SizedBox(width: AppSpacing.s8),
+                          Text(
+                            '${f.kcal(food.caloriesPer100g)} kcal',
+                            style: t.bodySmall!.copyWith(color: p.text2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
-class _RecentFoodChip extends StatelessWidget {
-  const _RecentFoodChip({required this.food, required this.onTap});
+/// The picked food: name, "per 100 g · 89 kcal", the quantity stepper with
+/// its quick chips, and the live effect on the day's budget.
+class _SelectedFoodCard extends ConsumerWidget {
+  const _SelectedFoodCard({
+    required this.food,
+    required this.grams,
+    required this.gramsFocus,
+    required this.lastGrams,
+    required this.autofocus,
+    required this.mealDateTime,
+    required this.replacedKcal,
+    required this.onNudge,
+    required this.onSetGrams,
+    required this.onTyped,
+    required this.onSubmit,
+  });
 
   final Food food;
-  final VoidCallback onTap;
+  final TextEditingController grams;
+  final FocusNode gramsFocus;
+  final double? lastGrams;
+  final bool autofocus;
+  final DateTime? mealDateTime;
+
+  /// kcal of the entry being edited, already inside the day's saved total.
+  final double replacedKcal;
+  final ValueChanged<double> onNudge;
+  final ValueChanged<double> onSetGrams;
+  final VoidCallback onTyped;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final mc = context.metricColors;
+    final t = Theme.of(context).textTheme;
+    final primary = Theme.of(context).colorScheme.primary;
+
+    final quick = <double>{..._quickGrams, if (lastGrams != null) lastGrams!}.toList()..sort();
+
+    const decoration = InputDecoration(
+      isDense: true,
+      filled: false,
+      constraints: BoxConstraints(),
+      contentPadding: EdgeInsets.zero,
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      errorBorder: InputBorder.none,
+      focusedErrorBorder: InputBorder.none,
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: primary, width: 1.5),
+      ),
+      child: LifeyCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(food.name, style: t.titleLarge!.copyWith(color: p.text)),
+            const SizedBox(height: 2),
+            Text(
+              food.caloriesPer100g > 0
+                  ? l10n.entryFoodPer100(f.kcal(food.caloriesPer100g))
+                  : l10n.entryFoodPer100NoKcal,
+              style: t.titleSmall!.copyWith(fontWeight: FontWeight.w500, color: p.text2),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+            Row(
+              children: [
+                _StepButton(
+                  icon: Icons.remove_rounded,
+                  tooltip: l10n.quantityDecreaseTooltip,
+                  onPressed: () => onNudge(-_gramsStep),
+                ),
+                Expanded(
+                  child: Semantics(
+                    label: l10n.quantityLabel,
+                    // The number and its unit sit together in the middle:
+                    // IntrinsicWidth makes the field as wide as its digits.
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Flexible(
+                          child: IntrinsicWidth(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: 48),
+                              child: TextFormField(
+                                key: const Key('quantityField'),
+                                controller: grams,
+                                focusNode: gramsFocus,
+                                autofocus: autofocus,
+                                textAlign: TextAlign.center,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                                textInputAction: TextInputAction.done,
+                                style: AppType.number(44, weight: FontWeight.w800, color: p.text),
+                                decoration: decoration,
+                                onChanged: (_) => onTyped(),
+                                validator: (v) {
+                                  final parsed = double.tryParse((v ?? '').replaceAll(',', '.'));
+                                  if (parsed == null) return l10n.enterANumberError;
+                                  if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
+                                  return null;
+                                },
+                                onFieldSubmitted: (_) => onSubmit(),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s4),
+                        Text(
+                          'g',
+                          style: t.titleLarge!.copyWith(fontWeight: FontWeight.w700, color: p.text2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                _StepButton(
+                  icon: Icons.add_rounded,
+                  tooltip: l10n.quantityIncreaseTooltip,
+                  onPressed: () => onNudge(_gramsStep),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s12),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: grams,
+              builder: (context, _, __) {
+                final current = double.tryParse(grams.text.replaceAll(',', '.'));
+                return Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: AppSpacing.s8,
+                  runSpacing: AppSpacing.s8,
+                  children: [
+                    for (final amount in quick)
+                      ChoiceChip(
+                        label: Text('${f.grams(amount)} g'),
+                        selected: current == amount,
+                        showCheckmark: false,
+                        onSelected: (_) => onSetGrams(amount),
+                      ),
+                  ],
+                );
+              },
+            ),
+            if (food.caloriesPer100g > 0) ...[
+              const SizedBox(height: AppSpacing.s12),
+              Divider(height: 1, thickness: 1, color: p.hairline),
+              const SizedBox(height: AppSpacing.s12),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: grams,
+                builder: (context, _, __) {
+                  final amount = double.tryParse(grams.text.replaceAll(',', '.'));
+                  if (amount == null || amount <= 0) return const SizedBox(height: 40);
+                  final kcal = food.caloriesPer100g * amount / 100;
+                  final protein = food.proteinPer100g * amount / 100;
+                  final remaining = _remainingAfter(ref, kcal - replacedKcal);
+                  return Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.s8,
+                    runSpacing: AppSpacing.s4,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.entryPreviewKcal(f.kcal(kcal)),
+                            style: t.headlineSmall!.copyWith(fontWeight: FontWeight.w800, color: mc.calories, fontFeatures: AppType.tabular),
+                          ),
+                          Text(
+                            l10n.entryPreviewProtein(f.grams(protein)),
+                            style: t.bodySmall!.copyWith(color: mc.protein, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                      if (remaining != null)
+                        Text(
+                          remaining < 0
+                              ? l10n.entryBudgetOver(f.kcal(-remaining))
+                              : l10n.entryBudgetLeft(f.kcal(remaining)),
+                          style: t.titleMedium!.copyWith(fontWeight: FontWeight.w700, color: remaining < 0 ? mc.negative : p.text, fontFeatures: AppType.tabular),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Calories left of the meal day's goal once [deltaKcal] more are counted;
+  /// null without a goal or a meal date. The day's saved meals already hold
+  /// everything logged so far (the editor autosaves), so [deltaKcal] is only
+  /// what this entry adds or changes.
+  double? _remainingAfter(WidgetRef ref, double deltaKcal) {
+    final at = mealDateTime;
+    if (at == null) return null;
+    final goal = ref.watch(settingsControllerProvider).value?.dailyCalorieGoal;
+    if (goal == null || goal <= 0) return null;
+    final day = ref.watch(mealsOnDayProvider(dateOnly(at.toLocal()))).value;
+    if (day == null) return null;
+    final logged = day.fold<double>(0, (sum, m) => sum + m.totalCalories);
+    return goal - logged - deltaKcal;
+  }
+}
+
+/// The 56 dp round − / + button of the quantity stepper.
+class _StepButton extends StatelessWidget {
+  const _StepButton({required this.icon, required this.tooltip, required this.onPressed});
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Text(
-          food.name,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
+    final p = context.palette;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, size: 28),
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(56),
+        minimumSize: const Size.square(56),
+        backgroundColor: p.control,
+        foregroundColor: p.text,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.control)),
       ),
     );
   }

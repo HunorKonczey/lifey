@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/entitlements/paywall_navigation.dart';
 import '../../../../core/entitlements/paywall_trigger.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
+import '../../../../shared/widgets/ds/lifey_header.dart';
+import '../../../../shared/widgets/ds/section_label.dart';
 import '../application/generated_recipe_saver.dart';
 import '../application/recipe_generation_controller.dart';
 import '../domain/generated_recipe.dart';
@@ -126,7 +129,7 @@ class _GeneratedRecipeScreenState extends ConsumerState<GeneratedRecipeScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.generatedRecipeTitle)),
+      appBar: LifeySubpageHeader(title: l10n.generatedRecipeTitle),
       body: SafeArea(
         child: switch (state) {
           RecipeGenerationDone(:final recipe) when _quantities.isNotEmpty =>
@@ -150,16 +153,13 @@ class _GeneratedRecipeScreenState extends ConsumerState<GeneratedRecipeScreen> {
       children: [
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s16),
             children: [
               TextField(
                 controller: _name,
                 textCapitalization: TextCapitalization.sentences,
                 style: theme.textTheme.titleLarge,
-                decoration: InputDecoration(
-                  labelText: l10n.nameLabel,
-                  border: const OutlineInputBorder(),
-                ),
+                decoration: InputDecoration(labelText: l10n.nameLabel),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 12),
@@ -169,9 +169,9 @@ class _GeneratedRecipeScreenState extends ConsumerState<GeneratedRecipeScreen> {
                 onServingsChanged: (value) => setState(() => _servings = value),
                 l10n: l10n,
               ),
-              const SizedBox(height: 16),
-              Text(l10n.ingredientsLabel, style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s16),
+              SectionLabel(l10n.ingredientsLabel),
+              const SizedBox(height: AppSpacing.s8),
               for (var index = 0; index < recipe.ingredients.length; index++)
                 _IngredientRow(
                   ingredient: recipe.ingredients[index],
@@ -183,16 +183,16 @@ class _GeneratedRecipeScreenState extends ConsumerState<GeneratedRecipeScreen> {
                   onQuantityChanged: () => setState(() {}),
                 ),
               if (recipe.description != null && recipe.description!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(l10n.descriptionOptionalLabel, style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.s16),
+                SectionLabel(l10n.descriptionOptionalLabel),
+                const SizedBox(height: AppSpacing.s8),
                 Text(recipe.description!, style: theme.textTheme.bodyMedium),
               ],
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s12),
           child: Row(
             children: [
               Expanded(
@@ -250,7 +250,7 @@ class _PerServingCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

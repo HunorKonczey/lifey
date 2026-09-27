@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/entitlements/history_cutoff.dart';
+import '../../../core/format/lifey_format.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
 import '../../../core/health/weight_health_backfill_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
+import '../../../shared/widgets/ds/delta_chip.dart';
+import '../../../shared/widgets/ds/grouped_list_item.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../shared/widgets/ds/lifey_segmented.dart';
+import '../../../shared/widgets/ds/metric_value.dart';
+import '../../../shared/widgets/ds/section_label.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/history_boundary_row.dart';
@@ -19,15 +25,19 @@ import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/shell_fab.dart';
 import '../application/weight_chart_data.dart';
 import '../application/weight_controller.dart';
+import '../application/weight_headline.dart';
 import '../application/weight_range.dart';
 import '../application/weight_trend_data.dart';
 import '../domain/weight_entry.dart';
 import 'widgets/add_weight_sheet.dart';
-import 'widgets/goal_progress_card.dart';
+import 'widgets/weight_goal_band.dart';
+import 'widgets/weight_hero_header.dart';
 
-/// Weight: a chart card (current reading + range + TimeSeriesChart) over a
-/// History list of past entries, mirroring the redesign mockup
-/// (docs/design · screen 04).
+/// Weight (canvas Lifey 4 › 4.1; docs/redesign/77-mobile-redesign-plan.md R4):
+/// one hero card — the current weight at 64 px with its two changes, the goal
+/// band, the range switcher and the chart with its 7-day average — over a
+/// "History" list of signed changes. The large title collapses as the page
+/// scrolls; "+ Log" is the shell's floating action.
 class WeightScreen extends ConsumerStatefulWidget {
   const WeightScreen({super.key});
 
@@ -45,24 +55,17 @@ class _WeightScreenState extends ConsumerState<WeightScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _pushFab());
   }
 
-  void _openAddSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => const AddWeightSheet(),
-    );
-  }
+  void _openAddSheet() => showAddWeightSheet(context);
 
   void _pushFab() {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     ref.read(shellFabProvider.notifier).set((
       tabIndex: 3,
       icon: Icons.add,
-      label: '',
+      label: l10n.logFabLabel,
       onPressed: _openAddSheet,
-      extended: false,
+      extended: true,
       onLongPress: null,
     ));
   }
@@ -72,9 +75,9 @@ class _WeightScreenState extends ConsumerState<WeightScreen> {
     final state = ref.watch(weightControllerProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
-    final contentTop = barTop + 58.0 + 12.0;
+    // The pinned header collapses to the status bar + a 52 px row; the
+    // pull-to-refresh spinner starts below it.
+    final headerBottom = MediaQuery.paddingOf(context).top + 52;
 
     ref.listen(activeShellTabProvider, (_, next) {
       if (next == 3) _pushFab();
@@ -82,42 +85,25 @@ class _WeightScreenState extends ConsumerState<WeightScreen> {
 
     return Scaffold(
       body: ScrollCollapseListener(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: RefreshIndicator(
-                displacement: contentTop,
-                onRefresh: () =>
-                    ref.read(weightControllerProvider.notifier).refresh(),
-                child: state.when(
-                  data: (entries) => entries.isEmpty
-                      ? EmptyView(
-                          icon: Icons.monitor_weight_outlined,
-                          title: l10n.noWeightEntriesYetTitle,
-                          subtitle: l10n.tapPlusToAddFirstOneMessage,
-                          action: const _ImportFromHealthButton(),
-                        )
-                      : _WeightBody(
-                          entries: entries,
-                          contentTop: contentTop,
-                        ),
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => ErrorView(
-                    error: error,
-                    onRetry: () =>
-                        ref.read(weightControllerProvider.notifier).refresh(),
-                  ),
+        child: RefreshIndicator(
+          edgeOffset: headerBottom,
+          onRefresh: () => ref.read(weightControllerProvider.notifier).refresh(),
+          child: state.when(
+            data: (entries) => _WeightBody(entries: entries),
+            loading: () => CustomScrollView(slivers: [
+              LifeyHeader(title: l10n.weightTitle),
+              const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
+            ]),
+            error: (error, _) => CustomScrollView(slivers: [
+              LifeyHeader(title: l10n.weightTitle),
+              SliverFillRemaining(
+                child: ErrorView(
+                  error: error,
+                  onRetry: () => ref.read(weightControllerProvider.notifier).refresh(),
                 ),
               ),
-            ),
-            Positioned(
-              top: barTop,
-              left: 12,
-              right: 12,
-              child: AdaptiveAppBar(title: l10n.weightTitle),
-            ),
-          ],
+            ]),
+          ),
         ),
       ),
     );
@@ -125,383 +111,98 @@ class _WeightScreenState extends ConsumerState<WeightScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Body — scrollable content
+// Body
 // ---------------------------------------------------------------------------
 
 class _WeightBody extends ConsumerWidget {
-  const _WeightBody({required this.entries, required this.contentTop});
+  const _WeightBody({required this.entries});
 
   final List<WeightEntry> entries;
-  final double contentTop;
-
-  static final _chartDateLabel = DateFormat('MMM d');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final mc = context.metricColors;
     final l10n = AppLocalizations.of(context)!;
+    final bottomPad = MediaQuery.paddingOf(context).bottom + AppSpacing.s56 + AppSpacing.s32;
+    final headline = ref.watch(weightHeadlineProvider);
+
+    final header = LifeyHeader(
+      title: l10n.weightTitle,
+      actions: const [_WeightMenu()],
+    );
+
+    if (entries.isEmpty || headline == null) {
+      return CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          header,
+          // EmptyView is a scroll-fill of its own: it needs the sliver's bounded
+          // height, not intrinsics.
+          SliverFillRemaining(
+            child: EmptyView(
+              icon: Icons.monitor_weight_outlined,
+              title: l10n.noWeightEntriesYetTitle,
+              subtitle: l10n.tapPlusToAddFirstOneMessage,
+              action: const _ImportFromHealthButton(),
+            ),
+          ),
+        ],
+      );
+    }
+
     final range = ref.watch(weightRangeControllerProvider);
-    final chartData = ref.watch(weightChartDataProvider);
-    final trend = ref.watch(weightTrendProvider).value;
-    final bottomPad = MediaQuery.paddingOf(context).bottom + 24;
+    // Intersected with the free history window (`67` §3.2, D-P6), same as
+    // [weightChartDataProvider] — this list re-filters `entries`
+    // independently rather than reading that provider, so it needs the same
+    // combination applied here too. `truncated` compares against the
+    // *range-only* result, not raw `entries` — otherwise a Pro user who
+    // simply picked "week" would also see the boundary row, which isn't the
+    // gate firing at all.
+    final rangeCutoff = range.cutoff();
+    final withinRange = rangeCutoff == null
+        ? entries
+        : entries.where((e) => !e.date.toLocal().isBefore(rangeCutoff)).toList();
+    final cutoff = combineHistoryCutoffs(rangeCutoff, ref.watch(historyCutoffProvider));
+    final filtered =
+        cutoff == null ? entries : entries.where((e) => !e.date.toLocal().isBefore(cutoff)).toList();
+    final truncated = filtered.length < withinRange.length;
 
-    final latest = entries.first;
-    final previous = entries.length > 1 ? entries[1] : null;
-    final delta = previous != null ? latest.weight - previous.weight : null;
-
-    return SingleChildScrollView(
+    const gutter = EdgeInsets.symmetric(horizontal: AppSpacing.screen);
+    return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Chart card: current reading + range + chart ────────────────
-          Container(
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-            ),
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Current reading + delta
-                Text(
-                  l10n.weightCurrentLabel,
-                  style: theme.textTheme.labelMedium
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      latest.weight.toStringAsFixed(1),
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                        letterSpacing: -1,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'kg',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (delta != null) ...[
-                      const SizedBox(width: 10),
-                      _DeltaLabel(delta: delta, large: true),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                // Range selector — pill segmented, inside the card
-                _RangePills(
-                  selected: range,
-                  onSelect: (r) => ref
-                      .read(weightRangeControllerProvider.notifier)
-                      .select(r),
-                ),
-                const SizedBox(height: 16),
-
-                // Chart
-                chartData.when(
-                  data: (points) => points.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
-                            child: Text(
-                              l10n.noWeightDataForRangeTitle,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: scheme.onSurfaceVariant),
-                            ),
-                          ),
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            TimeSeriesChart(
-                              points: points,
-                              dateLabelBuilder: _chartDateLabel.format,
-                              valueLabelBuilder: (value) =>
-                                  l10n.weightKgValue(value.toStringAsFixed(1)),
-                              accentColor: mc.weight,
-                              areaColor: mc.weight.withValues(alpha: 0.12),
-                              trendValues: trend,
-                            ),
-                            // Only claim a trend line when one is actually
-                            // drawn — a week of scattered weigh-ins has no
-                            // full window to average (docs/76 D-W2).
-                            if (trend?.any((v) => v != null) ?? false) ...[
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 14,
-                                    height: 3,
-                                    decoration: BoxDecoration(
-                                      color: mc.weight,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    l10n.weightTrendCaption,
-                                    style: theme.textTheme.labelSmall
-                                        ?.copyWith(color: scheme.onSurfaceVariant),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (error, _) => ErrorView(error: error),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Goal weight + projection (docs/76) ─────────────────────────
-          const GoalProgressCard(),
-
-          // ── History ────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 10),
-            child: Text(
-              l10n.weightHistoryLabel.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
-          Consumer(builder: (context, ref, _) {
-            // Intersected with the free history window (`67` §3.2, D-P6),
-            // same as [weightChartDataProvider] — this list re-filters
-            // `entries` independently rather than reading that provider, so
-            // it needs the same combination applied here too. `truncated`
-            // compares against the *range-only* result, not raw `entries` —
-            // otherwise a Pro user who simply picked "week" would also see
-            // the boundary row, which isn't the gate firing at all.
-            final rangeCutoff = range.cutoff();
-            final withinRange = rangeCutoff == null
-                ? entries
-                : entries.where((e) => !e.date.toLocal().isBefore(rangeCutoff)).toList();
-            final cutoff =
-                combineHistoryCutoffs(rangeCutoff, ref.watch(historyCutoffProvider));
-            final filtered = cutoff == null
-                ? entries
-                : entries
-                    .where((e) => !e.date.toLocal().isBefore(cutoff))
-                    .toList();
-            final truncated = filtered.length < withinRange.length;
-            return Column(
-              children: [
-                for (var i = 0; i < filtered.length; i++) ...[
-                  _HistoryRow(
-                    entry: filtered[i],
-                    delta: i + 1 < filtered.length
-                        ? filtered[i].weight - filtered[i + 1].weight
-                        : null,
-                  ),
-                  if (i < filtered.length - 1) const SizedBox(height: 8),
-                ],
-                if (truncated) ...[
-                  if (filtered.isNotEmpty) const SizedBox(height: 8),
-                  const HistoryBoundaryRow(),
-                ],
-              ],
-            );
-          }),
-
-          // ── Apple Health import ────────────────────────────────────────
-          const SizedBox(height: 16),
-          const _ImportFromHealthButton(),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Range selector — pill segmented control (matches design screen 04)
-// ---------------------------------------------------------------------------
-
-class _RangePills extends StatelessWidget {
-  const _RangePills({required this.selected, required this.onSelect});
-
-  final WeightRange selected;
-  final ValueChanged<WeightRange> onSelect;
-
-  String _label(AppLocalizations l10n, WeightRange r) => switch (r) {
-        WeightRange.week => l10n.weightRangeWeekLabel,
-        WeightRange.month => l10n.weightRangeMonthLabel,
-        WeightRange.quarter => l10n.weightRangeQuarterLabel,
-        WeightRange.all => l10n.weightRangeAllLabel,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: AppRadius.pill,
-      ),
-      child: Row(
-        children: [
-          for (final r in WeightRange.values)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => onSelect(r),
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: AppDuration.fast,
-                  curve: AppCurve.standard,
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  decoration: BoxDecoration(
-                    color: r == selected ? scheme.primary : Colors.transparent,
-                    borderRadius: AppRadius.pill,
-                  ),
-                  child: Text(
-                    _label(l10n, r),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: r == selected
-                          ? scheme.onPrimary
-                          : scheme.onSurfaceVariant,
-                      fontWeight:
-                          r == selected ? FontWeight.w700 : FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// History row — one past weight entry with relative date + delta
-// ---------------------------------------------------------------------------
-
-class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({required this.entry, required this.delta});
-
-  final WeightEntry entry;
-
-  /// Change vs the previous (older) entry. Negative = weight loss.
-  final double? delta;
-
-  static final _fallbackDate = DateFormat('EEE, MMM d');
-
-  String _relativeDate(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final d = entry.date.toLocal();
-    final day = DateTime(d.year, d.month, d.day);
-    final diff = today.difference(day).inDays;
-    if (diff == 0) return l10n.weightHistoryTodayLabel;
-    if (diff == 1) return l10n.weightHistoryYesterdayLabel;
-    return _fallbackDate.format(d);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.input),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${entry.weight.toStringAsFixed(1)} kg',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _relativeDate(context),
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
-          if (delta != null && delta != 0) _DeltaLabel(delta: delta!),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Delta label — arrow + change, green when down (loss), brown when up
-// ---------------------------------------------------------------------------
-
-class _DeltaLabel extends StatelessWidget {
-  const _DeltaLabel({required this.delta, this.large = false});
-
-  final double delta;
-  final bool large;
-
-  @override
-  Widget build(BuildContext context) {
-    final mc = context.metricColors;
-    // Weight loss (down) is the positive outcome.
-    final down = delta < 0;
-    final color = down ? mc.positive : mc.negative;
-    final magnitude = delta.abs().toStringAsFixed(1);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          down ? Icons.arrow_downward : Icons.arrow_upward,
-          size: large ? 18 : 16,
-          color: color,
+      slivers: [
+        header,
+        SliverPadding(
+          padding: gutter.copyWith(top: AppSpacing.s16),
+          sliver: SliverToBoxAdapter(child: _HeroCard(headline: headline)),
         ),
-        Text(
-          large ? '$magnitude kg' : magnitude,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: large ? 15 : 12,
-            fontWeight: FontWeight.w700,
-            color: color,
-            height: 1.0,
+        SliverPadding(
+          padding: gutter.copyWith(top: AppSpacing.s24, bottom: AppSpacing.s8),
+          sliver: SliverToBoxAdapter(child: SectionLabel(l10n.weightHistoryLabel)),
+        ),
+        SliverPadding(
+          padding: gutter,
+          sliver: SliverList.builder(
+            itemCount: filtered.length,
+            itemBuilder: (context, i) => GroupedListItem(
+              first: i == 0,
+              last: i == filtered.length - 1,
+              dividerInset: AppSpacing.s16,
+              child: _HistoryRow(
+                entry: filtered[i],
+                delta: i + 1 < filtered.length ? filtered[i].weight - filtered[i + 1].weight : null,
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: gutter.copyWith(top: AppSpacing.s12, bottom: bottomPad),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (truncated) const HistoryBoundaryRow(),
+              ],
+            ),
           ),
         ),
       ],
@@ -510,44 +211,211 @@ class _DeltaLabel extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Health import button
+// Hero card: hero number + goal band + range + chart
 // ---------------------------------------------------------------------------
 
-/// Manual "Import from Health" action: backfills the last 30 days of
-/// body-mass samples (one entry per day, skipping days already logged). Only
-/// rendered once the user has connected Health (Apple Health on iOS, Health
-/// Connect on Android); otherwise it collapses to nothing.
+class _HeroCard extends ConsumerWidget {
+  const _HeroCard({required this.headline});
+
+  final WeightHeadline headline;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final mc = context.metricColors;
+    final range = ref.watch(weightRangeControllerProvider);
+    final chartData = ref.watch(weightChartDataProvider);
+    final trend = ref.watch(weightTrendProvider).value;
+
+    String rangeLabel(WeightRange r) => switch (r) {
+          WeightRange.week => l10n.weightRangeWeekLabel,
+          WeightRange.month => l10n.weightRangeMonthLabel,
+          WeightRange.quarter => l10n.weightRangeQuarterLabel,
+          WeightRange.all => l10n.weightRangeAllLabel,
+        };
+
+    return LifeyCard.hero(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          WeightHeroHeader(headline: headline),
+          const SizedBox(height: AppSpacing.s16),
+          WeightGoalBand(headline: headline),
+          const SizedBox(height: AppSpacing.s16),
+          LifeySegmented<WeightRange>(
+            segments: [for (final r in WeightRange.values) (r, rangeLabel(r))],
+            selected: range,
+            onChanged: (r) => ref.read(weightRangeControllerProvider.notifier).select(r),
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          chartData.when(
+            data: (points) => points.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.s24),
+                    child: Center(
+                      child: Text(
+                        l10n.noWeightDataForRangeTitle,
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: p.text2),
+                      ),
+                    ),
+                  )
+                : TimeSeriesChart(
+                    points: points,
+                    dateLabelBuilder: (d) => f.shortDate(d),
+                    valueLabelBuilder: (value) => l10n.weightKgValue(f.decimal(value, 1)),
+                    axisLabelBuilder: (value) => f.decimal(value, 1),
+                    accentColor: mc.weight,
+                    gradientFill: true,
+                    // The canvas draws the daily line as the hero and the
+                    // 7-day average dotted over it (decision D-R4.1; the
+                    // docs/76 D-W3 style stays available as `emphasized`).
+                    trendValues: trend,
+                    trendStyle: TrendStyle.dotted,
+                    showPoints: false,
+                    highlightLast: true,
+                    legend: (daily: l10n.weightChartLegendDaily, trend: l10n.weightTrendCaption),
+                  ),
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.s32),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => ErrorView(error: error),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// History row — the weight, when, and the signed change from the one before
+// ---------------------------------------------------------------------------
+
+class _HistoryRow extends StatelessWidget {
+  const _HistoryRow({required this.entry, required this.delta});
+
+  final WeightEntry entry;
+
+  /// Change vs the previous (older) entry; null for the oldest.
+  final double? delta;
+
+  String _relativeDate(BuildContext context, AppLocalizations l10n) {
+    final f = LifeyFormat.of(context);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final d = entry.date.toLocal();
+    final diff = today.difference(DateTime(d.year, d.month, d.day)).inDays;
+    if (diff == 0) return l10n.weightHistoryTodayLabel;
+    if (diff == 1) return l10n.weightHistoryYesterdayLabel;
+    return '${f.weekdayShort(d)}, ${f.shortDate(d)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                MetricValue(value: f.decimal(entry.weight, 1), unit: 'kg', size: 19),
+                const SizedBox(height: AppSpacing.s4),
+                Text(
+                  _relativeDate(context, l10n),
+                  style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w500, color: p.text2),
+                ),
+              ],
+            ),
+          ),
+          if (delta != null) DeltaChip.signed(value: delta!),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ⋮ menu and the Health import
+// ---------------------------------------------------------------------------
+
+/// The header's ⋮ (canvas: a round 44 px button): "Import from Health" when
+/// Apple Health / Health Connect is connected — the only thing the menu
+/// holds today, so without it the button is not drawn at all.
+class _WeightMenu extends ConsumerWidget {
+  const _WeightMenu();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final available = ref.watch(healthServiceProvider).isAvailable;
+    final connected = ref.watch(healthControllerProvider).value ?? false;
+    if (!available || !connected) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context)!;
+    final p = context.palette;
+    return PopupMenuButton<void>(
+      tooltip: l10n.weightMoreTooltip,
+      position: PopupMenuPosition.under,
+      itemBuilder: (_) => [
+        PopupMenuItem<void>(
+          onTap: () => importWeightFromHealth(context, ref),
+          child: Text(l10n.importFromHealthButton),
+        ),
+      ],
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(color: p.nested, shape: BoxShape.circle),
+        child: Icon(Icons.more_vert_rounded, size: 22, color: p.text),
+      ),
+    );
+  }
+}
+
+/// Backfills the last 30 days of body-mass samples from Health (one entry per
+/// day, skipping days already logged) and says how many came in.
+Future<void> importWeightFromHealth(BuildContext context, WidgetRef ref) async {
+  final l10n = AppLocalizations.of(context)!;
+  try {
+    final count = await ref.read(weightHealthBackfillServiceProvider).backfill();
+    if (!context.mounted) return;
+    if (count > 0) {
+      AppSnackbar.showSuccess(context, title: l10n.weightImportedFromHealth(count));
+    } else {
+      AppSnackbar.showInfo(context, title: l10n.noNewWeightFromHealth);
+    }
+  } catch (_) {
+    if (!context.mounted) return;
+    AppSnackbar.showError(context, title: l10n.noNewWeightFromHealth);
+  }
+}
+
+/// Manual "Import from Health" action of the empty state. Only rendered once
+/// the user has connected Health (Apple Health on iOS, Health Connect on
+/// Android); otherwise it collapses to nothing.
 class _ImportFromHealthButton extends ConsumerStatefulWidget {
   const _ImportFromHealthButton();
 
   @override
-  ConsumerState<_ImportFromHealthButton> createState() =>
-      _ImportFromHealthButtonState();
+  ConsumerState<_ImportFromHealthButton> createState() => _ImportFromHealthButtonState();
 }
 
-class _ImportFromHealthButtonState
-    extends ConsumerState<_ImportFromHealthButton> {
+class _ImportFromHealthButtonState extends ConsumerState<_ImportFromHealthButton> {
   bool _importing = false;
 
   Future<void> _import() async {
     if (_importing) return;
     setState(() => _importing = true);
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final count =
-          await ref.read(weightHealthBackfillServiceProvider).backfill();
-      if (!mounted) return;
-      if (count > 0) {
-        AppSnackbar.showSuccess(context, title: l10n.weightImportedFromHealth(count));
-      } else {
-        AppSnackbar.showInfo(context, title: l10n.noNewWeightFromHealth);
-      }
-    } catch (_) {
-      if (!mounted) return;
-      AppSnackbar.showError(context, title: l10n.noNewWeightFromHealth);
-    } finally {
-      if (mounted) setState(() => _importing = false);
-    }
+    await importWeightFromHealth(context, ref);
+    if (mounted) setState(() => _importing = false);
   }
 
   @override
@@ -559,19 +427,9 @@ class _ImportFromHealthButtonState
     final l10n = AppLocalizations.of(context)!;
     return FilledButton.tonalIcon(
       onPressed: _importing ? null : _import,
-      style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.input),
-        ),
-      ),
       icon: _importing
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.favorite, size: 20),
+          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+          : const Icon(Icons.favorite_rounded, size: 20),
       label: Text(l10n.importFromHealthButton),
     );
   }

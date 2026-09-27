@@ -48,7 +48,7 @@ class _PostWorkoutFeedbackSheetState extends State<PostWorkoutFeedbackSheet> {
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final theme = Theme.of(context);
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
       child: Column(
         mainAxisSize: MainAxisSize.min,

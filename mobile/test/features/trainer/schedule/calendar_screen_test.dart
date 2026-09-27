@@ -13,6 +13,7 @@ import 'package:lifey/features/trainer/schedule/data/schedule_repository.dart';
 import 'package:lifey/features/trainer/schedule/domain/schedule.dart';
 import 'package:lifey/features/trainer/schedule/presentation/calendar_screen.dart';
 import 'package:lifey/features/trainer/schedule/presentation/widgets/month_overview.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 TrainerClient _client(int id, String firstName) => TrainerClient(
@@ -102,6 +103,9 @@ Future<void> _pump(
   List<TrainerClient> clients = const [],
   bool offline = false,
   Size size = const Size(400, 900),
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+  ThemeData? theme,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -117,11 +121,16 @@ Future<void> _pump(
         isOfflineProvider.overrideWith((ref) => Stream.value(offline)),
         unreadBadgeProvider.overrideWith((ref) => Stream.value(0)),
       ],
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: TrainerCalendarScreen(),
+        home: const TrainerCalendarScreen(),
       ),
     ),
   );
@@ -392,5 +401,42 @@ void main() {
       expect(find.byType(MonthOverview), findsOneWidget);
       expect(find.text('Push day'), findsNothing);
     });
+  });
+
+  group('layout (canvas Lifey 6 family)', () {
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('the agenda with a session fits 360 dp at x 1.3 in $name, $mode', (tester) async {
+          await _pump(
+            tester,
+            repo: _FakeScheduleRepository(sessions: [_session(at: const ScheduleTime(18, 0)), _session(sessionId: 2, daysFromToday: 1)]),
+            clients: [_client(1, 'Anna')],
+            size: const Size(360, 900),
+            locale: locale,
+            textScale: 1.3,
+            theme: theme,
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('the month view fits 360 dp at x 1.3 in $name, $mode', (tester) async {
+          await _pump(
+            tester,
+            repo: _FakeScheduleRepository(sessions: [_session(at: const ScheduleTime(18, 0)), _session(sessionId: 2)]),
+            clients: [_client(1, 'Anna')],
+            size: const Size(360, 900),
+            locale: locale,
+            textScale: 1.3,
+            theme: theme,
+          );
+          await tester.tap(find.byTooltip(locale.languageCode == 'hu' ? 'Hónap nézet' : 'Month view'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 }

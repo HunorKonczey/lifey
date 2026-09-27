@@ -245,7 +245,7 @@ class _PaceBarPainter extends CustomPainter {
         text: geometry.bars[index].label,
         style: TextStyle(
           color: accent,
-          fontSize: 9,
+          fontSize: 9,  // design-audit: ok - canvas label: a painter has no BuildContext or theme
           fontWeight: FontWeight.w800,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),

@@ -93,7 +93,7 @@ void main() {
         // Exact date formatting is locale-engine-dependent (DateFormat.yMMMd)
         // — check the fixed prefix rather than the full rendered string.
         expect(find.textContaining(isHu ? 'Megújul' : 'Renews'), findsOneWidget);
-        expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+        expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
         expect(find.text(l10n.paywallRestoreButton), findsOneWidget);
       });
 
@@ -108,7 +108,7 @@ void main() {
 
         expect(find.text(l10n.settingsSubscriptionProTitle), findsOneWidget);
         expect(find.text(l10n.settingsSubscriptionSponsoredSubtitle), findsOneWidget);
-        expect(find.byIcon(Icons.chevron_right), findsNothing);
+        expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
         expect(find.text(l10n.paywallRestoreButton), findsNothing);
       });
 
@@ -131,7 +131,7 @@ void main() {
 
         expect(find.text(l10n.settingsSubscriptionTrialTitle), findsOneWidget);
         expect(find.text(l10n.settingsSubscriptionTrialDaysLeft(6)), findsOneWidget);
-        expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+        expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
         // No restore for a trainer trial — there's no purchase to restore.
         expect(find.text(l10n.paywallRestoreButton), findsNothing);
       });

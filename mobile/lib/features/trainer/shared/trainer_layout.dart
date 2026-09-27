@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_tokens.dart';
+
 /// Where the trainer view stops being a phone app
 /// (docs/chat/41-trainer-mobile-v2-plan.md §8.2).
 ///
@@ -15,7 +17,7 @@ const double trainerTwoPaneBreakpoint = 900;
 
 /// The list pane's width. Wide enough for a client card with its compliance
 /// badges, narrow enough to leave the detail the room it needs.
-const double trainerListPaneWidth = 380;
+const double trainerListPaneWidth = 400;
 
 /// How wide a single-column trainer screen lets its content grow. Cards
 /// stretched across a 1280 dp tablet are unreadable long before they are
@@ -46,7 +48,7 @@ class TrainerTwoPane extends StatelessWidget {
         VerticalDivider(
           width: 1,
           thickness: 1,
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: context.palette.hairline,
         ),
         Expanded(child: detail),
       ],

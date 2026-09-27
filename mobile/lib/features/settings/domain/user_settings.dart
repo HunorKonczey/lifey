@@ -59,6 +59,20 @@ class UserSettings {
   final int? dailyFatGoal;
   final double? dailyWaterGoalLiters;
   final int? dailyStepGoal;
+
+  /// The step goal every account has until it sets its own (design canvas
+  /// Lifey 5: "A lépéscél „—” helyett alapértéket kap").
+  static const int defaultDailyStepGoal = 10000;
+
+  /// The goal to display and to judge steps against: the account's own, else
+  /// [defaultDailyStepGoal]. One getter for the dashboard tile, the statistics
+  /// goal line, the goal-reached notification and the home-screen widget, so
+  /// what is shown and what is notified can't disagree. (Streaks and the
+  /// weekly recap keep using the explicit [dailyStepGoal]: a default is not a
+  /// commitment, and a steps streak for someone who never tracked steps
+  /// would just be a permanent zero.)
+  int get effectiveDailyStepGoal =>
+      dailyStepGoal != null && dailyStepGoal! > 0 ? dailyStepGoal! : defaultDailyStepGoal;
   // Opt-out for the trainer-scheduled-workout push reminder
   // (docs/30-push-notifications-plan.md) — server-enforced (the backend job
   // checks it), synced like every other field here rather than a local pref.

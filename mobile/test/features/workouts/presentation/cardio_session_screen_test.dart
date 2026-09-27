@@ -383,7 +383,7 @@ void main() {
   testWidgets('a running session shows Pause and the slide-to-finish bar, not Resume', (tester) async {
     await _pump(tester, _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch));
 
-    expect(find.text('Pause'), findsOneWidget);
+    expect(find.byTooltip('Pause'), findsOneWidget);
     expect(find.text('Resume'), findsNothing);
     expect(find.text('Slide to finish'), findsOneWidget);
     expect(find.text('Paused'), findsNothing);
@@ -395,7 +395,7 @@ void main() {
     await _pump(tester, _pausedSession(movingSeconds: 400));
 
     expect(find.text('Resume'), findsOneWidget);
-    expect(find.text('Pause'), findsNothing);
+    expect(find.byTooltip('Pause'), findsNothing);
     expect(find.text('Slide to finish'), findsOneWidget);
     // "Paused" is the manual-pause card's title (M08) — the plain status
     // label it used to be is gone entirely while paused (C2.5).
@@ -408,7 +408,7 @@ void main() {
     final controller =
         await _pump(tester, _runningSession(movingSeconds: 60, movingSinceEpochMs: since.millisecondsSinceEpoch));
 
-    await tester.tap(find.text('Pause'));
+    await tester.tap(find.byTooltip('Pause'));
     await tester.pumpAndSettle();
 
     expect(controller.pauseCalls, hasLength(1));
@@ -434,7 +434,7 @@ void main() {
     expect(controller.resumeCalls, hasLength(1));
     final resumedAt = controller.resumeCalls.single['resumedAt'] as DateTime;
     expect(resumedAt.difference(before).inSeconds.abs() < 2, isTrue);
-    expect(find.text('Pause'), findsOneWidget);
+    expect(find.byTooltip('Pause'), findsOneWidget);
     expect(find.text('Paused'), findsNothing);
   });
 
@@ -445,10 +445,10 @@ void main() {
     );
     controller.failNext = true;
 
-    await tester.tap(find.text('Pause'));
+    await tester.tap(find.byTooltip('Pause'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Pause'), findsOneWidget); // still running, button unchanged
+    expect(find.byTooltip('Pause'), findsOneWidget); // still running, button unchanged
     expect(find.text('Paused'), findsNothing);
   });
 
@@ -585,7 +585,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controller.resumeCalls, hasLength(1));
-      expect(find.text('Pause'), findsOneWidget);
+      expect(find.byTooltip('Pause'), findsOneWidget);
       expect(find.text('Automatic pause'), findsNothing);
     });
 
@@ -629,7 +629,7 @@ void main() {
         _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch),
       );
 
-      await tester.tap(find.text('Pause'));
+      await tester.tap(find.byTooltip('Pause'));
       await tester.pumpAndSettle();
 
       expect(notifier.updateCalls, isNotEmpty);
@@ -651,7 +651,7 @@ void main() {
       final (_, notifier) = await _pumpWithNotifier(tester, _pausedSession(movingSeconds: 400));
       notifier.updateCalls.clear();
 
-      await tester.tap(find.text('DISTANCE'));
+      await tester.tap(find.text('Distance'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField), '5');
       await tester.tap(find.text('Save'));
@@ -714,7 +714,7 @@ void main() {
         _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch),
       );
 
-      await tester.tap(find.text('Pause'));
+      await tester.tap(find.byTooltip('Pause'));
       await tester.pumpAndSettle();
 
       expect(watch.updateCalls, isNotEmpty);
@@ -769,7 +769,7 @@ void main() {
       await tester.pumpAndSettle();
       watch.updateCalls.clear();
 
-      await tester.tap(find.text('Pause'));
+      await tester.tap(find.byTooltip('Pause'));
       await tester.pumpAndSettle();
 
       expect(watch.updateCalls, isEmpty);

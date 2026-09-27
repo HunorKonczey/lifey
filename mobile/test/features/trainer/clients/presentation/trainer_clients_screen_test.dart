@@ -9,6 +9,8 @@ import 'package:lifey/features/trainer/clients/application/trainer_clients_contr
 import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
 import 'package:lifey/features/trainer/clients/presentation/trainer_clients_screen.dart';
 import 'package:lifey/features/trainer/clients/presentation/widgets/client_card.dart';
+import 'package:lifey/features/trainer/clients/presentation/widgets/client_sort_chips.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 class _FakeAuthController extends AuthController {
@@ -61,6 +63,10 @@ Future<void> _pump(
   Object? error,
   bool offline = false,
 }) async {
+  // Tall enough for every card: the list is lazy and a card is now a KPI block.
+  tester.view.physicalSize = const Size(390 * 2, 2400 * 2);
+  tester.view.devicePixelRatio = 2;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -71,11 +77,12 @@ Future<void> _pump(
         isOfflineProvider.overrideWith((ref) => Stream.value(offline)),
         unreadBadgeProvider.overrideWith((ref) => Stream.value(0)),
       ],
-      child: const MaterialApp(
-        locale: Locale('en'),
+      child: MaterialApp(
+        theme: AppTheme.dark,
+        locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: TrainerClientsScreen(),
+        home: const TrainerClientsScreen(),
       ),
     ),
   );
@@ -108,8 +115,8 @@ void main() {
       _client(id: 2, firstName: 'Bela', missedWorkouts: 2),
     ]);
 
-    expect(find.text('Needs attention'), findsOneWidget);
-    expect(find.text('All clients'), findsOneWidget);
+    expect(find.text('NEEDS ATTENTION'), findsOneWidget);
+    expect(find.text('ALL CLIENTS'), findsOneWidget);
     // The flagged client is pulled to the top regardless of the sort.
     expect(_cardNamesInOrder(tester), ['Bela Client', 'Anna Client']);
   });
@@ -118,8 +125,8 @@ void main() {
       (tester) async {
     await _pump(tester, clients: [_client(id: 1, firstName: 'Anna')]);
 
-    expect(find.text('Needs attention'), findsNothing);
-    expect(find.text('All clients'), findsNothing);
+    expect(find.text('NEEDS ATTENTION'), findsNothing);
+    expect(find.text('ALL CLIENTS'), findsNothing);
   });
 
   testWidgets('shows the empty state, pointing at the web invite flow',
@@ -159,6 +166,14 @@ void main() {
     // only thing deciding the order.
     expect(_cardNamesInOrder(tester), ['Anna Client', 'Bela Client', 'Cili Client']);
 
+    // The pill row scrolls sideways: the third pill starts past the middle.
+    await tester.scrollUntilVisible(
+      find.text('Most missed'),
+      100,
+      scrollable: find.descendant(of: find.byType(ClientSortChips), matching: find.byType(Scrollable)),
+    );
+    await tester.ensureVisible(find.text('Most missed'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Most missed'));
     await tester.pumpAndSettle();
 

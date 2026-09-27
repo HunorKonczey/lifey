@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ads/banner_ad_slot.dart';
 import '../../../core/ads/nav_reserved_space.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../../shared/widgets/shell_fab.dart';
@@ -14,6 +15,9 @@ import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
 import '../application/meal_controller.dart';
 import '../domain/day_meals_summary.dart';
+import '../application/selected_meal_day_provider.dart';
+import '../domain/meal_days.dart';
+import 'all_meals_screen.dart';
 import 'barcode_scanner_screen.dart';
 import 'foods_tab.dart';
 import 'log_meal_screen.dart';
@@ -36,10 +40,11 @@ final nutritionPendingTabProvider =
       _NutritionPendingTabNotifier.new,
     );
 
-/// Nutrition: "Foods" (catalogue), "Meals" (logged meals) and "Recipes" tabs.
+/// Nutrition: the Meals, Recipes, Foods and Macros tabs (docs/redesign/
+/// 77-mobile-redesign-plan.md R2).
 ///
-/// The AdaptiveAppBar + PillTabBar form a single floating header unit that
-/// collapses together on scroll, matching the dashboard's header behaviour.
+/// A `NestedScrollView`: the large-title `LifeyHeader` collapses as the active
+/// tab scrolls, the `PillTabBar` under it stays pinned.
 class NutritionScreen extends ConsumerStatefulWidget {
   const NutritionScreen({super.key});
 
@@ -51,8 +56,14 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
-  DateRangeFilter _mealsFilter = DateRangeFilter.today;
-  DateRangeFilter _macrosFilter = DateRangeFilter.week;
+  /// 46 px pill bar + 8 px above and below (`PillTabBar`).
+  static const double _tabBarExtent = 62;
+
+  /// The overlap of the pinned title / search row and of the pinned tab bar,
+  /// each absorbed on its own handle (see the header builder below).
+  final _titleOverlap = SliverOverlapAbsorberHandle();
+  final _tabBarOverlap = SliverOverlapAbsorberHandle();
+
   bool _searching = false;
   String _searchQuery = '';
 
@@ -76,6 +87,8 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _titleOverlap.dispose();
+    _tabBarOverlap.dispose();
     super.dispose();
   }
 
@@ -142,9 +155,17 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     );
   }
 
+  /// Logs onto the day picked in the Meals tab's week strip.
   void _logMeal() {
+    final day = effectiveMealDay(ref.read(selectedMealDayProvider), DateTime.now());
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => const LogMealScreen()),
+      MaterialPageRoute(builder: (_) => LogMealScreen(initialDate: day)),
+    );
+  }
+
+  void _openAllMeals() {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => const AllMealsScreen()),
     );
   }
 
@@ -206,7 +227,6 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final statusTop = MediaQuery.paddingOf(context).top;
 
     ref.listen(activeShellTabProvider, (_, next) {
       if (next != 1) return;
@@ -226,95 +246,89 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
       });
     });
 
-    final barTop = statusTop + 8.0;
-    // AppBar expanded height + PillTabBar height (38 content + 8*2 padding)
-    final contentTop = barTop + 58.0 + 54.0;
-
     return Scaffold(
       body: ScrollCollapseListener(
         child: Stack(
           children: [
-            // ── Content fills the screen; each tab handles its own top padding ─
+            // The large title collapses as the active tab scrolls; the pill
+            // tab bar stays pinned under it (canvas Lifey 2 › 2.1).
             Positioned.fill(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  MealsTab(topPadding: contentTop, filter: _mealsFilter),
-                  RecipesTab(
-                    topPadding: contentTop,
-                    searchQuery: _searching ? _searchQuery : null,
-                  ),
-                  FoodsTab(
-                    topPadding: contentTop,
-                    searchQuery: _searching ? _searchQuery : null,
-                  ),
-                  MacrosTab(topPadding: contentTop, filter: _macrosFilter),
-                ],
-              ),
-            ),
-
-            // ── Floating combined header (AppBar + PillTabBar as one unit) ─
-            Positioned(
-              top: barTop,
-              left: 0,
-              right: 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: AdaptiveAppBar(
-                      title: l10n.nutritionTitle,
-                      searching: _searching,
-                      searchController: _searchController,
-                      searchHint: _tabController.index == 1
+              child: NestedScrollView(
+                headerSliverBuilder: (context, _) => [
+                  // Each pinned sliver is absorbed on a handle of its own and
+                  // every tab starts with the matching injectors
+                  // (OverlapInsetScope): without them a tab's first rows sit
+                  // under the pinned stack whenever the large title has
+                  // collapsed.
+                  SliverOverlapAbsorber(
+                    handle: _titleOverlap,
+                    sliver: _searching
+                        ? LifeySearchHeader(
+                      controller: _searchController,
+                      hint: _tabController.index == 1
                           ? l10n.searchRecipesHint
                           : l10n.searchFoodsHint,
-                      onSearchChanged: (value) =>
-                          setState(() => _searchQuery = value),
-                      onSearchClose: _closeSearch,
+                      closeTooltip: l10n.closeSearchTooltip,
+                      onChanged: (value) => setState(() => _searchQuery = value),
+                      onClose: _closeSearch,
+                    )
+                        : LifeyHeader(
+                      title: l10n.nutritionTitle,
                       actions: [
                         if (_searchableTab)
-                          AdaptiveAppBarAction(
-                            icon: Icons.search,
+                          HeaderIconButton(
+                            icon: Icons.search_rounded,
+                            tooltip: l10n.searchTooltip,
                             onPressed: _openSearch,
                           ),
                         if (_tabController.index == 0)
-                          AdaptiveAppBarAction(
-                            icon: Icons.content_copy_rounded,
-                            onPressed: _openCopyDaySheet,
-                            tooltip: l10n.copyPreviousDayAria,
+                          HeaderIconButton(
+                            icon: Icons.calendar_month_rounded,
+                            tooltip: l10n.allMealsTitle,
+                            onPressed: _openAllMeals,
                           ),
-                        AdaptiveAppBarAction(
-                          icon: Icons.qr_code_scanner,
+                        HeaderIconButton(
+                          icon: Icons.content_copy_rounded,
+                          tooltip: l10n.copyPreviousDayAria,
+                          onPressed: _openCopyDaySheet,
+                        ),
+                        HeaderIconButton(
+                          icon: Icons.qr_code_scanner_rounded,
+                          tooltip: l10n.scanBarcodeButton,
                           onPressed: _openBarcodeScanner,
                         ),
                       ],
-                      trailing: switch (_tabController.index) {
-                        0 => DateRangeFilterButton(
-                            value: _mealsFilter,
-                            onChanged: (f) =>
-                                setState(() => _mealsFilter = f),
-                          ),
-                        3 => DateRangeFilterButton(
-                            value: _macrosFilter,
-                            onChanged: (f) =>
-                                setState(() => _macrosFilter = f),
-                          ),
-                        _ => null,
-                      },
                     ),
                   ),
-                  PillTabBar(
-                    controller: _tabController,
-                    tabs: [
-                      Tab(text: l10n.mealsTabLabel),
-                      Tab(text: l10n.recipesTabLabel),
-                      Tab(text: l10n.foodsLabel),
-                      Tab(text: l10n.macrosTabLabel),
-                    ],
+                  SliverOverlapAbsorber(
+                    handle: _tabBarOverlap,
+                    sliver: LifeyPinnedSliver(
+                      height: _tabBarExtent,
+                      child: PillTabBar(
+                        controller: _tabController,
+                        horizontalMargin: AppSpacing.screen,
+                        tabs: [
+                          Tab(text: l10n.mealsTabLabel),
+                          Tab(text: l10n.recipesTabLabel),
+                          Tab(text: l10n.foodsLabel),
+                          Tab(text: l10n.macrosTabLabel),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
+                body: OverlapInsetScope(
+                  handles: [_titleOverlap, _tabBarOverlap],
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      MealsTab(onCopyDay: _openCopyDaySheet),
+                      RecipesTab(searchQuery: _searching ? _searchQuery : null),
+                      FoodsTab(searchQuery: _searching ? _searchQuery : null),
+                      const MacrosTab(),
+                    ],
+                  ),
+                ),
               ),
             ),
             Positioned(

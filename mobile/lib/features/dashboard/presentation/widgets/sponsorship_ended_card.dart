@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/entitlements/sponsorship_notice.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/notice_card.dart';
 
 /// The one notice a client gets when their trainer's sponsored Pro ends
 /// (`69` §12.1, built in `72` Prompt 10).
@@ -23,55 +24,17 @@ class SponsorshipEndedCard extends ConsumerWidget {
     if (!pending) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: scheme.onSurfaceVariant, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.sponsorshipEndedCardTitle,
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.sponsorshipEndedCardMessage,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: () => ref.read(sponsorshipNoticeProvider.notifier).dismiss(),
-            icon: const Icon(Icons.close, size: 18),
-            tooltip: l10n.sponsorshipEndedCardDismissTooltip,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ],
+    // Clay: it comes from the trainer. Quiet on purpose — no CTA (see above).
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s16),
+      child: NoticeCard(
+        icon: Icons.info_outline_rounded,
+        accent: context.palette.role,
+        title: l10n.sponsorshipEndedCardTitle,
+        body: l10n.sponsorshipEndedCardMessage,
+        onDismiss: () => ref.read(sponsorshipNoticeProvider.notifier).dismiss(),
+        dismissTooltip: l10n.sponsorshipEndedCardDismissTooltip,
       ),
     );
   }

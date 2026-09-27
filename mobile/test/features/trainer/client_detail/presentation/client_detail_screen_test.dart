@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/connectivity_status_provider.dart';
@@ -10,9 +11,12 @@ import 'package:lifey/features/trainer/client_detail/application/client_detail_t
 import 'package:lifey/features/trainer/client_detail/data/client_detail_repository.dart';
 import 'package:lifey/features/trainer/client_detail/domain/client_data.dart';
 import 'package:lifey/features/trainer/client_detail/domain/client_detail_tab.dart';
+import 'package:lifey/features/trainer/client_detail/domain/client_workout_session.dart';
 import 'package:lifey/features/trainer/client_detail/presentation/client_detail_screen.dart';
 import 'package:lifey/features/trainer/clients/application/trainer_clients_controller.dart';
 import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
+import 'package:lifey/core/theme/app_theme.dart';
+import 'package:lifey/shared/widgets/ds/lifey_segmented.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,6 +48,7 @@ class _FakeDetailRepository extends ClientDetailRepository {
     this.weights = const [],
     this.meals = const [],
     this.goals = const ClientNutritionGoals(),
+    this.sessions = const [],
     this.failWith,
   }) : super(Dio());
 
@@ -52,6 +57,7 @@ class _FakeDetailRepository extends ClientDetailRepository {
   final List<ClientWeightEntry> weights;
   final List<ClientMeal> meals;
   final ClientNutritionGoals goals;
+  final List<ClientWorkoutSession> sessions;
   final Object? failWith;
 
   void _maybeFail() {
@@ -81,6 +87,12 @@ class _FakeDetailRepository extends ClientDetailRepository {
   Future<List<ClientMeal>> fetchMealsForDay(int c, DateTime day) async {
     _maybeFail();
     return meals;
+  }
+
+  @override
+  Future<ClientSessionPage> fetchWorkoutSessions(int c, {int page = 0, int size = 20}) async {
+    _maybeFail();
+    return ClientSessionPage(sessions: sessions, isLast: true);
   }
 
   @override
@@ -131,7 +143,16 @@ Future<void> _pump(
   List<TrainerClient>? clients,
   bool offline = false,
   int clientId = 42,
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+  Size? size,
+  ThemeData? theme,
 }) async {
+  if (size != null) {
+    tester.view.physicalSize = size * 2;
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+  }
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -143,9 +164,14 @@ Future<void> _pump(
         isOfflineProvider.overrideWith((ref) => Stream.value(offline)),
       ],
       child: MaterialApp(
-        locale: const Locale('en'),
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: ClientDetailScreen(clientId: clientId),
       ),
     ),
@@ -170,7 +196,7 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   group('header and tabs', () {
-    testWidgets('names the client and opens on the overview', (tester) async {
+    testWidgets('names the client, says since when, and opens on the overview', (tester) async {
       await _pump(
         tester,
         repository: _FakeDetailRepository(
@@ -181,12 +207,62 @@ void main() {
       );
 
       expect(find.text('Anna Client'), findsOneWidget);
-      expect(find.text('anna@example.com'), findsOneWidget);
-      // 14000 kcal over the 7-day window.
-      expect(find.text('2,000 kcal'), findsOneWidget);
-      expect(find.text('71.4 kg'), findsOneWidget);
-      expect(find.text('-0.6 kg'), findsOneWidget);
-      expect(find.text('9,000'), findsOneWidget);
+      expect(find.text('Client since 1 Mar 2026'), findsOneWidget);
+      // 14000 kcal over the 7-day window; the figure and its unit are one
+      // rich text.
+      expect(find.text('2,000 kcal', findRichText: true), findsOneWidget);
+      expect(find.text('9,000', findRichText: true), findsOneWidget);
+      expect(find.text('over 2 days'), findsOneWidget);
+      expect(find.text('Last 7 days'), findsOneWidget);
+      // The weight trend: the change over 30 days as a chip, the latest
+      // reading under the title.
+      expect(find.text('−0.6 kg · 30 d'), findsOneWidget);
+      expect(find.textContaining('Latest: 71.4 kg'), findsOneWidget);
+    });
+
+    testWidgets('Message and Schedule sit right under the tabs, on every tab', (tester) async {
+      await _pump(tester);
+
+      expect(find.widgetWithText(OutlinedButton, 'Message'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Schedule'), findsOneWidget);
+      final tabsBottom = tester.getBottomLeft(find.byType(TabBar)).dy;
+      expect(tester.getTopLeft(find.widgetWithText(OutlinedButton, 'Message')).dy, greaterThanOrEqualTo(tabsBottom));
+
+      await tester.tap(find.text('Steps'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(FilledButton, 'Schedule'), findsOneWidget);
+    });
+
+    testWidgets('the underline follows the active tab', (tester) async {
+      await _pump(tester);
+
+      final bar = find.byType(TabBar);
+      expect(tester.widget<TabBar>(bar).controller!.index, ClientDetailTab.overview.index);
+
+      await tester.tap(find.text('Nutrition'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TabBar>(bar).controller!.index, ClientDetailTab.nutrition.index);
+
+      // Swiping the body moves it too, not only a tap on the row.
+      await tester.drag(find.byType(TabBarView), const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TabBar>(bar).controller!.index, ClientDetailTab.steps.index);
+    });
+
+    testWidgets('the tab row scrolls to the tabs that do not fit and keeps their labels whole', (tester) async {
+      await _pump(tester, locale: const Locale('hu'), size: const Size(360, 800), textScale: 1.3);
+
+      // Off-screen to the right until scrolled to, but never abbreviated.
+      final inTabs = find.descendant(of: find.byType(TabBar), matching: find.text('Ütemterv'));
+      await tester.ensureVisible(inTabs);
+      await tester.pumpAndSettle();
+      expect(tester.renderObject<RenderParagraph>(inTabs).didExceedMaxLines, isFalse);
+      expect(tester.getSize(inTabs).width, greaterThan(60));
+      expect(find.descendant(of: find.byType(TabBar), matching: find.text('Táplálkozás')), findsOneWidget);
+      // ...and the two buttons under the row keep their captions too.
+      expect(find.widgetWithText(OutlinedButton, 'Üzenet'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Ütemezés'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('a client who is no longer ours gets an explanation, not an error',
@@ -195,6 +271,94 @@ void main() {
 
       expect(find.text('Not your client'), findsOneWidget);
     });
+  });
+
+  group('overview KPIs (canvas Lifey 6, client overview)', () {
+    ClientWorkoutSession session(int daysAgo, int? rpe) => ClientWorkoutSession(
+          id: daysAgo + 1,
+          startedAt: DateTime.now().subtract(Duration(days: daysAgo)),
+          rpe: rpe,
+        );
+
+    testWidgets('put each figure in context: share of goal, missed sessions, days averaged, effort in words',
+        (tester) async {
+      final quiet = TrainerClient(
+        userId: 42,
+        email: 'anna@example.com',
+        firstName: 'Anna',
+        lastName: 'Client',
+        activeSince: DateTime.utc(2026, 3, 1),
+        missedWorkoutCount: 2,
+      );
+      await _pump(
+        tester,
+        clients: [quiet],
+        repository: _FakeDetailRepository(
+          statistics: const ClientStatistics(totalCalories: 14000, workoutCount: 3),
+          goals: const ClientNutritionGoals(dailyCalorieGoal: 2500),
+          steps: [_step(1, 8000), _step(0, 10000)],
+          // 7 and 8 inside the week are averaged; the 9 from three weeks ago is not.
+          sessions: [session(1, 7), session(3, 8), session(20, 9), session(2, null)],
+        ),
+      );
+
+      expect(find.text('80% of goal'), findsOneWidget); // 2,000 of 2,500
+      expect(find.text('2 sessions missed · 14 d'), findsOneWidget);
+      expect(find.text('over 2 days'), findsOneWidget);
+      expect(find.text('7.5 / 10', findRichText: true), findsOneWidget);
+      expect(find.text('hard, not maximal'), findsOneWidget);
+    });
+
+    testWidgets('a figure that does not exist is a dash and an empty line, never a zero', (tester) async {
+      await _pump(tester);
+
+      expect(find.text('—', findRichText: true), findsNWidgets(2)); // steps, RPE
+      expect(find.textContaining('of goal'), findsNothing);
+      expect(find.textContaining('missed'), findsNothing);
+      expect(find.textContaining('over '), findsNothing);
+      // No weigh-ins: the trend card says so instead of drawing a line.
+      expect(find.text('No weigh-ins yet'), findsOneWidget);
+      expect(find.textContaining('30 d'), findsNothing);
+    });
+
+    testWidgets('the tiles and the weight card open the tabs that explain them', (tester) async {
+      await _pump(tester);
+
+      await tester.tap(find.text('Avg steps'));
+      await tester.pumpAndSettle();
+      expect(find.text('No steps recorded'), findsOneWidget);
+    });
+
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('fits 360 dp at × 1.3 in $name, $mode, with every line filled', (tester) async {
+          final quiet = TrainerClient(
+            userId: 42,
+            email: 'anna@example.com',
+            firstName: 'Anna',
+            lastName: 'Client',
+            activeSince: DateTime.utc(2026, 3, 1),
+            missedWorkoutCount: 3,
+          );
+          await _pump(
+            tester,
+            clients: [quiet],
+            locale: locale,
+            textScale: 1.3,
+            size: const Size(360, 900),
+            theme: theme,
+            repository: _FakeDetailRepository(
+              statistics: const ClientStatistics(totalCalories: 17000, workoutCount: 12),
+              goals: const ClientNutritionGoals(dailyCalorieGoal: 2100),
+              steps: [_step(2, 12000), _step(1, 8000), _step(0, 10500)],
+              weights: [_weight(20, 72.0), _weight(0, 70.6)],
+              sessions: [session(1, 10), session(2, 9)],
+            ),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 
   group('statistics tab', () {
@@ -251,7 +415,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Last 30 days'), findsOneWidget);
-      expect(find.text('History'), findsOneWidget);
+      expect(find.text('HISTORY'), findsOneWidget);
       expect(find.text('8,214'), findsOneWidget);
       expect(find.text('10,500'), findsOneWidget);
     });
@@ -300,6 +464,75 @@ void main() {
       await _scrollNutritionTo(tester, find.text('Nothing logged on this day.'));
       expect(find.text('Nothing logged on this day.'), findsOneWidget);
     });
+  });
+
+  group('every tab, in both themes and languages (R6.6)', () {
+    testWidgets('weight history shows the change since the reading before it', (tester) async {
+      await _pump(
+        tester,
+        repository: _FakeDetailRepository(weights: [_weight(20, 72.0), _weight(10, 71.5), _weight(0, 71.9)]),
+      );
+
+      await tester.tap(find.text('Weight'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('READ-ONLY'), findsNothing); // not caps: it is a badge, not a label
+      expect(find.text('Read-only'), findsOneWidget);
+      expect(find.text('HISTORY'), findsOneWidget);
+      expect(find.text('+0.4'), findsOneWidget); // 71.5 -> 71.9
+      expect(find.text('−0.5'), findsOneWidget); // 72.0 -> 71.5
+    });
+
+    testWidgets('statistics switches its window with the segmented control', (tester) async {
+      await _pump(tester, repository: _FakeDetailRepository(statistics: const ClientStatistics(totalCalories: 900)));
+
+      await tester.tap(find.text('Statistics'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LifeySegmented<ClientStatisticsPeriod>), findsOneWidget);
+      await tester.tap(find.text('30 days'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('the data tabs fit 360 dp at x 1.3 in $name, $mode', (tester) async {
+          await _pump(
+            tester,
+            locale: locale,
+            textScale: 1.3,
+            size: const Size(360, 900),
+            theme: theme,
+            repository: _FakeDetailRepository(
+              statistics: const ClientStatistics(totalCalories: 17000, workoutCount: 5, latestWeight: 70.6),
+              goals: const ClientNutritionGoals(dailyCalorieGoal: 2100, dailyProteinGoal: 140),
+              steps: [_step(2, 12000), _step(1, 8000), _step(0, 10500)],
+              weights: [_weight(20, 72.0), _weight(10, 71.5), _weight(0, 70.6)],
+              meals: [_meal(MealType.breakfast, 'Oats with blueberries and milk', 390)],
+              sessions: [
+                ClientWorkoutSession(
+                  id: 1,
+                  startedAt: DateTime.now().subtract(const Duration(days: 1)),
+                  templateName: 'Upper body strength',
+                  rpe: 8,
+                  feedbackNote: 'Heavy',
+                  trainerComment: 'Nice work',
+                ),
+              ],
+            ),
+          );
+
+          final controller = tester.widget<TabBar>(find.byType(TabBar)).controller!;
+          for (var i = 0; i < ClientDetailTab.values.length; i++) {
+            // The schedule tab has its own test file and fakes.
+            if (ClientDetailTab.values[i] == ClientDetailTab.schedule) continue;
+            controller.animateTo(i, duration: Duration.zero);
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull, reason: 'tab $i');
+          }
+        });
+      }
+    }
   });
 
   group('failure states', () {
@@ -364,7 +597,7 @@ void main() {
       await _pump(tester, clients: [_client, other], clientId: 43);
 
       // Bela has no remembered tab, so he opens on the overview.
-      expect(find.text('Avg. daily calories'), findsOneWidget);
+      expect(find.text('Avg calories'), findsOneWidget);
     });
   });
 }

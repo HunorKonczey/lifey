@@ -139,7 +139,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('WAYPOINTS'), findsOneWidget);
-      expect(find.text('1 waypoints'), findsOneWidget);
+      expect(find.text('1 waypoint'), findsOneWidget);
       expect(find.textContaining('0.20 km'), findsWidgets);
       expect(find.textContaining('612 m'), findsWidgets); // the track's own altitude
       expect(find.textContaining('0:40'), findsWidgets);

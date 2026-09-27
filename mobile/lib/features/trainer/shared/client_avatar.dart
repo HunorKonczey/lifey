@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_tokens.dart';
+import '../../../shared/widgets/ds/monogram_avatar.dart';
 import '../../chat/application/peer_avatar_controller.dart';
 import '../clients/domain/trainer_client.dart';
 
@@ -32,7 +34,10 @@ class ClientAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
+    // The tint follows the person (the same seed as their chat avatar), so a
+    // roster of monograms is easy to scan.
+    final color = MonogramAvatar.colorFor(client.email, context.metricColors);
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     // Null covers every case the UI does not need to tell apart: no picture
     // set, no longer allowed to see it, or offline with nothing cached. All
@@ -50,7 +55,7 @@ class ClientAvatar extends ConsumerWidget {
         alignment: Alignment.center,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: scheme.tertiaryContainer,
+          color: color.withValues(alpha: dark ? 0.16 : 0.12),
           shape: BoxShape.circle,
         ),
         child: photo == null
@@ -58,9 +63,9 @@ class ClientAvatar extends ConsumerWidget {
                 client.monogram,
                 style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: size * 0.36,
+                  fontSize: size * 0.34,  // design-audit: ok - monogram proportional to the avatar
                   fontWeight: FontWeight.w800,
-                  color: scheme.onTertiaryContainer,
+                  color: color,
                 ),
               )
             : Image.memory(

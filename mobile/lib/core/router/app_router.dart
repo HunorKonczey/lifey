@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,9 +34,11 @@ import '../../features/workouts/application/workout_resume_prompt.dart';
 import '../../features/workouts/presentation/workouts_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 import '../../shared/widgets/trainer_shell.dart';
+import '../../shared/widgets/ds/gallery/design_gallery_screen.dart';
 import '../../shared/widgets/trainer_view_menu.dart';
 import '../auth/current_roles_provider.dart';
 import '../entitlements/paywall_trigger.dart';
+import 'transitions.dart';
 
 /// Notifies GoRouter to re-run its redirect whenever the signed-in user changes.
 class _AuthRefreshListenable extends ChangeNotifier {
@@ -119,6 +122,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/forgot-password';
 
+      // The design gallery needs no account — it only exists in debug builds.
+      if (kDebugMode && state.matchedLocation == DesignGalleryScreen.routePath) return null;
       if (!isLoggedIn && !isAuthRoute) return '/login';
       if (isLoggedIn && isAuthRoute) return homeLocation();
       // Every /trainer route is ROLE_TRAINER-only. This is a navigation
@@ -177,6 +182,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const TrainerSettingsScreen(),
       ),
       GoRoute(path: '/recap', builder: (context, state) => const WeeklyRecapScreen()),
+      // Debug builds only — the redesign's design gallery (docs/redesign/
+      // 77-mobile-redesign-plan.md R0.6). Tree-shaken out of release builds.
+      if (kDebugMode)
+        GoRoute(
+          path: DesignGalleryScreen.routePath,
+          builder: (context, state) => const DesignGalleryScreen(),
+        ),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       // A [PaywallTrigger] (docs/landing_page/67-mobile-free-pro-plan.md §4.3)
       // is passed as `extra` by every gated surface via `openPaywall()`.
@@ -185,7 +197,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             PaywallScreen(trigger: state.extra as PaywallTrigger? ?? PaywallTrigger.settings),
       ),
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
+        navigatorContainerBuilder: _fadeThroughBranches,
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),
         branches: [
@@ -235,7 +248,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // (docs/chat/41-trainer-mobile-v2-plan.md §2.1). T1 registers the one
       // branch it delivers; T2/T4/T6 each add theirs here and in
       // TrainerShell's destination list.
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
+        navigatorContainerBuilder: _fadeThroughBranches,
         builder: (context, state, navigationShell) =>
             TrainerShell(navigationShell: navigationShell),
         branches: [
@@ -245,11 +259,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: trainerShellLocation,
                 builder: (context, state) => const TrainerClientsScreen(),
                 routes: [
-                  // A child of the branch, so pushing it keeps the trainer
-                  // shell around it — and so a deep link from a chat thread
+                  // A child of the branch, so a deep link from a chat thread
                   // or a notification lands somewhere with a way back
-                  // (docs/chat/41 T2).
+                  // (docs/chat/41 T2) — but pushed on the *root* navigator, so
+                  // the floating bar does not sit over the client's tabs: the
+                  // canvas's client overview (Lifey 6) has none, and the last
+                  // rows of a list would hide under it (R6.fix-2).
                   GoRoute(
+                    parentNavigatorKey: rootNavigatorKey,
                     path: ':clientId',
                     builder: (context, state) => ClientDetailScreen(
                       clientId: int.parse(state.pathParameters['clientId']!),
@@ -296,3 +313,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Tab switches in both shells fade through instead of cutting
+/// (docs/redesign/77-mobile-redesign-plan.md R0.5); otherwise identical to
+/// `StatefulShellRoute.indexedStack` — every branch stays mounted.
+Widget _fadeThroughBranches(
+  BuildContext context,
+  StatefulNavigationShell navigationShell,
+  List<Widget> children,
+) =>
+    FadeThroughBranchContainer(
+      currentIndex: navigationShell.currentIndex,
+      children: children,
+    );

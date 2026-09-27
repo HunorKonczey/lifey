@@ -6,7 +6,11 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../../shared/widgets/ds/lifey_header.dart';
+import '../../../../shared/widgets/ds/list_group.dart';
+import '../../../../shared/widgets/ds/section_label.dart';
 import '../../../../shared/widgets/error_view.dart';
+import '../../shared/trainer_layout.dart';
 import '../application/trainer_invites_controller.dart';
 import '../domain/sent_invite.dart';
 
@@ -95,99 +99,95 @@ class _TrainerInvitesScreenState extends ConsumerState<TrainerInvitesScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.trainerInvitesTitle)),
+      appBar: LifeySubpageHeader(title: l10n.trainerInvitesTitle),
       body: RefreshIndicator(
         onRefresh: refresh,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            16,
-            20,
-            MediaQuery.paddingOf(context).bottom + 24,
-          ),
-          children: [
-            Form(
-              key: _formKey,
-              child: TextFormField(
-                controller: _emailController,
-                enabled: !_sending,
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                decoration: InputDecoration(
-                  labelText: l10n.trainerInviteEmailLabel,
-                  helperText: l10n.trainerInviteEmailHelper,
-                  helperMaxLines: 2,
-                  errorText: _sendError,
-                  border: const OutlineInputBorder(),
+        child: TrainerContentWidth(
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.screen,
+              AppSpacing.s16,
+              AppSpacing.screen,
+              MediaQuery.paddingOf(context).bottom + AppSpacing.s24,
+            ),
+            children: [
+              Form(
+                key: _formKey,
+                child: TextFormField(
+                  controller: _emailController,
+                  enabled: !_sending,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  decoration: InputDecoration(
+                    labelText: l10n.trainerInviteEmailLabel,
+                    helperText: l10n.trainerInviteEmailHelper,
+                    helperMaxLines: 2,
+                    errorText: _sendError,
+                  ),
+                  validator: (value) {
+                    final email = (value ?? '').trim();
+                    // The backend wants an exact address; a local shape check
+                    // keeps an obvious typo from costing a round trip.
+                    if (email.isEmpty || !email.contains('@') || email.endsWith('@')) {
+                      return l10n.trainerInviteEmailInvalidMessage;
+                    }
+                    return null;
+                  },
+                  onFieldSubmitted: (_) => _send(),
                 ),
-                validator: (value) {
-                  final email = (value ?? '').trim();
-                  // The backend wants an exact address; a local shape check
-                  // keeps an obvious typo from costing a round trip.
-                  if (email.isEmpty || !email.contains('@') || email.endsWith('@')) {
-                    return l10n.trainerInviteEmailInvalidMessage;
-                  }
-                  return null;
-                },
-                onFieldSubmitted: (_) => _send(),
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (_sending)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 12),
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _sending ? null : _send,
-                    icon: const Icon(Icons.send_outlined, size: 18),
-                    label: Text(l10n.trainerSendInviteButton),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: theme.colorScheme.tertiary,
-                      foregroundColor: theme.colorScheme.onTertiary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              l10n.trainerPendingInvitesTitle,
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            invites.when(
-              data: (list) => list.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
-                        l10n.trainerNoPendingInvitesMessage,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+              const SizedBox(height: AppSpacing.s12),
+              Row(
+                children: [
+                  if (_sending)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 12),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                    )
-                  : Column(
-                      children: [
-                        for (final invite in list)
-                          _InviteRow(invite: invite, onCancel: () => _cancel(invite)),
-                      ],
                     ),
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Center(child: CircularProgressIndicator()),
+                  Expanded(
+                    child: SizedBox(
+                      height: 56,
+                      child: FilledButton.icon(
+                        onPressed: _sending ? null : _send,
+                        icon: const Icon(Icons.send_rounded, size: 18),
+                        label: Text(l10n.trainerSendInviteButton),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              error: (error, _) => ErrorView(error: error, onRetry: refresh),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.s32),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                child: SectionLabel(l10n.trainerPendingInvitesTitle),
+              ),
+              invites.when(
+                data: (list) => list.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s12),
+                        child: Text(
+                          l10n.trainerNoPendingInvitesMessage,
+                          style: theme.textTheme.bodySmall?.copyWith(color: context.palette.text2),
+                        ),
+                      )
+                    : ListGroup(
+                        dividerInset: 72,
+                        children: [
+                          for (final invite in list) _InviteRow(invite: invite, onCancel: () => _cancel(invite)),
+                        ],
+                      ),
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (error, _) => ErrorView(error: error, onRetry: refresh),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -202,51 +202,21 @@ class _InviteRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final remaining = invite.remaining();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: AppRadius.cardAll,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.mail_outline, size: 18, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  invite.clientEmail,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  remaining == Duration.zero
-                      ? l10n.trainerInviteExpiredLabel
-                      : l10n.trainerInviteExpiresInLabel(remaining.inHours),
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            color: scheme.error,
-            tooltip: l10n.trainerCancelInviteTooltip,
-            onPressed: onCancel,
-          ),
-        ],
+    return ListRow(
+      leading: ListIconHolder(icon: Icons.mail_outline_rounded, color: scheme.primary),
+      title: invite.clientEmail,
+      subtitle: remaining == Duration.zero
+          ? l10n.trainerInviteExpiredLabel
+          : l10n.trainerInviteExpiresInLabel(remaining.inHours),
+      trailing: IconButton(
+        icon: const Icon(Icons.close_rounded),
+        color: scheme.error,
+        tooltip: l10n.trainerCancelInviteTooltip,
+        onPressed: onCancel,
       ),
     );
   }

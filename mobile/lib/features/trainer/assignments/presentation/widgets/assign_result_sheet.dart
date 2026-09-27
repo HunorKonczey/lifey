@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../../clients/domain/trainer_client.dart';
 import '../../domain/assignment.dart';
 
@@ -28,10 +31,10 @@ class AssignResultSheet extends StatelessWidget {
     required BulkAssignmentResult result,
     required List<TrainerClient> clients,
   }) {
-    return showModalBottomSheet<void>(
+    return showLifeySheet<void>(
       context: context,
+      title: AppLocalizations.of(context)!.trainerAssignButton,
       useRootNavigator: true,
-      showDragHandle: true,
       builder: (_) => AssignResultSheet(result: result, clients: clients),
     );
   }
@@ -46,78 +49,65 @@ class AssignResultSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
     final skipped = result.skippedClientIds;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        bottom: MediaQuery.paddingOf(context).bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.check_circle_outline, color: scheme.tertiary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.trainerAssignResultTitle(
-                    result.assignedClientIds.length,
-                    result.requestedCount,
-                  ),
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w800),
-                ),
+    // How many were assigned, then — only when someone was skipped — who, and
+    // why. The frame (title, handle, safe area) is showLifeySheet's.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.check_circle_outline_rounded, color: theme.colorScheme.primary),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Text(
+                l10n.trainerAssignResultTitle(result.assignedClientIds.length, result.requestedCount),
+                style: theme.textTheme.titleMedium,
               ),
-            ],
-          ),
-          if (skipped.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              l10n.trainerAssignSkippedTitle(skipped.length),
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
-            for (final clientId in skipped)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Icon(Icons.remove_circle_outline,
-                        size: 15, color: scheme.onSurfaceVariant),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _nameOf(clientId),
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 6),
-            Text(
-              l10n.trainerAssignSkippedExplanation,
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
-          const SizedBox(height: 18),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.okButton),
+        ),
+        const SizedBox(height: AppSpacing.s16),
+        if (skipped.isNotEmpty) ...[
+          LifeyCard.nested(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.trainerAssignSkippedTitle(skipped.length), style: theme.textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.s8),
+                for (final clientId in skipped)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Icon(Icons.remove_circle_outline_rounded, size: 16, color: p.text2),
+                        const SizedBox(width: AppSpacing.s8),
+                        Expanded(child: Text(_nameOf(clientId), style: theme.textTheme.bodyMedium)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.s8),
+                Text(
+                  l10n.trainerAssignSkippedExplanation,
+                  style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: AppSpacing.s16),
         ],
-      ),
+        SizedBox(
+          height: 56,
+          child: FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.okButton),
+          ),
+        ),
+      ],
     );
   }
 }

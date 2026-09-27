@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -8,6 +9,9 @@ import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/origin_trainer_badge.dart';
+import '../../../shared/widgets/ds/lifey_card.dart';
+import '../../../shared/widgets/ds/list_group.dart';
+import '../../../shared/widgets/ds/tinted_chip.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
 import '../domain/exercise.dart';
@@ -18,9 +22,8 @@ import 'log_session_screen.dart';
 
 /// "Templates" tab: tap "Start" to begin a session; overflow menu for edit/delete.
 class TemplatesTab extends ConsumerWidget {
-  const TemplatesTab({super.key, this.topPadding = 0});
+  const TemplatesTab({super.key});
 
-  final double topPadding;
 
   void _start(BuildContext context, WorkoutTemplate template) {
     Navigator.of(context, rootNavigator: true).push(
@@ -98,7 +101,6 @@ class TemplatesTab extends ConsumerWidget {
         );
 
     return RefreshIndicator(
-      displacement: topPadding,
       onRefresh: () =>
           ref.read(workoutTemplateControllerProvider.notifier).refresh(),
       child: state.when(
@@ -110,8 +112,12 @@ class TemplatesTab extends ConsumerWidget {
               subtitle: l10n.tapPlusToCreateOneMessage,
             );
           }
-          return ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, topPadding, 12, bottomPad + 88),
+          return CustomScrollView(
+            slivers: [
+              const OverlapInsetSliver(),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
+                sliver: SliverList.builder(
             itemCount: templates.length,
             itemBuilder: (context, index) {
               final template = templates[index];
@@ -125,6 +131,9 @@ class TemplatesTab extends ConsumerWidget {
                 onDelete: () => _delete(context, ref, template),
               );
             },
+                ),
+              ),
+            ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -190,21 +199,17 @@ class _TemplateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final p = context.palette;
 
     final categories = _categories();
-    // Templates keep the neutral green badge (matching the design); the
+    // Templates keep the neutral badge (matching the design); the
     // muscle-group colours appear only on the category chips below.
-    final badgeBg = scheme.primaryContainer;
-    final badgeIconColor = scheme.onPrimaryContainer;
 
-    return Card(
-      elevation: 0,
-      color: scheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      margin: const EdgeInsets.only(bottom: 10),
-      clipBehavior: Clip.antiAlias,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+      child: LifeyCard(
+      padding: EdgeInsets.zero,
+      clip: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -219,42 +224,20 @@ class _TemplateCard extends StatelessWidget {
                   // Header row
                   Row(
                     children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: badgeBg,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            _templateIcon(categories),
-                            size: 24,
-                            color: badgeIconColor,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 13),
+                      ListIconHolder(icon: _templateIcon(categories), color: scheme.primary),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               template.name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                              ).copyWith(color: scheme.onSurface),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, height: 1.25, color: p.text),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 3),
                             Text(
                               l10n.exercisesCountLabel(template.exercises.length),
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                              ).copyWith(color: scheme.onSurfaceVariant),
+                              style: theme.textTheme.bodySmall!.copyWith(height: 1.4, color: p.text2),
                             ),
                           ],
                         ),
@@ -270,8 +253,7 @@ class _TemplateCard extends StatelessWidget {
                               onDelete();
                           }
                         },
-                        icon: Icon(Icons.more_vert,
-                            size: 20, color: scheme.onSurfaceVariant),
+                        icon: Icon(Icons.more_vert_rounded, size: 22, color: p.text2),
                         padding: EdgeInsets.zero,
                         itemBuilder: (_) => [
                           PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
@@ -300,13 +282,11 @@ class _TemplateCard extends StatelessWidget {
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 6,
-                      runSpacing: 4,
-                      children: categories
-                          .map((c) => _CategoryChip(
-                                label: muscleGroupLabel(l10n, c),
-                                color: muscleGroupColor(c, context),
-                              ))
-                          .toList(),
+                      runSpacing: 6,
+                      children: [
+                        for (final c in categories)
+                          TintedChip(label: muscleGroupLabel(l10n, c), color: muscleGroupColor(c, context)),
+                      ],
                     ),
                   ],
                 ],
@@ -322,19 +302,6 @@ class _TemplateCard extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.tonal(
                 onPressed: onStart,
-                style: FilledButton.styleFrom(
-                  backgroundColor: scheme.primaryContainer,
-                  foregroundColor: scheme.onPrimaryContainer,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.card - 4),
-                  ),
-                  textStyle: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -348,37 +315,7 @@ class _TemplateCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Category chip
-// ---------------------------------------------------------------------------
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: AppRadius.pill,
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          height: 1.0,
-        ).copyWith(color: color),
       ),
     );
   }
 }
-

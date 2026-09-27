@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../core/format/lifey_format.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
-
-const _kScrim = Color(0x72080906);
 
 /// Confirmation dialog shown before duplicating a meal. Lets the user pick
 /// the date/time the copy should be logged at (defaults to now). Returns the
 /// chosen [DateTime], or null if the user cancelled.
+///
+/// Built like the other v2 dialogs (`LogoutDialog`): the theme's dialog
+/// surface, a 48 px tinted icon holder, the dialog text styles and a Cancel /
+/// action button pair that stacks at large text sizes
+/// (docs/redesign/77-mobile-redesign-plan.md R2.3).
 Future<DateTime?> showDuplicateMealDialog(BuildContext context) {
   return showDialog<DateTime>(
     context: context,
-    barrierColor: _kScrim,
     builder: (_) => const _DuplicateMealDialog(),
   );
 }
@@ -24,7 +27,7 @@ class _DuplicateMealDialog extends StatefulWidget {
 }
 
 class _DuplicateMealDialogState extends State<_DuplicateMealDialog> {
-  static final _dateTimeLabel = DateFormat('EEE, MMM d · HH:mm');
+  static const double _stackAboveTextScale = 1.15;
 
   DateTime _dateTime = DateTime.now();
 
@@ -54,130 +57,87 @@ class _DuplicateMealDialogState extends State<_DuplicateMealDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    const dialogBg = Color(0xFF22241B);
-    const titleColor = Color(0xFFF1F0E4);
-    const subtitleColor = Color(0xFFA8A899);
-    const cancelBg = Color(0xFF161611);
-    final accent = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final p = context.palette;
+    final f = LifeyFormat.of(context);
+    final primary = theme.colorScheme.primary;
+    final stack = MediaQuery.textScalerOf(context).scale(1) > _stackAboveTextScale;
+
+    final cancel = OutlinedButton(
+      onPressed: () => Navigator.of(context).pop(),
+      child: Text(l10n.cancelButton),
+    );
+    final confirm = FilledButton(
+      onPressed: () => Navigator.of(context).pop(_dateTime),
+      child: Text(l10n.duplicateMenuItem),
+    );
 
     return Dialog(
-      backgroundColor: dialogBg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: AppSpacing.s24),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+        padding: const EdgeInsets.all(AppSpacing.s24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon badge
             Container(
-              width: 60,
-              height: 60,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(20),
+                color: primary.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(AppRadius.control),
               ),
-              child: Icon(Icons.copy_rounded, size: 32, color: accent),
+              child: Icon(Icons.content_copy_rounded, size: 24, color: primary),
             ),
-            const SizedBox(height: 18),
-            // Title
-            Text(
-              l10n.duplicateMealQuestionTitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: titleColor,
-                letterSpacing: -0.3,
-                fontFamily: 'PlusJakartaSans',
-              ),
+            const SizedBox(height: 14),
+            Semantics(
+              header: true,
+              child: Text(l10n.duplicateMealQuestionTitle, style: theme.dialogTheme.titleTextStyle),
             ),
-            const SizedBox(height: 8),
-            // Message
-            Text(
-              l10n.duplicateMealConfirmMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: subtitleColor,
-                height: 1.55,
-                fontFamily: 'PlusJakartaSans',
-              ),
-            ),
-            const SizedBox(height: 18),
-            // Date/time picker tile
-            GestureDetector(
-              onTap: _pickDateTime,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                height: 54,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.schedule, size: 20, color: accent),
-                    const SizedBox(width: 9),
-                    Text(
-                      _dateTimeLabel.format(_dateTime),
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: titleColor,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
+            const SizedBox(height: 14),
+            Text(l10n.duplicateMealConfirmMessage, style: theme.dialogTheme.contentTextStyle),
+            const SizedBox(height: AppSpacing.s16),
+            // Date/time tile — the same row as the meal editor's.
+            Material(
+              color: p.nested,
+              borderRadius: BorderRadius.circular(AppRadius.control),
+              child: InkWell(
+                onTap: _pickDateTime,
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 52),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.schedule_rounded, size: 20, color: p.text2),
+                        const SizedBox(width: AppSpacing.s12),
+                        Expanded(
+                          child: Text(
+                            '${f.shortDayLabel(_dateTime)} · ${f.time(_dateTime)}',
+                            style: theme.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text),
+                          ),
+                        ),
+                        Icon(Icons.expand_more_rounded, size: 22, color: p.text2),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Buttons
-            Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(_dateTime),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: accent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
-                      textStyle: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    child: Text(l10n.duplicateMenuItem),
                   ),
                 ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: cancelBg,
-                      foregroundColor: titleColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
-                      textStyle: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    child: Text(l10n.cancelButton),
-                  ),
-                ),
-              ],
+              ),
             ),
+            const SizedBox(height: 20),
+            if (stack) ...[
+              confirm,
+              const SizedBox(height: 10),
+              cancel,
+            ] else
+              Row(
+                children: [
+                  Expanded(child: cancel),
+                  const SizedBox(width: 10),
+                  Expanded(child: confirm),
+                ],
+              ),
           ],
         ),
       ),

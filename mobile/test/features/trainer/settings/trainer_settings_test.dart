@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lifey/features/trainer/settings/trainer_preferences.dart';
 import 'package:lifey/features/trainer/settings/trainer_settings_screen.dart';
+import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/trainer_view_menu.dart';
 
@@ -63,6 +64,9 @@ class _FakePreferencesRepository extends TrainerPreferencesRepository {
 Future<void> _pump(
   WidgetTester tester, {
   required _FakePreferencesRepository repo,
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+  ThemeData? theme,
 }) async {
   final router = GoRouter(
     routes: [
@@ -78,7 +82,12 @@ Future<void> _pump(
     ProviderScope(
       overrides: [trainerPreferencesRepositoryProvider.overrideWithValue(repo)],
       child: MaterialApp.router(
-        locale: const Locale('en'),
+        theme: theme ?? AppTheme.dark,
+        locale: locale,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
@@ -138,18 +147,18 @@ void main() {
         find.textContaining('There is no in-app version'),
         findsOneWidget,
       );
-      expect(find.byType(SwitchListTile), findsOneWidget);
+      expect(find.byType(Switch), findsOneWidget);
     });
 
     testWidgets('turning it off writes it through', (tester) async {
       final repo = _FakePreferencesRepository();
       await _pump(tester, repo: repo);
 
-      await tester.tap(find.byType(SwitchListTile));
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
 
       expect(repo.writes, [false]);
-      final toggle = tester.widget<SwitchListTile>(find.byType(SwitchListTile));
+      final toggle = tester.widget<Switch>(find.byType(Switch));
       expect(toggle.value, isFalse);
     });
 
@@ -160,7 +169,7 @@ void main() {
         repo: _FakePreferencesRepository(failWrite: true),
       );
 
-      await tester.tap(find.byType(SwitchListTile));
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
 
       // No optimistic flip: a switch that springs back is worse than one
@@ -186,5 +195,19 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  group('layout (canvas Lifey 6 family)', () {
+    for (final (name, locale) in [('English', const Locale('en')), ('Hungarian', const Locale('hu'))]) {
+      for (final (mode, theme) in [('dark', AppTheme.dark), ('light', AppTheme.light)]) {
+        testWidgets('the settings list fits 360 dp at x 1.3 in $name, $mode', (tester) async {
+          tester.view.physicalSize = const Size(360, 900);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          await _pump(tester, repo: _FakePreferencesRepository(), locale: locale, textScale: 1.3, theme: theme);
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 }

@@ -1,35 +1,42 @@
 import 'dart:async';
 import 'dart:io' show File, Platform;
-import 'dart:typed_data' show Uint8List;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 
-import '../../../core/health/health_controller.dart';
+import '../../../core/entitlements/entitlement.dart';
+import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/sync/logout_preflight.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/watch/watch_workout_service.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
-import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/ds/gallery/design_gallery_screen.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../shared/widgets/ds/list_group.dart';
+import '../../../shared/widgets/ds/section_label.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/change_password_screen.dart';
-import '../../chat/data/chat_repository.dart';
-import '../../my_trainers/application/my_trainers_controller.dart';
-import '../../my_trainers/domain/my_trainer.dart';
 import '../../onboarding/presentation/onboarding_edit_screen.dart';
 import '../../water/presentation/water_sources_screen.dart';
 import '../application/avatar_controller.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
 import 'notification_settings_screen.dart';
+import 'widgets/logout_dialog.dart';
+import 'widgets/settings_goals.dart';
+import 'widgets/settings_integrations.dart';
+import 'widgets/settings_kit.dart';
+import 'widgets/settings_my_trainers.dart';
+import 'widgets/settings_profile_card.dart';
 import 'widgets/subscription_tile.dart';
 
 // ---------------------------------------------------------------------------
@@ -146,78 +153,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return '$m:$s';
   }
 
-  // Opens a bottom-sheet picker for the default rest duration. Scrollable
-  // (isScrollControlled + ListView, not a plain Column) since the 9 presets
-  // don't fit a fixed-height sheet on shorter screens.
+  // Opens a sheet picker for the default rest duration. Scrollable, since the 9
+  // presets don't fit a fixed-height sheet on shorter screens.
   void _pickRestDuration(AppLocalizations l10n) {
-    showModalBottomSheet<void>(
+    showLifeySheet<void>(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetCtx) {
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Text(
-                  l10n.restTimerDurationSheetTitle,
-                  style: Theme.of(sheetCtx).textTheme.titleMedium,
-                ),
-              ),
-              for (final seconds in _restDurationPresets)
-                ListTile(
-                  title: Text(_formatDuration(seconds)),
-                  trailing: _defaultRestSeconds == seconds
-                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
-                      : null,
-                  onTap: () {
-                    setState(() => _defaultRestSeconds = seconds);
-                    _autoSave();
-                    Navigator.of(sheetCtx).pop();
-                  },
-                ),
-            ],
-          ),
-        );
-      },
+      title: l10n.restTimerDurationSheetTitle,
+      builder: (sheetCtx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final seconds in _restDurationPresets)
+            _ChoiceTile(
+              label: _formatDuration(seconds),
+              selected: _defaultRestSeconds == seconds,
+              onTap: () {
+                setState(() => _defaultRestSeconds = seconds);
+                _autoSave();
+                Navigator.of(sheetCtx).pop();
+              },
+            ),
+        ],
+      ),
     );
   }
 
-  // Opens a bottom-sheet picker for Language.
+  // Opens a sheet picker for Language.
   void _pickLanguage(AppLocalizations l10n) {
-    showModalBottomSheet<void>(
+    showLifeySheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (sheetCtx) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final opt in LanguagePreference.values)
-              ListTile(
-                title: Text(_languageName(opt, l10n)),
-                trailing:
-                    _language == opt
-                        ? Icon(
-                          Icons.check,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                        : null,
-                onTap: () {
-                  setState(() => _language = opt);
-                  _autoSave();
-                  Navigator.of(sheetCtx).pop();
-                },
-              ),
-            SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
-          ],
-        );
-      },
+      title: l10n.languageLabel,
+      builder: (sheetCtx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final opt in LanguagePreference.values)
+            _ChoiceTile(
+              label: _languageName(opt, l10n),
+              selected: _language == opt,
+              onTap: () {
+                setState(() => _language = opt);
+                _autoSave();
+                Navigator.of(sheetCtx).pop();
+              },
+            ),
+        ],
+      ),
     );
   }
 
-  // Opens a bottom-sheet text editor for a numeric goal field.
+  // Opens the editor of one numeric goal; [onSave] stores the text, the
+  // autosave persists it.
   void _openGoalSheet({
     required String label,
     required String suffix,
@@ -225,28 +209,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required bool decimal,
     required void Function(String text) onSave,
   }) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => _GoalEditSheet(
-        label: label,
-        suffix: suffix,
-        initialText: initialText,
-        decimal: decimal,
-        onSave: (text) {
-          onSave(text);
-          _autoSave();
-        },
-      ),
+    showGoalEditSheet(
+      context,
+      label: label,
+      suffix: suffix,
+      initialText: initialText,
+      decimal: decimal,
+      onSave: (text) {
+        onSave(text);
+        _autoSave();
+      },
     );
   }
 
-  // Opens a bottom-sheet with the take-photo/gallery/remove actions.
+  // The take-photo / gallery / remove actions.
   void _openAvatarSheet(AppLocalizations l10n, {required bool hasAvatar}) {
-    showModalBottomSheet<void>(
+    showLifeySheet<void>(
       context: context,
-      showDragHandle: true,
+      title: l10n.changePhotoLabel,
       builder: (sheetCtx) {
         final scheme = Theme.of(sheetCtx).colorScheme;
         return Column(
@@ -270,14 +250,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             if (hasAvatar)
               ListTile(
-                leading: Icon(Icons.delete_outline, color: scheme.error),
-                title: Text(l10n.removePhotoAction, style: TextStyle(color: scheme.error)),
+                leading: Icon(Icons.delete_outline, color: sheetCtx.metricColors.heart),
+                title: Text(l10n.removePhotoAction, style: TextStyle(color: sheetCtx.metricColors.heart)),
                 onTap: () {
                   Navigator.of(sheetCtx).pop();
                   _removeAvatar(l10n);
                 },
               ),
-            SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
           ],
         );
       },
@@ -322,11 +301,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(settingsControllerProvider);
-    final authUser = ref.watch(authControllerProvider).value;
-    final email = authUser?.email;
-    final fullName = [authUser?.firstName, authUser?.lastName]
-        .where((part) => part != null && part.isNotEmpty)
-        .join(' ');
     final l10n = AppLocalizations.of(context)!;
 
     // Initialize form state once on first successful load.
@@ -334,584 +308,341 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       state.whenData(_initFromSettings);
     }
 
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
-    final contentTop = barTop + 58.0 + 12.0;
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
-
     return Scaffold(
-      body: state.when(
-        data:
-            (_) =>
-                _initialized
-                    ? _buildContent(
-                      context,
-                      l10n,
-                      barTop,
-                      contentTop,
-                      bottomPad,
-                      email,
-                      fullName,
-                    )
-                    : const Center(child: CircularProgressIndicator()),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error:
-            (error, _) => ErrorView(
-              error: error,
-              onRetry: () => ref.invalidate(settingsControllerProvider),
+      body: ScrollCollapseListener(
+        child: state.when(
+          data: (_) => _initialized
+              ? _buildContent(context, l10n)
+              : CustomScrollView(slivers: [
+                  LifeyHeader(title: l10n.settingsTitle, onBack: () => Navigator.of(context).maybePop()),
+                  const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
+                ]),
+          loading: () => CustomScrollView(slivers: [
+            LifeyHeader(title: l10n.settingsTitle, onBack: () => Navigator.of(context).maybePop()),
+            const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
+          ]),
+          error: (error, _) => CustomScrollView(slivers: [
+            LifeyHeader(title: l10n.settingsTitle, onBack: () => Navigator.of(context).maybePop()),
+            SliverFillRemaining(
+              child: ErrorView(error: error, onRetry: () => ref.invalidate(settingsControllerProvider)),
             ),
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader(
-    BuildContext context,
-    AppLocalizations l10n,
-    String? email,
-    String fullName,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
-    final avatarBytes = ref.watch(avatarControllerProvider).value;
-
-    return Material(
-      color: scheme.surfaceContainer,
-      borderRadius: AppRadius.cardAll,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _openAvatarSheet(l10n, hasAvatar: avatarBytes != null),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              _AvatarCircle(bytes: avatarBytes, email: email, busy: _avatarBusy),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (fullName.isNotEmpty)
-                      Text(
-                        fullName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                    Text(
-                      email ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: fullName.isEmpty ? 15 : 12.5,
-                        fontWeight: fullName.isEmpty ? FontWeight.w700 : FontWeight.w500,
-                        color: fullName.isEmpty ? scheme.onSurface : scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.changePhotoLabel,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, size: 22, color: scheme.onSurfaceVariant),
-            ],
-          ),
+          ]),
         ),
       ),
     );
   }
 
-  Widget _buildContent(
-    BuildContext context,
-    AppLocalizations l10n,
-    double barTop,
-    double contentTop,
-    double bottomPad,
-    String? email,
-    String fullName,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
+  Widget _buildContent(BuildContext context, AppLocalizations l10n) {
     final mc = context.metricColors;
+    final authUser = ref.watch(authControllerProvider).value;
+    final email = authUser?.email;
+    final fullName = [authUser?.firstName, authUser?.lastName]
+        .where((part) => part != null && part.isNotEmpty)
+        .join(' ');
+    final avatarBytes = ref.watch(avatarControllerProvider).value;
+    final entitlement = ref.watch(entitlementProvider).value;
+    final isPro = entitlement != null && entitlement.resolved && entitlement.tier == EntitlementTier.pro;
+    final bottomPad = MediaQuery.paddingOf(context).bottom + AppSpacing.s32;
 
-    return ScrollCollapseListener(
-      child: Stack(
-        children: [
-          // ── Scrollable body ─────────────────────────────────────────────
-          Positioned.fill(
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad + 32),
+    void editInt(GoalKind kind, String label, String suffix, int? current, void Function(int?) set) => _openGoalSheet(
+          label: label,
+          suffix: suffix,
+          initialText: current?.toString() ?? '',
+          decimal: false,
+          onSave: (text) => setState(() => set(text.trim().isEmpty ? null : int.parse(text.trim()))),
+        );
+
+    void editGoal(GoalKind kind) => switch (kind) {
+          GoalKind.calories => editInt(kind, l10n.caloriesLabel, 'kcal', _calorieGoal, (v) => _calorieGoal = v),
+          GoalKind.protein => editInt(kind, l10n.proteinLabel, 'g', _proteinGoal, (v) => _proteinGoal = v),
+          GoalKind.carbs => editInt(kind, l10n.carbsLabel, 'g', _carbsGoal, (v) => _carbsGoal = v),
+          GoalKind.fat => editInt(kind, l10n.fatLabel, 'g', _fatGoal, (v) => _fatGoal = v),
+          GoalKind.steps => _openGoalSheet(
+              label: l10n.stepsLabel,
+              suffix: l10n.statUnitSteps,
+              initialText: (_stepGoal ?? UserSettings.defaultDailyStepGoal).toString(),
+              decimal: false,
+              onSave: (text) => setState(() => _stepGoal = text.trim().isEmpty ? null : int.parse(text.trim())),
+            ),
+          GoalKind.water => _openGoalSheet(
+              label: l10n.waterLabel,
+              suffix: 'L',
+              initialText: _waterGoal?.toString() ?? '',
+              decimal: true,
+              onSave: (text) => setState(
+                () => _waterGoal = text.trim().isEmpty ? null : double.parse(text.replaceAll(',', '.').trim()),
+              ),
+            ),
+        };
+
+    const gutter = EdgeInsets.symmetric(horizontal: AppSpacing.screen);
+    Widget group(String label, List<Widget> rows) => Padding(
+          padding: gutter.copyWith(top: AppSpacing.s24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SectionLabel(label),
+              const SizedBox(height: AppSpacing.s8),
+              ListGroup(children: rows),
+            ],
+          ),
+        );
+
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        LifeyHeader(title: l10n.settingsTitle, onBack: () => Navigator.of(context).maybePop()),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: gutter.copyWith(top: AppSpacing.s16),
+            child: SettingsProfileCard(
+              name: fullName,
+              email: email,
+              avatarBytes: avatarBytes,
+              busy: _avatarBusy,
+              isPro: isPro,
+              onTap: () => _openAvatarSheet(l10n, hasAvatar: avatarBytes != null),
+            ),
+          ),
+        ),
+
+        // ── Preferences ────────────────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: group(l10n.preferencesLabel, [
+            SettingsChoiceRow(
+              icon: Icons.straighten_rounded,
+              title: l10n.unitsLabel,
+              control: InlinePillSegment<UnitSystem>(
+                options: [
+                  (UnitSystem.metric, l10n.unitsMetricShort),
+                  (UnitSystem.imperial, l10n.unitsImperialShort),
+                ],
+                selected: _unitSystem,
+                onChanged: (v) {
+                  setState(() => _unitSystem = v);
+                  _autoSave();
+                },
+              ),
+            ),
+            SettingsChoiceRow(
+              icon: Icons.dark_mode_outlined,
+              title: l10n.themeLabel,
+              control: InlinePillSegment<ThemePreference>(
+                options: [
+                  (ThemePreference.light, l10n.themeLight),
+                  (ThemePreference.dark, l10n.themeDark),
+                  (ThemePreference.system, l10n.optionSystem),
+                ],
+                selected: _theme,
+                onChanged: (v) {
+                  setState(() => _theme = v);
+                  _autoSave();
+                },
+              ),
+            ),
+            SettingsRow(
+              icon: Icons.translate_rounded,
+              title: l10n.languageLabel,
+              onTap: () => _pickLanguage(l10n),
+              trailing: SettingsValue(_languageName(_language, l10n)),
+            ),
+          ]),
+        ),
+
+        // ── Daily goals ────────────────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: gutter.copyWith(top: AppSpacing.s24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Profile picture ──────────────────────────────────────────
-                _buildProfileHeader(context, l10n, email, fullName),
-                const SizedBox(height: 20),
-
-                // ── Preferences ────────────────────────────────────────────
-                _GroupLabel(l10n.preferencesLabel),
-                const SizedBox(height: 8),
-                _SettingsCard(
-                  children: [
-                    // Units
-                    _SettingRow(
-                      icon: Icons.straighten,
-                      iconColor: scheme.primary,
-                      label: l10n.unitsLabel,
-                      trailing: _InlinePillSegment<UnitSystem>(
-                        options: [
-                          (UnitSystem.metric, l10n.unitsMetricShort),
-                          (UnitSystem.imperial, l10n.unitsImperialShort),
-                        ],
-                        selected: _unitSystem,
-                        onChanged: (v) {
-                          setState(() => _unitSystem = v);
-                          _autoSave();
-                        },
-                      ),
-                    ),
-                    const _RowDivider(),
-                    // Theme
-                    _SettingRow(
-                      icon: Icons.dark_mode_outlined,
-                      iconColor: scheme.primary,
-                      label: l10n.themeLabel,
-                      trailing: _InlinePillSegment<ThemePreference>(
-                        options: [
-                          (ThemePreference.light, l10n.themeLight),
-                          (ThemePreference.dark, l10n.themeDark),
-                          (ThemePreference.system, l10n.optionSystem),
-                        ],
-                        selected: _theme,
-                        onChanged: (v) {
-                          setState(() => _theme = v);
-                          _autoSave();
-                        },
-                      ),
-                    ),
-                    const _RowDivider(),
-                    // Language
-                    _SettingRow(
-                      icon: Icons.translate,
-                      iconColor: scheme.primary,
-                      label: l10n.languageLabel,
-                      onTap: () => _pickLanguage(l10n),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _languageName(_language, l10n),
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                          Icon(
-                            Icons.expand_more,
-                            size: 20,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                // "Edit" opens Body & goals, which recalculates the goals from
+                // the body details; the tiles below edit one number each.
+                SectionLabel(
+                  l10n.dailyGoalsLabel,
+                  actionLabel: l10n.settingsGoalsEditAction,
+                  onAction: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OnboardingEditScreen())),
                 ),
-                const SizedBox(height: 20),
-
-                // ── Daily goals ─────────────────────────────────────────────
-                _GroupLabel(l10n.dailyGoalsLabel),
-                const SizedBox(height: 8),
-                _SettingsCard(
-                  innerPadding: const EdgeInsets.all(14),
-                  children: [
-                    // Row 1: Calories + Protein
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _GoalCell(
-                            icon: Icons.local_fire_department,
-                            iconColor: mc.calories,
-                            label: l10n.caloriesLabel,
-                            value: _formatInt(_calorieGoal),
-                            onTap:
-                                () => _openGoalSheet(
-                                  label: l10n.caloriesLabel,
-                                  suffix: 'kcal',
-                                  initialText:
-                                      _calorieGoal?.toString() ?? '',
-                                  decimal: false,
-                                  onSave:
-                                      (text) => setState(
-                                        () =>
-                                            _calorieGoal =
-                                                text.trim().isEmpty
-                                                    ? null
-                                                    : int.parse(text.trim()),
-                                      ),
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _GoalCell(
-                            icon: Icons.egg_alt,
-                            iconColor: mc.protein,
-                            label: l10n.proteinLabel,
-                            value: _formatIntUnit(_proteinGoal, 'g'),
-                            onTap:
-                                () => _openGoalSheet(
-                                  label: l10n.proteinLabel,
-                                  suffix: 'g',
-                                  initialText:
-                                      _proteinGoal?.toString() ?? '',
-                                  decimal: false,
-                                  onSave:
-                                      (text) => setState(
-                                        () =>
-                                            _proteinGoal =
-                                                text.trim().isEmpty
-                                                    ? null
-                                                    : int.parse(text.trim()),
-                                      ),
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    // Row 2: Carbs + Fat
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _GoalCell(
-                            icon: Icons.bakery_dining,
-                            iconColor: mc.carbs,
-                            label: l10n.carbsLabel,
-                            value: _formatIntUnit(_carbsGoal, 'g'),
-                            onTap:
-                                () => _openGoalSheet(
-                                  label: l10n.carbsLabel,
-                                  suffix: 'g',
-                                  initialText: _carbsGoal?.toString() ?? '',
-                                  decimal: false,
-                                  onSave:
-                                      (text) => setState(
-                                        () =>
-                                            _carbsGoal =
-                                                text.trim().isEmpty
-                                                    ? null
-                                                    : int.parse(text.trim()),
-                                      ),
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _GoalCell(
-                            icon: Icons.water_drop,
-                            iconColor: mc.fat,
-                            label: l10n.fatLabel,
-                            value: _formatIntUnit(_fatGoal, 'g'),
-                            onTap:
-                                () => _openGoalSheet(
-                                  label: l10n.fatLabel,
-                                  suffix: 'g',
-                                  initialText: _fatGoal?.toString() ?? '',
-                                  decimal: false,
-                                  onSave:
-                                      (text) => setState(
-                                        () =>
-                                            _fatGoal =
-                                                text.trim().isEmpty
-                                                    ? null
-                                                    : int.parse(text.trim()),
-                                      ),
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    // Row 3: Water + placeholder (steps goal — TODO #19)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _GoalCell(
-                            icon: Icons.water_drop_outlined,
-                            iconColor: mc.water,
-                            label: l10n.waterLabel,
-                            value: _formatWater(_waterGoal),
-                            onTap:
-                                () => _openGoalSheet(
-                                  label: l10n.waterLabel,
-                                  suffix: 'L',
-                                  initialText: _waterGoal?.toString() ?? '',
-                                  decimal: true,
-                                  onSave:
-                                      (text) => setState(
-                                        () =>
-                                            _waterGoal =
-                                                text.trim().isEmpty
-                                                    ? null
-                                                    : double.parse(
-                                                      text
-                                                          .replaceAll(',', '.')
-                                                          .trim(),
-                                                    ),
-                                      ),
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _GoalCell(
-                            icon: Icons.directions_walk,
-                            iconColor: mc.steps,
-                            label: l10n.stepsLabel,
-                            value: _formatInt(_stepGoal),
-                            onTap:
-                                () => _openGoalSheet(
-                                  label: l10n.stepsLabel,
-                                  suffix: l10n.statUnitSteps,
-                                  initialText: _stepGoal?.toString() ?? '',
-                                  decimal: false,
-                                  onSave:
-                                      (text) => setState(
-                                        () =>
-                                            _stepGoal =
-                                                text.trim().isEmpty
-                                                    ? null
-                                                    : int.parse(text.trim()),
-                                      ),
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // ── Workout (docs/39-rest-timer-plan.md §3.2) ────────────────
-                _GroupLabel(l10n.workoutSectionLabel),
-                const SizedBox(height: 8),
-                _SettingsCard(
-                  children: [
-                    _SettingRow(
-                      icon: Icons.timer_outlined,
-                      iconColor: scheme.primary,
-                      label: l10n.restTimerToggleLabel,
-                      trailing: Switch(
-                        value: _restTimerEnabled,
-                        onChanged: (v) {
-                          setState(() => _restTimerEnabled = v);
-                          _autoSave();
-                          if (v) {
-                            // Exact-alarm permission is requested here (an
-                            // explicit user action) rather than mid-workout —
-                            // see docs/39-rest-timer-plan.md §2.3.
-                            unawaited(NotificationService.requestRestTimerExactAlarmPermission());
-                          } else {
-                            unawaited(NotificationService.cancelRestEnd());
-                          }
-                        },
-                        activeThumbColor: scheme.primary,
-                        activeTrackColor: scheme.primary.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    const _RowDivider(),
-                    _SettingRow(
-                      icon: Icons.hourglass_bottom,
-                      iconColor: scheme.primary,
-                      label: l10n.restTimerDurationLabel,
-                      onTap: () => _pickRestDuration(l10n),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _formatDuration(_defaultRestSeconds),
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                          Icon(
-                            Icons.expand_more,
-                            size: 20,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Only shown once a paired + installed watch app was
-                    // detected (docs/40-watch-app-plan.md §6.4) — a live
-                    // check, not persisted, so it can also disappear again if
-                    // the watch is later unpaired.
-                    if (_watchAvailable == true) ...[
-                      const _RowDivider(),
-                      _SettingRow(
-                        icon: Icons.watch_outlined,
-                        iconColor: scheme.primary,
-                        label: l10n.watchWorkoutToggleLabel,
-                        trailing: Switch(
-                          value: _watchWorkoutEnabled,
-                          onChanged: (v) {
-                            setState(() => _watchWorkoutEnabled = v);
-                            _autoSave();
-                          },
-                          activeThumbColor: scheme.primary,
-                          activeTrackColor: scheme.primary.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // ── Integrations ─────────────────────────────────────────────
-                _GroupLabel(l10n.integrationsLabel),
-                const SizedBox(height: 8),
-                _SettingsCard(
-                  children: [
-                    // Water sources
-                    _SettingRow(
-                      icon: Icons.water_drop,
-                      iconColor: mc.water,
-                      label: l10n.manageWaterSourcesButton,
-                      onTap:
-                          () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const WaterSourcesScreen(),
-                            ),
-                          ),
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        size: 22,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    // Health (Apple Health on iOS, Health Connect on Android)
-                    if (Platform.isIOS || Platform.isAndroid) ...[
-                      const _RowDivider(),
-                      const _HealthRow(),
-                    ],
-                    const _RowDivider(),
-                    // Notifications (docs/30-push-notifications-plan.md, M5)
-                    _SettingRow(
-                      icon: Icons.notifications_outlined,
-                      iconColor: scheme.primary,
-                      label: l10n.notificationsSettingsTileLabel,
-                      onTap:
-                          () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const NotificationSettingsScreen(),
-                            ),
-                          ),
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        size: 22,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // ── My trainers (hidden entirely when there are none) ───────
-                const _MyTrainersSection(),
-
-                // ── Subscription (docs/landing_page/67-mobile-free-pro-plan.md
-                // §4.4, frame P14) ───────────────────────────────────────────
-                const SubscriptionSection(),
-                const SizedBox(height: 20),
-
-                // ── Account ────────────────────────────────────────────────
-                _GroupLabel(l10n.accountLabel),
-                const SizedBox(height: 8),
-                _SettingsCard(
-                  children: [
-                    if (email != null) ...[
-                      _SettingRow(
-                        icon: Icons.email_outlined,
-                        iconColor: scheme.primary,
-                        label: l10n.emailLabel,
-                        trailing: Text(
-                          email,
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      const _RowDivider(),
-                    ],
-                    _SettingRow(
-                      icon: Icons.lock_outline,
-                      iconColor: scheme.primary,
-                      label: l10n.changePasswordButton,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-                      ),
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        size: 22,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const _RowDivider(),
-                    _SettingRow(
-                      icon: Icons.accessibility_new,
-                      iconColor: scheme.primary,
-                      label: l10n.onboardingProfileTileLabel,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const OnboardingEditScreen()),
-                      ),
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        size: 22,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: AppSpacing.s8),
+                DailyGoalTiles(
+                  calories: _calorieGoal,
+                  protein: _proteinGoal,
+                  carbs: _carbsGoal,
+                  fat: _fatGoal,
+                  waterLiters: _waterGoal,
+                  steps: _stepGoal,
+                  onEdit: editGoal,
                 ),
               ],
             ),
           ),
+        ),
 
-          // ── Floating top bar ─────────────────────────────────────────────
-          Positioned(
-            top: barTop,
-            left: 12,
-            right: 12,
-            child: AdaptiveAppBar(
-              title: l10n.settingsTitle,
-              onBack: () => Navigator.of(context).pop(),
+        // ── Workout (docs/39-rest-timer-plan.md §3.2) ─────────────────────
+        SliverToBoxAdapter(
+          child: group(l10n.workoutSectionLabel, [
+            SettingsRow(
+              icon: Icons.timer_outlined,
+              title: l10n.restTimerToggleLabel,
+              trailing: SettingsSwitch(
+                value: _restTimerEnabled,
+                onChanged: (v) {
+                  setState(() => _restTimerEnabled = v);
+                  _autoSave();
+                  if (v) {
+                    // Exact-alarm permission is requested here (an explicit
+                    // user action) rather than mid-workout — see
+                    // docs/39-rest-timer-plan.md §2.3.
+                    unawaited(NotificationService.requestRestTimerExactAlarmPermission());
+                  } else {
+                    unawaited(NotificationService.cancelRestEnd());
+                  }
+                },
+              ),
             ),
+            SettingsRow(
+              icon: Icons.hourglass_bottom_rounded,
+              title: l10n.restTimerDurationLabel,
+              onTap: () => _pickRestDuration(l10n),
+              trailing: SettingsValue(_formatDuration(_defaultRestSeconds)),
+            ),
+            // Only shown once a paired + installed watch app was detected
+            // (docs/40-watch-app-plan.md §6.4) — a live check, not persisted,
+            // so it can also disappear again if the watch is later unpaired.
+            if (_watchAvailable == true)
+              SettingsRow(
+                icon: Icons.watch_outlined,
+                title: l10n.watchWorkoutToggleLabel,
+                trailing: SettingsSwitch(
+                  value: _watchWorkoutEnabled,
+                  onChanged: (v) {
+                    setState(() => _watchWorkoutEnabled = v);
+                    _autoSave();
+                  },
+                ),
+              ),
+          ]),
+        ),
+
+        // ── Integrations ───────────────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: group(l10n.integrationsLabel, [
+            SettingsRow(
+              icon: Icons.water_drop_outlined,
+              title: l10n.manageWaterSourcesButton,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WaterSourcesScreen())),
+              trailing: const SettingsValue(''),
+            ),
+            // Health (Apple Health on iOS, Health Connect on Android)
+            if (Platform.isIOS || Platform.isAndroid) const HealthIntegrationRow(),
+            // Notifications (docs/30-push-notifications-plan.md, M5)
+            NotificationsRow(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())),
+            ),
+          ]),
+        ),
+
+        // ── My trainers (hidden entirely when there are none) ─────────────
+        const SliverToBoxAdapter(child: Padding(padding: gutter, child: MyTrainersSection())),
+
+        // ── Subscription (docs/landing_page/67-mobile-free-pro-plan.md §4.4,
+        // frame P14) ─────────────────────────────────────────────────────────
+        const SliverToBoxAdapter(child: Padding(padding: gutter, child: SubscriptionSection())),
+
+        // ── Account ────────────────────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: group(l10n.accountLabel, [
+            if (email != null)
+              // The address is the row's subline, so it is always shown in full
+              // (a trailing value would be cut to "anna.r5@life…" at 130 %).
+              SettingsRow(icon: Icons.mail_outline_rounded, title: l10n.emailLabel, subtitle: email),
+            SettingsRow(
+              icon: Icons.lock_outline_rounded,
+              title: l10n.changePasswordButton,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
+              trailing: const SettingsValue(''),
+            ),
+            SettingsRow(
+              icon: Icons.accessibility_new_rounded,
+              title: l10n.onboardingProfileTileLabel,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OnboardingEditScreen())),
+              trailing: const SettingsValue(''),
+            ),
+            // Bottom of the screen on purpose: moved here from the dashboard
+            // header, where one tap wiped the local data
+            // (docs/redesign/77-mobile-redesign-plan.md R1.1).
+            SettingsRow(
+              icon: Icons.logout_rounded,
+              title: l10n.logOutLabel,
+              color: mc.heart,
+              onTap: _confirmLogout,
+            ),
+          ]),
+        ),
+
+        // ── Debug (debug builds only) ──────────────────────────────────────
+        // The design gallery for the redesign reviews
+        // (docs/redesign/77-mobile-redesign-plan.md R0.6). Never in a release
+        // build, so its labels are deliberately not in the ARB.
+        if (kDebugMode)
+          SliverToBoxAdapter(
+            child: group('Debug', [
+              SettingsRow(
+                icon: Icons.palette_outlined,
+                title: 'Design gallery',
+                onTap: () => context.push(DesignGalleryScreen.routePath),
+                trailing: const SettingsValue(''),
+              ),
+            ]),
           ),
-        ],
-      ),
+        SliverToBoxAdapter(child: SizedBox(height: bottomPad)),
+      ],
     );
   }
 
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
+
+  Future<void> _confirmLogout() async {
+    final preflight = ref.read(logoutPreflightProvider);
+    final plan = await preflight.plan();
+    if (!mounted) return;
+    final confirmed = await showLogoutDialog(context, plan: plan);
+    if (!confirmed || !mounted) return;
+    // Queued changes go up before anything is wiped; a small progress dialog
+    // says so while they do (bounded — a bad connection cannot hold it).
+    if (plan.willUpload) await _uploadBeforeLogout(preflight);
+    if (!mounted) return;
+    // The router redirects to the login screen once auth state clears.
+    await ref.read(authControllerProvider.notifier).logout(flush: false);
+  }
+
+  Future<void> _uploadBeforeLogout(LogoutPreflight preflight) async {
+    final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    unawaited(showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)),
+              const SizedBox(width: AppSpacing.s16),
+              Expanded(child: Text(l10n.logOutUploadingMessage)),
+            ],
+          ),
+        ),
+      ),
+    ));
+    try {
+      await preflight.flush();
+    } finally {
+      if (navigator.canPop()) navigator.pop();
+    }
+  }
 
   String _languageName(LanguagePreference pref, AppLocalizations l10n) {
     return switch (pref) {
@@ -921,717 +652,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     };
   }
 
-  String _formatInt(int? value) {
-    if (value == null) return '—';
-    return NumberFormat.decimalPattern().format(value);
-  }
-
-  String _formatIntUnit(int? value, String unit) {
-    if (value == null) return '—';
-    return '${NumberFormat.decimalPattern().format(value)} $unit';
-  }
-
-  String _formatWater(double? value) {
-    if (value == null) return '—';
-    final s = value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1);
-    return '$s L';
-  }
 }
 
-// ---------------------------------------------------------------------------
-// _GroupLabel
-// ---------------------------------------------------------------------------
+/// One option of a picker sheet: the label and, when chosen, a check.
+class _ChoiceTile extends StatelessWidget {
+  const _ChoiceTile({required this.label, required this.selected, required this.onTap});
 
-class _GroupLabel extends StatelessWidget {
-  const _GroupLabel(this.label);
   final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 0),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: scheme.onSurfaceVariant,
-          letterSpacing: 1.2,
-          height: 1.0,
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _SettingsCard
-// ---------------------------------------------------------------------------
-
-class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({
-    required this.children,
-    this.innerPadding,
-  });
-
-  final List<Widget> children;
-  // When non-null, overrides the default row-based padding with a flat padding.
-  final EdgeInsets? innerPadding;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    // Material ensures InkWell ripples render against the card color,
-    // not the Scaffold background — which would look jarring on dark surfaces.
-    return Material(
-      color: scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: innerPadding ?? const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _RowDivider
-// ---------------------------------------------------------------------------
-
-class _RowDivider extends StatelessWidget {
-  const _RowDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Divider(
-      height: 1,
-      indent: 14,
-      endIndent: 14,
-      color: scheme.surfaceContainerHighest,
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _SettingRow
-// ---------------------------------------------------------------------------
-
-class _SettingRow extends StatelessWidget {
-  const _SettingRow({
-    required this.icon,
-    required this.label,
-    required this.trailing,
-    this.iconColor,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Widget trailing;
-  final Color? iconColor;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final effectiveIconColor = iconColor ?? scheme.primary;
-
-    final row = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 22, color: effectiveIconColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          trailing,
-        ],
-      ),
-    );
-
-    if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card - 4),
-        child: row,
-      );
-    }
-    return row;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _InlinePillSegment<T>
-// ---------------------------------------------------------------------------
-
-class _InlinePillSegment<T> extends StatelessWidget {
-  const _InlinePillSegment({
-    required this.options,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<(T, String)> options;
-  final T selected;
-  final ValueChanged<T> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: AppRadius.pill,
-      ),
-      padding: const EdgeInsets.all(3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final (value, label) in options)
-            GestureDetector(
-              onTap: () => onChanged(value),
-              child: AnimatedContainer(
-                duration: AppDuration.fast,
-                curve: AppCurve.standard,
-                decoration: BoxDecoration(
-                  color:
-                      value == selected
-                          ? scheme.primary
-                          : Colors.transparent,
-                  borderRadius: AppRadius.pill,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 5,
-                ),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 11.5,
-                    fontWeight:
-                        value == selected
-                            ? FontWeight.w700
-                            : FontWeight.w600,
-                    color:
-                        value == selected
-                            ? scheme.onPrimary
-                            : scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _GoalCell
-// ---------------------------------------------------------------------------
-
-class _GoalCell extends StatelessWidget {
-  const _GoalCell({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String value;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
+    final p = context.palette;
+    return ListTile(
+      title: Text(label, style: Theme.of(context).textTheme.titleMedium!.copyWith(color: p.text)),
+      trailing: selected ? Icon(Icons.check_rounded, color: Theme.of(context).colorScheme.primary) : null,
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: iconColor),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurface,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _GoalEditSheet
-// ---------------------------------------------------------------------------
-
-class _GoalEditSheet extends StatefulWidget {
-  const _GoalEditSheet({
-    required this.label,
-    required this.suffix,
-    required this.initialText,
-    required this.decimal,
-    required this.onSave,
-  });
-
-  final String label;
-  final String suffix;
-  final String initialText;
-  final bool decimal;
-  final void Function(String text) onSave;
-
-  @override
-  State<_GoalEditSheet> createState() => _GoalEditSheetState();
-}
-
-class _GoalEditSheetState extends State<_GoalEditSheet> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialText);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    // Read viewInsets inside the sheet's own build context so the dependency
-    // is properly registered and cleaned up when this widget is disposed.
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
-    // Capture validation strings at build time — avoids context lookups
-    // inside the validator closure (which could run after disposal).
-    final intError = l10n.enterNonNegativeWholeNumber;
-    final decimalError = l10n.enterNonNegativeNumber;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(24, 8, 24, 24 + bottomInset),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.label,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _controller,
-              autofocus: true,
-              keyboardType:
-                  widget.decimal
-                      ? const TextInputType.numberWithOptions(decimal: true)
-                      : TextInputType.number,
-              decoration: InputDecoration(
-                suffixText: widget.suffix,
-                hintText: l10n.leaveBlankForNoGoal,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
-                  borderSide: BorderSide(color: scheme.primary, width: 2),
-                ),
-              ),
-              validator: (value) {
-                final text = (value ?? '').replaceAll(',', '.').trim();
-                if (text.isEmpty) return null;
-                final parsed =
-                    widget.decimal
-                        ? double.tryParse(text)
-                        : int.tryParse(text);
-                if (parsed == null || parsed < 0) {
-                  return widget.decimal ? decimalError : intError;
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  widget.onSave(
-                    _controller.text.replaceAll(',', '.').trim(),
-                  );
-                  Navigator.of(context).pop();
-                }
-              },
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
-                ),
-              ),
-              child: Text(l10n.saveButton),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _HealthRow
-// ---------------------------------------------------------------------------
-
-class _HealthRow extends StatelessWidget {
-  const _HealthRow();
-
-  static const Color _heartColor = Color(0xFFC46A6A);
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.favorite, size: 22, color: _heartColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              l10n.healthIntegrationLabel,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-              ),
-            ),
-          ),
-          const _HealthSwitch(),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _HealthSwitch — HealthKit on iOS, Health Connect on Android
-// ---------------------------------------------------------------------------
-
-class _HealthSwitch extends ConsumerWidget {
-  const _HealthSwitch();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(healthControllerProvider);
-    final enabled = state.value ?? false;
-    return Switch(
-      value: enabled,
-      onChanged:
-          state.isLoading
-              ? null
-              : (v) =>
-                  ref
-                      .read(healthControllerProvider.notifier)
-                      .setEnabled(v),
-      activeThumbColor: Theme.of(context).colorScheme.primary,
-      activeTrackColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _MyTrainersSection — Settings §"Edzőim"
-// (docs/personal_trainer/05-mobil-terv.md §3). Hidden entirely (not just
-// empty-stated) when the user has no active trainer, per spec.
-// ---------------------------------------------------------------------------
-
-class _MyTrainersSection extends ConsumerWidget {
-  const _MyTrainersSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final trainers = ref.watch(myTrainersControllerProvider).value ?? const [];
-    if (trainers.isEmpty) return const SizedBox.shrink();
-
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _GroupLabel(l10n.myTrainersSectionLabel),
-        const SizedBox(height: 8),
-        _SettingsCard(
-          children: [
-            for (int i = 0; i < trainers.length; i++) ...[
-              if (i > 0) const _RowDivider(),
-              _MyTrainerRow(trainer: trainers[i]),
-            ],
-          ],
-        ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            l10n.myTrainersDataSharingExplanation,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: scheme.onSurfaceVariant,
-              height: 1.4,
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-}
-
-class _MyTrainerRow extends ConsumerWidget {
-  const _MyTrainerRow({required this.trainer});
-
-  final MyTrainer trainer;
-
-  /// Secondary chat entry point for the client side: the trainer they already
-  /// know about is right here, so the thread is one tap away without going
-  /// through the conversation list (docs/chat/40-trainer-chat-plan.md §6.1).
-  /// The thread is lazy-created server-side, so this works even before either
-  /// of them has written anything.
-  Future<void> _message(BuildContext context, WidgetRef ref) async {
-    try {
-      final conversationId =
-          await ref.read(chatRepositoryProvider).openConversationWith(trainer.trainerId);
-      if (context.mounted) context.push('/chat/$conversationId');
-    } catch (e) {
-      if (context.mounted) AppSnackbar.showError(context, title: friendlyError(e));
-    }
-  }
-
-  Future<void> _leave(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
-    final confirmed = await showConfirmDeleteDialog(
-      context,
-      title: l10n.myTrainersLeaveConfirmTitle,
-      message: l10n.myTrainersLeaveConfirmMessage(trainer.trainerEmail),
-    );
-    if (!confirmed) return;
-    try {
-      await ref.read(myTrainersControllerProvider.notifier).leave(trainer.trainerId);
-    } catch (e) {
-      if (context.mounted) AppSnackbar.showError(context, title: friendlyError(e));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final dateFmt = DateFormat.yMMMd(Localizations.localeOf(context).languageCode);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          Icon(Icons.fitness_center, size: 22, color: scheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  trainer.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                Text(
-                  l10n.myTrainersActiveSinceLabel(dateFmt.format(trainer.activeSince)),
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            onPressed: () => _message(context, ref),
-            tooltip: l10n.chatMessageAction,
-            icon: Icon(Icons.chat_bubble_outline, size: 20, color: scheme.primary),
-          ),
-          TextButton(
-            onPressed: () => _leave(context, ref, l10n),
-            style: TextButton.styleFrom(foregroundColor: scheme.error),
-            child: Text(l10n.myTrainersLeaveAction),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _AvatarCircle
-// ---------------------------------------------------------------------------
-
-class _AvatarCircle extends StatelessWidget {
-  const _AvatarCircle({
-    required this.bytes,
-    required this.email,
-    required this.busy,
-  });
-
-  final Uint8List? bytes;
-  final String? email;
-  final bool busy;
-
-  static const double _size = 64;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      width: _size,
-      height: _size,
-      child: Stack(
-        children: [
-          ClipOval(
-            child:
-                bytes != null
-                    ? Image.memory(
-                      bytes!,
-                      width: _size,
-                      height: _size,
-                      fit: BoxFit.cover,
-                    )
-                    : Container(
-                      width: _size,
-                      height: _size,
-                      color: scheme.primaryContainer,
-                      alignment: Alignment.center,
-                      child: Text(
-                        (email != null && email!.isNotEmpty)
-                            ? email![0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-          ),
-          if (busy)
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                color: scheme.primary,
-                shape: BoxShape.circle,
-                border: Border.all(color: scheme.surfaceContainer, width: 2),
-              ),
-              child: Icon(Icons.camera_alt, size: 12, color: scheme.onPrimary),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

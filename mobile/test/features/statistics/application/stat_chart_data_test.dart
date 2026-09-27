@@ -3,10 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/features/nutrition/application/meal_controller.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart';
+import 'package:lifey/features/settings/application/settings_controller.dart';
+import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/statistics/application/stat_chart_data.dart';
 import 'package:lifey/features/statistics/application/stat_kind_filter_controller.dart';
 import 'package:lifey/features/statistics/application/stat_metric_controller.dart';
-import 'package:lifey/features/statistics/application/stat_summary_data.dart';
 import 'package:lifey/features/statistics/application/stats_range_controller.dart';
 import 'package:lifey/features/statistics/domain/stat_kind_filter.dart';
 import 'package:lifey/features/statistics/domain/stat_metric.dart';
@@ -147,6 +148,11 @@ class _FakeWorkoutSessionController extends WorkoutSessionController {
 
   @override
   Stream<List<WorkoutSession>> build() => Stream.value(_sessions);
+}
+
+class _FakeSettings extends SettingsController {
+  @override
+  Stream<UserSettings> build() => Stream.value(const UserSettings.defaults());
 }
 
 class _FakeWeightController extends WeightController {
@@ -849,57 +855,75 @@ void main() {
     });
   });
 
-  group('statSummaryProvider', () {
-    test('empty points produce StatSummary.empty', () async {
-      final container = _buildContainer(meals: []);
-      addTearDown(container.dispose);
-
-      container.read(statMetricControllerProvider.notifier).select(StatMetric.calories);
-      await container.listen(mealControllerProvider.future, (previous, next) {}).read();
-
-      final summary = container.read(statSummaryProvider).value!;
-      expect(summary.sum, 0);
-      expect(summary.average, 0);
-      expect(summary.min, 0);
-      expect(summary.max, 0);
-      expect(summary.trend, isNull);
-      expect(summary.trendPercent, isNull);
-    });
-
-    test('a single point has no trend (nothing to compare it against)', () async {
-      final container = _buildContainer(meals: [_meal(_day(0), calories: 150)]);
-      addTearDown(container.dispose);
-
-      container.read(statMetricControllerProvider.notifier).select(StatMetric.calories);
-      await container.listen(mealControllerProvider.future, (previous, next) {}).read();
-
-      final summary = container.read(statSummaryProvider).value!;
-      expect(summary.sum, 150);
-      expect(summary.average, 150);
-      expect(summary.min, 150);
-      expect(summary.max, 150);
-      expect(summary.trend, isNull);
-      expect(summary.trendPercent, isNull);
-    });
-
-    test('splits a two-day range in half to compute sum/average/extremes/trend', () async {
-      final container = _buildContainer(meals: [
-        _meal(_day(1), calories: 100),
-        _meal(_day(0), calories: 200),
+  group('statSummaryProvider (R4.5)', () {
+    Future<ProviderContainer> containerWith(List<Meal> meals, {StatsRange range = StatsRange.month, DateTime? cutoff}) async {
+      final container = ProviderContainer(overrides: [
+        mealControllerProvider.overrideWith(() => _FakeMealController(meals)),
+        settingsControllerProvider.overrideWith(_FakeSettings.new),
+        historyCutoffProvider.overrideWithValue(cutoff),
       ]);
       addTearDown(container.dispose);
-
       container.read(statMetricControllerProvider.notifier).select(StatMetric.calories);
+      container.read(statsRangeControllerProvider.notifier).select(range);
       await container.listen(mealControllerProvider.future, (previous, next) {}).read();
+      return container;
+    }
+
+    test('no data: no hero, no sides, no trend', () async {
+      final container = await containerWith([]);
 
       final summary = container.read(statSummaryProvider).value!;
-      expect(summary.sum, 300);
-      expect(summary.average, 150);
-      expect(summary.min, 100);
-      expect(summary.max, 200);
-      // Earlier half (day 1, avg 100) vs later half (day 0, avg 200).
-      expect(summary.trend, 100);
-      expect(summary.trendPercent, 100);
+      expect(summary.hero, isNull);
+      expect(summary.sides, isEmpty);
+      expect(summary.trend, isNull);
+    });
+
+    test('the daily average leaves today out, and the trend is against the period before', () async {
+      final container = await containerWith([
+        _meal(_day(0), calories: 100), // today, unfinished: left out
+        _meal(_day(1), calories: 2000),
+        _meal(_day(2), calories: 2400),
+        _meal(_day(40), calories: 1100), // the 30 days before the range
+        _meal(_day(45), calories: 1300),
+      ]);
+
+      final summary = container.read(statSummaryProvider).value!;
+      expect(summary.hero, 2200);
+      expect(summary.trend!.delta, closeTo(1000, 1e-9));
+      expect(summary.trend!.percent, closeTo(1000 / 1200 * 100, 1e-9));
+    });
+
+    test('the prior period is cut to the range before it, not the whole history', () async {
+      final container = await containerWith([
+        _meal(_day(2), calories: 2000),
+        _meal(_day(40), calories: 1000),
+        _meal(_day(100), calories: 9000), // older than the period before: irrelevant
+      ]);
+
+      expect(container.read(statSummaryProvider).value!.trend!.delta, closeTo(1000, 1e-9));
+    });
+
+    test('range "all" has no prior period, so no trend', () async {
+      final container = await containerWith([_meal(_day(2), calories: 2000), _meal(_day(200), calories: 1000)], range: StatsRange.all);
+
+      expect(container.read(statSummaryProvider).value!.trend, isNull);
+    });
+
+    test('a history window that cuts into the prior period hides the trend rather than faking one', () async {
+      final container = await containerWith(
+        [_meal(_day(2), calories: 2000), _meal(_day(40), calories: 1000)],
+        cutoff: _day(35), // the free window: the prior period would be half there
+      );
+
+      final summary = container.read(statSummaryProvider).value!;
+      expect(summary.hero, 2000);
+      expect(summary.trend, isNull);
+    });
+
+    test('the chart points are still just the range', () async {
+      final container = await containerWith([_meal(_day(2), calories: 2000), _meal(_day(40), calories: 1000)]);
+
+      expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(2), 2000.0)]);
     });
   });
 

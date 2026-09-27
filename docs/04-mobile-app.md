@@ -52,12 +52,17 @@ Features:
 
 ## Navigation
 
-Bottom navigation:
+The client shell has a floating bottom bar (only the active tab shows its label):
 
-* Dashboard
+* Today (dashboard)
 * Nutrition
 * Workouts
 * Weight
+* Statistics
+
+A user with `ROLE_TRAINER` also has a **trainer view** (avatar menu → "Trainer view", marked with
+the clay TRAINER label): a second shell with Clients, Calendar, Assigned and Programs — a bottom bar
+on a phone, a 96 dp rail beside a list and a detail pane from 900 dp up.
 
 ## Offline Support
 
@@ -100,10 +105,25 @@ Ads are limited to the four tab roots (dashboard, nutrition, workouts, statistic
 nowhere else: not on detail screens, in chat, during an active session, on the watch or in
 widgets. The one ad-adjacent CTA is the remove-ads button in the slot's own chrome row.
 
-## UI Priorities
+## UI and theme
 
-* Fast interaction
-* Minimal clicks
-* Mobile-first experience
+The look of the app is the v2 design system, built by the redesign in
+[`redesign/77-mobile-redesign-plan.md`](redesign/77-mobile-redesign-plan.md) (R0 defines it, R1–R6
+apply it screen by screen, R7 closed it):
 
-Design can remain simple during MVP.
+* **Tokens** — `mobile/lib/core/theme/`: palette (`context.palette`, `context.metricColors`), the
+  type scale (`TextTheme` roles plus `AppType.number` for hero numbers), the four radii
+  (`AppRadius.tag / control / card / hero` and `pill`), spacing, elevation and motion
+  (`AppMotion`, which also honours "Remove animations").
+* **Components** — `mobile/lib/shared/widgets/ds/`: `LifeyCard`, `ListGroup` / `ListRow`,
+  `TintedChip`, `MetricTile`, `LifeyHeader` / `LifeySubpageHeader`, `showLifeySheet`,
+  `LifeySegmented`, `NoticeCard`, …, all shown on the debug **Design gallery** (Settings → Debug).
+* **Rules** — one hero number per screen; colour means data (metric colours only on their metric,
+  brand olive only on controls); related data grouped in one card; Hungarian and 130 % text scale
+  are the yardstick, so no label truncates.
+* **Guard rails** — `dart run tool/design_audit.dart` (run from `mobile/`) counts hand-rolled
+  `fontSize` / `Color(0x…)` / `BorderRadius.circular(n)` / `AppBar` literals outside the theme and
+  the design system; it must read zero (`--strict` exits 1 otherwise). `test/core/theme/contrast_test.dart`
+  keeps the palette WCAG AA, including every metric colour on its own chip tint.
+
+Priorities behind it: fast interaction, few taps, mobile first.

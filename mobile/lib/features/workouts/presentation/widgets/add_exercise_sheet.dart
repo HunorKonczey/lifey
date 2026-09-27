@@ -230,7 +230,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
             const SizedBox(height: 16),
             InkWell(
               onTap: _pickRestDuration,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.circular(AppRadius.tag),
               child: InputDecorator(
                 decoration: InputDecoration(
                   labelText: l10n.exerciseRestTimerFieldLabel,
@@ -313,7 +313,7 @@ class _ChipSection extends StatelessWidget {
                   label: Text(labelBuilder(code)),
                   selected: isSelected,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    borderRadius: BorderRadius.circular(AppRadius.tag),
                   ),
                   showCheckmark: false,
                   onSelected: (_) => onSelected(code),

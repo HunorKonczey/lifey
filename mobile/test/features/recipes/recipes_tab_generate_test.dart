@@ -43,14 +43,14 @@ void main() {
   testWidgets('shows the entry point with the remaining credits', (tester) async {
     await _pump(tester, offline: false, credits: 2);
 
-    expect(find.text('Generate with AI'), findsOneWidget);
+    expect(find.text('Generate a recipe'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
   });
 
   testWidgets('offline, it explains instead of opening the wizard', (tester) async {
     await _pump(tester, offline: true, credits: 3);
 
-    await tester.tap(find.text('Generate with AI'));
+    await tester.tap(find.text('Generate a recipe'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -61,7 +61,7 @@ void main() {
   testWidgets('out of credits, it opens the paywall instead', (tester) async {
     await _pump(tester, offline: false, credits: 0);
 
-    await tester.tap(find.text('Generate with AI'));
+    await tester.tap(find.text('Generate a recipe'));
     await tester.pumpAndSettle();
 
     expect(find.text('paywall'), findsOneWidget);
@@ -71,7 +71,7 @@ void main() {
   testWidgets('with credits, it opens the wizard', (tester) async {
     await _pump(tester, offline: false, credits: 3);
 
-    await tester.tap(find.text('Generate with AI'));
+    await tester.tap(find.text('Generate a recipe'));
     await tester.pumpAndSettle();
 
     expect(find.byType(RecipeWizardSheet), findsOneWidget);

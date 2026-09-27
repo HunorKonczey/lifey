@@ -260,7 +260,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ActivityPickerScreen), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
 
     expect(find.byType(ActivityPickerScreen), findsNothing);

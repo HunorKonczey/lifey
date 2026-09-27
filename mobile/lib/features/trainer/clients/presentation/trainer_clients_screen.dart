@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/sync/connectivity_status_provider.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../../shared/widgets/ds/lifey_header.dart';
+import '../../../../shared/widgets/ds/section_label.dart';
 import '../../../../shared/widgets/empty_view.dart';
 import '../../../../shared/widgets/error_view.dart';
 import '../../../../shared/widgets/nav_collapse_controller.dart';
@@ -13,15 +15,19 @@ import '../../../chat/application/conversation_list_controller.dart';
 import '../../client_detail/presentation/client_detail_screen.dart';
 import '../../shared/trainer_layout.dart';
 import '../../shared/trainer_view_badge.dart';
+import '../application/client_search_controller.dart';
 import '../application/selected_client_controller.dart';
 import '../application/trainer_clients_controller.dart';
 import '../domain/compliance.dart';
 import '../domain/trainer_client.dart';
 import 'widgets/client_card.dart';
+import 'widgets/client_list_row.dart';
 import 'widgets/client_sort_chips.dart';
 
 /// The trainer's daily entry point: who am I coaching, and who needs me today
-/// (docs/chat/41-trainer-mobile-v2-plan.md, T1).
+/// (docs/chat/41-trainer-mobile-v2-plan.md, T1; canvas Lifey 6 › 9.1): the clay
+/// "TRAINER" mark over a large "My clients" title with add-person, chat and the
+/// view switch, the sort pills, and one card per client.
 class TrainerClientsScreen extends ConsumerWidget {
   const TrainerClientsScreen({super.key});
 
@@ -30,10 +36,6 @@ class TrainerClientsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final state = ref.watch(trainerClientsControllerProvider);
     final isOffline = ref.watch(isOfflineProvider).value ?? false;
-
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final barTop = statusTop + 8.0;
-    final contentTop = barTop + 58.0 + 12.0;
     final twoPane = isTrainerTwoPane(context);
 
     Future<void> refresh() =>
@@ -47,73 +49,68 @@ class TrainerClientsScreen extends ConsumerWidget {
           .keepOnlyIfPresent(clients.map((client) => client.userId)));
     });
 
-    final list = ScrollCollapseListener(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: RefreshIndicator(
-                displacement: contentTop,
-                onRefresh: refresh,
-                // Offline is a first-class state here, not an edge case: the
-                // trainer view keeps no local copy of client data (§2.2), so
-                // with nothing loaded there is genuinely nothing to show.
-                // Once a list *has* loaded, the app-wide offline banner is
-                // enough — blanking a screen the trainer is reading would be
-                // worse than letting them finish reading it.
-                child: isOffline && !state.hasValue
-                    ? _OfflineView(onRetry: refresh)
-                    : state.when(
-                        data: (clients) => clients.isEmpty
-                            ? EmptyView(
-                                icon: Icons.group_outlined,
-                                title: l10n.trainerClientsEmptyTitle,
-                                subtitle: l10n.trainerClientsEmptyMessage,
-                                // T1 could only point at the web here; T7
-                                // brought the invite flow onto the phone.
-                                action: FilledButton.tonalIcon(
-                                  onPressed: () =>
-                                      context.push(trainerInvitesLocation),
-                                  icon: const Icon(Icons.mail_outline, size: 18),
-                                  label: Text(l10n.trainerSendInviteButton),
-                                ),
-                              )
-                            : _ClientList(
-                                clients: clients,
-                                contentTop: contentTop,
-                                twoPane: twoPane,
-                              ),
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (error, _) => ErrorView(error: error, onRetry: refresh),
-                      ),
-              ),
-            ),
-            Positioned(
-              top: barTop,
-              left: 12,
-              right: 12,
-              child: AdaptiveAppBar(
-                title: l10n.trainerClientsTitle,
-                titleBadge: const TrainerViewBadge(),
-                actions: [
-                  // Same entry point as the client side, same badge — the
-                  // chat is one feature both roles share (40-es terv).
-                  AdaptiveAppBarAction(
-                    icon: Icons.person_add_alt,
-                    tooltip: l10n.trainerInvitesTitle,
-                    onPressed: () => context.push(trainerInvitesLocation),
-                  ),
-                  AdaptiveAppBarAction(
-                    icon: Icons.chat_bubble_outline,
-                    tooltip: l10n.chatOpenTooltip,
-                    badgeCount: ref.watch(unreadBadgeProvider).value ?? 0,
-                    onPressed: () => context.push('/chat'),
-                  ),
-                ],
-                trailing: const TrainerViewMenu(inTrainerView: true),
-              ),
-            ),
-          ],
+    final header = LifeyHeader(
+      title: l10n.trainerClientsTitle,
+      badge: const TrainerViewBadge(),
+      // The mark is a 12/16 caps line in a padded pill; it grows with the text.
+      badgeHeight: MediaQuery.textScalerOf(context).scale(16) + 2 * AppSpacing.s4,
+      actions: [
+        HeaderIconButton(
+          icon: Icons.person_add_alt_1_rounded,
+          tooltip: l10n.trainerInvitesTitle,
+          onPressed: () => context.push(trainerInvitesLocation),
         ),
+        // Same entry point as the client side — the chat is one feature both
+        // roles share (40-es terv).
+        HeaderIconButton(
+          icon: Icons.chat_bubble_outline_rounded,
+          tooltip: l10n.chatOpenTooltip,
+          showDot: (ref.watch(unreadBadgeProvider).value ?? 0) > 0,
+          onPressed: () => context.push('/chat'),
+        ),
+        const TrainerViewMenu(inTrainerView: true),
+      ],
+    );
+
+    final List<Widget> content = isOffline && !state.hasValue
+        // Offline is a first-class state here, not an edge case: the trainer
+        // view keeps no local copy of client data (§2.2), so with nothing
+        // loaded there is genuinely nothing to show. Once a list *has* loaded,
+        // the app-wide offline banner is enough — blanking a screen the
+        // trainer is reading would be worse than letting them finish reading it.
+        ? [SliverFillRemaining(child: _OfflineView(onRetry: refresh))]
+        : state.when(
+            data: (clients) => clients.isEmpty
+                ? [
+                    SliverFillRemaining(
+                      child: EmptyView(
+                        icon: Icons.group_outlined,
+                        title: l10n.trainerClientsEmptyTitle,
+                        subtitle: l10n.trainerClientsEmptyMessage,
+                        // T1 could only point at the web here; T7 brought the
+                        // invite flow onto the phone.
+                        action: FilledButton.tonalIcon(
+                          onPressed: () => context.push(trainerInvitesLocation),
+                          icon: const Icon(Icons.mail_outline, size: 18),
+                          label: Text(l10n.trainerSendInviteButton),
+                        ),
+                      ),
+                    ),
+                  ]
+                : _clientSlivers(context, ref, clients, twoPane: twoPane),
+            loading: () => const [SliverFillRemaining(child: Center(child: CircularProgressIndicator()))],
+            error: (error, _) => [SliverFillRemaining(child: ErrorView(error: error, onRetry: refresh))],
+          );
+
+    final list = ScrollCollapseListener(
+      child: RefreshIndicator(
+        edgeOffset: MediaQuery.paddingOf(context).top + 52,
+        onRefresh: refresh,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [header, ...content],
+        ),
+      ),
     );
 
     // Tablet: the list keeps its place while the detail changes beside it
@@ -156,93 +153,149 @@ class _ClientDetailPane extends ConsumerWidget {
 // List
 // ---------------------------------------------------------------------------
 
-class _ClientList extends ConsumerWidget {
-  const _ClientList({
-    required this.clients,
-    required this.contentTop,
-    required this.twoPane,
-  });
+List<Widget> _clientSlivers(
+  BuildContext context,
+  WidgetRef ref,
+  List<TrainerClient> clients, {
+  required bool twoPane,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  final sort = ref.watch(clientSortControllerProvider);
+  // The rail replaces the floating bar on a tablet, so there is no bar to clear.
+  final bottomPad = MediaQuery.paddingOf(context).bottom + (twoPane ? AppSpacing.s24 : 96);
+  // The filter belongs to the tablet's search field; a phone has none.
+  final query = twoPane ? ref.watch(clientSearchControllerProvider) : '';
+  final shown = filterClients(clients, query);
 
-  final List<TrainerClient> clients;
-  final double contentTop;
+  // One instant for the whole build: sorting, chips and "days ago" must not
+  // disagree because they each called DateTime.now() a millisecond apart.
+  final now = DateTime.now();
+  final sorted = sortClients(shown, sort, now: now);
+  final needsAttention = sorted.where((c) => complianceFor(c, now: now).needsAttention).toList();
+  final rest = sorted.where((c) => !complianceFor(c, now: now).needsAttention).toList();
+  final selected = ref.watch(selectedClientControllerProvider);
 
-  /// On a tablet a tap picks the pane's client; on a phone it pushes the
-  /// detail screen, exactly as before.
-  final bool twoPane;
+  Widget card(TrainerClient client) => Padding(
+        padding: EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, twoPane ? AppSpacing.s4 : AppSpacing.s12),
+        child: twoPane
+            // The detail beside the list carries the figures; the pane only
+            // needs to say who, and how they are doing.
+            ? ClientListRow(
+                client: client,
+                now: now,
+                selected: client.userId == selected,
+                onTap: () => ref.read(selectedClientControllerProvider.notifier).select(client.userId),
+              )
+            : ClientCard(
+                client: client,
+                now: now,
+                onTap: () => context.push('$trainerShellLocation/${client.userId}'),
+              ),
+      );
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final sort = ref.watch(clientSortControllerProvider);
-    final bottomPad = MediaQuery.paddingOf(context).bottom + 24;
+  Widget section(String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s8),
+        child: SectionLabel(title),
+      );
 
-    // One instant for the whole build: sorting, badges and "days ago" must
-    // not disagree because they each called DateTime.now() a millisecond
-    // apart.
-    final now = DateTime.now();
-    final sorted = sortClients(clients, sort, now: now);
-    final needsAttention =
-        sorted.where((c) => complianceFor(c, now: now).needsAttention).toList();
-    final rest = sorted
-        .where((c) => !complianceFor(c, now: now).needsAttention)
-        .toList();
-
-    final selected = ref.watch(selectedClientControllerProvider);
-
-    Widget card(TrainerClient client) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: ClientCard(
-            client: client,
-            now: now,
-            selected: twoPane && client.userId == selected,
-            onTap: () => twoPane
-                ? ref
-                    .read(selectedClientControllerProvider.notifier)
-                    .select(client.userId)
-                : context.push('$trainerShellLocation/${client.userId}'),
-          ),
-        );
-
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.only(top: contentTop, bottom: bottomPad),
-      children: [
-        ClientSortChips(
-          selected: sort,
-          onSelected: (option) =>
-              ref.read(clientSortControllerProvider.notifier).select(option),
+  return [
+    if (twoPane)
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, 0),
+          child: _ClientSearchField(query: query),
         ),
-        const SizedBox(height: 12),
-        // The block disappears entirely when nobody is flagged — an empty
-        // "needs attention" heading would be a false alarm every day it is
-        // read (frame B2).
-        if (needsAttention.isNotEmpty) ...[
-          _SectionHeader(title: l10n.trainerClientsNeedsAttentionTitle),
-          ...needsAttention.map(card),
-          _SectionHeader(title: l10n.trainerClientsAllClientsTitle),
-        ],
-        ...rest.map(card),
-      ],
-    );
-  }
+      ),
+    SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.s8, bottom: AppSpacing.s16),
+        child: ClientSortChips(
+          selected: sort,
+          onSelected: (option) => ref.read(clientSortControllerProvider.notifier).select(option),
+        ),
+      ),
+    ),
+    // The block disappears entirely when nobody is flagged — an empty "needs
+    // attention" heading would be a false alarm every day it is read
+    // (frame B2).
+    if (needsAttention.isNotEmpty) ...[
+      SliverToBoxAdapter(child: section(l10n.trainerClientsNeedsAttentionTitle)),
+      SliverList.builder(
+        itemCount: needsAttention.length,
+        itemBuilder: (context, i) => card(needsAttention[i]),
+      ),
+      SliverToBoxAdapter(child: section(l10n.trainerClientsAllClientsTitle)),
+    ],
+    if (shown.isEmpty)
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s32),
+          // Not an EmptyView: that one fills its viewport, and this sits in a
+          // sliver of a list that keeps its header and search above it.
+          child: Column(
+            children: [
+              Text(l10n.noSearchResultsTitle, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: AppSpacing.s4),
+              Text(
+                l10n.tryDifferentSearchMessage,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.palette.text2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    SliverList.builder(itemCount: rest.length, itemBuilder: (context, i) => card(rest[i])),
+    SliverToBoxAdapter(child: SizedBox(height: bottomPad)),
+  ];
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
+/// The "Search clients" field at the top of the tablet's list pane: the theme's
+/// own input style, a search icon, and a clear button once there is text.
+class _ClientSearchField extends ConsumerStatefulWidget {
+  const _ClientSearchField({required this.query});
 
-  final String title;
+  final String query;
+
+  @override
+  ConsumerState<_ClientSearchField> createState() => _ClientSearchFieldState();
+}
+
+class _ClientSearchFieldState extends ConsumerState<_ClientSearchField> {
+  late final TextEditingController _controller = TextEditingController(text: widget.query);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Text(
-        title,
-        style: theme.textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+    final l10n = AppLocalizations.of(context)!;
+    final p = context.palette;
+    return TextField(
+      controller: _controller,
+      onChanged: (value) {
+        ref.read(clientSearchControllerProvider.notifier).set(value);
+        // Rebuild for the clear button; the query itself lives in the provider.
+        setState(() {});
+      },
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: l10n.trainerClientsSearchHint,
+        prefixIcon: const Icon(Icons.search_rounded, size: 22),
+        suffixIcon: _controller.text.isEmpty
+            ? null
+            : IconButton(
+                icon: Icon(Icons.close_rounded, size: 22, color: p.text2),
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () {
+                  _controller.clear();
+                  ref.read(clientSearchControllerProvider.notifier).clear();
+                  setState(() {});
+                },
+              ),
       ),
     );
   }

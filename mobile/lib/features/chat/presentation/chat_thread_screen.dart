@@ -8,10 +8,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/current_roles_provider.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/sync/connectivity_status_provider.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/empty_view.dart';
+import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/trainer_view_menu.dart';
 import '../domain/chat_peer.dart';
 import '../application/chat_thread_controller.dart';
@@ -175,7 +178,6 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     _streamController = ref.watch(chatStreamControllerProvider);
     final conversation = ref.watch(chatConversationProvider(widget.conversationId)).value;
     final messages = ref.watch(_controllerProvider);
@@ -183,39 +185,21 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
     final isOffline = ref.watch(isOfflineProvider).value ?? false;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        titleSpacing: 0,
-        title: conversation == null
-            ? const SizedBox.shrink()
-            : Row(
-                children: [
-                  ChatAvatar(
-                    monogram: conversation.peer.monogram,
-                    userId: conversation.peer.userId,
-                    size: 34,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      conversation.peer.displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
+      appBar: LifeySubpageHeader(
+        leading: conversation == null
+            ? null
+            : ChatAvatar(
+                monogram: conversation.peer.monogram,
+                userId: conversation.peer.userId,
+                size: 44,
               ),
-        // No presence subtitle: presence is tracked for the push decision
-        // (§5.1) but never reported back, and a fabricated "online" would be
-        // a lie the design explicitly rules out.
+        title: conversation?.peer.displayName ?? '',
+        // The person's role, not a presence claim: presence is tracked for the
+        // push decision (§5.1) but never reported back, so an "online" would
+        // be a lie the design explicitly rules out.
+        subtitle: conversation == null
+            ? null
+            : (conversation.peer.role == ChatPeerRole.trainer ? l10n.chatPeerRoleTrainer : l10n.chatPeerRoleClient),
         actions: [
           // The bridge from the conversation to the numbers behind it
           // (docs/chat/41 T2). Only for a trainer looking at a *client*: the
@@ -224,26 +208,40 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
           if (conversation != null &&
               conversation.peer.role == ChatPeerRole.client &&
               ref.watch(isTrainerProvider))
-            IconButton(
-              icon: const Icon(Icons.insights_outlined),
+            HeaderIconButton(
+              icon: Icons.insights_outlined,
               tooltip: l10n.trainerViewClientDataAction,
-              onPressed: () =>
-                  context.push('$trainerShellLocation/${conversation.peer.userId}'),
+              onPressed: () => context.push('$trainerShellLocation/${conversation.peer.userId}'),
             ),
-          IconButton(
-            icon: const Icon(Icons.search),
+          HeaderIconButton(
+            icon: Icons.search_rounded,
             tooltip: l10n.chatSearchInThread,
             onPressed: () => context.push('/chat/${widget.conversationId}/search'),
           ),
+          // Mute lives in the menu now: it is a setting, not something to do
+          // while reading.
           if (conversation != null)
-            IconButton(
-              icon: Icon(
-                conversation.isMuted ? Icons.notifications_off : Icons.notifications_none,
+            PopupMenuButton<void>(
+              tooltip: l10n.chatMoreTooltip,
+              position: PopupMenuPosition.under,
+              itemBuilder: (_) => [
+                PopupMenuItem<void>(
+                  onTap: () => conversation.isMuted ? _setMuted(null, l10n) : _showMuteOptions(conversation, l10n),
+                  child: Row(
+                    children: [
+                      Icon(conversation.isMuted ? Icons.notifications_off : Icons.notifications_none, size: 20),
+                      const SizedBox(width: AppSpacing.s12),
+                      Text(conversation.isMuted ? l10n.chatUnmuteAction : l10n.chatMuteAction),
+                    ],
+                  ),
+                ),
+              ],
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: context.palette.nested, shape: BoxShape.circle),
+                child: Icon(Icons.more_vert_rounded, size: 22, color: context.palette.text),
               ),
-              tooltip: conversation.isMuted ? l10n.chatUnmuteAction : l10n.chatMuteAction,
-              onPressed: () => conversation.isMuted
-                  ? _setMuted(null, l10n)
-                  : _showMuteOptions(conversation, l10n),
             ),
         ],
       ),
@@ -284,7 +282,6 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
           ),
         ],
       ),
-      backgroundColor: scheme.surface,
     );
   }
 
@@ -302,7 +299,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
     return ListView.builder(
       controller: _scrollController,
       reverse: true,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s12, AppSpacing.screen, AppSpacing.s4),
       itemCount: ordered.length,
       itemBuilder: (context, index) {
         final message = ordered[index];
@@ -325,9 +322,6 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
           isOwn: isOwn,
           senderName: isOwn ? '' : (conversation?.peer.displayName ?? ''),
           showTail: endsRun,
-          showAvatar: endsRun,
-          peerMonogram: conversation?.peer.monogram ?? '',
-          peerUserId: conversation?.peer.userId,
           uploadProgress: uploads[message.clientId],
           onRetry: () => ref.read(_controllerProvider.notifier).retry(message.clientId),
           onDelete: () => message.isUnsent
@@ -356,26 +350,16 @@ class _OfflineStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     return Container(
       width: double.infinity,
-      color: scheme.error.withValues(alpha: 0.14),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      color: context.metricColors.heart.withValues(alpha: 0.14),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen, vertical: AppSpacing.s8),
       child: Row(
         children: [
-          Icon(Icons.cloud_off, size: 15, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
+          Icon(Icons.cloud_off, size: 16, color: p.text2),
+          const SizedBox(width: AppSpacing.s8),
+          Expanded(child: Text(message, style: Theme.of(context).textTheme.bodySmall!.copyWith(color: p.text2))),
         ],
       ),
     );
@@ -387,25 +371,22 @@ class _ThreadSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     // Alternating sides and widths, so the placeholder reads as a
     // conversation rather than a loading list.
     const shapes = [(false, 180.0), (true, 140.0), (false, 220.0), (true, 90.0)];
     return ListView(
       reverse: true,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s12, AppSpacing.screen, AppSpacing.s4),
       children: [
         for (final (isOwn, width) in shapes)
           Align(
             alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
             child: Container(
               width: width,
-              height: 40,
+              height: 44,
               margin: const EdgeInsets.symmetric(vertical: 5),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(18),
-              ),
+              decoration: BoxDecoration(color: p.card, borderRadius: AppRadius.cardAll),
             ),
           ),
       ],
@@ -420,28 +401,12 @@ class _ThreadError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.error_outline, size: 44, color: scheme.error),
-          const SizedBox(height: 14),
-          Text(l10n.chatLoadErrorTitle, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 6),
-          Text(
-            l10n.chatLoadErrorBody,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.tonalIcon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: Text(l10n.chatRetryAction),
-          ),
-        ],
-      ),
+    return ErrorView(
+      error: Exception('chat thread'),
+      title: l10n.chatLoadErrorTitle,
+      message: l10n.chatLoadErrorBody,
+      onRetry: onRetry,
     );
   }
 }

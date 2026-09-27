@@ -245,9 +245,9 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('PLAYING TIME — ON COURT'), findsOneWidget);
-    expect(find.text('GROSS TIME'), findsOneWidget);
-    expect(find.text('HEART RATE'), findsOneWidget);
-    expect(find.text('ZONE'), findsOneWidget);
+    expect(find.text('Gross time'), findsOneWidget);
+    expect(find.text('Heart rate'), findsOneWidget);
+    expect(find.text('Zone'), findsOneWidget);
     expect(find.text('On court'), findsOneWidget);
     expect(find.text('Bench'), findsOneWidget);
   });

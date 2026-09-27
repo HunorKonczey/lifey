@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../shared/widgets/ds/list_group.dart';
+import '../../../../shared/widgets/ds/section_label.dart';
+import '../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../domain/workout_session.dart';
 
 /// A trainer-scheduled session within the client's 7-day visibility window
@@ -58,24 +62,19 @@ class UpcomingSessionsSection extends StatelessWidget {
       groups.putIfAbsent(day, () => []).add(session);
     }
 
+    final p = context.palette;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s12, AppSpacing.screen, AppSpacing.s4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(l10n.upcomingSessionsTitle, style: theme.textTheme.titleSmall),
-          ),
+          SectionLabel(l10n.upcomingSessionsTitle),
           for (final entry in groups.entries) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.s4, AppSpacing.s12, AppSpacing.s4, AppSpacing.s8),
               child: Text(
                 _dayLabel(entry.key, l10n),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: theme.textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w700, color: p.text2),
               ),
             ),
             for (final session in entry.value)
@@ -108,68 +107,40 @@ class _UpcomingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
 
-    return Card(
-      elevation: 0,
-      color: scheme.tertiaryContainer.withValues(alpha: 0.35),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        side: BorderSide(color: scheme.tertiary.withValues(alpha: 0.3)),
-      ),
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+      child: LifeyCard(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.s12, AppSpacing.s12, AppSpacing.s8, AppSpacing.s12),
         child: Row(
           children: [
-            Icon(Icons.schedule, size: 20, color: scheme.tertiary),
-            const SizedBox(width: 10),
+            ListIconHolder(icon: Icons.schedule_rounded, color: context.metricColors.weight),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     session.templateName ?? l10n.freeWorkoutLabel,
-                    style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w800),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w700, height: 1.3, color: p.text),
                   ),
-                  const SizedBox(height: 2),
-                  Row(
+                  const SizedBox(height: AppSpacing.s4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (session.scheduledTime != null) ...[
+                      if (session.scheduledTime != null)
                         Text(
                           session.scheduledTime!,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: theme.textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: p.text2),
                         ),
-                        const SizedBox(width: 6),
-                      ],
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: scheme.tertiaryContainer,
-                          borderRadius: AppRadius.pill,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.school, size: 11, color: scheme.onTertiaryContainer),
-                            const SizedBox(width: 3),
-                            Text(
-                              l10n.originTrainerBadgeLabel,
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onTertiaryContainer,
-                                height: 1.0,
-                              ),
-                            ),
-                          ],
-                        ),
+                      TintedChip(
+                        label: l10n.originTrainerBadgeLabel,
+                        color: context.metricColors.fat,
+                        icon: Icons.school_rounded,
                       ),
                     ],
                   ),
@@ -178,17 +149,15 @@ class _UpcomingCard extends StatelessWidget {
             ),
             IconButton(
               onPressed: onDelete,
-              icon: Icon(Icons.close, size: 18, color: scheme.onSurfaceVariant),
+              icon: Icon(Icons.close_rounded, size: 20, color: p.text2),
               tooltip: l10n.deleteWorkoutTooltip,
               visualDensity: VisualDensity.compact,
             ),
             FilledButton(
               onPressed: onStart,
               style: FilledButton.styleFrom(
-                backgroundColor: scheme.tertiary,
-                foregroundColor: scheme.onTertiary,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                minimumSize: const Size(0, 36),
+                minimumSize: const Size(0, 40),
               ),
               child: Text(l10n.startWorkoutButtonLabel),
             ),

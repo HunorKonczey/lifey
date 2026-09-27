@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../l10n/app_localizations.dart';
+import '../../../shared/filter_pill_row.dart';
 import '../../domain/compliance.dart';
 
-/// The four sort options as a horizontally scrolling chip row (frame B3).
+/// The four sort options as a horizontally scrolling pill row (canvas Lifey 6:
+/// the chosen one filled in the primary colour).
 ///
 /// Not a dropdown: on a phone a header menu hides the current choice behind a
 /// tap, and the sort is the thing the trainer changes most often on this
@@ -22,7 +24,6 @@ class ClientSortChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
 
     String label(ClientSortOption option) => switch (option) {
           ClientSortOption.recent => l10n.trainerClientsSortRecentLabel,
@@ -31,31 +32,11 @@ class ClientSortChips extends StatelessWidget {
           ClientSortOption.weightOverdue => l10n.trainerClientsSortWeightOverdueLabel,
         };
 
-    return SizedBox(
-      height: 38,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: ClientSortOption.values.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final option = ClientSortOption.values[index];
-          return ChoiceChip(
-            label: Text(label(option)),
-            selected: option == selected,
-            onSelected: (_) => onSelected(option),
-            showCheckmark: false,
-            selectedColor: scheme.tertiaryContainer,
-            labelStyle: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: option == selected
-                  ? scheme.onTertiaryContainer
-                  : scheme.onSurfaceVariant,
-            ),
-          );
-        },
-      ),
+    return FilterPillRow(
+      pills: [
+        for (final option in ClientSortOption.values)
+          (label: label(option), selected: option == selected, onTap: () => onSelected(option)),
+      ],
     );
   }
 }

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../core/format/lifey_format.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/list_group.dart';
 import '../../application/meal_controller.dart';
 import '../../domain/day_meals_summary.dart';
 
@@ -50,7 +51,7 @@ class _CopyDaySheetState extends ConsumerState<CopyDaySheet> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + bottomPad),
+      padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s20 + bottomPad),
       child: FutureBuilder<List<DayMealsSummary>>(
         future: _future,
         builder: (context, snapshot) {
@@ -65,7 +66,10 @@ class _CopyDaySheetState extends ConsumerState<CopyDaySheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.copyPreviousDayTitle, style: Theme.of(context).textTheme.titleLarge),
+              Semantics(
+                header: true,
+                child: Text(l10n.copyPreviousDayTitle, style: Theme.of(context).textTheme.headlineSmall),
+              ),
               const SizedBox(height: 12),
               if (days.isEmpty)
                 Padding(
@@ -80,14 +84,17 @@ class _CopyDaySheetState extends ConsumerState<CopyDaySheet> {
                   ),
                 )
               else
-                for (final day in days) ...[
-                  _DayRow(
-                    summary: day,
-                    showsAppendsNote: widget.hasMealsToday,
-                    onTap: () => Navigator.of(context).pop(day),
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                ListGroup(
+                  dividerInset: AppSpacing.s16,
+                  children: [
+                    for (final day in days)
+                      _DayRow(
+                        summary: day,
+                        showsAppendsNote: widget.hasMealsToday,
+                        onTap: () => Navigator.of(context).pop(day),
+                      ),
+                  ],
+                ),
             ],
           );
         },
@@ -107,48 +114,41 @@ class _DayRow extends StatelessWidget {
   final bool showsAppendsNote;
   final VoidCallback onTap;
 
-  static final _dayLabel = DateFormat('EEE, MMM d');
-
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final p = context.palette;
 
-    return Material(
-      color: scheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card),
+    final t = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_dayLabel.format(summary.day), style: theme.textTheme.bodyLarge),
-                    const SizedBox(height: 2),
                     Text(
-                      l10n.copyDaySheetMealsKcal(
-                          summary.mealCount, summary.totalCalories.round()),
-                      style: theme.textTheme.labelMedium
-                          ?.copyWith(color: scheme.onSurfaceVariant),
+                      LifeyFormat.of(context).shortDayLabel(summary.day),
+                      style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w700, height: 1.3, color: p.text),
                     ),
-                    if (showsAppendsNote) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.copyDayAppendsNote,
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    ],
+                    const SizedBox(height: 3),
+                    Text(
+                      l10n.copyDaySheetMealsKcal(summary.mealCount, summary.totalCalories.round()),
+                      style: t.bodySmall!.copyWith(height: 1.4, color: p.text2),
+                    ),
+                    if (showsAppendsNote)
+                      Text(l10n.copyDayAppendsNote, style: t.bodySmall!.copyWith(height: 1.4, color: p.text2)),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
+              Icon(Icons.chevron_right_rounded, color: p.text2),
             ],
           ),
         ),

@@ -19,6 +19,8 @@ class TrainerClient {
     this.lastActivityAt,
     this.lastWeightAt,
     this.missedWorkoutCount = 0,
+    this.avgCalories7d,
+    this.prCount7d,
   });
 
   final int userId;
@@ -39,6 +41,23 @@ class TrainerClient {
   final DateTime? lastActivityAt;
   final DateTime? lastWeightAt;
   final int missedWorkoutCount;
+
+  /// Mean daily calories over the last 7 days, or null when the client logged
+  /// no meals — or when the backend predates the field (R6.2). Null means "no
+  /// figure", never 0: the card hides the KPI instead of showing a false zero.
+  final int? avgCalories7d;
+
+  /// Strength records set in the last 7 days (R6.2). Null = unknown (an older
+  /// backend); 0 is a real answer and simply draws no chip.
+  final int? prCount7d;
+
+  /// How the weight moved across the card's sparkline window, in kg (last
+  /// minus first weigh-in), or null with fewer than two points — one reading is
+  /// not a trend. Derived, so it always agrees with the line drawn beside it.
+  double? get weightChangeKg {
+    if (weightTrend.length < 2) return null;
+    return weightTrend.last.weightKg - weightTrend.first.weightKg;
+  }
 
   String get displayName {
     final name = [firstName, lastName]
@@ -69,6 +88,8 @@ class TrainerClient {
       lastActivityAt: _parseNullableTimestamp(json['lastActivityAt'] as String?),
       lastWeightAt: _parseNullableTimestamp(json['lastWeightAt'] as String?),
       missedWorkoutCount: (json['missedWorkoutCount'] as num?)?.toInt() ?? 0,
+      avgCalories7d: (json['avgCalories7d'] as num?)?.toInt(),
+      prCount7d: (json['prCount7d'] as num?)?.toInt(),
     );
   }
 }

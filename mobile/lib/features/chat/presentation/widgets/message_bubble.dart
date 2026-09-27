@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/chat_message.dart';
 import 'chat_attachment_view.dart';
-import 'chat_avatar.dart';
 
 /// One message.
 ///
@@ -26,9 +26,6 @@ class MessageBubble extends StatelessWidget {
     required this.isOwn,
     required this.senderName,
     required this.showTail,
-    required this.showAvatar,
-    required this.peerMonogram,
-    this.peerUserId,
     this.receiptState,
     this.onRetry,
     this.onDelete,
@@ -50,36 +47,30 @@ class MessageBubble extends StatelessWidget {
 
   ChatMessageState get _state => receiptState ?? message.state;
 
-  /// Last message of a same-sender run: the one that shows the time, the
-  /// status and the flattened "tail" corner. Consecutive messages group.
+  /// Last message of a same-sender run: the one that shows the time and the
+  /// status under it, and the flattened "tail" corner. Consecutive messages
+  /// group.
   final bool showTail;
-
-  /// Peer-side runs show the avatar once, next to the last bubble.
-  final bool showAvatar;
-  final String peerMonogram;
-
-  /// Whose picture that avatar shows. Null falls back to the monogram — the
-  /// same behaviour as a peer who has no picture set.
-  final int? peerUserId;
 
   final VoidCallback? onRetry;
   final VoidCallback? onDelete;
 
-  static const _radius = 18.0;
-  static const _tailRadius = 6.0;
+  static const _tailRadius = 8.0;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final p = context.palette;
+    final t = theme.textTheme;
     final l10n = AppLocalizations.of(context)!;
-    final isDark = theme.brightness == Brightness.dark;
     final time = DateFormat.Hm(Localizations.localeOf(context).languageCode)
         .format(message.createdAt);
+    const radius = AppRadius.card;
 
-    final bubbleColor = isOwn
-        ? scheme.primary.withValues(alpha: isDark ? 0.20 : 0.13)
-        : scheme.surfaceContainerHigh;
+    // Own messages are the brand colour with its own "on" text, the peer's the
+    // card surface (canvas Lifey 5 › 7).
+    final bubbleColor = isOwn ? scheme.primary : p.card;
 
     return Semantics(
       label: l10n.chatMessageSemantics(
@@ -96,74 +87,48 @@ class MessageBubble extends StatelessWidget {
           // Tight inside a run, roomier between runs — the grouping the
           // design asks for is spacing, not a separator.
           top: showTail ? 2 : 1,
-          bottom: showTail ? 8 : 1,
+          bottom: showTail ? AppSpacing.s12 : 2,
         ),
-        child: Row(
-          mainAxisAlignment: isOwn ? MainAxisAlignment.end : MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        child: Column(
+          crossAxisAlignment: isOwn ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (!isOwn)
-              SizedBox(
-                width: 36,
-                child: showAvatar ? ChatAvatar(monogram: peerMonogram, userId: peerUserId, size: 30) : null,
-              ),
-            Flexible(
-              child: GestureDetector(
-                onLongPress: message.isDeleted ? null : () => _showActions(context, l10n),
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.sizeOf(context).width * 0.74,
-                  ),
-                  // A picture wants to fill its bubble, not float in it.
-                  padding: message.hasAttachment && !message.isDeleted
-                      ? const EdgeInsets.all(4)
-                      : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: bubbleColor,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(_radius),
-                      topRight: const Radius.circular(_radius),
-                      // The flattened corner stands in for a drawn tail.
-                      bottomLeft: Radius.circular(
-                        !isOwn && showTail ? _tailRadius : _radius,
-                      ),
-                      bottomRight: Radius.circular(
-                        isOwn && showTail ? _tailRadius : _radius,
-                      ),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _body(context, scheme, l10n),
-                      if (showTail) ...[
-                        const SizedBox(height: 3),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              time,
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w500,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                            if (isOwn) ...[
-                              const SizedBox(width: 4),
-                              _StatusIcon(state: _state),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ],
+            GestureDetector(
+              onLongPress: message.isDeleted ? null : () => _showActions(context, l10n),
+              child: Container(
+                constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.8),
+                // A picture wants to fill its bubble, not float in it.
+                padding: message.hasAttachment && !message.isDeleted
+                    ? const EdgeInsets.all(AppSpacing.s4)
+                    : const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+                decoration: BoxDecoration(
+                  color: bubbleColor,
+                  border: isOwn ? null : Border.all(color: context.elevation.border),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(radius),
+                    topRight: const Radius.circular(radius),
+                    // The flattened corner stands in for a drawn tail.
+                    bottomLeft: Radius.circular(!isOwn && showTail ? _tailRadius : radius),
+                    bottomRight: Radius.circular(isOwn && showTail ? _tailRadius : radius),
                   ),
                 ),
+                child: _body(context, scheme, l10n),
               ),
             ),
+            // Time and receipt sit under the bubble, not inside it.
+            if (showTail)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.s4, left: AppSpacing.s4, right: AppSpacing.s4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(time, style: t.bodySmall!.copyWith(color: p.text3)),
+                    if (isOwn) ...[
+                      const SizedBox(width: AppSpacing.s4),
+                      _StatusIcon(state: _state),
+                    ],
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -174,12 +139,10 @@ class MessageBubble extends StatelessWidget {
     if (message.isDeleted) {
       return Text(
         l10n.chatDeletedMessage,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 14,
-          fontStyle: FontStyle.italic,
-          color: scheme.onSurfaceVariant,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              fontStyle: FontStyle.italic,
+              color: isOwn ? scheme.onPrimary.withValues(alpha: 0.8) : context.palette.text2,
+            ),
       );
     }
     if (message.hasAttachment) {
@@ -197,7 +160,10 @@ class MessageBubble extends StatelessWidget {
           // whole message.
           if (caption != null && caption.isNotEmpty) ...[
             const SizedBox(height: 6),
-            _text(caption, scheme),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s4),
+              child: _text(context, caption, scheme),
+            ),
           ],
         ],
       );
@@ -207,19 +173,15 @@ class MessageBubble extends StatelessWidget {
     // The menu wins because it is what the design specifies, and its "Copy"
     // action covers the same need more reliably than a drag-to-select would
     // inside a 74%-width bubble.
-    return _text(message.body ?? '', scheme);
+    return _text(context, message.body ?? '', scheme);
   }
 
-  Widget _text(String value, ColorScheme scheme) {
+  Widget _text(BuildContext context, String value, ColorScheme scheme) {
     return Text(
       value,
-      style: TextStyle(
-        fontFamily: 'PlusJakartaSans',
-        fontSize: 14.5,
-        fontWeight: FontWeight.w500,
-        height: 1.35,
-        color: scheme.onSurface,
-      ),
+      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            color: isOwn ? scheme.onPrimary : context.palette.text,
+          ),
     );
   }
 
@@ -298,15 +260,16 @@ class _StatusIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final quiet = context.palette.text3;
     final (icon, color) = switch (state) {
-      ChatMessageState.pending => (Icons.schedule, scheme.onSurfaceVariant),
-      ChatMessageState.sent => (Icons.check, scheme.onSurfaceVariant),
-      ChatMessageState.delivered => (Icons.done_all, scheme.onSurfaceVariant),
+      ChatMessageState.pending => (Icons.schedule, quiet),
+      ChatMessageState.sent => (Icons.check, quiet),
+      ChatMessageState.delivered => (Icons.done_all, quiet),
       // The one state that gets the accent colour — "they've seen it" is the
       // only status worth drawing the eye.
       ChatMessageState.read => (Icons.done_all, scheme.primary),
       ChatMessageState.failed => (Icons.error_outline, scheme.error),
     };
-    return Icon(icon, size: 13, color: color);
+    return Icon(icon, size: 16, color: color);
   }
 }

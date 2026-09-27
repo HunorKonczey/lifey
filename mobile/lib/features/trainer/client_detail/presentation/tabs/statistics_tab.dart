@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_segmented.dart';
+import '../../../../../shared/widgets/ds/metric_tile.dart';
 import '../../application/client_detail_providers.dart';
 import '../../domain/client_data.dart';
 import '../widgets/client_tab_body.dart';
-import '../widgets/metric_card.dart';
+import '../widgets/kpi_grid.dart';
 import '../widgets/read_only_badge.dart';
 import '../widgets/trend_chart_card.dart';
 
@@ -40,8 +42,7 @@ class _ClientStatisticsTabState extends ConsumerState<ClientStatisticsTab> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final metrics = context.metricColors;
-    final locale = Localizations.localeOf(context).toString();
-    final integer = NumberFormat.decimalPattern(locale);
+    final f = LifeyFormat.of(context);
 
     final statsKey = (clientId: widget.clientId, period: _period);
     final weightsKey = (clientId: widget.clientId, days: _weightWindowDays);
@@ -71,74 +72,41 @@ class _ClientStatisticsTabState extends ConsumerState<ClientStatisticsTab> {
 
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, AppSpacing.s24),
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final period in ClientStatisticsPeriod.values)
-                        ChoiceChip(
-                          label: Text(periodLabel(period)),
-                          selected: period == _period,
-                          showCheckmark: false,
-                          selectedColor: theme.colorScheme.tertiaryContainer,
-                          labelStyle: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: period == _period
-                                ? theme.colorScheme.onTertiaryContainer
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                          onSelected: (_) => setState(() => _period = period),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const ReadOnlyBadge(),
-              ],
+            const Align(alignment: Alignment.centerRight, child: ReadOnlyBadge()),
+            const SizedBox(height: AppSpacing.s8),
+            LifeySegmented<ClientStatisticsPeriod>(
+              segments: [for (final period in ClientStatisticsPeriod.values) (period, periodLabel(period))],
+              selected: _period,
+              onChanged: (period) => setState(() => _period = period),
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: MetricCard(
-                    label: l10n.caloriesLabel,
-                    value: l10n.trainerKcalValue(
-                      integer.format((statistics.totalCalories ?? 0).round()),
-                    ),
-                    icon: Icons.local_fire_department_outlined,
-                    color: metrics.calories,
-                  ),
+            const SizedBox(height: AppSpacing.s16),
+            KpiGrid(
+              tiles: [
+                MetricTile(
+                  icon: Icons.local_fire_department_rounded,
+                  label: l10n.caloriesLabel,
+                  value: f.kcal(statistics.totalCalories ?? 0),
+                  unit: l10n.statUnitKcal,
+                  color: metrics.calories,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: MetricCard(
-                    label: l10n.workoutsTitle,
-                    value: '${statistics.workoutCount ?? 0}',
-                    icon: Icons.fitness_center,
-                    color: theme.colorScheme.tertiary,
-                  ),
+                MetricTile(
+                  icon: Icons.fitness_center_rounded,
+                  label: l10n.workoutsTitle,
+                  value: '${statistics.workoutCount ?? 0}',
+                  color: theme.colorScheme.primary,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: MetricCard(
-                    label: l10n.weightTitle,
-                    value: statistics.latestWeight == null
-                        ? '—'
-                        : l10n.trainerKgValue(
-                            statistics.latestWeight!.toStringAsFixed(1),
-                          ),
-                    icon: Icons.monitor_weight_outlined,
-                    color: metrics.weight,
-                  ),
+                MetricTile(
+                  icon: Icons.monitor_weight_rounded,
+                  label: l10n.weightTitle,
+                  value: statistics.latestWeight == null ? '—' : f.weight(statistics.latestWeight!),
+                  unit: statistics.latestWeight == null ? null : l10n.statUnitKg,
+                  color: metrics.weight,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             TrendChartCard(
               title: l10n.trainerWeightTrendTitle,
               points: [
@@ -147,8 +115,8 @@ class _ClientStatisticsTabState extends ConsumerState<ClientStatisticsTab> {
               ],
               accentColor: metrics.weight,
               emptyMessage: l10n.trainerNoWeightEntriesMessage,
-              valueLabelBuilder: (value) =>
-                  l10n.trainerKgValue(value.toStringAsFixed(1)),
+              valueLabelBuilder: (value) => l10n.trainerKgValue(f.weight(value)),
+              axisLabelBuilder: f.weight,
             ),
           ],
         );

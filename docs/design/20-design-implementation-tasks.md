@@ -1,5 +1,7 @@
 # Lifey – Design implementation tasks (step-by-step prompts)
 
+> ⚠️ **Felülírta:** [`redesign/77-mobile-redesign-plan.md`](../redesign/77-mobile-redesign-plan.md) — a tokenértékeket (paletta, tipográfia, sugarak, mozgás) és a komponenseket (`shared/widgets/ds/`) a `77` R0–R7 iterációi váltották le; ez a fájl csak a korábbi lépések története.
+
 > **Mi ez?** A redesign (`18-design-system-prompt.md` + a `design-handoff/`
 > mockupok) lebontva **kis, egymásra épülő, tisztán vizuális** lépésekre. Minden
 > lépés egy **önállóan beilleszthető prompt** — egyesével haladunk, mindegyik

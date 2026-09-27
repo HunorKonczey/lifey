@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ds/lifey_header.dart';
 
 /// Opens the camera and returns the first scanned barcode value via
 /// `Navigator.pop`. Pop with `null` if the user backs out without scanning.
@@ -35,8 +36,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // The header floats over the camera on its scrim (docs/redesign/77-mobile-
+    // redesign-plan.md R2.9); the preview fills the screen behind it.
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.scanBarcodeButton), scrolledUnderElevation: 0),
+      extendBodyBehindAppBar: true,
+      appBar: LifeySubpageHeader(title: l10n.scanBarcodeButton),
       body: MobileScanner(
         controller: _controller,
         onDetect: _onDetect,

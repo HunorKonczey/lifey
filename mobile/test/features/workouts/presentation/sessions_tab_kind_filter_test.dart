@@ -182,7 +182,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Running'), findsOneWidget);
-      expect(find.text('0 sets'), findsOneWidget);
+      expect(find.text('Strength'), findsOneWidget);
     });
   });
 }

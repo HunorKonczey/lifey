@@ -11,12 +11,6 @@ import '../../../../l10n/app_localizations.dart';
 import 'music_provider_picker_sheet.dart';
 import 'provider_glyph.dart';
 
-/// Same warn color as `_RestBanner`/`showAppConfirmDialog`'s delete-accent —
-/// see docs/music/46-workout-music-controls-plan.md §6.2 (reusing the
-/// existing color rather than introducing a one-off design-system token for
-/// a single icon/dot).
-const _kAttentionColor = Color(0xFFD66B5A);
-
 /// Result popped from [MusicPlayerSheet] when the user taps "Switch" — the
 /// sheet itself never re-shows [MusicProviderPickerSheet] (its own
 /// BuildContext would be gone the moment it pops), so the caller
@@ -98,12 +92,7 @@ class _ChromeSheet extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         provider?.displayName ?? '',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
                       ),
                     ],
                   ),
@@ -118,12 +107,7 @@ class _ChromeSheet extends StatelessWidget {
                       const SizedBox(width: 5),
                       Text(
                         l10n.musicSwitchProvider,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.primary,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.primary),
                       ),
                     ],
                   ),
@@ -162,12 +146,7 @@ class _LoadingBody extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             l10n.musicConnectingMessage,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -197,12 +176,7 @@ class _EmptyBody extends ConsumerWidget {
         Text(
           l10n.musicNoActiveSessionMessage(name),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 16),
         _FilledCta(
@@ -224,25 +198,22 @@ class _ErrorBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    // The warn colour of the delete accents and the music button's attention
+    // dot: the theme's negative (docs/music/46 §6.2).
+    final attention = context.metricColors.negative;
     return Column(
       children: [
         Container(
           width: 64,
           height: 64,
-          decoration:
-              BoxDecoration(color: _kAttentionColor.withValues(alpha: 0.14), shape: BoxShape.circle),
-          child: const Icon(Icons.cloud_off_rounded, size: 30, color: _kAttentionColor),
+          decoration: BoxDecoration(color: attention.withValues(alpha: 0.14), shape: BoxShape.circle),
+          child: Icon(Icons.cloud_off_rounded, size: 30, color: attention),
         ),
         const SizedBox(height: 12),
         Text(
           l10n.musicErrorMessage(provider?.displayName ?? ''),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 16),
         _TonalCta(
@@ -272,7 +243,7 @@ class _PlayingBody extends ConsumerWidget {
         Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: BorderRadius.circular(AppRadius.control),
               child: artwork != null
                   ? Image.memory(artwork, width: 64, height: 64, fit: BoxFit.cover)
                   : Container(
@@ -292,25 +263,14 @@ class _PlayingBody extends ConsumerWidget {
                     playback?.title ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onSurface,
-                      letterSpacing: -0.3,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, letterSpacing: -0.3),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     playback?.artist ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -349,7 +309,7 @@ class _TransportButton extends StatelessWidget {
         height: 48,
         decoration: BoxDecoration(
           color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(AppRadius.control),
         ),
         child: Icon(icon, size: 26, color: scheme.onSurface),
       ),
@@ -419,7 +379,7 @@ class _PermissionSheet extends ConsumerWidget {
               height: 64,
               decoration: BoxDecoration(
                 color: scheme.primary.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderRadius: BorderRadius.circular(AppRadius.control),
               ),
               child: Icon(Icons.graphic_eq_rounded, size: 32, color: scheme.primary),
             ),
@@ -427,26 +387,14 @@ class _PermissionSheet extends ConsumerWidget {
             Text(
               l10n.musicPermissionTitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurface,
-                letterSpacing: -0.3,
-              ),
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, letterSpacing: -0.3),
             ),
             const SizedBox(height: 10),
             for (final line in explanationLines) ...[
               Text(
                 line,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  color: scheme.onSurfaceVariant,
-                  height: 1.55,
-                ),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant, height: 1.55),
               ),
               if (line != explanationLines.last) const SizedBox(height: 4),
             ],
@@ -486,7 +434,7 @@ class _ConnectPromptSheet extends ConsumerWidget {
               height: 64,
               decoration: BoxDecoration(
                 color: scheme.primary.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderRadius: BorderRadius.circular(AppRadius.control),
               ),
               child: Icon(Icons.link_rounded, size: 32, color: scheme.primary),
             ),
@@ -494,25 +442,13 @@ class _ConnectPromptSheet extends ConsumerWidget {
             Text(
               l10n.musicConnectTitle(name),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurface,
-                letterSpacing: -0.3,
-              ),
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface, letterSpacing: -0.3),
             ),
             const SizedBox(height: 10),
             Text(
               l10n.musicConnectBody(name),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant,
-                height: 1.55,
-              ),
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant, height: 1.55),
             ),
             const SizedBox(height: 18),
             _FilledCta(
@@ -541,12 +477,7 @@ class _NotNowLink extends StatelessWidget {
       onTap: () => Navigator.of(context).pop(),
       child: Text(
         label,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 13.5,
-          fontWeight: FontWeight.w700,
-          color: scheme.onSurfaceVariant,
-        ),
+        style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
       ),
     );
   }
@@ -574,12 +505,12 @@ class _FilledCta extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.control)),
         ),
         icon: Icon(icon, size: 20),
         label: Text(
           label,
-          style: const TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 14, fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -604,12 +535,12 @@ class _TonalCta extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: scheme.surfaceContainerHigh,
           foregroundColor: scheme.onSurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.control)),
         ),
         icon: Icon(icon, size: 20),
         label: Text(
           label,
-          style: const TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 14, fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
     );

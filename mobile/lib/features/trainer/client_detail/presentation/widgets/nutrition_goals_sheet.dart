@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/network/error_message.dart';
+import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../application/client_detail_providers.dart';
 import '../../data/client_detail_repository.dart';
 import '../../domain/client_data.dart';
@@ -39,11 +41,10 @@ class NutritionGoalsSheet extends ConsumerStatefulWidget {
     required int clientId,
     required ClientNutritionGoals goals,
   }) {
-    return showModalBottomSheet<GoalsSaveOutcome>(
+    return showLifeySheet<GoalsSaveOutcome>(
       context: context,
+      title: AppLocalizations.of(context)!.trainerNutritionGoalsTitle,
       useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => NutritionGoalsSheet(clientId: clientId, goals: goals),
     );
   }
@@ -124,100 +125,89 @@ class _NutritionGoalsSheetState extends ConsumerState<NutritionGoalsSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final p = context.palette;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l10n.trainerNutritionGoalsTitle,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.trainerNutritionGoalsSubtitle,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 14),
-          _GoalField(
-            controller: _calories,
-            label: l10n.caloriesLabel,
-            suffix: 'kcal',
-            enabled: !_saving,
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _GoalField(
-                  controller: _protein,
-                  label: l10n.proteinLabel,
-                  suffix: 'g',
-                  enabled: !_saving,
-                ),
+    // The sheet's own frame (title, handle, keyboard inset) comes from
+    // showLifeySheet; this is only what goes in it.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.trainerNutritionGoalsSubtitle,
+          style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
+        ),
+        const SizedBox(height: 14),
+        _GoalField(
+          controller: _calories,
+          label: l10n.caloriesLabel,
+          suffix: l10n.statUnitKcal,
+          enabled: !_saving,
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _GoalField(
+                controller: _protein,
+                label: l10n.proteinLabel,
+                suffix: l10n.statUnitGrams,
+                enabled: !_saving,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _GoalField(
-                  controller: _carbs,
-                  label: l10n.carbsLabel,
-                  suffix: 'g',
-                  enabled: !_saving,
-                ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _GoalField(
+                controller: _carbs,
+                label: l10n.carbsLabel,
+                suffix: l10n.statUnitGrams,
+                enabled: !_saving,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _GoalField(
-                  controller: _fat,
-                  label: l10n.fatLabel,
-                  suffix: 'g',
-                  enabled: !_saving,
-                ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _GoalField(
+                controller: _fat,
+                label: l10n.fatLabel,
+                suffix: l10n.statUnitGrams,
+                enabled: !_saving,
               ),
-            ],
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              _error!,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.error),
             ),
           ],
-          const SizedBox(height: 8),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 10),
           Text(
-            l10n.trainerNutritionGoalsBlankHint,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Spacer(),
-              if (_saving)
-                const Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              FilledButton(
-                onPressed: _saving ? null : _save,
-                child: Text(l10n.saveButton),
-              ),
-            ],
+            _error!,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.error),
           ),
         ],
-      ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.trainerNutritionGoalsBlankHint,
+          style: theme.textTheme.labelSmall?.copyWith(color: p.text2),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Spacer(),
+            if (_saving)
+              const Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: Text(l10n.saveButton),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -247,8 +237,6 @@ class _GoalField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffix,
-        isDense: true,
-        border: const OutlineInputBorder(),
       ),
     );
   }

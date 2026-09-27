@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/network/error_message.dart';
+import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../application/client_sessions_controller.dart';
 import '../../domain/client_workout_session.dart';
 
@@ -32,11 +34,11 @@ class SessionCommentSheet extends ConsumerStatefulWidget {
     required int clientId,
     required ClientWorkoutSession session,
   }) {
-    return showModalBottomSheet<CommentSaveOutcome>(
+    final l10n = AppLocalizations.of(context)!;
+    return showLifeySheet<CommentSaveOutcome>(
       context: context,
+      title: session.hasTrainerComment ? l10n.trainerEditCommentTitle : l10n.trainerAddCommentTitle,
       useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => SessionCommentSheet(clientId: clientId, session: session),
     );
   }
@@ -106,72 +108,57 @@ class _SessionCommentSheetState extends ConsumerState<SessionCommentSheet> {
     final l10n = AppLocalizations.of(context)!;
     final hasExisting = widget.session.hasTrainerComment;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            hasExisting
-                ? l10n.trainerEditCommentTitle
-                : l10n.trainerAddCommentTitle,
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
+    // The sheet's own frame (title, handle, keyboard inset) comes from
+    // showLifeySheet; this is only what goes in it.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.trainerCommentSheetSubtitle,
+          style: theme.textTheme.bodySmall?.copyWith(color: context.palette.text2),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _controller,
+          enabled: !_busy,
+          autofocus: !hasExisting,
+          maxLines: 5,
+          minLines: 3,
+          maxLength: _commentMaxLength,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            hintText: l10n.trainerCommentHint,
+            errorText: _error,
           ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.trainerCommentSheetSubtitle,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _controller,
-            enabled: !_busy,
-            autofocus: !hasExisting,
-            maxLines: 5,
-            minLines: 3,
-            maxLength: _commentMaxLength,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
-              hintText: l10n.trainerCommentHint,
-              border: const OutlineInputBorder(),
-              errorText: _error,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              if (hasExisting)
-                TextButton.icon(
-                  onPressed: _busy ? null : _delete,
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  label: Text(l10n.deleteButton),
-                  style: TextButton.styleFrom(foregroundColor: scheme.error),
-                ),
-              const Spacer(),
-              if (_busy)
-                const Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              FilledButton(
-                onPressed: _busy ? null : _save,
-                child: Text(l10n.saveButton),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            if (hasExisting)
+              TextButton.icon(
+                onPressed: _busy ? null : _delete,
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: Text(l10n.deleteButton),
+                style: TextButton.styleFrom(foregroundColor: scheme.error),
               ),
-            ],
-          ),
-        ],
-      ),
+            const Spacer(),
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            FilledButton(
+              onPressed: _busy ? null : _save,
+              child: Text(l10n.saveButton),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

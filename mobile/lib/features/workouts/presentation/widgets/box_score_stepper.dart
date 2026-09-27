@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_type.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// One counted stat in the box score.
@@ -47,8 +49,8 @@ class BoxScoreStepper extends StatelessWidget {
   /// actively used never closes under the user's thumb.
   final VoidCallback onInteraction;
 
-  static const double _minusWidth = 40;
-  static const double _plusWidth = 56; // 1.4 × 40
+  static const double _minusWidth = 36;
+  static const double _plusWidth = 50.4; // 1.4 × 36 — three columns must fit 360 dp
   static const double _buttonHeight = 44;
 
   @override
@@ -61,7 +63,7 @@ class BoxScoreStepper extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,17 +75,16 @@ class BoxScoreStepper extends StatelessWidget {
               Expanded(
                 child: Text(
                   l10n.boxScoreCircleLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2, color: scheme.onSurfaceVariant),
                 ),
               ),
-              Text(
-                l10n.boxScoreAutoCloseHint,
-                style: TextStyle(fontSize: 10, color: scheme.outline),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  l10n.boxScoreAutoCloseHint,
+                  textAlign: TextAlign.right,
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(color: scheme.outline),
+                ),
               ),
             ],
           ),
@@ -125,12 +126,7 @@ class _Column extends StatelessWidget {
           column.label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 9.5,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.8, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 6),
         Row(
@@ -144,11 +140,7 @@ class _Column extends StatelessWidget {
               child: Text(
                 '${column.value}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
+                style: AppType.number(20, weight: FontWeight.w800),
               ),
             ),
             _StepButton(
@@ -190,10 +182,10 @@ class _StepButton extends StatelessWidget {
         color: emphasized
             ? scheme.primary.withValues(alpha: disabled ? 0.25 : 1)
             : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.controlAll,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadius.controlAll,
           child: Icon(
             icon,
             size: 20,
@@ -230,7 +222,7 @@ class BoxScoreOfferCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.cardAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

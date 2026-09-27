@@ -16,10 +16,10 @@ import 'package:lifey/features/workouts/domain/workout_template.dart';
 import 'package:lifey/features/workouts/presentation/sessions_tab.dart';
 import 'package:lifey/features/workouts/presentation/widgets/route_painter.dart';
 import 'package:lifey/l10n/app_localizations.dart';
-import 'package:lifey/shared/widgets/activity_chip.dart';
+import 'package:lifey/features/workouts/domain/activity_type.dart';
 
-/// C1.6: `ActivityChip` on the session list card, with a family-dependent
-/// primary metric for cardio sessions. See
+/// C1.6: the activity icon on the session list row, with a family-dependent
+/// primary metric for cardio sessions (the row was restyled in R3.3). See
 /// docs/cardio/59-cardio-implementation-plan.md C1.6 — kész-ha: all seven
 /// cardio types render, and the strength card stays visually unchanged.
 
@@ -84,6 +84,13 @@ WorkoutSession _strengthSession(String clientId) {
   );
 }
 
+/// A rich-text line containing [text] (the metrics line glues its parts with
+/// no-break spaces and a zero-width break after each dot, so those are read as
+/// plain spaces here).
+Finder _line(String text) => find.byWidgetPredicate(
+      (w) => w is RichText && w.text.toPlainText().replaceAll(' ', ' ').replaceAll('​', '').contains(text),
+    );
+
 Future<void> _pumpSessionsTab(WidgetTester tester, List<WorkoutSession> sessions) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -127,7 +134,7 @@ void main() {
 
   for (final entry in cardioTypes.entries) {
     final (label, cardio, movingSeconds) = entry.value;
-    testWidgets('$label (${entry.key}) renders with an ActivityChip and its type label as title',
+    testWidgets('$label (${entry.key}) renders with its activity icon and its type label as title',
         (tester) async {
       await _pumpSessionsTab(tester, [
         _cardioSession(
@@ -140,18 +147,17 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text(label), findsOneWidget);
-      expect(find.byType(ActivityChip), findsOneWidget);
+      expect(find.byIcon(activityTypeIcon(entry.key)), findsOneWidget);
     });
   }
 
-  testWidgets('the strength card keeps its existing badge and gets no ActivityChip',
-      (tester) async {
+  testWidgets('the strength row has the dumbbell holder, its duration, sets and volume', (tester) async {
     await _pumpSessionsTab(tester, [_strengthSession('s1')]);
 
     expect(tester.takeException(), isNull);
-    expect(find.byType(ActivityChip), findsNothing);
-    expect(find.byIcon(Icons.fitness_center), findsOneWidget);
-    expect(find.text('1 sets'), findsOneWidget);
+    expect(find.byIcon(Icons.fitness_center_rounded), findsOneWidget);
+    expect(_line('40 min · 1 set · 500 kg'), findsOneWidget);
+    expect(find.text('Squat'), findsOneWidget);
   });
 
   testWidgets('a DISTANCE session shows its distance as the primary metric', (tester) async {
@@ -163,7 +169,7 @@ void main() {
       ),
     ]);
 
-    expect(find.text('5.00 km'), findsOneWidget);
+    expect(_line('5.00 km'), findsOneWidget);
   });
 
   testWidgets('a MACHINE session shows its moving duration, not a distance', (tester) async {
@@ -176,8 +182,8 @@ void main() {
       ),
     ]);
 
-    expect(find.text('42:18'), findsOneWidget);
-    expect(find.text('18.40 km'), findsNothing);
+    expect(_line('42:18'), findsOneWidget);
+    expect(_line('18.40 km'), findsNothing);
   });
 
   group('route thumbnail (C4a.6)', () {

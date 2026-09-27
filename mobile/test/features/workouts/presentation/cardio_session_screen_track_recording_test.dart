@@ -158,7 +158,7 @@ void main() {
     location.emitFix(_fixAt(0));
     await tester.pump();
 
-    await tester.tap(find.text('Pause'));
+    await tester.tap(find.byTooltip('Pause'));
     await tester.pumpAndSettle();
 
     // Emitted while paused — must not be recorded.

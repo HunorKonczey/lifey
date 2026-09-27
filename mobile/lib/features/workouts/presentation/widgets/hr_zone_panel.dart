@@ -1,47 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/format/cardio_formatter.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../domain/hr_zone_breakdown.dart';
+import 'cardio_live_cards.dart';
 
-/// M43's heart-rate zone panel: a 22 px stacked bar, a verdict chip, and one
-/// row per zone.
+/// The heart-rate zone card of a finished session (canvas Lifey 3 › 3.3, M43):
+/// "Heart rate zones" with a verdict chip, one stacked bar in the zone colours,
+/// then a row per zone — "Z3 · Tempo · 9:41 · 35 %" — and a footnote in the
+/// tertiary text colour.
 ///
 /// **One component for every cardio type** (docs/cardio/60 Q-D7) — a run, a
-/// bike session and a match all get the identical panel; only *where* the
-/// summary places it differs by family. It is the first thing to display the
-/// `hrZone1..5Seconds` columns, which have been carried from the watch all
-/// the way to the domain since C5 without ever being shown.
+/// bike session and a match all get the identical card; only *where* the
+/// summary places it differs by family.
 ///
-/// Two accessibility rules from the frame, both load-bearing:
+/// Accessibility rules, load-bearing:
 /// - the verdict is **said in words** in the header chip, because the bar's
 ///   colours alone are not readable by a colour-blind user;
 /// - **the numbers are always full contrast** — colour appears only on the
-///   zone code chip and the small per-row bar, never on the time or the
-///   percentage.
+///   zone code and the bar, never on the time or the percentage;
+/// - the percentages are the largest-remainder split ([HrZoneBreakdown.percents])
+///   and always add up to 100.
 class HrZonePanel extends StatelessWidget {
   const HrZonePanel({super.key, required this.breakdown});
 
   final HrZoneBreakdown breakdown;
-
-  /// Cool-to-warm ramp, one step per zone. Local to this widget rather than in
-  /// `AppMetricColors`: these five are only ever used together, as a scale —
-  /// unlike the metric colours, which are each an identity for one metric.
-  static const _zoneColors = <Color>[
-    Color(0xFF6E8FA8), // Z1 warm-up
-    Color(0xFF5FA88C), // Z2 base
-    Color(0xFFD8B35A), // Z3 tempo
-    Color(0xFFD98A4E), // Z4 threshold
-    Color(0xFFC4564E), // Z5 maximum
-  ];
-
-  String _zoneName(AppLocalizations l10n, int zone) => switch (zone) {
-        1 => l10n.hrZone1Name,
-        2 => l10n.hrZone2Name,
-        3 => l10n.hrZone3Name,
-        4 => l10n.hrZone4Name,
-        _ => l10n.hrZone5Name,
-      };
 
   String _verdict(AppLocalizations l10n) => switch (breakdown.intensity) {
         HrZoneIntensity.hard => l10n.hrZoneVerdictHard,
@@ -52,106 +39,72 @@ class HrZonePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final endLabelStyle = TextStyle(fontSize: 10, color: scheme.outline);
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final mc = context.metricColors;
+    final percents = breakdown.percents;
+    final verdictColor = switch (breakdown.intensity) {
+      HrZoneIntensity.hard => mc.calories,
+      HrZoneIntensity.balanced => mc.protein,
+      HrZoneIntensity.easy => mc.weight,
+    };
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.hrZonesSectionLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            _VerdictChip(
-              label: _verdict(l10n),
-              color: _zoneColors[breakdown.intensity == HrZoneIntensity.hard ? 4 : 2],
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _StackedZoneBar(
-          breakdown: breakdown,
-          colors: _zoneColors,
-          hatchColor: scheme.outlineVariant,
-        ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(l10n.hrZoneEasyEndLabel, style: endLabelStyle),
-            Text(l10n.hrZoneHardEndLabel, style: endLabelStyle),
-          ],
-        ),
-        if (breakdown.isPartial) ...[
-          const SizedBox(height: 10),
-          Row(
+    return LifeyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // A Wrap, not a Row: a long verdict ("Kiegyensúlyozott edzés") at a
+          // large text size goes under the title instead of squeezing it.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.s12,
+            runSpacing: AppSpacing.s8,
             children: [
-              Icon(Icons.timelapse, size: 13, color: scheme.outline),
-              const SizedBox(width: 6),
-              Text(
-                l10n.hrZonePartialCoverage(
-                  (breakdown.coverageFraction * 100).round().toString(),
+              Semantics(
+                header: true,
+                child: Text(
+                  toBeginningOfSentenceCase(
+                      l10n.hrZonesSectionLabel.toLowerCase(), l10n.localeName),
+                  style: t.titleLarge!.copyWith(fontWeight: FontWeight.w800, height: 1.2, color: p.text),
                 ),
-                style: TextStyle(fontSize: 10.5, color: scheme.outline),
               ),
+              TintedChip(
+                  label: _verdict(l10n),
+                  color: verdictColor,
+                  size: TintedChipSize.medium),
             ],
           ),
-        ],
-        const SizedBox(height: 14),
-        for (final slice in breakdown.slices)
-          _ZoneRow(
-            slice: slice,
-            name: _zoneName(l10n, slice.zone),
-            color: _zoneColors[slice.zone - 1],
-          ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.hrZoneSourceNote,
-          style: TextStyle(fontSize: 10, height: 1.35, color: scheme.outline),
-        ),
-      ],
-    );
-  }
-}
-
-class _VerdictChip extends StatelessWidget {
-  const _VerdictChip({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.local_fire_department, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            // Full contrast, like every other number/word in this panel — the
-            // colour is carried by the icon and the wash, not the text.
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w800,
-              color: Theme.of(context).colorScheme.onSurface,
+          const SizedBox(height: AppSpacing.s16),
+          _StackedZoneBar(breakdown: breakdown, hatchColor: p.text3),
+          if (breakdown.isPartial) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Row(
+              children: [
+                Icon(Icons.timelapse, size: 14, color: p.text3),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    l10n.hrZonePartialCoverage(
+                        (breakdown.coverageFraction * 100).round().toString()),
+                    style: t.bodySmall!.copyWith(color: p.text3),
+                  ),
+                ),
+              ],
             ),
+          ],
+          const SizedBox(height: AppSpacing.s16),
+          for (final slice in breakdown.slices)
+            _ZoneRow(
+              slice: slice,
+              name: hrZoneDisplayName(l10n, slice.zone),
+              percent: percents[slice.zone - 1],
+              color: hrZoneColor(context, slice.zone),
+            ),
+          const SizedBox(height: AppSpacing.s4),
+          Text(
+            l10n.hrZoneSourceNote,
+            style: t.bodySmall!.copyWith(height: 1.4, color: p.text3),
           ),
         ],
       ),
@@ -159,45 +112,53 @@ class _VerdictChip extends StatelessWidget {
   }
 }
 
-/// The 22 px stacked bar. Zone slices fill the measured part of the track; an
-/// unmeasured remainder is **hatched**, never stretched over (M43's partial
-/// state) — stretching would claim heart-rate data for minutes that have
-/// none.
+/// The stacked bar: zone slices fill the measured part of the track, 3 dp
+/// apart; an unmeasured remainder is **hatched**, never stretched over (M43's
+/// partial state) — stretching would claim heart-rate data for minutes that
+/// have none.
 class _StackedZoneBar extends StatelessWidget {
-  const _StackedZoneBar({
-    required this.breakdown,
-    required this.colors,
-    required this.hatchColor,
-  });
+  const _StackedZoneBar({required this.breakdown, required this.hatchColor});
 
   final HrZoneBreakdown breakdown;
-  final List<Color> colors;
   final Color hatchColor;
+
+  static const double _height = 12;
+  static const double _gap = 3;
 
   @override
   Widget build(BuildContext context) {
     final coverage = breakdown.coverageFraction;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: SizedBox(
-        height: 22,
-        child: Row(
-          children: [
-            for (final slice in breakdown.slices)
-              if (slice.fraction > 0)
-                Expanded(
-                  // Integer-ish flex from a 0..1 fraction: scaled up so small
-                  // slices survive rounding rather than vanishing.
-                  flex: (slice.fraction * coverage * 10000).round().clamp(1, 1 << 30),
-                  child: ColoredBox(color: colors[slice.zone - 1]),
-                ),
-            if (breakdown.isPartial)
-              Expanded(
-                flex: ((1 - coverage) * 10000).round().clamp(1, 1 << 30),
-                child: CustomPaint(painter: _HatchPainter(color: hatchColor)),
-              ),
-          ],
+    final segments = <Widget>[
+      for (final slice in breakdown.slices)
+        if (slice.fraction > 0)
+          Expanded(
+            // Integer-ish flex from a 0..1 fraction: scaled up so small
+            // slices survive rounding rather than vanishing.
+            flex: (slice.fraction * coverage * 10000).round().clamp(1, 1 << 30),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                  color: hrZoneColor(context, slice.zone),
+                  borderRadius: AppRadius.pill),
+            ),
+          ),
+      if (breakdown.isPartial)
+        Expanded(
+          flex: ((1 - coverage) * 10000).round().clamp(1, 1 << 30),
+          child: ClipRRect(
+            borderRadius: AppRadius.pill,
+            child: CustomPaint(painter: _HatchPainter(color: hatchColor)),
+          ),
         ),
+    ];
+    return SizedBox(
+      height: _height,
+      child: Row(
+        children: [
+          for (var i = 0; i < segments.length; i++) ...[
+            if (i > 0) const SizedBox(width: _gap),
+            segments[i],
+          ],
+        ],
       ),
     );
   }
@@ -211,9 +172,7 @@ class _HatchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = color.withValues(alpha: 0.35),
-    );
+        Offset.zero & size, Paint()..color = color.withValues(alpha: 0.25));
     final line = Paint()
       ..color = color
       ..strokeWidth = 1;
@@ -228,99 +187,62 @@ class _HatchPainter extends CustomPainter {
   bool shouldRepaint(_HatchPainter oldDelegate) => oldDelegate.color != color;
 }
 
-/// One row: `Z3` chip · zone name · a small share bar · time · percentage.
-/// Every one of the five is listed, including the untouched ones — seeing that
-/// no time was spent at threshold is information, not an empty row.
+/// One row: `Z3` in the zone colour · the zone's name · the time · the
+/// percentage. Every one of the five is listed, including the untouched ones —
+/// seeing that no time was spent at threshold is information, not an empty row.
 class _ZoneRow extends StatelessWidget {
-  const _ZoneRow({required this.slice, required this.name, required this.color});
+  const _ZoneRow(
+      {required this.slice,
+      required this.name,
+      required this.percent,
+      required this.color});
 
   final HrZoneSlice slice;
   final String name;
+  final int percent;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final empty = slice.seconds <= 0;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Row(
-        children: [
-          Container(
-            width: 24,
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: empty ? 0.10 : 0.22),
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: Text(
-              'Z${slice.zone}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: empty ? scheme.outline : scheme.onSurface,
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final tabular = const [FontFeature.tabularFigures()];
+    final time = CardioFormatter.duration(Duration(seconds: slice.seconds));
+    return Semantics(
+      label: '${slice.zone}. $name, $time, $percent %',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 34,
+              child: Text(
+                'Z${slice.zone}',
+                style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w800, color: color),
               ),
             ),
-          ),
-          const SizedBox(width: 9),
-          SizedBox(
-            width: 74,
-            child: Text(
-              name,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11.5,
-                color: empty ? scheme.outline : scheme.onSurfaceVariant,
+            Expanded(
+              child: Text(name,
+                  style: t.titleMedium!.copyWith(fontWeight: FontWeight.w600, color: p.text2)),
+            ),
+            const SizedBox(width: AppSpacing.s8),
+            // Full contrast even for an untouched zone: the number is the fact,
+            // the colour is decoration (M43).
+            Text(
+              time,
+              style: t.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: p.text, fontFeatures: tabular),
+            ),
+            SizedBox(
+              width: 56,
+              child: Text(
+                '$percent%',
+                textAlign: TextAlign.right,
+                style: t.titleMedium!.copyWith(fontWeight: FontWeight.w600, color: p.text2, fontFeatures: tabular),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                height: 8,
-                color: scheme.surfaceContainer,
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: slice.fraction.clamp(0.0, 1.0),
-                  child: ColoredBox(color: color),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 9),
-          SizedBox(
-            width: 44,
-            child: Text(
-              CardioFormatter.duration(Duration(seconds: slice.seconds)),
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                // Full contrast even for an untouched zone: the number is the
-                // fact, the colour is decoration (M43).
-                color: empty ? scheme.outline : scheme.onSurface,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 34,
-            child: Text(
-              '${(slice.fraction * 100).round()}%',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: empty ? scheme.outline : scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

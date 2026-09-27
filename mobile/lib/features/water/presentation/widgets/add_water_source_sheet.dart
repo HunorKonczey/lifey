@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../application/water_source_controller.dart';
 import '../../domain/water_source.dart';
 
-/// Bottom sheet to create a water source, or edit one when [initial] is given.
+/// Opens the water-source form as a design-system sheet: "New water source",
+/// or "Edit water source" when [initial] is given (docs/redesign/77-mobile-
+/// redesign-plan.md R1.7).
+Future<void> showAddWaterSourceSheet(BuildContext context,
+    {WaterSource? initial}) {
+  final l10n = AppLocalizations.of(context)!;
+  return showLifeySheet<void>(
+    context: context,
+    useRootNavigator: true,
+    title:
+        initial != null ? l10n.editWaterSourceTitle : l10n.newWaterSourceTitle,
+    builder: (_) => AddWaterSourceSheet(initial: initial),
+  );
+}
+
+/// The form of the water-source sheet: create a source, or edit one when
+/// [initial] is given. The title and the keyboard inset come from the
+/// [LifeySheet] around it.
 class AddWaterSourceSheet extends ConsumerStatefulWidget {
   const AddWaterSourceSheet({super.key, this.initial});
 
   final WaterSource? initial;
 
   @override
-  ConsumerState<AddWaterSourceSheet> createState() => _AddWaterSourceSheetState();
+  ConsumerState<AddWaterSourceSheet> createState() =>
+      _AddWaterSourceSheetState();
 }
 
 class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
@@ -29,7 +49,9 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
     super.initState();
     _name = TextEditingController(text: widget.initial?.name ?? '');
     _volume = TextEditingController(
-        text: widget.initial != null ? widget.initial!.volumeLiters.toString() : '');
+        text: widget.initial != null
+            ? widget.initial!.volumeLiters.toString()
+            : '');
   }
 
   @override
@@ -52,13 +74,15 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
     try {
       final notifier = ref.read(waterSourceControllerProvider.notifier);
       if (_isEditing) {
-        await notifier.updateSource(widget.initial!.clientId, name: name, volumeLiters: volume);
+        await notifier.updateSource(widget.initial!.clientId,
+            name: name, volumeLiters: volume);
       } else {
         await notifier.addSource(name: name, volumeLiters: volume);
       }
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
-      setState(() => _error = AppLocalizations.of(context)!.couldNotSaveWaterSourceMessage);
+      setState(() => _error =
+          AppLocalizations.of(context)!.couldNotSaveWaterSourceMessage);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -66,65 +90,61 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final l10n = AppLocalizations.of(context)!;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(_isEditing ? l10n.editWaterSourceTitle : l10n.newWaterSourceTitle,
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _name,
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: l10n.nameLabel,
-                hintText: l10n.waterSourceNameHint,
-                border: const OutlineInputBorder(),
-              ),
-              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-              validator: (v) => (v == null || v.trim().isEmpty) ? l10n.requiredFieldError : null,
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _name,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: l10n.nameLabel,
+              hintText: l10n.waterSourceNameHint,
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _volume,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                labelText: l10n.volumeLabel,
-                suffixText: 'L',
-                border: const OutlineInputBorder(),
-              ),
-              validator: (v) {
-                final parsed = double.tryParse((v ?? '').replaceAll(',', '.'));
-                if (parsed == null) return l10n.enterANumberError;
-                if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
-                return null;
-              },
-              onFieldSubmitted: (_) => _submit(),
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? l10n.requiredFieldError
+                : null,
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          TextFormField(
+            controller: _volume,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(
+              labelText: l10n.volumeLabel,
+              suffixText: 'L',
             ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ],
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(
-                      height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(l10n.saveButton),
-            ),
+            validator: (v) {
+              final parsed = double.tryParse((v ?? '').replaceAll(',', '.'));
+              if (parsed == null) return l10n.enterANumberError;
+              if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
+              return null;
+            },
+            onFieldSubmitted: (_) => _submit(),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(_error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ],
-        ),
+          const SizedBox(height: AppSpacing.s16),
+          FilledButton(
+            onPressed: _submitting ? null : _submit,
+            child: _submitting
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(l10n.saveButton),
+          ),
+        ],
       ),
     );
   }

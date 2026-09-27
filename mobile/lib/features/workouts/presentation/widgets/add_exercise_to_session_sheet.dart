@@ -65,7 +65,7 @@ class _AddExerciseToSessionSheetState
                 filled: true,
                 fillColor: scheme.surfaceContainerHigh,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -161,18 +161,14 @@ class _AddExerciseToSessionSheetState
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: AppRadius.controlAll,
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       l10n.setsLabel,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurface),
                     ),
                   ),
                   // Decrement
@@ -190,13 +186,9 @@ class _AddExerciseToSessionSheetState
                     child: Text(
                       _targetSets?.toString() ?? '—',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: _targetSets != null
+                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w700, color: _targetSets != null
                             ? scheme.primary
-                            : scheme.onSurfaceVariant,
-                      ),
+                            : scheme.onSurfaceVariant),
                     ),
                   ),
                   // Increment
@@ -242,7 +234,7 @@ class _StepButton extends StatelessWidget {
           color: onPressed != null
               ? scheme.surfaceContainerHighest
               : scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: AppRadius.tagAll,
         ),
         child: Icon(
           icon,

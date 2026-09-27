@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/ads/nav_reserved_space.dart';
+import 'trainer_layout.dart';
 
 /// Places a trainer screen's FAB above `AdaptiveBottomNav`.
 ///
@@ -26,6 +27,8 @@ class TrainerFabPadding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // On a tablet the rail sits beside the content and there is no bar to clear.
+    if (isTrainerTwoPane(context)) return child;
     return Padding(
       padding: const EdgeInsets.only(bottom: navSlotHeight),
       child: child,
@@ -35,4 +38,4 @@ class TrainerFabPadding extends StatelessWidget {
 
 /// Distance from the bottom edge for a hand-placed trainer FAB.
 double trainerFabBottom(BuildContext context) =>
-    fabBottom(MediaQuery.paddingOf(context).bottom);
+    isTrainerTwoPane(context) ? MediaQuery.paddingOf(context).bottom + 16 : fabBottom(MediaQuery.paddingOf(context).bottom);

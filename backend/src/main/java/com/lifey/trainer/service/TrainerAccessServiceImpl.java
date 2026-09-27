@@ -3,6 +3,7 @@ package com.lifey.trainer.service;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ContentAssignmentRepository;
+import com.lifey.trainer.PersonalRecordCounter;
 import com.lifey.trainer.TrainerClientMapper;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientRevokedEvent;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,6 +48,9 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
     /** Trailing window for the missed-workout compliance count (docs/29) — old
      *  misses shouldn't keep a now-compliant client flagged forever. */
     private static final int MISSED_WORKOUT_WINDOW_DAYS = 14;
+
+    /** Window of the client card's "Avg kcal" and "PRs this week" figures (R6.2). */
+    private static final int CARD_WINDOW_DAYS = 7;
 
     private final TrainerClientRepository trainerClientRepository;
     private final ContentAssignmentRepository contentAssignmentRepository;
@@ -119,8 +124,44 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
         int missedWorkoutCount = (int) workoutSessionRepository.countMissedOccurrences(
                 trainerId, clientId, today.minusDays(MISSED_WORKOUT_WINDOW_DAYS), today);
 
+        Integer avgCalories7d = averageDailyCalories(tc, clientId, today);
+        Integer prCount7d = countRecordsThisWeek(clientId);
+
         return TrainerClientMapper.toClientResponse(
-                tc, weightTrend, assignedPlanCount, workoutsPerWeek, lastActivityAt, lastWeightAt, missedWorkoutCount);
+                tc, weightTrend, assignedPlanCount, workoutsPerWeek, lastActivityAt, lastWeightAt, missedWorkoutCount,
+                avgCalories7d, prCount7d);
+    }
+
+    /**
+     * Mean of the daily calorie totals over the last {@value #CARD_WINDOW_DAYS} days, counting only days
+     * with something logged — one quiet day must not drag a compliant client's figure down — in the client's
+     * own time zone, like the weekly report. Null when nothing was logged.
+     */
+    private Integer averageDailyCalories(TrainerClient tc, Long clientId, LocalDate today) {
+        ZoneOffset zone = ZoneOffset.ofTotalSeconds(tc.getClient().getUtcOffsetMinutes() * 60);
+        LocalDate localToday = LocalDate.now(zone);
+        int daysLogged = 0;
+        double total = 0;
+        for (int back = 0; back < CARD_WINDOW_DAYS; back++) {
+            LocalDate day = localToday.minusDays(back);
+            double calories = mealRepository.sumCaloriesBetween(
+                    clientId, day.atStartOfDay(zone).toInstant(), day.plusDays(1).atStartOfDay(zone).toInstant());
+            if (calories > 0) {
+                daysLogged++;
+                total += calories;
+            }
+        }
+        return daysLogged == 0 ? null : (int) Math.round(total / daysLogged);
+    }
+
+    private Integer countRecordsThisWeek(Long clientId) {
+        List<PersonalRecordCounter.SetFact> facts = workoutSessionRepository
+                .findFinishedStrengthSetsOldestFirst(clientId).stream()
+                .map(set -> new PersonalRecordCounter.SetFact(
+                        set.getWorkoutSession().getId(), set.getWorkoutSession().getStartedAt(),
+                        set.getExercise().getId(), set.getWeight(), set.getReps(), set.getPerformedAt()))
+                .toList();
+        return PersonalRecordCounter.countSince(facts, Instant.now().minus(CARD_WINDOW_DAYS, ChronoUnit.DAYS));
     }
 
     private static Instant latestOf(Instant... instants) {

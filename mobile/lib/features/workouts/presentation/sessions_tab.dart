@@ -2,36 +2,40 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../shared/widgets/ds/lifey_header.dart' show OverlapInsetSliver;
 import '../../../core/ads/banner_ad_slot.dart';
 import '../../../core/entitlements/entitlement_providers.dart';
-import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
+import '../../../core/format/lifey_format.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/activity_chip.dart';
-import '../../../shared/widgets/date_range_filter_bar.dart';
-import '../../../shared/widgets/empty_view.dart';
-import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/date_range_filter_bar.dart';
+import '../../../shared/widgets/ds/grouped_list_item.dart';
+import '../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../shared/widgets/ds/list_group.dart';
+import '../../../shared/widgets/ds/section_label.dart';
+import '../../../shared/widgets/empty_view.dart';
+import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/history_boundary_row.dart';
-import '../../../shared/widgets/sync_status_indicator.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
-import '../application/exercise_controller.dart';
 import '../application/recommended_template_provider.dart';
+import '../application/session_pr_counts.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
-import '../domain/exercise_enums.dart';
+import '../domain/session_groups.dart';
+import '../domain/week_summary.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'log_session_screen.dart';
 import 'open_workout_screens.dart';
-import 'session_row_plan.dart';
 import 'widgets/recommended_workout_card.dart';
-import 'widgets/route_painter.dart';
+import 'widgets/session_row.dart';
 import 'widgets/upcoming_sessions_section.dart';
+import 'widgets/week_summary_row.dart';
 
 /// Whether [session] passes the sessions-tab kind/type filter
 /// (docs/cardio/59-cardio-implementation-plan.md C1.7).
@@ -51,19 +55,29 @@ bool matchesSessionKindFilter(
   return activityTypeFilter == null || session.activityType == activityTypeFilter;
 }
 
-/// "Sessions" tab: tap to edit/continue; swipe-to-delete with confirm; date
-/// + kind filters. The active [filter]/[kindFilter]/[activityTypeFilter] are
-/// owned by the parent screen and shown in the AppBar.
+enum _SessionAction { open, delete }
+
+/// One entry of the flattened, lazily built list: a ready widget (the leading
+/// cards, a group header, a gap) or a session row with its place in its group.
+typedef _Entry = ({Widget? widget, WorkoutSession? session, bool first, bool last, SessionRowDate date});
+
+_Entry _widgetEntry(Widget widget) =>
+    (widget: widget, session: null, first: false, last: false, date: SessionRowDate.none);
+
+/// "Sessions" tab (docs/redesign/77-mobile-redesign-plan.md R3.1 / R3.3): the
+/// week summary, then the workouts grouped under "Today" / "Earlier this
+/// week" / "Last week" / one header per older week, one card per group. Tap
+/// opens (or resumes) a session, long-press opens Open / Delete, swipe
+/// deletes after a confirmation. The active filters are owned by the parent
+/// screen and shown in its header.
 class SessionsTab extends ConsumerStatefulWidget {
   const SessionsTab({
     super.key,
-    this.topPadding = 0,
     this.filter = DateRangeFilter.today,
     this.kindFilter,
     this.activityTypeFilter,
   });
 
-  final double topPadding;
   final DateRangeFilter filter;
 
   /// `null` (all), `'STRENGTH'`, or `'CARDIO'` — see [matchesSessionKindFilter].
@@ -77,20 +91,6 @@ class SessionsTab extends ConsumerStatefulWidget {
 }
 
 class _SessionsTabState extends ConsumerState<SessionsTab> {
-  static final _dateLabel = DateFormat('EEE, MMM d · HH:mm');
-
-  /// Muscle group with the most exercises in [session], or null when unknown.
-  static String? _dominantCategory(
-      WorkoutSession session, Map<String, String?> categoryByExercise) {
-    final exerciseIds = <String>{
-      for (final ex in session.exercises) ex.exerciseClientId,
-      for (final set in session.sets) set.exerciseClientId,
-    };
-    return dominantMuscleGroup(
-      exerciseIds.map((id) => categoryByExercise[id]),
-    );
-  }
-
   Future<void> _edit(BuildContext context, WorkoutSession session) {
     return openSessionScreen(Navigator.of(context, rootNavigator: true), session);
   }
@@ -104,9 +104,9 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   Future<void> _delete(BuildContext context, WidgetRef ref, WorkoutSession session) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      // Nothing prevents swiping to delete a still-running session — end its
-      // Live Activity / ongoing notification so it doesn't linger as an
-      // orphan (see docs/24-ios-widget-live-activity-plan.md and
+      // Nothing prevents deleting a still-running session — end its Live
+      // Activity / ongoing notification so it doesn't linger as an orphan
+      // (see docs/24-ios-widget-live-activity-plan.md and
       // docs/25-android-widget-ongoing-notification-plan.md, orphan handling).
       if (session.inProgress) {
         unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
@@ -123,8 +123,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     }
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, WorkoutSession session) async {
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, WorkoutSession session) async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showConfirmDeleteDialog(
       context,
@@ -136,31 +135,67 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     }
   }
 
+  /// The long-press menu — where the trash icon of every row went.
+  Future<void> _openMenu(BuildContext context, WorkoutSession session, String title) async {
+    final l10n = AppLocalizations.of(context)!;
+    final action = await showLifeySheet<_SessionAction>(
+      context: context,
+      useRootNavigator: true,
+      title: title,
+      builder: (sheetContext) {
+        final primary = Theme.of(sheetContext).colorScheme.primary;
+        final heart = sheetContext.metricColors.heart;
+        void pick(_SessionAction a) => Navigator.of(sheetContext).pop(a);
+        return ListGroup(
+          children: [
+            ListRow(
+              leading: ListIconHolder(icon: Icons.open_in_new_rounded, color: primary),
+              title: l10n.sessionMenuOpen,
+              onTap: () => pick(_SessionAction.open),
+            ),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.delete_rounded, color: heart),
+              title: l10n.deleteButton,
+              onTap: () => pick(_SessionAction.delete),
+            ),
+          ],
+        );
+      },
+    );
+    if (action == null || !context.mounted) return;
+    switch (action) {
+      case _SessionAction.open:
+        await _edit(context, session);
+      case _SessionAction.delete:
+        await _confirmDelete(context, ref, session);
+    }
+  }
+
+  String _title(AppLocalizations l10n, WorkoutSession s) => s.isCardio
+      ? activityTypeLabel(l10n, s.activityType!)
+      : (s.templateName?.trim().isNotEmpty ?? false)
+          ? s.templateName!.trim()
+          : l10n.activityTypeStrength;
+
+  String _groupLabel(AppLocalizations l10n, LifeyFormat f, SessionGroup group) => switch (group.kind) {
+        SessionGroupKind.today => l10n.sessionsGroupToday,
+        SessionGroupKind.earlierThisWeek => l10n.sessionsGroupEarlierThisWeek,
+        SessionGroupKind.lastWeek => l10n.sessionsGroupLastWeek,
+        SessionGroupKind.olderWeek =>
+          '${f.shortDate(group.weekStart)} – ${f.shortDate(DateTime(group.weekStart.year, group.weekStart.month, group.weekStart.day + 6))}',
+      };
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(workoutSessionControllerProvider);
     final recommended = ref.watch(recommendedTemplateProvider);
+    final prCounts = ref.watch(sessionPrCountsProvider);
     final l10n = AppLocalizations.of(context)!;
-    final bottomPad =
-        MediaQuery.paddingOf(context).bottom + ref.watch(bannerAdSlotHeightProvider(2));
-    final unitSystem =
-        (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults())
-            .unitSystem;
+    final f = LifeyFormat.of(context);
+    final bottomPad = MediaQuery.paddingOf(context).bottom + ref.watch(bannerAdSlotHeightProvider(2));
+    final unitSystem = (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
 
-    // Exercise clientId → muscle-group code, for colouring each card's icon by
-    // the session's dominant muscle group.
-    final categoryByExercise = ref.watch(exerciseControllerProvider).maybeWhen(
-          data: (exercises) => {for (final e in exercises) e.clientId: e.category},
-          orElse: () => const <String, String?>{},
-        );
-
-    // The recommended-workout card is pinned above the scrollable area (not a
-    // list item), so once it's shown the list itself starts right below it
-    // instead of under `widget.topPadding`.
-    final listTopPadding = recommended == null ? widget.topPadding : 4.0;
-    final refreshDisplacement = recommended == null ? widget.topPadding : 40.0;
-
-    final content = state.when(
+    return state.when(
       data: (sessions) {
         // Trainer-scheduled, not-yet-started sessions within the 7-day
         // visibility window get their own pinned section, never mixed into
@@ -189,344 +224,99 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 
         if (sessions.isEmpty || (filtered.isEmpty && upcoming.isEmpty)) {
           return RefreshIndicator(
-            displacement: refreshDisplacement,
-            onRefresh: () =>
-                ref.read(workoutSessionControllerProvider.notifier).refresh(),
+            onRefresh: () => ref.read(workoutSessionControllerProvider.notifier).refresh(),
             child: EmptyView(
               icon: Icons.fitness_center_outlined,
-              title: sessions.isEmpty
-                  ? l10n.noWorkoutsLoggedYetTitle
-                  : l10n.noWorkoutsInRangeTitle,
-              subtitle: sessions.isEmpty
-                  ? l10n.tapPlusToLogOneMessage
-                  : l10n.tryWiderDateFilterMessage,
+              title: sessions.isEmpty ? l10n.noWorkoutsLoggedYetTitle : l10n.noWorkoutsInRangeTitle,
+              subtitle: sessions.isEmpty ? l10n.tapPlusToLogOneMessage : l10n.tryWiderDateFilterMessage,
             ),
           );
         }
 
-        final hasUpcoming = upcoming.isNotEmpty;
-        final leadingCount = hasUpcoming ? 1 : 0;
+        // The week summary counts the whole calendar week, whatever the list
+        // is filtered to (same rules as the weekly recap).
+        final summary = computeWeekSummary(sessions, DateTime.now());
+        final entries = <_Entry>[
+          if (recommended != null)
+            _widgetEntry(Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+              child: RecommendedWorkoutCard(
+                template: recommended,
+                onTap: () => _startRecommended(context, recommended),
+              ),
+            )),
+          _widgetEntry(Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+            child: WeekSummaryRow(summary: summary, unitSystem: unitSystem),
+          )),
+          if (upcoming.isNotEmpty)
+            _widgetEntry(UpcomingSessionsSection(
+              sessions: upcoming,
+              onStart: (s) => _edit(context, s),
+              onDelete: (s) => _confirmDelete(context, ref, s),
+            )),
+          for (final group in groupSessionsByWeek(visible, DateTime.now())) ...[
+            _widgetEntry(SectionLabel(_groupLabel(l10n, f, group))),
+            for (final (i, s) in group.sessions.indexed)
+              (
+                widget: null,
+                session: s,
+                first: i == 0,
+                last: i == group.sessions.length - 1,
+                date: switch (group.kind) {
+                  SessionGroupKind.today => SessionRowDate.none,
+                  SessionGroupKind.olderWeek => SessionRowDate.date,
+                  _ => SessionRowDate.weekday,
+                },
+              ),
+            _widgetEntry(const SizedBox(height: AppSpacing.s8)),
+          ],
+          if (truncated) _widgetEntry(const HistoryBoundaryRow()),
+        ];
+
         return RefreshIndicator(
-          displacement: refreshDisplacement,
-          onRefresh: () =>
-              ref.read(workoutSessionControllerProvider.notifier).refresh(),
-          child: ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, listTopPadding, 12, bottomPad + 88),
-            itemCount: leadingCount + visible.length + (truncated ? 1 : 0),
+          onRefresh: () => ref.read(workoutSessionControllerProvider.notifier).refresh(),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              const OverlapInsetSliver(),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad + 88),
+                sliver: SliverList.builder(
+            itemCount: entries.length,
             itemBuilder: (context, index) {
-              if (hasUpcoming && index == 0) {
-                return UpcomingSessionsSection(
-                  sessions: upcoming,
-                  onStart: (s) => _edit(context, s),
-                  onDelete: (s) => _confirmDelete(context, ref, s),
-                );
-              }
-              final i = index - leadingCount;
-              if (i >= visible.length) return const HistoryBoundaryRow();
-              return _SessionCard(
-                session: visible[i],
-                categoryCode: _dominantCategory(visible[i], categoryByExercise),
-                dateLabel: _dateLabel,
-                unitSystem: unitSystem,
-                onEdit: () => _edit(context, visible[i]),
-                onDelete: () => _confirmDelete(context, ref, visible[i]),
+              final entry = entries[index];
+              final session = entry.session;
+              if (session == null) return entry.widget!;
+              return GroupedListItem(
+                first: entry.first,
+                last: entry.last,
+                dismissKey: ValueKey(session.clientId),
+                confirmDismiss: () async {
+                  await _confirmDelete(context, ref, session);
+                  // The list's own stream removes the row once the delete lands.
+                  return false;
+                },
+                child: SessionRow(
+                  session: session,
+                  unitSystem: unitSystem,
+                  prCount: prCounts[session.clientId] ?? 0,
+                  date: entry.date,
+                  onTap: () => _edit(context, session),
+                  onLongPress: () => _openMenu(context, session, _title(l10n, session)),
+                ),
               );
             },
+                ),
+              ),
+            ],
           ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => ErrorView(
         error: error,
-        onRetry: () =>
-            ref.read(workoutSessionControllerProvider.notifier).refresh(),
-      ),
-    );
-
-    if (recommended == null) return content;
-
-    return Column(
-      children: [
-        SizedBox(height: widget.topPadding),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: RecommendedWorkoutCard(
-            template: recommended,
-            onTap: () => _startRecommended(context, recommended),
-          ),
-        ),
-        Expanded(child: content),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Session card
-// ---------------------------------------------------------------------------
-
-class _SessionCard extends StatelessWidget {
-  const _SessionCard({
-    required this.session,
-    required this.categoryCode,
-    required this.dateLabel,
-    required this.unitSystem,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  final WorkoutSession session;
-  final String? categoryCode;
-  final DateFormat dateLabel;
-  final UnitSystem unitSystem;
-  final VoidCallback onEdit;
-
-  /// Asks for confirmation, then deletes. Shared by the swipe gesture and the
-  /// trailing delete button.
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-
-    // Comma-separated unique exercise names from this session's sets.
-    final exerciseNames = session.sets
-        .map((s) => s.exerciseName)
-        .toSet()
-        .take(4)
-        .join(', ');
-
-    final Color badgeBg;
-    final Color badgeIconColor;
-    if (categoryCode != null) {
-      final mc = muscleGroupColor(categoryCode!, context);
-      badgeBg = mc.withValues(alpha: 0.15);
-      badgeIconColor = mc;
-    } else {
-      badgeBg = scheme.primaryContainer;
-      badgeIconColor = scheme.onPrimaryContainer;
-    }
-
-    // A cardio session has no template name — it's titled by its activity
-    // type instead, the way `templateName` titles a strength session.
-    final title =
-        session.isCardio ? activityTypeLabel(l10n, session.activityType!) : session.templateName;
-
-    // C4a.6 — only a finished DISTANCE session with a recorded GPS trail has
-    // one of these; MACHINE/GAME never track location, and the badge slot
-    // above already carries activity identity, so no thumbnail is shown
-    // otherwise.
-    final routePolyline = session.isCardio && session.family == ActivityFamily.distance
-        ? session.cardio?.routePolyline
-        : null;
-
-    return Dismissible(
-      key: ValueKey(session.clientId),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        decoration: BoxDecoration(
-          color: scheme.errorContainer,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 10),
-        child: Icon(Icons.delete, color: scheme.onErrorContainer),
-      ),
-      // Confirm before deleting; the local cache stream removes the tile once
-      // the delete lands, so we always report `false` here.
-      confirmDismiss: (_) async {
-        onDelete();
-        return false;
-      },
-      child: Card(
-        elevation: 0,
-        color: scheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        margin: const EdgeInsets.only(bottom: 10),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onEdit,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Icon badge — cardio gets the shared ActivityChip (colour +
-                // icon keyed by activity type); strength keeps its existing
-                // muscle-group badge unchanged.
-                if (session.isCardio)
-                  ActivityChip(activityType: session.activityType!, size: 44)
-                else
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: badgeBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.fitness_center,
-                        size: 22,
-                        color: badgeIconColor,
-                      ),
-                    ),
-                  ),
-                const SizedBox(width: 12),
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Title: template name (strength) or activity type
-                      // label (cardio) — whichever the session has.
-                      if (title != null) ...[
-                        Text(
-                          title,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 1),
-                      ],
-                      // Date + Health badge + status chip
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              dateLabel.format(session.startedAt!.toLocal()),
-                              style: title != null
-                                  ? theme.textTheme.labelMedium
-                                      ?.copyWith(color: scheme.onSurfaceVariant)
-                                  : theme.textTheme.bodyLarge,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (session.enrichedFromWatch)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: Tooltip(
-                                message: l10n.enrichedFromWatchTooltip,
-                                child: Icon(
-                                  Icons.watch,
-                                  size: 15,
-                                  color: scheme.onSurfaceVariant,
-                                  semanticLabel:
-                                      l10n.enrichedFromWatchTooltip,
-                                ),
-                              ),
-                            ),
-                          SyncStatusIndicator(clientId: session.clientId),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      // Sets count / cardio primary metric / in-progress pill
-                      if (session.inProgress)
-                        _StatusPill(label: l10n.inProgressLabel, scheme: scheme)
-                      else if (session.isCardio)
-                        Text(
-                          cardioCardPrimaryMetric(session, unitSystem) ?? '–',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        )
-                      else
-                        Text(
-                          l10n.setsCountLabel(session.sets.length),
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      // Health stats
-                      if (session.activeCalories != null ||
-                          session.averageHeartRate != null) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          l10n.healthStatsLine(
-                            session.activeCalories?.round().toString() ?? '–',
-                            session.averageHeartRate?.round().toString() ?? '–',
-                          ),
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                      // Exercise names
-                      if (exerciseNames.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          exerciseNames,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant
-                                .withValues(alpha: 0.7),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (routePolyline != null && routePolyline.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: RouteThumbnail(polyline: routePolyline),
-                  ),
-                ],
-                // Delete button
-                IconButton(
-                  onPressed: onDelete,
-                  icon: Icon(
-                    Icons.delete_outline,
-                    size: 20,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  tooltip: l10n.deleteWorkoutTooltip,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.scheme});
-  final String label;
-  final ColorScheme scheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: scheme.onTertiaryContainer,
-          height: 1.0,
-        ),
+        onRetry: () => ref.read(workoutSessionControllerProvider.notifier).refresh(),
       ),
     );
   }

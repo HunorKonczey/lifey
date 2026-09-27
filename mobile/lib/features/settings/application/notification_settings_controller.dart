@@ -52,6 +52,18 @@ class NotificationSettingsState {
       programAssignedPushEnabled ||
       chatPushEnabled;
 
+  /// How many notification types are on — the "3 on" in Settings. Quiet hours
+  /// are a schedule, not a type, so they are not counted.
+  int get enabledCount => [
+        workoutReminderEnabled,
+        weighInReminderEnabled,
+        stepGoalNotificationEnabled,
+        trainerCommentPushEnabled,
+        trainerGoalsPushEnabled,
+        programAssignedPushEnabled,
+        chatPushEnabled,
+      ].where((on) => on).length;
+
   NotificationSettingsState copyWith({
     bool? workoutReminderEnabled,
     bool? weighInReminderEnabled,

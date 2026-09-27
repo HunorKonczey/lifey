@@ -176,4 +176,55 @@ void main() {
       expect(breakdown.isPartial, isTrue);
     });
   });
+  group('percents (largest remainder)', () {
+    test('the canvas split: 2:46 / 8:18 / 9:41 / 5:32 / 1:23 gives 10 / 30 / 35 / 20 / 5', () {
+      final breakdown = HrZoneBreakdown.fromSession(
+        _session(zones: const [166, 498, 581, 332, 83], grossSeconds: 1660))!;
+
+      expect(breakdown.percents, [10, 30, 35, 20, 5]);
+    });
+
+    test('plain rounding would give 99: the missing point goes to the biggest remainder', () {
+      // thirds: 33.3 / 33.3 / 33.3 each round to 33 -> 99
+      final breakdown = HrZoneBreakdown.fromSession(
+        _session(zones: const [100, 100, 100, 0, 0], grossSeconds: 300))!;
+
+      expect(breakdown.percents.fold(0, (a, b) => a + b), 100);
+      expect(breakdown.percents.sublist(3), [0, 0]);
+      expect(breakdown.percents.take(3).toList()..sort(), [33, 33, 34]);
+    });
+
+    test('plain rounding would give 101: nobody is rounded above their share', () {
+      // 12.5 x 8 style: 5 zones with x.5 remainders -> 10.5 + 10.5 + 26.5 + 26.5 + 26 = 100
+      final breakdown = HrZoneBreakdown.fromSession(
+        _session(zones: const [21, 21, 53, 53, 52], grossSeconds: 200))!;
+
+      expect(breakdown.percents.fold(0, (a, b) => a + b), 100);
+      for (var i = 0; i < 5; i++) {
+        final exact = breakdown.slices[i].fraction * 100;
+        expect(breakdown.percents[i], inInclusiveRange(exact.floor(), exact.ceil()));
+      }
+    });
+
+    test('always 100 for a spread of awkward splits', () {
+      for (final zones in [
+        [1, 1, 1, 1, 1],
+        [7, 0, 0, 0, 1],
+        [1, 2, 3, 4, 5],
+        [333, 333, 333, 1, 0],
+        [1, 0, 0, 0, 0],
+        [59, 61, 47, 13, 2],
+      ]) {
+        final total = zones.fold(0, (a, b) => a + b);
+        final breakdown = HrZoneBreakdown.fromSession(_session(zones: zones, grossSeconds: total))!;
+        expect(breakdown.percents.fold(0, (a, b) => a + b), 100, reason: '$zones');
+      }
+    });
+
+    test('an untouched zone stays at 0 unless the leftover points are needed', () {
+      final breakdown = HrZoneBreakdown.fromSession(_session(zones: const [600, 0, 0, 0, 0], grossSeconds: 600))!;
+
+      expect(breakdown.percents, [100, 0, 0, 0, 0]);
+    });
+  });
 }

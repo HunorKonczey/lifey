@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_tokens.dart';
 import '../../features/trainer/application/trainer_view_preference.dart';
+import '../../features/trainer/shared/trainer_layout.dart';
 import '../../l10n/app_localizations.dart';
+import 'ds/lifey_sheet.dart';
 import 'adaptive_bottom_nav.dart';
 import 'nav_collapse_controller.dart';
+import 'trainer_nav_rail.dart';
 
 /// The trainer's own shell, living beside [MainShell] rather than replacing
 /// it (docs/chat/41-trainer-mobile-v2-plan.md §2.1, option 3).
@@ -46,42 +50,27 @@ class _TrainerShellState extends ConsumerState<TrainerShell> {
     if (!mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
-    await showModalBottomSheet<void>(
+    await showLifeySheet<void>(
       context: context,
+      title: l10n.trainerIntroTitle,
       useRootNavigator: true,
-      showDragHandle: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          bottom: MediaQuery.paddingOf(context).bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.trainerIntroTitle,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w800),
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.trainerIntroMessage,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: context.palette.text2),
+          ),
+          const SizedBox(height: AppSpacing.s24),
+          SizedBox(
+            height: 56,
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.trainerIntroDismissButton),
             ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.trainerIntroMessage,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 18),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.trainerIntroDismissButton),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
     // Marked seen on dismissal either way: a card the trainer swiped away is a
@@ -106,7 +95,6 @@ class _TrainerShellState extends ConsumerState<TrainerShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
 
     // One entry per registered branch, in the same order as the router's
     // `branches` list.
@@ -114,7 +102,7 @@ class _TrainerShellState extends ConsumerState<TrainerShell> {
       AdaptiveNavDestination(
         icon: Icons.group_outlined,
         selectedIcon: Icons.group,
-        label: l10n.trainerClientsTitle,
+        label: l10n.trainerNavClientsLabel,
       ),
       AdaptiveNavDestination(
         icon: Icons.calendar_month_outlined,
@@ -127,26 +115,40 @@ class _TrainerShellState extends ConsumerState<TrainerShell> {
         label: l10n.trainerAssignmentsTitle,
       ),
       AdaptiveNavDestination(
-        icon: Icons.calendar_view_week_outlined,
-        selectedIcon: Icons.calendar_view_week,
+        icon: Icons.view_list_outlined,
+        selectedIcon: Icons.view_list,
         label: l10n.trainerProgramsTitle,
       ),
     ];
 
+    // A tablet gets the rail beside the content instead of the floating bar
+    // under it (canvas Lifey 6 › Trainer tablet).
+    final rail = isTrainerTwoPane(context);
+    final showNav = destinations.length >= 2;
+
     return NavCollapseScope(
       controller: _collapseController,
       child: Scaffold(
-        extendBody: true,
-        body: widget.navigationShell,
-        bottomNavigationBar: destinations.length < 2
+        extendBody: !rail,
+        body: rail && showNav
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TrainerNavRail(
+                    selectedIndex: widget.navigationShell.currentIndex,
+                    onDestinationSelected: _onTap,
+                    destinations: destinations,
+                  ),
+                  Expanded(child: widget.navigationShell),
+                ],
+              )
+            : widget.navigationShell,
+        bottomNavigationBar: rail || !showNav
             ? null
             : AdaptiveBottomNav(
                 selectedIndex: widget.navigationShell.currentIndex,
                 onDestinationSelected: _onTap,
                 destinations: destinations,
-                // The one visual difference from the client shell — same
-                // system, different accent (frame A1).
-                accentColor: scheme.tertiary,
               ),
       ),
     );

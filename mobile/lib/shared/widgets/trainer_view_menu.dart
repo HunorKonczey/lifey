@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/current_roles_provider.dart';
+import '../../core/theme/app_tokens.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/trainer/application/trainer_view_preference.dart';
 import '../../l10n/app_localizations.dart';
+import 'ds/monogram_avatar.dart';
 
 /// Where the trainer shell starts. Kept next to the switch that navigates
 /// there so the two never drift apart.
@@ -20,6 +22,15 @@ const String trainerProgramsLocation = '/trainer/programs';
 /// trainer visits and leaves, not places they work from.
 const String trainerInvitesLocation = '/trainer/invites';
 const String trainerSettingsLocation = '/trainer/settings';
+
+/// Moves between the client and trainer homes and remembers the choice —
+/// shared by this menu and the dashboard's avatar menu.
+void switchTrainerView(BuildContext context, WidgetRef ref, {required bool trainer}) {
+  // Remember first: if the app is killed right after the switch, it should
+  // come back where the user just went, not where they left.
+  ref.read(lastViewIsTrainerProvider.notifier).set(isTrainerView: trainer);
+  context.go(trainer ? trainerShellLocation : '/dashboard');
+}
 
 /// The avatar menu that moves a trainer between their two homes:
 /// "Trainer view" from the client side, "My own log" from the trainer side
@@ -45,16 +56,19 @@ class TrainerViewMenu extends ConsumerWidget {
     return PopupMenuButton<void>(
       tooltip: l10n.trainerViewSwitchTooltip,
       position: PopupMenuPosition.under,
-      icon: _Avatar(
-        monogram: _monogramOf(ref),
-        // The avatar wears the accent of the view it can take you to, so the
-        // switch is legible before the menu is even open.
-        color: inTrainerView ? scheme.primaryContainer : scheme.tertiaryContainer,
-        foreground: inTrainerView ? scheme.onPrimaryContainer : scheme.onTertiaryContainer,
+      padding: EdgeInsets.zero,
+      // The same 44 dp monogram as every header's avatar. It wears the accent of
+      // the view it can take you to — the brand olive in the trainer view, the
+      // clay role colour on the client side — so the switch is legible before
+      // the menu is even open.
+      icon: MonogramAvatar(
+        name: _nameOf(ref),
+        email: ref.watch(authControllerProvider).value?.email,
+        color: inTrainerView ? null : context.palette.role,
       ),
       itemBuilder: (context) => [
         PopupMenuItem<void>(
-          onTap: () => _switchTo(context, ref, trainer: !inTrainerView),
+          onTap: () => switchTrainerView(context, ref, trainer: !inTrainerView),
           child: Row(
             children: [
               Icon(
@@ -93,54 +107,10 @@ class TrainerViewMenu extends ConsumerWidget {
     );
   }
 
-  void _switchTo(BuildContext context, WidgetRef ref, {required bool trainer}) {
-    // Remember first: if the app is killed right after the switch, it should
-    // come back where the user just went, not where they left.
-    ref.read(lastViewIsTrainerProvider.notifier).set(isTrainerView: trainer);
-    context.go(trainer ? trainerShellLocation : '/dashboard');
-  }
-
-  String _monogramOf(WidgetRef ref) {
+  String? _nameOf(WidgetRef ref) {
     final user = ref.watch(authControllerProvider).value;
-    if (user == null) return '?';
-    final name = [user.firstName, user.lastName]
-        .where((part) => part != null && part.isNotEmpty)
-        .join(' ')
-        .trim();
-    final source = name.isNotEmpty ? name : user.email;
-    final words = source.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (words.isEmpty) return '?';
-    return words.take(2).map((w) => w[0].toUpperCase()).join();
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({
-    required this.monogram,
-    required this.color,
-    required this.foreground,
-  });
-
-  final String monogram;
-  final Color color;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 30,
-      height: 30,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: Text(
-        monogram,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: foreground,
-        ),
-      ),
-    );
+    if (user == null) return null;
+    final name = [user.firstName, user.lastName].where((part) => part != null && part.isNotEmpty).join(' ').trim();
+    return name.isEmpty ? null : name;
   }
 }
