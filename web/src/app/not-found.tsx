@@ -22,6 +22,10 @@ export default async function RootNotFound() {
 
   return (
     <main className="min-h-dvh flex items-center justify-center px-6" style={{ background: "var(--bg)" }}>
+      {/* This 404 belongs to marketing (it is the public 404) but renders
+          outside the marketing route group, so it carries its own pin
+          marker (D-W0.2). */}
+      <span data-surface="marketing" hidden aria-hidden="true" />
       <div className="text-center max-w-[360px]">
         <a href={`/${routing.defaultLocale}`} className="flex items-center justify-center gap-2.5 mb-6">
           <span

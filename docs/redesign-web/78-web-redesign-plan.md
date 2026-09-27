@@ -635,7 +635,7 @@ values (already decided in 77 D-R0.2 – D-R0.13).
 *As built:* landed with the plan commit itself (the branch's first commit), so the canvases are openable
 from the PR.
 
-### W0.1 — Web UI: v2 colour tokens, legacy aliases, marketing pin, contrast test
+### W0.1 — Web UI: v2 colour tokens, legacy aliases, marketing pin, contrast test ✅
 - Files: `web/src/app/globals.css`, `app/(marketing)/[locale]/layout.tsx` and
   `app/(marketing-bare)/[locale]/layout.tsx` + `app/not-found.tsx` (the `data-surface="marketing"`
   marker), `web/src/lib/theme/contrast.ts` + `contrast.test.ts` (new).
@@ -650,6 +650,20 @@ from the PR.
 - **Verify:** contrast test green; `/dashboard`, `/admin`, `/superadmin/users` show the v2 bg/cards in both
   themes; `/hu` (marketing) is pixel-identical before/after (compare two screenshots); `check:js-budget`
   unchanged.
+
+*As built:* `--float`, `--primary-tint`, `--role-tint`, `--scrim` and the two repointed `--*-container`
+aliases use `color-mix(in srgb, …)` rather than pre-computed rgba, so `--scrim` (defined once, referencing
+`var(--bg)`) automatically tracks the theme without a light-mode override. Verified in a real browser
+(`/login`, dark and light) rather than `/dashboard` — the dashboard needs auth; the login page is app-scope
+and unauthenticated, and showed the v2 tokens correctly in both themes. `/hu` confirmed pixel-identical
+before/after in both themes via the marketing pin. Grep of `--metric-protein` / `var(--primary)` /
+`--tertiary` usage (left for each owning iteration, not fixed here): `--tertiary` is used as the trainer
+accent throughout `components/layout/AdminSidebar.tsx`, `app/(admin)/**`, `features/trainer/**` (~60
+files) — cleared in W0.23. Light `--metric-protein` equalled `--primary` (`#586E38`) before this step; call
+sites that relied on that coincidence to mean "primary" rather than "protein" need a look when their file
+moves off the legacy names — none found reading `--metric-protein` for a primary-coloured accent rather
+than the protein macro, but the two are no longer equal in v2 (light protein `#34742F` vs. primary
+`#4E6530`), so a visual regression there would show as a metric-tinted element turning slightly warmer.
 
 ### W0.2 — Web UI: radius, spacing, elevation, blur, motion and breakpoint tokens
 - Files: `globals.css`, `web/src/lib/hooks/useReducedMotion.ts` (new) + test.

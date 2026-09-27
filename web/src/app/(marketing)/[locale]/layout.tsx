@@ -46,6 +46,9 @@ export default async function MarketingLayout({
     // islands as plain string props, so no messages payload ships to the
     // client and the JS budget (65 §8) is unaffected.
     <NextIntlClientProvider locale={locale}>
+      {/* Marks the marketing tree so globals.css can pin its pre-v2 palette
+          (D-W0.2) — `:has()` on `:root` sees this regardless of nesting. */}
+      <span data-surface="marketing" hidden aria-hidden="true" />
       <AttributionCapture />
       <MarketingHeader />
       {children}

@@ -3,45 +3,74 @@
 /* ─── FOUC prevention: apply theme class before paint ─── */
 /* Inline script in layout.tsx sets data-theme on <html> */
 
-/* ─── Design tokens — dark (default) ─── */
+/* ─── v2 design tokens — dark (default) (D-W0.4) ─── */
 :root {
-  --bg:                 #161611;
-  --surface:            #1C1E16;
-  --surface-container:  #22241B;
-  --surface-high:       #2A2C20;
-  --surface-highest:    #32342A;
-  --primary:            #9DAE6B;
-  --secondary:          #C49A6C;
-  --tertiary:           #6E9A6A;
-  --on-surface:         #F1F0E4;
-  --on-surface-variant: #A8A899;
-  /* Was #777264 — below WCAG AA 4.5:1 against every surface tone it's
-     paired with (3.27–3.78:1, verified). Lightened to the same hue,
-     preserving the "quieter than on-surface-variant" character. */
-  --muted:              #918B7A;
-  --outline:            #3C3E32;
-  --border:             transparent;
-  --error:              #CF6679;
+  --bg:       #12130E;
+  --card:     #1A1C15;
+  --nested:   #22251C;
+  --control:  #2C2F24;
+  --raised:   #36392D;
+  --float:    rgba(40, 44, 32, .82);
+  --scrim:    color-mix(in srgb, var(--bg) 82%, transparent);
+  --text:     #F2F1E6;
+  --text-2:   #B6B5A5;
+  --text-3:   #8F8F80;
+  --hairline: rgba(242, 241, 230, .07);
+  --grid:     var(--hairline);
+  --outline:  #45483B;
 
-  /* Admin (trainer) container tones — tertiary/error at low opacity, per
-     docs/personal_trainer/06-design.md and the design/ mockup */
-  --tertiary-container:    rgba(110, 154, 106, .18);
-  --on-tertiary-container: #A9CBA5;
-  --error-container:       rgba(207, 102, 121, .16);
+  --primary:          #B5C47C;
+  --on-primary:       #1A1F0A;
+  --primary-tint:     color-mix(in srgb, var(--primary) 16%, transparent);
+  --on-primary-tint:  #D6E2A6;
+  --role:             #C49A6C;
+  --role-tint:        color-mix(in srgb, var(--role) 16%, transparent);
+  --heart:            #E07F76;
 
-  /* Metric accent colours */
-  --metric-kcal:    #E0915A;
-  --metric-protein: #9DAE6B;
-  --metric-carbs:   #D8B35A;
-  --metric-fat:     #8E8EC4;
-  --metric-steps:   #B08AC8;
-  --metric-weight:  #8AA0B4;
-  --metric-water:   #6FA8C4;
-  --metric-hr:      #C46A6A;
+  --m-kcal:    #EC9A66;
+  --m-protein: #93C98C;
+  --m-carbs:   #E2BE62;
+  --m-fat:     #A3A1DB;
+  --m-water:   #74B6D6;
+  --m-steps:   #C593CC;
+  --m-weight:  #98ADC0;
+  --m-heart:   var(--heart);
 
-  /* Goal tone */
-  --goal-positive: #9DAE6B;
-  --goal-negative: #E08A52;
+  /* Semantic roles (D-W0.3) — the same metric colour read by intent */
+  --improvement: var(--m-protein);
+  --record:      var(--m-carbs);
+  --decrease:    var(--m-weight);
+  --increase:    var(--m-kcal);
+
+  /* ─── Legacy tokens, re-pointed at the nearest v2 token (D-W0.3) ─── */
+  /* Names stay until W10.3 deletes them; each iteration moves its own
+     files off these and onto the v2 names directly. */
+  --surface:            var(--card);
+  --surface-container:  var(--nested);
+  --surface-high:       var(--control);
+  --surface-highest:    var(--raised);
+  --secondary:          var(--role);
+  --tertiary:              var(--primary);
+  --tertiary-container:    var(--primary-tint);
+  --on-tertiary-container: var(--on-primary-tint);
+  --on-surface:         var(--text);
+  --on-surface-variant: var(--text-2);
+  --muted:              var(--text-3);
+  --border:             var(--hairline);
+  --error:              var(--heart);
+  --error-container:    color-mix(in srgb, var(--heart) 16%, transparent);
+
+  --metric-kcal:    var(--m-kcal);
+  --metric-protein: var(--m-protein);
+  --metric-carbs:   var(--m-carbs);
+  --metric-fat:     var(--m-fat);
+  --metric-steps:   var(--m-steps);
+  --metric-weight:  var(--m-weight);
+  --metric-water:   var(--m-water);
+  --metric-hr:      var(--m-heart);
+
+  --goal-positive: var(--m-protein);
+  --goal-negative: var(--m-kcal);
 
   /* Workout-success celebration dialog */
   --success-icon-tint: 16%;
@@ -73,35 +102,101 @@
   --shadow-float: 0 1px 3px rgba(0, 0, 0, .18);
 }
 
-/* ─── Light theme ─── */
+/* ─── v2 design tokens — light (D-W0.4) ─── */
 [data-theme="light"] {
+  --bg:       #F4F2E9;
+  --card:     #FFFFFF;
+  --nested:   #F0EEE3;
+  --control:  #E6E4D6;
+  --raised:   #DCDAC9;
+  --float:    color-mix(in srgb, var(--bg) 86%, transparent);
+  --text:     #1C1D16;
+  --text-2:   #56574B;
+  --text-3:   #6B6C5F;
+  --hairline: #E6E4D6;
+  --outline:  #CDCBBC;
+
+  --primary:          #4E6530;
+  --on-primary:       #FFFFFF;
+  --primary-tint:     color-mix(in srgb, var(--primary) 12%, transparent);
+  --on-primary-tint:  var(--primary);
+  --role:             #7E613C;
+  --role-tint:        color-mix(in srgb, var(--role) 12%, transparent);
+  --heart:            #A73831;
+
+  --m-kcal:    #9D4602;
+  --m-protein: #34742F;
+  --m-carbs:   #7F5D00;
+  --m-fat:     #5A57A8;
+  --m-water:   #1A6C8F;
+  --m-steps:   #83488D;
+  --m-weight:  #50667A;
+  --m-heart:   var(--heart);
+
+  /* Legacy tokens whose mapping differs by theme (D-W0.3) */
+  --surface-high:    var(--card);    /* white today */
+  --surface-highest: var(--control);
+  --error-container: color-mix(in srgb, var(--heart) 12%, transparent);
+
+  --success-icon-tint: 12%;
+  --success-chip-bg: rgba(76, 175, 80, .16);
+  --success-chip-text: #2C7430;
+  --scrim-celebration: rgba(28, 29, 24, .45);
+}
+
+/* ─── Marketing pin (D-W0.2): the marketing tree keeps its pre-v2 palette ───
+   The marketing layouts and the root not-found page render a
+   `data-surface="marketing"` marker; `:has()` on `:root` (== `<html>`, where
+   `data-theme` also lives) restores every legacy value the marketing tree
+   reads directly, so retheming the app doesn't silently recolour it. */
+:root:has([data-surface="marketing"]) {
+  --bg:                 #161611;
+  --surface:            #1C1E16;
+  --surface-container:  #22241B;
+  --surface-high:       #2A2C20;
+  --surface-highest:    #32342A;
+  --primary:            #9DAE6B;
+  --secondary:          #C49A6C;
+  --tertiary:           #6E9A6A;
+  --on-surface:         #F1F0E4;
+  --on-surface-variant: #A8A899;
+  --muted:              #918B7A;
+  --outline:            #3C3E32;
+  --border:             transparent;
+  --error:              #CF6679;
+  --tertiary-container:    rgba(110, 154, 106, .18);
+  --on-tertiary-container: #A9CBA5;
+  --error-container:       rgba(207, 102, 121, .16);
+  --metric-kcal:    #E0915A;
+  --metric-protein: #9DAE6B;
+  --metric-carbs:   #D8B35A;
+  --metric-fat:     #8E8EC4;
+  --metric-steps:   #B08AC8;
+  --metric-weight:  #8AA0B4;
+  --metric-water:   #6FA8C4;
+  --metric-hr:      #C46A6A;
+  --goal-positive: #9DAE6B;
+  --goal-negative: #E08A52;
+}
+
+[data-theme="light"]:has([data-surface="marketing"]) {
   --bg:                 #F3F2E8;
   --surface:            #FFFFFF;
   --surface-container:  #ECEBDE;
   --surface-high:       #FFFFFF;
   --surface-highest:    #ECEBDE;
   --primary:            #586E38;
-  /* Secondary was #8A6A42 and tertiary #4A7A52 — both below WCAG AA 4.5:1
-     as text on the light surfaces they sit on (4.42/4.15 and 4.45/4.17
-     against --bg/--surface-container, verified), which Lighthouse only
-     catches on a runner whose prefers-color-scheme is light. Darkened ~3%
-     lightness at the same hue and saturation, landing both in the same
-     contrast band as --primary (4.7-4.8 against --surface-container). */
   --secondary:          #7E613C;
   --tertiary:           #44704C;
   --on-surface:         #1E1F18;
   --on-surface-variant: #5C5C50;
-  /* Was #9A9A8C — below WCAG AA 4.5:1 against every surface tone it's
-     paired with (2.37–2.85:1, verified). Darkened to the same hue. */
   --muted:              #696960;
   --outline:            #CDCBBC;
   --border:             #E2E0D2;
   --error:              #CF6679;
-
   --tertiary-container:    rgba(74, 122, 82, .14);
   --on-tertiary-container: #2F5B39;
   --error-container:       rgba(207, 102, 121, .14);
-
   --metric-kcal:    #D27A3E;
   --metric-protein: #586E38;
   --metric-carbs:   #B8902F;
@@ -110,16 +205,8 @@
   --metric-weight:  #5E7A92;
   --metric-water:   #4E8AA8;
   --metric-hr:      #C46A6A;
-
-  /* Same darkening as --tertiary above — this is used as text (weight
-     delta, KPI cards), so it needs the same 4.5:1 on light surfaces. */
   --goal-positive: #44704C;
   --goal-negative: #E08A52;
-
-  --success-icon-tint: 12%;
-  --success-chip-bg: rgba(76, 175, 80, .16);
-  --success-chip-text: #2C7430;
-  --scrim-celebration: rgba(28, 29, 24, .45);
 }
 
 /* ─── Tailwind theme extension ─── */
@@ -148,6 +235,30 @@
   --color-metric-steps:   var(--metric-steps);
   --color-metric-weight:  var(--metric-weight);
   --color-metric-water:   var(--metric-water);
+
+  /* v2 colour keys (D-W0.3) — "fg" not "text" so `text-fg-2` stays readable */
+  --color-card:              var(--card);
+  --color-nested:            var(--nested);
+  --color-control:           var(--control);
+  --color-raised:            var(--raised);
+  --color-fg:                var(--text);
+  --color-fg-2:              var(--text-2);
+  --color-fg-3:              var(--text-3);
+  --color-hairline:          var(--hairline);
+  --color-on-primary:        var(--on-primary);
+  --color-primary-tint:      var(--primary-tint);
+  --color-on-primary-tint:   var(--on-primary-tint);
+  --color-role:              var(--role);
+  --color-role-tint:         var(--role-tint);
+  --color-heart:             var(--heart);
+  --color-m-kcal:            var(--m-kcal);
+  --color-m-protein:         var(--m-protein);
+  --color-m-carbs:           var(--m-carbs);
+  --color-m-fat:             var(--m-fat);
+  --color-m-water:           var(--m-water);
+  --color-m-steps:           var(--m-steps);
+  --color-m-weight:          var(--m-weight);
+  --color-m-heart:           var(--m-heart);
 
   --radius-sm:    var(--r-sm);
   --radius-md:    var(--r-md);
