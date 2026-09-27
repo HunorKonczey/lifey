@@ -550,6 +550,48 @@ button:disabled { cursor: default; }
   transition-delay: 400ms;
 }
 
+/* ─── Form field shape (D-W0.9/DS-03) ─── */
+/* Default --control fill, no border; hover --raised (one step up the
+   ladder in both themes — the light theme's own "surface-3" fill is the
+   same --control the field already starts at, so a plain tone-lighten
+   needs the next step up, not a same-value "hover"); focus is
+   [data-ring-frame]:focus-within (globals.css, above); error keeps its
+   heart ring even while focused (the D-W0.9 rule takes priority). */
+.lifey-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--control);
+  transition: background var(--dur-hover) var(--ease-standard);
+}
+.lifey-field:hover:not(:focus-within) { background: var(--raised); }
+/* Top-aligned content for a growing `<textarea>` instead of the default
+   vertical centering — a custom class, not Tailwind's `items-start`
+   utility: globals.css has no `@layer`, so every rule here is unlayered and
+   always outranks a (layered) Tailwind utility on the same property,
+   regardless of source order or specificity. */
+.lifey-field-autoheight { align-items: flex-start; padding-top: 10px; padding-bottom: 10px; }
+.lifey-field-error,
+.lifey-field-error:hover,
+.lifey-field-error:focus-within {
+  box-shadow: 0 0 0 1.5px var(--heart) !important;
+}
+.lifey-field input,
+.lifey-field textarea {
+  background: transparent;
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font: inherit;
+}
+.lifey-field input::placeholder,
+.lifey-field textarea::placeholder {
+  color: var(--text-3);
+}
+
 /* ─── Kill browser autofill background ─── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

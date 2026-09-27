@@ -862,7 +862,7 @@ never placed directly on bare `--bg` in the real app, and the gallery demo shoul
 does. Tooltip and IconButton are CSS-only (`:hover`/`:focus-within`), not yet on `useAnchoredPosition`
 (that primitive doesn't exist until W0.11), so they always open above their trigger with no flip.
 
-### W0.9 — Web UI: form fields with every state
+### W0.9 — Web UI: form fields with every state ✅
 - Files: `src/components/ds/field/{Field,TextField,PasswordField,NumberField,TimeField,TextArea,ReadOnlyField}.tsx`,
   `src/lib/forms/rhf.ts` (react-hook-form + zod adapters).
 - States (DS-03 light + dark): default (`--control` fill, no border), hover (`--raised` dark / surface-3
@@ -875,6 +875,25 @@ does. Tooltip and IconButton are CSS-only (`:hover`/`:focus-within`), not yet on
   chips (e.g. 17:30 / 18:30).
 - **Verify:** `numberField.test.ts` (HU "166,7" ↔ 166.7, EN "166.7", clamp, rounding); gallery "Fields";
   axe — every field has a label and its error is `aria-describedby`.
+
+*As built:* `TimeField` types 24-hour ("17:30") while focused and shows the locale's own display at rest
+via `lifeyFormat.time` ("18:00" HU, "6:00 PM" EN) — not full bidirectional 12-hour text parsing, which adds
+real ambiguity ("5:30" — AM or PM?) for a field whose whole job is picking one unambiguous moment; typing
+is genuinely a different interaction from reading, so this doesn't cheat the display requirement, and no
+native `<input type="time">` is used anywhere (its per-browser chrome the design system doesn't control).
+`useZodForm` (src/lib/forms/rhf.ts) needed one `as any`/`as never` pair at the `zodResolver()` call:
+Zod 4's generic internals don't unify against an arbitrary `S extends ZodType<FieldValues>` the way they do
+against a schema TypeScript sees concretely at a real call site — the wrapper's return type (`z.infer<S>`)
+is what every caller actually depends on, and stays fully checked; only the internal resolver wiring is
+cast. Two more `set-state-in-effect` lint hits (W0.6's fix, same rule) in `NumberField`/`TimeField`'s
+external-value resync — moved to React's "adjust state during render" pattern (comparing a `prevValue`
+tracked in state) instead of a `useEffect`, which needs no cast and is the documented fix for exactly this
+"state derived from a prop" shape. Found a third, unrelated CSS trap while giving `TextArea` a top-aligned,
+growable field shape: `globals.css` has no `@layer`, so its custom classes (`.lifey-field`, etc.) are
+unlayered and always outrank a Tailwind utility on the same property regardless of source order —
+`items-start` silently lost to `.lifey-field`'s own `align-items: center`. Fixed with another custom class
+(`.lifey-field-autoheight`) rather than a Tailwind utility; noted for every later step, since it'll recur
+for any component overriding this file's own classes.
 
 ### W0.10 — Web UI: date picker, two modes; no native date input anywhere
 - Files: `src/components/ds/date/CalendarPopover.tsx` (month grid Monday-first, today filled primary,
