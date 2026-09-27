@@ -368,6 +368,30 @@ body {
 /* ─── Tabular numbers for all metrics ─── */
 .tabular { font-variant-numeric: tabular-nums; }
 
+/* ─── Type scale (D-W0.7) ─── */
+@utility type-display-xl { font-size: 72px; line-height: 68px; font-weight: 800; letter-spacing: -0.03em; }
+@utility type-display     { font-size: 48px; line-height: 48px; font-weight: 800; letter-spacing: -0.025em; }
+@utility type-headline    { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.02em; }
+@utility type-page        { font-size: 26px; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; }
+@utility type-title       { font-size: 20px; line-height: 26px; font-weight: 700; letter-spacing: -0.01em; }
+/* Drawers use the 22 px variant of the title style (DS-03). */
+@utility type-title-l     { font-size: 22px; line-height: 1.2; font-weight: 800; }
+@utility type-title-s     { font-size: 16px; line-height: 22px; font-weight: 700; }
+@utility type-body        { font-size: 15px; line-height: 22px; font-weight: 500; }
+@utility type-body-s      { font-size: 13px; line-height: 18px; font-weight: 500; }
+@utility type-label       { font-size: 12px; line-height: 16px; font-weight: 700; }
+/* CAPS + tracking only belongs on 12 px section labels — never on body text. */
+@utility type-section     { font-size: 12px; line-height: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+@utility type-button      { font-size: 15px; line-height: 1; font-weight: 700; }
+@utility type-button-dense { font-size: 14px; line-height: 1; font-weight: 700; }
+/* Table headers are sentence case, never CAPS (DS-03). */
+@utility type-table-head  { font-size: 13px; line-height: 1; font-weight: 600; }
+
+/* Off-scale hero numbers (dashboard ring, KPI, tile values) — font-size is
+   set per instance (56, 26–34, 28…) by the component, not by a fixed
+   utility; this carries the shared weight/tracking/tabular rule (D-W0.7). */
+.num { font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+
 /* ─── A11y: visible focus ring for keyboard navigation ─── */
 /* Inset (negative offset) so the ring never pokes past an element's own
    rounded corners; a positive offset + forced border-radius mismatched

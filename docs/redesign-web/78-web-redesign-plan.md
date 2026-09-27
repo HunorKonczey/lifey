@@ -688,12 +688,20 @@ shadow. `useReducedMotion.test.ts` tests the non-reactive `prefersReducedMotion(
 D-W0.12) — the reactive `useReducedMotion()` hook itself is exercised once real components use it, from
 W0.6 onward.
 
-### W0.3 — Web UI: type utilities, `MetricValue`, `Icon`
+### W0.3 — Web UI: type utilities, `MetricValue`, `Icon` ✅
 - Files: `globals.css` (`@utility type-*`, `num-*`, `.tabular` kept), `src/components/ds/MetricValue.tsx`,
   `src/components/ds/Icon.tsx`, `src/components/ds/index.ts` (barrel).
 - Spec D-W0.7 and D-W0.10. `MetricValue({ value, unit, size, unitRatio, label })` renders tabular
   number + smaller unit in `--text-2` and one `aria-label` sentence.
 - **Verify:** gallery arrives in W0.5 — until then a temporary check on `/dashboard`; typecheck.
+
+*As built:* verified `type-headline` on `/login` (unauthenticated, app-scope) rather than `/dashboard`
+(needs auth) — computed style matched the D-W0.7 spec exactly (30px/800/36px/−2%) once cleared of the
+element's pre-existing Tailwind classes, then reverted (no lasting change to that file). Off-scale hero
+numbers use a plain `.num` class with `font-size` set per instance by `MetricValue`, not a `num-[size]`
+functional Tailwind utility — sizes vary continuously (28, 32, 56…) and a component prop is simpler than
+generating arbitrary-value utility classes for it. `MetricValue`/`Icon` aren't wired into any page yet
+(no consumer until W1); the dev gallery (W0.5) is the first place they render for real.
 
 ### W0.4 — Web UI: one formatting layer + typed messages + key parity
 - Files: `src/lib/format/lifeyFormat.ts` + `lifeyFormat.test.ts`, `src/lib/format/useFormat.ts`,
