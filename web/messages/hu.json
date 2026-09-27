@@ -672,7 +672,7 @@
     "avgWater": "Átlag víz",
     "latestWeight": "Legutóbbi testsúly",
     "streak": "Sorozat",
-    "streakDays": "napja folyamatosan naplózol",
+    "streakDays": "{count} napja folyamatosan naplózol",
     "noEntryYet": "Még nincs bejegyzés",
     "goal": "Cél: {value}",
     "workoutFallback": "Edzés",
@@ -1237,5 +1237,41 @@
     "pendingBody": "Az edzői jelentkezéseket kézzel bíráljuk el, általában egy munkanapon belül. A 14 napos próbaidőszakod akkor indul, amikor jóváhagyunk, nem most.",
     "approvedTitle": "Jóváhagyva!",
     "approvedBody": "Irányítunk az edzői felületedre…"
+  },
+  "labels": {
+    "roles": {
+      "ROLE_USER": "Kliens",
+      "ROLE_TRAINER": "Edző",
+      "ROLE_ADMIN": "Superadmin",
+      "ROLE_SUPER_ADMIN": "Superadmin"
+    },
+    "mealTypes": {
+      "BREAKFAST": "Reggeli",
+      "LUNCH": "Ebéd",
+      "DINNER": "Vacsora",
+      "SNACK": "Snack"
+    },
+    "activityTypes": {
+      "RUNNING": "Futás",
+      "WALKING": "Séta",
+      "HIKING": "Túrázás",
+      "CYCLING": "Kerékpározás",
+      "INDOOR_BIKE": "Szobabicikli",
+      "BASKETBALL": "Kosárlabda",
+      "FOOTBALL": "Foci",
+      "OTHER_CARDIO": "Egyéb",
+      "STRENGTH": "Erősítő"
+    },
+    "recurrence": {
+      "ONCE": "Egyszeri",
+      "DAILY": "Napi",
+      "WEEKLY": "Heti"
+    },
+    "occurrenceStatus": {
+      "UPCOMING": "Közelgő",
+      "DONE": "Elvégezve",
+      "MISSED": "Kihagyva",
+      "CANCELLED": "Lemondva"
+    }
   }
 }

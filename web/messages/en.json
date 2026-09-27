@@ -1237,5 +1237,41 @@
     "pendingBody": "We review trainer applications by hand, usually within one working day. Your 14-day trial starts when we approve you, not now.",
     "approvedTitle": "You're approved!",
     "approvedBody": "Taking you to your trainer dashboard…"
+  },
+  "labels": {
+    "roles": {
+      "ROLE_USER": "Client",
+      "ROLE_TRAINER": "Trainer",
+      "ROLE_ADMIN": "Superadmin",
+      "ROLE_SUPER_ADMIN": "Superadmin"
+    },
+    "mealTypes": {
+      "BREAKFAST": "Breakfast",
+      "LUNCH": "Lunch",
+      "DINNER": "Dinner",
+      "SNACK": "Snack"
+    },
+    "activityTypes": {
+      "RUNNING": "Running",
+      "WALKING": "Walking",
+      "HIKING": "Hiking",
+      "CYCLING": "Cycling",
+      "INDOOR_BIKE": "Indoor bike",
+      "BASKETBALL": "Basketball",
+      "FOOTBALL": "Football",
+      "OTHER_CARDIO": "Other",
+      "STRENGTH": "Strength"
+    },
+    "recurrence": {
+      "ONCE": "Once",
+      "DAILY": "Daily",
+      "WEEKLY": "Weekly"
+    },
+    "occurrenceStatus": {
+      "UPCOMING": "Upcoming",
+      "DONE": "Done",
+      "MISSED": "Missed",
+      "CANCELLED": "Cancelled"
+    }
   }
 }

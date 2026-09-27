@@ -703,7 +703,7 @@ functional Tailwind utility — sizes vary continuously (28, 32, 56…) and a co
 generating arbitrary-value utility classes for it. `MetricValue`/`Icon` aren't wired into any page yet
 (no consumer until W1); the dev gallery (W0.5) is the first place they render for real.
 
-### W0.4 — Web UI: one formatting layer + typed messages + key parity
+### W0.4 — Web UI: one formatting layer + typed messages + key parity ✅
 - Files: `src/lib/format/lifeyFormat.ts` + `lifeyFormat.test.ts`, `src/lib/format/useFormat.ts`,
   `src/i18n/messages.d.ts`, `src/i18n/messages.test.ts`, `messages/en.json` + `hu.json` (label maps:
   roles, activity types, meal types, recurrence, occurrence status).
@@ -712,6 +712,32 @@ generating arbitrary-value utility classes for it. `MetricValue`/`Icon` aren't w
 - Call sites are **not** migrated here — each iteration migrates its own.
 - **Verify:** unit tests EN + HU; `npm run typecheck` fails when a key is removed from `en.json` (try it
   once, revert); parity test fails when a key is missing from `hu.json`.
+
+*As built:* `src/i18n/messages.d.ts` became `src/i18n/messagesShape.ts` (a plain `.ts` file, not a
+declaration file) and does **not** use next-intl's documented `AppConfig.Messages` global augmentation.
+A trial run of that augmentation broke 47 files: the app ships two independent message catalogs (this
+`messages/{en,hu}.json` for the authenticated app, `messages/marketing.{en,hu}.json` for the marketing
+tree via `src/i18n/request.ts`) sharing one `next-intl` import, and dozens of existing call sites pass a
+route- or state-driven `string` key (e.g. the top bar's page title) rather than a literal — both break
+under a single global typed shape. Kept the "missing key = `npm run typecheck` failure" guarantee with a
+narrower, self-contained mechanism instead: a mutual-assignability check between `Shape<typeof en>` and
+`Shape<typeof hu>` (every string leaf → `true`), which only checks key shape and touches no other file
+in the app; verified it actually fails by deleting a key and restoring it. Untangling the two catalogs
+and typing every dynamic `t()` call site is real, separate work — worth its own step before `AppConfig.
+Messages` can be turned on for real per-call-site key checking.
+
+`messages.test.ts`'s ICU-placeholder check (the other half of D-W0.8, using `@formatjs/icu-
+messageformat-parser` — the same parser next-intl uses internally, added as an explicit devDependency
+since a plain regex can't tell a real `{name}` argument from a plural branch's literal text, e.g.
+`{count, plural, one {client} other {clients}}`) caught a real, pre-existing bug while landing: Hungarian's
+`dashboard.streakDays` didn't reference `{count}` at all, so the streak page silently dropped the number in
+Hungarian. Fixed in `messages/hu.json` alongside the new `labels` namespace, since the test can't pass
+otherwise. `useFormat()`'s enum-label lookups (`roleLabel`, `activityLabel`, `mealTypeLabel`,
+`recurrenceLabel`, `occurrenceStatusLabel`) read a new top-level `messages/*.json` `"labels"` namespace
+rather than the existing scattered ones (`workouts.activityTypes`, `superadmin.roleNames`, `nutrition.
+breakfast`…) — those differ in exact wording from the D-W0.8 examples (the new `labels.roles.ROLE_USER` is
+"Kliens" per the plan's "Kliens · Edző · Superadmin"; the existing `superadmin.roleNames.ROLE_USER` says
+"Felhasználó") and migrating each call site off the old ones is each feature's own job, not this step's.
 
 ### W0.5 — Web UI: dev design gallery skeleton + the `ds` Playwright project
 - Files: `app/(dev)/dev/design/page.tsx` (+ `layout.tsx` with `Providers`), `src/components/ds/gallery/*`
