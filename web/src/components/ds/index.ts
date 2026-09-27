@@ -4,3 +4,7 @@ export { Icon } from "./Icon";
 export type { IconProps } from "./Icon";
 export { MetricValue } from "./MetricValue";
 export type { MetricValueProps } from "./MetricValue";
+export { AnimatedNumber } from "./AnimatedNumber";
+export type { AnimatedNumberProps } from "./AnimatedNumber";
+export { AnimatedFill } from "./AnimatedFill";
+export type { AnimatedFillProps } from "./AnimatedFill";

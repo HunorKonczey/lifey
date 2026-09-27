@@ -767,7 +767,7 @@ OS setting. Verified the production 404 by hand (`next build`; `.next/server/app
 `"status": 404`) rather than through Playwright, since the `ds` project's `webServer` is `next dev`
 (`NODE_ENV=development`) same as every other e2e project here.
 
-### W0.6 — Web UI: motion primitives
+### W0.6 — Web UI: motion primitives ✅
 - Files: `src/components/ds/AnimatedNumber.tsx`, `AnimatedFill.tsx` (drives rings and bars),
   `src/lib/motion/stagger.ts`.
 - `AnimatedNumber` keeps the last shown value and animates old → new (600 ms, rAF, tabular so width is
@@ -776,6 +776,23 @@ OS setting. Verified the production 404 by hand (`next build`; `.next/server/app
   first appearance, afterwards only the difference (D-W0.13).
 - **Verify:** `e2e/ds/motion.spec.ts` — re-render with the same value: no animation frames; reduced
   motion: final text immediately; gallery "Motion" section.
+
+*As built:* the reduced-motion and "already correct on mount" paths were originally a direct, synchronous
+`setDisplay(...)` inside the effect body — the project's `react-hooks/set-state-in-effect` lint rule
+correctly flags that (it can cascade renders); moved the reduced-motion snap into a single
+`requestAnimationFrame` callback instead (still "the final value on the first frame", per D-W0.13, just
+not before any frame has painted), and dropped the mount-time set entirely since `useState(value)` already
+shows the right number. `e2e/ds/motion.spec.ts`'s "no animation frames" check ended up sampling the
+rendered text repeatedly rather than counting `requestAnimationFrame` calls globally — the gallery page
+has other legitimate rAF traffic (React's own scheduler, devtools) unrelated to `AnimatedNumber`, so a
+global counter was flaky; asserting the visible text never flickers tests the actual user-facing guarantee
+directly. `AnimatedFill` is a render-prop component (`children: (animatedValue) => ReactNode`) rather than
+something that draws its own bar/ring — `ProgressRing`/`MetricBar` don't exist until W0.16, so it can't
+know their markup yet; the gallery demo shows the shape a consumer would use. It reuses one `durationMs`
+for both the first-appearance fill and later difference-only updates, rather than switching from 900ms to
+600ms on update the way `AnimatedNumber` always uses 600ms — D-W0.13 doesn't specify a duration for a
+fill's *non-first* update, only that only the difference animates, so this keeps one predictable knob
+until a real consumer's canvas frame says otherwise.
 
 ### W0.7 — Web UI: surfaces and text components
 - Files in `src/components/ds/`: `Card.tsx` (`card` r22 / pad 20 (16 < 768) / e1 in light + edge in dark;
