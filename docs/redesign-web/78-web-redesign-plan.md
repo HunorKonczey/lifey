@@ -794,7 +794,7 @@ for both the first-appearance fill and later difference-only updates, rather tha
 fill's *non-first* update, only that only the difference animates, so this keeps one predictable knob
 until a real consumer's canvas frame says otherwise.
 
-### W0.7 — Web UI: surfaces and text components
+### W0.7 — Web UI: surfaces and text components ✅
 - Files in `src/components/ds/`: `Card.tsx` (`card` r22 / pad 20 (16 < 768) / e1 in light + edge in dark;
   `hero` r30 / pad 24–28 / e2; `nested` `--nested`, r = parent − padding; `interactive` adds hover +
   pointer + press 0.98), `SectionLabel.tsx` (12/16 caps + optional trailing "Mind / See all" link),
@@ -806,6 +806,21 @@ until a real consumer's canvas frame says otherwise.
   superadmin — DS-02), `CountPill.tsx` (unread badge, primary pill).
 - **Verify:** gallery sections "Cards & labels", "Chips & avatars"; `avatar.test.ts` ("Anna Kovács" →
   "AK", no name → e-mail initial); axe.
+
+*As built:* `Card`'s `interactive` hover uses a flat `background: var(--nested)` in both themes via a new
+`.lifey-card-interactive` class, not D-W0.18's full per-theme tone-step ladder (one surface step lighter in
+dark) — that system doesn't exist until W0.18 lands; this is a placeholder the later step replaces.
+`TintedChip`'s tint alpha (16% dark / 12% light, D-W0.4) is a new `--chip-tint` CSS variable rather than a
+hard-coded percentage in the component, so `color-mix(in srgb, ${color} var(--chip-tint), transparent)`
+resolves per theme automatically. `DeltaChip`'s `goalDirection` prop implements the W4 note precisely: a
+delta moving *toward* the goal renders `--improvement` green regardless of its raw sign, and one moving
+*away* from it renders `--heart` (not attempted in the plan's own one-line description, but the natural
+complement — a chip that only ever turns green and never signals "wrong direction" would be half the
+feature). `initialsFor`/`colorForSeed` are exported as named functions from `Avatar.tsx` rather than static
+members of a class (no `MonogramAvatar.initialsFor`-style namespacing in this codebase's component
+convention) — verified byte-for-byte against `mobile/lib/shared/widgets/ds/monogram_avatar.dart`'s
+algorithm, including the exact hashing (`codeUnits`/`charCodeAt` agree for the BMP), so the same seed
+produces the same colour on both clients.
 
 ### W0.8 — Web UI: buttons, icon buttons, tooltip, segmented control, tabs, switch, choice tile, focus ring
 - Files: `src/components/ds/Button.tsx` (primary, secondary = nested + hairline, tonal = primary tint,

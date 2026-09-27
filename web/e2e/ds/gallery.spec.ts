@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { GALLERY_SECTIONS } from "../../src/components/ds/gallery/registry";
 
 /**
  * The dev design gallery (`/dev/design`, D-W0.12) — no backend needed, so
@@ -27,8 +28,8 @@ for (const colorScheme of ["dark", "light"] as const) {
 
 test("renders every registered section", async ({ page }) => {
   await page.goto("/dev/design");
-  for (const heading of ["Colour", "Type", "Radius, spacing, elevation", "Motion", "Icons", "Formatting"]) {
-    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+  for (const { title } of GALLERY_SECTIONS) {
+    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   }
 });
 

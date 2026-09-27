@@ -4,6 +4,8 @@ import { TokensSection } from "./sections/TokensSection";
 import { MotionSection } from "./sections/MotionSection";
 import { IconsSection } from "./sections/IconsSection";
 import { FormattingSection } from "./sections/FormattingSection";
+import { CardsSection } from "./sections/CardsSection";
+import { ChipsAvatarsSection } from "./sections/ChipsAvatarsSection";
 
 export interface GallerySection {
   id: string;
@@ -20,5 +22,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "tokens", title: "Radius, spacing, elevation", Component: TokensSection },
   { id: "motion", title: "Motion", Component: MotionSection },
   { id: "icons", title: "Icons", Component: IconsSection },
+  { id: "cards", title: "Cards & labels", Component: CardsSection },
+  { id: "chips-avatars", title: "Chips & avatars", Component: ChipsAvatarsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

@@ -35,6 +35,8 @@
   --m-steps:   #C593CC;
   --m-weight:  #98ADC0;
   --m-heart:   var(--heart);
+  /* TintedChip's background tint alpha (D-W0.4) — 16% dark, 12% light. */
+  --chip-tint: 16%;
 
   /* Semantic roles (D-W0.3) — the same metric colour read by intent */
   --improvement: var(--m-protein);
@@ -208,6 +210,7 @@
   --m-steps:   #83488D;
   --m-weight:  #50667A;
   --m-heart:   var(--heart);
+  --chip-tint: 12%;
 
   /* Legacy tokens whose mapping differs by theme (D-W0.3) */
   --surface-high:    var(--card);    /* white today */
@@ -488,6 +491,17 @@ body {
 /* ─── Buttons ─── */
 button { cursor: pointer; }
 button:disabled { cursor: default; }
+
+/* ─── Interactive card (D-W0.7) ─── */
+/* A simplified stand-in for D-W0.18's full hover ladder (one surface step
+   lighter in dark, --nested in light) — W0.18 replaces this with the real
+   per-surface tone step once it lands. */
+.lifey-card-interactive {
+  cursor: pointer;
+  transition: background var(--dur-hover) var(--ease-standard), transform 120ms var(--ease-standard);
+}
+.lifey-card-interactive:hover { background: var(--nested); }
+.lifey-card-interactive:active { transform: scale(0.98); }
 
 /* ─── Kill browser autofill background ─── */
 input:-webkit-autofill,
