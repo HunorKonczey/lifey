@@ -13,6 +13,7 @@ import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useLocale } from "@/lib/hooks/useLocale";
+import { useFormat } from "@/lib/i18n/format";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
 
@@ -24,6 +25,7 @@ interface ClientStatisticsTabProps {
 
 export function ClientStatisticsTab({ clientId }: ClientStatisticsTabProps) {
   const t = useTranslations("admin.clientDetail");
+  const fmt = useFormat();
   const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
   const [period, setPeriod] = useState<Period>("weekly");
 
@@ -76,7 +78,7 @@ export function ClientStatisticsTab({ clientId }: ClientStatisticsTabProps) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         <KpiCard
           label={t("kpi.calories")}
-          value={`${(statsQ.data?.totalCalories ?? 0).toLocaleString()} kcal`}
+          value={`${fmt.number(Math.round(statsQ.data?.totalCalories ?? 0))} kcal`}
           icon="local_fire_department"
           color="var(--metric-kcal)"
         />
@@ -88,7 +90,7 @@ export function ClientStatisticsTab({ clientId }: ClientStatisticsTabProps) {
         />
         <KpiCard
           label={t("kpi.weight")}
-          value={statsQ.data?.latestWeight != null ? `${statsQ.data.latestWeight.toFixed(1)} kg` : "—"}
+          value={statsQ.data?.latestWeight != null ? `${fmt.number(statsQ.data.latestWeight, 1, 1)} kg` : "—"}
           icon="monitor_weight"
           color="var(--metric-weight)"
         />

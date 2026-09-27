@@ -24,7 +24,9 @@ export function SegmentedControl<T extends string>({
 
   return (
     <div
-      className="inline-flex gap-1 p-1 rounded-[var(--r-pill)]"
+      // max-w-full + scroll: on a phone the tab row (e.g. Edzések · Sablonok ·
+      // Gyakorlatok) used to overflow the viewport and cut the last tab off.
+      className="inline-flex max-w-full overflow-x-auto gap-1 p-1 rounded-[var(--r-pill)]"
       style={{ background: "var(--surface-highest)" }}
       role="tablist"
     >
@@ -36,7 +38,7 @@ export function SegmentedControl<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`flex items-center gap-1.5 rounded-[var(--r-pill)] font-semibold transition-colors ${pad}`}
+            className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-[var(--r-pill)] font-semibold transition-colors ${pad}`}
             style={{
               background: active ? activeBackground : "transparent",
               color: active ? activeColor : "var(--on-surface-variant)",

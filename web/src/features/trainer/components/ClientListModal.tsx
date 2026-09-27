@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, hu } from "date-fns/locale";
-import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { useLocale } from "@/lib/hooks/useLocale";
 import type { TrainerClientResponse } from "../types";
 
@@ -49,7 +49,7 @@ export function ClientListModal({ clients, onClose }: ClientListModalProps) {
             >
               <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={36} />
               <span className="flex-1 min-w-0 text-sm font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                {nameFor(c.clientEmail)}
+                {clientDisplayName(c)}
               </span>
               <span className="text-[11.5px]" style={{ color: "var(--muted)" }}>
                 {formatDistanceToNow(new Date(c.activeSince), { addSuffix: true, locale: dateLocale })}

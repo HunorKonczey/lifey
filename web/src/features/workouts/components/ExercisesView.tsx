@@ -74,7 +74,7 @@ export function ExercisesView() {
   ) as string[];
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0 flex flex-col gap-4">
         {/* Filter chips + new */}
         <div className="flex flex-wrap items-center gap-2">
@@ -138,7 +138,7 @@ export function ExercisesView() {
       </div>
 
       {(editing || creating) && (
-        <div className="w-[320px] shrink-0">
+        <div className="w-full lg:w-[320px] lg:shrink-0">
           <ExerciseEditor
             key={editing?.id ?? "new"}
             exercise={editing}

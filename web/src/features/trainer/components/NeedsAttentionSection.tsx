@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { byLeastActiveFirst, complianceFor } from "../compliance";
-import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import type { TrainerClientResponse } from "../types";
 
 interface NeedsAttentionSectionProps {
@@ -41,7 +41,7 @@ export function NeedsAttentionSection({ clients }: NeedsAttentionSectionProps) {
             >
               <ClientAvatar clientId={client.clientId} email={client.clientEmail} size={34} />
               <p className="text-[13.5px] font-extrabold flex-1 min-w-0 truncate" style={{ color: "var(--on-surface)" }}>
-                {nameFor(client.clientEmail)}
+                {clientDisplayName(client)}
               </p>
               <div className="flex flex-wrap items-center justify-end gap-1.5">
                 {flags.inactive && (

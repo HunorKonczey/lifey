@@ -15,11 +15,13 @@ import {
 import { authApi } from "@/features/auth/api";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/lib/hooks/useToast";
+import { useValidationMessage } from "@/lib/i18n/useValidationMessage";
 
 type Step = "email" | "reset";
 
 export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
+  const vm = useValidationMessage();
   const router = useRouter();
   const { show } = useToast();
   const [step, setStep] = useState<Step>("email");
@@ -39,7 +41,7 @@ export default function ForgotPasswordPage() {
       setEmail(data.email);
       setStep("reset");
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "An unexpected error occurred";
+      const message = err instanceof ApiError ? err.message : t("unexpectedError");
       emailForm.setError("email", { message });
     }
   };
@@ -50,7 +52,7 @@ export default function ForgotPasswordPage() {
       show(t("resetSuccess"), "success");
       router.push("/login");
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "An unexpected error occurred";
+      const message = err instanceof ApiError ? err.message : t("unexpectedError");
       resetForm.setError("code", { message });
     }
   };
@@ -97,7 +99,7 @@ export default function ForgotPasswordPage() {
               </div>
               {emailForm.formState.errors.email && (
                 <p className="text-xs" style={{ color: "var(--error)" }}>
-                  {emailForm.formState.errors.email.message}
+                  {vm(emailForm.formState.errors.email.message)}
                 </p>
               )}
             </div>
@@ -146,7 +148,7 @@ export default function ForgotPasswordPage() {
               </div>
               {resetForm.formState.errors.code && (
                 <p className="text-xs" style={{ color: "var(--error)" }}>
-                  {resetForm.formState.errors.code.message}
+                  {vm(resetForm.formState.errors.code.message)}
                 </p>
               )}
             </div>
@@ -175,7 +177,7 @@ export default function ForgotPasswordPage() {
                 </div>
                 {resetForm.formState.errors[field] && (
                   <p className="text-xs" style={{ color: "var(--error)" }}>
-                    {resetForm.formState.errors[field]?.message}
+                    {vm(resetForm.formState.errors[field]?.message)}
                   </p>
                 )}
               </div>

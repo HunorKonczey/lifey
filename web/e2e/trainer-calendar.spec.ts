@@ -33,9 +33,16 @@ function nameFor(email: string): string {
     .join(" ");
 }
 
+function splitName(full: string): { firstName: string; lastName: string } {
+  const [firstName, ...rest] = full.split(" ");
+  return { firstName, lastName: rest.join(" ") || "Test" };
+}
+
 async function registerAndLogin(request: APIRequestContext, email: string, password: string) {
   const registerRes = await request.post(`${API_BASE}/auth/register`, {
-    data: { email, password, firstName: "E2E", lastName: "Test" },
+    // The UI shows the profile name when there is one, so register a name that
+    // matches what nameFor(email) derives — the assertions below use that.
+    data: { email, password, ...splitName(nameFor(email)) },
   });
   expect(registerRes.ok(), await registerRes.text()).toBeTruthy();
   const user: { id: number } = await registerRes.json();

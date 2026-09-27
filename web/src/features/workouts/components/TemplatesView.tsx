@@ -95,9 +95,9 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
   });
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col lg:flex-row gap-6">
       {/* Master list */}
-      <div className="w-[280px] shrink-0 flex flex-col gap-2">
+      <div className="w-full lg:w-[280px] lg:shrink-0 flex flex-col gap-2">
         <button onClick={() => setSelectedId("new")}
           className="flex items-center gap-1 px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm justify-center"
           style={{ background: "var(--primary)", color: "var(--bg)" }}>

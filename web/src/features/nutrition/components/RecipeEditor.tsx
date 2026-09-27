@@ -266,10 +266,10 @@ export function RecipeEditor({ recipe, onClose }: RecipeEditorProps) {
         <div className="flex justify-between text-sm tabular pt-2" style={{ borderTop: "1px solid var(--outline)" }}>
           <span style={{ color: "var(--on-surface-variant)" }}>{t("total")}</span>
           <span className="font-semibold" style={{ color: "var(--metric-kcal)" }}>
-            {Math.round(totalKcal)} kcal · {Math.round(totalKcal / servings)} / serving
+            {t("totalPerServingKcal", { total: Math.round(totalKcal), perServing: Math.round(totalKcal / servings) })}
           </span>
           <span className="font-semibold" style={{ color: "var(--metric-protein)" }}>
-            {Math.round(totalProtein)}g protein · {Math.round(totalProtein / servings)}g / serving
+            {t("totalPerServingProtein", { total: Math.round(totalProtein), perServing: Math.round(totalProtein / servings) })}
           </span>
         </div>
 

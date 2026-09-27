@@ -3,18 +3,19 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { trainerRequestApi } from "@/features/trainer-requests/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 import type { SuperAdminTrainerRequestResponse } from "@/features/trainer-requests/types";
+import { useFormat } from "@/lib/i18n/format";
 
 const PAGE_SIZE = 20;
 
 export default function SuperAdminTrainerRequestsPage() {
   const t = useTranslations("superadmin");
+  const fmt = useFormat();
   const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -85,7 +86,7 @@ export default function SuperAdminTrainerRequestsPage() {
                       {req.userEmail}
                     </p>
                     <p className="text-[11px] font-mono" style={{ color: "var(--on-surface-variant)" }}>
-                      {format(new Date(req.createdAt), "yyyy-MM-dd HH:mm")}
+                      {fmt.date(req.createdAt, "dateTime")}
                       {req.signupSource ? ` · ${req.signupSource}` : ""}
                     </p>
                   </div>

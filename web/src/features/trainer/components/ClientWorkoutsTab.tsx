@@ -17,6 +17,7 @@ import { activityTypeColor, activityTypeIcon } from "@/features/workouts/activit
 import { buildCardioSummaryLine } from "@/features/workouts/cardioSummaryLine";
 import { buildCardioTiles } from "@/features/workouts/cardioTiles";
 import type { WorkoutSessionResponse } from "@/features/workouts/types";
+import { useFormat } from "@/lib/i18n/format";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
 
@@ -32,6 +33,7 @@ export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: 
   const tw = useTranslations("workouts");
   const ta = useTranslations("workouts.activityTypes");
   const common = useTranslations("common");
+  const fmt = useFormat();
   const locale = useLocale((s) => s.locale);
   const dateLocale = DATE_LOCALES[locale];
   const [page, setPage] = useState(0);
@@ -100,7 +102,7 @@ export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: 
                       : t("sessionMeta", {
                           duration: durationMin ?? "—",
                           count: s.exercises.length,
-                          volume: Math.round(volume).toLocaleString(),
+                          volume: fmt.number(Math.round(volume)),
                         })}
                   </p>
                 </div>

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { useDateStore } from "@/lib/hooks/useDateStore";
+import { useFormat } from "@/lib/i18n/format";
+import { loggingStreak } from "@/features/statistics/streak";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { statisticsApi } from "@/features/statistics/api";
 import { settingsApi } from "@/features/settings/api";
@@ -53,6 +55,7 @@ export default function DashboardPage() {
   const tw = useTranslations("workouts");
   const ta = useTranslations("workouts.activityTypes");
   const locale = useLocale();
+  const fmt = useFormat();
   const { date } = useDateStore();
   const router = useRouter();
   const dateStr = localDateStr(date);
@@ -135,6 +138,10 @@ export default function DashboardPage() {
     .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
   const recentSessions = sessionsDesc.slice(0, 5);
   const recommended = recommendedTemplate(sessionsDesc, templatesQ.data ?? []);
+  const streak = loggingStreak([
+    ...((mealsQ.data as MealResponse[] | undefined) ?? []).map((m) => m.dateTime),
+    ...(sessionsQ.data ?? []).map((s) => s.startedAt),
+  ]);
 
   const todayEntries = todayMeals.flatMap((m) => m.entries);
   const totalKcal = todayEntries.reduce((s, e) => s + e.calories, 0);
@@ -230,8 +237,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Water / Steps / Weight row */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Water / Steps / Weight row — one column on phones, three was unreadable at 390 px */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {waterEntriesQ.isLoading ? (
             <Skeleton variant="card" className="h-40" />
           ) : (
@@ -257,7 +264,7 @@ export default function DashboardPage() {
                   : undefined
               }
               goalReached={(todaySteps?.steps ?? 0) >= (settings?.dailyStepGoal ?? 10000)}
-              subtitle={t("goal", { value: (settings?.dailyStepGoal ?? 10000).toLocaleString() })}
+              subtitle={t("goal", { value: fmt.number(settings?.dailyStepGoal ?? 10000) })}
               onClick={() => router.push("/steps")}
             />
           )}
@@ -267,11 +274,11 @@ export default function DashboardPage() {
           ) : (
             <StatCard
               label={t("weight")}
-              value={latestWeight ? latestWeight.weight.toFixed(1) : "—"}
+              value={latestWeight ? fmt.number(latestWeight.weight, 1, 1) : "—"}
               unit={latestWeight ? "kg" : ""}
               icon="monitor_weight"
               color="var(--metric-weight)"
-              subtitle={latestWeight ? latestWeight.date : t("noEntryYet")}
+              subtitle={latestWeight ? fmt.date(latestWeight.date, "dayYear") : t("noEntryYet")}
               onClick={() => router.push("/weight")}
             />
           )}
@@ -305,7 +312,7 @@ export default function DashboardPage() {
                             : s.templateName ?? (s.exercises.map((e) => e.exerciseName).join(", ") || t("workoutFallback"))}
                         </p>
                         <p className="text-xs" style={{ color: "var(--muted)" }}>
-                          {format(new Date(s.startedAt), "MMM d, HH:mm")}
+                          {fmt.date(s.startedAt, "dayTime")}
                         </p>
                       </div>
                       {isCardio ? (
@@ -344,7 +351,7 @@ export default function DashboardPage() {
                 <span style={{ color: "var(--on-surface-variant)" }}>{t("avgCalories")}</span>
                 <span className="font-semibold tabular">
                   {weeklyStats?.totalCalories != null
-                    ? Math.round(weeklyStats.totalCalories / 7).toLocaleString()
+                    ? fmt.number(Math.round(weeklyStats.totalCalories / 7))
                     : "—"}
                 </span>
               </div>
@@ -363,14 +370,14 @@ export default function DashboardPage() {
                 <span style={{ color: "var(--on-surface-variant)" }}>{t("avgWater")}</span>
                 <span className="font-semibold tabular">
                   {weeklyStats?.totalWater != null
-                    ? (weeklyStats.totalWater / 7).toFixed(1) + " L"
+                    ? fmt.number(weeklyStats.totalWater / 7, 1, 1) + " L"
                     : "—"}
                 </span>
               </div>
               {weeklyStats?.latestWeight != null && (
                 <div className="flex justify-between text-sm">
                   <span style={{ color: "var(--on-surface-variant)" }}>{t("latestWeight")}</span>
-                  <span className="font-semibold tabular">{weeklyStats.latestWeight.toFixed(1)} kg</span>
+                  <span className="font-semibold tabular">{fmt.number(weeklyStats.latestWeight, 1, 1)} kg</span>
                 </div>
               )}
             </div>
@@ -380,10 +387,10 @@ export default function DashboardPage() {
         <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
           <p className="text-sm font-bold mb-2">{t("streak")}</p>
           <p className="text-3xl font-extrabold tabular" style={{ color: "var(--primary)" }}>
-            {recentSessions.length}
+            {streak}
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--on-surface-variant)" }}>
-            {t("sessionsLogged")}
+            {t("streakDays", { count: streak })}
           </p>
         </div>
       </div>

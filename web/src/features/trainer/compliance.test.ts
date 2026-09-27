@@ -17,6 +17,8 @@ function client(overrides: Partial<TrainerClientResponse> = {}): TrainerClientRe
   return {
     clientId: 1,
     clientEmail: "client@example.com",
+    clientFirstName: null,
+    clientLastName: null,
     activeSince: "2026-06-01T00:00:00Z",
     weightTrend: [],
     assignedPlanCount: 0,

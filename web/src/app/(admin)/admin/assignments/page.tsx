@@ -3,21 +3,22 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { trainerApi } from "@/features/trainer/api";
 import { templateApi } from "@/features/workouts/api";
 import { recipeApi } from "@/features/nutrition/api";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { ClientAvatar, nameFor } from "@/features/trainer/components/ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "@/features/trainer/components/ClientAvatar";
 import { UnassignButton } from "@/features/trainer/components/UnassignButton";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import type { ContentType } from "@/features/trainer/types";
+import { useFormat } from "@/lib/i18n/format";
 
 const CONTENT_ICON: Record<ContentType, string> = { TEMPLATE: "fitness_center", RECIPE: "restaurant" };
 
 export default function AdminAssignmentsPage() {
   const t = useTranslations("admin.assignments");
+  const fmt = useFormat();
   const [clientFilter, setClientFilter] = useState<number | "all">("all");
   const [typeFilter, setTypeFilter] = useState<ContentType | "all">("all");
 
@@ -66,7 +67,7 @@ export default function AdminAssignmentsPage() {
         >
           <option value="all">{t("allClients")}</option>
           {clients.map((c) => (
-            <option key={c.clientId} value={c.clientId}>{nameFor(c.clientEmail)}</option>
+            <option key={c.clientId} value={c.clientId}>{clientDisplayName(c)}</option>
           ))}
         </select>
         <select
@@ -88,11 +89,11 @@ export default function AdminAssignmentsPage() {
           {rows.map((r) => (
             <div key={r.id} className="flex items-center gap-3.5 px-3.5 py-3 rounded-[13px]">
               <span className="text-xs tabular w-[70px] shrink-0" style={{ color: "var(--muted)" }}>
-                {format(new Date(r.assignedAt), "yyyy-MM-dd")}
+                {fmt.date(r.assignedAt, "dayYear")}
               </span>
               <ClientAvatar clientId={r.client.clientId} email={r.client.clientEmail} size={30} />
               <span className="text-[13px] font-bold w-[140px] shrink-0 truncate" style={{ color: "var(--on-surface)" }}>
-                {nameFor(r.client.clientEmail)}
+                {clientDisplayName(r.client)}
               </span>
               <span
                 className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"

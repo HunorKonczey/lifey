@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useFormat } from "@/lib/i18n/format";
 
 interface HeroMetricCardProps {
   value: number;
@@ -13,6 +14,7 @@ interface HeroMetricCardProps {
 
 export function HeroMetricCard({ value, goal, unit = "kcal" }: HeroMetricCardProps) {
   const t = useTranslations("dashboard");
+  const fmt = useFormat();
   const hasGoal = goal != null && goal > 0;
   const ratio = hasGoal ? Math.min(value / goal, 1) : 0;
   const over = hasGoal && value > goal;
@@ -55,11 +57,11 @@ export function HeroMetricCard({ value, goal, unit = "kcal" }: HeroMetricCardPro
       {/* Big number */}
       <div className="flex items-end gap-2 mb-4">
         <span className="tabular font-extrabold" style={{ fontSize: 46, lineHeight: 1, color: "var(--on-surface)" }}>
-          {Math.round(value).toLocaleString()}
+          {fmt.number(Math.round(value))}
         </span>
         {hasGoal && (
           <span className="text-base font-semibold mb-1" style={{ color: "var(--on-surface-variant)" }}>
-            / {goal.toLocaleString()} {unit}
+            / {fmt.number(goal)} {unit}
           </span>
         )}
       </div>

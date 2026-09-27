@@ -1,5 +1,4 @@
 import { useTranslations, useLocale } from "next-intl";
-import { format } from "date-fns";
 import { StatCard } from "@/components/data/StatCard";
 import { ActivityChip } from "./ActivityChip";
 import { RouteSvg } from "./RouteSvg";
@@ -19,6 +18,7 @@ import { buildHrZoneBreakdown } from "../hrZoneBreakdown";
 import { totalWorkKj } from "../cardioFormat";
 import { flattenAltitudes } from "../routeGeometry";
 import type { WorkoutSessionResponse } from "../types";
+import { useFormat } from "@/lib/i18n/format";
 
 /**
  * Read-only cardio session view — the `kind`-branch counterpart of
@@ -86,6 +86,7 @@ export function CardioSessionDetail({
   const t = useTranslations("workouts");
   const ta = useTranslations("workouts.activityTypes");
   const locale = useLocale();
+  const fmt = useFormat();
 
   const activityType = session.activityType ?? "OTHER_CARDIO";
   const family = activityFamilyOf(activityType);
@@ -109,7 +110,7 @@ export function CardioSessionDetail({
         <div className="flex-1 min-w-0">
           <p className="font-bold text-base truncate">{ta(activityType)}</p>
           <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-            {format(new Date(session.startedAt), "MMM d, yyyy · HH:mm")}
+            {fmt.date(session.startedAt, "dayYearTime")}
           </p>
         </div>
         {session.rpe != null && (

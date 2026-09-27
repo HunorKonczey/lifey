@@ -10,8 +10,9 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { normalizeForSearch } from "@/lib/utils/search";
 import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
-import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import type { ContentType } from "../types";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 
 export interface AssignSummaryRow {
   label: string;
@@ -30,6 +31,7 @@ interface AssignToClientDrawerProps {
 export function AssignToClientDrawer({
   contentType, sourceId, title, summary, moreCount = 0, onClose,
 }: AssignToClientDrawerProps) {
+  useEscapeKey(onClose);
   const t = useTranslations("admin.assignDrawer");
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -57,7 +59,7 @@ export function AssignToClientDrawer({
 
   const normalizedSearch = normalizeForSearch(search);
   const filteredClients = (clientsQ.data ?? []).filter((c) =>
-    normalizeForSearch(c.clientEmail).includes(normalizedSearch) || normalizeForSearch(nameFor(c.clientEmail)).includes(normalizedSearch),
+    normalizeForSearch(c.clientEmail).includes(normalizedSearch) || normalizeForSearch(clientDisplayName(c)).includes(normalizedSearch),
   );
 
   const toggleClient = (clientId: number) => {
@@ -82,7 +84,7 @@ export function AssignToClientDrawer({
       if (skippedCount === 0) {
         if (assignedCount === 1) {
           const client = clientsQ.data?.find((c) => c.clientId === response.assignments[0].clientId);
-          show(t("assigned", { name: client ? nameFor(client.clientEmail) : "" }), "success");
+          show(t("assigned", { name: client ? clientDisplayName(client) : "" }), "success");
         } else {
           show(t("assignedMultiple", { count: assignedCount }), "success");
         }
@@ -115,7 +117,7 @@ export function AssignToClientDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-to-client-drawer">
+    <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-to-client-drawer" role="dialog" aria-modal="true">
       <div className="absolute inset-0" style={{ background: "rgba(8,9,6,.45)" }} onClick={onClose} />
       <div
         className="relative w-full max-w-[420px] h-full flex flex-col gap-4 p-5.5 overflow-y-auto"
@@ -165,7 +167,7 @@ export function AssignToClientDrawer({
                   <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={32} />
                   <span className="flex-1 min-w-0">
                     <span className="block text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                      {nameFor(c.clientEmail)}
+                      {clientDisplayName(c)}
                     </span>
                     {locked && (
                       <span className="block text-[11px]" style={{ color: "var(--muted)" }}>

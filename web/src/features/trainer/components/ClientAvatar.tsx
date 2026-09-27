@@ -38,6 +38,16 @@ export function initialsFor(email: string) {
   return chars.join("").toUpperCase().slice(0, 2);
 }
 
+/**
+ * The client's real name when their profile has one, otherwise a name derived
+ * from the email. Deriving it always (the old behaviour) lost every accent —
+ * "Réka Tóth" showed up as "Reka Toth".
+ */
+export function clientDisplayName(c: { clientEmail: string; clientFirstName?: string | null; clientLastName?: string | null }) {
+  const full = [c.clientFirstName, c.clientLastName].filter((p) => p && p.trim()).join(" ").trim();
+  return full || nameFor(c.clientEmail);
+}
+
 export function nameFor(email: string) {
   const local = email.split("@")[0] ?? email;
   return local

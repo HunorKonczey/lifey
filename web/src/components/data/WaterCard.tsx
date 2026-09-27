@@ -6,6 +6,7 @@ import { waterApi } from "@/features/water/api";
 import type { WaterSourceResponse } from "@/features/water/types";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { logTimestampFor } from "@/lib/utils/logTime";
+import { useFormat } from "@/lib/i18n/format";
 
 interface WaterCardProps {
   currentLiters: number;
@@ -20,6 +21,7 @@ const SEGMENTS = 8;
 export function WaterCard({ currentLiters, goalLiters, sources, date }: WaterCardProps) {
   const t = useTranslations("dashboard");
   const tWater = useTranslations("water");
+  const fmt = useFormat();
   const queryClient = useQueryClient();
   const filled = goalLiters > 0 ? Math.min(currentLiters / goalLiters, 1) : 0;
   const filledSegments = Math.round(filled * SEGMENTS);
@@ -65,7 +67,7 @@ export function WaterCard({ currentLiters, goalLiters, sources, date }: WaterCar
         </span>
         <span className="text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("water")}</span>
         <span className="ml-auto text-sm font-bold tabular">
-          {currentLiters.toFixed(1)} <span style={{ color: "var(--on-surface-variant)" }}>/ {goalLiters.toFixed(1)} L</span>
+          {fmt.number(currentLiters, 1, 1)} <span style={{ color: "var(--on-surface-variant)" }}>/ {fmt.number(goalLiters, 1, 1)} L</span>
         </span>
       </div>
 

@@ -1,50 +1,53 @@
 import { z } from "zod";
 
+// Messages are i18n keys (messages/*.json → "validation"), translated where
+// the error is rendered — see useValidationMessage.
+
 export const loginSchema = z.object({
-  email: z.string().email("Valid email required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().email("validation.emailInvalid"),
+  password: z.string().min(8, "validation.passwordMin"),
 });
 
 export const registerSchema = z
   .object({
-    firstName: z.string().min(1, "First name required"),
-    lastName: z.string().min(1, "Last name required"),
-    email: z.string().email("Valid email required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    firstName: z.string().min(1, "validation.firstNameRequired"),
+    lastName: z.string().min(1, "validation.lastNameRequired"),
+    email: z.string().email("validation.emailInvalid"),
+    password: z.string().min(8, "validation.passwordMin"),
     confirmPassword: z.string(),
   })
   .refine((d) => d.password === d.confirmPassword, {
-    message: "Passwords do not match",
+    message: "validation.passwordsMismatch",
     path: ["confirmPassword"],
   });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Valid email required"),
+  email: z.string().email("validation.emailInvalid"),
 });
 
 export const resetPasswordSchema = z
   .object({
-    code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    code: z.string().regex(/^\d{6}$/, "validation.codeInvalid"),
+    newPassword: z.string().min(8, "validation.passwordMin"),
     confirmPassword: z.string(),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
-    message: "Passwords do not match",
+    message: "validation.passwordsMismatch",
     path: ["confirmPassword"],
   });
 
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Required"),
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    currentPassword: z.string().min(1, "validation.required"),
+    newPassword: z.string().min(8, "validation.passwordMin"),
     confirmPassword: z.string(),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
-    message: "Passwords do not match",
+    message: "validation.passwordsMismatch",
     path: ["confirmPassword"],
   })
   .refine((d) => d.newPassword !== d.currentPassword, {
-    message: "New password must be different from the current password",
+    message: "validation.passwordSameAsCurrent",
     path: ["newPassword"],
   });
 

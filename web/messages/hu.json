@@ -1,4 +1,14 @@
 {
+  "validation": {
+    "emailInvalid": "Adj meg egy érvényes e-mail címet",
+    "passwordMin": "A jelszó legalább 8 karakter legyen",
+    "firstNameRequired": "A keresztnév kötelező",
+    "lastNameRequired": "A vezetéknév kötelező",
+    "passwordsMismatch": "A két jelszó nem egyezik",
+    "codeInvalid": "Add meg a 6 jegyű kódot",
+    "required": "Kötelező",
+    "passwordSameAsCurrent": "Az új jelszó nem egyezhet a jelenlegivel"
+  },
   "nav": {
     "dashboard": "Áttekintő",
     "nutrition": "Táplálkozás",
@@ -591,7 +601,10 @@
     "resetSuccess": "A jelszó visszaállítva — most már bejelentkezhetsz.",
     "backToLogin": "Vissza a bejelentkezéshez",
     "orContinueWith": "vagy folytasd ezzel",
-    "googleSignInFailed": "A Google bejelentkezés sikertelen. Próbáld újra."
+    "googleSignInFailed": "A Google bejelentkezés sikertelen. Próbáld újra.",
+    "invalidCredentials": "Hibás e-mail cím vagy jelszó",
+    "firstNamePlaceholder": "Anna",
+    "lastNamePlaceholder": "Kovács"
   },
   "common": {
     "today": "Ma",
@@ -619,6 +632,8 @@
     "close": "Bezárás",
     "remove": "Eltávolítás",
     "signOut": "Kijelentkezés",
+    "signOutConfirmTitle": "Kijelentkezel?",
+    "signOutConfirmBody": "A folytatáshoz újra be kell majd jelentkezned.",
     "expandSidebar": "Oldalsáv kinyitása",
     "collapseSidebar": "Oldalsáv összecsukása",
     "closeMenu": "Menü bezárása",
@@ -657,7 +672,7 @@
     "avgWater": "Átlag víz",
     "latestWeight": "Legutóbbi testsúly",
     "streak": "Sorozat",
-    "sessionsLogged": "edzés rögzítve",
+    "streakDays": "napja folyamatosan naplózol",
     "noEntryYet": "Még nincs bejegyzés",
     "goal": "Cél: {value}",
     "workoutFallback": "Edzés",
@@ -683,6 +698,8 @@
     "editMealAria": "Étkezés szerkesztése",
     "duplicateMealAria": "Étkezés duplikálása",
     "removeMealAria": "Étkezés eltávolítása",
+    "removeMealConfirmTitle": "Eltávolítod az étkezést?",
+    "removeMealConfirmBody": "Az étkezés ({kcal} kcal, {count} tétel) törlődik erről a napról.",
     "mealDuplicated": "Étkezés duplikálva",
     "duplicateMealFailed": "Nem sikerült duplikálni az étkezést",
     "copyPreviousDay": "Korábbi nap másolása",
@@ -797,6 +814,8 @@
       "ingredients": "Hozzávalók",
       "addIngredientPlaceholder": "Hozzávaló hozzáadása…",
       "total": "Összesen",
+      "totalPerServingKcal": "{total} kcal · {perServing} / adag",
+      "totalPerServingProtein": "{total} g fehérje · {perServing} g / adag",
       "saveFailed": "Nem sikerült elmenteni a receptet",
       "deleted": "Recept törölve",
       "deleteFailed": "Nem sikerült törölni",
@@ -1015,6 +1034,7 @@
       "RUNNING": "Futás",
       "WALKING": "Séta",
       "HIKING": "Túrázás",
+      "CYCLING": "Kerékpározás",
       "INDOOR_BIKE": "Szobabicikli",
       "BASKETBALL": "Kosárlabda",
       "FOOTBALL": "Foci",
@@ -1130,6 +1150,7 @@
     "name": "Név",
     "email": "Email",
     "roles": "Szerepkörök",
+    "roleNames": { "ROLE_USER": "Felhasználó", "ROLE_TRAINER": "Edző", "ROLE_SUPER_ADMIN": "Rendszergazda" },
     "profileEditingSoon": "A profil szerkesztése még nem elérhető.",
     "onboardingNotDone": "Még nem fejezted be a bevezetőt.",
     "startOnboarding": "Bevezető indítása",

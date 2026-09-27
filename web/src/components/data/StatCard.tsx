@@ -1,3 +1,7 @@
+"use client";
+
+import { useFormat } from "@/lib/i18n/format";
+
 interface StatCardProps {
   label: string;
   value: string | number;
@@ -14,6 +18,7 @@ export function StatCard({
   label, value, unit, icon, color, ratio, goalReached, subtitle, onClick,
 }: StatCardProps) {
   const Tag = onClick ? "button" : "div";
+  const fmt = useFormat();
 
   return (
     <Tag
@@ -46,7 +51,7 @@ export function StatCard({
       <div>
         <div className="flex items-end gap-1">
           <span className="text-2xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
-            {typeof value === "number" ? value.toLocaleString() : value}
+            {typeof value === "number" ? fmt.number(value) : value}
           </span>
           {unit && (
             <span className="text-sm font-semibold mb-0.5" style={{ color: "var(--on-surface-variant)" }}>
