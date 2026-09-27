@@ -17,6 +17,7 @@ import { activityTypeColor, activityTypeIcon } from "@/features/workouts/activit
 import { buildCardioSummaryLine } from "@/features/workouts/cardioSummaryLine";
 import { UnassignButton } from "./UnassignButton";
 import type { ContentType } from "../types";
+import { useFormat } from "@/lib/i18n/format";
 
 const CONTENT_ICON: Record<ContentType, string> = { TEMPLATE: "fitness_center", RECIPE: "restaurant" };
 const DATE_LOCALES = { en: enUS, hu } as const;
@@ -29,6 +30,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
   const t = useTranslations("admin.clientDetail");
   const tw = useTranslations("workouts");
   const ta = useTranslations("workouts.activityTypes");
+  const fmt = useFormat();
   const locale = useLocale((s) => s.locale);
   const dateLocale = DATE_LOCALES[locale];
 
@@ -105,13 +107,13 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <KpiCard
           label={t("kpi.avgCalories")}
-          value={`${Math.round((statsQ.data?.totalCalories ?? 0) / 7).toLocaleString()} kcal`}
+          value={`${fmt.number(Math.round((statsQ.data?.totalCalories ?? 0) / 7))} kcal`}
           icon="local_fire_department"
           color="var(--metric-kcal)"
         />
         <KpiCard
           label={t("kpi.currentWeight")}
-          value={latestWeight ? `${latestWeight.weight.toFixed(1)} kg` : "—"}
+          value={latestWeight ? `${fmt.number(latestWeight.weight, 1, 1)} kg` : "—"}
           icon="monitor_weight"
           color="var(--metric-weight)"
           delta={weightDelta}
@@ -126,7 +128,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
         />
         <KpiCard
           label={t("kpi.avgSteps")}
-          value={avgSteps.toLocaleString()}
+          value={fmt.number(avgSteps)}
           icon="directions_walk"
           color="var(--metric-steps)"
         />
@@ -201,7 +203,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
                       <p className="text-[11px] mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
                         {isCardio
                           ? buildCardioSummaryLine(s, tw, locale)
-                          : t("sessionSummary", { count: s.exercises.length, volume: Math.round(volume).toLocaleString() })}
+                          : t("sessionSummary", { count: s.exercises.length, volume: fmt.number(Math.round(volume)) })}
                       </p>
                     </div>
                     {isCardio ? (

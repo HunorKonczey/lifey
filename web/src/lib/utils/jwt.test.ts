@@ -17,6 +17,13 @@ describe("decodeJwt", () => {
     expect(claims?.roles).toEqual(["ROLE_USER"]);
   });
 
+  it("decodes non-ASCII (UTF-8) claims without mojibake", () => {
+    const token = makeJwt({ sub: "7", email: "u@b.hu", firstName: "Új", lastName: "Felhasználó Őrsi-Ű", roles: [], exp: 1, iat: 0 });
+    const claims = decodeJwt(token);
+    expect(claims?.firstName).toBe("Új");
+    expect(claims?.lastName).toBe("Felhasználó Őrsi-Ű");
+  });
+
   it("returns null for malformed tokens", () => {
     expect(decodeJwt("not-a-jwt")).toBeNull();
     expect(decodeJwt("")).toBeNull();

@@ -12,12 +12,14 @@ import { useToast } from "@/lib/hooks/useToast";
 import { logTimestampFor } from "@/lib/utils/logTime";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useFormat } from "@/lib/i18n/format";
 
 const SEGMENTS = 10;
 const QUICK_AMOUNTS = [0.25, 0.5, 1.0];
 
 export default function WaterPage() {
   const t = useTranslations("water");
+  const fmt = useFormat();
   const nav = useTranslations("nav");
   const { date } = useDateStore();
   const queryClient = useQueryClient();
@@ -97,7 +99,7 @@ export default function WaterPage() {
   }
 
   if (entriesQ.isLoading || sourcesQ.isLoading) {
-    return <div className="flex gap-6"><Skeleton variant="card" className="flex-1 h-80" /><Skeleton variant="card" className="w-[300px] h-80" /></div>;
+    return <div className="flex flex-col lg:flex-row gap-6"><Skeleton variant="card" className="flex-1 h-80" /><Skeleton variant="card" className="w-full lg:w-[300px] h-80" /></div>;
   }
   if (entriesQ.isError) return <ErrorState onRetry={() => entriesQ.refetch()} />;
 
@@ -112,8 +114,8 @@ export default function WaterPage() {
         {/* Summary + quick add */}
         <div className="flex-1 min-w-0 flex flex-col gap-5 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
           <div className="flex items-end gap-2">
-            <span className="text-4xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>{total.toFixed(2)}</span>
-            <span className="text-base font-semibold mb-1.5" style={{ color: "var(--on-surface-variant)" }}>/ {goal.toFixed(1)} L</span>
+            <span className="text-4xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>{fmt.number(total, 2, 2)}</span>
+            <span className="text-base font-semibold mb-1.5" style={{ color: "var(--on-surface-variant)" }}>/ {fmt.number(goal, 1, 1)} L</span>
           </div>
 
           <div className="flex items-end gap-1.5">
@@ -184,7 +186,7 @@ export default function WaterPage() {
                     {e.sourceName ?? t("entryLabel")} · {format(new Date(e.consumedAt), "HH:mm")}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold tabular">{(e.volumeLiters * 1000).toFixed(0)} ml</span>
+                    <span className="text-sm font-semibold tabular">{fmt.number(e.volumeLiters * 1000, 0)} ml</span>
                     <button onClick={() => deleteEntry.mutate(e.id)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "var(--muted)" }}
                       aria-label={t("removeEntryAria")}>

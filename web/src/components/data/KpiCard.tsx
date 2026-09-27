@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useFormat } from "@/lib/i18n/format";
 
 interface KpiCardProps {
   label: string;
@@ -19,6 +20,7 @@ export function KpiCard({
   label, value, icon, color, delta, higherIsBetter = true, deltaUnit = "", subtitle,
 }: KpiCardProps) {
   const t = useTranslations("common");
+  const fmt = useFormat();
   const hasDelta = delta != null && delta !== 0;
   const good = delta != null && (higherIsBetter ? delta > 0 : delta < 0);
 
@@ -41,7 +43,7 @@ export function KpiCard({
             {delta! > 0 ? "trending_up" : "trending_down"}
           </span>
           <span className="tabular">
-            {delta! > 0 ? "+" : ""}{delta!.toLocaleString()}{deltaUnit} {t("vsPrevious")}
+            {delta! > 0 ? "+" : ""}{fmt.number(delta!)}{deltaUnit} {t("vsPrevious")}
           </span>
         </div>
       )}

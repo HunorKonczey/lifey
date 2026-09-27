@@ -15,6 +15,7 @@ export function activityFamilyOf(activityType: ActivityType): ActivityFamily {
     case "RUNNING":
     case "WALKING":
     case "HIKING":
+    case "CYCLING":
       return "DISTANCE";
     case "INDOOR_BIKE":
       return "MACHINE";
@@ -35,6 +36,7 @@ export function activityTypeIcon(code: ActivityType | "STRENGTH" | null | undefi
     case "RUNNING": return "directions_run";
     case "WALKING": return "directions_walk";
     case "HIKING": return "hiking";
+    case "CYCLING": return "directions_bike";
     case "INDOOR_BIKE": return "pedal_bike";
     case "BASKETBALL": return "sports_basketball";
     case "FOOTBALL": return "sports_soccer";
@@ -55,6 +57,9 @@ export function activityTypeColor(code: ActivityType | "STRENGTH" | null | undef
     case "RUNNING": return "var(--metric-kcal)";
     case "WALKING": return "var(--metric-steps)";
     case "HIKING": return "var(--tertiary)";
+    // Same as mobile (docs/cardio/62-cardio-cycling-plan.md §3): every metric
+    // colour is already claimed, so outdoor cycling takes the warm secondary.
+    case "CYCLING": return "var(--secondary)";
     case "INDOOR_BIKE": return "var(--metric-carbs)";
     case "BASKETBALL": return "var(--metric-fat)";
     case "FOOTBALL": return "var(--metric-water)";

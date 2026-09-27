@@ -29,6 +29,7 @@ import { Switch } from "@/components/ui/Switch";
 import { TimePicker } from "@/components/ui/TimePicker";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useValidationMessage } from "@/lib/i18n/useValidationMessage";
 import type {
   SettingsResponse, SettingsRequest, UnitSystem, ThemePreference, LanguagePreference,
 } from "@/features/settings/types";
@@ -48,6 +49,7 @@ const DEFAULT_QUIET_HOURS = { start: "22:00:00", end: "07:00:00" };
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
+  const vm = useValidationMessage();
   const d = useTranslations("dashboard");
   const queryClient = useQueryClient();
 
@@ -195,12 +197,14 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex gap-6">
-      {/* Sub-nav */}
-      <div className="w-[200px] shrink-0 flex flex-col gap-1">
+    // Stacks below md: side by side, the 200 px sub-nav squeezed the panel to
+    // ~150 px on a phone and cut off every field.
+    <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+      {/* Sub-nav — a horizontally scrolling chip row on small screens */}
+      <div className="md:w-[200px] md:shrink-0 flex md:flex-col gap-1 overflow-x-auto -mx-1 px-1 md:mx-0 md:px-0">
         {SECTIONS.map((s) => (
           <button key={s.value} onClick={() => setSection(s.value)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card)] text-left transition-colors"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card)] text-left transition-colors shrink-0 whitespace-nowrap"
             style={{
               background: section === s.value ? "var(--primary)" : "transparent",
               color: section === s.value ? "var(--bg)" : "var(--on-surface-variant)",
@@ -212,7 +216,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0 rounded-[var(--r-lg)] p-6" style={{ background: "var(--surface)" }}>
+      <div className="flex-1 min-w-0 rounded-[var(--r-lg)] p-4 md:p-6" style={{ background: "var(--surface)" }}>
         {section === "profile" && (
           <Panel title={t("profile")}>
             <AvatarUploader />
@@ -226,7 +230,9 @@ export default function SettingsPage() {
               <ReadonlyValue>{user?.email ?? "—"}</ReadonlyValue>
             </Field>
             <Field label={t("roles")}>
-              <ReadonlyValue>{user?.roles.join(", ") ?? "—"}</ReadonlyValue>
+              <ReadonlyValue>{user?.roles.length
+                ? user.roles.map((r) => (t.has(`roleNames.${r}`) ? t(`roleNames.${r}`) : r)).join(", ")
+                : "—"}</ReadonlyValue>
             </Field>
 
             <hr style={{ borderColor: "var(--outline)" }} />
@@ -409,7 +415,7 @@ export default function SettingsPage() {
                     style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
                   />
                   {passwordErrors[field] && (
-                    <p className="text-xs" style={{ color: "var(--error)" }}>{passwordErrors[field]?.message}</p>
+                    <p className="text-xs" style={{ color: "var(--error)" }}>{vm(passwordErrors[field]?.message)}</p>
                   )}
                 </Field>
               ))}

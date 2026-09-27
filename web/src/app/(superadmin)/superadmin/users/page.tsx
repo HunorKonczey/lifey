@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { superAdminApi } from "@/features/superadmin/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
@@ -12,6 +11,7 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 import { UserAvatar } from "@/features/superadmin/components/UserAvatar";
 import type { SuperAdminUserResponse } from "@/features/superadmin/types";
+import { useFormat } from "@/lib/i18n/format";
 
 const PAGE_SIZE = 20;
 
@@ -47,6 +47,7 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 function AuditHistory({ userId }: { userId: number }) {
+  const fmt = useFormat();
   const t = useTranslations("superadmin");
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.superAdminUsers.roleAudit(userId),
@@ -68,7 +69,7 @@ function AuditHistory({ userId }: { userId: number }) {
         data.map((entry) => (
           <div key={entry.id} className="flex items-center gap-2.5 text-xs">
             <span className="font-mono" style={{ color: "var(--on-surface-variant)" }}>
-              {format(new Date(entry.createdAt), "yyyy-MM-dd HH:mm")}
+              {fmt.date(entry.createdAt, "dateTime")}
             </span>
             <span className="font-bold" style={{ color: "var(--on-surface)" }}>
               {entry.action} {entry.role}

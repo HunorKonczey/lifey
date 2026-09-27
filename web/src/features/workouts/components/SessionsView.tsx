@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations, useLocale } from "next-intl";
-import { format } from "date-fns";
 import { workoutSessionApi, templateApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
@@ -17,6 +16,7 @@ import { ActivityChip } from "./ActivityChip";
 import { recommendedTemplate } from "../recommendation";
 import { buildCardioSummaryLine } from "../cardioSummaryLine";
 import type { WorkoutSessionResponse } from "../types";
+import { useFormat } from "@/lib/i18n/format";
 
 export function SessionsView({
   autoStartTemplateId,
@@ -32,6 +32,7 @@ export function SessionsView({
   const d = useTranslations("dashboard");
   const common = useTranslations("common");
   const locale = useLocale();
+  const fmt = useFormat();
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -224,12 +225,12 @@ export function SessionsView({
             </div>
             {isCardio ? (
               <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-                {format(new Date(session.startedAt), "MMM d, HH:mm")}
+                {fmt.date(session.startedAt, "dayTime")}
                 {summaryLine && ` · ${summaryLine}`}
               </p>
             ) : (
               <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-                {format(new Date(session.startedAt), "MMM d, HH:mm")}
+                {fmt.date(session.startedAt, "dayTime")}
                 {duration != null && ` · ${duration} ${d("minutes")}`}
                 {session.sets.length > 0 && ` · ${session.sets.length} ${t("sets").toLowerCase()}`}
                 {session.averageHeartRate != null && ` · ${t("bpmAvg", { value: Math.round(session.averageHeartRate) })}`}

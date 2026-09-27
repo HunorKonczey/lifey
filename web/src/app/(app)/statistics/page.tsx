@@ -22,6 +22,7 @@ import type { WeightResponse } from "@/features/weight/types";
 import type { WaterEntryResponse } from "@/features/water/types";
 import type { DailyStepCountResponse } from "@/features/steps/types";
 import type { WorkoutSessionResponse } from "@/features/workouts/types";
+import { DATE_LOCALES, useFormat } from "@/lib/i18n/format";
 
 type Range = "WEEK" | "MONTH" | "YEAR";
 
@@ -38,6 +39,8 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 export default function StatisticsPage() {
   const t = useTranslations("statistics");
+  const fmt = useFormat();
+  const locale = fmt.locale;
   const [range, setRange] = useState<Range>("WEEK");
   const [kindFilter, setKindFilter] = useState<StatKindFilter>("ALL");
 
@@ -79,17 +82,18 @@ export default function StatisticsPage() {
 
   const { current, previous } = useMemo(() => {
     const days = RANGE_DAYS[range];
-    const label = range === "WEEK" ? "EEE" : "MMM d";
+    const label = range === "WEEK" ? "EEE" : locale === "hu" ? "MMM d." : "MMM d";
+    const dateLocale = DATE_LOCALES[locale];
     const now = new Date();
     const curStart = startOfDay(subDays(now, days - 1));
     const curEnd = endOfDay(now);
     const prevStart = startOfDay(subDays(now, days * 2 - 1));
     const prevEnd = endOfDay(subDays(now, days));
     return {
-      current: aggregate(raw, curStart, curEnd, label, kindFilter),
-      previous: aggregate(raw, prevStart, prevEnd, label, kindFilter),
+      current: aggregate(raw, curStart, curEnd, label, kindFilter, dateLocale),
+      previous: aggregate(raw, prevStart, prevEnd, label, kindFilter, dateLocale),
     };
-  }, [raw, range, kindFilter]);
+  }, [raw, range, kindFilter, locale]);
 
   const exportCsv = () => {
     const rows = [["date", "calories", "protein", "water_l", "steps", "volume"]];
@@ -137,6 +141,10 @@ export default function StatisticsPage() {
       body={t("logToSeeStats")} />;
   }
 
+  // A delta against an empty previous period ("+1659 vs previous" when there
+  // was nothing to compare with) is noise, not information — hide it.
+  const deltaVs = (cur: number, prev: number) => (prev === 0 ? null : cur - prev);
+
   const weightDeltaPrev =
     current.weightChange != null && previous.weightChange != null
       ? Number((current.weightChange - previous.weightChange).toFixed(1))
@@ -158,21 +166,23 @@ export default function StatisticsPage() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label={t("avgCalories")} value={current.avgCalories.toLocaleString()} icon="local_fire_department"
-          color="var(--metric-kcal)" delta={current.avgCalories - previous.avgCalories} higherIsBetter={false} />
+        <KpiCard label={t("avgCalories")} value={fmt.number(current.avgCalories)} icon="local_fire_department"
+          color="var(--metric-kcal)" delta={deltaVs(current.avgCalories, previous.avgCalories)} higherIsBetter={false} />
         <KpiCard label={t("workouts")} value={String(current.workoutCount)} icon="exercise"
-          color="var(--tertiary)" delta={current.workoutCount - previous.workoutCount} higherIsBetter
+          color="var(--tertiary)" delta={deltaVs(current.workoutCount, previous.workoutCount)} higherIsBetter
           subtitle={t("workoutsBreakdown", { strength: current.strengthWorkoutCount, cardio: current.cardioWorkoutCount })} />
-        <KpiCard label={t("weight")} value={current.latestWeight != null ? `${current.latestWeight.toFixed(1)} kg` : "—"}
+        <KpiCard label={t("weight")} value={current.latestWeight != null ? `${fmt.number(current.latestWeight, 1, 1)} kg` : "—"}
           icon="monitor_weight" color="var(--metric-weight)" delta={weightDeltaPrev} higherIsBetter={false} deltaUnit=" kg" />
-        <KpiCard label={t("trainingVolume")} value={`${Math.round(current.totalVolume).toLocaleString()} kg`} icon="fitness_center"
-          color="var(--metric-protein)" delta={Math.round(current.totalVolume - previous.totalVolume)} higherIsBetter deltaUnit=" kg" />
+        <KpiCard label={t("trainingVolume")} value={`${fmt.number(Math.round(current.totalVolume))} kg`} icon="fitness_center"
+          color="var(--metric-protein)" delta={previous.totalVolume === 0 ? null : Math.round(current.totalVolume - previous.totalVolume)} higherIsBetter deltaUnit=" kg" />
       </div>
 
       {/* Chart grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title={t("calories")}>
-          <TimeSeriesChart data={current.caloriesSeries} color="var(--metric-kcal)" unit=" kcal" />
+          {/* Days without a single logged meal are missing data, not 0 kcal — plotting
+              them as 0 drew a months-long flat line in the year view. */}
+          <TimeSeriesChart data={current.caloriesSeries.filter((p) => p.value > 0)} color="var(--metric-kcal)" unit=" kcal" />
         </ChartCard>
 
         <ChartCard title={t("weight")}>

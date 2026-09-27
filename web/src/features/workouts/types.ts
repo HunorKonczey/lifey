@@ -17,7 +17,7 @@ export const SESSION_KINDS = ["STRENGTH", "CARDIO"] as const;
 export type SessionKind = (typeof SESSION_KINDS)[number];
 
 export const ACTIVITY_TYPES = [
-  "RUNNING", "WALKING", "HIKING", "INDOOR_BIKE", "BASKETBALL", "FOOTBALL", "OTHER_CARDIO",
+  "RUNNING", "WALKING", "HIKING", "CYCLING", "INDOOR_BIKE", "BASKETBALL", "FOOTBALL", "OTHER_CARDIO",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

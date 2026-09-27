@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { useCheckoutConfirmation, useEntitlements, type CheckoutConfirmationStatus } from "@/features/billing/hooks";
 import { consumePendingCheckoutPlan } from "@/features/billing/checkoutPoll";
 import { billingApi } from "@/features/billing/api";
@@ -16,6 +15,7 @@ import { trainerApi } from "@/features/trainer/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
+import { useFormat } from "@/lib/i18n/format";
 
 const PILL_STYLES: Record<StatusPillTone, { background: string; color: string }> = {
   trial: { background: "var(--tertiary-container)", color: "var(--on-tertiary-container)" },
@@ -36,6 +36,7 @@ const PLAN_NAME_KEYS = { STARTER: "planStarter", PRO: "planPro", STUDIO: "planSt
  * the new plan once the fetched response actually confirms it.
  */
 export default function AdminBillingPage() {
+  const fmt = useFormat();
   const t = useTranslations("admin.billing");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -137,13 +138,13 @@ export default function AdminBillingPage() {
               // by actually checking this in a browser against the real (disabled-
               // by-default) local backend, not from the type-checker or a unit test.
               <p className="text-xs mt-1.5" style={{ color: "var(--on-surface-variant)" }}>
-                {t("trialEndsOn", { date: format(new Date(trainer.trialEndsAt), "yyyy-MM-dd") })}
+                {t("trialEndsOn", { date: fmt.date(trainer.trialEndsAt, "dayYear") })}
               </p>
             ) : (
               trainer.status !== "TRIALING" &&
               entitlement.expiresAt && (
                 <p className="text-xs mt-1.5" style={{ color: "var(--on-surface-variant)" }}>
-                  {t("renewsOn", { date: format(new Date(entitlement.expiresAt), "yyyy-MM-dd") })}
+                  {t("renewsOn", { date: fmt.date(entitlement.expiresAt, "dayYear") })}
                 </p>
               )
             )}

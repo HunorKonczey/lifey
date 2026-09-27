@@ -7,7 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { enUS, hu } from "date-fns/locale";
 import { Sparkline } from "@/components/data/Sparkline";
 import { useLocale } from "@/lib/hooks/useLocale";
-import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { ComplianceBadges } from "./ComplianceBadges";
 import type { TrainerClientResponse } from "../types";
 
@@ -42,7 +42,7 @@ export function ClientCard({ client, onRevoke, revoking, overLimit }: ClientCard
           <ClientAvatar clientId={client.clientId} email={client.clientEmail} />
           <div className="flex-1 min-w-0">
             <p className="text-[15.5px] font-extrabold truncate" style={{ color: "var(--on-surface)" }}>
-              {nameFor(client.clientEmail)}
+              {clientDisplayName(client)}
             </p>
             <p className="text-[11.5px] mt-0.5 truncate" style={{ color: "var(--on-surface-variant)" }}>
               {t("clientSince", {
@@ -142,7 +142,7 @@ export function ClientCard({ client, onRevoke, revoking, overLimit }: ClientCard
               {t("endRelationshipConfirmTitle")}
             </p>
             <p className="text-[12.5px] leading-relaxed mb-5" style={{ color: "var(--on-surface-variant)" }}>
-              {t("endRelationshipConfirmBody", { name: nameFor(client.clientEmail) })}
+              {t("endRelationshipConfirmBody", { name: clientDisplayName(client) })}
             </p>
             <div className="flex gap-2.5 justify-end">
               <button
@@ -181,10 +181,10 @@ export function ClientCard({ client, onRevoke, revoking, overLimit }: ClientCard
             style={{ background: "var(--surface-container)", boxShadow: "0 18px 44px rgba(0,0,0,.4)" }}
           >
             <p className="text-base font-extrabold mb-2" style={{ color: "var(--on-surface)" }}>
-              {t("archiveClientConfirmTitle", { name: nameFor(client.clientEmail) })}
+              {t("archiveClientConfirmTitle", { name: clientDisplayName(client) })}
             </p>
             <p className="text-[12.5px] leading-relaxed mb-5" style={{ color: "var(--on-surface-variant)" }}>
-              {t("archiveClientConfirmBody", { name: nameFor(client.clientEmail) })}
+              {t("archiveClientConfirmBody", { name: clientDisplayName(client) })}
             </p>
             <div className="flex gap-2.5 justify-end">
               <button

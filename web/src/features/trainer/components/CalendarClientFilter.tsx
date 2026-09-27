@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import type { TrainerClientResponse } from "../types";
 
 interface CalendarClientFilterProps {
@@ -90,7 +90,7 @@ export function CalendarClientFilter({ clients, deselectedClientIds, onToggleCli
                 <Checkbox checked={checked} />
                 <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={26} />
                 <span className="flex-1 text-[13px] font-semibold text-left truncate" style={{ color: "var(--on-surface)" }}>
-                  {nameFor(c.clientEmail)}
+                  {clientDisplayName(c)}
                 </span>
               </button>
             );

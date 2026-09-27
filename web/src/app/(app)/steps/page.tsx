@@ -11,9 +11,11 @@ import { useDateStore } from "@/lib/hooks/useDateStore";
 import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useFormat } from "@/lib/i18n/format";
 
 export default function StepsPage() {
   const t = useTranslations("steps");
+  const fmt = useFormat();
   const nav = useTranslations("nav");
   const common = useTranslations("common");
   const { date } = useDateStore();
@@ -50,7 +52,7 @@ export default function StepsPage() {
   const bars = days.map((d) => {
     const key = format(d, "yyyy-MM-dd");
     const steps = byDate.get(key)?.steps ?? 0;
-    return { key, label: format(d, "EEE"), steps, isSelected: key === dateStr };
+    return { key, label: fmt.date(d, "weekday"), steps, isSelected: key === dateStr };
   });
   const maxSteps = Math.max(goal, ...bars.map((b) => b.steps), 1);
 
@@ -69,12 +71,12 @@ export default function StepsPage() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-              {dateStr === format(new Date(), "yyyy-MM-dd") ? common("today") : format(date, "MMM d")}
+              {dateStr === format(new Date(), "yyyy-MM-dd") ? common("today") : fmt.date(date, "day")}
             </p>
             <p className="text-4xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
-              {(todayEntry?.steps ?? 0).toLocaleString()}
+              {fmt.number(todayEntry?.steps ?? 0)}
             </p>
-            <p className="text-xs tabular mt-1" style={{ color: "var(--muted)" }}>{t("goal", { value: goal.toLocaleString() })}</p>
+            <p className="text-xs tabular mt-1" style={{ color: "var(--muted)" }}>{t("goal", { value: fmt.number(goal) })}</p>
           </div>
           {!editing ? (
             <button onClick={() => { setEditing(true); setValue(String(todayEntry?.steps ?? "")); }}
@@ -114,7 +116,7 @@ export default function StepsPage() {
             return (
               <div key={b.key} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
                 <span className="text-xs tabular font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-                  {b.steps > 0 ? (b.steps >= 1000 ? `${(b.steps / 1000).toFixed(1)}k` : b.steps) : ""}
+                  {b.steps > 0 ? (b.steps >= 1000 ? `${fmt.number(b.steps / 1000, 1)}k` : b.steps) : ""}
                 </span>
                 <div className="w-full rounded-t-[var(--r-sm)] transition-all duration-[var(--dur-base)]"
                   style={{

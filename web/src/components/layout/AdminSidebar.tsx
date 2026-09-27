@@ -14,6 +14,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Switch } from "@/components/ui/Switch";
 import { useUnreadTotal } from "@/features/chat/hooks";
 import { unreadBadgeLabel } from "@/features/chat/thread";
+import { SignOutButton } from "./SignOutButton";
 
 const NAV_ITEMS = [
   { href: "/admin", icon: "group", key: "clients" },
@@ -244,15 +245,7 @@ export function AdminSidebar() {
                   {admin("chip")}
                 </p>
               </div>
-              <button
-                onClick={logout}
-                className="p-1 rounded-[var(--r-sm)] transition-colors shrink-0"
-                style={{ color: "var(--on-surface-variant)" }}
-                aria-label={common("signOut")}
-                title={common("signOut")}
-              >
-                <span className="material-symbols-rounded text-xl">logout</span>
-              </button>
+              <SignOutButton onSignOut={logout} className="shrink-0" />
             </div>
           )}
         </div>

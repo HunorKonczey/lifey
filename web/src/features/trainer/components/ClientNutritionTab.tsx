@@ -15,6 +15,7 @@ import { useLocale } from "@/lib/hooks/useLocale";
 import { useToast } from "@/lib/hooks/useToast";
 import type { MealResponse, MealType } from "@/features/nutrition/types";
 import type { ClientNutritionGoalsResponse } from "../types";
+import { useFormat } from "@/lib/i18n/format";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
 
@@ -49,11 +50,11 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
 
   if (mealsQ.isLoading || goalsQ.isLoading) {
     return (
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 flex flex-col gap-3">
           {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}
         </div>
-        <Skeleton variant="card" className="w-[300px] h-80" />
+        <Skeleton variant="card" className="w-full lg:w-[300px] h-80" />
       </div>
     );
   }
@@ -97,7 +98,7 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
         </button>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Meal groups */}
         <div className="flex-1 min-w-0 flex flex-col gap-6">
           {MEAL_GROUPS.map(({ type, label, icon }) => {
@@ -131,7 +132,7 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
         </div>
 
         {/* Daily summary sticky panel */}
-        <div className="w-[300px] shrink-0">
+        <div className="w-full lg:w-[300px] lg:shrink-0 order-first lg:order-none">
           <NutritionGoalsPanel
             clientId={clientId}
             goals={goals}
@@ -171,6 +172,7 @@ function NutritionGoalsPanel({
   const n = useTranslations("nutrition");
   const d = useTranslations("dashboard");
   const common = useTranslations("common");
+  const fmt = useFormat();
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [editing, setEditing] = useState(false);
@@ -252,11 +254,11 @@ function NutritionGoalsPanel({
         <>
           <div className="flex items-end gap-2 mb-1">
             <span className="text-3xl font-extrabold tabular">
-              {Math.round(totalKcal).toLocaleString()}
+              {fmt.number(Math.round(totalKcal))}
             </span>
             {goals?.dailyCalorieGoal != null && (
               <span className="text-sm font-semibold mb-1" style={{ color: "var(--on-surface-variant)" }}>
-                / {goals.dailyCalorieGoal.toLocaleString()} kcal
+                / {fmt.number(goals.dailyCalorieGoal)} kcal
               </span>
             )}
           </div>

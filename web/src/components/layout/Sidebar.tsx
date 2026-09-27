@@ -9,6 +9,7 @@ import { useUiStore } from "@/lib/hooks/useUiStore";
 import { useEffect, useState } from "react";
 import { avatarApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { SignOutButton } from "./SignOutButton";
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: "dashboard", key: "dashboard" },
@@ -209,15 +210,7 @@ export function Sidebar() {
                 </p>
                 <p className="text-xs truncate" style={{ color: "var(--muted)" }}>{user.email}</p>
               </div>
-              <button
-                onClick={logout}
-                className="p-1 rounded-[var(--r-sm)] transition-colors"
-                style={{ color: "var(--on-surface-variant)" }}
-                aria-label={common("signOut")}
-                title={common("signOut")}
-              >
-                <span className="material-symbols-rounded text-xl">logout</span>
-              </button>
+              <SignOutButton onSignOut={logout} />
             </div>
           )}
         </div>

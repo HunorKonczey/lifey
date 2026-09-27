@@ -17,10 +17,12 @@ import { AddMealEntryDialog } from "./AddMealEntryDialog";
 import { MealCard, mealKcal, mealProtein } from "./MealCard";
 import { computeRemainingBudget, isOver, remainingOf } from "../budget";
 import type { MealResponse, MealType } from "../types";
+import { useFormat } from "@/lib/i18n/format";
 
 export function MealsView() {
   const t = useTranslations("nutrition");
   const d = useTranslations("dashboard");
+  const fmt = useFormat();
   const { date } = useDateStore();
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -29,6 +31,8 @@ export function MealsView() {
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
   const [editingMeal, setEditingMeal] = useState<MealResponse | null>(null);
   const [copyingPreviousDay, setCopyingPreviousDay] = useState(false);
+  // Deleting used to fire on the first click with no way back (docs/redesign/web-redesign-prompt.md).
+  const [removingMeal, setRemovingMeal] = useState<MealResponse | null>(null);
 
   const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
     { type: "BREAKFAST", label: t("breakfast"), icon: "bakery_dining" },
@@ -55,6 +59,7 @@ export function MealsView() {
       show(t("mealRemoved"), "success");
     },
     onError: () => show(t("removeFailed"), "error"),
+    onSettled: () => setRemovingMeal(null),
   });
 
   const duplicateMutation = useMutation({
@@ -102,11 +107,11 @@ export function MealsView() {
 
   if (isLoading) {
     return (
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 flex flex-col gap-3">
           {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}
         </div>
-        <Skeleton variant="card" className="w-[300px] h-80" />
+        <Skeleton variant="card" className="w-full lg:w-[300px] h-80" />
       </div>
     );
   }
@@ -114,7 +119,9 @@ export function MealsView() {
   if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
-    <div className="flex gap-6">
+    // Stacks below lg — side by side, the fixed 300 px summary left the meal
+    // column a few pixels wide on a phone.
+    <div className="flex flex-col lg:flex-row gap-6">
       {/* Meal groups */}
       <div className="flex-1 min-w-0 flex flex-col gap-6">
         {MEAL_GROUPS.map(({ type, label, icon }) => {
@@ -146,7 +153,7 @@ export function MealsView() {
                   meal={meal}
                   onEdit={() => setEditingMeal(meal)}
                   onDuplicate={() => duplicateMutation.mutate(meal)}
-                  onDelete={() => deleteMutation.mutate(meal.id)}
+                  onDelete={() => setRemovingMeal(meal)}
                   isDeleting={deleteMutation.isPending && deleteMutation.variables === meal.id}
                 />
               ))}
@@ -181,8 +188,8 @@ export function MealsView() {
       </div>
 
       {/* Daily summary sticky panel */}
-      <div className="w-[300px] shrink-0">
-        <div className="sticky top-6 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
+      <div className="w-full lg:w-[300px] lg:shrink-0 order-first lg:order-none">
+        <div className="lg:sticky lg:top-6 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
           <p className="text-sm font-bold mb-4">{t("dailySummary")}</p>
 
           {/* Prominent "what's left today" line — hidden metric-by-metric
@@ -214,11 +221,11 @@ export function MealsView() {
 
           <div className="flex items-end gap-2 mb-1">
             <span className="text-3xl font-extrabold tabular">
-              {Math.round(totalKcal).toLocaleString()}
+              {fmt.number(Math.round(totalKcal))}
             </span>
             {budget.calories.goal != null ? (
               <span className="text-sm font-semibold mb-1" style={{ color: "var(--on-surface-variant)" }}>
-                / {budget.calories.goal.toLocaleString()} kcal
+                / {fmt.number(budget.calories.goal)} kcal
               </span>
             ) : (
               <span className="text-sm mb-1" style={{ color: "var(--on-surface-variant)" }}>kcal</span>
@@ -297,12 +304,25 @@ export function MealsView() {
         body={t("copyPreviousDayConfirmBody", {
           count: previousDayMeals.length,
           kcal: Math.round(previousDayKcal),
-          date: format(subDays(date, 1), "MMM d"),
+          date: fmt.date(subDays(date, 1), "day"),
         })}
         confirmLabel={t("copyPreviousDay")}
         confirming={copyMealsMutation.isPending}
         onConfirm={() => copyMealsMutation.mutate(previousDayMeals)}
         onCancel={() => setCopyingPreviousDay(false)}
+      />
+
+      <ConfirmDialog
+        open={removingMeal != null}
+        title={t("removeMealConfirmTitle")}
+        body={removingMeal ? t("removeMealConfirmBody", {
+          kcal: Math.round(removingMeal.entries.reduce((sum, e) => sum + e.calories, 0)),
+          count: removingMeal.entries.length,
+        }) : ""}
+        confirmLabel={t("removeMealAria")}
+        confirming={deleteMutation.isPending}
+        onConfirm={() => removingMeal && deleteMutation.mutate(removingMeal.id)}
+        onCancel={() => setRemovingMeal(null)}
       />
     </div>
   );

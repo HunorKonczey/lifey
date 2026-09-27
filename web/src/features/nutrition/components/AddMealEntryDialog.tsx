@@ -13,6 +13,7 @@ import { normalizeForSearch } from "@/lib/utils/search";
 import { computeFoodUsage, rankFoodsByUsage, recentFoodsByUsage, type FoodUsage } from "../usage";
 import { isOver, remainingOf, type BudgetMetric } from "../budget";
 import type { MealType, FoodResponse, MealResponse } from "../types";
+import { useFormat } from "@/lib/i18n/format";
 
 interface AddMealEntryDialogProps {
   /** The meal type to log under — fixed when opened from a meal section, the
@@ -56,6 +57,7 @@ function draftItemsFromMeal(meal: MealResponse): DraftItem[] {
 
 export function AddMealEntryDialog({ mealType, date, onClose, meal, initialFood }: AddMealEntryDialogProps) {
   const t = useTranslations("nutrition.addMealDialog");
+  const fmt = useFormat();
   const n = useTranslations("nutrition");
   const common = useTranslations("common");
   const queryClient = useQueryClient();
@@ -202,7 +204,7 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal, initialFood 
   };
   // From the Foods tab the day comes from the top bar, not a section the
   // user just clicked — name it when it isn't today (docs/75 §2.8).
-  const dateSuffix = showTypePicker && !isTodayDate ? ` · ${format(date, "MMM d")}` : "";
+  const dateSuffix = showTypePicker && !isTodayDate ? ` · ${fmt.date(date, "day")}` : "";
 
   return (
     <div
@@ -279,7 +281,7 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal, initialFood 
               <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-[var(--r-md)]"
                 style={{ background: "var(--surface-container)" }}>
                 <span className="flex-1 min-w-0 text-sm font-semibold truncate">{it.foodName}</span>
-                <input type="number" min={1} value={it.quantityInGrams}
+                <input type="number" min={1} value={Math.round(it.quantityInGrams * 10) / 10}
                   onChange={(e) => updateGrams(idx, Math.max(1, Number(e.target.value)))}
                   className="w-16 px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
                   style={{ background: "var(--surface)", border: "1px solid var(--outline)" }} />

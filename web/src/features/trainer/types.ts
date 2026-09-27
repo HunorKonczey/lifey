@@ -17,6 +17,9 @@ export interface WeightTrendPoint {
 export interface TrainerClientResponse {
   clientId: number;
   clientEmail: string;
+  /** Null when the client never filled in their profile. */
+  clientFirstName: string | null;
+  clientLastName: string | null;
   activeSince: string;
   weightTrend: WeightTrendPoint[];
   assignedPlanCount: number;

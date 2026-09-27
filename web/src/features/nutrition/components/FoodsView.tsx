@@ -16,6 +16,7 @@ import { AddMealEntryDialog } from "./AddMealEntryDialog";
 import { defaultMealType } from "../mealTypeDefault";
 import type { FoodResponse, MealType } from "../types";
 import type { FoodFormValues } from "../schemas";
+import { useFormat } from "@/lib/i18n/format";
 
 const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -32,6 +33,7 @@ const SORT_FIELDS: Record<string, string> = {
 
 export function FoodsView() {
   const t = useTranslations("nutrition.foodsView");
+  const fmt = useFormat();
   const n = useTranslations("nutrition");
   const { show } = useToast();
   const { date } = useDateStore();
@@ -136,17 +138,17 @@ export function FoodsView() {
     {
       key: "protein", header: t("colProtein"), sortable: true, align: "right", color: "var(--metric-protein)",
       sortValue: (f) => f.proteinPer100g,
-      render: (f) => `${+f.proteinPer100g.toFixed(1)}g`,
+      render: (f) => `${fmt.number(f.proteinPer100g)}g`,
     },
     {
       key: "carbs", header: t("colCarbs"), sortable: true, align: "right", color: "var(--metric-carbs)",
       sortValue: (f) => f.carbsPer100g ?? 0,
-      render: (f) => (f.carbsPer100g != null ? `${+f.carbsPer100g.toFixed(1)}g` : "—"),
+      render: (f) => (f.carbsPer100g != null ? `${fmt.number(f.carbsPer100g)}g` : "—"),
     },
     {
       key: "fat", header: t("colFat"), sortable: true, align: "right", color: "var(--metric-fat)",
       sortValue: (f) => f.fatPer100g ?? 0,
-      render: (f) => (f.fatPer100g != null ? `${+f.fatPer100g.toFixed(1)}g` : "—"),
+      render: (f) => (f.fatPer100g != null ? `${fmt.number(f.fatPer100g)}g` : "—"),
     },
     {
       key: "actions", header: "", align: "right",
@@ -169,7 +171,7 @@ export function FoodsView() {
   const showEditor = creating || selected !== null;
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0 flex flex-col gap-4">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3">
@@ -253,7 +255,7 @@ export function FoodsView() {
 
       {/* Editor panel */}
       {showEditor && (
-        <div className="w-[340px] shrink-0">
+        <div className="w-full lg:w-[340px] lg:shrink-0">
           <FoodEditor
             food={selected}
             prefill={creating ? prefill : undefined}

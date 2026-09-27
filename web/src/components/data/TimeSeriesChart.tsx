@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormat } from "@/lib/i18n/format";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
   Tooltip, ReferenceLine, CartesianGrid,
@@ -23,10 +24,11 @@ export function TimeSeriesChart({
   data, color, goalLine, goalLabel, height = 240, unit = "",
 }: TimeSeriesChartProps) {
   const gradientId = `grad-${color.replace(/[^a-z0-9]/gi, "")}`;
+  const fmt = useFormat();
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.35} />
@@ -46,10 +48,15 @@ export function TimeSeriesChart({
           tick={{ fill: "var(--muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
-          width={44}
+          // Sized to the widest tick — a fixed 44 px (plus the old negative
+          // left margin) clipped 4-digit values ("1900" rendered as "900").
+          width="auto"
+          tickFormatter={(v: number) => fmt.number(v)}
           domain={["auto", "auto"]}
         />
         <Tooltip
+          // The series has no name, so the default ": " separator rendered as a stray leading colon.
+          separator=""
           contentStyle={{
             background: "var(--surface-high)",
             border: "1px solid var(--outline)",
@@ -57,7 +64,7 @@ export function TimeSeriesChart({
             fontSize: 12,
           }}
           labelStyle={{ color: "var(--on-surface-variant)" }}
-          formatter={(v) => [`${typeof v === "number" ? +v.toFixed(2) : v}${unit}`, ""] as [string, string]}
+          formatter={(v) => [`${typeof v === "number" ? fmt.number(v, 2) : v}${unit}`, ""] as [string, string]}
         />
         {goalLine != null && (
           <ReferenceLine

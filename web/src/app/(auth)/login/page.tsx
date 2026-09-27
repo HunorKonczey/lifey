@@ -10,9 +10,11 @@ import { authApi } from "@/features/auth/api";
 import { useSessionStore } from "@/features/auth/store";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { ApiError } from "@/lib/api/client";
+import { useValidationMessage } from "@/lib/i18n/useValidationMessage";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const vm = useValidationMessage();
   const router = useRouter();
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
 
@@ -31,8 +33,11 @@ export default function LoginPage() {
       applyAccessToken(res.accessToken, res.refreshToken);
       router.push("/dashboard");
     } catch (err) {
+      // 401 is always bad credentials; the backend's English text must not reach a Hungarian UI.
       const message =
-        err instanceof ApiError ? err.message : t("unexpectedError");
+        err instanceof ApiError
+          ? err.status === 401 ? t("invalidCredentials") : err.message
+          : t("unexpectedError");
       setError("password", { message });
     }
   };
@@ -74,7 +79,7 @@ export default function LoginPage() {
             />
           </div>
           {errors.email && (
-            <p className="text-xs" style={{ color: "var(--error)" }}>{errors.email.message}</p>
+            <p className="text-xs" style={{ color: "var(--error)" }}>{vm(errors.email.message)}</p>
           )}
         </div>
 
@@ -98,7 +103,7 @@ export default function LoginPage() {
             />
           </div>
           {errors.password && (
-            <p className="text-xs" style={{ color: "var(--error)" }}>{errors.password.message}</p>
+            <p className="text-xs" style={{ color: "var(--error)" }}>{vm(errors.password.message)}</p>
           )}
         </div>
 

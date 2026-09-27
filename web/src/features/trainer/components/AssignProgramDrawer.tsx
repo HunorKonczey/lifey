@@ -11,9 +11,10 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
-import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { nextOrSameMonday, isValidProgramStartDate, programEndDate } from "../program";
 import { format } from "date-fns";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 
 interface AssignProgramDrawerProps {
   /* Client-detail entry point: the client is fixed, the trainer picks a program. */
@@ -30,6 +31,7 @@ export function AssignProgramDrawer({
   programId: fixedProgramId, programName: fixedProgramName,
   onClose,
 }: AssignProgramDrawerProps) {
+  useEscapeKey(onClose);
   const t = useTranslations("admin.programs");
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -62,10 +64,10 @@ export function AssignProgramDrawer({
   );
   const filteredClients = (clientsQ.data ?? []).filter((c) =>
     c.clientEmail.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    nameFor(c.clientEmail).toLowerCase().includes(clientSearch.toLowerCase()),
+    clientDisplayName(c).toLowerCase().includes(clientSearch.toLowerCase()),
   );
 
-  const clientName = fixedClientName ?? nameFor(clientsQ.data?.find((c) => c.clientId === selectedClientId)?.clientEmail ?? "");
+  const clientName = fixedClientName ?? (() => { const sel = clientsQ.data?.find((c) => c.clientId === selectedClientId); return sel ? clientDisplayName(sel) : ""; })();
 
   const startValid = isValidProgramStartDate(startDate);
   const minStartDate = new Date(`${format(nextOrSameMonday(new Date()), "yyyy-MM-dd")}T00:00:00`);
@@ -111,7 +113,7 @@ export function AssignProgramDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-program-drawer">
+    <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-program-drawer" role="dialog" aria-modal="true">
       <div className="absolute inset-0" style={{ background: "rgba(8,9,6,.45)" }} onClick={onClose} />
       <div
         className="relative w-full max-w-[420px] h-full flex flex-col gap-4 p-5.5 overflow-y-auto"
@@ -232,7 +234,7 @@ export function AssignProgramDrawer({
                     >
                       <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={32} />
                       <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                        {nameFor(c.clientEmail)}
+                        {clientDisplayName(c)}
                       </span>
                       {selected && (
                         <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>

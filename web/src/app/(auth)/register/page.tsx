@@ -13,6 +13,7 @@ import { useSessionStore } from "@/features/auth/store";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { ApiError } from "@/lib/api/client";
 import { extractAttribution, readAttributionCookie } from "@/lib/attribution";
+import { useValidationMessage } from "@/lib/i18n/useValidationMessage";
 
 /** A relative, same-origin path only — guards against an open-redirect via `?next=`. */
 function safeNextPath(value: string | null): string | null {
@@ -30,6 +31,7 @@ export default function RegisterPage() {
 
 function RegisterForm() {
   const t = useTranslations("auth");
+  const vm = useValidationMessage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
@@ -98,8 +100,8 @@ function RegisterForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         {(
           [
-            { field: "firstName", label: t("firstName"), type: "text", icon: "person", placeholder: "Jane", autoComplete: "given-name" },
-            { field: "lastName", label: t("lastName"), type: "text", icon: "person", placeholder: "Doe", autoComplete: "family-name" },
+            { field: "firstName", label: t("firstName"), type: "text", icon: "person", placeholder: t("firstNamePlaceholder"), autoComplete: "given-name" },
+            { field: "lastName", label: t("lastName"), type: "text", icon: "person", placeholder: t("lastNamePlaceholder"), autoComplete: "family-name" },
             { field: "email", label: t("email"), type: "email", icon: "mail", placeholder: "you@example.com", autoComplete: "email" },
             { field: "password", label: t("password"), type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
             { field: "confirmPassword", label: t("confirmPassword"), type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
@@ -122,7 +124,7 @@ function RegisterForm() {
               />
             </div>
             {errors[field] && (
-              <p className="text-xs" style={{ color: "var(--error)" }}>{errors[field]?.message}</p>
+              <p className="text-xs" style={{ color: "var(--error)" }}>{vm(errors[field]?.message)}</p>
             )}
           </div>
         ))}

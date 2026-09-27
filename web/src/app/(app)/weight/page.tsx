@@ -13,6 +13,8 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import type { WeightResponse } from "@/features/weight/types";
+import { useFormat } from "@/lib/i18n/format";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 type Range = "1M" | "3M" | "1Y";
 
@@ -25,6 +27,7 @@ function rangeStart(range: Range): Date {
 
 export default function WeightPage() {
   const t = useTranslations("weight");
+  const fmt = useFormat();
   const nav = useTranslations("nav");
   const common = useTranslations("common");
   const queryClient = useQueryClient();
@@ -69,7 +72,7 @@ export default function WeightPage() {
   const start = rangeStart(range);
   const chartData: SeriesPoint[] = sorted
     .filter((w) => new Date(w.date) >= start)
-    .map((w) => ({ date: format(new Date(w.date), "MMM d"), value: w.weight }));
+    .map((w) => ({ date: fmt.date(w.date, "day"), value: w.weight }));
 
   // History newest-first with delta vs previous chronological entry
   const history = sorted.slice().reverse();
@@ -92,10 +95,7 @@ export default function WeightPage() {
         <div className="flex flex-wrap items-end gap-3 p-4 rounded-[var(--r-card)]" style={{ background: "var(--surface)" }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("date")}</label>
-            <input type="date" value={newDate} max={format(new Date(), "yyyy-MM-dd")}
-              onChange={(e) => setNewDate(e.target.value)}
-              className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
-              style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
+            <DatePicker value={newDate} onChange={setNewDate} max={new Date()} />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("weightKg")}</label>
@@ -113,9 +113,9 @@ export default function WeightPage() {
       )}
 
       {isLoading ? (
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           <Skeleton variant="chart" className="flex-1" />
-          <Skeleton variant="card" className="w-[300px] h-72" />
+          <Skeleton variant="card" className="w-full lg:w-[300px] h-72" />
         </div>
       ) : isError ? (
         <ErrorState onRetry={refetch} />
@@ -130,7 +130,7 @@ export default function WeightPage() {
               <div>
                 <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("current")}</p>
                 <p className="text-3xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
-                  {latest?.weight.toFixed(1)} <span className="text-base" style={{ color: "var(--on-surface-variant)" }}>kg</span>
+                  {latest != null && fmt.number(latest.weight, 1, 1)} <span className="text-base" style={{ color: "var(--on-surface-variant)" }}>kg</span>
                 </p>
               </div>
               <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} size="sm" />
@@ -154,14 +154,14 @@ export default function WeightPage() {
                   <div key={w.id} className="flex items-center justify-between py-2 group"
                     style={{ borderBottom: "1px solid var(--outline)" }}>
                     <span className="text-sm tabular" style={{ color: "var(--on-surface-variant)" }}>
-                      {format(new Date(w.date), "MMM d, yyyy")}
+                      {fmt.date(w.date, "dayYear")}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold tabular">{w.weight.toFixed(1)} kg</span>
+                      <span className="text-sm font-semibold tabular">{fmt.number(w.weight, 1, 1)} kg</span>
                       {delta != null && delta !== 0 && (
                         <span className="text-xs tabular font-semibold"
                           style={{ color: delta < 0 ? "var(--goal-positive)" : "var(--goal-negative)" }}>
-                          {delta > 0 ? "+" : ""}{delta.toFixed(1)}
+                          {delta > 0 ? "+" : ""}{fmt.number(delta, 1, 1)}
                         </span>
                       )}
                       <button onClick={() => deleteMutation.mutate(w.id)}

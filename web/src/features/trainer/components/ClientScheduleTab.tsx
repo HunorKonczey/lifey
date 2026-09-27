@@ -18,11 +18,13 @@ import { nameFor } from "./ClientAvatar";
 interface ClientScheduleTabProps {
   clientId: number;
   clientEmail: string;
+  /** Profile name when known; falls back to one derived from the email. */
+  clientName?: string;
   onOpenDrawer: () => void;
   onViewSession: (sessionId: number) => void;
 }
 
-export function ClientScheduleTab({ clientId, clientEmail, onOpenDrawer, onViewSession }: ClientScheduleTabProps) {
+export function ClientScheduleTab({ clientId, clientEmail, clientName, onOpenDrawer, onViewSession }: ClientScheduleTabProps) {
   const t = useTranslations("admin.schedule");
   const tPrograms = useTranslations("admin.programs");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -127,7 +129,7 @@ export function ClientScheduleTab({ clientId, clientEmail, onOpenDrawer, onViewS
       {assignDrawerOpen && (
         <AssignProgramDrawer
           clientId={clientId}
-          clientName={nameFor(clientEmail)}
+          clientName={clientName ?? nameFor(clientEmail)}
           onClose={() => setAssignDrawerOpen(false)}
         />
       )}

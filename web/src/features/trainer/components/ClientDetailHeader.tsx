@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { enUS, hu } from "date-fns/locale";
-import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { useLocale } from "@/lib/hooks/useLocale";
 import { useToast } from "@/lib/hooks/useToast";
 import { chatApi } from "@/features/chat/api";
@@ -51,22 +51,24 @@ export function ClientDetailHeader({ client, tab, onTabChange, onScheduleWorkout
   return (
     <div className="flex flex-col gap-3.5">
       <div
-        className="flex items-center gap-4 rounded-[var(--r-card)] px-5 py-4"
+        // Wraps on narrow screens — one unbreakable row pushed the name and the
+        // action buttons off-screen on a phone.
+        className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[var(--r-card)] px-4 md:px-5 py-4"
         style={{ background: "var(--surface-high)" }}
       >
         <Link href="/admin" style={{ color: "var(--on-surface-variant)" }}>
           <span className="material-symbols-rounded text-2xl">arrow_back</span>
         </Link>
         <ClientAvatar clientId={client.clientId} email={client.clientEmail} size={48} />
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-[140px]">
           <p className="text-lg font-extrabold tracking-tight truncate" style={{ color: "var(--on-surface)" }}>
-            {nameFor(client.clientEmail)}
+            {clientDisplayName(client)}
           </p>
           <p className="text-xs mt-0.5 truncate" style={{ color: "var(--on-surface-variant)" }}>
             {client.clientEmail}
           </p>
         </div>
-        <span className="text-[11.5px] font-semibold whitespace-nowrap" style={{ color: "var(--muted)" }}>
+        <span className="hidden lg:inline text-[11.5px] font-semibold whitespace-nowrap" style={{ color: "var(--muted)" }}>
           {t("relationshipSince", {
             date: format(new Date(client.activeSince), "yyyy. MMM d.", { locale: dateLocale }),
           })}
@@ -100,14 +102,14 @@ export function ClientDetailHeader({ client, tab, onTabChange, onScheduleWorkout
         )}
       </div>
 
-      <div className="flex rounded-[var(--r-pill)] p-1 w-fit" style={{ background: "var(--surface)" }}>
+      <div className="flex rounded-[var(--r-pill)] p-1 w-fit max-w-full overflow-x-auto" style={{ background: "var(--surface)" }}>
         {TABS.map(({ key, icon }) => {
           const active = tab === key;
           return (
             <button
               key={key}
               onClick={() => onTabChange(key)}
-              className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[13px] font-bold px-5 py-2.5 transition-colors"
+              className="flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-[var(--r-pill)] text-[13px] font-bold px-4 md:px-5 py-2.5 transition-colors"
               style={{ background: active ? "var(--tertiary)" : "transparent", color: active ? "var(--bg)" : "var(--on-surface-variant)" }}
             >
               <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>

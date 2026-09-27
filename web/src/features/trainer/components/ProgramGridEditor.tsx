@@ -243,7 +243,7 @@ function WeekRow({ week, weeksCount, workouts, templateName, onCellClick, onDupl
                   {templateName(slot.templateId)}
                 </span>
                 {slot.timeOfDay && (
-                  <span className="text-[10px]" style={{ color: "var(--on-surface-variant)" }}>{slot.timeOfDay}</span>
+                  <span className="text-[10px]" style={{ color: "var(--on-surface-variant)" }}>{slot.timeOfDay.slice(0, 5)}</span>
                 )}
               </>
             ) : (

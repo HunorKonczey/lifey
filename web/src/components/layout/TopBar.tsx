@@ -6,6 +6,7 @@ import { useDateStore } from "@/lib/hooks/useDateStore";
 import { useUiStore } from "@/lib/hooks/useUiStore";
 import { ThemeToggle } from "./ThemeToggle";
 import { format, addDays, subDays } from "date-fns";
+import { useFormat } from "@/lib/i18n/format";
 
 const PAGE_TITLE_KEYS: Record<string, string> = {
   "/dashboard": "dashboard",
@@ -20,6 +21,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
 
 export function TopBar() {
   const t = useTranslations("nav");
+  const fmt = useFormat();
   const common = useTranslations("common");
   const pathname = usePathname();
   const { date, setDate } = useDateStore();
@@ -72,7 +74,7 @@ export function TopBar() {
             color: isToday ? "var(--bg)" : "var(--on-surface)",
           }}
         >
-          {isToday ? common("today") : format(date, "MMM d")}
+          {isToday ? common("today") : fmt.date(date, "day")}
         </button>
 
         <button

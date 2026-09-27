@@ -77,7 +77,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-3.5">
       <div
-        className="flex items-center justify-between rounded-[var(--r-card)] h-[62px] px-3.5 pl-5.5"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--r-card)] min-h-[62px] py-2.5 px-3.5 pl-5.5"
         style={{ background: "var(--surface-high)" }}
       >
         <div>
@@ -92,14 +92,15 @@ export default function AdminDashboardPage() {
           {clients && clients.length > 1 && <ClientSortSelect value={sort} onChange={updateSort} />}
           <Link
             href="/admin/invites"
+            aria-label={t("inviteClient")}
             className="flex items-center gap-2 rounded-2xl px-4 py-2.5 text-[13px] font-extrabold"
             style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-[19px]">person_add</span>
-            {t("inviteClient")}
+            <span className="hidden sm:inline">{t("inviteClient")}</span>
           </Link>
           <div
-            className="w-[42px] h-[42px] rounded-2xl flex items-center justify-center text-[15px] font-extrabold"
+            className="hidden sm:flex w-[42px] h-[42px] rounded-2xl items-center justify-center text-[15px] font-extrabold"
             style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             {user?.email.charAt(0).toUpperCase()}

@@ -15,7 +15,7 @@ import { ClientNutritionTab } from "@/features/trainer/components/ClientNutritio
 import { ClientWorkoutsTab } from "@/features/trainer/components/ClientWorkoutsTab";
 import { ClientScheduleTab } from "@/features/trainer/components/ClientScheduleTab";
 import { ScheduleWorkoutDrawer } from "@/features/trainer/components/ScheduleWorkoutDrawer";
-import { nameFor } from "@/features/trainer/components/ClientAvatar";
+import { clientDisplayName } from "@/features/trainer/components/ClientAvatar";
 import { Skeleton } from "@/components/status/Skeleton";
 
 interface ClientDetailPageProps {
@@ -123,6 +123,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
         <ClientScheduleTab
           clientId={clientId}
           clientEmail={client.clientEmail}
+          clientName={clientDisplayName(client)}
           onOpenDrawer={() => setScheduleDrawerOpen(true)}
           onViewSession={(sessionId) => {
             setFocusSessionId(sessionId);
@@ -133,7 +134,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
       {scheduleDrawerOpen && (
         <ScheduleWorkoutDrawer
           clientId={clientId}
-          clientName={nameFor(client.clientEmail)}
+          clientName={clientDisplayName(client)}
           onClose={() => setScheduleDrawerOpen(false)}
         />
       )}

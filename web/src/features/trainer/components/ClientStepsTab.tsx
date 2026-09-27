@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useLocale } from "@/lib/hooks/useLocale";
+import { useFormat } from "@/lib/i18n/format";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
 
@@ -20,6 +21,7 @@ interface ClientStepsTabProps {
 
 export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
   const t = useTranslations("admin.clientDetail");
+  const fmt = useFormat();
   const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
 
   const stepsQ = useQuery({
@@ -53,7 +55,7 @@ export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
                 {format(new Date(s.date), "MMM d, yyyy", { locale: dateLocale })}
               </span>
               <span className="text-sm font-semibold tabular" style={{ color: "var(--on-surface)" }}>
-                {s.steps.toLocaleString()}
+                {fmt.number(s.steps)}
               </span>
             </div>
           ))}

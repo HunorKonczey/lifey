@@ -1,4 +1,4 @@
-import { format, eachDayOfInterval } from "date-fns";
+import { format, eachDayOfInterval, type Locale as DateFnsLocale } from "date-fns";
 import type { MealResponse } from "@/features/nutrition/types";
 import type { WeightResponse } from "@/features/weight/types";
 import type { WaterEntryResponse } from "@/features/water/types";
@@ -63,8 +63,11 @@ export function aggregate(
   end: Date,
   label = "MMM d",
   kindFilter: StatKindFilter = "ALL",
+  /** date-fns locale for the axis labels — without it they are English ("Mon", "Sep 26") on the Hungarian UI. */
+  locale?: DateFnsLocale,
 ): AggregatedStats {
   const days = eachDayOfInterval({ start, end });
+  const fmtLabel = (d: Date) => format(d, label, { locale });
   const inRange = (d: Date | string) => {
     const t = new Date(d).getTime();
     return t >= start.getTime() && t <= end.getTime() + 86_399_999; // include end day
@@ -126,7 +129,7 @@ export function aggregate(
     days.map((d) => {
       const k = dayKey(d);
       const v = bucket.get(k) ?? 0;
-      return { date: format(d, label), value: round ? Math.round(v) : Number(v.toFixed(2)) };
+      return { date: fmtLabel(d), value: round ? Math.round(v) : Number(v.toFixed(2)) };
     });
 
   const caloriesSeries = mkSeries(cal);
@@ -134,20 +137,20 @@ export function aggregate(
   const waterSeries = mkSeries(wat, false);
   const volumeSeries = mkSeries(vol);
   const stepsSeries: SeriesPoint[] = days.map((d) => ({
-    date: format(d, label),
+    date: fmtLabel(d),
     value: stepByDate.get(dayKey(d)) ?? 0,
   }));
 
   // Weight: only actual logged points within range (sparse)
   const weightSeries: SeriesPoint[] = days
     .filter((d) => weightByDate.has(dayKey(d)))
-    .map((d) => ({ date: format(d, label), value: weightByDate.get(dayKey(d))! }));
+    .map((d) => ({ date: fmtLabel(d), value: weightByDate.get(dayKey(d))! }));
 
   // Cardio distance: only actual days with distance (sparse, D-C3.5 — a
   // dayless-of-running week is missing data, not a 0.00 km point).
   const cardioDistanceSeries: SeriesPoint[] = days
     .filter((d) => cardioDist.has(dayKey(d)))
-    .map((d) => ({ date: format(d, label), value: Number(cardioDist.get(dayKey(d))!.toFixed(2)) }));
+    .map((d) => ({ date: fmtLabel(d), value: Number(cardioDist.get(dayKey(d))!.toFixed(2)) }));
 
   // KPIs
   const calDays = caloriesSeries.filter((p) => p.value > 0);

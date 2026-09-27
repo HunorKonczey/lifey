@@ -1,4 +1,14 @@
 {
+  "validation": {
+    "emailInvalid": "Enter a valid email address",
+    "passwordMin": "Password must be at least 8 characters",
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "passwordsMismatch": "Passwords do not match",
+    "codeInvalid": "Enter the 6-digit code",
+    "required": "Required",
+    "passwordSameAsCurrent": "New password must be different from the current password"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "nutrition": "Nutrition",
@@ -591,7 +601,10 @@
     "resetSuccess": "Password reset — you can now sign in.",
     "backToLogin": "Back to sign in",
     "orContinueWith": "or continue with",
-    "googleSignInFailed": "Google sign-in failed. Please try again."
+    "googleSignInFailed": "Google sign-in failed. Please try again.",
+    "invalidCredentials": "Invalid email or password",
+    "firstNamePlaceholder": "Jane",
+    "lastNamePlaceholder": "Doe"
   },
   "common": {
     "today": "Today",
@@ -619,6 +632,8 @@
     "close": "Close",
     "remove": "Remove",
     "signOut": "Sign out",
+    "signOutConfirmTitle": "Sign out?",
+    "signOutConfirmBody": "You'll need to sign in again to continue.",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "closeMenu": "Close menu",
@@ -657,7 +672,7 @@
     "avgWater": "Avg water",
     "latestWeight": "Latest weight",
     "streak": "Streak",
-    "sessionsLogged": "sessions logged",
+    "streakDays": "{count, plural, one {day in a row logged} other {days in a row logged}}",
     "noEntryYet": "No entry yet",
     "goal": "Goal: {value}",
     "workoutFallback": "Workout",
@@ -683,6 +698,8 @@
     "editMealAria": "Edit meal",
     "duplicateMealAria": "Duplicate meal",
     "removeMealAria": "Remove meal",
+    "removeMealConfirmTitle": "Remove this meal?",
+    "removeMealConfirmBody": "The meal ({kcal} kcal, {count, plural, one {# item} other {# items}}) will be removed from this day.",
     "mealDuplicated": "Meal duplicated",
     "duplicateMealFailed": "Failed to duplicate meal",
     "copyPreviousDay": "Copy previous day",
@@ -797,6 +814,8 @@
       "ingredients": "Ingredients",
       "addIngredientPlaceholder": "Add ingredient…",
       "total": "Total",
+      "totalPerServingKcal": "{total} kcal · {perServing} / serving",
+      "totalPerServingProtein": "{total}g protein · {perServing}g / serving",
       "saveFailed": "Failed to save recipe",
       "deleted": "Recipe deleted",
       "deleteFailed": "Failed to delete",
@@ -1015,6 +1034,7 @@
       "RUNNING": "Running",
       "WALKING": "Walking",
       "HIKING": "Hiking",
+      "CYCLING": "Cycling",
       "INDOOR_BIKE": "Indoor bike",
       "BASKETBALL": "Basketball",
       "FOOTBALL": "Football",
@@ -1130,6 +1150,7 @@
     "name": "Name",
     "email": "Email",
     "roles": "Roles",
+    "roleNames": { "ROLE_USER": "User", "ROLE_TRAINER": "Trainer", "ROLE_SUPER_ADMIN": "Super admin" },
     "profileEditingSoon": "Profile editing is not available yet.",
     "onboardingNotDone": "You haven't completed onboarding yet.",
     "startOnboarding": "Start onboarding",

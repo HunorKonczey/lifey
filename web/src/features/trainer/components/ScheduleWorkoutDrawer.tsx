@@ -15,8 +15,9 @@ import { TimePicker } from "@/components/ui/TimePicker";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
-import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { DAYS_OF_WEEK, type DayOfWeek, type Recurrence } from "../types";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 
 const JS_DAY_INDEX: Record<DayOfWeek, number> = {
   MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6, SUNDAY: 0,
@@ -54,6 +55,7 @@ export function ScheduleWorkoutDrawer({
   initialStartDate,
   onClose,
 }: ScheduleWorkoutDrawerProps) {
+  useEscapeKey(onClose);
   const t = useTranslations("admin.schedule");
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -90,13 +92,13 @@ export function ScheduleWorkoutDrawer({
   );
   const filteredClients = (clientsQ.data ?? []).filter((c) =>
     c.clientEmail.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    nameFor(c.clientEmail).toLowerCase().includes(clientSearch.toLowerCase()),
+    clientDisplayName(c).toLowerCase().includes(clientSearch.toLowerCase()),
   );
   const alreadyAssigned =
     templateId != null && selectedClientId != null && (assignedClientIdsQ.data ?? []).includes(selectedClientId);
 
   const clientName =
-    fixedClientName ?? nameFor(clientsQ.data?.find((c) => c.clientId === selectedClientId)?.clientEmail ?? "");
+    fixedClientName ?? (() => { const sel = clientsQ.data?.find((c) => c.clientId === selectedClientId); return sel ? clientDisplayName(sel) : ""; })();
 
   const maxEndDate = useMemo(() => addMonths(new Date(`${startDate || todayIso()}T00:00:00`), 3), [startDate]);
   const minDate = useMemo(() => new Date(`${todayIso()}T00:00:00`), []);
@@ -160,7 +162,7 @@ export function ScheduleWorkoutDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" data-testid="schedule-workout-drawer">
+    <div className="fixed inset-0 z-50 flex justify-end" data-testid="schedule-workout-drawer" role="dialog" aria-modal="true">
       <div className="absolute inset-0" style={{ background: "rgba(8,9,6,.45)" }} onClick={onClose} />
       <div
         className="relative w-full max-w-[420px] h-full flex flex-col gap-4 p-5.5 overflow-y-auto"
@@ -287,7 +289,7 @@ export function ScheduleWorkoutDrawer({
                     >
                       <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={32} />
                       <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                        {nameFor(c.clientEmail)}
+                        {clientDisplayName(c)}
                       </span>
                       {selected && (
                         <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>
