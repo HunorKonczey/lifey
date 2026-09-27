@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { contrastRatio, hexContrastRatio, parseHex, relativeLuminance, tintOver } from "./contrast";
+import { contrastRatio, hexContrastRatio, parseCssColor, parseHex, relativeLuminance, tintOver } from "./contrast";
 
 const AA = 4.5;
 
@@ -22,6 +22,17 @@ describe("contrastRatio", () => {
   });
   it("is symmetric", () => {
     expect(hexContrastRatio("#12130E", "#F2F1E6")).toBeCloseTo(hexContrastRatio("#F2F1E6", "#12130E"), 5);
+  });
+});
+
+describe("parseCssColor", () => {
+  it("parses rgb() and rgba(), as getComputedStyle normalizes hex/color-mix to", () => {
+    expect(parseCssColor("rgb(26, 28, 21)")).toEqual({ r: 26, g: 28, b: 21 });
+    expect(parseCssColor("rgba(26, 28, 21, 0.5)")).toEqual({ r: 26, g: 28, b: 21 });
+  });
+
+  it("still parses a raw hex string", () => {
+    expect(parseCssColor("#1A1C15")).toEqual(parseHex("#1A1C15"));
   });
 });
 

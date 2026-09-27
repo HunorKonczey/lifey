@@ -157,6 +157,27 @@
   }
 }
 
+/* Same overrides, forced by a class rather than the OS setting — lets the
+   dev design gallery (W0.5) preview reduced motion without changing the
+   host machine's accessibility settings. A plain rule, not a media query, so
+   it can be toggled at runtime. */
+:root[data-force-reduced-motion="true"] {
+  --dur-fast: 0ms;
+  --dur-base: 0ms;
+  --dur-slow: 0ms;
+  --dur-hover: 0ms;
+  --dur-menu: 0ms;
+  --dur-menu-out: 0ms;
+  --dur-modal: 0ms;
+  --dur-toast: 0ms;
+  --dur-drawer: 0ms;
+  --dur-sheet: 0ms;
+  --dur-count: 0ms;
+  --dur-fill: 0ms;
+  --dur-celebrate: 0ms;
+  --stagger: 0ms;
+}
+
 /* ─── v2 design tokens — light (D-W0.4) ─── */
 [data-theme="light"] {
   --bg:       #F4F2E9;

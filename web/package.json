@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "check:js-budget": "node scripts/check-js-budget.mjs",
     "lhci": "lhci autorun",
-    "test:e2e:marketing": "playwright test --project=marketing"
+    "test:e2e:marketing": "playwright test --project=marketing",
+    "test:e2e:ds": "playwright test --project=ds"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

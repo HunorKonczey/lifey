@@ -1,0 +1,24 @@
+import { ColorSection } from "./sections/ColorSection";
+import { TypeSection } from "./sections/TypeSection";
+import { TokensSection } from "./sections/TokensSection";
+import { MotionSection } from "./sections/MotionSection";
+import { IconsSection } from "./sections/IconsSection";
+import { FormattingSection } from "./sections/FormattingSection";
+
+export interface GallerySection {
+  id: string;
+  title: string;
+  Component: React.ComponentType;
+}
+
+/** The gallery page (`/dev/design`, D-W0.12) renders these in order. Each
+ *  later W0 step (fields, overlays, table, charts…) adds its own entry here
+ *  rather than growing one of the existing sections. */
+export const GALLERY_SECTIONS: GallerySection[] = [
+  { id: "color", title: "Colour", Component: ColorSection },
+  { id: "type", title: "Type", Component: TypeSection },
+  { id: "tokens", title: "Radius, spacing, elevation", Component: TokensSection },
+  { id: "motion", title: "Motion", Component: MotionSection },
+  { id: "icons", title: "Icons", Component: IconsSection },
+  { id: "formatting", title: "Formatting", Component: FormattingSection },
+];

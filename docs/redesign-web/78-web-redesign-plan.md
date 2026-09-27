@@ -739,7 +739,7 @@ breakfast`…) — those differ in exact wording from the D-W0.8 examples (the n
 "Kliens" per the plan's "Kliens · Edző · Superadmin"; the existing `superadmin.roleNames.ROLE_USER` says
 "Felhasználó") and migrating each call site off the old ones is each feature's own job, not this step's.
 
-### W0.5 — Web UI: dev design gallery skeleton + the `ds` Playwright project
+### W0.5 — Web UI: dev design gallery skeleton + the `ds` Playwright project ✅
 - Files: `app/(dev)/dev/design/page.tsx` (+ `layout.tsx` with `Providers`), `src/components/ds/gallery/*`
   (section registry), `playwright.config.ts` (project `ds`, `testDir: ./e2e/ds`), `e2e/ds/gallery.spec.ts`,
   `.github/workflows/web-ci.yml` (run `--project=ds` next to `marketing`).
@@ -749,6 +749,23 @@ breakfast`…) — those differ in exact wording from the D-W0.8 examples (the n
 - `notFound()` in production builds (test: `next build && next start`, `/dev/design` → 404).
 - **Verify:** `npx playwright test --project=ds` green locally and in CI; axe zero serious/critical in both
   themes.
+
+*As built:* sections so far are colour (live contrast ratios via a new `parseCssColor`, reading actual
+computed `:root` values through a `useCssVar` hook + `MutationObserver` on `data-theme` — not a hard-coded
+palette table, so it can't drift from `globals.css`), type, radius/spacing/elevation, motion (a replayable
+fill bar per duration), icons (`Icon` at FILL 0/1 and five weights) and formatting (every `lifeyFormat`/
+`useFormat` function against real output). Fields/date-picker/overlays/table/charts sections are added by
+their own steps (W0.9–W0.19), not stubbed here. `--heart` has no defined "on-heart" foreground in D-W0.4 —
+it's a text/icon colour, not a fill — so the colour section shows it that way (text on card, like every
+other metric) rather than as a filled swatch that axe correctly flagged at 2.48:1. The type-scale demo
+stacks the utility name above the sample instead of side by side: at 72px a single Hungarian word can be
+wider than the 390px gallery column even after wrapping, so competing for horizontal room was never going
+to work — this is a gallery layout choice, not a `type-display-xl` bug. Added `--force-reduced-motion`
+(a plain rule beside the `@media` block) plus `setForcedReducedMotion()`/a same-tab event so the toolbar's
+toggle drives both CSS transitions and `useReducedMotion()` consumers (from W0.6 on) without touching the
+OS setting. Verified the production 404 by hand (`next build`; `.next/server/app/dev/design.meta` reports
+`"status": 404`) rather than through Playwright, since the `ds` project's `webServer` is `next dev`
+(`NODE_ENV=development`) same as every other e2e project here.
 
 ### W0.6 — Web UI: motion primitives
 - Files: `src/components/ds/AnimatedNumber.tsx`, `AnimatedFill.tsx` (drives rings and bars),

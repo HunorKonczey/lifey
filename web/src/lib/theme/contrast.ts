@@ -62,3 +62,16 @@ export function contrastRatio(foreground: Rgb, background: Rgb): number {
 export function hexContrastRatio(foreground: string, background: string): number {
   return contrastRatio(parseHex(foreground), parseHex(background));
 }
+
+/** Parses whatever `getComputedStyle` hands back for a CSS colour —
+ * `rgb(r, g, b)` / `rgba(r, g, b, a)` (what a browser normalizes hex and
+ * `color-mix()` values to) or a raw hex string. Used by the design gallery's
+ * live contrast swatches (W0.5), which read actual computed values rather
+ * than a hard-coded palette table. */
+export function parseCssColor(value: string): Rgb {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("#")) return parseHex(trimmed);
+  const match = trimmed.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+  if (!match) throw new Error(`Unrecognized CSS colour: ${value}`);
+  return { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]) };
+}

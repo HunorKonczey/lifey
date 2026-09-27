@@ -76,3 +76,13 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1
           NEXT_TELEMETRY_DISABLED: "1"
+
+      # docs/redesign-web/78-web-redesign-plan.md D-W0.12 — the dev design
+      # gallery's own Playwright project. No backend needed (fixture data),
+      # same reason `marketing` can run here: keyboard behaviour, axe in both
+      # themes, no horizontal scroll at 390px.
+      - name: Design gallery e2e + accessibility
+        run: npm run test:e2e:ds
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1
+          NEXT_TELEMETRY_DISABLED: "1"
