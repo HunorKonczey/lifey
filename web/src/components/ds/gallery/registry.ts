@@ -8,6 +8,7 @@ import { CardsSection } from "./sections/CardsSection";
 import { ChipsAvatarsSection } from "./sections/ChipsAvatarsSection";
 import { ControlsSection } from "./sections/ControlsSection";
 import { FieldsSection } from "./sections/FieldsSection";
+import { DatePickerSection } from "./sections/DatePickerSection";
 
 export interface GallerySection {
   id: string;
@@ -28,5 +29,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "chips-avatars", title: "Chips & avatars", Component: ChipsAvatarsSection },
   { id: "controls", title: "Controls", Component: ControlsSection },
   { id: "fields", title: "Fields", Component: FieldsSection },
+  { id: "date-picker", title: "Date picker", Component: DatePickerSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

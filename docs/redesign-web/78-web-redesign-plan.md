@@ -895,7 +895,7 @@ unlayered and always outrank a Tailwind utility on the same property regardless 
 (`.lifey-field-autoheight`) rather than a Tailwind utility; noted for every later step, since it'll recur
 for any component overriding this file's own classes.
 
-### W0.10 — Web UI: date picker, two modes; no native date input anywhere
+### W0.10 — Web UI: date picker, two modes; no native date input anywhere ✅
 - Files: `src/components/ds/date/CalendarPopover.tsx` (month grid Monday-first, today filled primary,
   selected ring, dots = "has data" via a prop, future days muted/disabled by prop, ←/→/↑/↓/PageUp/PageDown
   keyboard), `src/components/ds/date/DateFields.tsx` (typed segments in locale order — HU year · month ·
@@ -904,6 +904,20 @@ for any component overriding this file's own classes.
 - Replaces `components/ui/DatePicker.tsx` / `TimePicker.tsx` at their call sites in each owning
   iteration; grep `type="date"` / `type="time"` and list the call sites in the commit (`client-020`).
 - **Verify:** `e2e/ds/date.spec.ts` (keyboard, disabled future, typed HU and EN order); gallery.
+
+*As built:* the grid needed a real ARIA row structure axe caught immediately — `role="grid"` requires
+`role="row"` children with `role="gridcell"` nested inside them, not 42 gridcells as direct children.
+Fixed with a `display: contents` row wrapper per week: it satisfies the ARIA tree without breaking the
+`grid-cols-7` CSS layout, which needs the cells as direct grid-item children to place correctly. axe also
+caught the muted (out-of-month/disabled) day styling: `opacity: 0.35` dims the background along with the
+text, and the resulting contrast fell under AA in both themes — switched to a plain `color: var(--text-3)`
+(already verified ≥ 4.5:1 on every surface) instead of fading. Keyboard model is a separate "focused
+cursor" from the committed selection (arrows move `focusedDate`, Enter/Space calls `onChange`) rather than
+selecting on every arrow press — the more common date-grid pattern, and it means `disableFuture` only has
+to guard the one commit path. `DateFields`' per-segment `aria-label` includes the field's own label
+("Birth date – month") rather than just the segment name: an `aria-label` always wins over an associated
+`<label>` for the accessible name, so the bare segment name alone would have made every date field's first
+input impossible to distinguish from another by screen reader users.
 
 ### W0.11 — Web UI: popover, menu and row "⋯" menu
 - Files: `src/lib/a11y/{useAnchoredPosition,useDismiss,useRovingFocus,useFocusReturn}.ts`,
