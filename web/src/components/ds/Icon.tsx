@@ -17,18 +17,21 @@ export interface IconProps {
   size?: number;
   /** Variable-font weight, 100–700. Default 400. */
   weight?: number;
+  /** A CSS colour — omit to inherit `color` from the surrounding text. */
+  color?: string;
   className?: string;
   /** Set only when the icon alone conveys meaning (no visible label beside it). */
   label?: string;
 }
 
-export function Icon({ name, fill = 0, size = 24, weight = 400, className, label }: IconProps) {
+export function Icon({ name, fill = 0, size = 24, weight = 400, color, className, label }: IconProps) {
   return (
     <span
       className={["material-symbols-rounded select-none", className].filter(Boolean).join(" ")}
       style={{
         fontSize: size,
         lineHeight: 1,
+        color,
         fontVariationSettings: `'FILL' ${fill}, 'wght' ${weight}, 'GRAD' 0, 'opsz' ${size}`,
       }}
       aria-hidden={label ? undefined : true}

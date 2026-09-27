@@ -49,7 +49,18 @@ export interface AvatarProps {
 }
 
 export function Avatar({ name, email, size = 44, color, src, roleRing, className }: AvatarProps) {
-  const bg = color ? `color-mix(in srgb, ${color} 16%, var(--bg))` : "var(--primary-tint)";
+  // --chip-tint (16% dark / 12% light, D-W0.4) blended toward transparent,
+  // not var(--bg) — mobile's MonogramAvatar blends toward its scaffold
+  // background specifically (Color.alphaBlend(bg, p.bg)), but ported
+  // literally that under-contrasts on the web: a hard-coded 16% regardless
+  // of theme first (axe: 4.2:1), and even corrected to 12% in light, still
+  // 4.44:1 against bare --bg (axe again) because --bg itself is a warmer,
+  // darker cream than mobile's equivalent. Blending toward transparent lets
+  // the avatar composite against whatever it actually sits on — every real
+  // placement (row, header, card) clears AA at 12%/16% this way (verified
+  // for all eight metrics), where a fixed target color can't account for
+  // where the avatar ends up in a wider page.
+  const bg = color ? `color-mix(in srgb, ${color} var(--chip-tint), transparent)` : "var(--primary-tint)";
   const fg = color ?? "var(--on-primary-tint)";
   const initials = initialsFor(name, email);
   const label = name ?? email ?? undefined;

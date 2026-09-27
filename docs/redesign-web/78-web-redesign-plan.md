@@ -822,7 +822,7 @@ convention) — verified byte-for-byte against `mobile/lib/shared/widgets/ds/mon
 algorithm, including the exact hashing (`codeUnits`/`charCodeAt` agree for the BMP), so the same seed
 produces the same colour on both clients.
 
-### W0.8 — Web UI: buttons, icon buttons, tooltip, segmented control, tabs, switch, choice tile, focus ring
+### W0.8 — Web UI: buttons, icon buttons, tooltip, segmented control, tabs, switch, choice tile, focus ring ✅
 - Files: `src/components/ds/Button.tsx` (primary, secondary = nested + hairline, tonal = primary tint,
   ghost, danger = heart; heights 40 desktop / 44 < 768 / 52 auth / 56 large CTA; r14; 15/700; pressed
   one tone lighter, no ripple), `IconButton.tsx` (32–40 visual, required `label` → `Tooltip` +
@@ -838,6 +838,29 @@ produces the same colour on both clients.
 - **Verify:** `e2e/ds/controls.spec.ts` — every button/chip hit area ≥ 32 px desktop, ≥ 44 px at 390;
   segmented and choice groups move with arrows; tooltips appear on focus; focus ring visible on
   `--bg`, `--card`, `--nested`, `--primary` in both themes (axe + a computed-style check).
+
+*As built:* found and fixed a real cross-cutting bug while building the ring: an inline `style.boxShadow`
+(Card's e1/e2, a selected segment's lifted pill, a checked ChoiceTile's ring) always wins over a
+stylesheet rule regardless of specificity, so the naive `:focus-visible { box-shadow: … }` from the plan's
+own wording was silently swallowed on every component that draws its own shadow. Fixed by exposing the
+ring as `--shadow-focus` (default `0 0 0 0 transparent` — not the `none` keyword, which is invalid as one
+layer of a multi-layer `box-shadow` list and broke `--e1`/`--segment-shadow`/the light `--edge-*` tokens
+the same way once they were combined with it) and having each such component append
+`, var(--shadow-focus)` to its own shadow. `e2e/ds/controls.spec.ts`'s ring check caught this directly
+(the segmented-control assertion failed until the fix landed) — a genuinely useful test, not a rubber
+stamp. Also gave interactive `Card` real keyboard support (`role="button"`, `tabIndex`, Enter/Space →
+`onClick`) since a focus-ring test on a div with no way to reach it by keyboard would have been hollow.
+`axe` also caught two unrelated contrast bugs while re-running against the growing gallery: `Avatar`
+hard-coded a 16% tint regardless of theme (should read `--chip-tint`, 12% in light) and additionally
+blended toward `var(--bg)` the way mobile's `MonogramAvatar` does — correct for mobile's scaffold-centric
+placement, but `--bg` on the web is warmer/darker than white, so even at the right 12% alpha a
+water-tinted avatar fell to 4.44:1 outside a card. Both fixed: `--chip-tint` for the alpha, blending
+toward `transparent` instead of `--bg` so it composites against whatever it actually sits on (verified
+≥ 4.5:1 for all eight metrics at 12%/16% once on a card, the way every real call site places one). The
+"Chips & avatars" gallery section is now wrapped in a `Card` for the same reason — chips and avatars are
+never placed directly on bare `--bg` in the real app, and the gallery demo shouldn't be the one place that
+does. Tooltip and IconButton are CSS-only (`:hover`/`:focus-within`), not yet on `useAnchoredPosition`
+(that primitive doesn't exist until W0.11), so they always open above their trigger with no flip.
 
 ### W0.9 — Web UI: form fields with every state
 - Files: `src/components/ds/field/{Field,TextField,PasswordField,NumberField,TimeField,TextArea,ReadOnlyField}.tsx`,

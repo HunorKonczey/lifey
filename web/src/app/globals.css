@@ -37,6 +37,15 @@
   --m-heart:   var(--heart);
   /* TintedChip's background tint alpha (D-W0.4) — 16% dark, 12% light. */
   --chip-tint: 16%;
+  /* SegmentedControl's/Tabs' selected-pill fill (DS-03): --raised in dark
+     (lighter than the --control track, so it reads as lifted with no
+     shadow needed); --card + e1 in light (the surface ladder darkens with
+     nesting there, so a plain fill wouldn't stand out — see --segment-shadow). */
+  --segment-selected-bg: var(--raised);
+  /* Not the `none` keyword — this gets combined into a multi-layer
+     box-shadow list with --shadow-focus at the call site, and `none` isn't
+     valid as one layer of a list (it invalidates the whole declaration). */
+  --segment-shadow: 0 0 0 0 transparent;
 
   /* Semantic roles (D-W0.3) — the same metric colour read by intent */
   --improvement: var(--m-protein);
@@ -101,7 +110,9 @@
   /* ─── Elevation (D-W0.2/D-W0.4) — dark: tone carries depth, drop shadows only
      on floating layers; a 1 px top light edge on cards/hero/float instead of
      a border (mobile AppElevation.dark) ─── */
-  --e1: none;
+  /* Not the `none` keyword (see --segment-shadow above) — --e1 is combined
+     into Card's box-shadow list alongside --edge-card and --shadow-focus. */
+  --e1: 0 0 0 0 transparent;
   --e2: 0 10px 24px -12px rgba(0, 0, 0, .8);
   --e3: 0 20px 40px -12px rgba(0, 0, 0, .9);
   --e-sheet: 0 -20px 40px -12px rgba(0, 0, 0, .6);
@@ -211,6 +222,8 @@
   --m-weight:  #50667A;
   --m-heart:   var(--heart);
   --chip-tint: 12%;
+  --segment-selected-bg: var(--card);
+  --segment-shadow: var(--e1);
 
   /* Legacy tokens whose mapping differs by theme (D-W0.3) */
   --surface-high:    var(--card);    /* white today */
@@ -223,9 +236,11 @@
   --e2: 0 1px 2px rgba(40, 38, 20, .05), 0 10px 24px -16px rgba(40, 38, 20, .22);
   --e3: 0 16px 32px -12px rgba(40, 38, 20, .3);
   --e-sheet: 0 -16px 32px -12px rgba(40, 38, 20, .3);
-  --edge-card:  none;
-  --edge-hero:  none;
-  --edge-float: none;
+  /* Not the `none` keyword (see --segment-shadow above) — these are
+     combined into a multi-layer box-shadow list at their call sites. */
+  --edge-card:  0 0 0 0 transparent;
+  --edge-hero:  0 0 0 0 transparent;
+  --edge-float: 0 0 0 0 transparent;
 
   --success-icon-tint: 12%;
   --success-chip-bg: rgba(76, 175, 80, .16);
@@ -416,13 +431,26 @@ body {
    utility; this carries the shared weight/tracking/tabular rule (D-W0.7). */
 .num { font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 
-/* ─── A11y: visible focus ring for keyboard navigation ─── */
-/* Inset (negative offset) so the ring never pokes past an element's own
-   rounded corners; a positive offset + forced border-radius mismatched
-   with elements that set their own (larger) radius, e.g. --r-input. */
+/* ─── A11y: visible focus ring for keyboard navigation (D-W0.18) ─── */
+/* Keyboard-only (:focus-visible), brand-colour-independent, AA on every
+   surface: a 2px --bg gap then a 2px --text ring, as two box-shadow layers
+   (an outline alone can't draw two concentric rings). Replaces the old
+   inset primary outline.
+
+   `--shadow-focus` (not a bare `box-shadow` on `:focus-visible`) because an
+   inline `style.boxShadow` — Card's e1/e2, a selected segment's lifted pill,
+   a checked ChoiceTile's ring — always wins over a stylesheet rule
+   regardless of specificity, silently swallowing the ring underneath it.
+   Any component that sets its own inline box-shadow appends
+   `, var(--shadow-focus)` to it instead of letting this rule apply alone;
+   `0 0 0 0 transparent` (not the keyword `none`) is the neutral "no ring"
+   value because `none` isn't valid as one layer inside a multi-layer
+   box-shadow list. */
+:root { --shadow-focus: 0 0 0 0 transparent; }
 :focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: -2px;
+  outline: none;
+  --shadow-focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
+  box-shadow: var(--shadow-focus);
 }
 /* Don't show the ring for mouse clicks, only keyboard */
 :focus:not(:focus-visible) {
@@ -434,15 +462,16 @@ body {
    wrapper itself, so ringing the input directly hugs just the text with
    almost no breathing room. Ring the marked wrapper instead — it already
    owns the right border-radius and padding — and suppress the child's own
-   ring so there's no double ring. */
+   ring so there's no double ring. Form fields keep their own focus style
+   (DS-03): a 2px primary border, plus a 4px primary halo. */
 [data-ring-frame]:focus-within {
-  outline: 2px solid var(--primary);
-  outline-offset: -2px;
+  box-shadow: 0 0 0 2px var(--primary), 0 0 0 6px color-mix(in srgb, var(--primary) 24%, transparent);
 }
 [data-ring-frame] input:focus-visible,
 [data-ring-frame] select:focus-visible,
 [data-ring-frame] textarea:focus-visible {
   outline: none;
+  box-shadow: none;
 }
 
 /* ─── Skeleton pulse animation ─── */
@@ -502,6 +531,24 @@ button:disabled { cursor: default; }
 }
 .lifey-card-interactive:hover { background: var(--nested); }
 .lifey-card-interactive:active { transform: scale(0.98); }
+
+/* ─── Button (D-W0.7) ─── */
+/* "Pressed = one tone lighter" as a universal brightness bump rather than a
+   hand-picked colour per variant × theme (5 variants × 2 themes = 10 pairs
+   to keep in sync otherwise). No ripple. */
+.lifey-button {
+  transition: filter var(--dur-hover) var(--ease-standard);
+}
+.lifey-button:hover:not(:disabled) { filter: brightness(1.08); }
+.lifey-button:active:not(:disabled) { filter: brightness(1.16); }
+
+/* ─── Tooltip (D-W0.17) — 400ms delay, hover and keyboard focus alike ─── */
+.lifey-tooltip { transition: opacity var(--dur-menu) var(--ease-standard); }
+.lifey-tooltip-anchor:hover .lifey-tooltip,
+.lifey-tooltip-anchor:focus-within .lifey-tooltip {
+  opacity: 1;
+  transition-delay: 400ms;
+}
 
 /* ─── Kill browser autofill background ─── */
 input:-webkit-autofill,
