@@ -665,7 +665,7 @@ moves off the legacy names — none found reading `--metric-protein` for a prima
 than the protein macro, but the two are no longer equal in v2 (light protein `#34742F` vs. primary
 `#4E6530`), so a visual regression there would show as a metric-tinted element turning slightly warmer.
 
-### W0.2 — Web UI: radius, spacing, elevation, blur, motion and breakpoint tokens
+### W0.2 — Web UI: radius, spacing, elevation, blur, motion and breakpoint tokens ✅
 - Files: `globals.css`, `web/src/lib/hooks/useReducedMotion.ts` (new) + test.
 - `--r-tag/control/card/hero/pill` + legacy aliases (D-W0.5); `--e1 --e2 --e3` and the top light edge as
   inset shadows (`--edge-card inset 0 1px 0 rgba(255,255,255,.035)`, hero .05, float .07; none in light);
@@ -674,6 +674,19 @@ than the protein macro, but the two are no longer equal in v2 (light protein `#3
   `--sidebar-w-collapsed 76px`.
 - **Verify:** `useReducedMotion` test (media query mocked); no layout change on existing pages beyond
   radii; build green.
+
+*As built:* `--r-sm/md/input/lg/nav` and `--shadow-float` are also read directly by the marketing tree
+(29 files, mostly via the `rounded-*` Tailwind utilities) — not caught by the D-W0.2 colour-only pin, so
+the marketing `:has()` blocks in W0.1 got a second pass here restoring the pre-v2 radius and shadow values
+inside `data-surface="marketing"`. Elevation (`--e1/e2/e3`, `--edge-*`) and the breakpoint/grid variables
+are new names the marketing tree never referenced, so they needed no pin. Per the D-W0.3 table,
+`--shadow-float` resolves to `--e1`, which is `none` in dark (v2 cards get their depth from surface tone,
+not a shadow) — harmless today since nothing in the app scope reads `--shadow-float` yet (only marketing
+did, now pinned), but worth knowing before a future step reaches for the legacy name expecting a visible
+shadow. `useReducedMotion.test.ts` tests the non-reactive `prefersReducedMotion()` export by stubbing
+`window.matchMedia` directly (the project's `vitest` environment is `node`, no jsdom/Testing Library per
+D-W0.12) — the reactive `useReducedMotion()` hook itself is exercised once real components use it, from
+W0.6 onward.
 
 ### W0.3 — Web UI: type utilities, `MetricValue`, `Icon`
 - Files: `globals.css` (`@utility type-*`, `num-*`, `.tabular` kept), `src/components/ds/MetricValue.tsx`,

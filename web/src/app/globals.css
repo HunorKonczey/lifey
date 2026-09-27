@@ -83,23 +83,78 @@
   --success-chip-text: #66BB6A;
   --scrim-celebration: rgba(8, 9, 6, .66);
 
-  /* Radius scale */
-  --r-sm:    8px;
-  --r-md:    16px;
-  --r-input: 18px;
-  --r-card:  20px;
-  --r-lg:    24px;
-  --r-nav:   28px;
-  --r-pill:  999px;
+  /* ─── Radius scale — 4 steps + pill (D-W0.5) ─── */
+  --r-tag:     8px;
+  --r-control: 14px;
+  --r-card:    22px;
+  --r-hero:    30px;
+  --r-pill:    999px;
+  /* Legacy names re-pointed at the nearest step (D-W0.3) */
+  --r-sm:    var(--r-tag);
+  --r-md:    var(--r-control);
+  --r-input: var(--r-control);
+  --r-lg:    var(--r-card);
+  --r-nav:   var(--r-hero);
 
-  /* Motion */
+  /* ─── Elevation (D-W0.2/D-W0.4) — dark: tone carries depth, drop shadows only
+     on floating layers; a 1 px top light edge on cards/hero/float instead of
+     a border (mobile AppElevation.dark) ─── */
+  --e1: none;
+  --e2: 0 10px 24px -12px rgba(0, 0, 0, .8);
+  --e3: 0 20px 40px -12px rgba(0, 0, 0, .9);
+  --e-sheet: 0 -20px 40px -12px rgba(0, 0, 0, .6);
+  --edge-card:  inset 0 1px 0 rgba(255, 255, 255, .035);
+  --edge-hero:  inset 0 1px 0 rgba(255, 255, 255, .05);
+  --edge-float: inset 0 1px 0 rgba(255, 255, 255, .07);
+  --blur-float: 24px;
+  /* Legacy name re-pointed (D-W0.3) — becomes `none` in dark, matching the
+     v2 rule that dark cards get no drop shadow. */
+  --shadow-float: var(--e1);
+
+  /* ─── Motion (D-W0.13) ─── */
   --dur-fast: 150ms;
   --dur-base: 250ms;
   --dur-slow: 350ms;
   --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur-hover:    120ms;
+  --dur-menu:     160ms;
+  --dur-menu-out: 100ms;
+  --dur-modal:    200ms;
+  --dur-toast:    200ms;
+  --dur-drawer:   300ms;
+  --dur-sheet:    350ms;
+  --dur-count:    600ms;
+  --dur-fill:     900ms;
+  --dur-celebrate: 1200ms;
+  --stagger: 60ms;
+  --ease-standard: cubic-bezier(.2, 0, 0, 1);
+  --ease-enter:    cubic-bezier(.05, .7, .1, 1);
+  --ease-exit:     cubic-bezier(.3, 0, .8, .15);
 
-  /* Shadow */
-  --shadow-float: 0 1px 3px rgba(0, 0, 0, .18);
+  /* ─── Grid / breakpoints (D-W0.6) — theme-independent ─── */
+  --content-max: 1320px;
+  --reading-max: 720px;
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 76px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-hover: 0ms;
+    --dur-menu: 0ms;
+    --dur-menu-out: 0ms;
+    --dur-modal: 0ms;
+    --dur-toast: 0ms;
+    --dur-drawer: 0ms;
+    --dur-sheet: 0ms;
+    --dur-count: 0ms;
+    --dur-fill: 0ms;
+    --dur-celebrate: 0ms;
+    --stagger: 0ms;
+  }
 }
 
 /* ─── v2 design tokens — light (D-W0.4) ─── */
@@ -137,6 +192,16 @@
   --surface-high:    var(--card);    /* white today */
   --surface-highest: var(--control);
   --error-container: color-mix(in srgb, var(--heart) 12%, transparent);
+
+  /* ─── Elevation (D-W0.2/D-W0.4) — light: white cards on a warm bg, a soft
+     warm shadow instead of a border; no top-light edges ─── */
+  --e1: 0 1px 2px rgba(40, 38, 20, .05), 0 10px 24px -16px rgba(40, 38, 20, .22);
+  --e2: 0 1px 2px rgba(40, 38, 20, .05), 0 10px 24px -16px rgba(40, 38, 20, .22);
+  --e3: 0 16px 32px -12px rgba(40, 38, 20, .3);
+  --e-sheet: 0 -16px 32px -12px rgba(40, 38, 20, .3);
+  --edge-card:  none;
+  --edge-hero:  none;
+  --edge-float: none;
 
   --success-icon-tint: 12%;
   --success-chip-bg: rgba(76, 175, 80, .16);
@@ -177,6 +242,14 @@
   --metric-hr:      #C46A6A;
   --goal-positive: #9DAE6B;
   --goal-negative: #E08A52;
+  /* Radius/shadow (D-W0.5/W0.2 pin, same reasoning as the colour pin above) */
+  --r-sm:    8px;
+  --r-md:    16px;
+  --r-input: 18px;
+  --r-card:  20px;
+  --r-lg:    24px;
+  --r-nav:   28px;
+  --shadow-float: 0 1px 3px rgba(0, 0, 0, .18);
 }
 
 [data-theme="light"]:has([data-surface="marketing"]) {
