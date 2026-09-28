@@ -1118,13 +1118,38 @@ to `--text` (proven passing at that same background by the adjacent message text
 was migrated onto the new `entity`/`code`/`secondaryAction` props yet — same per-feature-iteration pattern
 as every other W0 step.
 
-### W0.18 — Web UI: chart math + `LifeyBarChart`
+### W0.18 — Web UI: chart math + `LifeyBarChart` ✅
 - Files: `src/components/ds/charts/chartMath.ts` + `chartMath.test.ts`, `LifeyBarChart.tsx`,
   `LifeyBarChart.lazy.tsx` (`next/dynamic`, `ssr: false`, skeleton placeholder).
 - D-W0.9. Unit tests ported from `mobile/test/shared/widgets/charts/bar_chart_test.dart` (ticks for max
   0, 7, 2 360, 13 000; average excludes today; ignoreZero).
 - **Verify:** gallery "Bar chart" = DS-04 calories sample (V H K Sze Cs P Ma, goal 1 900, today dashed,
   average 1 812 without today); `check:js-budget` unchanged.
+
+*As built:* `chartMath.ts` bundles all five functions the plan's D-W0.9 lists under one file — `niceAxisMax`
+and `yAxisTicks` are genuinely in mobile's `chart_math.dart`; `averageExcludingPartialToday` too, ported
+with its exact `bar_chart_test.dart` cases (including the "value logged at 00:10 is still today" edge
+case). `weeklyBuckets` and `movingAverage` aren't actually in `chart_math.dart` despite the plan text's
+phrasing — the real sources are `features/statistics/domain/metric_summary.dart`'s `weekStart`/`weeklySums`
+(consolidated here as one `weeklyBuckets`, tested against its exact `metric_summary_test.dart` case) and
+`features/weight/domain/weight_trend.dart`'s `movingAverage` (ported with its exact gap-aware,
+days-not-samples window logic) — verified against the actual Dart source rather than trusting the plan
+summary. Confirmed by reading mobile's actual `bar_chart.dart` that today's dashed/unfilled outline and the
+60%/80% theme-dependent past-bar opacity are **not** existing mobile behavior to copy — current mobile bars
+are solid-highlighted-or-45%-flat-opacity with no dashed-today treatment (only the goal line is dashed
+there) — so `LifeyBarChart`'s bar rendering follows this plan's own DS-04 spec directly rather than porting
+mobile pixels; only the five `chartMath` functions are literal ports. Implemented as a Recharts `<Bar
+shape={...}>` custom render (a rounded rect, uniformly on all four corners rather than top-only, since
+Recharts has no built-in per-corner radius on a custom shape and a full custom path wasn't worth it for a
+short bar where the difference is barely visible) so the same shape function can also draw the optional
+"met goal" check glyph, an optional value label, and a rest-day dot on the baseline — all from one place
+per bar. The dark/light branch for past-bar opacity reads the existing `useTheme` zustand store (resolving
+`"system"` against a live media query) rather than a one-off `document.documentElement` read, so it updates
+immediately if the viewer flips the toggle without a remount. Kept out of the main `ds/index.ts` barrel
+entirely (component and lazy wrapper both) — D-W0.9's own text warns about a prior 95KB Recharts leak into
+marketing, and importing by direct path (`@/components/ds/charts/LifeyBarChart.lazy`) is the safer
+insurance against a future barrel-wide import accidentally pulling it in; `check:js-budget` numbers are
+byte-for-byte identical to before this step, confirming no leak.
 
 ### W0.19 — Web UI: `LifeyLineChart` (and `TimeSeriesChart` callers keep working)
 - Files: `src/components/ds/charts/LifeyLineChart.tsx` (+ `.lazy.tsx`), `components/data/TimeSeriesChart.tsx`

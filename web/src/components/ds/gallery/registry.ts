@@ -16,6 +16,7 @@ import { ToastSection } from "./sections/ToastSection";
 import { TableSection } from "./sections/TableSection";
 import { ProgressSection } from "./sections/ProgressSection";
 import { StatesSection } from "./sections/StatesSection";
+import { BarChartSection } from "./sections/BarChartSection";
 
 export interface GallerySection {
   id: string;
@@ -44,5 +45,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "table", title: "Data table", Component: TableSection },
   { id: "progress", title: "Progress", Component: ProgressSection },
   { id: "states", title: "States", Component: StatesSection },
+  { id: "bar-chart", title: "Bar chart", Component: BarChartSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];
