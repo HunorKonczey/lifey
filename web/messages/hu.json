@@ -653,7 +653,10 @@
     "emptyTitle": "Még nincs semmi itt",
     "emptyBody": "Add hozzá az első bejegyzést a kezdéshez.",
     "errorTitle": "Valami nem sikerült",
-    "errorBody": "Nem sikerült betölteni az adatokat. Ellenőrizd a kapcsolatot, majd próbáld újra."
+    "errorTitleFor": "Nem sikerült betölteni: {entity}",
+    "errorBody": "Nem sikerült betölteni az adatokat. Ellenőrizd a kapcsolatot, majd próbáld újra.",
+    "errorReassurance": "A többi oldal működik; a naplózott adatod nem veszett el.",
+    "details": "Részletek"
   },
   "dashboard": {
     "calories": "Kalória",

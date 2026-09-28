@@ -653,7 +653,10 @@
     "emptyTitle": "Nothing here yet",
     "emptyBody": "Add your first entry to get started.",
     "errorTitle": "Something went wrong",
-    "errorBody": "We couldn't load your data. Check your connection and try again."
+    "errorTitleFor": "Couldn't load {entity}",
+    "errorBody": "We couldn't load your data. Check your connection and try again.",
+    "errorReassurance": "The rest of the app still works — nothing you've logged has been lost.",
+    "details": "Details"
   },
   "dashboard": {
     "calories": "Calories",

@@ -91,3 +91,5 @@ export { SegmentBar } from "./progress/SegmentBar";
 export type { SegmentBarProps } from "./progress/SegmentBar";
 export { MetricTile } from "./progress/MetricTile";
 export type { MetricTileProps } from "./progress/MetricTile";
+export { DelayedSkeleton } from "./states/DelayedSkeleton";
+export type { DelayedSkeletonProps } from "./states/DelayedSkeleton";

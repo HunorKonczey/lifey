@@ -1089,7 +1089,7 @@ button wasn't ported as-is (no web canvas confirms that exact treatment) — `ac
 header slot instead. No existing call site (`MacroRing`/`KpiCard`/`StatCard`/`HeroMetricCard`) was migrated
 yet — happens per-feature at its own iteration, same as every other DS-v2 component so far.
 
-### W0.17 — Web UI: empty, error and loading states
+### W0.17 — Web UI: empty, error and loading states ✅
 - Files: `components/status/{EmptyState,ErrorState,Skeleton}.tsx` (restyled in place, APIs kept),
   `src/components/ds/states/DelayedSkeleton.tsx`.
 - `EmptyState` (DS-05): tinted icon holder (metric colour or primary), 17/700 title that says what to do,
@@ -1099,6 +1099,24 @@ yet — happens per-feature at its own iteration, same as every other DS-v2 comp
   "Újrapróbálás" + "Részletek" (expands the error code). `DelayedSkeleton`: renders only after 300 ms,
   shaped like the final layout, static under reduced motion.
 - **Verify:** gallery "States" in HU and EN; existing call sites still compile.
+
+*As built:* both components keep their exact existing prop names — `icon`/`title`/`body`/`action`
+(`EmptyState`) and `message`/`onRetry`/`inline` (`ErrorState`) — so all 36 existing call sites compile
+unchanged (`tsc --noEmit` across the whole project, not just the two files); new DS-05 behaviour is
+additive-only: `EmptyState` gained `secondaryAction`/`color` (default `--primary`), `ErrorState` gained
+`entity` (parameterizes the title via a new `status.errorTitleFor` message key, "Couldn't load {entity}" /
+"Nem sikerült betölteni: {entity}") and `code` (the "Details" toggle, local `useState`, no new dependency).
+17/700 snapped to the existing `type-title-s` (16/700) — 17 isn't itself a scale step and is far closer to
+16 than to `type-title`'s 20, matching D-W0.5's snap-to-scale rule. `Skeleton.tsx` itself needed no prop
+changes, but its `.skeleton-pulse` animation had no reduced-motion handling at all (kept pulsing under both
+the OS setting and the gallery's forced toggle) — fixed by routing its duration through a new
+`--dur-skeleton` token, following the exact same 0ms-under-reduced-motion pattern every other `--dur-*`
+token already uses, rather than inventing a separate mechanism. Caught a real AA contrast failure building
+the gallery's "States" section: `ErrorState`'s inline "Details" link used `--text-3` (tuned against the
+page background) on top of the heart-tinted inline background, dropping under 4.5:1 in both themes; fixed
+to `--text` (proven passing at that same background by the adjacent message text). No existing call site
+was migrated onto the new `entity`/`code`/`secondaryAction` props yet — same per-feature-iteration pattern
+as every other W0 step.
 
 ### W0.18 — Web UI: chart math + `LifeyBarChart`
 - Files: `src/components/ds/charts/chartMath.ts` + `chartMath.test.ts`, `LifeyBarChart.tsx`,

@@ -152,6 +152,7 @@
   --dur-count:    600ms;
   --dur-fill:     900ms;
   --dur-celebrate: 1200ms;
+  --dur-skeleton: 1400ms;
   --stagger: 60ms;
   --ease-standard: cubic-bezier(.2, 0, 0, 1);
   --ease-enter:    cubic-bezier(.05, .7, .1, 1);
@@ -179,6 +180,7 @@
     --dur-count: 0ms;
     --dur-fill: 0ms;
     --dur-celebrate: 0ms;
+    --dur-skeleton: 0ms;
     --stagger: 0ms;
   }
 }
@@ -201,6 +203,7 @@
   --dur-count: 0ms;
   --dur-fill: 0ms;
   --dur-celebrate: 0ms;
+  --dur-skeleton: 0ms;
   --stagger: 0ms;
 }
 
@@ -496,7 +499,10 @@ body {
   50%       { opacity: 0.28; }
 }
 .skeleton-pulse {
-  animation: lifeyPulse 1.4s ease-in-out infinite;
+  /* D-W0.17: --dur-skeleton goes to 0ms under reduced motion (both the OS
+     setting and the gallery's forced toggle), same mechanism as every other
+     motion token — a 0ms-duration infinite animation just renders statically. */
+  animation: lifeyPulse var(--dur-skeleton) ease-in-out infinite;
   background: var(--surface-highest);
   border-radius: var(--r-sm);
 }

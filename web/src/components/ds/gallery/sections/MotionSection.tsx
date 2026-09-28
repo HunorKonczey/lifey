@@ -14,6 +14,7 @@ const DURATIONS = [
   { label: "count", varName: "--dur-count" },
   { label: "fill", varName: "--dur-fill" },
   { label: "celebrate", varName: "--dur-celebrate" },
+  { label: "skeleton", varName: "--dur-skeleton" },
 ];
 
 /** D-W0.13 — one durations demo per row, replayable, so reduced motion
