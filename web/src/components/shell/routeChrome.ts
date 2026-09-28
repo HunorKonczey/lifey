@@ -30,6 +30,9 @@ const TITLE_KEYS: Record<string, string> = {
   "/admin/nutrition": "admin.nav.nutrition",
   "/admin/assignments": "admin.nav.assignments",
   "/admin": "admin.nav.clients",
+  // Superadmin shell (D-W0.24) — same "superadmin" keys as its own page headings.
+  "/superadmin/users": "superadmin.usersTitle",
+  "/superadmin/trainer-requests": "superadmin.trainerRequestsTitle",
 };
 
 // Trainer client detail pages ("/admin/clients/[id]") also get the stepper —

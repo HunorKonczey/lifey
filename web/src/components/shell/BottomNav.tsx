@@ -7,10 +7,13 @@ import { Icon } from "@/components/ds/Icon";
 import type { NavItemDef } from "./navConfig";
 
 export interface BottomNavProps {
-  /** Exactly four items (D-W0.22). */
+  /** Exactly four items for the client/trainer shells (D-W0.22); the
+   *  superadmin shell (D-W0.24) has only three and no "Több" overflow. */
   items: NavItemDef[];
   moreOpen: boolean;
   onMoreClick: () => void;
+  /** Hides the "Több" trigger when there's nothing to overflow into. Default true. */
+  showMore?: boolean;
 }
 
 function label(t: ReturnType<typeof useTranslations>, item: NavItemDef) {
@@ -22,7 +25,7 @@ function label(t: ReturnType<typeof useTranslations>, item: NavItemDef) {
  * e3. The active item is a filled primary pill with its icon and label;
  * every other item (including "Több") is a plain 48x48 icon.
  */
-export function BottomNav({ items, moreOpen, onMoreClick }: BottomNavProps) {
+export function BottomNav({ items, moreOpen, onMoreClick, showMore = true }: BottomNavProps) {
   const t = useTranslations();
   const common = useTranslations("common");
   const pathname = usePathname();
@@ -66,25 +69,27 @@ export function BottomNav({ items, moreOpen, onMoreClick }: BottomNavProps) {
         );
       })}
 
-      <button
-        type="button"
-        onClick={onMoreClick}
-        aria-haspopup="dialog"
-        aria-expanded={moreOpen}
-        aria-label={moreOpen ? undefined : common("more")}
-        className="lifey-button flex items-center justify-center rounded-[var(--r-pill)] shrink-0"
-        style={{
-          height: 48,
-          minWidth: 48,
-          padding: moreOpen ? "0 16px" : 0,
-          gap: moreOpen ? 8 : 0,
-          background: moreOpen ? "var(--primary)" : "transparent",
-          color: moreOpen ? "var(--on-primary)" : "var(--text-2)",
-        }}
-      >
-        <Icon name="more_horiz" size={24} fill={moreOpen ? 1 : 0} />
-        {moreOpen && <span style={{ fontSize: 14, fontWeight: 700 }}>{common("more")}</span>}
-      </button>
+      {showMore && (
+        <button
+          type="button"
+          onClick={onMoreClick}
+          aria-haspopup="dialog"
+          aria-expanded={moreOpen}
+          aria-label={moreOpen ? undefined : common("more")}
+          className="lifey-button flex items-center justify-center rounded-[var(--r-pill)] shrink-0"
+          style={{
+            height: 48,
+            minWidth: 48,
+            padding: moreOpen ? "0 16px" : 0,
+            gap: moreOpen ? 8 : 0,
+            background: moreOpen ? "var(--primary)" : "transparent",
+            color: moreOpen ? "var(--on-primary)" : "var(--text-2)",
+          }}
+        >
+          <Icon name="more_horiz" size={24} fill={moreOpen ? 1 : 0} />
+          {moreOpen && <span style={{ fontSize: 14, fontWeight: 700 }}>{common("more")}</span>}
+        </button>
+      )}
     </nav>
   );
 }

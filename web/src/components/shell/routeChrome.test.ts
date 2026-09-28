@@ -16,6 +16,11 @@ describe("routeChrome", () => {
     expect(routeChrome("/admin/clients/42").hasDateStepper).toBe(true);
   });
 
+  it("titles the superadmin pages without a date stepper", () => {
+    expect(routeChrome("/superadmin/users")).toEqual({ titleKey: "superadmin.usersTitle", hasDateStepper: false });
+    expect(routeChrome("/superadmin/trainer-requests").titleKey).toBe("superadmin.trainerRequestsTitle");
+  });
+
   it("falls back to no title outside the known routes", () => {
     expect(routeChrome("/onboarding")).toEqual({ titleKey: null, hasDateStepper: false });
   });

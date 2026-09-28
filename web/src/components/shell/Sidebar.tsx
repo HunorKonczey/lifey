@@ -3,10 +3,13 @@
 import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { Icon } from "@/components/ds/Icon";
 import { Avatar } from "@/components/ds/Avatar";
 import { useUnreadTotal } from "@/features/chat/hooks";
 import { unreadBadgeLabel } from "@/features/chat/thread";
+import { trainerRequestApi } from "@/features/trainer-requests/api";
+import { queryKeys } from "@/lib/api/queryKeys";
 import type { SessionUser } from "@/features/auth/types";
 import type { NavGroup } from "./navConfig";
 import { SETTINGS_NAV_ITEM } from "./navConfig";
@@ -66,6 +69,13 @@ export function Sidebar({
   const [menuOpen, setMenuOpen] = useState(false);
   // Cheap when 0 (client groups never contain a "chat" item, so it's simply unused there).
   const unread = useUnreadTotal();
+  const hasRequestsItem = groups.some((g) => g.items.some((i) => i.key === "trainerRequestsTitle"));
+  const { data: pendingRequests } = useQuery({
+    queryKey: queryKeys.trainerRequests.pending({ page: 0, size: 1 }),
+    queryFn: () => trainerRequestApi.pending({ page: 0, size: 1 }),
+    enabled: hasRequestsItem,
+    staleTime: 60_000,
+  });
 
   const width = collapsed ? 76 : 248;
 
@@ -106,9 +116,19 @@ export function Sidebar({
         {roleBadge && !collapsed && (
           <span
             className="inline-flex items-center gap-1 self-start mt-3 rounded-[var(--r-pill)] px-2.5 py-1"
-            style={{ background: "var(--role)", color: "var(--bg)", fontSize: 10, fontWeight: 800, letterSpacing: "0.02em" }}
+            style={
+              roleRing === "trainer"
+                ? { background: "var(--role)", color: "var(--bg)", fontSize: 10, fontWeight: 800, letterSpacing: "0.02em" }
+                : {
+                    boxShadow: "inset 0 0 0 1.5px var(--outline)",
+                    color: "var(--text-2)",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: "0.02em",
+                  }
+            }
           >
-            <Icon name={roleBadge.icon} size={13} fill={1} color="var(--bg)" />
+            <Icon name={roleBadge.icon} size={13} fill={1} color={roleRing === "trainer" ? "var(--bg)" : "var(--text-2)"} />
             {roleBadge.label}
           </span>
         )}
@@ -138,7 +158,14 @@ export function Sidebar({
               )}
               {group.items.map((item) => {
                 const isChat = item.key === "chat";
-                const badge = isChat && unread > 0 ? unreadBadgeLabel(unread) : null;
+                const isRequests = item.key === "trainerRequestsTitle";
+                const requestCount = pendingRequests?.totalElements ?? 0;
+                const badge = isChat && unread > 0 ? unreadBadgeLabel(unread) : isRequests && requestCount > 0 ? String(requestCount) : null;
+                const badgeLabel = isChat
+                  ? t("chat.unreadCount", { count: unread })
+                  : isRequests
+                    ? t("superadmin.pendingRequestsBadge", { count: requestCount })
+                    : undefined;
                 return (
                   <SidebarItem
                     key={item.href}
@@ -147,7 +174,7 @@ export function Sidebar({
                     active={item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href)}
                     collapsed={collapsed}
                     badge={badge}
-                    badgeLabel={isChat ? t("chat.unreadCount", { count: unread }) : undefined}
+                    badgeLabel={badgeLabel}
                   />
                 );
               })}

@@ -557,6 +557,7 @@
     "cancel": "Mégsem",
     "trainerRequestsTitle": "Edzői kérelmek",
     "noPendingRequests": "Nincs elbírálásra váró kérelem",
+    "pendingRequestsBadge": "{count} elbírálásra váró kérelem",
     "clientCountBadge": "{count} {count, plural, one {ügyfél} other {ügyfél}} most",
     "approve": "Jóváhagyás",
     "reject": "Elutasítás",

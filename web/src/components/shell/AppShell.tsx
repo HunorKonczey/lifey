@@ -121,8 +121,15 @@ export function AppShell({
           {extraContent}
           {children}
         </main>
-        <BottomNav items={bottomNavItems} moreOpen={moreOpen} onMoreClick={() => setMoreOpen((v) => !v)} />
-        <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} items={moreSheetItems} />
+        <BottomNav
+          items={bottomNavItems}
+          moreOpen={moreOpen}
+          onMoreClick={() => setMoreOpen((v) => !v)}
+          showMore={moreSheetItems.length > 0}
+        />
+        {moreSheetItems.length > 0 && (
+          <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} items={moreSheetItems} />
+        )}
       </div>
     );
   }

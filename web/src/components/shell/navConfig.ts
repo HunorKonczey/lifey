@@ -105,3 +105,15 @@ export const TRAINER_MORE_SHEET_ITEMS: NavItemDef[] = [
   ACCOUNT_GROUP[0],
   ACCOUNT_GROUP[1],
 ];
+
+/**
+ * Superadmin nav (D-W0.24): "SUPERADMIN · ugyanaz a héj" — flat, no groups.
+ * "Szerepkör-történet" is deliberately absent: D-W0.24 says its route only
+ * lands in W9.9, and this shell doesn't link to pages that don't exist yet.
+ */
+export const SUPERADMIN_NAV_ITEMS: NavItemDef[] = [
+  { href: "/superadmin/users", key: "usersTitle", icon: "group", shortcut: "U", namespace: "superadmin" },
+  { href: "/superadmin/trainer-requests", key: "trainerRequestsTitle", icon: "how_to_reg", shortcut: "R", namespace: "superadmin" },
+  { href: "/dashboard", key: "backToOwnView", icon: "undo", shortcut: "O", namespace: "superadmin" },
+];
+export const SUPERADMIN_NAV_GROUPS: NavGroup[] = [{ items: SUPERADMIN_NAV_ITEMS }];

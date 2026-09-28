@@ -557,6 +557,7 @@
     "cancel": "Cancel",
     "trainerRequestsTitle": "Trainer requests",
     "noPendingRequests": "No pending requests",
+    "pendingRequestsBadge": "{count} pending requests",
     "clientCountBadge": "{count} {count, plural, one {client} other {clients}} today",
     "approve": "Approve",
     "reject": "Reject",

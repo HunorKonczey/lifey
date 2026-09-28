@@ -1366,12 +1366,35 @@ a bug). Not achievable in this environment: every real `/admin/*` page in the ne
 backend) — covered instead by the gallery demo, `grep -r tertiary` (empty, confirmed), and the full lint /
 vitest / `ds` + `marketing` Playwright / build / `check:js-budget` suite, all green.
 
-### W0.24 — Web UI: superadmin shell onto `AppShell`
+### W0.24 — Web UI: superadmin shell onto `AppShell` ✅
 - Files: `app/(superadmin)/superadmin/layout.tsx` (the top header with tabs is deleted), `navConfig.ts`.
 - DS-02 "SUPERADMIN · ugyanaz a héj": neutral **RENDSZER** badge; items Felhasználók, Edzői kérelmek
   (+ pending count), Szerepkör-történet (route added in W9.9 — hidden until then), Saját nézet; user chip
   "Admin · Superadmin" with a neutral ring.
 - **Verify:** `/superadmin/users`, `/superadmin/trainer-requests` in the shell, both themes, 390.
+
+*As built:* by far the smallest of the three shell migrations, precisely because W0.23 already generalized
+`AppShell`/`Sidebar`/`AccountMenu` — this step is closer to *configuration* than new component work.
+`SUPERADMIN_NAV_ITEMS`/`SUPERADMIN_NAV_GROUPS` (flat, one unlabelled group, new `"superadmin"`-namespaced
+items reusing the already-existing `superadmin.usersTitle`/`trainerRequestsTitle`/`backToOwnView` keys) and
+the layout rewrite were the only genuinely new pieces; "Szerepkör-történet" is deliberately left out of the
+nav entirely rather than added-but-hidden, since its route doesn't exist until W9.9 and a shell shouldn't
+link to a 404. One real gap the plan's own wording exposed: D-W0.23 calls for a *clay* EDZŐ badge but D-W0.24
+a *neutral* RENDSZER one — `Sidebar`'s `roleBadge` prop only carried `{icon, label}` with a single hardcoded
+clay style, which would have painted the superadmin badge clay too; fixed by deriving the badge's tone from
+the already-passed `roleRing` (trainer → clay fill, anything else → a neutral `--outline` ring), rather than
+growing the prop surface with a redundant tone field `roleRing` already implies. The "+ pending count" on
+Edzői kérelmek is a real, live query (`trainerRequestApi.pending({page:0,size:1})`, reading just
+`totalElements`) — the same "if the data is real, fetch it; if it isn't, don't fake it" line as W0.23's
+billing-plan chip, generalized in `Sidebar`'s existing badge slot (until now hardcoded to the trainer's chat
+key) rather than a second bespoke badge mechanism. `BottomNav` gained a `showMore` flag (default true) since
+superadmin's three items fit without an overflow sheet at all — `AppShell` hides both the trigger and
+`MoreSheet` together when `moreSheetItems` is empty, instead of shipping a "Több" button that opens nothing.
+Gallery: `ShellSection`'s toggle is now three-way (Client/Trainer/Superadmin) on the same generalized props,
+plus a new `e2e/ds/superadminShell.spec.ts` (flat nav, the neutral badge, no dedicated Settings row). Not
+achievable in this environment: the real `/superadmin/*` pages in the new shell, both themes, 390 (no
+backend) — covered instead by the gallery demo and the full lint / vitest / `ds` + `marketing` Playwright /
+build / `check:js-budget` suite, all green.
 
 ### W0.25 — Web UI: keyboard shortcut layer + help overlay
 - Files: `src/lib/hooks/useHotkeys.ts` + `useHotkeys.test.ts`, `src/components/shell/ShortcutHelp.tsx`,
