@@ -1177,7 +1177,7 @@ direct-path-only import discipline as W0.18's `LifeyBarChart`. The tooltip the o
 adapter silently losing an interactive feature its callers already relied on isn't "keeping call sites
 working."
 
-### W0.20 — Web UI: sidebar v2 (client) + account menu
+### W0.20 — Web UI: sidebar v2 (client) + account menu ✅
 - Files: `src/components/shell/{AppShell,Sidebar,SidebarItem,AccountMenu,LogoutDialog,navConfig}.tsx`,
   `src/lib/hooks/useSidebarState.ts`, `app/(app)/layout.tsx` (uses `AppShell`), delete
   `components/layout/Sidebar.tsx` usage for the client.
@@ -1196,6 +1196,51 @@ working."
   settings`. Width fixed at 248 (sized for HU "Ételeim & receptjeim" in the trainer nav).
 - **Verify:** `e2e/ds/shell.spec.ts` on a gallery shell demo (collapse, persistence, tooltips, account menu,
   logout dialog focus on "Mégse"); real `/dashboard` in both themes.
+
+*As built:* `AppShell` is deliberately thin this step — it owns the new `Sidebar` plus the still-old
+`components/layout/TopBar.tsx` (its redesign is W0.21) and the avatar-blob-URL plumbing lifted verbatim from
+the old sidebar; `app/(app)/layout.tsx`'s own local function was also literally named `AppShell`, so it's
+renamed to `AppGate` (auth guard + locale/date sync only) to free the name for the real component. `Sidebar`
+takes `user`/`avatarUrl`/`collapsed`/`onLogout` as props rather than reading `useSessionStore` itself, so the
+gallery's `ShellSection` demo (fixture user, no auth) is the *same* component real pages use, not a parallel
+mock — `e2e/ds/shell.spec.ts` runs against it directly. Two role-gated jump links (`ROLE_TRAINER` → `/admin`,
+`ROLE_SUPER_ADMIN` → `/superadmin/users`) are carried over unchanged from the old sidebar; they aren't in the
+DS-02 canvas, which only speaks to the plain client nav, but dropping them would have silently broken
+existing navigation for dual-role users. `Téma`/`Nyelv` in the account menu reuse Settings' own dual-write
+pattern (`useTheme`/`useLocale` for the immediate visual change, `settingsApi.update` so it survives
+`AppGate`'s settings-query resync on refocus, which would otherwise silently revert a `useLocale`-only
+change) rather than being new, disconnected controls — when the settings fetch fails (no backend in this
+environment, and CI's `ds` project has none either) they simply don't render, same graceful-without-crashing
+shape as every other query-backed gallery section. Logout is **not** styled destructive (`ConfirmModal`'s
+`destructive={false}`, a `--primary` icon tint, "Cancel" default focus) since D-W0.20's whole point is that
+nothing is lost; `common.signOutConfirmBody` (the only place it was used) is updated in place to the plan's
+honest copy rather than adding a parallel key, which also fixes the copy for the trainer/superadmin
+`AdminSidebar`'s still-old `SignOutButton` (unmigrated until W0.23) for free. The collapse-default breakpoint
+read (`window.innerWidth`) is set in a mount effect rather than a `useState` lazy initializer — reading it
+synchronously on the client's first render would silently mismatch the server's render, the exact hydration
+bug just fixed project-wide in `useMediaQuery` (see the CI fix below); the one-frame flash from "open" to
+"collapsed" on a narrow screen is the accepted trade-off, same as `DelayedSkeleton`/`FormattingSection`.
+Below 768px, `Sidebar` still renders as the old full-height overlay drawer (`useUiStore`'s `drawerOpen`,
+restyled to the new DS-02 look) rather than being hidden outright — the bottom nav that actually replaces it
+is W0.22, not yet built, and shipping this step with mobile navigation silently broken in between wasn't
+acceptable; the closed drawer is now `aria-hidden`/`inert` (the old sidebar was neither), fixing a real
+`ds`-gallery test collision once its "Close menu" button joined the same page as `controls.spec.ts`'s
+substring-matched "Close" query. Collapsed-tooltip shortcut letters (`G D/N/W/S` come from D-W0.17; `E`
+weight/`A` water/`P` steps/`C` settings/`T` trainer/`Y` superadmin are this step's own pick, filling gaps the
+plan's own list left open) are cosmetic only — `useHotkeys` doesn't exist until W0.25, so `G <letter>`
+doesn't actually navigate yet. Not achievable in this environment: the real `/dashboard` in both themes
+(D-W0.20's other verify bullet) — no backend (`java`/`mvn` not on `PATH`), so the deepest available check is
+`ShellSection`'s fixture-data gallery demo, `tsc --noEmit` across the whole project, and the full lint /
+vitest / `ds` + `marketing` Playwright / build / `check:js-budget` suite, all green.
+
+**Also fixed in passing (not part of W0.20's own scope, found while investigating a failing CI run the user
+flagged mid-step):** two pre-existing hydration mismatches were corrupting the whole `/dev/design` gallery
+tree on load in CI and cascading into unrelated modal/drawer/menu/toast/motion test flakiness —
+`useMediaQuery` read `window.matchMedia` synchronously in a `useState` lazy initializer (hydration-unsafe the
+same way this step's own sidebar-breakpoint read would have been; fixed with `useSyncExternalStore` and a
+fixed `false` server snapshot) and `FormattingSection` computed `new Date()` directly during render (can
+straddle a real clock tick between the server render and hydration; deferred to state set after mount).
+Committed separately as `056b2ad`.
 
 ### W0.21 — Web UI: top bar + global date stepper
 - Files: `src/components/shell/{TopBar,DateStepper,routeChrome}.ts(x)`, `lib/hooks/useDateStore.ts`

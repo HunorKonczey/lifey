@@ -18,6 +18,7 @@ import { ProgressSection } from "./sections/ProgressSection";
 import { StatesSection } from "./sections/StatesSection";
 import { BarChartSection } from "./sections/BarChartSection";
 import { LineChartSection } from "./sections/LineChartSection";
+import { ShellSection } from "./sections/ShellSection";
 
 export interface GallerySection {
   id: string;
@@ -48,5 +49,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "states", title: "States", Component: StatesSection },
   { id: "bar-chart", title: "Bar chart", Component: BarChartSection },
   { id: "line-chart", title: "Line chart", Component: LineChartSection },
+  { id: "shell", title: "Sidebar & account menu", Component: ShellSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

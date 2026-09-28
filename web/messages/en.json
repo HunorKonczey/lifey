@@ -19,7 +19,8 @@
     "statistics": "Statistics",
     "settings": "Settings",
     "trainerView": "Trainer view",
-    "systemView": "System"
+    "systemView": "System",
+    "mainNavigation": "Main navigation"
   },
   "admin": {
     "chip": "TRAINER",
@@ -635,7 +636,7 @@
     "remove": "Remove",
     "signOut": "Sign out",
     "signOutConfirmTitle": "Sign out?",
-    "signOutConfirmBody": "You'll need to sign in again to continue.",
+    "signOutConfirmBody": "Everything you've added is safely in your account — sign back in here to pick up right where you left off. The mobile app stays signed in.",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "closeMenu": "Close menu",

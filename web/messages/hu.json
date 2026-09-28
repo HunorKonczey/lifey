@@ -19,7 +19,8 @@
     "statistics": "Statisztika",
     "settings": "Beállítások",
     "trainerView": "Edző nézet",
-    "systemView": "Rendszer"
+    "systemView": "Rendszer",
+    "mainNavigation": "Fő navigáció"
   },
   "admin": {
     "chip": "EDZŐ",
@@ -635,7 +636,7 @@
     "remove": "Eltávolítás",
     "signOut": "Kijelentkezés",
     "signOutConfirmTitle": "Kijelentkezel?",
-    "signOutConfirmBody": "A folytatáshoz újra be kell majd jelentkezned.",
+    "signOutConfirmBody": "Minden adatod a fiókodban van, újra belépve ugyanitt folytatod. A mobilappban bejelentkezve maradsz.",
     "expandSidebar": "Oldalsáv kinyitása",
     "collapseSidebar": "Oldalsáv összecsukása",
     "closeMenu": "Menü bezárása",
