@@ -919,7 +919,7 @@ to guard the one commit path. `DateFields`' per-segment `aria-label` includes th
 `<label>` for the accessible name, so the bare segment name alone would have made every date field's first
 input impossible to distinguish from another by screen reader users.
 
-### W0.11 — Web UI: popover, menu and row "⋯" menu
+### W0.11 — Web UI: popover, menu and row "⋯" menu ✅
 - Files: `src/lib/a11y/{useAnchoredPosition,useDismiss,useRovingFocus,useFocusReturn}.ts`,
   `src/components/ds/Popover.tsx`, `Menu.tsx` (`MenuItem` icon + label + shortcut; destructive last item
   in heart with "…"), `RowMenuButton.tsx` (the table/list "⋯", 32 px, opens on click and `Shift+F10`).
@@ -928,6 +928,17 @@ input impossible to distinguish from another by screen reader users.
 - Decide §10 Q3 here (in-house positioning vs Floating UI) and record it as *As built*.
 - **Verify:** `e2e/ds/menu.spec.ts` (arrow navigation, typeahead, Esc, focus return, flip near the bottom
   edge at 390 × 844).
+
+*As built:* §10 Q3 decided **in-house positioning**, not Floating UI — `useAnchoredPosition` is ~30 lines
+(measure the trigger, flip above when `window.innerHeight - rect.bottom` is under the panel height, clamp
+horizontally to the viewport) and the full `e2e/ds/menu.spec.ts` suite (including the edge-flip case at a
+squeezed 500px-tall viewport) passed against it without needing a second iteration. Revisit only if a later
+step's overlay needs something this can't do (nested/scrollable-ancestor tracking, `middleware`-style
+collision avoidance) — nothing so far has. `Popover` portals straight to `document.body` rather than a
+shared `OverlayRoot`, since that component doesn't exist until W0.12; W0.12 can fold this in once
+modal/drawer/toast exist to actually contend for z-order with. The flip test used a 500px-tall viewport
+rather than 390×844 (a *narrow* phone, not a *short* one) — the edge case `useAnchoredPosition` flips for
+is running out of vertical room, which a 390-wide viewport alone doesn't exercise.
 
 ### W0.12 — Web UI: modal + mobile sheet
 - Files: `src/lib/a11y/useFocusTrap.ts`, `src/components/ds/overlay/{OverlayRoot,Modal,Sheet,ConfirmModal}.tsx`.

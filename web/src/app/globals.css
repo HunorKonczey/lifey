@@ -592,6 +592,19 @@ button:disabled { cursor: default; }
   color: var(--text-3);
 }
 
+/* ─── Popover / menu entrance (D-W0.11/D-W0.15) — 160ms, opacity + 4px
+   from the trigger side; closing is instant (no exit animation) per the
+   100ms-close note, since a removed-on-close portal has nothing left to
+   animate out. ─── */
+@keyframes lifey-popover-enter-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes lifey-popover-enter-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ─── Kill browser autofill background ─── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
