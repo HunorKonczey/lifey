@@ -46,6 +46,12 @@
      box-shadow list with --shadow-focus at the call site, and `none` isn't
      valid as one layer of a list (it invalidates the whole declaration). */
   --segment-shadow: 0 0 0 0 transparent;
+  /* Modal/Sheet fill (D-W0.12/DS-03): --nested in dark, white in light —
+     not --card in dark (too close to the page bg to read as "lifted"). */
+  --modal-bg: var(--nested);
+  /* A dark, near-neutral scrim regardless of theme — same reasoning as the
+     existing --scrim-celebration, which also stays dark in light mode. */
+  --modal-scrim: rgba(8, 9, 6, .4);
 
   /* Semantic roles (D-W0.3) — the same metric colour read by intent */
   --improvement: var(--m-protein);
@@ -224,6 +230,7 @@
   --chip-tint: 12%;
   --segment-selected-bg: var(--card);
   --segment-shadow: var(--e1);
+  --modal-bg: var(--card);
 
   /* Legacy tokens whose mapping differs by theme (D-W0.3) */
   --surface-high:    var(--card);    /* white today */
@@ -603,6 +610,20 @@ button:disabled { cursor: default; }
 @keyframes lifey-popover-enter-up {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Modal / sheet entrance (D-W0.12/D-W0.13) ─── */
+@keyframes lifey-modal-enter {
+  from { opacity: 0; transform: scale(.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes lifey-scrim-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes lifey-sheet-enter {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
 /* ─── Kill browser autofill background ─── */

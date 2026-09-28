@@ -10,6 +10,7 @@ import { ControlsSection } from "./sections/ControlsSection";
 import { FieldsSection } from "./sections/FieldsSection";
 import { DatePickerSection } from "./sections/DatePickerSection";
 import { MenuSection } from "./sections/MenuSection";
+import { OverlaysSection } from "./sections/OverlaysSection";
 
 export interface GallerySection {
   id: string;
@@ -32,5 +33,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "fields", title: "Fields", Component: FieldsSection },
   { id: "date-picker", title: "Date picker", Component: DatePickerSection },
   { id: "menu", title: "Popover & menu", Component: MenuSection },
+  { id: "overlays", title: "Modal & confirm", Component: OverlaysSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

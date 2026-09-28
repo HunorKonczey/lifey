@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/Toaster";
+import { OverlayRoot } from "@/components/ds/overlay/OverlayRoot";
 import { useSessionStore } from "@/features/auth/store";
 import { loadClientConfig } from "@/lib/api/client-config";
 import { useLocale } from "@/lib/hooks/useLocale";
@@ -41,6 +42,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <I18nProvider locale={locale}>
         {children}
         <Toaster />
+        <OverlayRoot />
       </I18nProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

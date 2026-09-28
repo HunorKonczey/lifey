@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useAnchoredPosition } from "@/lib/a11y/useAnchoredPosition";
 import { useDismiss } from "@/lib/a11y/useDismiss";
 import { useFocusReturn } from "@/lib/a11y/useFocusReturn";
+import { getOverlayContainer } from "./overlay/OverlayRoot";
 
 export interface PopoverProps {
   open: boolean;
@@ -18,9 +19,8 @@ export interface PopoverProps {
 /**
  * A floating panel anchored to a trigger (D-W0.11/D-W0.15) — 160ms open,
  * flips above near the bottom edge, closes on Esc and an outside click,
- * returns focus to its trigger. Portals straight to `document.body` for
- * now; `OverlayRoot` (W0.12) will own z-ordering across every overlay kind
- * once modal/drawer/toast exist to coordinate with.
+ * returns focus to its trigger. Portals into the shared `OverlayRoot`
+ * (D-W0.15's z-order: toast > modal > drawer > popover > top bar).
  */
 export function Popover({ open, onClose, anchorRef, width = 280, children, className }: PopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -46,6 +46,6 @@ export function Popover({ open, onClose, anchorRef, width = 280, children, class
     >
       {children}
     </div>,
-    document.body,
+    getOverlayContainer(),
   );
 }

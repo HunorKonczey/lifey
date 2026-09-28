@@ -940,7 +940,7 @@ modal/drawer/toast exist to actually contend for z-order with. The flip test use
 rather than 390×844 (a *narrow* phone, not a *short* one) — the edge case `useAnchoredPosition` flips for
 is running out of vertical room, which a 390-wide viewport alone doesn't exercise.
 
-### W0.12 — Web UI: modal + mobile sheet
+### W0.12 — Web UI: modal + mobile sheet ✅
 - Files: `src/lib/a11y/useFocusTrap.ts`, `src/components/ds/overlay/{OverlayRoot,Modal,Sheet,ConfirmModal}.tsx`.
 - Widths 480 / 640 / 880, `--r-hero`, `--nested` fill in dark / white in light, scrim 40 %, 200 ms
   0.96 → 1; centred; initial focus on the element marked `data-autofocus` (the safe button in
@@ -948,6 +948,22 @@ is running out of vertical room, which a 390-wide viewport alone doesn't exercis
   36 × 4, radius 30 on top, 350 ms, safe-area aware). `ConfirmModal` = DS-03 sample: 48 px tinted icon
   holder, 22/800 title, body, "Mégse" + danger action; buttons stack when they don't fit (HU at 200 %).
 - **Verify:** `e2e/ds/modal.spec.ts` (trap, Esc, focus return, scroll lock, sheet at 390); gallery.
+
+*As built:* `--modal-bg` (`--nested` dark / `--card` light) and `--modal-scrim` tokens added to
+`globals.css`, plus `lifey-modal-enter` / `lifey-scrim-enter` / `lifey-sheet-enter` keyframes; the
+mobile/desktop split uses the existing `useMediaQuery("(max-width: 767px)")` from W0-earlier rather than a
+new hook. Fulfilled W0.11's own As-built promise: introduced a real `OverlayRoot` (a dedicated DOM node
+under `Providers`, via `getOverlayContainer()`) and retrofitted `Popover.tsx` to portal there instead of
+straight to `document.body`, so overlay z-order can now be coordinated on siblings once drawer/toast exist
+(D-W0.15). Caught two real bugs against the gallery + e2e: (1) `Sheet` didn't forward `aria-label`, so the
+mobile shape rendered as an unlabelled dialog while the desktop `Modal` had a real accessible name —
+fixed by threading `aria-label` through `Modal` → `Sheet`; (2) focus never returned to the trigger after
+Esc/outside-click — `useFocusTrap`'s effect (which moves focus into the dialog) ran *before*
+`useFocusReturn`'s effect (which captures `document.activeElement`) because of hook declaration order, so
+it captured the dialog's own newly-focused child instead of the trigger. Fixed by calling `useFocusReturn`
+before `useFocusTrap` in `Modal`. `e2e/ds/modal.spec.ts` scopes every `dialog` role query by accessible
+name, since the gallery's own "Date picker" section keeps a `CalendarPopover` (also `role="dialog"`) open
+by default — a bare `getByRole("dialog")` matches both.
 
 ### W0.13 — Web UI: drawer
 - Files: `src/components/ds/overlay/Drawer.tsx`, `src/lib/a11y/useUnsavedGuard.ts`.
