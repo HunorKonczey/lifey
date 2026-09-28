@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/health/weight_health_importer.dart';
 import '../../../core/push/weigh_in_reminder_controller.dart';
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
@@ -28,7 +29,9 @@ class WeightController extends StreamNotifier<List<WeightEntry>> {
   /// The list is already live; this drains the outbox and re-pulls from the
   /// server, e.g. for a manual pull-to-refresh gesture. Both halves matter —
   /// pushing alone never reconciles a stale/corrupted local row with the
-  /// server's truth.
+  /// server's truth. Also gives the silent Health weight import
+  /// ([WeightHealthImporter], normally only triggered on app resume) another
+  /// chance to run, for the case where the app was already foregrounded.
   Future<void> refresh() async {
     try {
       await ref.read(syncEngineProvider).sync();
@@ -36,6 +39,7 @@ class WeightController extends StreamNotifier<List<WeightEntry>> {
     } catch (_) {
       // Best-effort: no connectivity or a backend hiccup leaves the cache as-is.
     }
+    await ref.read(weightHealthImporterProvider).import();
   }
 }
 
