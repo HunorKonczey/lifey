@@ -157,6 +157,27 @@ function chatRequest<T>(path: string, init: RequestInit = {}, config: RequestCon
   return request<T>(path, init, { ...config, baseUrl: chatBaseUrl });
 }
 
+/**
+ * A DELETE that survives page unload (D-W0.16's undo-then-flush: a delete
+ * is deferred behind a 6 s undo toast, and the real request only fires once
+ * that window elapses or gets flushed). `keepalive` lets the browser finish
+ * sending it even if the tab is already closing, when the response can't be
+ * read anyway — normal in-tab commits can still `.catch()` this and it
+ * behaves like an ordinary fetch.
+ */
+export function keepaliveDelete(path: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  return fetch(`${env.NEXT_PUBLIC_API_BASE_URL}${path}`, {
+    method: "DELETE",
+    headers,
+    credentials: "include",
+    keepalive: true,
+  }).then((res) => {
+    if (!res.ok) throw new ApiError(res.status, "UNKNOWN", res.statusText);
+  });
+}
+
 export const api = {
   get: <T>(path: string, init?: RequestInit) => request<T>(path, { method: "GET", ...init }),
   post: <T>(path: string, body?: unknown) =>

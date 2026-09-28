@@ -52,6 +52,13 @@
   /* A dark, near-neutral scrim regardless of theme — same reasoning as the
      existing --scrim-celebration, which also stays dark in light mode. */
   --modal-scrim: rgba(8, 9, 6, .4);
+  /* Toast (D-W0.14): the v2 **dark** palette's --nested/--text, fixed —
+     not re-pointed in [data-theme="light"] below — so it reads as an
+     "inverse surface" (Tooltip gets the same effect the other way, by
+     swapping --text/--bg; a toast needs one fixed look in both themes
+     instead of a per-theme swap). */
+  --toast-bg: #22251C;
+  --toast-fg: #F2F1E6;
 
   /* Semantic roles (D-W0.3) — the same metric colour read by intent */
   --improvement: var(--m-protein);
@@ -630,6 +637,19 @@ button:disabled { cursor: default; }
 @keyframes lifey-drawer-enter {
   from { transform: translateX(100%); }
   to   { transform: translateX(0); }
+}
+
+/* ─── Toast (D-W0.14) ─── */
+@keyframes lifey-toast-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* The 6s undo/dismiss bar — scaleX from a left `transform-origin` rather
+   than animating `width`, so pausing it (`animation-play-state`) freezes
+   exactly in place instead of jumping on the next paint. */
+@keyframes lifey-toast-bar {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
 }
 
 /* ─── Kill browser autofill background ─── */

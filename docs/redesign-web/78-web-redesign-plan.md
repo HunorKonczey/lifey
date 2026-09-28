@@ -989,7 +989,7 @@ it. Added a `type-overline` utility (13/600) alongside the existing type scale f
 line, and `--dur-drawer`/`lifey-drawer-enter` (translateX) were already anticipated by W0.12's own comment
 in `globals.css`.
 
-### W0.14 — Web UI: toast with undo + `useUndoableDelete`
+### W0.14 — Web UI: toast with undo + `useUndoableDelete` ✅
 - Files: `src/components/ds/overlay/Toast.tsx` (replaces `components/ui/Toaster.tsx`),
   `src/lib/hooks/useToast.ts` (API kept: `show(message, variant)`; new `showUndo(message, onUndo,
   onCommit)`), `src/lib/hooks/useUndoableDelete.ts` + `useUndoableDelete.test.ts`.
@@ -1002,6 +1002,26 @@ in `globals.css`.
   `pagehide` / route change / the next delete, error → restore + error toast.
 - **Verify:** unit tests with fake timers (commit at 6 s, no request on undo, flush on second delete,
   hover pause extends); `e2e/ds/toast.spec.ts`.
+
+*As built:* the `show(message, variant)` API is untouched — all 40+ existing call sites keep working —
+`showUndo` is purely additive. All timer/pause/flush state (a single in-flight `setTimeout`, remaining-ms
+bookkeeping, the pending commit) lives in the `useToast` zustand store as module-level state, not in the
+`Toast` component or in `useUndoableDelete` itself — `useUndoableDelete`'s actual orchestration is a plain
+exported function (`undoableDelete`, not a hook), specifically so `useUndoableDelete.test.ts` can call it
+directly with `vi.useFakeTimers()` instead of needing `renderHook`/Testing Library, which this project
+doesn't have (D-W0.12: node-environment Vitest, no jsdom). "Inverse surface" is implemented as two fixed
+tokens (`--toast-bg`/`--toast-fg`, the v2 **dark** palette's `--nested`/`--text`) defined once at `:root`
+and never re-pointed inside `[data-theme="light"]` — deliberately different from `Tooltip`'s approach
+(swapping `--text`/`--bg`), because a toast needs one constant look in both themes rather than a per-theme
+inversion. The deferred DELETE always goes through a new `keepaliveDelete()` in `lib/api/client.ts`
+(`fetch(..., { keepalive: true })` with the in-memory access token) rather than the normal `api.delete()` —
+not only for the pagehide/flush path but for the ordinary 6 s-elapsed commit too, since `keepalive` is
+harmless in the normal case and having one code path avoids a fetch call that behaves differently
+depending on why it fired. Route-change and `pagehide` flushing both live in `Toast.tsx` (always mounted
+via `Providers`) rather than in `useUndoableDelete` itself, since the hook is only mounted for the
+duration of the triggering action, not for the app's whole lifetime. Added a `common.undo` message key
+(EN/HU) since none existed. No existing call site was migrated onto `useUndoableDelete` yet — that happens
+per-feature as each iteration reaches its own delete flow.
 
 ### W0.15 — Web UI: data table v2
 - Files: `src/components/ds/table/{DataTable,TableToolbar,TablePagination,useTableKeyboard}.tsx`

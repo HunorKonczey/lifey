@@ -630,6 +630,7 @@
     "nextPage": "Next page",
     "rangeOf": "{from}–{to} of {total}",
     "close": "Close",
+    "undo": "Undo",
     "remove": "Remove",
     "signOut": "Sign out",
     "signOutConfirmTitle": "Sign out?",

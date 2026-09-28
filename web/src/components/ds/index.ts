@@ -72,3 +72,4 @@ export { ConfirmModal } from "./overlay/ConfirmModal";
 export type { ConfirmModalProps } from "./overlay/ConfirmModal";
 export { Drawer } from "./overlay/Drawer";
 export type { DrawerProps } from "./overlay/Drawer";
+export { Toast } from "./overlay/Toast";

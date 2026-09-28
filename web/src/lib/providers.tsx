@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { Toaster } from "@/components/ui/Toaster";
+import { Toast } from "@/components/ds/overlay/Toast";
 import { OverlayRoot } from "@/components/ds/overlay/OverlayRoot";
 import { useSessionStore } from "@/features/auth/store";
 import { loadClientConfig } from "@/lib/api/client-config";
@@ -41,7 +41,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <I18nProvider locale={locale}>
         {children}
-        <Toaster />
+        <Toast />
         <OverlayRoot />
       </I18nProvider>
       <ReactQueryDevtools initialIsOpen={false} />

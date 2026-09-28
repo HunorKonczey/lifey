@@ -630,6 +630,7 @@
     "nextPage": "Következő oldal",
     "rangeOf": "{from}–{to} / {total}",
     "close": "Bezárás",
+    "undo": "Visszavonás",
     "remove": "Eltávolítás",
     "signOut": "Kijelentkezés",
     "signOutConfirmTitle": "Kijelentkezel?",
