@@ -70,3 +70,5 @@ export type { ModalProps } from "./overlay/Modal";
 export { Sheet } from "./overlay/Sheet";
 export { ConfirmModal } from "./overlay/ConfirmModal";
 export type { ConfirmModalProps } from "./overlay/ConfirmModal";
+export { Drawer } from "./overlay/Drawer";
+export type { DrawerProps } from "./overlay/Drawer";

@@ -425,6 +425,8 @@ body {
 @utility type-title-s     { font-size: 16px; line-height: 22px; font-weight: 700; }
 @utility type-body        { font-size: 15px; line-height: 22px; font-weight: 500; }
 @utility type-body-s      { font-size: 13px; line-height: 18px; font-weight: 500; }
+/* The drawer header's overline, above the 22/800 title (DS-03). */
+@utility type-overline    { font-size: 13px; line-height: 18px; font-weight: 600; }
 @utility type-label       { font-size: 12px; line-height: 16px; font-weight: 700; }
 /* CAPS + tracking only belongs on 12 px section labels — never on body text. */
 @utility type-section     { font-size: 12px; line-height: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
@@ -624,6 +626,10 @@ button:disabled { cursor: default; }
 @keyframes lifey-sheet-enter {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
+}
+@keyframes lifey-drawer-enter {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
 }
 
 /* ─── Kill browser autofill background ─── */

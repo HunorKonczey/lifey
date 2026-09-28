@@ -5,3 +5,4 @@ export { useFocusReturn } from "./useFocusReturn";
 export { useRovingFocus } from "./useRovingFocus";
 export type { RovingFocus } from "./useRovingFocus";
 export { useFocusTrap } from "./useFocusTrap";
+export { useUnsavedGuard } from "./useUnsavedGuard";

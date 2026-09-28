@@ -11,6 +11,7 @@ import { FieldsSection } from "./sections/FieldsSection";
 import { DatePickerSection } from "./sections/DatePickerSection";
 import { MenuSection } from "./sections/MenuSection";
 import { OverlaysSection } from "./sections/OverlaysSection";
+import { DrawerSection } from "./sections/DrawerSection";
 
 export interface GallerySection {
   id: string;
@@ -34,5 +35,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "date-picker", title: "Date picker", Component: DatePickerSection },
   { id: "menu", title: "Popover & menu", Component: MenuSection },
   { id: "overlays", title: "Modal & confirm", Component: OverlaysSection },
+  { id: "drawer", title: "Drawer", Component: DrawerSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

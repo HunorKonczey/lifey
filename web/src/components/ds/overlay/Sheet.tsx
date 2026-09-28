@@ -3,6 +3,10 @@ import { forwardRef, type ReactNode } from "react";
 export interface SheetProps {
   onScrimClick: () => void;
   "aria-label"?: string;
+  /** Takes the full viewport height instead of capping at 85vh — the
+   *  `Drawer`'s (D-W0.13) mobile shape, vs. the short-decision default. */
+  fullHeight?: boolean;
+  className?: string;
   children: ReactNode;
 }
 
@@ -10,7 +14,7 @@ export interface SheetProps {
  *  36×4 handle, radius 30 on the top corners only, 350ms
  *  (`--dur-sheet`), safe-area aware for a phone's home indicator. */
 export const Sheet = forwardRef<HTMLDivElement, SheetProps>(function Sheet(
-  { onScrimClick, children, ...aria },
+  { onScrimClick, children, fullHeight, className, ...aria },
   ref,
 ) {
   return (
@@ -27,9 +31,12 @@ export const Sheet = forwardRef<HTMLDivElement, SheetProps>(function Sheet(
         aria-modal="true"
         aria-label={aria["aria-label"]}
         tabIndex={-1}
-        className="w-full overflow-y-auto"
+        className={["w-full", fullHeight ? "flex flex-col overflow-hidden" : "overflow-y-auto", className]
+          .filter(Boolean)
+          .join(" ")}
         style={{
-          maxHeight: "85vh",
+          maxHeight: fullHeight ? "100dvh" : "85vh",
+          height: fullHeight ? "100dvh" : undefined,
           background: "var(--modal-bg)",
           borderTopLeftRadius: "var(--r-hero)",
           borderTopRightRadius: "var(--r-hero)",
@@ -37,7 +44,7 @@ export const Sheet = forwardRef<HTMLDivElement, SheetProps>(function Sheet(
           animation: "lifey-sheet-enter var(--dur-sheet) var(--ease-enter)",
         }}
       >
-        <div className="flex justify-center pt-2 pb-1">
+        <div className="flex justify-center pt-2 pb-1 shrink-0">
           <div style={{ width: 36, height: 4, borderRadius: "var(--r-pill)", background: "var(--outline)" }} />
         </div>
         {children}

@@ -965,7 +965,7 @@ before `useFocusTrap` in `Modal`. `e2e/ds/modal.spec.ts` scopes every `dialog` r
 name, since the gallery's own "Date picker" section keeps a `CalendarPopover` (also `role="dialog"`) open
 by default — a bare `getByRole("dialog")` matches both.
 
-### W0.13 — Web UI: drawer
+### W0.13 — Web UI: drawer ✅
 - Files: `src/components/ds/overlay/Drawer.tsx`, `src/lib/a11y/useUnsavedGuard.ts`.
 - 480 / 520 / 560 wide, from the right, 300 ms enter curve, radius 30 on the inner edge, sticky header
   (13/600 overline + 22/800 title + 40 px close) and footer (secondary + primary, 44 px, r14), Esc and
@@ -973,6 +973,21 @@ by default — a bare `getByRole("dialog")` matches both.
   < 768 it becomes a full-height `Sheet`.
 - **Verify:** `e2e/ds/drawer.spec.ts` (Esc closes — the recorded bug `trainer-011`; dirty form asks; focus
   return).
+
+*As built:* `Drawer` composes the existing primitives rather than adding new ones — `useFocusReturn` +
+`useFocusTrap` (same ordering fix as W0.12: capture focus before the trap moves it), the shared
+`OverlayRoot`, and `Sheet` reused for its < 768 shape via a new `fullHeight` prop (100dvh instead of the
+short-decision 85vh cap, and `flex flex-col overflow-hidden` on the panel instead of the default
+`overflow-y-auto`, so the header/footer stay sticky and only the body scrolls). The unsaved-changes guard
+(`useUnsavedGuard(isDirty, onClose)`) intercepts Esc, the scrim click, and the header ×, routing all three
+through one `requestClose()` that only shows the confirm when `isDirty`; the confirm itself is the existing
+`ConfirmModal` (a `Modal`), portaled into the same `OverlayRoot` and stacking correctly on top of the
+open drawer without any z-index coordination beyond DOM order. Copy is placeholder English ("Discard
+changes?" / "Keep editing"), matching the DS-level pattern of `ConfirmModal`'s own gallery sample — real
+i18n keys land when a feature (W7.12's schedule drawer, closing the `trainer-011` loop) actually consumes
+it. Added a `type-overline` utility (13/600) alongside the existing type scale for the header's overline
+line, and `--dur-drawer`/`lifey-drawer-enter` (translateX) were already anticipated by W0.12's own comment
+in `globals.css`.
 
 ### W0.14 — Web UI: toast with undo + `useUndoableDelete`
 - Files: `src/components/ds/overlay/Toast.tsx` (replaces `components/ui/Toaster.tsx`),
