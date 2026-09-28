@@ -1280,7 +1280,7 @@ new `e2e/ds/dateStepper.spec.ts` and a `DateStepperSection` gallery demo (next-d
 to today" chip, the `T` shortcut, the calendar popover), and the full lint / vitest / `ds` + `marketing`
 Playwright / build / `check:js-budget` suite, all green.
 
-### W0.22 — Web UI: mobile shell below 768 — bottom nav + "Több" sheet
+### W0.22 — Web UI: mobile shell below 768 — bottom nav + "Több" sheet ✅
 - Files: `src/components/shell/{BottomNav,MoreSheet,MobileHeader}.tsx`.
 - DS-02 "768 px alatt": the mobile app's floating bottom nav (68 px, r30, `--float` + blur, e3; active
   = primary pill with icon + label, others 48 × 48 icons) with **four items + "Több"**: client
@@ -1291,6 +1291,34 @@ Playwright / build / `check:js-budget` suite, all green.
 - The hamburger and the drawer-style sidebar (`useUiStore.drawerOpen`) go away.
 - **Verify:** 390 × 844 in both roles: no horizontal scroll, every item ≥ 44 px, last list row visible,
   "Több" sheet keyboard-operable.
+
+*As built:* `BottomNav`/`MoreSheet`/`MobileHeader` take their nav items as props rather than reading a role
+off session state, same "generic component, real wiring per role in its own step" split as `Sidebar`
+(W0.20): only the client `AppShell` actually mounts them (replacing its own W0.20/21 interim mobile overlay
+drawer + hamburger, which are now dead code and removed from `Sidebar.tsx`/`TopBar.tsx` — both are
+desktop-only, >=768px, from this step on); the "both roles" verify bullet is satisfied by demoing a trainer
+config in the gallery only, since the real trainer `AppShell` wiring is W0.23. That trainer demo reuses
+`AdminSidebar.tsx`'s existing nine routes/icons/`admin.nav` i18n keys (a `namespace` field added to
+`NavItemDef` so one component can resolve labels from either "nav" or "admin.nav") rather than inventing new
+ones — the plan's own "Klienseim · Naptár · Chat · Tervek" four-item row names a "Tervek" grouping that
+doesn't exist as a single route yet (that regrouping is W0.23's own "TARTALOM" redesign), so this picks four
+of today's real nine instead (Klienseim, Naptár, Chat, Programok) and puts the rest in "Több". `MoreSheet` is
+a thin wrapper over the existing `Modal` rather than a new overlay — `Modal` already becomes exactly this
+shape below 768px, with focus trap/Esc/scrim-close already built and tested, so wrapping it is what makes
+"keyboard-operable" free instead of a second implementation to get right. The FAB slot D-W0.22 mentions
+("used by W2/W4") isn't built — nothing consumes it yet, and adding an empty slot for a future caller is the
+kind of speculative code the redesign's own discipline (D-W0.19) argues against. One CI-only wrinkle found
+while writing `e2e/ds/mobileShell.spec.ts`: at 390px the "Több" button sits under the dev-only TanStack Query
+devtools toggle (always mounted via `Providers`, present in `next dev` and therefore in the `ds` project's
+webServer too, though never in production) — clicking it via the mouse hit the devtools icon instead, so the
+test focuses the button and presses Enter rather than clicking, which incidentally is a stronger check of
+"keyboard-operable" anyway. `shell.spec.ts` (W0.20) needed a locator fix too: both it and this step's own
+gallery demo now have a link named "Dashboard" on the same page, so its assertions are scoped to `#shell`
+the same way `AccountMenu`'s tests were already scoped to `#lifey-overlay-root`. Not achievable in this
+environment: 390x844 on the real authenticated app in both roles (no backend) — covered instead by
+`e2e/ds/mobileShell.spec.ts` against the new `MobileShellSection` gallery demo (both role configs, hit
+areas, no horizontal scroll, the sheet), and the full lint / vitest / `ds` + `marketing` Playwright / build /
+`check:js-budget` suite, all green.
 
 ### W0.23 — Web UI: trainer shell onto `AppShell`
 - Files: `app/(admin)/admin/layout.tsx`, `navConfig.ts`, delete `components/layout/AdminSidebar.tsx`

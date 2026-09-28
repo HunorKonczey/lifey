@@ -1,8 +1,14 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 /** DS-02's client sidebar + account menu (D-W0.20) against the gallery's
  *  "Sidebar & account menu" section: collapse, persistence, the collapsed
  *  tooltip, the account menu, and the logout dialog's default focus. */
+
+// Scoped to the section — the mobile bottom-nav demo elsewhere on this same
+// page also has a "Dashboard" link, sharing the same aria-label.
+function section(page: Page) {
+  return page.locator("#shell");
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/dev/design");
@@ -10,12 +16,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("collapsing the sidebar hides labels and shows the expand toggle", async ({ page }) => {
-  await expect(page.getByText("Dashboard", { exact: true })).toBeVisible();
+  await expect(section(page).getByText("Dashboard", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Collapse sidebar" }).click();
   // The link itself stays reachable and named via aria-label (D-W0.17) — only
   // its visible text span goes away.
-  await expect(page.getByText("Dashboard", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
+  await expect(section(page).getByText("Dashboard", { exact: true })).toHaveCount(0);
+  await expect(section(page).getByRole("link", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
 });
 
@@ -30,7 +36,7 @@ test("the collapsed state persists across a reload", async ({ page }) => {
 
 test("a collapsed item's tooltip shows its label and go-to shortcut", async ({ page }) => {
   await page.getByRole("button", { name: "Collapse sidebar" }).click();
-  const dashboard = page.getByRole("link", { name: "Dashboard" });
+  const dashboard = section(page).getByRole("link", { name: "Dashboard" });
   await dashboard.focus();
   const tooltip = page.getByRole("tooltip", { name: "Dashboard" });
   await expect(tooltip).toHaveCSS("opacity", "1");
