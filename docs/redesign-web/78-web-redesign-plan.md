@@ -1059,7 +1059,7 @@ takes an optional `rowMenuLabel` to disambiguate them (e.g. "More actions for Ch
 migrated onto the sole existing consumer (`FoodsView.tsx`) yet — that happens at its own nutrition
 iteration, same as every other DS component replacing a `components/ui`/`components/data` original.
 
-### W0.16 — Web UI: progress components
+### W0.16 — Web UI: progress components ✅
 - Files: `src/components/ds/progress/{ProgressRing,MetricBar,RatioBar,SegmentBar,MetricTile}.tsx`
   (replace `components/data/MacroRing.tsx`, `KpiCard`, `StatCard`, `HeroMetricCard` at their call sites
   per iteration).
@@ -1069,6 +1069,25 @@ iteration, same as every other DS component replacing a `components/ui`/`compone
   segments (full, partial @ 45 %, empty `--control`); `MetricTile` = icon + label + meta ("utoljára
   14:10"), value, bar/segments, subline, optional trailing quick actions and a "⋯".
 - **Verify:** gallery states 0 / 22 / 100 / 130 %; `ringSweeps.test.ts` (never > 360° + one lap).
+
+*As built:* `ProgressRing`/`MetricBar`/`RatioBar`'s math (`ringSweeps`, the stroke = 15/160 formula, the
+12-o'clock start, the over-goal second-lap-with-shadow, `RatioBar.fractions`) is ported byte-for-byte from
+mobile's `progress_ring.dart`/`metric_bar.dart`, verified against the actual Dart source rather than the
+plan summary alone. The ring itself is SVG (`stroke-dasharray`/`dashoffset` + a `rotate(-90)` transform to
+start at 12 o'clock), not Canvas — simpler to reason about in React and no cap-seam artifact to special-case
+at a closed 100% lap the way Canvas needed. Both `ringSweeps` (co-located in `ProgressRing.tsx`, per the
+`Avatar.tsx`/`avatar.test.ts` precedent) and `RatioBar.fractions` get their own pure-function test file.
+Reused the existing `AnimatedFill` (W0.6) and `MetricValue` (W0.7, whose own doc comment already
+anticipated a tile's 0.5 `unitRatio`) rather than re-deriving mobile's separate `AnimatedFill`/value-text
+logic. `SegmentBar` has no mobile precedent — the plan's own text flags it as a W1 water-tile design — so
+it's a fresh implementation: a segment is full, a fixed 45%-filled "partial" (the one segment straddling
+the boundary, a deliberately constant mark rather than its exact fractional remainder, to avoid a
+sliver-thin fill), or empty. `MetricTile` adds the plan's own web-only `meta` (small header text) and
+`rowMenu` (a `RowMenuButton`) alongside the ported mobile layout, since the DS-03 web spec calls for them
+and mobile's `metric_tile.dart` doesn't have them; the mobile canvas's overhanging 48dp corner quick-add
+button wasn't ported as-is (no web canvas confirms that exact treatment) — `actions` is a plain inline
+header slot instead. No existing call site (`MacroRing`/`KpiCard`/`StatCard`/`HeroMetricCard`) was migrated
+yet — happens per-feature at its own iteration, same as every other DS-v2 component so far.
 
 ### W0.17 — Web UI: empty, error and loading states
 - Files: `components/status/{EmptyState,ErrorState,Skeleton}.tsx` (restyled in place, APIs kept),
