@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormat } from "@/lib/format/useFormat";
 
 /** DS-07's formatting table, rendered through the real `lifeyFormat` /
@@ -8,7 +9,16 @@ import { useFormat } from "@/lib/format/useFormat";
  *  toolbar has selected. */
 export function FormattingSection() {
   const f = useFormat();
-  const now = new Date();
+  // `now` is filled in after mount instead of read directly during render:
+  // a bare `new Date()` runs once on the server and again on the client at
+  // hydration, and those are genuinely different instants (a real hydration
+  // mismatch when they straddle a clock tick, not test flakiness).
+  const [now, setNow] = useState<Date | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time mount fill-in, not a sync loop
+  useEffect(() => setNow(new Date()), []);
+
+  if (!now) return null;
+
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   yesterday.setHours(18, 20, 0, 0);
