@@ -627,6 +627,7 @@
     "openMenu": "Menü megnyitása",
     "previousDay": "Előző nap",
     "nextDay": "Következő nap",
+    "backToToday": "Vissza a mai napra",
     "previousPage": "Előző oldal",
     "nextPage": "Következő oldal",
     "rangeOf": "{from}–{to} / {total}",

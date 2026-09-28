@@ -1242,7 +1242,7 @@ fixed `false` server snapshot) and `FormattingSection` computed `new Date()` dir
 straddle a real clock tick between the server render and hydration; deferred to state set after mount).
 Committed separately as `056b2ad`.
 
-### W0.21 — Web UI: top bar + global date stepper
+### W0.21 — Web UI: top bar + global date stepper ✅
 - Files: `src/components/shell/{TopBar,DateStepper,routeChrome}.ts(x)`, `lib/hooks/useDateStore.ts`
   (unchanged API; `setDate` refuses future days).
 - DS-02 "Felső sáv": sticky; transparent over `--bg` at the top, **float surface (82 % bg + blur 24) +
@@ -1259,6 +1259,26 @@ Committed separately as `056b2ad`.
   `/weight` (range switcher, W4).
 - **Verify:** `dateStepper.test.ts` (future refused, label HU/EN); keyboard ←/→/T on `/dashboard`; the
   title no longer mismatches the date format in HU.
+
+*As built:* the pill's two-weight label ("Ma" 15/700 + the full weekday date 14/600) isn't new formatting
+logic — `lifeyFormat.dayLabel(date, today)` (D-W0.8) already returns exactly this as one string ("Ma ·
+szept. 27., szombat" / bare "szept. 26., péntek" on any other day); `DateStepper` just splits on `" · "` to
+give the "Ma"/"Today" word its own weight, rather than duplicating the todayWord/format logic. The
+`CalendarPopover` D-W0.10 already built (month grid, `disableFuture`, an optional `hasData` dot per day) is
+reused as-is for the pill's popover — no new calendar code needed. **Not wired:** the "dots = days with a
+logged meal" bullet — there is no cached *range* query to read from; `queryKeys.meals` only has `byDate`
+(a single day) and `all()` (unbounded), not a week. Adding a week-range endpoint/query is backend/feature
+work, out of scope for a shell step (same D-W0.19 "derived, hidden, or an explicit non-goal" discipline as
+every other canvas/API gap this session) — `CalendarPopover`'s `hasData` prop is simply left unset for now;
+whichever W-step gives nutrition a real week query should pass it in. `useDateStore.setDate`'s new
+future-clamp reuses `isFuture` from `ds/date/monthGrid.ts` (already used by `CalendarPopover` for the same
+purpose) instead of a second implementation. `routeChrome.ts` only implements the title-key/date-stepper
+split this step needs — D-W0.14's centre-slot swap (statistics/weight) and `focus` mode (no chrome) are
+that function's own later additions, not stubbed out ahead of time. Not achievable in this environment: the
+real `/dashboard` keyboard/title check (no backend) — covered instead by `dateStepper.test.ts` (vitest) plus
+new `e2e/ds/dateStepper.spec.ts` and a `DateStepperSection` gallery demo (next-disabled-on-today, the "Back
+to today" chip, the `T` shortcut, the calendar popover), and the full lint / vitest / `ds` + `marketing`
+Playwright / build / `check:js-budget` suite, all green.
 
 ### W0.22 — Web UI: mobile shell below 768 — bottom nav + "Több" sheet
 - Files: `src/components/shell/{BottomNav,MoreSheet,MobileHeader}.tsx`.

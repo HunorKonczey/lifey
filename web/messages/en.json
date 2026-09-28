@@ -627,6 +627,7 @@
     "openMenu": "Open menu",
     "previousDay": "Previous day",
     "nextDay": "Next day",
+    "backToToday": "Back to today",
     "previousPage": "Previous page",
     "nextPage": "Next page",
     "rangeOf": "{from}–{to} of {total}",

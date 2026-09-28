@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { isSameDay } from "date-fns";
+import { isFuture } from "@/components/ds/date/monthGrid";
 
 interface DateState {
   date: Date;
@@ -19,7 +20,14 @@ interface DateState {
 export const useDateStore = create<DateState>((set, get) => ({
   date: new Date(),
   isPinned: false,
-  setDate: (date) => set({ date, isPinned: !isSameDay(date, new Date()) }),
+  setDate: (date) => {
+    // The old top bar's `addDays` had no ceiling — the "next day" arrow
+    // could walk into next week (D-W0.21). Clamp instead of ignoring the
+    // call, so a click that lands exactly on today from the past still works.
+    const today = new Date();
+    const clamped = isFuture(date, today) ? today : date;
+    set({ date: clamped, isPinned: !isSameDay(clamped, today) });
+  },
   syncToday: () => {
     if (!get().isPinned) set({ date: new Date() });
   },

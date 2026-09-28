@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { avatarApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { TopBar } from "@/components/layout/TopBar";
 import { useSidebarState } from "@/lib/hooks/useSidebarState";
 import type { SessionUser } from "@/features/auth/types";
 import { Sidebar } from "./Sidebar";
+import { TopBar } from "./TopBar";
 
 export interface AppShellProps {
   user: SessionUser;

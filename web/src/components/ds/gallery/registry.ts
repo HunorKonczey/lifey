@@ -19,6 +19,7 @@ import { StatesSection } from "./sections/StatesSection";
 import { BarChartSection } from "./sections/BarChartSection";
 import { LineChartSection } from "./sections/LineChartSection";
 import { ShellSection } from "./sections/ShellSection";
+import { DateStepperSection } from "./sections/DateStepperSection";
 
 export interface GallerySection {
   id: string;
@@ -50,5 +51,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "bar-chart", title: "Bar chart", Component: BarChartSection },
   { id: "line-chart", title: "Line chart", Component: LineChartSection },
   { id: "shell", title: "Sidebar & account menu", Component: ShellSection },
+  { id: "date-stepper", title: "Date stepper", Component: DateStepperSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];
