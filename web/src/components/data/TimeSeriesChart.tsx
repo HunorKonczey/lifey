@@ -1,13 +1,9 @@
 "use client";
 
-import { useFormat } from "@/lib/i18n/format";
-import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
-  Tooltip, ReferenceLine, CartesianGrid,
-} from "recharts";
+import { LifeyLineChart } from "@/components/ds/charts/LifeyLineChart";
 
 export interface SeriesPoint {
-  date: string; // label
+  date: string; // pre-formatted label
   value: number;
 }
 
@@ -20,75 +16,32 @@ interface TimeSeriesChartProps {
   unit?: string;
 }
 
-export function TimeSeriesChart({
-  data, color, goalLine, goalLabel, height = 240, unit = "",
-}: TimeSeriesChartProps) {
-  const gradientId = `grad-${color.replace(/[^a-z0-9]/gi, "")}`;
-  const fmt = useFormat();
+/**
+ * A thin adapter over `LifeyLineChart` (D-W0.9/W0.19) — kept so the
+ * weight/statistics/trainer call sites that already pass a pre-formatted
+ * `SeriesPoint[]` (a display string, not a real per-point `Date`) keep
+ * working unchanged. Deleted in W10.3 once those call sites move onto
+ * `LifeyLineChart` directly with real dates (gaining gaps/average/goal-ring
+ * along the way). Synthetic sequential dates only drive `LifeyLineChart`'s
+ * internal bookkeeping (last-point lookup) — every point's `label` override
+ * keeps the caller's own original date string on the X axis.
+ */
+export function TimeSeriesChart({ data, color, goalLine, goalLabel, height = 240, unit = "" }: TimeSeriesChartProps) {
+  const epoch = new Date(2000, 0, 1).getTime();
+  const dayMs = 86_400_000;
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.35} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--outline)" vertical={false} />
-        <XAxis
-          dataKey="date"
-          tick={{ fill: "var(--muted)", fontSize: 11 }}
-          axisLine={{ stroke: "var(--outline)" }}
-          tickLine={false}
-          interval="preserveStartEnd"
-          minTickGap={28}
-        />
-        <YAxis
-          tick={{ fill: "var(--muted)", fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-          // Sized to the widest tick — a fixed 44 px (plus the old negative
-          // left margin) clipped 4-digit values ("1900" rendered as "900").
-          width="auto"
-          tickFormatter={(v: number) => fmt.number(v)}
-          domain={["auto", "auto"]}
-        />
-        <Tooltip
-          // The series has no name, so the default ": " separator rendered as a stray leading colon.
-          separator=""
-          contentStyle={{
-            background: "var(--surface-high)",
-            border: "1px solid var(--outline)",
-            borderRadius: "var(--r-md)",
-            fontSize: 12,
-          }}
-          labelStyle={{ color: "var(--on-surface-variant)" }}
-          formatter={(v) => [`${typeof v === "number" ? fmt.number(v, 2) : v}${unit}`, ""] as [string, string]}
-        />
-        {goalLine != null && (
-          <ReferenceLine
-            y={goalLine}
-            stroke="var(--primary)"
-            strokeDasharray="5 5"
-            label={{
-              value: goalLabel ?? `Goal ${goalLine}${unit}`,
-              fill: "var(--primary)",
-              fontSize: 11,
-              position: "insideTopRight",
-            }}
-          />
-        )}
-        <Area
-          type="monotone"
-          dataKey="value"
-          stroke={color}
-          strokeWidth={2.5}
-          fill={`url(#${gradientId})`}
-          dot={{ r: 2.5, fill: color }}
-          activeDot={{ r: 4 }}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+    <LifeyLineChart
+      data={data.map((p, i) => ({
+        date: new Date(epoch + i * dayMs),
+        value: p.value,
+        label: p.date,
+      }))}
+      color={color}
+      goal={goalLine}
+      goalLabel={goalLabel}
+      unit={unit}
+      height={height}
+    />
   );
 }

@@ -1151,13 +1151,31 @@ marketing, and importing by direct path (`@/components/ds/charts/LifeyBarChart.l
 insurance against a future barrel-wide import accidentally pulling it in; `check:js-budget` numbers are
 byte-for-byte identical to before this step, confirming no leak.
 
-### W0.19 — Web UI: `LifeyLineChart` (and `TimeSeriesChart` callers keep working)
+### W0.19 — Web UI: `LifeyLineChart` (and `TimeSeriesChart` callers keep working) ✅
 - Files: `src/components/ds/charts/LifeyLineChart.tsx` (+ `.lazy.tsx`), `components/data/TimeSeriesChart.tsx`
   (becomes a thin adapter over `LifeyLineChart` with today's defaults, deleted in W10.3).
 - D-W0.9 line rules; `movingAverage` with gaps; "no data" band; goal line; last point 12 px with a 4 px
   card-colour ring; legend "napi mérés · 7 napos átlag · cél".
 - **Verify:** gallery = DS-04 weight sample (aug. 18. – szept. 27., gaps, 72 / 68,5 / 65 axis, goal 65 kg);
   the existing weight/statistics/trainer charts still render.
+
+*As built:* unlike `chartMath.yAxisTicks`'s 0-anchored scale (right for a bar count), the line chart's own Y
+axis spans the data's actual value range — a new `lineAxisTicks(dataMin, dataMax, goal)` local to
+`LifeyLineChart.tsx` (floor/ceil to whole numbers, exact midpoint), not a mobile port (no canvas or Dart
+source names this specifically); it reproduces the exact 72/68.5/65 example. `TimeSeriesChart` really did
+become a thin adapter, not just a note-for-later: all four existing call sites
+(statistics/weight/`ClientStatisticsTab`/`ClientStepsTab`) pass a `SeriesPoint[]` with a pre-formatted date
+*string*, not a real per-point `Date` — `LifeyLineChart` needs a real `Date` for its own bookkeeping
+(last-point lookup, the average calculation), so `LineChartPoint` gained an optional `label` override that
+takes priority over the auto-formatted `shortDate(date)`; the adapter feeds it synthetic sequential dates
+(pure internal plumbing, gaps/average impossible on old plain-number data anyway) plus each point's
+original string as `label`, so the X axis still shows exactly what the caller always passed. `tsc --noEmit`
+across the whole project — not just the two chart files — confirms all four call sites still compile
+against the new signature; `check:js-budget` numbers are unchanged, same reasoning and same
+direct-path-only import discipline as W0.18's `LifeyBarChart`. The tooltip the old `TimeSeriesChart` had
+(hover to see the exact value + unit) moved into `LifeyLineChart` itself rather than being dropped — an
+adapter silently losing an interactive feature its callers already relied on isn't "keeping call sites
+working."
 
 ### W0.20 — Web UI: sidebar v2 (client) + account menu
 - Files: `src/components/shell/{AppShell,Sidebar,SidebarItem,AccountMenu,LogoutDialog,navConfig}.tsx`,
