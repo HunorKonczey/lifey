@@ -37,22 +37,22 @@ test("the error variant is sticky, assertive, and has its own close button", asy
 });
 
 test("deleting an item shows an undo toast; Undo restores the row without deleting it", async ({ page }) => {
-  // exact: true — the undo toast's own text ('"Chicken breast" deleted')
+  // exact: true — the undo toast's own text ('"Draft report" deleted')
   // otherwise still matches as a substring once the row itself is gone.
-  const row = page.getByText("Chicken breast", { exact: true });
+  const row = page.getByText("Draft report", { exact: true });
   await expect(row).toBeVisible();
-  await page.getByRole("button", { name: "Delete Chicken breast" }).click();
+  await page.getByRole("button", { name: "Delete Draft report" }).click();
   await expect(row).toHaveCount(0);
   const toast = page.getByRole("status");
-  await expect(toast).toHaveText(/Chicken breast.*deleted/);
+  await expect(toast).toHaveText(/Draft report.*deleted/);
   await toast.getByRole("button", { name: "Undo" }).click();
   await expect(row).toBeVisible();
   await expect(page.getByRole("status")).toHaveCount(0);
 });
 
 test("an undo toast commits (disappears for good) once its window elapses", async ({ page }) => {
-  await page.getByRole("button", { name: "Delete Chicken breast" }).click();
+  await page.getByRole("button", { name: "Delete Draft report" }).click();
   await expect(page.getByRole("status")).toBeVisible();
   await expect(page.getByRole("status")).toHaveCount(0, { timeout: 7000 });
-  await expect(page.getByText("Chicken breast", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Draft report", { exact: true })).toHaveCount(0);
 });

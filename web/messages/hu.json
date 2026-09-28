@@ -629,6 +629,7 @@
     "previousPage": "Előző oldal",
     "nextPage": "Következő oldal",
     "rangeOf": "{from}–{to} / {total}",
+    "rowRange": "{from}–{to}",
     "close": "Bezárás",
     "undo": "Visszavonás",
     "remove": "Eltávolítás",

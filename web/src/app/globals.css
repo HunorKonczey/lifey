@@ -566,6 +566,11 @@ button:disabled { cursor: default; }
   transition-delay: 400ms;
 }
 
+/* ─── DataTable row hover (D-W0.15) ─── */
+/* Only when the row hasn't set its own inline `background` (a selected
+   row keeps its own tint even on hover) — see DataTable.tsx. */
+.lifey-table-row:hover { background: var(--nested); }
+
 /* ─── Form field shape (D-W0.9/DS-03) ─── */
 /* Default --control fill, no border; hover --raised (one step up the
    ladder in both themes — the light theme's own "surface-3" fill is the

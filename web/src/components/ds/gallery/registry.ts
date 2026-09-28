@@ -13,6 +13,7 @@ import { MenuSection } from "./sections/MenuSection";
 import { OverlaysSection } from "./sections/OverlaysSection";
 import { DrawerSection } from "./sections/DrawerSection";
 import { ToastSection } from "./sections/ToastSection";
+import { TableSection } from "./sections/TableSection";
 
 export interface GallerySection {
   id: string;
@@ -38,5 +39,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "overlays", title: "Modal & confirm", Component: OverlaysSection },
   { id: "drawer", title: "Drawer", Component: DrawerSection },
   { id: "toast", title: "Toast", Component: ToastSection },
+  { id: "table", title: "Data table", Component: TableSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

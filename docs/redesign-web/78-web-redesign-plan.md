@@ -1023,7 +1023,7 @@ duration of the triggering action, not for the app's whole lifetime. Added a `co
 (EN/HU) since none existed. No existing call site was migrated onto `useUndoableDelete` yet — that happens
 per-feature as each iteration reaches its own delete flow.
 
-### W0.15 — Web UI: data table v2
+### W0.15 — Web UI: data table v2 ✅
 - Files: `src/components/ds/table/{DataTable,TableToolbar,TablePagination,useTableKeyboard}.tsx`
   (replaces `components/data/DataTable.tsx`).
 - DS-03 table: container card r22; toolbar = search (320 × 40, r14, `/` focuses it), filter chips (40,
@@ -1037,6 +1037,27 @@ per-feature as each iteration reaches its own delete flow.
 - Generic over a column definition (`{ key, header, align, width, metricDot, render, sort }`).
 - **Verify:** `e2e/ds/table.spec.ts` (sort, keyboard, density, card rows at 390); gallery with the DS-03
   foods sample.
+
+*As built:* `useTableKeyboard.ts` (not `.tsx` — it returns no JSX, matching every other hook file in
+`lib/a11y`/`lib/hooks`). The desktop `<table>` reuses the roving-tabindex pattern from `Menu.tsx`
+(`rowRefs` + focus-on-`activeIndex`-change) rather than a new primitive, and the active row's focus ring
+comes for free from the existing global `:focus-visible` → `--shadow-focus` mechanism once real DOM focus
+moves there — no separate "active" visual state needed. `RowMenuButton` (W0.11) gained optional
+`open`/`onOpenChange` props so `DataTable`'s own `Shift+F10` handler (fired while the *row*, not the "⋯"
+button, holds focus) can open a specific row's menu — it stays fully backward compatible (omit both, it
+manages its own state as before). "Filter chips" and "primary action" are a single generic `filters`/
+`action` `ReactNode` slot on `TableToolbar` rather than a dedicated filter-chip subsystem, since no
+concrete filter shape exists yet; a real feature iteration can build a chip row inside that slot. The
+container reuses `Card`'s "card" variant *styling* (radius, `--e1`, `--edge-card`) copied inline rather
+than the `Card` component itself, since `Card`'s own fixed padding can't be zeroed via a Tailwind
+utility override (the established unlayered-class gotcha) and the table's toolbar/rows/footer each need
+their own padding. Two real bugs surfaced building the DS-03 gallery sample: the sort-direction arrows
+were hand-rolled `<span>`s instead of the `Icon` component, so their ligature text ("arrow_upward") wasn't
+`aria-hidden` and leaked into each column header's accessible name; and giving every row's "⋯" the same
+default "More actions" label (fine for a single row) collided across 10+ rows at once, so `DataTable`
+takes an optional `rowMenuLabel` to disambiguate them (e.g. "More actions for Chicken breast"). Not
+migrated onto the sole existing consumer (`FoodsView.tsx`) yet — that happens at its own nutrition
+iteration, same as every other DS component replacing a `components/ui`/`components/data` original.
 
 ### W0.16 — Web UI: progress components
 - Files: `src/components/ds/progress/{ProgressRing,MetricBar,RatioBar,SegmentBar,MetricTile}.tsx`

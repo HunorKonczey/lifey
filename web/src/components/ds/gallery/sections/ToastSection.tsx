@@ -5,7 +5,9 @@ import { Button } from "../../Button";
 import { Card } from "../../Card";
 import { useToast } from "@/lib/hooks/useToast";
 
-const INITIAL_ITEMS = ["Chicken breast", "Brown rice", "Broccoli"];
+// Distinct from the Data table section's own food names below it, so a bare
+// text search for either demo's items doesn't cross-match the other.
+const INITIAL_ITEMS = ["Draft report", "Invoice #204", "Meeting notes"];
 
 /** D-W0.14 — Toast (bottom-centre, inverse surface, one at a time, a 6s bar
  *  that pauses on hover/focus, sticky errors with a close button) and the

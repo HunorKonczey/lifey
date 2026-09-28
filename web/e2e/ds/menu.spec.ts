@@ -61,7 +61,7 @@ test("an outside click closes the menu", async ({ page }) => {
 });
 
 test("Shift+F10 opens the row menu", async ({ page }) => {
-  const rowMenuButton = page.getByRole("button", { name: "More actions" });
+  const rowMenuButton = page.getByRole("button", { name: "More actions", exact: true });
   await rowMenuButton.focus();
   await page.keyboard.press("Shift+F10");
   await expect(page.getByRole("menuitem", { name: "View" })).toBeVisible();
@@ -69,7 +69,7 @@ test("Shift+F10 opens the row menu", async ({ page }) => {
 
 test("the menu flips above near the bottom edge of the viewport", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 500 });
-  const rowMenuButton = page.getByRole("button", { name: "More actions" });
+  const rowMenuButton = page.getByRole("button", { name: "More actions", exact: true });
   await rowMenuButton.scrollIntoViewIfNeeded();
   const triggerBox = await rowMenuButton.boundingBox();
   await rowMenuButton.click();

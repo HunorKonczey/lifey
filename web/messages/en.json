@@ -629,6 +629,7 @@
     "previousPage": "Previous page",
     "nextPage": "Next page",
     "rangeOf": "{from}–{to} of {total}",
+    "rowRange": "{from}–{to}",
     "close": "Close",
     "undo": "Undo",
     "remove": "Remove",
