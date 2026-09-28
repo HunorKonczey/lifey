@@ -1320,7 +1320,7 @@ environment: 390x844 on the real authenticated app in both roles (no backend) �
 areas, no horizontal scroll, the sheet), and the full lint / vitest / `ds` + `marketing` Playwright / build /
 `check:js-budget` suite, all green.
 
-### W0.23 — Web UI: trainer shell onto `AppShell`
+### W0.23 — Web UI: trainer shell onto `AppShell` ✅
 - Files: `app/(admin)/admin/layout.tsx`, `navConfig.ts`, delete `components/layout/AdminSidebar.tsx`
   usage; weekly-report switch → `AccountMenu` (reads/writes `trainerApi.preferences` — `trainer-004`).
 - DS-02 "EDZŐ · csoportosítva": clay **EDZŐ** badge under the logo; groups **KLIENSEK** (Klienseim,
@@ -1330,6 +1330,41 @@ areas, no horizontal scroll, the sheet), and the full lint / vitest / `ds` + `ma
   `/admin/pending` keeps its chrome-less layout (restyled in W9.6). Billing banner stays above content.
 - **Verify:** every `/admin/*` page renders in the new shell; chat badge live (the chat stream is still
   held by the layout); `grep -r "tertiary" src/components/shell` empty.
+
+*As built:* this step is the one D-W0.14 actually asked for and W0.20 deferred — `AppShell`/`Sidebar`/
+`AccountMenu` are now genuinely the *one* shell every role shares, not client-only components a trainer
+shell would duplicate. `Sidebar` gained `groups: NavGroup[]` (a flat single group for the client, three
+labelled groups — KLIENSEK/TARTALOM/FIÓK, `admin.nav.groupClients/groupContent/groupAccount`, new keys this
+step — for the trainer), plus `roleBadge`/`roleRing`/`showSettingsRow`/`trainerPrefs`; `AppShell` grew the
+matching props with client-shaped defaults, so `(app)/layout.tsx`'s own call site barely changed. The client
+sidebar's role-gated trainer/superadmin jump links (preserved unchanged since W0.20, not itself in the DS-02
+canvas) moved out of `Sidebar` into a new `clientGroupsFor(user)` in `navConfig.ts`, since `groups` is now
+supplied by the caller rather than computed inside the component. The user chip's hand-rolled avatar circle
+(client, mobile header) is replaced with the DS `Avatar` component (`src/components/ds/Avatar.tsx` — built in
+an earlier W0 step but never actually used until now): real initials instead of the e-mail's first letter,
+and the `roleRing` prop this step specifically needs for the clay trainer ring. The "Edző · PRO" chip
+subtitle is real billing data, not decoration — `AppShell` queries `queryKeys.billing.entitlements()`
+(`AdminBillingBanner`'s own query key, so it shares the cache instead of double-fetching) only when
+`roleRing === "trainer"`, and maps `TrainerPlan` through the existing `admin.billing.planStarter/planPro/
+planStudio` keys (D-W0.8: never a raw enum on screen) rather than hardcoding "PRO". `routeChrome.ts` moved
+from a `"nav"`-namespaced key to a full dotted path (`"admin.nav.clients"` etc.) so one function can title
+both the client and trainer routes, matched longest-prefix-first so `/admin/billing` doesn't get shadowed by
+the bare `/admin` entry — covered by a new `routeChrome.test.ts`. The weekly-report-email switch moved from
+its old fixed sidebar row into `AccountMenu` behind a new `trainerPrefs` prop, reusing the exact
+`trainerApi.preferences` query/mutation `AdminSidebar.tsx` already had (same query key, same toast copy) —
+not a rebuilt feature, just relocated. `components/layout/AdminSidebar.tsx` and `SignOutButton.tsx` (its only
+other user was the client sidebar, already retired in W0.20) are both deleted outright, not just unwired.
+`/admin/pending`'s chrome-less exception and the `useChatStream` call that keeps the sidebar's live unread
+badge working while a trainer is elsewhere in the app are both preserved verbatim in the new `AdminGate`
+(renamed from `AdminShell` for the same reason `(app)/layout.tsx`'s gate was renamed in W0.20 — the real
+`AppShell` needed the name). Gallery coverage: `ShellSection`'s existing Client/Trainer toggle (from W0.20)
+now drives the real generalized props instead of a stand-in, and a new `e2e/ds/trainerShell.spec.ts` checks
+the group headers and the role badge render (scoped past a text-matching wrinkle: a badge's `<span>`'s raw
+DOM text also includes its icon's Material Symbols ligature name, e.g. "fitness_center", so an exact-text
+locator for "TRAINER" only ever matches the plain chip-subtitle span, not the badge — noted in the test, not
+a bug). Not achievable in this environment: every real `/admin/*` page in the new shell, live chat badge (no
+backend) — covered instead by the gallery demo, `grep -r tertiary` (empty, confirmed), and the full lint /
+vitest / `ds` + `marketing` Playwright / build / `check:js-budget` suite, all green.
 
 ### W0.24 — Web UI: superadmin shell onto `AppShell`
 - Files: `app/(superadmin)/superadmin/layout.tsx` (the top header with tabs is deleted), `navConfig.ts`.

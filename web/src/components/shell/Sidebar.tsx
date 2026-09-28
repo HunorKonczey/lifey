@@ -4,8 +4,12 @@ import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ds/Icon";
+import { Avatar } from "@/components/ds/Avatar";
+import { useUnreadTotal } from "@/features/chat/hooks";
+import { unreadBadgeLabel } from "@/features/chat/thread";
 import type { SessionUser } from "@/features/auth/types";
-import { CLIENT_NAV_ITEMS, SETTINGS_NAV_ITEM } from "./navConfig";
+import type { NavGroup } from "./navConfig";
+import { SETTINGS_NAV_ITEM } from "./navConfig";
 import { SidebarItem } from "./SidebarItem";
 import { AccountMenu } from "./AccountMenu";
 
@@ -15,6 +19,20 @@ export interface SidebarProps {
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onLogout: () => void;
+  /** DS-02's nav content, one shell shared by every role (D-W0.14) — a flat
+   *  single group for the client, three labelled groups for the trainer. */
+  groups: NavGroup[];
+  /** A clay/neutral pill under the logo — "EDZŐ"/"RENDSZER" (D-W0.23/24). */
+  roleBadge?: { icon: string; label: string };
+  /** Clay ring for the trainer avatar, neutral for superadmin (D-W0.23/24). */
+  roleRing?: "trainer" | "superadmin";
+  /** Replaces the e-mail line under the user's name ("Edző · Pro" etc). */
+  chipSubtitle?: string;
+  /** The client's own dedicated bottom row — trainer/superadmin reach
+   *  Settings through the (now shared) account menu instead. Default true. */
+  showSettingsRow?: boolean;
+  /** Adds the weekly-report-email switch to the account menu (D-W0.23). */
+  trainerPrefs?: boolean;
 }
 
 function displayName(user: SessionUser) {
@@ -22,19 +40,32 @@ function displayName(user: SessionUser) {
 }
 
 /**
- * DS-02's floating client sidebar (D-W0.20): a 12px-inset panel, the nav
- * list, role-gated trainer/superadmin jump links (preserved from the old
- * `components/layout/Sidebar.tsx`, not itself in the DS-02 canvas), and the
- * user chip opening `AccountMenu`. Desktop-only (>=768px) since W0.22 —
- * `AppShell` renders `MobileHeader` + `BottomNav` below that instead of the
- * old drawer-overlay fallback this component used to render itself.
+ * DS-02's floating sidebar (D-W0.20/23/24): a 12px-inset panel, grouped nav,
+ * an optional role badge, and the user chip opening `AccountMenu`.
+ * Desktop-only (>=768px) — `AppShell` renders `MobileHeader` + `BottomNav`
+ * below that (D-W0.22).
  */
-export function Sidebar({ user, avatarUrl, collapsed, onToggleCollapsed, onLogout }: SidebarProps) {
-  const t = useTranslations("nav");
+export function Sidebar({
+  user,
+  avatarUrl,
+  collapsed,
+  onToggleCollapsed,
+  onLogout,
+  groups,
+  roleBadge,
+  roleRing,
+  chipSubtitle,
+  showSettingsRow = true,
+  trainerPrefs,
+}: SidebarProps) {
+  const t = useTranslations();
+  const nav = useTranslations("nav");
   const common = useTranslations("common");
   const pathname = usePathname();
   const chipRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Cheap when 0 (client groups never contain a "chat" item, so it's simply unused there).
+  const unread = useUnreadTotal();
 
   const width = collapsed ? 76 : 248;
 
@@ -51,7 +82,7 @@ export function Sidebar({ user, avatarUrl, collapsed, onToggleCollapsed, onLogou
         }}
       >
         {/* Logo row */}
-        <div className="flex items-center gap-3 mb-4" style={{ height: 36 }}>
+        <div className="flex items-center gap-3" style={{ height: 36 }}>
           <span
             className="inline-flex items-center justify-center shrink-0"
             style={{ width: 36, height: 36, borderRadius: "var(--r-control)", background: "var(--primary)" }}
@@ -72,6 +103,18 @@ export function Sidebar({ user, avatarUrl, collapsed, onToggleCollapsed, onLogou
           )}
         </div>
 
+        {roleBadge && !collapsed && (
+          <span
+            className="inline-flex items-center gap-1 self-start mt-3 rounded-[var(--r-pill)] px-2.5 py-1"
+            style={{ background: "var(--role)", color: "var(--bg)", fontSize: 10, fontWeight: 800, letterSpacing: "0.02em" }}
+          >
+            <Icon name={roleBadge.icon} size={13} fill={1} color="var(--bg)" />
+            {roleBadge.label}
+          </span>
+        )}
+
+        <div className={collapsed ? "mt-2" : "mt-4"} />
+
         {collapsed && (
           <button
             type="button"
@@ -85,43 +128,44 @@ export function Sidebar({ user, avatarUrl, collapsed, onToggleCollapsed, onLogou
         )}
 
         {/* Nav */}
-        <nav className="flex-1 flex flex-col gap-1 overflow-y-auto" aria-label={t("mainNavigation")}>
-          {CLIENT_NAV_ITEMS.map((item) => (
-            <SidebarItem
-              key={item.href}
-              item={item}
-              label={t(item.key)}
-              active={pathname.startsWith(item.href)}
-              collapsed={collapsed}
-            />
+        <nav className="flex-1 flex flex-col gap-4 overflow-y-auto" aria-label={nav("mainNavigation")}>
+          {groups.map((group, i) => (
+            <div key={group.label ?? i} className="flex flex-col gap-1">
+              {group.label && !collapsed && (
+                <p className="type-label px-3 mb-0.5" style={{ color: "var(--text-3)" }}>
+                  {t(group.label)}
+                </p>
+              )}
+              {group.items.map((item) => {
+                const isChat = item.key === "chat";
+                const badge = isChat && unread > 0 ? unreadBadgeLabel(unread) : null;
+                return (
+                  <SidebarItem
+                    key={item.href}
+                    item={item}
+                    label={t(`${item.namespace ?? "nav"}.${item.key}`)}
+                    active={item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href)}
+                    collapsed={collapsed}
+                    badge={badge}
+                    badgeLabel={isChat ? t("chat.unreadCount", { count: unread }) : undefined}
+                  />
+                );
+              })}
+            </div>
           ))}
-
-          {user.roles.includes("ROLE_TRAINER") && (
-            <SidebarItem
-              item={{ href: "/admin", key: "trainerView", icon: "storefront", shortcut: "T" }}
-              label={t("trainerView")}
-              active={pathname.startsWith("/admin")}
-              collapsed={collapsed}
-            />
-          )}
-          {user.roles.includes("ROLE_SUPER_ADMIN") && (
-            <SidebarItem
-              item={{ href: "/superadmin/users", key: "systemView", icon: "admin_panel_settings", shortcut: "Y" }}
-              label={t("systemView")}
-              active={pathname.startsWith("/superadmin")}
-              collapsed={collapsed}
-            />
-          )}
         </nav>
 
-        <div className="my-2" style={{ borderTop: "1px solid var(--hairline)" }} />
-
-        <SidebarItem
-          item={SETTINGS_NAV_ITEM}
-          label={t("settings")}
-          active={pathname.startsWith("/settings")}
-          collapsed={collapsed}
-        />
+        {showSettingsRow && (
+          <>
+            <div className="my-2" style={{ borderTop: "1px solid var(--hairline)" }} />
+            <SidebarItem
+              item={SETTINGS_NAV_ITEM}
+              label={nav("settings")}
+              active={pathname.startsWith("/settings")}
+              collapsed={collapsed}
+            />
+          </>
+        )}
 
         {/* User chip → account menu */}
         <button
@@ -138,18 +182,13 @@ export function Sidebar({ user, avatarUrl, collapsed, onToggleCollapsed, onLogou
             background: "var(--nested)",
           }}
         >
-          <span
-            className="inline-flex items-center justify-center rounded-full shrink-0 overflow-hidden"
-            style={{ width: 36, height: 36, background: "var(--primary)", color: "var(--on-primary)", fontSize: 14, fontWeight: 700 }}
-          >
-            {avatarUrl ? (
-              // Blob object URLs aren't compatible with next/image's optimizer.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              user.email.charAt(0).toUpperCase()
-            )}
-          </span>
+          <Avatar
+            name={displayName(user)}
+            email={user.email}
+            src={avatarUrl ?? undefined}
+            roleRing={roleRing}
+            size={36}
+          />
           {!collapsed && (
             <>
               <span className="flex-1 min-w-0 text-left">
@@ -157,7 +196,7 @@ export function Sidebar({ user, avatarUrl, collapsed, onToggleCollapsed, onLogou
                   {displayName(user)}
                 </span>
                 <span className="block truncate" style={{ fontSize: 12, fontWeight: 500, color: "var(--text-3)" }}>
-                  {user.email}
+                  {chipSubtitle ?? user.email}
                 </span>
               </span>
               <Icon name="unfold_more" size={18} color="var(--text-3)" />
@@ -165,7 +204,7 @@ export function Sidebar({ user, avatarUrl, collapsed, onToggleCollapsed, onLogou
           )}
         </button>
 
-        <AccountMenu open={menuOpen} onClose={() => setMenuOpen(false)} anchorRef={chipRef} onLogout={onLogout} />
+        <AccountMenu open={menuOpen} onClose={() => setMenuOpen(false)} anchorRef={chipRef} onLogout={onLogout} trainerPrefs={trainerPrefs} />
       </div>
     </aside>
   );

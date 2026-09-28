@@ -16,7 +16,7 @@ import { DateStepper } from "./DateStepper";
  * toggle right.
  */
 export function TopBar() {
-  const t = useTranslations("nav");
+  const t = useTranslations();
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
 

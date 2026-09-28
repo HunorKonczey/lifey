@@ -34,7 +34,10 @@
       "programs": "Programs",
       "nutrition": "My food & recipes",
       "assignments": "Assigned plans",
-      "backToOwnView": "Back to my view"
+      "backToOwnView": "Back to my view",
+      "groupClients": "CLIENTS",
+      "groupContent": "CONTENT",
+      "groupAccount": "ACCOUNT"
     },
     "screenComingSoon": "This screen isn't built yet.",
     "preferences": {

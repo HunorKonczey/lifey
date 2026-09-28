@@ -34,7 +34,10 @@
       "programs": "Programok",
       "nutrition": "Ételeim & receptjeim",
       "assignments": "Kiosztott tervek",
-      "backToOwnView": "Saját nézet"
+      "backToOwnView": "Saját nézet",
+      "groupClients": "KLIENSEK",
+      "groupContent": "TARTALOM",
+      "groupAccount": "FIÓK"
     },
     "screenComingSoon": "Ez a képernyő még nincs elkészítve.",
     "preferences": {

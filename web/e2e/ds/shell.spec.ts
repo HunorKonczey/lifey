@@ -44,7 +44,7 @@ test("a collapsed item's tooltip shows its label and go-to shortcut", async ({ p
 });
 
 test("the account menu opens from the user chip and offers sign out", async ({ page }) => {
-  await page.getByRole("button", { name: /Nagy Kata/ }).click();
+  await section(page).getByRole("button", { name: /Nagy Kata/ }).click();
   // Portals into the shared overlay root, distinct from the sidebar's own
   // always-visible "Settings" row underneath it.
   const menu = page.locator("#lifey-overlay-root");
@@ -53,7 +53,7 @@ test("the account menu opens from the user chip and offers sign out", async ({ p
 });
 
 test("the logout dialog defaults focus to Cancel, never the destructive action", async ({ page }) => {
-  await page.getByRole("button", { name: /Nagy Kata/ }).click();
+  await section(page).getByRole("button", { name: /Nagy Kata/ }).click();
   await page.getByRole("button", { name: "Sign out…" }).click();
   const dialog = page.getByRole("dialog", { name: "Sign out?" });
   await expect(dialog).toBeVisible();
