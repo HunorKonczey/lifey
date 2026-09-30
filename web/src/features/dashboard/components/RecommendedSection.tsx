@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { RecommendedWorkout } from "@/features/workouts/components/RecommendedWorkout";
-import { useUiStore } from "@/lib/hooks/useUiStore";
 import type { DashboardData } from "../useDashboardData";
 
 /** The recommended-workout slot (W1.4): the suggestion card, or — with no
@@ -18,10 +17,7 @@ export function RecommendedSection({ data }: { data: DashboardData }) {
       name={recommended?.name ?? null}
       summary={recommendedSummary}
       onStart={() => recommended && router.push(`/workouts?start=${recommended.id}`)}
-      onPickTemplate={() => {
-        useUiStore.getState().setWorkoutsTab("templates");
-        router.push("/workouts");
-      }}
+      onPickTemplate={() => router.push("/workouts?tab=templates")}
     />
   );
 }

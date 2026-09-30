@@ -17,12 +17,20 @@ import { recommendedTemplate } from "../recommendation";
 import { buildCardioSummaryLine } from "../cardioSummaryLine";
 import type { WorkoutSessionResponse } from "../types";
 import { useFormat } from "@/lib/i18n/format";
+import { matchesTypeFilter, type SessionTypeFilter } from "../workoutsTab";
 
 export function SessionsView({
+  typeFilter = "all",
+  starting = false,
+  onStartingChange,
   autoStartTemplateId,
   autoOpenSessionId,
   onAutoStartHandled,
 }: {
+  // The page's type chips (W3.1) and its "Edzés indítása" / `N` state — the start dialog is shown here.
+  typeFilter?: SessionTypeFilter;
+  starting?: boolean;
+  onStartingChange?: (starting: boolean) => void;
   // Set when navigated here from the dashboard's recommended-workout card —
   // starts this template's session automatically once templates are loaded.
   autoStartTemplateId?: number | null;
@@ -40,7 +48,7 @@ export function SessionsView({
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [activeId, setActiveId] = useState<number | null>(null);
-  const [starting, setStarting] = useState(false);
+  const setStarting = (value: boolean) => onStartingChange?.(value);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.workoutSessions.all(),
@@ -76,6 +84,8 @@ export function SessionsView({
   const sessions = (data ?? []).slice().sort(
     (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
   );
+
+  const visible = sessions.filter((s) => matchesTypeFilter(s.sessionKind, typeFilter));
 
   const active = activeId != null ? sessions.find((s) => s.id === activeId) ?? null : null;
   const recommended = recommendedTemplate(sessions, templates ?? []);
@@ -138,14 +148,7 @@ export function SessionsView({
         />
       )}
 
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold">{t("history")}</p>
-        <button onClick={() => setStarting(true)}
-          className="flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}>
-          <span className="material-symbols-rounded text-lg">play_arrow</span> {t("startWorkout")}
-        </button>
-      </div>
+      <p className="text-sm font-bold">{t("history")}</p>
 
       {isLoading ? (
         <Skeleton variant="table" />
@@ -153,9 +156,11 @@ export function SessionsView({
         <ErrorState onRetry={refetch} />
       ) : sessions.length === 0 ? (
         <EmptyState icon="exercise" title={t("noWorkoutsYet")} body={t("startToBegin")} />
+      ) : visible.length === 0 ? (
+        <EmptyState icon="exercise" title={t("noMatches")} />
       ) : (
         <div className="flex flex-col gap-2">
-          {sessions.map((s) => (
+          {visible.map((s) => (
             <SessionRow key={s.id} session={s} onOpen={() => setActiveId(s.id)} />
           ))}
         </div>

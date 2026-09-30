@@ -1239,7 +1239,14 @@
       "FOOTBALL": "Football",
       "OTHER_CARDIO": "Other",
       "STRENGTH": "Strength"
-    }
+    },
+    "tabsAria": "Workout sections",
+    "fabStart": "Workout",
+    "filterAria": "Workout type",
+    "filterAll": "All",
+    "filterStrength": "Strength",
+    "filterCardio": "Cardio",
+    "noMatches": "No workouts of this type yet."
   },
   "weight": {
     "newEntry": "New entry",

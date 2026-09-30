@@ -1239,7 +1239,14 @@
       "FOOTBALL": "Foci",
       "OTHER_CARDIO": "Egyéb",
       "STRENGTH": "Erősítő"
-    }
+    },
+    "tabsAria": "Edzés szakaszok",
+    "fabStart": "Edzés",
+    "filterAria": "Edzés típusa",
+    "filterAll": "Mind",
+    "filterStrength": "Erősítő",
+    "filterCardio": "Cardio",
+    "noMatches": "Még nincs ilyen típusú edzés."
   },
   "weight": {
     "newEntry": "Új bejegyzés",

@@ -2347,9 +2347,25 @@ PostWorkoutFeedbackDialog (105), RecommendedWorkoutCard, ActivityChip}.tsx`,
 defaultRestSeconds` (respect `restTimerEnabled`); RPE is the existing post-workout feedback field;
 "Ismétlés ma" = the existing start-from-template call.
 
-### W3.1 — Web UI: workouts header, tabs, type filter
+### W3.1 — Web UI: workouts header, tabs, type filter ✅
 - Files: `app/(app)/workouts/page.tsx`, `lib/hooks/useUiStore.ts` (`workoutsTab` → URL `?tab=`).
 - **Verify:** tabs deep-link; `N` opens the template picker.
+
+*As built:* the workouts page has its W3-A header. The tab lives in the URL (`workoutsTab.ts`: `?tab=templates`,
+`?tab=exercises`, sessions is the bare route; unknown values fall back to sessions) exactly like nutrition's, so
+`workoutsTab` left `useUiStore` and the dashboard's "pick a template" link is `/workouts?tab=templates`; the
+`?start=` / `?open=` deep links still land on the sessions tab. From 768 px: the `Tabs` underline row with
+"Edzés indítása `N`" (primary) to the right; under 768 px the tabs are a full-width `SegmentedControl` and the start
+action is the FAB ("＋ Edzés"). Below the tabs, on the sessions tab, the type chips **Mind · Erősítő · Cardio**
+(`aria-pressed`; `matchesTypeFilter`: strength = everything that is not cardio, so sessions from before the kind
+column still show) filter the list, with an empty state when a type has no sessions. The page now owns the
+start-dialog state — `SessionsView` shows the dialog and lost its own "Edzés indítása" button — so `N` (and the
+FAB) open it from any tab (from templates/exercises it first switches to sessions); W3.5 replaces the dialog with the
+template picker. **Deviation:** the plan's secondary "Cardio rögzítése" button is *not* built — the web has no
+cardio-recording flow (docs/cardio/58 D-W.2: the web reads, never edits cardio), so the button would be dead.
+Verified on the real app (demo account): `?tab=exercises` selects Gyakorlatok, `N` there switches to Edzések
+and opens the start dialog, the chips split 31 sessions into 12 cardio + 19 strength, no sideways scroll; unit tests
+for the tab parsing, the href round trip and the filter.
 
 ### W3.2 — Web data: week grouping + week summary
 - Files: `features/workouts/sessionGroups.ts` + test — port of `mobile/lib/features/workouts/domain/
