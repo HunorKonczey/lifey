@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { Button, Icon, PasswordField, TextField } from "@/components/ds";
 import {
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -58,145 +59,83 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div
-      className="w-full max-w-sm rounded-[var(--r-lg)] p-8"
-      style={{ background: "var(--surface)" }}
-    >
-      {/* Logo */}
-      <div className="flex items-center gap-2 mb-8">
-        <span
-          className="material-symbols-rounded text-3xl"
-          style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
-        >
-          eco
-        </span>
-        <span className="text-xl font-bold tracking-tight">Lifey</span>
-      </div>
-
+    <div className="flex flex-col gap-[22px] flex-1 lg:flex-none">
       {step === "email" ? (
         <>
-          <h1 className="text-2xl font-bold mb-1">{t("forgotPasswordTitle")}</h1>
-          <p className="text-sm mb-8" style={{ color: "var(--on-surface-variant)" }}>
-            {t("forgotPasswordTagline")}
-          </p>
+          <div className="flex flex-col gap-2">
+            <h1 style={{ fontSize: 30, lineHeight: 1.15, fontWeight: 800, letterSpacing: "-0.02em" }}>{t("forgotPasswordTitle")}</h1>
+            <p style={{ fontSize: 16, lineHeight: 1.5, color: "var(--text-2)" }}>{t("forgotPasswordTagline")}</p>
+          </div>
 
-          <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-semibold">{t("email")}</label>
-              <div
-                className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
-                style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-                data-ring-frame
-              >
-                <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>mail</span>
-                <input
-                  {...emailForm.register("email")}
-                  type="email"
-                  placeholder="you@example.com"
-                  className="flex-1 min-w-0 bg-transparent outline-none text-sm"
-                  autoComplete="email"
-                />
-              </div>
-              {emailForm.formState.errors.email && (
-                <p className="text-xs" style={{ color: "var(--error)" }}>
-                  {vm(emailForm.formState.errors.email.message)}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={emailForm.formState.isSubmitting}
-              className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "var(--bg)" }}
-            >
+          <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="flex flex-col gap-[22px] flex-1" noValidate>
+            <TextField
+              size="auth"
+              label={t("email")}
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              error={emailForm.formState.errors.email ? vm(emailForm.formState.errors.email.message) : undefined}
+              {...emailForm.register("email")}
+            />
+            <div className="flex-1 lg:hidden" />
+            <Button type="submit" size="auth" fullWidth disabled={emailForm.formState.isSubmitting}>
               {emailForm.formState.isSubmitting ? t("sending") : t("sendCode")}
-            </button>
+            </Button>
           </form>
         </>
       ) : (
         <>
-          <h1 className="text-2xl font-bold mb-1">{t("resetPasswordTitle")}</h1>
-          <p className="text-sm mb-4" style={{ color: "var(--on-surface-variant)" }}>
-            {t("resetPasswordTagline")}
-          </p>
+          <div className="flex flex-col gap-2">
+            <h1 style={{ fontSize: 30, lineHeight: 1.15, fontWeight: 800, letterSpacing: "-0.02em" }}>{t("resetPasswordTitle")}</h1>
+            <p style={{ fontSize: 16, lineHeight: 1.5, color: "var(--text-2)" }}>{t("resetPasswordTagline")}</p>
+          </div>
           <p
-            className="text-xs mb-6 px-3 py-2 rounded-[var(--r-input)]"
-            style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+            className="flex items-start gap-2.5 px-3.5 py-3 type-body-s"
+            style={{ borderRadius: "var(--r-control)", background: "var(--nested)", color: "var(--text-2)" }}
+            role="status"
           >
+            <Icon name="mail" size={18} color="var(--text-3)" />
             {t("checkYourEmail")}
           </p>
 
-          <form onSubmit={resetForm.handleSubmit(onSubmitReset)} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-semibold">{t("code")}</label>
-              <div
-                className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
-                style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-                data-ring-frame
-              >
-                <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>pin</span>
-                <input
-                  {...resetForm.register("code")}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="000000"
-                  className="flex-1 min-w-0 bg-transparent outline-none text-sm tracking-[0.3em]"
-                  autoComplete="one-time-code"
-                />
-              </div>
-              {resetForm.formState.errors.code && (
-                <p className="text-xs" style={{ color: "var(--error)" }}>
-                  {vm(resetForm.formState.errors.code.message)}
-                </p>
-              )}
-            </div>
-
-            {(
-              [
-                { field: "newPassword", label: t("newPassword") },
-                { field: "confirmPassword", label: t("confirmPassword") },
-              ] as const
-            ).map(({ field, label }) => (
-              <div key={field} className="flex flex-col gap-1">
-                <label className="text-sm font-semibold">{label}</label>
-                <div
-                  className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
-                  style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-                  data-ring-frame
-                >
-                  <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>lock</span>
-                  <input
-                    {...resetForm.register(field)}
-                    type="password"
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                    className="flex-1 min-w-0 bg-transparent outline-none text-sm"
-                  />
-                </div>
-                {resetForm.formState.errors[field] && (
-                  <p className="text-xs" style={{ color: "var(--error)" }}>
-                    {vm(resetForm.formState.errors[field]?.message)}
-                  </p>
-                )}
-              </div>
-            ))}
-
-            <button
-              type="submit"
-              disabled={resetForm.formState.isSubmitting}
-              className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "var(--bg)" }}
-            >
+          <form onSubmit={resetForm.handleSubmit(onSubmitReset)} className="flex flex-col gap-[18px] flex-1" noValidate>
+            <TextField
+              size="auth"
+              label={t("code")}
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="000000"
+              autoComplete="one-time-code"
+              className="[&_input]:tracking-[0.3em]"
+              error={resetForm.formState.errors.code ? vm(resetForm.formState.errors.code.message) : undefined}
+              {...resetForm.register("code")}
+            />
+            <PasswordField
+              size="auth"
+              label={t("newPassword")}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              error={resetForm.formState.errors.newPassword ? vm(resetForm.formState.errors.newPassword.message) : undefined}
+              {...resetForm.register("newPassword")}
+            />
+            <PasswordField
+              size="auth"
+              label={t("confirmPassword")}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              error={resetForm.formState.errors.confirmPassword ? vm(resetForm.formState.errors.confirmPassword.message) : undefined}
+              {...resetForm.register("confirmPassword")}
+            />
+            <div className="flex-1 lg:hidden" />
+            <Button type="submit" size="auth" fullWidth disabled={resetForm.formState.isSubmitting}>
               {resetForm.formState.isSubmitting ? t("resetting") : t("resetPassword")}
-            </button>
+            </Button>
           </form>
         </>
       )}
 
-      <p className="mt-6 text-center text-sm" style={{ color: "var(--on-surface-variant)" }}>
-        <Link href="/login" className="font-semibold" style={{ color: "var(--primary)" }}>
+      <p className="text-center type-body">
+        <Link href="/login" style={{ color: "var(--primary)", fontWeight: 700 }}>
           {t("backToLogin")}
         </Link>
       </p>
