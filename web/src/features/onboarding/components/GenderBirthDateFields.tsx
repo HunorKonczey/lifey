@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import type { FieldErrors, UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { DateFields } from "@/components/ds/date/DateFields";
-import { OptionCard } from "./OptionCard";
+import { ChoiceTileGroup } from "@/components/ds";
 import type { OnboardingFormValues } from "../schemas";
 import type { Gender } from "../types";
 
@@ -32,18 +32,14 @@ export function GenderBirthDateFields({ watch, setValue, errors }: Props) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold">{t("gender")}</label>
-        <div className="grid grid-cols-3 gap-3">
-          {GENDERS.map((g) => (
-            <OptionCard
-              key={g.value}
-              icon={g.icon}
-              label={t(`gender_${g.value}`)}
-              active={gender === g.value}
-              onClick={() => setValue("gender", g.value, { shouldValidate: true })}
-            />
-          ))}
-        </div>
+        <span className="type-label" style={{ color: "var(--text-2)" }} aria-hidden>{t("gender")}</span>
+        <ChoiceTileGroup<Gender>
+          aria-label={t("gender")}
+          columns={3}
+          options={GENDERS.map((g) => ({ value: g.value, icon: g.icon, label: t(`gender_${g.value}`) }))}
+          value={gender as Gender}
+          onChange={(v) => setValue("gender", v, { shouldValidate: true })}
+        />
         {errors.gender && (
           <p className="text-xs" style={{ color: "var(--error)" }}>{t("required")}</p>
         )}

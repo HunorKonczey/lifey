@@ -14,6 +14,8 @@ interface ChoiceTileGroupBase<T extends string> {
   options: ChoiceTileOption<T>[];
   "aria-label"?: string;
   className?: string;
+  /** Tiles per row from 640 px up: 2 (default) or 3 — a phone always shows one or two. */
+  columns?: 2 | 3;
 }
 
 export interface ChoiceTileRadioProps<T extends string> extends ChoiceTileGroupBase<T> {
@@ -37,7 +39,7 @@ export type ChoiceTileGroupProps<T extends string> = ChoiceTileRadioProps<T> | C
  * a grid, not a list Tab alone would serve well.
  */
 export function ChoiceTileGroup<T extends string>(props: ChoiceTileGroupProps<T>) {
-  const { options, className } = props;
+  const { options, className, columns = 2 } = props;
   const refs = useRef(new Map<string, HTMLButtonElement>());
 
   const isChecked = (v: T) => (props.mode === "checkbox" ? props.value.includes(v) : props.value === v);
@@ -68,7 +70,7 @@ export function ChoiceTileGroup<T extends string>(props: ChoiceTileGroupProps<T>
     <div
       role={props.mode === "checkbox" ? "group" : "radiogroup"}
       aria-label={props["aria-label"]}
-      className={["grid grid-cols-2 gap-3", className].filter(Boolean).join(" ")}
+      className={["grid gap-3", columns === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2", className].filter(Boolean).join(" ")}
     >
       {options.map((opt, i) => {
         const active = isChecked(opt.value);
