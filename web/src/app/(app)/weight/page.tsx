@@ -12,7 +12,10 @@ import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import type { WeightResponse } from "@/features/weight/types";
 import { useFormat } from "@/lib/i18n/format";
-import { GridItem, PageGrid, SegmentedControl } from "@/components/ds";
+import { ConfirmModal, GridItem, PageGrid, SegmentedControl } from "@/components/ds";
+import { useUndoableDelete } from "@/lib/hooks/useUndoableDelete";
+import { TOAST_DURATION_MS } from "@/lib/hooks/useToast";
+import { WeightLogTable } from "@/features/weight/components/WeightLogTable";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useTopBarCentre } from "@/lib/hooks/useTopBarSlot";
 import { WeightChart } from "@/features/weight/components/WeightChart";
@@ -69,21 +72,24 @@ export default function WeightPage() {
     onError: () => show(t("saveFailed"), "error"),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => weightApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.weights.all() });
-      show(t("entryRemoved"), "success");
-    },
-    onError: () => show(t("removeFailed"), "error"),
-  });
+  // Delete = confirm → the entry leaves the table and a toast offers Undo; the DELETE goes out when the window closes.
+  const undoableDelete = useUndoableDelete();
+  const [deleting, setDeleting] = useState<WeightResponse | null>(null);
+  const setCached = (update: (list: WeightResponse[]) => WeightResponse[]) =>
+    queryClient.setQueryData<WeightResponse[]>(queryKeys.weights.all(), (old) => update(old ?? []));
+  const deleteEntry = (entry: WeightResponse) =>
+    undoableDelete({
+      message: t("entryDeletedUndo", { weight: fmt.number(entry.weight, 1, 1) }),
+      path: `/weights/${entry.id}`,
+      remove: () => setCached((list) => list.filter((w) => w.id !== entry.id)),
+      restore: () => setCached((list) => (list.some((w) => w.id === entry.id) ? list : [...list, entry])),
+      errorMessage: t("removeFailed"),
+    });
 
   const sorted = (data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
 
   const hero = buildWeightHero(data ?? [], goalKg, new Date());
 
-  // History newest-first with delta vs previous chronological entry
-  const history = sorted.slice().reverse();
 
   return (
     <div className="flex flex-col gap-5">
@@ -141,43 +147,26 @@ export default function WeightPage() {
             <WeightChart weights={data ?? []} range={range} goalKg={goalKg} />
           </GridItem>
 
-          {/* History */}
+          {/* Log */}
           <GridItem span={{ base: 4, md: 8, xl: 8 }}>
-          <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-            <p className="text-sm font-bold mb-3">{t("history")}</p>
-            <div className="flex flex-col">
-              {history.map((w, idx) => {
-                // delta vs the next older entry (history is newest-first)
-                const older = history[idx + 1] as WeightResponse | undefined;
-                const delta = older ? w.weight - older.weight : null;
-                return (
-                  <div key={w.id} className="flex items-center justify-between py-2 group"
-                    style={{ borderBottom: "1px solid var(--outline)" }}>
-                    <span className="text-sm tabular" style={{ color: "var(--on-surface-variant)" }}>
-                      {fmt.date(w.date, "dayYear")}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold tabular">{fmt.number(w.weight, 1, 1)} kg</span>
-                      {delta != null && delta !== 0 && (
-                        <span className="text-xs tabular font-semibold"
-                          style={{ color: delta < 0 ? "var(--goal-positive)" : "var(--goal-negative)" }}>
-                          {delta > 0 ? "+" : ""}{fmt.number(delta, 1, 1)}
-                        </span>
-                      )}
-                      <button onClick={() => deleteMutation.mutate(w.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "var(--muted)" }}
-                        aria-label={t("deleteEntryAria")}>
-                        <span className="material-symbols-rounded text-base">close</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+            <WeightLogTable weights={data ?? []} goalKg={goalKg} onDelete={setDeleting} />
           </GridItem>
         </PageGrid>
       )}
+
+      <ConfirmModal
+        open={deleting != null}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) deleteEntry(deleting);
+          setDeleting(null);
+        }}
+        icon="delete"
+        title={deleting ? t("deleteTitle", { weight: `${fmt.number(deleting.weight, 1, 1)} kg` }) : ""}
+        body={t("deleteBody", { seconds: TOAST_DURATION_MS / 1000 })}
+        cancelLabel={common("cancel")}
+        confirmLabel={common("delete")}
+      />
     </div>
   );
 }
