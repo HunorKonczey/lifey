@@ -13,6 +13,7 @@ import { SessionLogger } from "./SessionLogger";
 import { CardioSessionDetail } from "./CardioSessionDetail";
 import { RecommendedWorkoutCard } from "./RecommendedWorkoutCard";
 import { SessionRow } from "./SessionRow";
+import { TemplatePicker } from "./TemplatePicker";
 import { WeekHeader } from "./WeekHeader";
 import { SessionSummary, sessionTitle, sessionWhenLabel } from "./SessionSummary";
 import { Card } from "@/components/ds";
@@ -46,7 +47,6 @@ export function SessionsView({
   onAutoStartHandled?: () => void;
 } = {}) {
   const t = useTranslations("workouts");
-  const common = useTranslations("common");
   const d = useTranslations("dashboard");
   const { locale } = useFormat();
   const sidePanel = useMediaQuery("(min-width: 1280px)");
@@ -209,42 +209,17 @@ export function SessionsView({
         </div>
       )}
 
-      {/* Start dialog */}
-      {starting && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,.5)" }}
-          onClick={() => setStarting(false)}>
-          <div className="w-full max-w-md rounded-[var(--r-lg)] p-5 flex flex-col gap-3"
-            style={{ background: "var(--surface)" }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-base">{t("startWorkout")}</h3>
-              <button onClick={() => setStarting(false)} aria-label={common("close")} className="p-1 rounded-[var(--r-sm)]">
-                <span className="material-symbols-rounded">close</span>
-              </button>
-            </div>
-            <button onClick={() => startMutation.mutate({ exerciseIds: [] })} disabled={startMutation.isPending}
-              className="text-left px-4 py-3 rounded-[var(--r-md)] text-sm font-semibold"
-              style={{ background: "var(--surface-container)" }}>
-              {t("emptyWorkout")}
-            </button>
-            <p className="text-xs font-semibold mt-1" style={{ color: "var(--on-surface-variant)" }}>{t("fromTemplate")}</p>
-            {(templates ?? []).length === 0 && (
-              <p className="text-xs" style={{ color: "var(--muted)" }}>{t("noTemplatesYet")}</p>
-            )}
-            {(templates ?? []).map((tpl) => (
-              <button key={tpl.id}
-                onClick={() => startMutation.mutate({ exerciseIds: tpl.exercises.map((e) => e.exerciseId), templateId: tpl.id })}
-                disabled={startMutation.isPending}
-                className="text-left px-4 py-3 rounded-[var(--r-md)] text-sm font-semibold transition-colors hover:bg-surface-container"
-                style={{ background: "var(--surface-container)" }}>
-                {tpl.name}
-                <span className="block text-xs font-normal" style={{ color: "var(--muted)" }}>
-                  {t("exercisesCount", { count: tpl.exercises.length })}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <TemplatePicker
+        open={starting}
+        onClose={() => setStarting(false)}
+        templates={templates ?? []}
+        sessions={sessions}
+        recommendedId={recommended?.id ?? null}
+        starting={startMutation.isPending}
+        onStart={(tpl) =>
+          startMutation.mutate(tpl ? { exerciseIds: tpl.exercises.map((e) => e.exerciseId), templateId: tpl.id } : { exerciseIds: [] })
+        }
+      />
     </div>
 
     {sidePanel && (
