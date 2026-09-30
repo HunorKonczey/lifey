@@ -45,6 +45,26 @@ export interface HrZoneBreakdown {
 }
 
 /**
+ * Whole percentages that add up to exactly 100 (W3.10): each fraction is floored, then the leftover points go to
+ * the largest remainders — so "33 % + 33 % + 33 %" can never be shown as 99, nor "50 + 25 + 26" as 101.
+ * All-zero input stays all zero.
+ */
+export function wholePercents(fractions: readonly number[]): number[] {
+  const total = fractions.reduce((a, b) => a + b, 0);
+  if (total <= 0) return fractions.map(() => 0);
+  const exact = fractions.map((f) => (f / total) * 100);
+  const floors = exact.map(Math.floor);
+  let left = 100 - floors.reduce((a, b) => a + b, 0);
+  const order = exact.map((e, i) => ({ i, rem: e - floors[i] })).sort((a, b) => b.rem - a.rem || a.i - b.i);
+  for (const { i } of order) {
+    if (left <= 0) break;
+    floors[i] += 1;
+    left -= 1;
+  }
+  return floors;
+}
+
+/**
  * Builds the breakdown from a finished session, or `null` when it carries no
  * zone data at all — the most common case by far, and the panel disappears
  * entirely for it rather than showing five zeroes.
