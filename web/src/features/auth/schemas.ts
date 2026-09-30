@@ -8,18 +8,12 @@ export const loginSchema = z.object({
   password: z.string().min(8, "validation.passwordMin"),
 });
 
-export const registerSchema = z
-  .object({
-    firstName: z.string().min(1, "validation.firstNameRequired"),
-    lastName: z.string().min(1, "validation.lastNameRequired"),
-    email: z.string().email("validation.emailInvalid"),
-    password: z.string().min(8, "validation.passwordMin"),
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: "validation.passwordsMismatch",
-    path: ["confirmPassword"],
-  });
+export const registerSchema = z.object({
+  firstName: z.string().min(1, "validation.firstNameRequired"),
+  lastName: z.string().min(1, "validation.lastNameRequired"),
+  email: z.string().email("validation.emailInvalid"),
+  password: z.string().min(8, "validation.passwordMin"),
+});
 
 export const forgotPasswordSchema = z.object({
   email: z.string().email("validation.emailInvalid"),

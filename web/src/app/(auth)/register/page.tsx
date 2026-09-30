@@ -5,7 +5,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { Button, PasswordField, TextField } from "@/components/ds";
+import { isHuLocale } from "@/lib/format/lifeyFormat";
+import { PasswordStrength } from "@/features/auth/components/PasswordStrength";
+import { TrainerSignupStepper } from "@/features/auth/components/TrainerSignupStepper";
 import { track } from "@vercel/analytics";
 import { registerSchema, type RegisterFormValues } from "@/features/auth/schemas";
 import { authApi } from "@/features/auth/api";
@@ -40,10 +44,14 @@ function RegisterForm() {
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
   });
+
+  const password = watch("password");
+  const locale = useLocale();
 
   const onSubmit = async (data: RegisterFormValues) => {
     // First-touch (65 D-W8): the lifey_attrib cookie a marketing page wrote
@@ -77,73 +85,74 @@ function RegisterForm() {
     }
   };
 
+  const trainerPath = (safeNextPath(searchParams.get("next")) ?? "").startsWith("/admin");
+  // Surname first in Hungarian, first name first in English (W6-B).
+  const hu = isHuLocale(locale);
+  const nameFields = [
+    <TextField
+      key="firstName"
+      size="auth"
+      label={t("firstName")}
+      placeholder={t("firstNamePlaceholder")}
+      autoComplete="given-name"
+      error={errors.firstName ? vm(errors.firstName.message) : undefined}
+      {...register("firstName")}
+    />,
+    <TextField
+      key="lastName"
+      size="auth"
+      label={t("lastName")}
+      placeholder={t("lastNamePlaceholder")}
+      autoComplete="family-name"
+      error={errors.lastName ? vm(errors.lastName.message) : undefined}
+      {...register("lastName")}
+    />,
+  ];
+
   return (
-    <div
-      className="w-full max-w-sm rounded-[var(--r-lg)] p-8"
-      style={{ background: "var(--surface)" }}
-    >
-      <div className="flex items-center gap-2 mb-8">
-        <span
-          className="material-symbols-rounded text-3xl"
-          style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
-        >
-          eco
-        </span>
-        <span className="text-xl font-bold tracking-tight">Lifey</span>
+    <div className="flex flex-col gap-[18px] flex-1 lg:flex-none">
+      {trainerPath && <TrainerSignupStepper />}
+      <div className="flex flex-col gap-2">
+        <h1 style={{ fontSize: 30, lineHeight: 1.15, fontWeight: 800, letterSpacing: "-0.02em" }}>
+          {trainerPath ? t("trainerRegisterTitle") : t("registerTitle")}
+        </h1>
+        {!trainerPath && <p style={{ fontSize: 16, lineHeight: 1.5, color: "var(--text-2)" }}>{t("registerTagline")}</p>}
       </div>
 
-      <h1 className="text-2xl font-bold mb-1">{t("register")}</h1>
-      <p className="text-sm mb-8" style={{ color: "var(--on-surface-variant)" }}>
-        {t("registerTagline")}
-      </p>
+      {!trainerPath && <GoogleSignInButton mode="register" />}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        {(
-          [
-            { field: "firstName", label: t("firstName"), type: "text", icon: "person", placeholder: t("firstNamePlaceholder"), autoComplete: "given-name" },
-            { field: "lastName", label: t("lastName"), type: "text", icon: "person", placeholder: t("lastNamePlaceholder"), autoComplete: "family-name" },
-            { field: "email", label: t("email"), type: "email", icon: "mail", placeholder: "you@example.com", autoComplete: "email" },
-            { field: "password", label: t("password"), type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
-            { field: "confirmPassword", label: t("confirmPassword"), type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
-          ] as const
-        ).map(({ field, label, type, icon, placeholder, autoComplete }) => (
-          <div key={field} className="flex flex-col gap-1">
-            <label className="text-sm font-semibold">{label}</label>
-            <div
-              className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
-              style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-              data-ring-frame
-            >
-              <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>{icon}</span>
-              <input
-                {...register(field)}
-                type={type}
-                placeholder={placeholder}
-                autoComplete={autoComplete}
-                className="flex-1 min-w-0 bg-transparent outline-none text-sm"
-              />
-            </div>
-            {errors[field] && (
-              <p className="text-xs" style={{ color: "var(--error)" }}>{vm(errors[field]?.message)}</p>
-            )}
-          </div>
-        ))}
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[18px] flex-1" noValidate>
+        <div className="grid grid-cols-2 gap-3">{hu ? [...nameFields].reverse() : nameFields}</div>
+        <TextField
+          size="auth"
+          label={t("email")}
+          type="email"
+          placeholder="you@example.com"
+          autoComplete="email"
+          error={errors.email ? vm(errors.email.message) : undefined}
+          {...register("email")}
+        />
+        <div>
+          <PasswordField
+            size="auth"
+            label={t("password")}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            error={errors.password ? vm(errors.password.message) : undefined}
+            {...register("password")}
+          />
+          <PasswordStrength password={password ?? ""} />
+        </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}
-        >
-          {isSubmitting ? t("creating") : t("register")}
-        </button>
+        <div className="flex-1 lg:hidden" />
+        <Button type="submit" size="auth" fullWidth disabled={isSubmitting}>
+          {isSubmitting ? t("creating") : trainerPath ? t("trainerContinue") : t("register")}
+        </Button>
       </form>
 
-      <GoogleSignInButton mode="register" />
-
-      <p className="mt-6 text-center text-sm" style={{ color: "var(--on-surface-variant)" }}>
+      <p className="text-center type-body" style={{ color: "var(--text-2)" }}>
         {t("haveAccount")}{" "}
-        <Link href="/login" className="font-semibold" style={{ color: "var(--primary)" }}>
+        <Link href="/login" style={{ color: "var(--primary)", fontWeight: 700 }}>
           {t("signIn")}
         </Link>
       </p>
