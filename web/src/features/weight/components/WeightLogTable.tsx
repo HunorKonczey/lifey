@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { DataTable, DeltaChip } from "@/components/ds";
+import { Button, DataTable, DeltaChip } from "@/components/ds";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import type { DataTableColumn } from "@/components/ds";
 import type { MenuItemDef } from "@/components/ds/Menu";
 import { useFormat } from "@/lib/format/useFormat";
@@ -28,7 +30,12 @@ export function WeightLogTable({
 }) {
   const t = useTranslations("weight");
   const fmt = useFormat();
-  const rows = weightLogRows(weights);
+  const phone = useMediaQuery("(max-width: 767px)");
+  // On a phone (W4-D) the log is a short list — the last three weigh-ins — with "Mind" for the rest.
+  const [showAll, setShowAll] = useState(false);
+  const allRows = weightLogRows(weights);
+  const short = phone && !showAll && allRows.length > 3;
+  const rows = short ? allRows.slice(0, 3) : allRows;
   const latest = weights.length > 0 ? [...weights].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id).at(-1)! : null;
   const goalDirection = goalKg == null || latest == null ? undefined : goalKg < latest.weight ? "lower" : "higher";
   const dateText = (r: WeightLogRow) => logDateLabel(parseLocalDate(r.entry.date), fmt.locale, fmt.shortDate);
@@ -59,14 +66,19 @@ export function WeightLogTable({
         rowKey={(r) => r.entry.id}
         rowMenu={rowMenu}
         rowMenuLabel={(r) => t("rowMenuLabel", { date: dateText(r) })}
-        pageSize={10}
-        totalLabel={(n) => t("totalEntries", { count: n })}
+        pageSize={short ? 3 : 10}
+        totalLabel={(n) => t("totalEntries", { count: short ? allRows.length : n })}
         renderCardRow={(r) => ({
           title: dateText(r),
           meta: r.delta == null ? undefined : fmt.signedDelta(r.delta, { unit: "kg" }),
           value: fmt.weight(r.entry.weight),
         })}
       />
+      {short && (
+        <Button variant="ghost" className="mt-2 w-full" onClick={() => setShowAll(true)}>
+          {t("showAllEntries", { count: allRows.length })}
+        </Button>
+      )}
     </div>
   );
 }

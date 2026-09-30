@@ -47,8 +47,8 @@ export default function StepsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-[1fr_0.5fr_0.5fr_0.5fr]">
-        <div className="md:col-span-3 xl:col-span-1">
+      <div className="grid grid-cols-3 gap-2 md:gap-4 xl:grid-cols-[1fr_0.5fr_0.5fr_0.5fr]">
+        <div className="col-span-3 xl:col-span-1">
           <StepsHero steps={entry?.steps ?? 0} goal={goal} isToday={isToday} date={date} onEdit={() => setEditing(true)} />
         </div>
         <StepsStats stats={stats} />

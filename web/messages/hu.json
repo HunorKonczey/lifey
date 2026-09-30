@@ -1354,6 +1354,8 @@
     "noMatches": "Még nincs ilyen típusú edzés."
   },
   "weight": {
+    "heroGoalLine": "Cél {goal} · még {left}",
+    "showAllEntries": "Minden bejegyzés ({count})",
     "logTitle": "Súly rögzítése",
     "editTitle": "Bejegyzés szerkesztése",
     "updated": "Bejegyzés frissítve",
@@ -1418,6 +1420,8 @@
     "range1Y": "1É"
   },
   "water": {
+    "fabWater": "Víz",
+    "fabWaterAria": "{name} hozzáadása ({litres})",
     "ringAria": "A napi vízcél {percent}%-a",
     "goalReached": "Cél elérve",
     "remaining": "Még {litres} · kb. {count} pohár",

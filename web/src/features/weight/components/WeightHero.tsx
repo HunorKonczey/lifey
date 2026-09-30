@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Card, DeltaChip } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { monthThird, type WeightHeroData } from "../weightHero";
 
 /**
@@ -14,11 +15,43 @@ import { monthThird, type WeightHeroData } from "../weightHero";
 export function WeightHero({ hero, now = new Date() }: { hero: WeightHeroData; now?: Date }) {
   const t = useTranslations("weight");
   const fmt = useFormat();
+  const phone = useMediaQuery("(max-width: 767px)");
   const goalDirection = hero.goalKg == null ? undefined : hero.goalKg < hero.start.weight ? "lower" : "higher";
   const eta = hero.projection?.state === "onTrack" ? hero.projection.etaDate : undefined;
   // "72 kg", not "72,0 kg": a whole number reads cleaner on the band (the tile on the dashboard does the same).
   const kg = (v: number) => (Number.isInteger(v) ? fmt.integer(v, "kg") : fmt.weight(v));
   const month = (d: Date) => new Intl.DateTimeFormat(fmt.locale, { month: "short" }).format(d);
+
+  // On a phone (W4-D) the hero is the number, this week's change and "Cél 65 kg · még 4,6 kg" — the band, the second chip and the stats stay on the desktop card.
+  if (phone) {
+    return (
+      <Card variant="hero" className="flex flex-col gap-3" style={{ padding: 20 }} data-testid="weight-hero">
+        <div>
+          <p className="type-body-s" style={{ color: "var(--text-3)" }}>
+            {fmt.relativeDay(hero.latest.date, now)}
+          </p>
+          <p className="tabular" style={{ color: "var(--text)" }}>
+            <span style={{ fontSize: 56, lineHeight: "60px", fontWeight: 800, letterSpacing: "-0.03em" }} data-testid="weight-hero-number">
+              {fmt.weightNumber(hero.latest.weight)}
+            </span>
+            <span className="type-title-s ml-2" style={{ color: "var(--text-2)" }}>
+              kg
+            </span>
+          </p>
+        </div>
+        {hero.weekDelta != null && (
+          <div>
+            <DeltaChip value={hero.weekDelta} unit={t("heroWeekUnit")} goalDirection={goalDirection} size="medium" />
+          </div>
+        )}
+        {hero.goalKg != null && (
+          <p className="type-body-s" style={{ color: "var(--text-2)" }} data-testid="weight-remaining">
+            {hero.reached ? t("heroReached") : t("heroGoalLine", { goal: kg(hero.goalKg), left: fmt.weight(hero.remainingKg ?? 0) })}
+          </p>
+        )}
+      </Card>
+    );
+  }
 
   return (
     <Card variant="hero" className="flex flex-col gap-5" style={{ padding: 28 }} data-testid="weight-hero">

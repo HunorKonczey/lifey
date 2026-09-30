@@ -89,7 +89,7 @@ export function WaterHero({
         </div>
       </div>
 
-      <div className="flex items-end gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <NumberField
           className="flex-1"
           label={t("customAmount")}
@@ -102,7 +102,7 @@ export function WaterHero({
           maxDecimals={2}
           onEnter={(v) => onAdd({ sourceId: null, volumeLiters: v })}
         />
-        <Button variant="secondary" onClick={() => onAdd({ sourceId: null, volumeLiters: custom })} disabled={pending}>
+        <Button variant="secondary" className="max-sm:w-full" onClick={() => onAdd({ sourceId: null, volumeLiters: custom })} disabled={pending}>
           <Icon name="add" size={20} />
           {t("add")}
         </Button>

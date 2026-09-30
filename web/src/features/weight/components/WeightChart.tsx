@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Card } from "@/components/ds";
 import { LifeyLineChart, type LineChartPoint } from "@/components/ds/charts/LifeyLineChart.lazy";
 import { useFormat } from "@/lib/format/useFormat";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { buildWeightSeries, type WeightRange } from "../weightSeries";
 import type { WeightResponse } from "../types";
 
@@ -16,6 +17,7 @@ import type { WeightResponse } from "../types";
 export function WeightChart({ weights, range, goalKg, now = new Date() }: { weights: WeightResponse[]; range: WeightRange; goalKg: number | null; now?: Date }) {
   const t = useTranslations("weight");
   const fmt = useFormat();
+  const phone = useMediaQuery("(max-width: 767px)");
   const series = buildWeightSeries(weights, range, now);
   const todayKey = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
@@ -40,8 +42,9 @@ export function WeightChart({ weights, range, goalKg, now = new Date() }: { weig
           showAverage={!series.weekly}
           emphasis="average"
           threeXLabels
-          height={280}
-          legend={{ raw: series.weekly ? t("chartLegendWeekly") : t("chartLegendRaw"), average: t("chartLegendAverage"), goal: t("chartLegendGoal") }}
+          dots={!phone}
+          height={phone ? 200 : 280}
+          legend={{ raw: phone ? undefined : series.weekly ? t("chartLegendWeekly") : t("chartLegendRaw"), average: t("chartLegendAverage"), goal: t("chartLegendGoal") }}
         />
       ) : (
         <p className="type-body-s py-16 text-center" style={{ color: "var(--text-3)" }}>

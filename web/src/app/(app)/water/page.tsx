@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
-import { ConfirmModal, GridItem, PageGrid } from "@/components/ds";
+import { ConfirmModal, Fab, GridItem, PageGrid } from "@/components/ds";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 import { settingsApi } from "@/features/settings/api";
@@ -40,6 +41,7 @@ export default function WaterPage() {
   const { show } = useToast();
   const undoableDelete = useUndoableDelete();
   const dateStr = format(date, "yyyy-MM-dd");
+  const phone = useMediaQuery("(max-width: 767px)");
   const [managing, setManaging] = useState(false);
   const [deleting, setDeleting] = useState<WaterEntryResponse | null>(null);
 
@@ -141,6 +143,15 @@ export default function WaterPage() {
           <WaterTrendCard window={trend} goal={goal} />
         </GridItem>
       </PageGrid>
+
+      {/* The phone's FAB (W4.7) is one tap: it logs the most used source, the first tile. */}
+      {phone && tiles[0] && (
+        <Fab
+          label={t("fabWater")}
+          aria-label={t("fabWaterAria", { name: tiles[0].name, litres: fmt.litres(tiles[0].source.volumeLiters) })}
+          onClick={() => addMutation.mutate(tiles[0].source)}
+        />
+      )}
 
       {managing && <WaterSourcesDrawer sources={sources} onClose={() => setManaging(false)} />}
 

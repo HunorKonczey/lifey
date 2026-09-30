@@ -41,6 +41,8 @@ export interface LifeyLineChartProps {
   emphasis?: "raw" | "average";
   /** Label only the first, middle and last point on the X axis ("aug. 29. · szept. 13. · ma") instead of every other one. */
   threeXLabels?: boolean;
+  /** Draw the individual measurements. `false` on a phone (W4-D): only the average line and the goal remain. Default true. */
+  dots?: boolean;
   /** "napi mérés" / "7 napos átlag" / "cél" — omit any to hide that legend entry. */
   legend?: { raw?: string; average?: string; goal?: string };
   "aria-label"?: string;
@@ -77,6 +79,7 @@ export function LifeyLineChart({
   showAverage = false,
   emphasis = "raw",
   threeXLabels = false,
+  dots = true,
   legend,
   ...aria
 }: LifeyLineChartProps) {
@@ -125,7 +128,7 @@ export function LifeyLineChart({
   function renderLastDot(props: { cx?: number; cy?: number; payload?: { time: number; value: number | null } }) {
     if (props.payload?.time !== lastTime) {
       // Average-led: every other measurement is a faint dot (the line itself is hidden).
-      if (averageLed && props.payload?.value != null) return <circle cx={props.cx} cy={props.cy} r={3} fill={color} fillOpacity={0.4} />;
+      if (averageLed && dots && props.payload?.value != null) return <circle cx={props.cx} cy={props.cy} r={3} fill={color} fillOpacity={0.4} />;
       return <g />;
     }
     return (
