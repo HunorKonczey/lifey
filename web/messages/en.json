@@ -923,7 +923,8 @@
     },
     "tabsAria": "Nutrition sections",
     "addFood": "Add food",
-    "copyFromDay": "Copy from an earlier day"
+    "copyFromDay": "Copy from an earlier day",
+    "goalLabel": "Goal"
   },
   "workouts": {
     "sessions": "Sessions",

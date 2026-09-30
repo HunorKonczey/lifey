@@ -923,7 +923,8 @@
     },
     "tabsAria": "Táplálkozás szakaszai",
     "addFood": "Étel hozzáadása",
-    "copyFromDay": "Másolás korábbi napról"
+    "copyFromDay": "Másolás korábbi napról",
+    "goalLabel": "Cél"
   },
   "workouts": {
     "sessions": "Edzések",

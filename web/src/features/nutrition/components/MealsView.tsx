@@ -14,15 +14,15 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddMealEntryDialog } from "./AddMealEntryDialog";
-import { MealCard, mealKcal, mealProtein } from "./MealCard";
-import { computeRemainingBudget, isOver, remainingOf } from "../budget";
+import { GridItem, PageGrid } from "@/components/ds";
+import { DaySummaryView } from "./DaySummary";
+import { MealCard, mealCarbs, mealFat, mealKcal, mealProtein } from "./MealCard";
 import { useNutritionUi } from "../nutritionUi";
 import type { MealResponse, MealType } from "../types";
 import { useFormat } from "@/lib/i18n/format";
 
 export function MealsView() {
   const t = useTranslations("nutrition");
-  const d = useTranslations("dashboard");
   const fmt = useFormat();
   const { date } = useDateStore();
   const queryClient = useQueryClient();
@@ -97,36 +97,41 @@ export function MealsView() {
   );
   const previousDayKcal = previousDayMeals.reduce((s, m) => s + mealKcal(m), 0);
 
-  const totalKcal = todayMeals.reduce((s, m) => s + mealKcal(m), 0);
-  const totalProtein = todayMeals.reduce((s, m) => s + mealProtein(m), 0);
-  const totalItems = todayMeals.reduce((s, m) => s + m.entries.length, 0);
-
-  const budget = computeRemainingBudget(
-    { calories: totalKcal, protein: totalProtein },
-    { dailyCalorieGoal: settings?.dailyCalorieGoal ?? null, dailyProteinGoal: settings?.dailyProteinGoal ?? null },
+  const totalKcal = todayMeals.reduce((sum, m) => sum + mealKcal(m), 0);
+  const summary = (
+    <DaySummaryView
+      kcal={totalKcal}
+      goalKcal={settings?.dailyCalorieGoal ?? null}
+      macros={{
+        protein: { value: todayMeals.reduce((sum, m) => sum + mealProtein(m), 0), goal: settings?.dailyProteinGoal ?? null },
+        carbs: { value: todayMeals.reduce((sum, m) => sum + mealCarbs(m), 0), goal: settings?.dailyCarbsGoal ?? null },
+        fat: { value: todayMeals.reduce((sum, m) => sum + mealFat(m), 0), goal: settings?.dailyFatGoal ?? null },
+      }}
+    />
   );
-  const remainingKcal = remainingOf(budget.calories);
-  const remainingProtein = remainingOf(budget.protein);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 flex flex-col gap-3">
-          {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}
-        </div>
-        <Skeleton variant="card" className="w-full lg:w-[300px] h-80" />
-      </div>
+      <PageGrid>
+        <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 1, xl: 0 }}>
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}
+          </div>
+        </GridItem>
+        <GridItem span={{ base: 4, md: 8, xl: 4 }} order={{ base: 0, xl: 1 }}>
+          <Skeleton variant="card" className="h-72" />
+        </GridItem>
+      </PageGrid>
     );
   }
 
   if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
-    // Stacks below lg — side by side, the fixed 300 px summary left the meal
-    // column a few pixels wide on a phone.
-    <div className="flex flex-col lg:flex-row gap-6">
+    // 8 + 4 from 1280 (the summary sticky); below that the summary sits above the list (W2-A/B/F).
+    <PageGrid>
       {/* Meal groups */}
-      <div className="flex-1 min-w-0 flex flex-col gap-6">
+      <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 1, xl: 0 }} className="flex flex-col gap-6">
         {MEAL_GROUPS.map(({ type, label, icon }) => {
           const meals = todayMeals.filter((m) => m.mealType === type);
           const groupKcal = meals.reduce((s, m) => s + mealKcal(m), 0);
@@ -188,105 +193,12 @@ export function MealsView() {
             </div>
           );
         })}
-      </div>
+      </GridItem>
 
-      {/* Daily summary sticky panel */}
-      <div className="w-full lg:w-[300px] lg:shrink-0 order-first lg:order-none">
-        <div className="lg:sticky lg:top-6 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-4">{t("dailySummary")}</p>
-
-          {/* Prominent "what's left today" line — hidden metric-by-metric
-              when its goal isn't set, whole block hidden without any goal. */}
-          {(remainingKcal != null || remainingProtein != null) && (
-            <div className="flex flex-col gap-0.5 mb-3">
-              {remainingKcal != null && (
-                <p
-                  className="text-base font-extrabold tabular"
-                  style={{ color: isOver(budget.calories) ? "var(--goal-negative)" : "var(--goal-positive)" }}
-                >
-                  {isOver(budget.calories)
-                    ? d("over", { diff: Math.abs(Math.round(remainingKcal)), unit: "kcal" })
-                    : d("remaining", { diff: Math.round(remainingKcal), unit: "kcal" })}
-                </p>
-              )}
-              {remainingProtein != null && (
-                <p
-                  className="text-sm font-semibold tabular"
-                  style={{ color: isOver(budget.protein) ? "var(--goal-negative)" : "var(--on-surface-variant)" }}
-                >
-                  {isOver(budget.protein)
-                    ? d("over", { diff: Math.abs(Math.round(remainingProtein)), unit: "g protein" })
-                    : d("remaining", { diff: Math.round(remainingProtein), unit: "g protein" })}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-end gap-2 mb-1">
-            <span className="text-3xl font-extrabold tabular">
-              {fmt.number(Math.round(totalKcal))}
-            </span>
-            {budget.calories.goal != null ? (
-              <span className="text-sm font-semibold mb-1" style={{ color: "var(--on-surface-variant)" }}>
-                / {fmt.number(budget.calories.goal)} kcal
-              </span>
-            ) : (
-              <span className="text-sm mb-1" style={{ color: "var(--on-surface-variant)" }}>kcal</span>
-            )}
-          </div>
-          {budget.calories.goal != null && (
-            <div className="h-2 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
-              <div
-                className="h-full rounded-[var(--r-pill)] transition-all"
-                style={{
-                  width: `${Math.min(totalKcal / budget.calories.goal, 1) * 100}%`,
-                  background: isOver(budget.calories) ? "var(--goal-negative)" : "var(--metric-kcal)",
-                }}
-              />
-            </div>
-          )}
-
-          <div className="flex justify-between text-xs mb-1">
-            <span style={{ color: "var(--metric-protein)" }}>{d("protein")}</span>
-            <span className="tabular" style={{ color: "var(--on-surface-variant)" }}>
-              {budget.protein.goal != null
-                ? `${Math.round(totalProtein)} / ${budget.protein.goal}g`
-                : `${Math.round(totalProtein)}g`}
-            </span>
-          </div>
-          {budget.protein.goal != null && (
-            <div className="h-1.5 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
-              <div
-                className="h-full rounded-[var(--r-pill)]"
-                style={{
-                  width: `${Math.min(totalProtein / budget.protein.goal, 1) * 100}%`,
-                  background: isOver(budget.protein) ? "var(--goal-negative)" : "var(--metric-protein)",
-                }}
-              />
-            </div>
-          )}
-
-          <div className="flex justify-between pt-3 text-sm" style={{ borderTop: "1px solid var(--outline)" }}>
-            <span style={{ color: "var(--on-surface-variant)" }}>{t("mealsCount")}</span>
-            <span className="font-semibold tabular">{todayMeals.length}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span style={{ color: "var(--on-surface-variant)" }}>{t("items")}</span>
-            <span className="font-semibold tabular">{totalItems}</span>
-          </div>
-
-          {previousDayMeals.length > 0 && (
-            <button
-              onClick={() => setCopyingPreviousDay(true)}
-              className="w-full mt-4 py-2 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container"
-              style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
-            >
-              <span className="material-symbols-rounded text-lg">content_copy</span>
-              {t("copyPreviousDay")}
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Daily summary — sticky beside the list from 1280 */}
+      <GridItem span={{ base: 4, md: 8, xl: 4 }} order={{ base: 0, xl: 1 }}>
+        <div className="xl:sticky xl:top-6">{summary}</div>
+      </GridItem>
 
       {addingTo && (
         <AddMealEntryDialog mealType={addingTo} date={date} onClose={() => setAddingTo(null)} />
@@ -327,6 +239,6 @@ export function MealsView() {
         onConfirm={() => removingMeal && deleteMutation.mutate(removingMeal.id)}
         onCancel={() => setRemovingMeal(null)}
       />
-    </div>
+    </PageGrid>
   );
 }

@@ -1918,9 +1918,24 @@ Verified on the real app: `?tab=foods` selects the tab and survives a reload, cl
 (meals drops the query), `N` opens add-food on all three tabs, the copy button appears on meals only. The
 recipes count on the demo account is 4 (the canvas shows 3).
 
-### W2.2 — Web UI: meals tab layout + `DaySummary` hero
+### W2.2 — Web UI: meals tab layout + `DaySummary` hero ✅
 - Files: `features/nutrition/components/{MealsView,DaySummary}.tsx`.
 - **Verify:** 8 + 4 at 1440/1280, summary sticky; at 1024 the summary sits above the list; W2-A side by side.
+
+*As built:* The meals tab is now a `PageGrid` (W1.1's): the meal list spans 8 and the new `DaySummary` 4 from
+1280 — the summary wrapper is `sticky top-6` there — and below 1280 the summary moves above the list via
+`order` (W2-A/B at 1440/1280/1024; the phone layout is W2.12). `DaySummaryView` is the canvas' right-hand
+hero: the "NAPI ÖSSZESÍTŐ" label, a 112 px ring with **859** and "kcal maradt", "Elfogyasztva 1 041 kcal" and
+"Cél 1 900 kcal" beside it, and three macro rows "68 / 120 g" with `MetricBar`s — no fibre or sugar rows. It
+deliberately reuses the dashboard hero's pure `heroState` / `macroRowState`, so the two screens can't disagree
+about what is left: under budget it shows the remainder, over budget the overage with the caption in
+`--m-kcal` (a macro past its goal is painted the same), and without a calorie goal what was eaten with no goal
+line; a macro without a goal shows its value only. The old hand-rolled panel (prominent "remaining" lines,
+plain bars, meal and item counts and its own "copy previous day" button) is gone — the copy action lives in
+the page header since W2.1. The remaining-budget helpers in `budget.ts` stay for the add dialog until W2.6.
+Gallery section "Day summary" (remaining / over / no goal, on the canvas' 1 041 / 1 900 day) and
+`e2e/ds/daySummary.spec.ts` cover the three states and the macro rows; checked on the real page at 1440 (HU,
+dark), 1024 (light) and 390.
 
 ### W2.3 — Web UI: `MealCard` v2 + item rows
 - Files: `features/nutrition/components/{MealCard,MealItemRow}.tsx`.

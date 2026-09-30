@@ -29,6 +29,7 @@ import { DashboardTilesSection } from "./sections/DashboardTilesSection";
 import { WeekCaloriesSection } from "./sections/WeekCaloriesSection";
 import { RecentWorkoutsSection } from "./sections/RecentWorkoutsSection";
 import { FirstStepsSection } from "./sections/FirstStepsSection";
+import { DaySummarySection } from "./sections/DaySummarySection";
 
 export interface GallerySection {
   id: string;
@@ -69,6 +70,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "week-calories", title: "Week calories", Component: WeekCaloriesSection },
   { id: "recent-workouts", title: "Recent workouts list", Component: RecentWorkoutsSection },
   { id: "first-steps", title: "First steps", Component: FirstStepsSection },
+  { id: "day-summary", title: "Day summary", Component: DaySummarySection },
   { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];
