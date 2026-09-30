@@ -40,6 +40,8 @@ export interface AddFoodModalViewProps {
   usage: Map<string, ItemUsage>;
   /** Start with this typed into the search field. */
   initialQuery?: string;
+  /** Start with this row (`food:12`) highlighted. */
+  initialKey?: string;
   /** Empty-result shortcut: "Új étel létrehozása «joghurt» néven". */
   onCreate: (name: string) => void;
   /** The right-hand pane (W2.6's preview + submit); reads the dialog through `useAddFoodContext`. */
@@ -52,11 +54,11 @@ export interface AddFoodModalViewProps {
  * renders as the preview on the right. Below 768px the `Modal` itself becomes
  * the bottom sheet (W0.12). Presentational — `AddFoodModal` below wires the data.
  */
-export function AddFoodModalView({ open, onClose, items, usage, initialQuery = "", onCreate, children }: AddFoodModalViewProps) {
+export function AddFoodModalView({ open, onClose, items, usage, initialQuery = "", initialKey, onCreate, children }: AddFoodModalViewProps) {
   const t = useTranslations("nutrition.addFoodModal");
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<SearchFilter>("all");
-  const [pickedKey, setPickedKey] = useState<string | null>(null);
+  const [pickedKey, setPickedKey] = useState<string | null>(initialKey ?? null);
   const quantityInput = useRef<HTMLInputElement | null>(null);
   const commitRef = useRef<(() => void) | null>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);

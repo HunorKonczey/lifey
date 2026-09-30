@@ -150,7 +150,7 @@ describe("searchItems — without a query", () => {
       new Map([[5, { lastUsedAt: 1, useCount: 2, lastGrams: 100 }]]),
       new Map([[10, { lastUsedAt: 2, useCount: 1 }]]),
     );
-    expect(m.get("food:5")).toEqual({ lastUsedAt: 1, useCount: 2 });
+    expect(m.get("food:5")).toEqual({ lastUsedAt: 1, useCount: 2, lastGrams: 100 });
     expect(m.get("recipe:10")).toEqual({ lastUsedAt: 2, useCount: 1 });
   });
 });

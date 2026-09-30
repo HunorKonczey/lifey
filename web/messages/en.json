@@ -956,7 +956,23 @@
       "noResults": "Nothing matches that.",
       "noFoodsYet": "You have no foods yet.",
       "createNamed": "Create a new food “{name}”",
-      "keyHint": "↑ ↓ select · Enter add · Tab quantity"
+      "keyHint": "↑ ↓ select · Enter add · Tab quantity",
+      "pickSomething": "Search and pick a food on the left.",
+      "previewSourceFood": "Own food · {kcal} kcal / 100 g",
+      "previewSourceRecipe": "Recipe · {n, plural, one {# serving} other {# servings}}",
+      "quantity": "Quantity",
+      "quantityChips": "Quick quantities",
+      "servingsUnit": "servings",
+      "servingsChip": "{n, plural, one {# serving} other {# servings}}",
+      "meal": "Meal",
+      "previewCalories": "Calories",
+      "afterLeft": "<b>{kcal} kcal</b> left after this",
+      "afterOver": "<b>{kcal} kcal</b> over after this",
+      "proteinToGo": "protein {g} g to go",
+      "proteinReached": "protein goal reached",
+      "submitTo": "{meal, select, BREAKFAST {Add to breakfast} LUNCH {Add to lunch} SNACK {Add to snack} other {Add to dinner}}",
+      "added": "Added to {meal}",
+      "addFailed": "Couldn't add it"
     }
   },
   "workouts": {

@@ -46,22 +46,23 @@ test("keyboard only: type, ↓, Tab to the quantity, type 150, Enter adds exactl
   await page.keyboard.press("ArrowDown");
   await expect(options(page).nth(1)).toHaveAttribute("aria-selected", "true");
   await expect(first).toHaveAttribute("aria-selected", "false");
-  const picked = (await options(page).nth(1).innerText()).split("\n")[0];
+  await page.keyboard.press("ArrowDown"); // the first two rows are "Joghurt 10%" and the recipe; the third is a food
+  await expect(options(page).nth(2)).toHaveAttribute("aria-selected", "true");
+  const picked = (await options(page).nth(2).innerText()).split("\n")[0];
 
   await page.keyboard.press("Tab");
-  await expect(dialog(page).getByRole("textbox", { name: "Quantity (g)" })).toBeFocused();
-  await page.keyboard.press("Control+a");
+  await expect(dialog(page).getByRole("textbox", { name: "Quantity" })).toBeFocused();
   await page.keyboard.type("150");
   await page.keyboard.press("Enter");
 
   await expect(dialog(page)).toHaveCount(0);
-  await expect(page.getByTestId("added-log")).toHaveText(`Added: ${picked} 150 g`);
+  await expect(page.getByTestId("added-log")).toHaveText(`Added: ${picked} 150 g DINNER`);
 });
 
 test("Enter in the search field adds the active row with the preview's quantity", async ({ page }) => {
   await page.keyboard.type("kefir");
   await page.keyboard.press("Enter");
-  await expect(page.getByTestId("added-log")).toHaveText("Added: Kefir 100 g");
+  await expect(page.getByTestId("added-log")).toHaveText("Added: Kefir 200 g DINNER"); // Kefir was last logged at 200 g
 });
 
 test("the active row carries a primary marker bar and the preview follows it", async ({ page }) => {

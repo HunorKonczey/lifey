@@ -956,7 +956,23 @@
       "noResults": "Nincs ilyen találat.",
       "noFoodsYet": "Még nincs ételed.",
       "createNamed": "Új étel létrehozása „{name}” néven",
-      "keyHint": "↑ ↓ választás · Enter hozzáadás · Tab mennyiség"
+      "keyHint": "↑ ↓ választás · Enter hozzáadás · Tab mennyiség",
+      "pickSomething": "Keress és válassz egy ételt a bal oldalon.",
+      "previewSourceFood": "Saját étel · {kcal} kcal / 100 g",
+      "previewSourceRecipe": "Recept · {n} adag",
+      "quantity": "Mennyiség",
+      "quantityChips": "Gyors mennyiségek",
+      "servingsUnit": "adag",
+      "servingsChip": "{n} adag",
+      "meal": "Étkezés",
+      "previewCalories": "Kalória",
+      "afterLeft": "Utána marad <b>{kcal} kcal</b>",
+      "afterOver": "Utána <b>{kcal} kcal</b>-lal túllépsz",
+      "proteinToGo": "fehérje még {g} g",
+      "proteinReached": "a fehérjecél teljesül",
+      "submitTo": "{meal, select, BREAKFAST {Hozzáadás a reggelihez} LUNCH {Hozzáadás az ebédhez} SNACK {Hozzáadás a snackhez} other {Hozzáadás a vacsorához}}",
+      "added": "Hozzáadva: {meal}",
+      "addFailed": "Nem sikerült hozzáadni"
     }
   },
   "workouts": {

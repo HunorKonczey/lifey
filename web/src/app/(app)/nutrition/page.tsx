@@ -5,12 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, Icon, Tabs } from "@/components/ds";
-import { AddMealEntryDialog } from "@/features/nutrition/components/AddMealEntryDialog";
+import { AddFoodFlow } from "@/features/nutrition/components/addFood/AddFoodFlow";
 import { FoodsView } from "@/features/nutrition/components/FoodsView";
 import { MealsView } from "@/features/nutrition/components/MealsView";
 import { RecipesView } from "@/features/nutrition/components/RecipesView";
 import { foodApi, recipeApi } from "@/features/nutrition/api";
-import { defaultMealType } from "@/features/nutrition/mealTypeDefault";
 import { nutritionTabHref, parseNutritionTab, type NutritionTab } from "@/features/nutrition/nutritionTab";
 import { useNutritionUi } from "@/features/nutrition/nutritionUi";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -73,7 +72,7 @@ export default function NutritionPage() {
       {tab === "foods" && <FoodsView />}
       {tab === "recipes" && <RecipesView />}
 
-      {adding && <AddMealEntryDialog mealType={defaultMealType()} date={date} onClose={() => setAdding(false)} />}
+      {adding && <AddFoodFlow date={date} onClose={() => setAdding(false)} />}
     </div>
   );
 }

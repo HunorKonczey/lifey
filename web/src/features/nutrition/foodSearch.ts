@@ -30,6 +30,8 @@ export const SEARCH_FILTERS: SearchFilter[] = ["all", "foods", "recipes", "favor
 export interface ItemUsage {
   lastUsedAt: number;
   useCount: number;
+  /** Grams of the most recent log of a food — the quantity chip ("150 g"). Not set for recipes. */
+  lastGrams?: number;
 }
 
 /** How many "recent" rows the empty state and the Recent filter show. */
@@ -63,7 +65,7 @@ export function usageByKey(
   recipeUsage: Map<number, ItemUsage>,
 ): Map<string, ItemUsage> {
   const out = new Map<string, ItemUsage>();
-  for (const [id, u] of foodUsage) out.set(`food:${id}`, { lastUsedAt: u.lastUsedAt, useCount: u.useCount });
+  for (const [id, u] of foodUsage) out.set(`food:${id}`, { lastUsedAt: u.lastUsedAt, useCount: u.useCount, lastGrams: u.lastGrams });
   for (const [id, u] of recipeUsage) out.set(`recipe:${id}`, u);
   return out;
 }

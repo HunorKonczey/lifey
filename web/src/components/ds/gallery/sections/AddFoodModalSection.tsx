@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ds";
-import { AddFoodModalView, useAddFoodContext } from "@/features/nutrition/components/addFood/AddFoodModal";
+import { AddFoodModalView } from "@/features/nutrition/components/addFood/AddFoodModal";
+import { FoodPreviewPaneView } from "@/features/nutrition/components/addFood/FoodPreviewPane";
 import { buildSearchItems, type ItemUsage } from "@/features/nutrition/foodSearch";
 import type { FoodResponse, RecipeResponse } from "@/features/nutrition/types";
 
-const food = (id: number, name: string, caloriesPer100g: number): FoodResponse => ({
+const food = (id: number, name: string, kcal: number, protein: number, carbs: number, fat: number): FoodResponse => ({
   id,
   name,
-  caloriesPer100g,
-  proteinPer100g: 8,
-  carbsPer100g: 10,
-  fatPer100g: 3,
+  caloriesPer100g: kcal,
+  proteinPer100g: protein,
+  carbsPer100g: carbs,
+  fatPer100g: fat,
   barcode: null as unknown as string,
   hidden: false,
 });
@@ -21,12 +22,12 @@ const food = (id: number, name: string, caloriesPer100g: number): FoodResponse =
 const LOGGED_AT = new Date(2026, 8, 29, 8, 0).getTime();
 
 const FOODS = [
-  food(1, "Görög joghurt 2%", 73),
-  food(2, "Natúr joghurt 3,5%", 61),
-  food(3, "Joghurt 10%", 133),
-  food(4, "Skyr natúr", 63),
-  food(5, "Kefir", 52),
-  food(6, "Barna rizs (főtt)", 123),
+  food(1, "Görög joghurt 2%", 73, 9.9, 3.9, 2),
+  food(2, "Natúr joghurt 3,5%", 61, 3.5, 4.7, 3.5),
+  food(3, "Joghurt 10%", 133, 3, 4, 10),
+  food(4, "Skyr natúr", 63, 11, 4, 0.2),
+  food(5, "Kefir", 52, 3.3, 4, 2.8),
+  food(6, "Barna rizs (főtt)", 123, 2.7, 25.6, 1),
 ];
 const RECIPES: RecipeResponse[] = [
   {
@@ -43,17 +44,22 @@ const RECIPES: RecipeResponse[] = [
   },
 ];
 
-/** The add-food dialog shell (W2.5) with fixture data and a stub preview: type, ↓, Tab, a quantity, Enter. */
+/**
+ * The add-food dialog (W2.5 + W2.6) on fixture data: the search pane, the
+ * preview pane (macros, "left after this", meal type) and the submit, which here
+ * only logs what would be added. Type, ↓, Tab, a quantity, Enter.
+ */
 export function AddFoodModalSection() {
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState<string[]>([]);
   const [created, setCreated] = useState<string | null>(null);
   const items = useMemo(() => buildSearchItems(FOODS, RECIPES), []);
+  const foodsById = useMemo(() => new Map(FOODS.map((f) => [f.id, f] as const)), []);
   const usage = useMemo(
     () =>
       new Map<string, ItemUsage>([
-        ["food:5", { lastUsedAt: LOGGED_AT + 3_600_000, useCount: 3 }], // Kefir — logged most recently
-        ["food:1", { lastUsedAt: LOGGED_AT, useCount: 1 }],
+        ["food:5", { lastUsedAt: LOGGED_AT + 3_600_000, useCount: 3, lastGrams: 200 }], // Kefir — logged most recently
+        ["food:1", { lastUsedAt: LOGGED_AT, useCount: 1, lastGrams: 150 }],
       ]),
     [],
   );
@@ -69,56 +75,30 @@ export function AddFoodModalSection() {
       <p data-testid="created-log" className="type-body-s">
         Create: {created ?? "—"}
       </p>
-      <AddFoodModalView
-        open={open}
-        onClose={() => setOpen(false)}
-        items={items}
-        usage={usage}
-        onCreate={(name) => {
-          setCreated(name);
-          setOpen(false);
-        }}
-      >
-        <StubPreview
-          onAdd={(label) => {
-            setAdded((a) => [...a, label]);
+      {open && (
+        <AddFoodModalView
+          open
+          onClose={() => setOpen(false)}
+          items={items}
+          usage={usage}
+          onCreate={(name) => {
+            setCreated(name);
             setOpen(false);
           }}
-        />
-      </AddFoodModalView>
-    </div>
-  );
-}
-
-/** Stands in for W2.6's preview pane: shows the active row and a quantity box that Tab reaches. */
-function StubPreview({ onAdd }: { onAdd: (label: string) => void }) {
-  const ctx = useAddFoodContext();
-  const [qty, setQty] = useState("100");
-  const { active, setCommit } = ctx;
-  useEffect(() => {
-    setCommit(() => active && onAdd(`${active.name} ${qty} g`));
-    return () => setCommit(null);
-  });
-
-  return (
-    <div className="flex flex-col gap-3">
-      <h3 data-testid="preview-title" className="type-title-l">
-        {active?.name ?? "—"}
-      </h3>
-      <input
-        ref={(el) => ctx.registerQuantity(el)}
-        aria-label="Quantity (g)"
-        value={qty}
-        onChange={(e) => setQty(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            if (active) onAdd(`${active.name} ${qty} g`);
-          }
-        }}
-        className="h-10 w-28 px-3"
-        style={{ background: "var(--nested)", borderRadius: "var(--r-control)" }}
-      />
+        >
+          <FoodPreviewPaneView
+            foodsById={foodsById}
+            initialMealType="DINNER"
+            consumed={{ calories: 1041, protein: 68 }}
+            goals={{ dailyCalorieGoal: 1900, dailyProteinGoal: 120 }}
+            onSubmit={({ item, quantity, mealType }) => {
+              setAdded((a) => [...a, `${item.name} ${quantity} ${item.kind === "recipe" ? "servings" : "g"} ${mealType}`]);
+              setOpen(false);
+            }}
+            onCancel={() => setOpen(false)}
+          />
+        </AddFoodModalView>
+      )}
     </div>
   );
 }

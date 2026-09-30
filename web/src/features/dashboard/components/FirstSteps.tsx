@@ -7,8 +7,7 @@ import { Button, Card, Icon, IconButton } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
 import { usePageShortcuts } from "@/lib/hooks/usePageShortcuts";
 import { useSessionStore } from "@/features/auth/store";
-import { AddMealEntryDialog } from "@/features/nutrition/components/AddMealEntryDialog";
-import { defaultMealType } from "@/features/nutrition/mealTypeDefault";
+import { AddFoodFlow } from "@/features/nutrition/components/addFood/AddFoodFlow";
 import type { FirstStepId, FirstStepsState } from "../firstSteps";
 import type { DashboardData } from "../useDashboardData";
 
@@ -140,7 +139,7 @@ export function FirstSteps({
           else router.push("/weight");
         }}
       />
-      {adding && <AddMealEntryDialog mealType={defaultMealType()} date={data.date} onClose={() => setAdding(false)} />}
+      {adding && <AddFoodFlow date={data.date} onClose={() => setAdding(false)} />}
     </>
   );
 }

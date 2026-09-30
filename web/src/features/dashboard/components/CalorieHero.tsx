@@ -7,8 +7,7 @@ import { AnimatedNumber, Button, Card, Icon, MetricBar, MetricValue, ProgressRin
 import { useFormat } from "@/lib/format/useFormat";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { usePageShortcuts } from "@/lib/hooks/usePageShortcuts";
-import { AddMealEntryDialog } from "@/features/nutrition/components/AddMealEntryDialog";
-import { defaultMealType } from "@/features/nutrition/mealTypeDefault";
+import { AddFoodFlow } from "@/features/nutrition/components/addFood/AddFoodFlow";
 import { isSameDay } from "@/components/ds/date/monthGrid";
 import { heroState, macroRowState } from "../calorieHero";
 import { CopyYesterdayButton } from "./CopyYesterdayButton";
@@ -182,7 +181,7 @@ export function CalorieHero({ data, secondaryAction }: { data: DashboardData; se
         secondaryAction={secondaryAction ?? <CopyYesterdayButton meals={data.meals} isToday={isSameDay(date, new Date())} />}
         showGoalsHint={!settings?.dailyCalorieGoal && !settings?.dailyProteinGoal}
       />
-      {adding && <AddMealEntryDialog mealType={defaultMealType()} date={date} onClose={() => setAdding(false)} />}
+      {adding && <AddFoodFlow date={date} onClose={() => setAdding(false)} />}
     </>
   );
 }

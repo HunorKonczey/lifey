@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent, type Ref } from "react";
 import { useLocale } from "next-intl";
 import { Icon } from "../Icon";
 import { Field, fieldDescribedBy } from "./Field";
@@ -23,6 +23,15 @@ export interface NumberFieldProps {
   required?: boolean;
   id?: string;
   className?: string;
+  /** The inner `<input>` — for a dialog that focuses the quantity on Tab. */
+  inputRef?: Ref<HTMLInputElement>;
+  /** Report every parseable keystroke through `onChange` instead of only on blur / Enter, so a
+   *  live preview follows what is being typed. The text itself is left as typed until blur. */
+  liveUpdate?: boolean;
+  /** Select the whole number on focus so typing replaces it. */
+  selectOnFocus?: boolean;
+  /** Enter was pressed; the typed value has just been committed through `onChange`. */
+  onEnter?: () => void;
 }
 
 /**
@@ -47,6 +56,10 @@ export function NumberField({
   required,
   id,
   className,
+  inputRef,
+  liveUpdate,
+  selectOnFocus,
+  onEnter,
 }: NumberFieldProps) {
   const locale = useLocale();
   const autoId = useId();
@@ -83,6 +96,12 @@ export function NumberField({
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && onEnter) {
+      e.preventDefault();
+      commit(e.currentTarget.value);
+      onEnter();
+      return;
+    }
     if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
     e.preventDefault();
     const magnitude = e.shiftKey ? step * 10 : step;
@@ -102,7 +121,15 @@ export function NumberField({
         required={required}
         aria-invalid={!!error}
         aria-describedby={fieldDescribedBy(inputId, error, hint)}
-        onChange={(e) => setText(e.target.value)}
+        ref={inputRef}
+        onChange={(e) => {
+          setText(e.target.value);
+          if (liveUpdate) {
+            const parsed = parseLocaleNumber(e.target.value, locale);
+            if (parsed !== null) onChange(roundToDecimals(parsed, maxDecimals));
+          }
+        }}
+        onFocus={selectOnFocus ? (e) => e.currentTarget.select() : undefined}
         onBlur={(e) => commit(e.target.value)}
         onKeyDown={handleKeyDown}
         className="tabular text-center"

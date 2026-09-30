@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { foodApi } from "../api";
@@ -12,9 +13,8 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { FoodEditor } from "./FoodEditor";
-import { AddMealEntryDialog } from "./AddMealEntryDialog";
-import { defaultMealType } from "../mealTypeDefault";
-import type { FoodResponse, MealType } from "../types";
+import { AddFoodFlow } from "./addFood/AddFoodFlow";
+import type { FoodResponse } from "../types";
 import type { FoodFormValues } from "../schemas";
 import { useFormat } from "@/lib/i18n/format";
 
@@ -34,7 +34,6 @@ const SORT_FIELDS: Record<string, string> = {
 export function FoodsView() {
   const t = useTranslations("nutrition.foodsView");
   const fmt = useFormat();
-  const n = useTranslations("nutrition");
   const { show } = useToast();
   const { date } = useDateStore();
   const [search, setSearch] = useState("");
@@ -50,14 +49,19 @@ export function FoodsView() {
   // Food being logged via "Add to meal" (docs/75 §2.9).
   const [loggingFood, setLoggingFood] = useState<FoodResponse | null>(null);
 
-  const mealTypeLabels: Record<MealType, string> = {
-    BREAKFAST: n("breakfast"), LUNCH: n("lunch"), DINNER: n("dinner"), SNACK: n("snack"),
-  };
-
-  const closeLogging = (savedAs?: MealType) => {
-    setLoggingFood(null);
-    if (savedAs) show(t("addedToMeal", { meal: mealTypeLabels[savedAs] }), "success");
-  };
+  // "?new=<name>" arrives from the add-food dialog's empty result ("Create a new food “yoghurt”"):
+  // open the editor with that name and clear the param so a reload doesn't reopen it.
+  const router = useRouter();
+  const newName = useSearchParams().get("new");
+  useEffect(() => {
+    if (newName == null) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- one-shot deep link, cleared from the URL right after */
+    setSelected(null);
+    setPrefill({ name: newName });
+    setCreating(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    router.replace("/nutrition?tab=foods", { scroll: false });
+  }, [newName, router]);
 
   // Debounce the search box so typing doesn't refetch on every keystroke.
   // Reset to page 0 alongside it, since a new search term invalidates the
@@ -267,11 +271,11 @@ export function FoodsView() {
       )}
 
       {loggingFood && (
-        <AddMealEntryDialog
-          initialFood={loggingFood}
-          mealType={defaultMealType()}
+        <AddFoodFlow
           date={date}
-          onClose={closeLogging}
+          initialQuery={loggingFood.name}
+          initialKey={`food:${loggingFood.id}`}
+          onClose={() => setLoggingFood(null)}
         />
       )}
     </div>

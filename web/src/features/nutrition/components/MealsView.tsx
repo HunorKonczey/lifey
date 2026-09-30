@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddMealEntryDialog } from "./AddMealEntryDialog";
+import { AddFoodFlow } from "./addFood/AddFoodFlow";
 import { GridItem, PageGrid } from "@/components/ds";
 import { DaySummaryView } from "./DaySummary";
 import { EmptyMealSlot } from "./EmptyMealSlot";
@@ -194,9 +195,7 @@ export function MealsView() {
         <div className="xl:sticky xl:top-6">{summary}</div>
       </GridItem>
 
-      {addingTo && (
-        <AddMealEntryDialog mealType={addingTo} date={date} onClose={() => setAddingTo(null)} />
-      )}
+      {addingTo && <AddFoodFlow date={date} mealType={addingTo} onClose={() => setAddingTo(null)} />}
 
       {editingMeal && (
         <AddMealEntryDialog

@@ -2021,11 +2021,38 @@ objects off a render-prop argument, which is why the preview slot is context, no
 ranking, the full keyboard flow type → ↓ → Tab → 150 → Enter, Enter with the default quantity, the active
 marker, no wrap, every filter, the create shortcut, Esc).
 
-### W2.6 — Web UI: add-food modal, preview pane + submit
+### W2.6 — Web UI: add-food modal, preview pane + submit ✅
 - Files: `features/nutrition/components/addFood/FoodPreviewPane.tsx`, `features/nutrition/budget.ts`
   (`remainingAfter(entry)`), delete `AddMealEntryDialog.tsx`.
 - "Utána marad" subtracts the **stored** version when editing an existing meal (risk 3).
 - **Verify:** `budget.test.ts` (new entry vs editing an existing entry); W2-B side by side; 390 = sheet.
+
+*As built:* The right pane (`addFood/FoodPreviewPane.tsx`: a presentational `FoodPreviewPaneView` plus the
+connected `FoodPreviewPane`) completes the dialog, and `AddFoodFlow` wires it to the app — every add-food
+entry point now opens it: the page header's button and `N`, each slot's "Hozzáadás" and each meal card's "＋"
+(starting on that meal type), the dashboard hero and first-steps card, and the foods table's "log today"
+(search pre-filled with the food's name and its row highlighted). The pane shows the highlighted row's name
+and source, the quantity as a `NumberField` (grams, or servings for a recipe) with the "100 g" and last-used
+chips, the meal type as a `SegmentedControl` (starting from the caller's, else the clock's), four macro tiles,
+"Utána marad **750 kcal** · fehérje még 37 g" with a two-tone bar, and Mégse + "Hozzáadás a vacsorához" (an
+ICU `select`, so the Hungarian dative is right for each meal). The budget arithmetic is
+`remainingAfter(consumed, goals, add, replaces?)` in `budget.ts` (5 new tests): `replaces` takes the stored
+version of an entry being edited out first — the plan's risk 3 — so the W2.7 drawer can't double-count; for a
+new entry it is simply omitted. Recipe macros come from `recipeMacros.ts` (7 tests): the recipe API carries
+only kcal and protein per ingredient, so carbs and fat are worked out from the foods the ingredients point at.
+To make "type 150, Enter" work, `NumberField` gained `inputRef`, `liveUpdate` (report every parseable
+keystroke so the preview follows what's typed), `selectOnFocus` and `onEnter`. What submit does: a food goes
+into the day's latest *plain* meal of that type (a recipe meal — one with a name — is never extended with
+loose foods) or starts one, a recipe always becomes its own meal named after it, its ingredient grams scaled
+by servings via `logRecipePortion.buildEntries`; then the meals refresh and a toast says "Hozzáadva: Vacsora".
+The empty result hands the typed name to the foods tab (`?tab=foods&new=…`), which opens its editor with it.
+Verified on the real app, keyboard only: `N` → "görög" → Tab → 150 → Enter adds the meal (one `POST`), and a
+second `N` → "alma" → 180 → Enter *extends the same meal* (one `PUT`, still one card); the test meals were
+deleted afterwards. **Deviation from the plan:** `AddMealEntryDialog.tsx` is not deleted in this step — it
+still backs "edit meal" in `MealsView` and is removed in W2.7 together with its replacement, the edit drawer,
+so there is no commit in which editing has no UI. Gallery: the "Add food dialog" section now runs the real
+preview pane; `e2e/ds/addFoodPreview.spec.ts` (10 tests) covers quantity/chips/live macros, "left after this"
+and its "over" flip, meal type and the submit label, recipes by servings, cancel and the empty result.
 
 ### W2.7 — Web UI: edit-meal drawer
 - Files: `features/nutrition/components/EditMealDrawer.tsx`.
