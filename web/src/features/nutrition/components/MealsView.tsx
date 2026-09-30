@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { format, subDays, isToday } from "date-fns";
 import { mealApi } from "../api";
 import { copyMealPayload } from "../copyMeal";
@@ -15,16 +15,18 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddMealEntryDialog } from "./AddMealEntryDialog";
 import { GridItem, PageGrid } from "@/components/ds";
-import { MEAL_TYPE_STYLE } from "../mealTypeStyle";
 import { DaySummaryView } from "./DaySummary";
+import { EmptyMealSlot } from "./EmptyMealSlot";
 import { MealCard, mealCarbs, mealFat, mealKcal, mealProtein } from "./MealCard";
 import { useNutritionUi } from "../nutritionUi";
+import { useCopyMeals } from "../useCopyMeals";
 import type { MealResponse, MealType } from "../types";
 import { useFormat } from "@/lib/i18n/format";
 
 export function MealsView() {
   const t = useTranslations("nutrition");
   const fmt = useFormat();
+  const locale = useLocale();
   const { date } = useDateStore();
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -38,11 +40,11 @@ export function MealsView() {
   // Deleting used to fire on the first click with no way back (docs/redesign/web-redesign-prompt.md).
   const [removingMeal, setRemovingMeal] = useState<MealResponse | null>(null);
 
-  const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
-    { type: "BREAKFAST", label: t("breakfast"), icon: MEAL_TYPE_STYLE.BREAKFAST.icon },
-    { type: "LUNCH", label: t("lunch"), icon: MEAL_TYPE_STYLE.LUNCH.icon },
-    { type: "SNACK", label: t("snack"), icon: MEAL_TYPE_STYLE.SNACK.icon },
-    { type: "DINNER", label: t("dinner"), icon: MEAL_TYPE_STYLE.DINNER.icon },
+  const MEAL_GROUPS: { type: MealType; label: string }[] = [
+    { type: "BREAKFAST", label: t("breakfast") },
+    { type: "LUNCH", label: t("lunch") },
+    { type: "SNACK", label: t("snack") },
+    { type: "DINNER", label: t("dinner") },
   ];
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -77,6 +79,9 @@ export function MealsView() {
     onError: () => show(t("duplicateMealFailed"), "error"),
   });
 
+  // "Yesterday's dinner" on an empty slot: copy + toast with Undo.
+  const copySlot = useCopyMeals(date);
+
   const copyMealsMutation = useMutation({
     mutationFn: async (mealsToCopy: MealResponse[]) => {
       await Promise.all(mealsToCopy.map((m) => mealApi.create(copyMealPayload(m, date))));
@@ -99,10 +104,12 @@ export function MealsView() {
   const previousDayKcal = previousDayMeals.reduce((s, m) => s + mealKcal(m), 0);
 
   const totalKcal = todayMeals.reduce((sum, m) => sum + mealKcal(m), 0);
+  const goalKcal = settings?.dailyCalorieGoal ?? null;
+  const remainingKcal = goalKcal != null ? goalKcal - totalKcal : null;
   const summary = (
     <DaySummaryView
       kcal={totalKcal}
-      goalKcal={settings?.dailyCalorieGoal ?? null}
+      goalKcal={goalKcal}
       macros={{
         protein: { value: todayMeals.reduce((sum, m) => sum + mealProtein(m), 0), goal: settings?.dailyProteinGoal ?? null },
         carbs: { value: todayMeals.reduce((sum, m) => sum + mealCarbs(m), 0), goal: settings?.dailyCarbsGoal ?? null },
@@ -133,7 +140,7 @@ export function MealsView() {
     <PageGrid>
       {/* Meal groups */}
       <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 1, xl: 0 }} className="flex flex-col gap-6">
-        {MEAL_GROUPS.map(({ type, label, icon }) => {
+        {MEAL_GROUPS.map(({ type, label }) => {
           const meals = todayMeals.filter((m) => m.mealType === type);
           const prevMeals = previousDayMeals.filter((m) => m.mealType === type);
           // "Yesterday" is only a meaningful label while viewing today —
@@ -142,7 +149,7 @@ export function MealsView() {
           const canCopyYesterday = meals.length === 0 && prevMeals.length > 0 && isToday(date);
 
           // A logged meal type is just its cards (each carries the type's icon and name);
-          // a type with nothing logged keeps the dashed slot until W2.4 replaces it.
+          // a type with nothing logged is a quiet slot with the budget that still fits (W2.4).
           if (meals.length > 0) {
             return (
               <div key={type} className="flex flex-col gap-3">
@@ -162,33 +169,22 @@ export function MealsView() {
           }
 
           return (
-            <div key={type} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 px-1">
-                <span className="material-symbols-rounded text-xl" style={{ color: MEAL_TYPE_STYLE[type].color }}>{icon}</span>
-                <span className="font-bold text-sm">{label}</span>
-              </div>
-              <button
-                onClick={() => setAddingTo(type)}
-                className="w-full py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container"
-                style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
-              >
-                <span className="material-symbols-rounded text-lg">add</span> {t("addTo", { meal: label })}
-              </button>
-              {canCopyYesterday && (
-                <button
-                  onClick={() => copyMealsMutation.mutate(prevMeals)}
-                  disabled={copyMealsMutation.isPending}
-                  className="w-full py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container disabled:opacity-50"
-                  style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
-                >
-                  <span className="material-symbols-rounded text-lg">content_copy</span>
-                  {t("copyPreviousDayGhost", {
-                    meal: label,
-                    kcal: Math.round(prevMeals.reduce((sum, m) => sum + mealKcal(m), 0)),
-                  })}
-                </button>
-              )}
-            </div>
+            <EmptyMealSlot
+              key={type}
+              mealType={type}
+              remainingKcal={remainingKcal}
+              copyOffer={
+                canCopyYesterday
+                  ? {
+                      kcal: Math.round(prevMeals.reduce((sum, m) => sum + mealKcal(m), 0)),
+                      pending: copySlot.isPending,
+                      onCopy: () =>
+                        copySlot.mutate({ meals: prevMeals, message: t("slotCopied", { meal: label.toLocaleLowerCase(locale) }) }),
+                    }
+                  : null
+              }
+              onAdd={() => setAddingTo(type)}
+            />
           );
         })}
       </GridItem>

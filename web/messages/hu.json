@@ -932,7 +932,12 @@
     "menuDelete": "Törlés",
     "mealMenuLabel": "Étkezés műveletei",
     "itemMenuLabel": "Tétel műveletei",
-    "addToThisMeal": "Hozzáadás ehhez az étkezéshez"
+    "addToThisMeal": "Hozzáadás ehhez az étkezéshez",
+    "slotEmpty": "Még nincs naplózva",
+    "slotBudget": "{kcal} kcal fér bele",
+    "slotCopy": "Tegnapi {meal} · {kcal} kcal",
+    "slotAdd": "Hozzáadás",
+    "slotCopied": "Tegnapi {meal} átmásolva"
   },
   "workouts": {
     "sessions": "Edzések",

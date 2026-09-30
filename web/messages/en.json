@@ -932,7 +932,12 @@
     "menuDelete": "Delete",
     "mealMenuLabel": "Meal options",
     "itemMenuLabel": "Item options",
-    "addToThisMeal": "Add to this meal"
+    "addToThisMeal": "Add to this meal",
+    "slotEmpty": "Nothing logged yet",
+    "slotBudget": "{kcal} kcal fits",
+    "slotCopy": "Yesterday's {meal} · {kcal} kcal",
+    "slotAdd": "Add",
+    "slotCopied": "Copied yesterday's {meal}"
   },
   "workouts": {
     "sessions": "Sessions",

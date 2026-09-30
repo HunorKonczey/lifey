@@ -31,6 +31,7 @@ import { RecentWorkoutsSection } from "./sections/RecentWorkoutsSection";
 import { FirstStepsSection } from "./sections/FirstStepsSection";
 import { DaySummarySection } from "./sections/DaySummarySection";
 import { MealCardSection } from "./sections/MealCardSection";
+import { EmptyMealSlotSection } from "./sections/EmptyMealSlotSection";
 
 export interface GallerySection {
   id: string;
@@ -73,6 +74,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "first-steps", title: "First steps", Component: FirstStepsSection },
   { id: "day-summary", title: "Day summary", Component: DaySummarySection },
   { id: "meal-card", title: "Meal card", Component: MealCardSection },
+  { id: "empty-slot", title: "Empty meal slot", Component: EmptyMealSlotSection },
   { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

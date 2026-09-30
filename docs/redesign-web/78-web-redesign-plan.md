@@ -1963,9 +1963,25 @@ margin, or the accessible name reads "379kcal". Gallery section "Meal card" (mul
 long name, recipe lunch, one-item snack, a read-only card) + `e2e/ds/mealCard.spec.ts` (7 tests); checked on
 the real page on 27 Sep (the canvas' 859 / 1 041 day): two recipe cards with their rows and dots.
 
-### W2.4 — Web UI: empty meal-type slot cards
+### W2.4 — Web UI: empty meal-type slot cards ✅
 - Files: `features/nutrition/components/EmptyMealSlot.tsx`, `copyMeal.ts` (`suggestCopy` from W1.3).
 - **Verify:** slot shows the "fér bele" budget; one-click copy + undo.
+
+*As built:* `EmptyMealSlot` replaces the dashed "add to…" / "copy yesterday" buttons for a meal type with
+nothing logged: a quiet nested `Card` (no dashed outline — a spec asserts it) with the type's icon on a
+control disc, the name, "Még nincs naplózva · 1 900 kcal fér bele" (the fits-in-budget part only when a
+calorie goal exists *and* something is left — over budget or no goal says just "Még nincs naplózva"), a
+secondary one-click chip "Tegnapi vacsora · 438 kcal" when the day before the viewed day had meals of that
+type (still only offered while viewing today, as before) and a tonal "＋ Hozzáadás". The copy now goes through
+a new shared hook, `useCopyMeals(date)`: it creates a *new* meal for each source (original time of day, never
+overwriting), refreshes the list, and raises the toast "Tegnapi vacsora átmásolva · Visszavonás" whose Undo
+deletes exactly the meals that copy created — the same direction-of-undo reasoning as the dashboard button
+(`showUndo` rather than `useUndoableDelete`, which defers a DELETE of something that already exists); W2.9's
+popover will reuse it. The old full-width "copy the whole previous day" confirm stays until W2.9. Verified
+against the real backend with two meals seeded for yesterday (removed afterwards): both slots show their chips
+with the right kcal, one click adds the dinner card and hides its chip, Undo sends exactly one `DELETE` and
+the chip returns. Gallery section "Empty meal slot" (with copy, budget only, no goal, used up) and
+`e2e/ds/emptyMealSlot.spec.ts`.
 
 ### W2.5 — Web UI: add-food modal, search pane
 - Files: `features/nutrition/components/addFood/{AddFoodModal,FoodSearchPane}.tsx`,
