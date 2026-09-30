@@ -2367,10 +2367,12 @@ Verified on the real app (demo account): `?tab=exercises` selects Gyakorlatok, `
 and opens the start dialog, the chips split 31 sessions into 12 cardio + 19 strength, no sideways scroll; unit tests
 for the tab parsing, the href round trip and the filter.
 
-### W3.2 — Web data: week grouping + week summary
+### W3.2 — Web data: week grouping + week summary ✅
 - Files: `features/workouts/sessionGroups.ts` + test — port of `mobile/lib/features/workouts/domain/
   {session_groups,week_summary}.dart` (Monday weeks; count, moving time, volume, distance).
 - **Verify:** the mobile test cases; a week spanning a month boundary.
+
+*As built:* `features/workouts/sessionGroups.ts` ports the mobile `session_groups.dart` + `week_summary.dart`: `weekStartFor` (local-midnight Monday), `groupSessionsByWeek(sessions, now)` → one `SessionWeek` per calendar week (`thisWeek` / `lastWeek` / `olderWeek`, `weekStart`, `weekEnd` = Sunday for the "szept. 22–27." label, the sessions in input order, empty weeks never returned) and `summarizeSessions` → count, seconds, volume kg, distance m. **Web differs from the phone** in one place: no separate "Today" group — the web list is one group per week, as W3-A shows. Rules kept from the mobile summary: a session counts when it *started* in the week, finished or not; time is the finished sessions effective duration (`movingSeconds`, else finished − started; a running session adds 0); distance is DISTANCE and MACHINE cardio only (a football match distance is not comparable). Volume is Σ weight × reps. `sessionGroups.test.ts` (8 tests): the mobile group cases (order, Sunday/Monday edge, year boundary, empty), a week spanning a month boundary (Mon 28 Sep – Sun 4 Oct stays one group with the right range), and the summary rules. Pure data — nothing renders it until W3.3, so no browser check.
 
 ### W3.3 — Web UI: week-grouped session list
 - Files: `features/workouts/components/{SessionsView,SessionRow,WeekHeader}.tsx`.
