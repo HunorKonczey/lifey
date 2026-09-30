@@ -34,7 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // account changes keeps a second user on this tab from inheriting the first
   // one's answer.
   useEffect(() => {
-    void loadClientConfig();
+    void loadClientConfig({ signedIn: userId !== null });
   }, [userId]);
 
   return (

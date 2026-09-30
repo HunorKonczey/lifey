@@ -51,8 +51,14 @@ export default function RootLayout({
       </head>
       <body className="min-h-full antialiased bg-bg text-on-surface" suppressHydrationWarning>
         {children}
-        <SpeedInsights />
-        <Analytics />
+        {/* Vercel's scripts are blocked by our dev CSP and meaningless off Vercel,
+            so `next dev` would log two errors per page for nothing. */}
+        {process.env.NODE_ENV === "production" && (
+          <>
+            <SpeedInsights />
+            <Analytics />
+          </>
+        )}
       </body>
     </html>
   );

@@ -70,6 +70,12 @@ describe("loadClientConfig", () => {
     expect(chatBaseUrl()).toBe(env.NEXT_PUBLIC_API_BASE_URL);
   });
 
+  it("does not call the endpoint while signed out, so the console shows no 401", async () => {
+    await loadClientConfig({ signedIn: false });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("treats an empty answer as 'the API serves the chat'", async () => {
     // The rollback: emptying CHAT_PUBLIC_BASE_URL on lifey-api must send the
     // chat back to the main API without a client release.
