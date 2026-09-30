@@ -678,7 +678,8 @@
     "increase": "Increase",
     "rowDensity": "Row density",
     "densityComfortable": "Comfortable",
-    "densityCompact": "Compact"
+    "densityCompact": "Compact",
+    "done": "Done"
   },
   "status": {
     "emptyTitle": "Nothing here yet",
@@ -844,15 +845,22 @@
       "noRecipes": "No recipes yet",
       "tryDifferentSearch": "Try a different search term.",
       "createToLog": "Create a recipe to quickly log meals you eat often.",
-      "logAsMeal": "Log as meal",
-      "duplicate": "Duplicate",
       "copyOf": "{name} (Copy)",
       "recipeDuplicated": "Recipe duplicated",
       "duplicateRecipeFailed": "Failed to duplicate recipe",
-      "duplicateRecipeConfirmTitle": "Duplicate recipe",
-      "duplicateRecipeConfirmBody": "Are you sure you want to duplicate this recipe?",
-      "perServingCaloriesProtein": "{calories} kcal · {protein}g protein / serving",
-      "totalCaloriesProtein": "{calories} kcal · {protein}g protein"
+      "servingsMeta": "{servings, plural, one {# serving} other {# servings}} · {count, plural, one {# ingredient} other {# ingredients}}",
+      "kcalPerServing": "kcal / serving",
+      "macroLine": "P {protein} g · C {carbs} g · F {fat} g",
+      "log": "Log",
+      "menuEdit": "Edit",
+      "menuDuplicate": "Duplicate",
+      "menuDelete": "Delete…",
+      "rowMenuLabel": "Actions for {name}",
+      "favoriteAria": "Favorite",
+      "deleteTitle": "Delete {name}?",
+      "deleteBody": "Meals you already logged from it stay. You can undo it for {seconds} seconds afterwards.",
+      "recipeDeleted": "{name} deleted",
+      "deleteFailed": "Couldn't delete the recipe"
     },
     "foodEditor": {
       "editFood": "Edit food",
@@ -912,13 +920,13 @@
       "logged": "Logged {name}",
       "logFailed": "Failed to log recipe",
       "logMeal": "Log meal",
-      "logging": "Logging…"
+      "logging": "Logging…",
+      "preview": "{kcal} kcal · P {protein} g · C {carbs} g · F {fat} g",
+      "splitHint": "Every ingredient is divided into {count} portions; you log one of them."
     },
     "recipeEditor": {
       "editRecipe": "Edit recipe",
       "newRecipe": "New recipe",
-      "namePlaceholder": "Recipe name",
-      "descriptionPlaceholder": "Description (optional)",
       "servings": "Servings",
       "favorite": "Favorite",
       "ingredients": "Ingredients",
@@ -927,8 +935,6 @@
       "totalPerServingKcal": "{total} kcal · {perServing} / serving",
       "totalPerServingProtein": "{total}g protein · {perServing}g / serving",
       "saveFailed": "Failed to save recipe",
-      "deleted": "Recipe deleted",
-      "deleteFailed": "Failed to delete",
       "deleteAria": "Delete recipe",
       "removeIngredientAria": "Remove ingredient",
       "changePhoto": "Change photo",
@@ -936,7 +942,15 @@
       "photoUpdated": "Recipe photo updated",
       "photoUploadFailed": "Failed to update recipe photo",
       "photoRemoved": "Recipe photo removed",
-      "photoRemoveFailed": "Failed to remove recipe photo"
+      "photoRemoveFailed": "Failed to remove recipe photo",
+      "name": "Name",
+      "namePlaceholder": "e.g. Chicken and rice bowl",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional",
+      "saving": "Saving…",
+      "autoSaved": "Changes are saved automatically",
+      "needsIngredient": "Saved once it has a name and an ingredient with grams",
+      "delete": "Delete…"
     },
     "tabsAria": "Nutrition sections",
     "addFood": "Add food",
@@ -1008,7 +1022,8 @@
     "copyEmptyDay": "Nothing was logged on this day.",
     "copyNoteToday": "Added to today, nothing is overwritten.",
     "copyNoteDay": "Added to {day}, nothing is overwritten.",
-    "copyAction": "{count, plural, one {Copy # meal} other {Copy # meals}}"
+    "copyAction": "{count, plural, one {Copy # meal} other {Copy # meals}}",
+    "newRecipe": "New recipe"
   },
   "workouts": {
     "sessions": "Sessions",

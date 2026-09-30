@@ -35,6 +35,7 @@ import { EmptyMealSlotSection } from "./sections/EmptyMealSlotSection";
 import { AddFoodModalSection } from "./sections/AddFoodModalSection";
 import { CopyFromDaySection } from "./sections/CopyFromDaySection";
 import { FoodsTableSection } from "./sections/FoodsTableSection";
+import { RecipeCardsSection } from "./sections/RecipeCardsSection";
 import { EditMealDrawerSection } from "./sections/EditMealDrawerSection";
 
 export interface GallerySection {
@@ -83,6 +84,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "edit-meal", title: "Edit meal drawer", Component: EditMealDrawerSection },
   { id: "copy-from-day", title: "Copy from day popover", Component: CopyFromDaySection },
   { id: "foods-table", title: "Foods table and editor", Component: FoodsTableSection },
+  { id: "recipe-cards", title: "Recipe cards and log modal", Component: RecipeCardsSection },
   { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

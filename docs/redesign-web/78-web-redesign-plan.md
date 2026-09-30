@@ -2181,10 +2181,49 @@ search, row menu, editor open/Save gating, untouched tabbing, the three macro-li
 Hungarian); the gallery can't assert `/` focus because its Shortcuts demo answers `/` as well — that one was
 checked on the real page.
 
-### W2.11 — Web UI: recipe cards + log-recipe modal
+### W2.11 — Web UI: recipe cards + log-recipe modal ✅
 - Files: `features/nutrition/components/{RecipesView,RecipeCard,LogRecipeDialog,RecipeEditor}.tsx`,
   `features/nutrition/recipeTint.ts` + test (dominant macro by kcal share).
 - **Verify:** photo when present, tint icon otherwise; "kcal / adag" in HU, "kcal / serving" in EN.
+
+*As built:* The recipes tab is now a grid of `RecipeCard`s and the "log as meal" dialog and the recipe editor
+are DS overlays. **Cards** (`RecipeCard.tsx`, presentational): the photo (`RecipeThumbnail`, 56 px) or a 56 px
+icon holder in the colour of the recipe's **dominant macro** (`recipeTint.ts`, 5 tests: biggest share of kcal
+with protein and carbs at 4 kcal/g and fat at 9 — protein `egg_alt`, carbs `bakery_dining`, fat `water_drop`,
+a neutral book when there are no macro data), the name (16/800, two lines, never truncated), "4 adag · 3
+hozzávaló", the **kcal per serving** at 28/800 with "kcal / adag" ("kcal / serving" in EN, never a bare "/
+serving"), a P/C/F `RatioBar` by kcal share, "F 55 g · Sz 58 g · Zs 8 g" with each part in its metric colour,
+a tonal "Naplózás" and a "⋯" (Szerkesztés, Duplikálás, Törlés…; "Kiosztás" first in the admin view). The top
+of the card opens the editor; the actions sit outside that button so nothing is nested. The column count
+follows the **pane**, not the viewport (container queries: 1 below 560 px, 2 from 560, 3 from 840), so the
+sidebar is accounted for. `RecipesView` now works on the whole recipe list (the query the tab's count uses)
+plus the food list, because the recipe API carries only kcal and protein per ingredient — carbs and fat come
+from the foods (`recipeMacros.ts`); search ignores accents and case, "Kedvencek" is a toggle chip, and "＋ Új
+recept" is in the page's tab row on this tab (a controlled `creating` prop; the admin view, which has no such
+row, still draws its own). Duplicate is one click with a toast (the confirm was noise for a non-destructive
+action); **delete is confirm → undo toast** like W2.8 — the card leaves at once, Undo sends nothing, the
+`DELETE` goes out after 6 s — so every delete in W2 is now undoable. **Log dialog** (`LogRecipeModal` +
+connected `LogRecipeDialog`): DS `Modal`, meal type as a `SegmentedControl`, "Egy adag rögzítése" switch (on
+by default for a multi-serving recipe) with a split stepper and the line "Minden hozzávaló 4 részre oszlik, te
+egyet naplózol belőle.", "Hozzávalók módosítása" with a `NumberField` of grams per ingredient (0 leaves it
+out, a reset button per overridden row) and a preview of exactly what will be logged — kcal **and** F / Sz /
+Zs, where the old one showed kcal and an untranslated "protein" (`scaledMacros`, 3 new tests → 14 in
+`logRecipePortion.test.ts`). **Editor** (`RecipeEditor`): a DS `Drawer` (520) with DS fields; the auto-save
+engine (debounced, one request at a time) is unchanged, and the header now says so — "A módosítások
+automatikusan mentődnek" / "Mentés…" / what is still missing; the footer has "Törlés…" (confirm + undo) and
+"Kész". Verified against the real backend (throwaway "ZZ W211" recipe and a logged meal, removed afterwards; 4
+recipes and 155 meals before and after): four cards with the right kcal per serving (528 = the API's total
+over 4), the modal's preview matches the card, logging a snack sends one `POST /meals` with 3 entries, "Új
+recept" in the tab row creates the recipe by auto-save (one `POST`), changing the servings sends one `PUT`,
+and deleting from the editor closes it, Undo sends nothing and a second delete sends exactly one `DELETE`
+after the window. Two platform bugs found on the way: (1) **the toast sat at the same z-index as drawers**
+(both `z-[60]`, the drawer later in the DOM), so a toast raised while a drawer was open — "Undo" after
+deleting from the editor — was covered and unclickable; it is `z-[70]` now, matching D-W0.15's toast > modal >
+drawer; (2) the first focus in a modal landed on its close icon, whose tooltip then hung clipped at the top —
+the log dialog has no close icon (Esc and "Mégsem" do that). Gallery section "Recipe cards and log modal" and
+`e2e/ds/recipeCards.spec.ts` (14 tests: card content, the four tints, the favourite star, wrapping names,
+actions and menu, 3 → 1 columns, Hungarian, and the modal's preview, split, overrides, reset, payload, Esc and
+Hungarian).
 
 ### W2.12 — Web UI: nutrition at 390
 - Files: the W2 components' responsive variants; FAB via the W0.22 slot.

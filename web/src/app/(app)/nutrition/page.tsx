@@ -29,6 +29,7 @@ export default function NutritionPage() {
   const { date } = useDateStore();
   const [adding, setAdding] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [creatingRecipe, setCreatingRecipe] = useState(false);
   const copyAnchor = useRef<HTMLSpanElement>(null);
 
   // Hidden foods are the one-off "enter macros" entries — not part of the user's food list.
@@ -64,7 +65,13 @@ export default function NutritionPage() {
               </Button>
             </span>
           )}
-          <Button onClick={openAdd}>
+          {tab === "recipes" && (
+            <Button onClick={() => setCreatingRecipe(true)}>
+              <Icon name="add" size={20} />
+              {t("newRecipe")}
+            </Button>
+          )}
+          <Button variant={tab === "recipes" ? "secondary" : "primary"} onClick={openAdd}>
             <Icon name="add" size={20} />
             {t("addFood")}
             <kbd className="type-label ml-1 opacity-70">N</kbd>
@@ -74,7 +81,7 @@ export default function NutritionPage() {
 
       {tab === "meals" && <MealsView />}
       {tab === "foods" && <FoodsView />}
-      {tab === "recipes" && <RecipesView />}
+      {tab === "recipes" && <RecipesView creating={creatingRecipe} onCreatingChange={setCreatingRecipe} />}
 
       <CopyFromDayPopover open={copying} onClose={() => setCopying(false)} anchorRef={copyAnchor} date={date} />
 

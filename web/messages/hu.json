@@ -678,7 +678,8 @@
     "increase": "Növelés",
     "rowDensity": "Sorok sűrűsége",
     "densityComfortable": "Kényelmes",
-    "densityCompact": "Kompakt"
+    "densityCompact": "Kompakt",
+    "done": "Kész"
   },
   "status": {
     "emptyTitle": "Még nincs semmi itt",
@@ -844,15 +845,22 @@
       "noRecipes": "Még nincs recept",
       "tryDifferentSearch": "Próbálj más keresőszót.",
       "createToLog": "Hozz létre egy receptet, hogy gyorsan rögzíthesd a gyakran evett étkezéseidet.",
-      "logAsMeal": "Rögzítés étkezésként",
-      "duplicate": "Duplikálás",
       "copyOf": "{name} (Másolat)",
       "recipeDuplicated": "Recept duplikálva",
       "duplicateRecipeFailed": "Nem sikerült duplikálni a receptet",
-      "duplicateRecipeConfirmTitle": "Recept duplikálása",
-      "duplicateRecipeConfirmBody": "Biztosan duplikálni szeretnéd ezt a receptet?",
-      "perServingCaloriesProtein": "{calories} kcal · {protein}g fehérje / adag",
-      "totalCaloriesProtein": "{calories} kcal · {protein}g fehérje"
+      "servingsMeta": "{servings} adag · {count} hozzávaló",
+      "kcalPerServing": "kcal / adag",
+      "macroLine": "F {protein} g · Sz {carbs} g · Zs {fat} g",
+      "log": "Naplózás",
+      "menuEdit": "Szerkesztés",
+      "menuDuplicate": "Duplikálás",
+      "menuDelete": "Törlés…",
+      "rowMenuLabel": "{name} műveletei",
+      "favoriteAria": "Kedvenc",
+      "deleteTitle": "Törlöd: {name}?",
+      "deleteBody": "A belőle már naplózott étkezések megmaradnak. Utána még {seconds} másodpercig visszavonhatod.",
+      "recipeDeleted": "{name} törölve",
+      "deleteFailed": "Nem sikerült törölni a receptet"
     },
     "foodEditor": {
       "editFood": "Étel szerkesztése",
@@ -912,13 +920,13 @@
       "logged": "{name} rögzítve",
       "logFailed": "Nem sikerült rögzíteni a receptet",
       "logMeal": "Étkezés rögzítése",
-      "logging": "Rögzítés…"
+      "logging": "Rögzítés…",
+      "preview": "{kcal} kcal · F {protein} g · Sz {carbs} g · Zs {fat} g",
+      "splitHint": "Minden hozzávaló {count} részre oszlik, te egyet naplózol belőle."
     },
     "recipeEditor": {
       "editRecipe": "Recept szerkesztése",
       "newRecipe": "Új recept",
-      "namePlaceholder": "Recept neve",
-      "descriptionPlaceholder": "Leírás (opcionális)",
       "servings": "Adagok",
       "favorite": "Kedvenc",
       "ingredients": "Hozzávalók",
@@ -927,8 +935,6 @@
       "totalPerServingKcal": "{total} kcal · {perServing} / adag",
       "totalPerServingProtein": "{total} g fehérje · {perServing} g / adag",
       "saveFailed": "Nem sikerült elmenteni a receptet",
-      "deleted": "Recept törölve",
-      "deleteFailed": "Nem sikerült törölni",
       "deleteAria": "Recept törlése",
       "removeIngredientAria": "Hozzávaló eltávolítása",
       "changePhoto": "Fénykép módosítása",
@@ -936,7 +942,15 @@
       "photoUpdated": "Recept fotója frissítve",
       "photoUploadFailed": "Nem sikerült frissíteni a recept fotóját",
       "photoRemoved": "Recept fotója eltávolítva",
-      "photoRemoveFailed": "Nem sikerült eltávolítani a recept fotóját"
+      "photoRemoveFailed": "Nem sikerült eltávolítani a recept fotóját",
+      "name": "Név",
+      "namePlaceholder": "pl. Csirkés rizstál",
+      "description": "Leírás",
+      "descriptionPlaceholder": "Nem kötelező",
+      "saving": "Mentés…",
+      "autoSaved": "A módosítások automatikusan mentődnek",
+      "needsIngredient": "Akkor mentődik, ha van neve és egy grammal megadott hozzávalója",
+      "delete": "Törlés…"
     },
     "tabsAria": "Táplálkozás szakaszai",
     "addFood": "Étel hozzáadása",
@@ -1008,7 +1022,8 @@
     "copyEmptyDay": "Ezen a napon nincs naplózott étkezés.",
     "copyNoteToday": "A mai naphoz adódik, nem írja felül.",
     "copyNoteDay": "{day} napjához adódik, nem írja felül.",
-    "copyAction": "{count} étkezés másolása"
+    "copyAction": "{count} étkezés másolása",
+    "newRecipe": "Új recept"
   },
   "workouts": {
     "sessions": "Edzések",

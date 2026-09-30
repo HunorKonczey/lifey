@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildEntries, defaultGrams, gramsFor, parseGrams, scaledTotals } from "./logRecipePortion";
-import type { RecipeIngredientResponse } from "./types";
+import { buildEntries, defaultGrams, gramsFor, parseGrams, scaledMacros, scaledTotals } from "./logRecipePortion";
+import type { FoodResponse, RecipeIngredientResponse } from "./types";
 
 const chicken: RecipeIngredientResponse = {
   foodId: 1, foodName: "Chicken", quantityInGrams: 300, calories: 600, protein: 60,
@@ -75,5 +75,35 @@ describe("buildEntries", () => {
 
   it("returns no entries when everything is zeroed out", () => {
     expect(buildEntries(ingredients, 1, { 0: "0", 1: "" })).toEqual([]);
+  });
+});
+
+describe("scaledMacros", () => {
+  const food = (id: number, carbs: number | null, fat: number | null): FoodResponse => ({
+    id, name: `f${id}`, caloriesPer100g: 0, proteinPer100g: 0, carbsPer100g: carbs, fatPer100g: fat, barcode: null, hidden: false,
+  });
+  const foods = new Map([[1, food(1, 0, 4)], [2, food(2, 77, 1)]]);
+
+  it("adds carbs and fat from the foods for the grams actually logged", () => {
+    // one of two portions: 150 g chicken (0 C, 6 F) + 100 g rice (77 C, 1 F)
+    const m = scaledMacros(ingredients, 2, {}, foods);
+    expect(m.calories).toBeCloseTo(430);
+    expect(m.protein).toBeCloseTo(32.5);
+    expect(m.carbs).toBeCloseTo(77);
+    expect(m.fat).toBeCloseTo(7);
+  });
+
+  it("follows per-ingredient overrides and leaves out a 0 g ingredient", () => {
+    const m = scaledMacros(ingredients, 2, { 1: "0", 0: "100" }, foods);
+    expect(m.carbs).toBe(0);
+    expect(m.fat).toBeCloseTo(4);
+    expect(m.calories).toBeCloseTo(200);
+  });
+
+  it("counts a missing food or a null macro as zero carbs and fat", () => {
+    const m = scaledMacros(ingredients, 1, {}, new Map([[2, food(2, null, null)]]));
+    expect(m.carbs).toBe(0);
+    expect(m.fat).toBe(0);
+    expect(m.calories).toBeCloseTo(860);
   });
 });

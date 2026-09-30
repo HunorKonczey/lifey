@@ -44,7 +44,7 @@ export function Toast() {
 
   return (
     <div
-      className="fixed left-1/2 -translate-x-1/2 z-[60] pointer-events-none px-4"
+      className="fixed left-1/2 -translate-x-1/2 z-[70] pointer-events-none px-4"
       style={{ bottom: "calc(24px + env(safe-area-inset-bottom))" }}
     >
       {/* Keyed on the toast's id so a new toast always mounts fresh —
