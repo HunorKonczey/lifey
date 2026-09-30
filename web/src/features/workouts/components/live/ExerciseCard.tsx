@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, Card, Icon } from "@/components/ds";
 import { formatNumber, useFormat } from "@/lib/i18n/format";
 import type { DraftSet, RowMark } from "../../liveSession";
-import { SET_GRID, SetRow } from "./SetRow";
+import { SET_GRID_CLASS, SetRow } from "./SetRow";
 
 /** The focusable inputs of one set row. */
 const rowInput = (root: HTMLElement | null, row: number) => root?.querySelector<HTMLInputElement>(`[data-set-row="${row}"] input`) ?? null;
@@ -78,8 +78,8 @@ export function ExerciseCard({
       </div>
 
       <div
-        className="type-label grid gap-2 px-2 pb-1"
-        style={{ gridTemplateColumns: SET_GRID, color: "var(--text-3)" }}
+        className={["type-label grid gap-2 px-1 pb-1 md:px-2", SET_GRID_CLASS].join(" ")}
+        style={{ color: "var(--text-3)" }}
         aria-hidden
       >
         <span className="text-center">{t("setColumn")}</span>
@@ -87,7 +87,7 @@ export function ExerciseCard({
         <span className="text-center">{t("kg")}</span>
         <span className="text-center">{t("reps")}</span>
         <span />
-        <span />
+        <span className="max-md:hidden" />
       </div>
 
       <div className="flex flex-col gap-1">

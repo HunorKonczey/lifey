@@ -6,6 +6,7 @@ import { formatDuration } from "../../cardioFormat";
 import { formatKg } from "../../weekLabels";
 import { REST_STEP_SECONDS, isFinished, isUrgent, remainingFraction, remainingSeconds, type RestState } from "../../restTimer";
 import { useFormat } from "@/lib/i18n/format";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 /**
  * The right column of the live logger (W3.8, W3-B, live-002): "PIHENŐ", the remaining time as the hero (72/800),
@@ -39,10 +40,57 @@ export function RestHero({
   const finished = isFinished(state, now);
   const urgent = isUrgent(state, now);
   const paused = state.status === "paused";
+  const phone = useMediaQuery("(max-width: 767px)");
 
   return (
     <aside className="flex flex-col gap-4" aria-label={t("restAria")}>
-      {enabled && (
+      {enabled && phone && active && (
+        <div
+          data-testid="rest-floating"
+          className="fixed inset-x-3 z-30 flex flex-col gap-2 p-3"
+          style={{
+            bottom: "calc(env(safe-area-inset-bottom) + 12px)",
+            borderRadius: "var(--r-card)",
+            background: "var(--modal-bg)",
+            boxShadow: "var(--e2)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex min-w-0 flex-1 items-baseline gap-2">
+              <span className="type-label" style={{ color: "var(--text-3)" }}>
+                {t("restTitle")}
+              </span>
+              <span
+                className={["tabular", urgent ? "rest-urgent" : ""].filter(Boolean).join(" ")}
+                data-testid="rest-time"
+                role="timer"
+                aria-live="off"
+                style={{ fontSize: 30, lineHeight: "34px", fontWeight: 800, letterSpacing: "-0.02em", opacity: paused ? 0.6 : 1 }}
+              >
+                {formatDuration(left)}
+              </span>
+            </span>
+            <Button variant="secondary" onClick={() => onAdjust(REST_STEP_SECONDS)}>
+              {t("restPlusShort", { s: REST_STEP_SECONDS })}
+            </Button>
+            {!finished && (
+              <Button variant="ghost" onClick={onPauseResume} aria-label={paused ? t("restResume") : t("restPause")}>
+                <Icon name={paused ? "play_arrow" : "pause"} size={20} />
+              </Button>
+            )}
+            <Button variant="ghost" onClick={onSkip}>
+              {t("restSkipShort")}
+            </Button>
+          </div>
+          <div className="overflow-hidden" style={{ height: 4, borderRadius: "var(--r-pill)", background: "var(--nested)" }} aria-hidden>
+            <div
+              data-testid="rest-bar"
+              style={{ height: "100%", width: `${Math.round(remainingFraction(state, now) * 100)}%`, borderRadius: "var(--r-pill)", background: urgent ? "var(--m-kcal)" : "var(--primary)" }}
+            />
+          </div>
+        </div>
+      )}
+      {enabled && !phone && (
         <Card variant="hero" className="flex flex-col gap-3" data-testid="rest-hero" data-rest-status={finished ? "finished" : state.status}>
           <span className="type-section" style={{ color: "var(--text-3)" }}>
             {t("restTitle")}

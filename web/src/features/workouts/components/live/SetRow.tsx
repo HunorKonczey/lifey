@@ -6,8 +6,12 @@ import { formatNumber } from "@/lib/i18n/format";
 import { useFormat } from "@/lib/i18n/format";
 import type { DraftSet, RowMark } from "../../liveSession";
 
-/** The grid every set row and the column header share: Szett · Előző · kg · Ismétlés · ✓ · remove. */
-export const SET_GRID = "56px minmax(0, 1fr) 120px 120px 56px 32px";
+/**
+ * The grid every set row and the column header share. Desktop: Szett · Előző · kg · Ismétlés · ✓ · remove
+ * (`56 | 1fr | 120 | 120 | 56 | 32`). On a phone (W3.13, W3-E) `28 | 1fr | 76 | 60 | 44` — the remove button is
+ * left to the desktop row there, so the two number fields and the check are what the thumb meets.
+ */
+export const SET_GRID_CLASS = "grid-cols-[28px_minmax(0,1fr)_76px_60px_44px] md:grid-cols-[56px_minmax(0,1fr)_120px_120px_56px_32px]";
 
 // The −/+ steppers are hidden: the row is for typing, and ↑/↓ step the value from the keyboard.
 const BIG_NUMBER = "[&_input]:!text-[18px] [&_input]:!font-extrabold [&_button]:hidden";
@@ -46,9 +50,8 @@ export function SetRow({
     <div
       data-set-row={index}
       data-done={done || undefined}
-      className="grid items-center gap-2 px-2 py-2"
+      className={["grid items-center gap-2 px-1 py-2 scroll-mb-32 md:px-2", SET_GRID_CLASS].join(" ")}
       style={{
-        gridTemplateColumns: SET_GRID,
         borderRadius: "var(--r-card)",
         background: done ? "color-mix(in srgb, var(--m-protein) var(--chip-tint), transparent)" : "transparent",
         transition: "background-color 250ms var(--ease-standard)",
@@ -56,7 +59,7 @@ export function SetRow({
     >
       <span
         className="tabular flex items-center justify-center"
-        style={{ width: 32, height: 32, borderRadius: "var(--r-pill)", background: "var(--nested)", fontWeight: 800 }}
+        style={{ width: 28, height: 28, borderRadius: "var(--r-pill)", background: "var(--nested)", fontWeight: 800 }}
       >
         {number}
       </span>
@@ -87,7 +90,7 @@ export function SetRow({
         onEnter={onEnter}
         className={BIG_NUMBER}
       />
-      <span className="flex items-center justify-end gap-1">
+      <span className="flex items-center justify-end gap-0.5">
         {mark.record && <Icon name="trophy" size={18} fill={1} color="var(--record)" label={t("recordAria")} />}
         {!mark.record && mark.better && <Icon name="arrow_upward" size={18} color="var(--improvement)" label={t("improvedAria")} />}
         <button
@@ -97,8 +100,8 @@ export function SetRow({
           aria-label={t("markSetDoneAria")}
           className="lifey-button flex items-center justify-center"
           style={{
-            width: 36,
-            height: 36,
+            width: 44,
+            height: 44,
             borderRadius: "var(--r-control)",
             background: done ? "var(--m-protein)" : "var(--nested)",
             color: done ? "var(--bg)" : "var(--text-3)",
@@ -107,7 +110,9 @@ export function SetRow({
           <Icon name="check" size={20} />
         </button>
       </span>
-      <IconButton icon="close" label={t("removeSetAria")} size={32} onClick={onRemove} />
+      <span className="max-md:hidden">
+        <IconButton icon="close" label={t("removeSetAria")} size={32} onClick={onRemove} />
+      </span>
     </div>
   );
 }

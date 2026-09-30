@@ -23,6 +23,7 @@ import { LiveHeader } from "./LiveHeader";
 import { RestHero } from "./RestHero";
 import { useRestTimer } from "./useRestTimer";
 import { isTypingTarget } from "@/lib/hooks/useHotkeys";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 /**
  * The live workout logger in focus mode (W3.6, W3-B): header, exercise rail on the left, the current exercise
@@ -115,6 +116,10 @@ export function LiveSession({
     setDrafts((prev) => [...prev, { exerciseId, weight: last?.weight ?? 0, reps: last?.reps ?? 0, done: false }]);
   };
   const rest = useRestTimer();
+  const phone = useMediaQuery("(max-width: 767px)");
+  // On a phone the running rest is a floating panel over the bottom — the page gets room for it so the last row
+  // (and its focused field) can always scroll clear of it.
+  const floatingRest = phone && restEnabled && rest.state.status !== "idle";
   const updateDraft = (index: number, patch: Partial<DraftSet>) => {
     const row = drafts[index];
     // Ticking a set starts its rest, announcing the set that follows in the same exercise.
@@ -181,7 +186,7 @@ export function LiveSession({
         onFinish={() => setFeedbackContext("finish")}
       />
 
-      <div className="grid flex-1 items-start gap-4 p-4 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_340px]">
+      <div className={["grid flex-1 items-start gap-4 p-3 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_340px]", floatingRest ? "pb-32" : "pb-6"].join(" ")}>
         <ExerciseRail items={railExercises(exercises, drafts, currentId)} onSelect={setPickedId} />
 
         <div className="flex min-w-0 flex-col gap-4">
