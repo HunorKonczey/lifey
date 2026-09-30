@@ -20,13 +20,15 @@ export function daysBetween(from: Date, now: Date): number {
 
 /**
  * The tiles of the start-workout picker (W3.5, W3-F): every template with its exercise count, estimated time
- * and "last used" day count, the recommended one first (the rest keep their order). `sessionsDesc` is newest first.
+ * and "last used" day count, the recommended one first (the rest keep their order) — or, with
+ * `recommendedFirst = false` (the Templates tab), everything in the templates' own order. `sessionsDesc` is newest first.
  */
 export function pickerTemplates(
   templates: readonly WorkoutTemplateResponse[],
   sessionsDesc: WorkoutSessionResponse[],
   recommendedId: number | null,
   now: Date,
+  recommendedFirst = true,
 ): PickerTemplate[] {
   const items = templates.map((template) => {
     const summary = summarizeTemplate(template, sessionsDesc, new Map());
@@ -38,5 +40,5 @@ export function pickerTemplates(
       recommended: template.id === recommendedId,
     };
   });
-  return [...items.filter((i) => i.recommended), ...items.filter((i) => !i.recommended)];
+  return recommendedFirst ? [...items.filter((i) => i.recommended), ...items.filter((i) => !i.recommended)] : items;
 }

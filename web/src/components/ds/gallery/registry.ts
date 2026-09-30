@@ -38,6 +38,7 @@ import { FoodsTableSection } from "./sections/FoodsTableSection";
 import { RecipeCardsSection } from "./sections/RecipeCardsSection";
 import { NutritionMobileSection } from "./sections/NutritionMobileSection";
 import { SetRowsSection } from "./sections/SetRowsSection";
+import { TemplateEditorSection } from "./sections/TemplateEditorSection";
 import { EditMealDrawerSection } from "./sections/EditMealDrawerSection";
 
 export interface GallerySection {
@@ -89,6 +90,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "recipe-cards", title: "Recipe cards and log modal", Component: RecipeCardsSection },
   { id: "nutrition-mobile", title: "Nutrition on a phone", Component: NutritionMobileSection },
   { id: "set-rows", title: "Live logger set rows", Component: SetRowsSection },
+  { id: "template-editor", title: "Template editor", Component: TemplateEditorSection },
   { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];
