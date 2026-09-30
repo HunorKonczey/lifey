@@ -29,3 +29,10 @@ export interface StatisticsResponse {
   totalDistanceMeters: number;
   totalElevationGainMeters: number;
 }
+
+/**
+ * The Mozgás section's filter (docs/cardio/56 D-C3.4, W5.5): which movement cards show. It never changes a number —
+ * calories and weight sit outside it, and so do the KPI tiles.
+ */
+export const STAT_KIND_FILTERS = ["ALL", "STRENGTH", "CARDIO"] as const;
+export type StatKindFilter = (typeof STAT_KIND_FILTERS)[number];

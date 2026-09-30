@@ -225,7 +225,7 @@ describe("movement", () => {
     const s = week(raw);
     expect(s.cardio.values).toEqual([null, null, 14.8, null, 5.2, null, null]);
     expect(s.cardio.totalKm).toBe(20);
-    expect(s.cardio.sessions).toBe(4);
+    expect(s.cardio.sessions).toBe(2); // the run and the bike; the game and the distance-less session do not count
   });
 
   it("steps: a zero count is no count, and today is out of the average", () => {

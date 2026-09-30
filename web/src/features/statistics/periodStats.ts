@@ -1,4 +1,4 @@
-import { addDays, differenceInCalendarDays, eachDayOfInterval, format, startOfDay, startOfWeek } from "date-fns";
+import { addDays, eachDayOfInterval, format, startOfDay, startOfWeek } from "date-fns";
 import { activityFamilyOf } from "@/features/workouts/activityType";
 import type { RawData } from "./types";
 import { isCurrentPeriod, periodRange, previousPeriod, type PeriodRange, type StatsPeriod } from "./period";
@@ -193,6 +193,17 @@ export function bucketByDay(raw: RawData): Daily {
   return { calories, steps, volume, cardioKm, workouts, weight, firstMeal };
 }
 
+/** Cardio sessions in `range` that contributed a distance — the "2 alkalom" under the cardio chart. */
+function distanceSessionsIn(raw: RawData, range: PeriodRange): number {
+  return raw.sessions.filter((s) => {
+    if (s.sessionKind !== "CARDIO" || !s.activityType || s.cardio?.distanceMeters == null) return false;
+    const family = activityFamilyOf(s.activityType);
+    if (family !== "DISTANCE" && family !== "MACHINE") return false;
+    const day = dayOf(s.startedAt).getTime();
+    return day >= range.start.getTime() && day <= range.end.getTime();
+  }).length;
+}
+
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 const mean = (values: number[]) => (values.length === 0 ? null : sum(values) / values.length);
 
@@ -354,9 +365,7 @@ export function buildPeriodStats({ raw, period, start, now, goals }: StatsInput)
     const v = slotValue(daily.cardioKm, s, today, "sum", false);
     return v == null ? null : Math.round(v * 100) / 100;
   });
-  const cardioSessions = raw.sessions.filter(
-    (s) => s.sessionKind === "CARDIO" && differenceInCalendarDays(dayOf(s.startedAt), range.start) >= 0 && differenceInCalendarDays(range.end, dayOf(s.startedAt)) >= 0,
-  ).length;
+  const cardioSessions = distanceSessionsIn(raw, range);
 
   const stepValues = slots.map((s) => slotValue(daily.steps, s, today, "mean", weekly));
 

@@ -4,7 +4,8 @@ import type { WeightResponse } from "@/features/weight/types";
 import type { WaterEntryResponse } from "@/features/water/types";
 import type { DailyStepCountResponse } from "@/features/steps/types";
 import type { WorkoutSessionResponse } from "@/features/workouts/types";
-import type { RawData } from "./types";
+import type { RawData, StatKindFilter } from "./types";
+import { STAT_KIND_FILTERS } from "./types";
 import { activityFamilyOf } from "@/features/workouts/activityType";
 
 export interface SeriesPoint {
@@ -21,8 +22,8 @@ export type { RawData };
  * `cardioDistanceSeries` ignore this except to go empty under `STRENGTH`
  * (nothing to show — mirrors the mobile `stat_chart_data.dart` behavior).
  */
-export const STAT_KIND_FILTERS = ["ALL", "STRENGTH", "CARDIO"] as const;
-export type StatKindFilter = (typeof STAT_KIND_FILTERS)[number];
+export { STAT_KIND_FILTERS };
+export type { StatKindFilter };
 
 export interface AggregatedStats {
   caloriesSeries: SeriesPoint[];
