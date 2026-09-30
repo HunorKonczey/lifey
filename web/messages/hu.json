@@ -797,10 +797,6 @@
     "duplicateMealAria": "Étkezés duplikálása",
     "mealDuplicated": "Étkezés duplikálva",
     "duplicateMealFailed": "Nem sikerült duplikálni az étkezést",
-    "copyPreviousDay": "Korábbi nap másolása",
-    "copyPreviousDayGhost": "Tegnapi {meal} másolása · {kcal} kcal",
-    "copyPreviousDayConfirmTitle": "Korábbi nap másolása",
-    "copyPreviousDayConfirmBody": "Átmásolod a {count} {count, plural, one {étkezést} other {étkezést}} ({kcal} kcal) erről a napról: {date}?",
     "mealsCopied": "{count} {count, plural, one {étkezés} other {étkezés}} átmásolva",
     "copyDayFailed": "Nem sikerült átmásolni azt a napot",
     "foodsView": {
@@ -986,7 +982,14 @@
     "deleteItemTitle": "Törlöd: {food}?",
     "deleteItemBody": "{grams} g, {kcal} kcal. Utána még {seconds} másodpercig visszavonhatod.",
     "deleteItemLastBody": "Ez az étkezés utolsó tétele, ezért az egész étkezés törlődik. Utána még {seconds} másodpercig visszavonhatod.",
-    "itemDeleted": "{food} törölve"
+    "itemDeleted": "{food} törölve",
+    "copyChipYesterday": "Tegnap · {date}",
+    "copyChipOther": "Másik nap",
+    "copyDayChipsAria": "Melyik napról másolsz",
+    "copyEmptyDay": "Ezen a napon nincs naplózott étkezés.",
+    "copyNoteToday": "A mai naphoz adódik, nem írja felül.",
+    "copyNoteDay": "{day} napjához adódik, nem írja felül.",
+    "copyAction": "{count} étkezés másolása"
   },
   "workouts": {
     "sessions": "Edzések",

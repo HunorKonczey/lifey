@@ -14,14 +14,12 @@ import { useUndoableDelete } from "@/lib/hooks/useUndoableDelete";
 import { keepalivePut } from "@/lib/api/client";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EditMealDrawer } from "./EditMealDrawer";
 import { AddFoodFlow } from "./addFood/AddFoodFlow";
 import { ConfirmModal, GridItem, PageGrid } from "@/components/ds";
 import { DaySummaryView } from "./DaySummary";
 import { EmptyMealSlot } from "./EmptyMealSlot";
 import { MealCard, mealCarbs, mealFat, mealKcal, mealProtein } from "./MealCard";
-import { useNutritionUi } from "../nutritionUi";
 import { useCopyMeals } from "../useCopyMeals";
 import type { MealResponse, MealType } from "../types";
 import { useFormat } from "@/lib/i18n/format";
@@ -38,9 +36,6 @@ export function MealsView() {
   const prevDateStr = format(subDays(date, 1), "yyyy-MM-dd");
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
   const [editingMeal, setEditingMeal] = useState<MealResponse | null>(null);
-  // Opened by the page header's "Copy from an earlier day" as well as the summary panel's button.
-  const copyingPreviousDay = useNutritionUi((s) => s.copyOpen);
-  const setCopyingPreviousDay = useNutritionUi((s) => s.setCopyOpen);
   // Deleting used to fire on the first click with no way back (docs/redesign/web-redesign-prompt.md).
   const [removingMeal, setRemovingMeal] = useState<MealResponse | null>(null);
   const [removingItem, setRemovingItem] = useState<{ meal: MealResponse; index: number } | null>(null);
@@ -116,26 +111,12 @@ export function MealsView() {
   // "Yesterday's dinner" on an empty slot: copy + toast with Undo.
   const copySlot = useCopyMeals(date);
 
-  const copyMealsMutation = useMutation({
-    mutationFn: async (mealsToCopy: MealResponse[]) => {
-      await Promise.all(mealsToCopy.map((m) => mealApi.create(copyMealPayload(m, date))));
-      return mealsToCopy.length;
-    },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show(t("mealsCopied", { count }), "success");
-      setCopyingPreviousDay(false);
-    },
-    onError: () => show(t("copyDayFailed"), "error"),
-  });
-
   const todayMeals = (data ?? []).filter(
     (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === dateStr,
   );
   const previousDayMeals = (data ?? []).filter(
     (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === prevDateStr,
   );
-  const previousDayKcal = previousDayMeals.reduce((s, m) => s + mealKcal(m), 0);
 
   const totalKcal = todayMeals.reduce((sum, m) => sum + mealKcal(m), 0);
   const goalKcal = settings?.dailyCalorieGoal ?? null;
@@ -231,20 +212,6 @@ export function MealsView() {
       {addingTo && <AddFoodFlow date={date} mealType={addingTo} onClose={() => setAddingTo(null)} />}
 
       {editingMeal && <EditMealDrawer meal={editingMeal} onClose={() => setEditingMeal(null)} />}
-
-      <ConfirmDialog
-        open={copyingPreviousDay}
-        title={t("copyPreviousDayConfirmTitle")}
-        body={t("copyPreviousDayConfirmBody", {
-          count: previousDayMeals.length,
-          kcal: Math.round(previousDayKcal),
-          date: fmt.date(subDays(date, 1), "day"),
-        })}
-        confirmLabel={t("copyPreviousDay")}
-        confirming={copyMealsMutation.isPending}
-        onConfirm={() => copyMealsMutation.mutate(previousDayMeals)}
-        onCancel={() => setCopyingPreviousDay(false)}
-      />
 
       <ConfirmModal
         open={removingMeal != null}

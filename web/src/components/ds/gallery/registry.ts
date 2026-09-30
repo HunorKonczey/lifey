@@ -33,6 +33,7 @@ import { DaySummarySection } from "./sections/DaySummarySection";
 import { MealCardSection } from "./sections/MealCardSection";
 import { EmptyMealSlotSection } from "./sections/EmptyMealSlotSection";
 import { AddFoodModalSection } from "./sections/AddFoodModalSection";
+import { CopyFromDaySection } from "./sections/CopyFromDaySection";
 import { EditMealDrawerSection } from "./sections/EditMealDrawerSection";
 
 export interface GallerySection {
@@ -79,6 +80,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "empty-slot", title: "Empty meal slot", Component: EmptyMealSlotSection },
   { id: "add-food", title: "Add food dialog", Component: AddFoodModalSection },
   { id: "edit-meal", title: "Edit meal drawer", Component: EditMealDrawerSection },
+  { id: "copy-from-day", title: "Copy from day popover", Component: CopyFromDaySection },
   { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

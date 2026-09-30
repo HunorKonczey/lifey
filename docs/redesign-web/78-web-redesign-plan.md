@@ -2108,10 +2108,32 @@ after 6 s exactly one `DELETE`; meal delete then navigating to the dashboard ins
 is sent and the meal is gone on the backend. Gallery "Meal card" section gained a "Delete requested" log and
 two specs in `e2e/ds/mealCard.spec.ts` (food row → item delete; recipe row → meal delete).
 
-### W2.9 — Web UI: copy-from-day popover
+### W2.9 — Web UI: copy-from-day popover ✅
 - Files: `features/nutrition/components/CopyFromDayPopover.tsx`, `copyMeal.ts`.
 - **Verify:** copying 2 meals from yesterday adds them to the selected day, never overwrites; success toast
   with undo.
+
+*As built:* "Másolás korábbi napról" now opens a day-chip popover instead of the old "copy the whole previous
+day?" confirm. `CopyFromDayPopover.tsx` has a presentational `CopyFromDayView` (the DS `Popover`, 392 wide,
+anchored to the page-header button) and a connected wrapper that reads the meals the log already loads and
+copies through `useCopyMeals`. Inside: chips "Tegnap · szept. 29." / "szept. 28." / "Másik nap" (the viewed
+day minus one and two; "Másik nap" unfolds the DS month grid, future days disabled, a dot on every day that
+has a logged meal, and the chip then reads "Másik nap · szept. 12."), the chosen day's meals as rows with a
+checkbox, the meal type's tinted icon, "07:07 · 2 tétel" (a recipe shows its name) and kcal, the note "A mai
+naphoz adódik, nem írja felül." (or "{nap} napjához …" when a past day is being viewed) and a primary "N
+étkezés másolása" that counts the ticked meals and is disabled at zero; a day with nothing logged says so.
+Everything starts ticked on the first chip each time it opens, and the first chip takes focus (a frame late,
+so the Popover's focus-return still remembers the real trigger — Esc returns to the button). Copies are **new
+meals** at the source meal's time of day on the viewed day (`copyMealPayload`), so nothing is overwritten; the
+success toast "2 étkezés másolva" has Undo, which deletes exactly the meals that copy created. Pure helpers in
+`copyFromDay.ts` (8 tests: quick days across month ends and DST, a day's meals in time order, logged-day keys,
+chip mapping). The old confirm, its `copyMealsMutation`, the `nutritionUi.ts` store it needed (the popover
+state now lives in the page next to its button) and four dead messages are removed. Verified on the real
+backend (seeded meals, removed afterwards): with one lunch already logged today, copying yesterday's two meals
+sent two `POST /meals`, today went from 1 to 3 meals (the lunch untouched), unticking dinner changed the
+button to "1 étkezés másolása", and Undo sent two `DELETE`s and returned to 1. Gallery section "Copy from day
+popover" and `e2e/ds/copyFromDay.spec.ts` (10 tests, incl. the calendar dots, the empty day, focus return,
+reopening reset and the Hungarian copy).
 
 ### W2.10 — Web UI: foods table + editor panel
 - Files: `features/nutrition/components/{FoodsView,FoodEditor}.tsx`, `features/nutrition/macroCheck.ts` +

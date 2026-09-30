@@ -797,10 +797,6 @@
     "duplicateMealAria": "Duplicate meal",
     "mealDuplicated": "Meal duplicated",
     "duplicateMealFailed": "Failed to duplicate meal",
-    "copyPreviousDay": "Copy previous day",
-    "copyPreviousDayGhost": "Copy yesterday's {meal} · {kcal} kcal",
-    "copyPreviousDayConfirmTitle": "Copy previous day",
-    "copyPreviousDayConfirmBody": "Copy {count} {count, plural, one {meal} other {meals}} ({kcal} kcal) from {date}?",
     "mealsCopied": "{count} {count, plural, one {meal} other {meals}} copied",
     "copyDayFailed": "Failed to copy that day",
     "foodsView": {
@@ -986,7 +982,14 @@
     "deleteItemTitle": "Delete {food}?",
     "deleteItemBody": "{grams} g, {kcal} kcal. You can undo it for {seconds} seconds afterwards.",
     "deleteItemLastBody": "This is the last item of the meal, so the whole meal is deleted. You can undo it for {seconds} seconds afterwards.",
-    "itemDeleted": "{food} deleted"
+    "itemDeleted": "{food} deleted",
+    "copyChipYesterday": "Yesterday · {date}",
+    "copyChipOther": "Another day",
+    "copyDayChipsAria": "Day to copy from",
+    "copyEmptyDay": "Nothing was logged on this day.",
+    "copyNoteToday": "Added to today, nothing is overwritten.",
+    "copyNoteDay": "Added to {day}, nothing is overwritten.",
+    "copyAction": "{count, plural, one {Copy # meal} other {Copy # meals}}"
   },
   "workouts": {
     "sessions": "Sessions",

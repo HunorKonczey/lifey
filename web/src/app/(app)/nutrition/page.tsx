@@ -1,17 +1,17 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, Icon, Tabs } from "@/components/ds";
 import { AddFoodFlow } from "@/features/nutrition/components/addFood/AddFoodFlow";
+import { CopyFromDayPopover } from "@/features/nutrition/components/CopyFromDayPopover";
 import { FoodsView } from "@/features/nutrition/components/FoodsView";
 import { MealsView } from "@/features/nutrition/components/MealsView";
 import { RecipesView } from "@/features/nutrition/components/RecipesView";
 import { foodApi, recipeApi } from "@/features/nutrition/api";
 import { nutritionTabHref, parseNutritionTab, type NutritionTab } from "@/features/nutrition/nutritionTab";
-import { useNutritionUi } from "@/features/nutrition/nutritionUi";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDateStore } from "@/lib/hooks/useDateStore";
 import { usePageShortcuts } from "@/lib/hooks/usePageShortcuts";
@@ -28,6 +28,8 @@ export default function NutritionPage() {
   const tab = parseNutritionTab(useSearchParams().get("tab"));
   const { date } = useDateStore();
   const [adding, setAdding] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const copyAnchor = useRef<HTMLSpanElement>(null);
 
   // Hidden foods are the one-off "enter macros" entries — not part of the user's food list.
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
@@ -55,10 +57,12 @@ export default function NutritionPage() {
         </div>
         <div className="flex items-center gap-2">
           {tab === "meals" && (
-            <Button variant="secondary" onClick={() => useNutritionUi.getState().setCopyOpen(true)}>
-              <Icon name="event_repeat" size={20} />
-              {t("copyFromDay")}
-            </Button>
+            <span ref={copyAnchor} className="inline-flex">
+              <Button variant="secondary" onClick={() => setCopying((o) => !o)} aria-haspopup="dialog" aria-expanded={copying}>
+                <Icon name="event_repeat" size={20} />
+                {t("copyFromDay")}
+              </Button>
+            </span>
           )}
           <Button onClick={openAdd}>
             <Icon name="add" size={20} />
@@ -71,6 +75,8 @@ export default function NutritionPage() {
       {tab === "meals" && <MealsView />}
       {tab === "foods" && <FoodsView />}
       {tab === "recipes" && <RecipesView />}
+
+      <CopyFromDayPopover open={copying} onClose={() => setCopying(false)} anchorRef={copyAnchor} date={date} />
 
       {adding && <AddFoodFlow date={date} onClose={() => setAdding(false)} />}
     </div>
