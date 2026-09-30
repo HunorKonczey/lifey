@@ -192,3 +192,23 @@ describe("weightNumber / relativeDay", () => {
     expect(en.relativeDay(new Date(2026, 8, 25), now)).toBe("Sep 25");
   });
 });
+
+describe("dateRange / monthYear", () => {
+  it("dateRange shares the month when it can", () => {
+    const week = [new Date(2026, 8, 21), new Date(2026, 8, 27)] as const;
+    expect(hu.dateRange(...week)).toBe("szept. 21–27.");
+    expect(en.dateRange(...week).replace(/\s/g, "")).toBe("Sep21–27");
+  });
+
+  it("dateRange names both months across a boundary", () => {
+    const week = [new Date(2026, 7, 31), new Date(2026, 8, 6)] as const;
+    expect(hu.dateRange(...week)).toContain("aug. 31.");
+    expect(hu.dateRange(...week)).toContain("szept. 6.");
+    expect(en.dateRange(...week)).toContain("Aug 31");
+  });
+
+  it("monthYear spells the month out", () => {
+    expect(hu.monthYear(new Date(2026, 8, 1))).toBe("2026. szeptember");
+    expect(en.monthYear(new Date(2026, 8, 1))).toBe("September 2026");
+  });
+});

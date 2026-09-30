@@ -2617,10 +2617,12 @@ steps / session lists), `features/statistics/{aggregate,api,types}.ts` + `aggreg
 
 **Data:** everything from the lists the page already loads; exports are built client-side (no backend).
 
-### W5.1 — Web UI: statistics top bar controls
+### W5.1 — Web UI: statistics top bar controls ✅
 - Files: `app/(app)/statistics/page.tsx`, `features/statistics/components/PeriodControl.tsx`,
   `routeChrome.ts`.
 - **Verify:** period in the URL (`?period=week&start=2026-09-21`); stepping stops at the current period.
+
+*As built:* the statistics top bar is the W5-A one: the title, then in the centre the **Hét · Hónap · Év** switch and a "‹ szept. 28. – okt. 4. ›" period stepper (the forward arrow is disabled on the current period), and **Exportálás** right beside the theme toggle — the top bar gained a `trailing` slot for it (`useTopBarTrailing`, same contract as the W4.2 centre slot). On a phone there is no top bar, so the export and the stacked full-width switch + stepper open the page (W5-D; the 390 pass is W5.9). `features/statistics/period.ts` (11 tests) is the period model: **calendar** weeks (Monday start), months and years instead of the old rolling 7 / 30 / 365 days, stepping with `shiftPeriod`, `canStepForward` stopping at the current period, the period before it for every delta, and the URL form `?period=week&start=2026-09-21` — a missing, malformed or future `start` falls back to the current period and `start` snaps to the period's first day; switching the view keeps the viewed time in view (a week in August → that August). The page reads and writes the query with `router.replace`, so a view is linkable and survives a reload. Two formatters joined `lifeyFormat` for the labels: `dateRange` ("szept. 21–27." / "Sep 21 – 27", both months when the span crosses one) and `monthYear`. The page body is still the old one fed by the new range — W5.2–W5.6 replace it. `routeChrome` needed no change: statistics was never a dated route, so there is no date stepper to hide. Verified in Chromium on the demo account: the stepper reads "szept. 28. – okt. 4.", next is disabled, ‹ writes `?period=week&start=2026-09-21`, "Hónap" switches to `?period=month&start=2026-09-01` and "2026. szeptember".
 
 ### W5.2 — Web data: series shaping and honest deltas
 - Files: `features/statistics/aggregate.ts` (+ tests): per-day series with `null` gaps, weekly averages for

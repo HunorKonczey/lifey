@@ -31,6 +31,7 @@ export function TopBar() {
   const { titleKey, hasDateStepper } = routeChrome(pathname);
   // A page can put its own control in the centre (the weight page's range switcher) — it wins over the date stepper.
   const centre = useTopBarSlotStore((s) => s.centre);
+  const trailing = useTopBarSlotStore((s) => s.trailing);
   const title = titleKey ? t(titleKey) : "Lifey";
 
   return (
@@ -52,6 +53,7 @@ export function TopBar() {
       )}
 
       <div className="flex items-center gap-2 shrink-0">
+        {trailing}
         <ThemeToggle />
       </div>
     </header>

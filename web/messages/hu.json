@@ -1515,7 +1515,14 @@
     "kindCardio": "Cardio",
     "workoutsBreakdown": "{strength} erősítő · {cardio} cardio",
     "cardioDistance": "Cardio táv",
-    "noCardioDistance": "Nincs rögzített cardio táv ebben az időszakban"
+    "noCardioDistance": "Nincs rögzített cardio táv ebben az időszakban",
+    "periodAria": "Időszak",
+    "previous_week": "Előző hét",
+    "next_week": "Következő hét",
+    "previous_month": "Előző hónap",
+    "next_month": "Következő hónap",
+    "previous_year": "Előző év",
+    "next_year": "Következő év"
   },
   "settings": {
     "profile": "Profil",

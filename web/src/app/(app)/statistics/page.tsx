@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { subDays, startOfDay, endOfDay } from "date-fns";
+import { endOfDay } from "date-fns";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { mealApi } from "@/features/nutrition/api";
 import { weightApi } from "@/features/weight/api";
@@ -11,7 +12,12 @@ import { waterApi } from "@/features/water/api";
 import { stepsApi } from "@/features/steps/api";
 import { workoutSessionApi } from "@/features/workouts/api";
 import { aggregate, type RawData, type StatKindFilter } from "@/features/statistics/aggregate";
+import { Button, Icon } from "@/components/ds";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { PeriodControl } from "@/features/statistics/components/PeriodControl";
+import { parsePeriodState, periodRange, periodSearch, previousPeriod, type PeriodState } from "@/features/statistics/period";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useTopBarCentre, useTopBarTrailing } from "@/lib/hooks/useTopBarSlot";
 import { KpiCard } from "@/components/data/KpiCard";
 import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
 import { Skeleton } from "@/components/status/Skeleton";
@@ -24,10 +30,6 @@ import type { DailyStepCountResponse } from "@/features/steps/types";
 import type { WorkoutSessionResponse } from "@/features/workouts/types";
 import { DATE_LOCALES, useFormat } from "@/lib/i18n/format";
 
-type Range = "WEEK" | "MONTH" | "YEAR";
-
-const RANGE_DAYS: Record<Range, number> = { WEEK: 7, MONTH: 30, YEAR: 365 };
-
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
@@ -37,18 +39,31 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
+/** The period lives in the URL (`?period=week&start=2026-09-21`) so a view can be linked and survives a reload. */
 export default function StatisticsPage() {
+  return (
+    <Suspense fallback={null}>
+      <Statistics />
+    </Suspense>
+  );
+}
+
+function Statistics() {
   const t = useTranslations("statistics");
   const fmt = useFormat();
   const locale = fmt.locale;
-  const [range, setRange] = useState<Range>("WEEK");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const phone = useMediaQuery("(max-width: 767px)");
   const [kindFilter, setKindFilter] = useState<StatKindFilter>("ALL");
 
-  const RANGE_OPTIONS: { value: Range; label: string }[] = [
-    { value: "WEEK", label: t("week") },
-    { value: "MONTH", label: t("month") },
-    { value: "YEAR", label: t("year") },
-  ];
+  const state = useMemo(() => parsePeriodState(new URLSearchParams(searchParams.toString()), new Date()), [searchParams]);
+  const setState = useCallback(
+    (next: PeriodState) => router.replace(`${pathname}?${periodSearch(next)}`, { scroll: false }),
+    [router, pathname],
+  );
+  const { period } = state;
 
   // Fajta-szűrő (docs/cardio/56 D-C3.4) — re-scopes workoutCount/trainingVolume,
   // not the nutrition/weight/water/steps charts, which aren't "edzés jellegű".
@@ -81,19 +96,15 @@ export default function StatisticsPage() {
   }), [mealsQ.data, weightsQ.data, waterQ.data, stepsQ.data, sessionsQ.data]);
 
   const { current, previous } = useMemo(() => {
-    const days = RANGE_DAYS[range];
-    const label = range === "WEEK" ? "EEE" : locale === "hu" ? "MMM d." : "MMM d";
+    const label = period === "week" ? "EEE" : locale === "hu" ? "MMM d." : "MMM d";
     const dateLocale = DATE_LOCALES[locale];
-    const now = new Date();
-    const curStart = startOfDay(subDays(now, days - 1));
-    const curEnd = endOfDay(now);
-    const prevStart = startOfDay(subDays(now, days * 2 - 1));
-    const prevEnd = endOfDay(subDays(now, days));
+    const cur = periodRange(period, state.start);
+    const prev = previousPeriod(period, state.start);
     return {
-      current: aggregate(raw, curStart, curEnd, label, kindFilter, dateLocale),
-      previous: aggregate(raw, prevStart, prevEnd, label, kindFilter, dateLocale),
+      current: aggregate(raw, cur.start, endOfDay(cur.end), label, kindFilter, dateLocale),
+      previous: aggregate(raw, prev.start, endOfDay(prev.end), label, kindFilter, dateLocale),
     };
-  }, [raw, range, kindFilter, locale]);
+  }, [raw, period, state.start, kindFilter, locale]);
 
   const exportCsv = () => {
     const rows = [["date", "calories", "protein", "water_l", "steps", "volume"]];
@@ -112,10 +123,26 @@ export default function StatisticsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `lifey-stats-${range.toLowerCase()}.csv`;
+    a.download = `lifey-stats-${period}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // The period control sits in the top bar's centre and the export beside the theme toggle; a phone has no top bar
+  // (W5-D), so both move into the page header below.
+  const periodControl = useMemo(() => <PeriodControl state={state} onChange={setState} />, [state, setState]);
+  useTopBarCentre(phone ? null : periodControl);
+  const exportButton = useMemo(
+    () => (
+      <Button variant="secondary" onClick={exportCsv}>
+        <Icon name="download" size={20} />
+        {t("export")}
+      </Button>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- exportCsv closes over the current series
+    [current, t],
+  );
+  useTopBarTrailing(phone ? null : exportButton);
 
   if (isLoading) {
     return (
@@ -152,16 +179,14 @@ export default function StatisticsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} />
-          <SegmentedControl options={KIND_OPTIONS} value={kindFilter} onChange={setKindFilter} size="sm" />
+      {phone && (
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-end">{exportButton}</div>
+          <PeriodControl state={state} onChange={setState} stacked />
         </div>
-        <button onClick={exportCsv}
-          className="flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
-          style={{ background: "var(--surface)", border: "1px solid var(--outline)", color: "var(--on-surface-variant)" }}>
-          <span className="material-symbols-rounded text-lg">ios_share</span> {t("export")}
-        </button>
+      )}
+      <div className="flex items-center gap-3 flex-wrap">
+        <SegmentedControl options={KIND_OPTIONS} value={kindFilter} onChange={setKindFilter} size="sm" />
       </div>
 
       {/* KPI row */}

@@ -1515,7 +1515,14 @@
     "kindCardio": "Cardio",
     "workoutsBreakdown": "{strength} strength · {cardio} cardio",
     "cardioDistance": "Cardio distance",
-    "noCardioDistance": "No cardio distance logged in this period"
+    "noCardioDistance": "No cardio distance logged in this period",
+    "periodAria": "Period",
+    "previous_week": "Previous week",
+    "next_week": "Next week",
+    "previous_month": "Previous month",
+    "next_month": "Next month",
+    "previous_year": "Previous year",
+    "next_year": "Next year"
   },
   "settings": {
     "profile": "Profile",
