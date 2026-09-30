@@ -61,6 +61,8 @@ export interface LifeyFormat {
   shortDate(date: Date): string;
   /** A span of days for a period stepper: "Sep 21 – 27" / "szept. 21–27." within a month, "Aug 31 – Sep 6" / "aug. 31. – szept. 6." across two. */
   dateRange(start: Date, end: Date): string;
+  /** A date with its year, no weekday: "May 14, 1994" / "1994. máj. 14.". */
+  mediumDate(date: Date): string;
   /** Just the month for a year chart's X axis: "Sep" / "szept.". */
   monthShort(date: Date): string;
   /** A whole month for the month view's stepper: "September 2026" / "2026. szeptember". */
@@ -98,6 +100,7 @@ export function createFormat(locale: string): LifeyFormat {
   const gramsFmt = new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 1, useGrouping: "always" });
   const litresFmt = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 2, useGrouping: "always" });
   const shortDateFmt = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" });
+  const mediumDateFmt = new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" });
   const monthShortFmt = new Intl.DateTimeFormat(locale, { month: "short" });
   const monthYearFmt = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
   const longDateFmt = new Intl.DateTimeFormat(locale, {
@@ -174,6 +177,10 @@ export function createFormat(locale: string): LifeyFormat {
     return shortDateFmt.formatRange(start, end);
   }
 
+  function mediumDate(date: Date): string {
+    return mediumDateFmt.format(date);
+  }
+
   function monthShort(date: Date): string {
     return monthShortFmt.format(date);
   }
@@ -247,6 +254,7 @@ export function createFormat(locale: string): LifeyFormat {
     litresOfGoal,
     shortDate,
     dateRange,
+    mediumDate,
     monthShort,
     monthYear,
     longDate,

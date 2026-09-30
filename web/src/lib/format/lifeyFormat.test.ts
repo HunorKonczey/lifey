@@ -213,6 +213,13 @@ describe("dateRange / monthYear", () => {
   });
 });
 
+describe("mediumDate", () => {
+  it("spells the year in the locale's order", () => {
+    expect(hu.mediumDate(new Date(1994, 4, 14))).toBe("1994. máj. 14.");
+    expect(en.mediumDate(new Date(1994, 4, 14))).toBe("May 14, 1994");
+  });
+});
+
 describe("number", () => {
   it("drops a trailing zero and groups thousands", () => {
     expect(en.number(20)).toBe("20");

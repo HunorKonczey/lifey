@@ -22,7 +22,8 @@ describe("routeChrome", () => {
   });
 
   it("falls back to no title outside the known routes", () => {
-    expect(routeChrome("/onboarding")).toEqual({ titleKey: null, hasDateStepper: false, chrome: "standard" });
+    expect(routeChrome("/onboarding")).toEqual({ titleKey: null, hasDateStepper: false, chrome: "focus" });
+    expect(routeChrome("/elsewhere")).toEqual({ titleKey: null, hasDateStepper: false, chrome: "standard" });
   });
 
   it("the live workout logger is focus mode; the workouts page itself is not", () => {

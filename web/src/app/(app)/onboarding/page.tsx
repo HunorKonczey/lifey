@@ -15,6 +15,10 @@ import { LifestyleGoalFields } from "@/features/onboarding/components/LifestyleG
 import { settingsApi } from "@/features/settings/api";
 import { weightApi } from "@/features/weight/api";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { Button, Icon } from "@/components/ds";
+import { LifeyLogo } from "@/features/auth/components/BrandPanel";
+import { OnboardingRail, type RailStep } from "@/features/onboarding/components/OnboardingRail";
+import { useFormat } from "@/lib/format/useFormat";
 import { useToast } from "@/lib/hooks/useToast";
 import { ApiError } from "@/lib/api/client";
 import type { SuggestGoalsResponse } from "@/features/onboarding/types";
@@ -119,67 +123,77 @@ export default function OnboardingPage() {
     }
   };
 
-  return (
-    <div className="flex flex-col items-center py-6">
-      <div className="w-full max-w-2xl rounded-[var(--r-lg)] p-8" style={{ background: "var(--surface)" }}>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            {Array.from({ length: STEP_COUNT }).map((_, i) => (
-              <span
-                key={i}
-                className="rounded-full transition-colors"
-                style={{
-                  width: i === step ? 20 : 8,
-                  height: 8,
-                  background: i <= step ? "var(--primary)" : "var(--surface-highest)",
-                }}
-              />
-            ))}
+  // The rail reads the answers live from the form (W6-D).
+  const v = watch();
+  const fmt = useFormat();
+  const birth = v.birthDate ? new Date(v.birthDate) : null;
+  const num = (n: number | undefined) => (n == null || Number.isNaN(n) ? null : fmt.number(n));
+  const railDetail = (index: number): string => {
+    if (index === 0) {
+      return [v.gender ? t(`gender_${v.gender}`) : null, birth && !Number.isNaN(birth.getTime()) ? fmt.mediumDate(birth) : null].filter(Boolean).join(" · ");
+    }
+    if (index === 1) {
+      return [num(v.heightCm) && `${num(v.heightCm)} cm`, num(v.currentWeightKg) && `${num(v.currentWeightKg)} kg`].filter(Boolean).join(" · ");
+    }
+    if (index === 2) {
+      return [v.activityLevel ? t(`activity_${v.activityLevel}`) : null, v.primaryGoal ? t(`goal_${v.primaryGoal}`).toLocaleLowerCase(fmt.locale) : null].filter(Boolean).join(" · ");
+    }
+    return step === 4 ? t("railNow") : "";
+  };
+  const railSteps: RailStep[] = [t("aboutYouTitle"), t("bodyTitle"), t("lifestyleTitle"), t("suggestedTitle")].map((title, index) => ({
+    title,
+    detail: index + 1 === step && index !== 3 ? (railDetail(index) || t("railNow")) : railDetail(index),
+  }));
+  const titles = ["", t("aboutYouTitle"), t("bodyTitle"), t("lifestyleTitle"), t("suggestedTitle")];
+
+  if (step === 0) {
+    // The intro screen: no rail yet (W6-D) — it appears with the first question.
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 py-10">
+        <div className="flex flex-col items-center text-center gap-6 max-w-[520px]">
+          <LifeyLogo size={56} />
+          <h1 style={{ fontSize: 40, lineHeight: 1.1, fontWeight: 800, letterSpacing: "-0.03em" }}>{t("welcomeTitle")}</h1>
+          <p style={{ fontSize: 17, lineHeight: 1.55, color: "var(--text-2)" }}>{t("welcomeBody")}</p>
+          <div className="flex items-center gap-3 pt-2">
+            <Button variant="ghost" size="auth" onClick={skip}>
+              {t("skipLong")}
+            </Button>
+            <Button size="auth" onClick={next}>
+              {t("getStarted")}
+            </Button>
           </div>
-          <button onClick={skip} className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <OnboardingRail steps={railSteps} current={step - 1} onSkip={skip} />
+      <div className="flex flex-col gap-7 px-6 py-8 lg:pl-12 lg:pr-[72px] lg:pt-16 lg:pb-12 min-h-screen">
+        <div className="flex items-center justify-between lg:hidden">
+          <LifeyLogo size={32} />
+          <button type="button" onClick={skip} className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 600 }}>
             {t("skip")}
           </button>
         </div>
+        <div className="flex flex-col gap-2.5">
+          <p className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 600, fontSize: 14 }}>
+            {t("stepOf", { step, total: 4 })} · {titles[step]}
+          </p>
+          <h1 style={{ fontSize: 34, lineHeight: 1.1, fontWeight: 800, letterSpacing: "-0.02em" }}>{titles[step]}</h1>
+        </div>
 
-        {step === 0 && (
-          <div className="flex flex-col items-center text-center gap-3 py-8">
-            <span className="material-symbols-rounded text-5xl" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>
-              eco
-            </span>
-            <h1 className="text-2xl font-bold">{t("welcomeTitle")}</h1>
-            <p className="text-sm max-w-sm" style={{ color: "var(--on-surface-variant)" }}>{t("welcomeBody")}</p>
-          </div>
-        )}
-
-        {step === 1 && (
-          <div className="flex flex-col gap-5">
-            <h2 className="text-lg font-bold">{t("aboutYouTitle")}</h2>
-            <GenderBirthDateFields register={register} watch={watch} setValue={setValue} errors={errors} />
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="flex flex-col gap-5">
-            <h2 className="text-lg font-bold">{t("bodyTitle")}</h2>
-            <BodyFields register={register} setValue={setValue} errors={errors} unitSystem={unitSystem} />
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="flex flex-col gap-5">
-            <h2 className="text-lg font-bold">{t("lifestyleTitle")}</h2>
-            <LifestyleGoalFields register={register} watch={watch} setValue={setValue} errors={errors} unitSystem={unitSystem} />
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="flex flex-col gap-5">
-            <h2 className="text-lg font-bold">{t("suggestedTitle")}</h2>
-            {suggestGoalsMutation.isPending || !suggestion ? (
-              <p className="text-sm py-8 text-center" style={{ color: "var(--on-surface-variant)" }}>{t("calculating")}</p>
+        <div className="flex flex-col gap-5 max-w-[640px]">
+          {step === 1 && <GenderBirthDateFields register={register} watch={watch} setValue={setValue} errors={errors} />}
+          {step === 2 && <BodyFields register={register} setValue={setValue} errors={errors} unitSystem={unitSystem} />}
+          {step === 3 && <LifestyleGoalFields register={register} watch={watch} setValue={setValue} errors={errors} unitSystem={unitSystem} />}
+          {step === 4 &&
+            (suggestGoalsMutation.isPending || !suggestion ? (
+              <p className="type-body py-8" style={{ color: "var(--text-2)" }}>{t("calculating")}</p>
             ) : (
               <>
-                <p className="text-xs" style={{ color: "var(--on-surface-variant)" }}>
+                <p className="type-body-s" style={{ color: "var(--text-2)" }}>
                   {t("suggestedFrom", { bmr: suggestion.bmr, tdee: suggestion.tdee })}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -190,54 +204,37 @@ export default function OnboardingPage() {
                     { label: d("fat"), value: suggestion.fatGrams, unit: "g", color: "var(--metric-fat)" },
                     { label: d("water"), value: suggestion.waterLiters, unit: "L", color: "var(--metric-water)" },
                   ].map((m) => (
-                    <div key={m.label} className="flex flex-col gap-1 p-3 rounded-[var(--r-card)]" style={{ background: "var(--surface-container)" }}>
-                      <span className="text-xs font-semibold" style={{ color: m.color }}>{m.label}</span>
-                      <span className="text-xl font-extrabold tabular">{m.value} <span className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{m.unit}</span></span>
+                    <div key={m.label} className="flex flex-col gap-1 p-3 rounded-[var(--r-card)]" style={{ background: "var(--card)" }}>
+                      <span className="type-body-s" style={{ color: m.color, fontWeight: 600 }}>{m.label}</span>
+                      <span className="num" style={{ fontSize: 24, fontWeight: 800 }}>
+                        {m.value} <span className="type-body-s" style={{ color: "var(--text-2)" }}>{m.unit}</span>
+                      </span>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs" style={{ color: "var(--muted)" }}>{t("changeLater")}</p>
+                <p className="type-body-s" style={{ color: "var(--text-3)" }}>{t("changeLater")}</p>
               </>
-            )}
-          </div>
-        )}
+            ))}
+        </div>
 
-        <div className="flex items-center justify-between mt-8">
-          <button
-            onClick={back}
-            disabled={step === 0}
-            className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-0"
-            style={{ background: "var(--surface-container)", color: "var(--on-surface)" }}
-          >
+        <div className="flex-1" />
+        <div className="flex items-center justify-between gap-3">
+          <Button variant="secondary" size="auth" onClick={back}>
+            <Icon name="arrow_back" size={20} />
             {t("back")}
-          </button>
-
+          </Button>
           {step < 4 ? (
-            <button
-              onClick={next}
-              className="h-10 px-6 rounded-[var(--r-input)] font-semibold text-sm"
-              style={{ background: "var(--primary)", color: "var(--bg)" }}
-            >
-              {step === 0 ? t("getStarted") : t("next")}
-            </button>
+            <Button size="auth" onClick={next}>
+              {t("next")}
+            </Button>
           ) : (
-            <div className="flex gap-3">
-              <button
-                onClick={() => finish(false)}
-                disabled={finishing}
-                className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-                style={{ background: "var(--surface-container)", color: "var(--on-surface)" }}
-              >
+            <div className="flex gap-2.5">
+              <Button variant="secondary" size="auth" onClick={() => finish(false)} disabled={finishing}>
                 {t("notNow")}
-              </button>
-              <button
-                onClick={() => finish(true)}
-                disabled={finishing || !suggestion}
-                className="h-10 px-6 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-                style={{ background: "var(--primary)", color: "var(--bg)" }}
-              >
+              </Button>
+              <Button size="auth" onClick={() => finish(true)} disabled={finishing || !suggestion}>
                 {finishing ? t("saving") : t("applyGoals")}
-              </button>
+              </Button>
             </div>
           )}
         </div>

@@ -1745,7 +1745,11 @@
     "bannerTitle": "Fejezd be a profilod beállítását",
     "bannerBody": "Kapj személyre szabott kalória-, makro- és vízcélokat egy perc alatt.",
     "bannerCta": "Beállítás folytatása",
-    "bannerDismissAria": "Bezárás"
+    "bannerDismissAria": "Bezárás",
+    "railAria": "A beállítás lépései",
+    "railNow": "Most",
+    "skipLong": "Kihagyás, később beállítom",
+    "stepOf": "{step} / {total}"
   },
   "trainerRequest": {
     "title": "Legyél Lifey edző",

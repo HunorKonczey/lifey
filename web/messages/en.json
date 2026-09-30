@@ -1745,7 +1745,11 @@
     "bannerTitle": "Finish setting up your profile",
     "bannerBody": "Get personalized calorie, macro, and water goals in under a minute.",
     "bannerCta": "Continue setup",
-    "bannerDismissAria": "Dismiss"
+    "bannerDismissAria": "Dismiss",
+    "railAria": "Setup steps",
+    "railNow": "Now",
+    "skipLong": "Skip, I will set it up later",
+    "stepOf": "{step} / {total}"
   },
   "trainerRequest": {
     "title": "Become a Lifey trainer",
