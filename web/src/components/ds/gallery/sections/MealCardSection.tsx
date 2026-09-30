@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { MealCard } from "@/features/nutrition/components/MealCard";
 import type { MealResponse } from "@/features/nutrition/types";
 
@@ -43,13 +44,31 @@ const SNACK: MealResponse = { id: 3, dateTime: at(15, 40), mealType: "SNACK", na
 
 /** The meal card (W2.3): a multi-item breakfast (one very long name), a recipe lunch, a one-item snack, and a read-only card (no handlers — the trainer's view). */
 export function MealCardSection() {
+  const [log, setLog] = useState("none");
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="flex flex-col gap-4" data-state="editable">
-        <MealCard meal={BREAKFAST} onAdd={noop} onEdit={noop} onDuplicate={noop} onDelete={noop} />
-        <MealCard meal={LUNCH_RECIPE} onAdd={noop} onEdit={noop} onDuplicate={noop} onDelete={noop} />
+        <MealCard
+          meal={BREAKFAST}
+          onAdd={noop}
+          onEdit={noop}
+          onDuplicate={noop}
+          onDelete={() => setLog("meal:1")}
+          onDeleteItem={(i) => setLog(`item:1:${i}`)}
+        />
+        <MealCard
+          meal={LUNCH_RECIPE}
+          onAdd={noop}
+          onEdit={noop}
+          onDuplicate={noop}
+          onDelete={() => setLog("meal:2")}
+          onDeleteItem={(i) => setLog(`item:2:${i}`)}
+        />
         <MealCard meal={SNACK} onAdd={noop} onEdit={noop} onDuplicate={noop} onDelete={noop} />
       </div>
+      <p data-testid="delete-log" className="type-body-s lg:col-span-2">
+        Delete requested: {log}
+      </p>
       <div data-state="read-only">
         <MealCard meal={BREAKFAST} />
       </div>

@@ -82,3 +82,20 @@ test("the read-only card draws no actions", async ({ page }) => {
   await expect(card.getByRole("button")).toHaveCount(0);
   await expect(card.getByText("Zabpehely")).toBeVisible();
 });
+
+test("a food row's '⋯' deletes that food — Edit, then a destructive Delete", async ({ page }) => {
+  const row = cards(page, "editable").nth(0).locator(".meal-item-row").nth(1);
+  await row.getByRole("button", { name: "Item options" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem")).toHaveText([/Edit/, /Delete…/]);
+  await page.getByRole("menuitem", { name: /Delete/ }).click();
+  await expect(page.getByTestId("delete-log")).toHaveText("Delete requested: item:1:1");
+});
+
+test("a recipe row's '⋯' deletes the whole meal — it is one row for the portion", async ({ page }) => {
+  const row = cards(page, "editable").nth(1).locator(".meal-item-row").first();
+  await row.getByRole("button", { name: "Item options" }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: /Delete/ }).click();
+  await expect(page.getByTestId("delete-log")).toHaveText("Delete requested: meal:2");
+});

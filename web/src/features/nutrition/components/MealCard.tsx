@@ -59,7 +59,8 @@ interface MealCardProps {
   onEdit?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
-  isDeleting?: boolean;
+  /** Delete one food (index into `meal.entries`); the parent asks first, and the last food takes the meal with it. */
+  onDeleteItem?: (index: number) => void;
 }
 
 /**
@@ -69,7 +70,7 @@ interface MealCardProps {
  * foods below as `MealItemRow`s. Without any handler (the trainer's read-only
  * view of a client's day) the actions simply aren't drawn.
  */
-export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, isDeleting }: MealCardProps) {
+export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, onDeleteItem }: MealCardProps) {
   const t = useTranslations("nutrition");
   const fmt = useFormat();
   const style = MEAL_TYPE_STYLE[meal.mealType];
@@ -81,7 +82,12 @@ export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, isDeletin
     ...(onDuplicate ? [{ label: t("menuDuplicate"), icon: "content_copy", onSelect: onDuplicate }] : []),
     ...(onDelete ? [{ label: t("menuDelete"), icon: "delete", destructive: true, onSelect: onDelete }] : []),
   ];
-  const rowMenu: MenuItemDef[] = onEdit ? [{ label: t("menuEdit"), icon: "edit", onSelect: onEdit }] : [];
+  // A recipe card is one row for the whole portion, so its row "⋯" deletes the meal; a food meal deletes just that food.
+  const rowDelete = recipe ? onDelete : onDeleteItem ? (i: number) => onDeleteItem(i) : undefined;
+  const rowMenu = (i: number): MenuItemDef[] => [
+    ...(onEdit ? [{ label: t("menuEdit"), icon: "edit", onSelect: onEdit }] : []),
+    ...(rowDelete ? [{ label: t("menuDelete"), icon: "delete", destructive: true, onSelect: () => rowDelete(i) }] : []),
+  ];
 
   return (
     <Card className="overflow-hidden" style={{ padding: 0 }} data-testid="meal-card" data-meal-type={meal.mealType}>
@@ -109,13 +115,13 @@ export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, isDeletin
             kcal
           </span>
         </p>
-        {onAdd && <IconButton icon="add" label={t("addToThisMeal")} onClick={onAdd} disabled={isDeleting} />}
+        {onAdd && <IconButton icon="add" label={t("addToThisMeal")} onClick={onAdd} />}
         {menu.length > 0 && <RowMenuButton items={menu} label={t("mealMenuLabel")} />}
       </div>
 
       <div>
         {mealItemRows(meal).map((item, i) => (
-          <MealItemRow key={i} item={item} menu={rowMenu} />
+          <MealItemRow key={i} item={item} menu={rowMenu(i)} />
         ))}
       </div>
     </Card>

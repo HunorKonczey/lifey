@@ -178,6 +178,22 @@ export function keepaliveDelete(path: string): Promise<void> {
   });
 }
 
+/** `keepaliveDelete`'s sibling for an edit that is deferred behind an undo toast — e.g. removing one
+ *  item from a meal is a PUT of the shortened list, sent once the undo window closes. */
+export function keepalivePut(path: string, body: unknown): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  return fetch(`${env.NEXT_PUBLIC_API_BASE_URL}${path}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(body),
+    credentials: "include",
+    keepalive: true,
+  }).then((res) => {
+    if (!res.ok) throw new ApiError(res.status, "UNKNOWN", res.statusText);
+  });
+}
+
 export const api = {
   get: <T>(path: string, init?: RequestInit) => request<T>(path, { method: "GET", ...init }),
   post: <T>(path: string, body?: unknown) =>

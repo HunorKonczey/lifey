@@ -80,6 +80,36 @@ describe("useToast's undo/commit lifecycle", () => {
   });
 });
 
+describe("undoableDelete with a custom commit", () => {
+  it("sends that instead of a DELETE, and only after the window", () => {
+    const commit = vi.fn(() => Promise.resolve());
+    undoableDelete({ message: "Item removed", commit, remove: vi.fn(), restore: vi.fn(), errorMessage: "err" });
+    expect(commit).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(6000);
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(keepaliveDelete).not.toHaveBeenCalled();
+  });
+
+  it("undo means the commit is never sent", () => {
+    const commit = vi.fn(() => Promise.resolve());
+    const restore = vi.fn();
+    undoableDelete({ message: "Item removed", commit, remove: vi.fn(), restore, errorMessage: "err" });
+    useToast.getState().undo();
+    vi.advanceTimersByTime(6000);
+    expect(restore).toHaveBeenCalledTimes(1);
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("a failing commit restores and shows the error toast", async () => {
+    const commit = vi.fn(() => Promise.reject(new Error("network")));
+    const restore = vi.fn();
+    undoableDelete({ message: "Item removed", commit, remove: vi.fn(), restore, errorMessage: "Couldn't remove" });
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(restore).toHaveBeenCalledTimes(1);
+    expect(useToast.getState().toast).toMatchObject({ message: "Couldn't remove", variant: "error" });
+  });
+});
+
 describe("undoableDelete", () => {
   it("removes optimistically and only calls the DELETE once the undo window elapses", () => {
     const remove = vi.fn();

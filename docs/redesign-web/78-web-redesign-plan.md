@@ -2080,12 +2080,33 @@ szerkeszté…". `NumberField` also takes an `aria-label` for fields with no vis
 meal drawer" and `e2e/ds/editMealDrawer.spec.ts` (9 tests, including the Hungarian copy and the decimal
 comma).
 
-### W2.8 — Web UI: delete meal / item with confirm + undo
+### W2.8 — Web UI: delete meal / item with confirm + undo ✅
 - Files: `MealCard.tsx`, `MealItemRow.tsx` (deleting the last item deletes the meal — say so in the
   confirm copy), `useUndoableDelete` wiring.
 - Behaviour change (called out): delete was immediate with no confirmation.
 - **Verify:** undo restores the meal without a network call; after 6 s exactly one DELETE; navigating away
   flushes it.
+
+*As built:* Deleting a meal or one food now asks first with the DS `ConfirmModal` and then goes through the
+undo toast (D-W0.16) instead of firing a request: the card leaves the list at once, a "Reggeli törölve ·
+Visszavonás" toast runs for 6 s, and the real request is sent only when that window closes — or when the user
+navigates away, which flushes it (`keepalive`). Undo puts the card back and sends **nothing**. Two entry
+points in `MealsView`: the header "⋯" deletes the meal ("Törlöd a reggelit? 3 tétel, 344 kcal. Utána még 6
+másodpercig visszavonhatod."), and each food row's "⋯" now has a destructive Delete next to Edit ("Törlöd:
+Édesburgonya? 110,5 g, 95 kcal …"); the dialog's initial focus is the safe "Mégsem". The API has no per-item
+endpoint, so removing one food is a deferred `PUT /meals/{id}` of the remaining entries, carrying each
+untouched row's **stored, unrounded** quantity (and the meal's own `dateTime`, type and name); removing the
+*last* food deletes the whole meal and the dialog says so ("Ez az étkezés utolsó tétele, ezért az egész
+étkezés törlődik"). A recipe meal shows one row for the whole portion, so its row "⋯" deletes the meal, not a
+single ingredient. Helper layer: `undoableDelete` gained an optional `commit` (used instead of `DELETE path`),
+`client.ts` a `keepalivePut`, and a failing deferred request restores the card and shows the error toast (3
+new unit tests → 13 in `useUndoableDelete.test.ts`). The old auto-firing `ConfirmDialog`/mutation, the
+`isDeleting` prop and four dead messages are gone. Verified against the real backend (two seeded test meals,
+removed afterwards): item delete → confirm → row gone → Undo → no request and the row is back; item delete →
+after 6 s exactly one `PUT` and the stored entries are 100 and 121 (the other rows untouched); meal delete →
+after 6 s exactly one `DELETE`; meal delete then navigating to the dashboard inside the window → the `DELETE`
+is sent and the meal is gone on the backend. Gallery "Meal card" section gained a "Delete requested" log and
+two specs in `e2e/ds/mealCard.spec.ts` (food row → item delete; recipe row → meal delete).
 
 ### W2.9 — Web UI: copy-from-day popover
 - Files: `features/nutrition/components/CopyFromDayPopover.tsx`, `copyMeal.ts`.
