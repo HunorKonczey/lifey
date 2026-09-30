@@ -715,7 +715,10 @@
     "addMealShort": "Meal",
     "macroLeft": "{n} g left",
     "macroOver": "{n} g over",
-    "heroRingLabel": "Calories: {eaten} of {goal} kcal"
+    "heroRingLabel": "Calories: {eaten} of {goal} kcal",
+    "copyYesterday": "Copy yesterday's {meal}",
+    "copyYesterdayDone": "Copied yesterday's {meal}",
+    "copyYesterdayFailed": "Couldn't copy the meal"
   },
   "nutrition": {
     "meals": "Meals",

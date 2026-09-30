@@ -1565,13 +1565,33 @@ shortcut through `usePageShortcuts`, which is also listed in the `?` help ("Add 
 stay in `components/data` until W10's sweep). The old "set your goals" link lives on under the buttons when
 neither a calorie nor a protein goal exists. Checked on the real app at 1440 (HU), 1280, 1024 (light) and 390.
 
-### W1.3 — Web UI: "copy yesterday's <meal>" quick action
+### W1.3 — Web UI: "copy yesterday's <meal>" quick action ✅
 - Files: `features/nutrition/copyMeal.ts` (+ `suggestCopy()` and tests), `CalorieHero.tsx`.
 - Rule: the next meal type by local time (before 10:30 breakfast, before 15:00 lunch, before 17:30
   snack, else dinner) that has **no entry today** and **had one yesterday** → "Tegnapi vacsora másolása";
   otherwise the button is hidden. One click copies with the existing copy mutation and shows a toast with
   undo (`useUndoableDelete` on the created meal).
 - **Verify:** unit tests for the time boundaries and the "already logged" case.
+
+*As built:* `features/nutrition/copyMeal.ts` gains `mealTypeForClock()` (before 10:30 breakfast, before 15:00
+lunch, before 17:30 snack, else dinner — the boundaries are exclusive, so 10:30 is already lunch) and
+`suggestCopy(meals, now)`, which returns `{ mealType, source }` only when today has no meal of the clock's
+type and yesterday had one (the latest, if it had several) — otherwise null and the button isn't rendered;
+twelve unit tests cover every boundary minute, midnight and late night, "today's other types don't hide it",
+"only yesterday counts" and the multiple-meals pick. `CopyYesterdayButton` is the hero's `secondaryAction`: a
+secondary `Button` ("Tegnapi vacsora másolása" / "Copy yesterday's dinner", the meal name lower-cased through
+`labels.mealTypes`, so it never shows a raw enum), icon-only with an aria-label below 640 px. It is only
+offered while the dashboard is on today, because "yesterday" means the day before now — browsing a past day
+hides it. One click posts `copyMealPayload(source, today)` (keeping the original time of day), invalidates the
+meals query (so the hero ring and the week card refresh on their own) and raises the toast "Tegnapi vacsora
+átmásolva · Visszavonás". One deviation from the plan's wording: the plan says `useUndoableDelete`, but that
+helper is the opposite direction (an item that already exists has its DELETE deferred until the undo window
+ends), while here the item is created immediately and Undo deletes it — so the button calls the toast store's
+`showUndo` directly (Undo → `DELETE /meals/{id}`; a failed delete shows the error toast). Verified against the
+real backend: with a seeded meal for yesterday the button appears, the click creates the meal and the hero
+jumps to the new total, Undo sends exactly one `DELETE` and the button returns; the seeded meal was removed
+afterwards. No Playwright spec — the `ds` project has no backend, so the logic lives in the unit tests and the
+flow was driven on the real app.
 
 ### W1.4 — Web UI: `RecommendedWorkout`
 - Files: `features/workouts/components/RecommendedWorkoutCard.tsx` (rewritten), `recommendation.ts` (reuse;

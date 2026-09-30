@@ -715,7 +715,10 @@
     "addMealShort": "Étkezés",
     "macroLeft": "még {n} g",
     "macroOver": "{n} g túl",
-    "heroRingLabel": "Kalória: {eaten} / {goal} kcal"
+    "heroRingLabel": "Kalória: {eaten} / {goal} kcal",
+    "copyYesterday": "Tegnapi {meal} másolása",
+    "copyYesterdayDone": "Tegnapi {meal} átmásolva",
+    "copyYesterdayFailed": "Nem sikerült átmásolni az étkezést"
   },
   "nutrition": {
     "meals": "Étkezések",

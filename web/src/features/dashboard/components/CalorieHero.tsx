@@ -9,7 +9,9 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { usePageShortcuts } from "@/lib/hooks/usePageShortcuts";
 import { AddMealEntryDialog } from "@/features/nutrition/components/AddMealEntryDialog";
 import { defaultMealType } from "@/features/nutrition/mealTypeDefault";
+import { isSameDay } from "@/components/ds/date/monthGrid";
 import { heroState, macroRowState } from "../calorieHero";
+import { CopyYesterdayButton } from "./CopyYesterdayButton";
 import type { DashboardData } from "../useDashboardData";
 
 const MACROS = [
@@ -171,7 +173,7 @@ export function CalorieHero({ data, secondaryAction }: { data: DashboardData; se
           fat: { value: totals.fat, goal: settings?.dailyFatGoal ?? null },
         }}
         onAdd={openAdd}
-        secondaryAction={secondaryAction}
+        secondaryAction={secondaryAction ?? <CopyYesterdayButton meals={data.meals} isToday={isSameDay(date, new Date())} />}
         showGoalsHint={!settings?.dailyCalorieGoal && !settings?.dailyProteinGoal}
       />
       {adding && <AddMealEntryDialog mealType={defaultMealType()} date={date} onClose={() => setAdding(false)} />}
