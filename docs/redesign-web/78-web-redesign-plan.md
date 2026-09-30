@@ -1705,11 +1705,34 @@ node (the ✓) and it takes a `unitRatio`. `e2e/ds/dashboardTiles.spec.ts` cover
 section (steps under/over goal, weight with goal and losing pace, gaining without a goal, goal reached, empty)
 plus the 1024 shortening.
 
-### W1.8 — Web UI: 7-day calories card
+### W1.8 — Web UI: 7-day calories card ✅
 - Files: `features/dashboard/components/WeekCaloriesCard.tsx` (uses `LifeyBarChart`), the dashboard's
   weekly query (reuse the existing meals range query).
 - **Verify:** average excludes today and zero days; "célon belül 5 / 6"; today dashed; axis never clipped
   at 1024.
+
+*As built:* `WeekCaloriesCard` replaces the old "This week" + streak stack (`WeekSection` is deleted, and the
+streak computation is dropped from `useDashboardData` — the canvas has no streak card and
+`features/statistics/streak.ts` stays for the statistics iteration). The numbers come from two pure functions
+in `features/dashboard/weekCalories.ts` (11 tests): `weekDays(meals, endDate, now)` — seven calendar days
+ending on the day the dashboard shows, each with its summed calories, with only the *real* today flagged
+partial (browsing a past day makes all seven complete; a month boundary works) — and `weekStats(days, goal,
+sessionStartTimes, now)`: the average reuses the DS chart math (`averageExcludingPartialToday` with zero days
+ignored, since 0 kcal means "didn't log"), "within goal" counts complete days with 0 < kcal ≤ goal (exactly on
+the goal counts, an unlogged day doesn't) out of the complete days — the "6" in "4 / 6 nap", which stays 6
+even when one of those days is empty — and is absent without a goal, and the workouts are the sessions started
+inside the seven days (today included). The card is a `Card` with the plan's 22/24 padding: title, the three
+stats (átlag · célon belül · edzés) wrapping under it on narrow widths, and the lazily-loaded `LifeyBarChart`
+with the dashed goal line, today as a dashed unfilled outline and "Ma"/"Today" spelled out as its label; days
+with nothing logged draw no bar. `e2e/ds/weekCalories.spec.ts` runs a fixed week on a gallery section (with
+and without a goal): the header arithmetic, seven labelled columns with today spelled out, the dashed goal
+line, the dashed today outline, no within-goal stat / goal line without a goal, and at 1024 all three Y-axis
+labels inside the card. Two things learned about Recharts 3 while writing those: it paints axis labels as SVG
+`<text>` in its own layer, *outside* `.recharts-xAxis`/`.recharts-yAxis` (those groups hold empty tick
+shells), so a spec must match text over the whole chart; and Playwright's `getByText` doesn't find SVG text,
+so it uses `locator("text")`. The dashboard's old `thisWeek` / `avgCalories` / `streak…` message keys are now
+unused — left for W10's sweep. Checked on the real page at 1440 (HU) and 1024 (light): 4 / 6 nap, átlag 1 550
+kcal, edzés 3, axis "1,9 e / 950 / 0".
 
 ### W1.9 — Web data: personal-record derivation port
 - Files: `features/workouts/personalRecords.ts` + test — port of `mobile/lib/features/workouts/domain/

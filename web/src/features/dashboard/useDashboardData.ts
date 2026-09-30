@@ -3,7 +3,6 @@
 import { useQueries } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { loggingStreak } from "@/features/statistics/streak";
 import { statisticsApi } from "@/features/statistics/api";
 import { settingsApi } from "@/features/settings/api";
 import { weightApi } from "@/features/weight/api";
@@ -85,7 +84,6 @@ export function useDashboardData(date: Date) {
   const recommended = recommendedTemplate(sessionsDesc, templatesQ.data ?? []);
   const exerciseNames = new Map((exercisesQ.data ?? []).map((e) => [e.id, e.name] as const));
   const recommendedSummary = recommended ? summarizeTemplate(recommended, sessionsDesc, exerciseNames) : null;
-  const streak = loggingStreak([...meals.map((m) => m.dateTime), ...sessionsDesc.map((s) => s.startedAt)]);
 
   const todayEntries = todayMeals.flatMap((m) => m.entries);
   const totals = {
@@ -114,7 +112,6 @@ export function useDashboardData(date: Date) {
     templates: templatesQ.data ?? [],
     recommended,
     recommendedSummary,
-    streak,
     totals,
     isLoading: statsQ.isLoading || weeklyStatsQ.isLoading || settingsQ.isLoading,
     hasError: statsQ.isError || weeklyStatsQ.isError || settingsQ.isError,

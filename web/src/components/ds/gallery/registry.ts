@@ -26,6 +26,7 @@ import { PageGridSection } from "./sections/PageGridSection";
 import { CalorieHeroSection } from "./sections/CalorieHeroSection";
 import { RecommendedWorkoutSection } from "./sections/RecommendedWorkoutSection";
 import { DashboardTilesSection } from "./sections/DashboardTilesSection";
+import { WeekCaloriesSection } from "./sections/WeekCaloriesSection";
 
 export interface GallerySection {
   id: string;
@@ -63,6 +64,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "calorie-hero", title: "Calorie hero", Component: CalorieHeroSection },
   { id: "recommended-workout", title: "Recommended workout", Component: RecommendedWorkoutSection },
   { id: "dashboard-tiles", title: "Dashboard tiles", Component: DashboardTilesSection },
+  { id: "week-calories", title: "Week calories", Component: WeekCaloriesSection },
   { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

@@ -744,7 +744,15 @@
     "weightEmptyTitle": "Weigh yourself",
     "weightEmptyBody": "Your first weigh-in starts the trend.",
     "weightLog": "Log weight",
-    "weightPerWeekShort": "kg/wk"
+    "weightPerWeekShort": "kg/wk",
+    "weekTitle": "Last 7 days",
+    "weekAverage": "average",
+    "weekWithinGoal": "within goal",
+    "weekWithinValue": "{n} / {total} days",
+    "weekWorkouts": "workouts",
+    "weekGoalLabel": "goal {goal}",
+    "weekTodayShort": "Today",
+    "weekChartLabel": "Calories over the last 7 days"
   },
   "nutrition": {
     "meals": "Meals",

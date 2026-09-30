@@ -9,7 +9,7 @@ import { useDashboardData } from "@/features/dashboard/useDashboardData";
 import { CalorieHero } from "@/features/dashboard/components/CalorieHero";
 import { RecommendedSection } from "@/features/dashboard/components/RecommendedSection";
 import { TilesSection } from "@/features/dashboard/components/TilesSection";
-import { WeekSection } from "@/features/dashboard/components/WeekSection";
+import { WeekCaloriesCard } from "@/features/dashboard/components/WeekCaloriesCard";
 import { RecentWorkoutsSection } from "@/features/dashboard/components/RecentWorkoutsSection";
 
 /**
@@ -62,7 +62,7 @@ export default function DashboardPage() {
           <RecentWorkoutsSection data={data} />
         </GridItem>
         <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 4, xl: 3 }}>
-          <WeekSection data={data} />
+          <WeekCaloriesCard data={data} />
         </GridItem>
       </PageGrid>
     </div>

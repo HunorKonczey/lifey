@@ -744,7 +744,15 @@
     "weightEmptyTitle": "Mérd meg magad",
     "weightEmptyBody": "Az első mérés indítja el a trendet.",
     "weightLog": "Súly rögzítése",
-    "weightPerWeekShort": "kg a héten"
+    "weightPerWeekShort": "kg a héten",
+    "weekTitle": "Az elmúlt 7 nap",
+    "weekAverage": "átlag",
+    "weekWithinGoal": "célon belül",
+    "weekWithinValue": "{n} / {total} nap",
+    "weekWorkouts": "edzés",
+    "weekGoalLabel": "cél {goal}",
+    "weekTodayShort": "Ma",
+    "weekChartLabel": "Kalória az elmúlt 7 napban"
   },
   "nutrition": {
     "meals": "Étkezések",
