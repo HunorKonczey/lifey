@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { workoutSessionApi, templateApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
@@ -12,11 +12,12 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { SessionLogger } from "./SessionLogger";
 import { CardioSessionDetail } from "./CardioSessionDetail";
 import { RecommendedWorkoutCard } from "./RecommendedWorkoutCard";
-import { ActivityChip } from "./ActivityChip";
+import { SessionRow } from "./SessionRow";
+import { WeekHeader } from "./WeekHeader";
+import { Card } from "@/components/ds";
+import { groupSessionsByWeek } from "../sessionGroups";
+import { recordsBySession, setFactsFromSessions } from "../personalRecords";
 import { recommendedTemplate } from "../recommendation";
-import { buildCardioSummaryLine } from "../cardioSummaryLine";
-import type { WorkoutSessionResponse } from "../types";
-import { useFormat } from "@/lib/i18n/format";
 import { matchesTypeFilter, type SessionTypeFilter } from "../workoutsTab";
 
 export function SessionsView({
@@ -40,11 +41,7 @@ export function SessionsView({
   onAutoStartHandled?: () => void;
 } = {}) {
   const t = useTranslations("workouts");
-  const ta = useTranslations("workouts.activityTypes");
-  const d = useTranslations("dashboard");
   const common = useTranslations("common");
-  const locale = useLocale();
-  const fmt = useFormat();
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -88,6 +85,9 @@ export function SessionsView({
   const visible = sessions.filter((s) => matchesTypeFilter(s.sessionKind, typeFilter));
 
   const active = activeId != null ? sessions.find((s) => s.id === activeId) ?? null : null;
+  const weeks = groupSessionsByWeek(visible, new Date());
+  // Records come from the whole history, not the filtered list — a filter must not change what counts as a PR.
+  const records = recordsBySession(setFactsFromSessions(sessions));
   const recommended = recommendedTemplate(sessions, templates ?? []);
 
   // Auto-start the template the dashboard's recommended-workout card pointed
@@ -159,9 +159,20 @@ export function SessionsView({
       ) : visible.length === 0 ? (
         <EmptyState icon="exercise" title={t("noMatches")} />
       ) : (
-        <div className="flex flex-col gap-2">
-          {visible.map((s) => (
-            <SessionRow key={s.id} session={s} onOpen={() => setActiveId(s.id)} />
+        <div className="flex flex-col gap-5">
+          {weeks.map((week) => (
+            <section key={week.weekStart.getTime()} className="flex flex-col gap-2">
+              <WeekHeader week={week} />
+              <Card className="!p-0 overflow-hidden">
+                <ul className="divide-y" style={{ borderColor: "var(--hairline)" }}>
+                  {week.sessions.map((s) => (
+                    <li key={s.id} style={{ borderColor: "var(--hairline)" }}>
+                      <SessionRow session={s} records={records.get(s.id)} onOpen={() => setActiveId(s.id)} />
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            </section>
           ))}
         </div>
       )}
@@ -205,65 +216,4 @@ export function SessionsView({
     </div>
   );
 
-  function SessionRow({ session, onOpen }: { session: WorkoutSessionResponse; onOpen: () => void }) {
-    const isCardio = session.sessionKind === "CARDIO";
-    const exNames = session.exercises.map((e) => e.exerciseName).join(", ");
-    const title = isCardio
-      ? ta(session.activityType ?? "OTHER_CARDIO")
-      : session.templateName ?? (exNames || d("workoutFallback"));
-    const summaryLine = isCardio ? buildCardioSummaryLine(session, t, locale) : null;
-    const duration = session.finishedAt
-      ? Math.round((new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) / 60000)
-      : null;
-    const ongoing = !session.finishedAt;
-
-    const deleteMutation = useMutation({
-      mutationFn: () => workoutSessionApi.delete(session.id),
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() }); show(t("sessionDeleted"), "success"); },
-      onError: () => show(t("deleteFailed"), "error"),
-    });
-
-    return (
-      <div className="flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] group" style={{ background: "var(--surface)" }}>
-        <button onClick={onOpen} className="flex-1 min-w-0 flex items-center gap-3 text-left">
-          {isCardio && <ActivityChip activityType={session.activityType} />}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-sm truncate">{title}</p>
-              {ongoing && (
-                <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
-                  style={{ background: "color-mix(in srgb, var(--primary) 18%, transparent)", color: "var(--primary)" }}>
-                  {t("inProgress")}
-                </span>
-              )}
-              {session.rpe != null && (
-                <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
-                  style={{ background: "color-mix(in srgb, var(--secondary) 18%, transparent)", color: "var(--secondary)" }}>
-                  {t("sessionRpe", { rpe: session.rpe })}
-                </span>
-              )}
-            </div>
-            {isCardio ? (
-              <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-                {fmt.date(session.startedAt, "dayTime")}
-                {summaryLine && ` · ${summaryLine}`}
-              </p>
-            ) : (
-              <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-                {fmt.date(session.startedAt, "dayTime")}
-                {duration != null && ` · ${duration} ${d("minutes")}`}
-                {session.sets.length > 0 && ` · ${session.sets.length} ${t("sets").toLowerCase()}`}
-                {session.averageHeartRate != null && ` · ${t("bpmAvg", { value: Math.round(session.averageHeartRate) })}`}
-              </p>
-            )}
-          </div>
-        </button>
-        <button onClick={() => deleteMutation.mutate()}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1" style={{ color: "var(--muted)" }}
-          aria-label={t("deleteSessionAria")}>
-          <span className="material-symbols-rounded text-lg">delete</span>
-        </button>
-      </div>
-    );
-  }
 }

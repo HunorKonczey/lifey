@@ -1241,6 +1241,10 @@
       "STRENGTH": "Erősítő"
     },
     "tabsAria": "Edzés szakaszok",
+    "weekThis": "Ez a hét",
+    "weekLast": "Múlt hét",
+    "weekCount": "{count} edzés",
+    "prBadge": "PR",
     "fabStart": "Edzés",
     "filterAria": "Edzés típusa",
     "filterAll": "Mind",

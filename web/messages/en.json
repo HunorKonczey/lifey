@@ -1241,6 +1241,10 @@
       "STRENGTH": "Strength"
     },
     "tabsAria": "Workout sections",
+    "weekThis": "This week",
+    "weekLast": "Last week",
+    "weekCount": "{count, plural, one {# workout} other {# workouts}}",
+    "prBadge": "PR",
     "fabStart": "Workout",
     "filterAria": "Workout type",
     "filterAll": "All",
