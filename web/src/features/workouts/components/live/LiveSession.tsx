@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ds";
 import { ConfirmModal } from "@/components/ds/overlay/ConfirmModal";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -11,10 +12,11 @@ import { workoutSessionApi } from "../../api";
 import { baselineFromSets } from "../../personalRecords";
 import { firstOpenExerciseId, hasUnsavedSets, liveProgress, railExercises, rowMarks, seedDrafts, type DraftSet } from "../../liveSession";
 import { priorSets } from "../../sessionSummary";
-import { computeWorkoutProgress, isWorkoutSuccess, previousSets, type WorkoutProgressResult } from "../../progress";
+import { previousSets } from "../../progress";
+import { celebrationData, type CelebrationData } from "../../finishSummary";
 import type { WorkoutSessionResponse } from "../../types";
-import { PostWorkoutFeedbackDialog } from "../PostWorkoutFeedbackDialog";
-import { WorkoutSuccessDialog } from "../WorkoutSuccessDialog";
+import { CelebrationModal } from "../finish/CelebrationModal";
+import { RpeModal } from "../finish/RpeModal";
 import { ExerciseCard } from "./ExerciseCard";
 import { ExerciseRail } from "./ExerciseRail";
 import { LiveHeader } from "./LiveHeader";
@@ -49,11 +51,11 @@ export function LiveSession({
   onLeave: () => void;
 }) {
   const t = useTranslations("workouts");
-  const locale = useLocale();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { show } = useToast();
 
-  const [successResult, setSuccessResult] = useState<WorkoutProgressResult | null>(null);
+  const [celebration, setCelebration] = useState<CelebrationData | null>(null);
   // "finish": the rating is captured right before finishing; "edit": changing an already-saved rating.
   const [feedbackContext, setFeedbackContext] = useState<"finish" | "edit" | null>(null);
   const [rpe, setRpe] = useState<number | null>(session.rpe ?? null);
@@ -100,18 +102,8 @@ export function LiveSession({
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
       if (vars.finished) {
-        show(t("workoutFinished"), "success");
-        const progress = computeWorkoutProgress(
-          session,
-          drafts,
-          history,
-          exercises,
-          (n) => n.toLocaleString(locale, { maximumFractionDigits: 1 }),
-          t("workoutSuccessRepsAbbrev"),
-          t("kg"),
-        );
-        if (isWorkoutSuccess(progress)) setSuccessResult(progress);
-        else onLeave();
+        // The celebration replaces the toast (W3.9): time, volume, sets and the records, computed from what was just saved.
+        setCelebration(celebrationData(session, drafts, history, new Date()));
       } else show(t("progressSaved"), "success");
     },
     onError: () => show(t("saveFailed"), "error"),
@@ -301,7 +293,8 @@ export function LiveSession({
         confirmLabel={t("leaveDiscard")}
       />
 
-      <PostWorkoutFeedbackDialog
+      <RpeModal
+        key={feedbackContext ?? "closed"}
         open={feedbackContext !== null}
         initialRpe={rpe}
         initialNote={feedbackNote}
@@ -310,7 +303,7 @@ export function LiveSession({
           setFeedbackContext(null);
           if (finishing) saveMutation.mutate({ finished: true, rpe, feedbackNote });
         }}
-        onSave={(newRpe, newNote) => {
+        onContinue={(newRpe, newNote) => {
           const finishing = feedbackContext === "finish";
           setRpe(newRpe);
           setFeedbackNote(newNote);
@@ -319,11 +312,13 @@ export function LiveSession({
         }}
       />
 
-      <WorkoutSuccessDialog
-        open={successResult !== null}
-        result={successResult ?? { score: 0, improvements: [] }}
-        onClose={() => {
-          setSuccessResult(null);
+      <CelebrationModal
+        open={celebration !== null}
+        name={name}
+        data={celebration}
+        onSummary={() => router.replace(`/workouts?open=${session.id}`)}
+        onDone={() => {
+          setCelebration(null);
           onLeave();
         }}
       />

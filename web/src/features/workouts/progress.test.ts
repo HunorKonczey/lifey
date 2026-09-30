@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { previousSets, computeWorkoutProgress } from "./progress";
+import { previousSets } from "./progress";
 import type { WorkoutSessionResponse } from "./types";
 
 let nextId = 1;
@@ -35,7 +35,7 @@ function strengthSession(
 
 /**
  * A finished cardio session — `sets: []` and `exercises: []` always (docs/cardio/52 §3.3), the
- * same shape `computeWorkoutProgress`/`previousSets` must not choke on.
+ * same shape `previousSets` must not choke on.
  */
 function cardioSession(): WorkoutSessionResponse {
   return strengthSession({ sessionKind: "CARDIO", activityType: "RUNNING", templateId: null });
@@ -69,33 +69,5 @@ describe("previousSets — cardio sessions never surface as a 'previous' set", (
     const result = previousSets([current, cardio, sameTemplate], current.id, 5, 9);
     expect(result).toHaveLength(1);
     expect(result[0].weight).toBe(70);
-  });
-});
-
-describe("computeWorkoutProgress — a cardio session in history doesn't corrupt the score", () => {
-  it("computes the same score whether or not a cardio session sits in history", () => {
-    const current = strengthSession({ id: 400 });
-    const prior = strengthSession({
-      sets: [{ exerciseId: 5, exerciseName: "Bench", reps: 8, weight: 60, performedAt: current.startedAt }],
-    });
-    const drafts = [{ exerciseId: 5, weight: 65, reps: 8, done: true }];
-    const exercises = [{ exerciseId: 5, exerciseName: "Bench" }];
-    const formatWeight = (n: number) => n.toFixed(1);
-
-    const withoutNoise = computeWorkoutProgress(current, drafts, [current, prior], exercises, formatWeight, "reps", "kg");
-    const withNoise = computeWorkoutProgress(
-      current, drafts, [current, cardioSession(), prior, cardioSession()], exercises, formatWeight, "reps", "kg",
-    );
-
-    expect(withNoise.score).toBe(withoutNoise.score);
-    expect(withNoise.improvements).toEqual(withoutNoise.improvements);
-  });
-
-  it("doesn't throw when every session in history is cardio (empty exercises/sets)", () => {
-    const current = strengthSession({ id: 500 });
-    const history = [current, cardioSession(), cardioSession()];
-    const drafts = [{ exerciseId: 5, weight: 65, reps: 8, done: true }];
-    const exercises = [{ exerciseId: 5, exerciseName: "Bench" }];
-    expect(() => computeWorkoutProgress(current, drafts, history, exercises, (n) => `${n}`, "reps", "kg")).not.toThrow();
   });
 });
