@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** Modal/Sheet/ConfirmModal (D-W0.12) against the gallery's "Modal & confirm"
  *  section: focus trap, Esc, focus return, scroll lock, and the mobile

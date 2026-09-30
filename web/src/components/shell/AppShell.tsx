@@ -123,7 +123,8 @@ export function AppShell({
     return (
       <div className="flex flex-col min-h-screen bg-bg">
         <MobileHeader user={user} avatarUrl={avatarUrl} onLogout={onLogout} roleRing={roleRing} trainerPrefs={trainerPrefs} />
-        <main className="flex-1 p-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 96px)" }}>
+        {/* `overflow-x-auto`: a page whose own layout is still wider than 390px (several trainer/superadmin pages until their iteration) scrolls inside <main> instead of dragging the whole page and header sideways. */}
+        <main className="flex-1 min-w-0 overflow-x-auto p-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 96px)" }}>
           {extraContent}
           {children}
         </main>
@@ -143,19 +144,22 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-bg">
-      <Sidebar
-        user={user}
-        avatarUrl={avatarUrl}
-        collapsed={collapsed}
-        onToggleCollapsed={toggle}
-        onLogout={onLogout}
-        groups={resolvedGroups}
-        roleBadge={roleBadge}
-        roleRing={roleRing}
-        chipSubtitle={chipSubtitle}
-        showSettingsRow={showSettingsRow}
-        trainerPrefs={trainerPrefs}
-      />
+      {/* Pinned to the viewport (not stretched to the page height) so the account chip at the foot stays on screen on long pages. */}
+      <div className="sticky top-0 h-screen shrink-0">
+        <Sidebar
+          user={user}
+          avatarUrl={avatarUrl}
+          collapsed={collapsed}
+          onToggleCollapsed={toggle}
+          onLogout={onLogout}
+          groups={resolvedGroups}
+          roleBadge={roleBadge}
+          roleRing={roleRing}
+          chipSubtitle={chipSubtitle}
+          showSettingsRow={showSettingsRow}
+          trainerPrefs={trainerPrefs}
+        />
+      </div>
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar />
         <main className="flex-1 p-6 overflow-auto">

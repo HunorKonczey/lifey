@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GalleryToolbar, type GalleryWidth } from "@/components/ds/gallery/GalleryToolbar";
 import { GALLERY_SECTIONS } from "@/components/ds/gallery/registry";
 
 export function GalleryClient() {
   const [width, setWidth] = useState<GalleryWidth>(1440);
+
+  // Read by `e2e/ds/fixtures.ts`: the page is interactive only once this has run.
+  useEffect(() => {
+    document.documentElement.dataset.hydrated = "true";
+  }, []);
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>

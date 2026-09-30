@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** DS-02's date stepper (D-W0.21) against the gallery's standalone demo:
  *  next disabled on today, prev/next/T keyboard shortcuts, and the

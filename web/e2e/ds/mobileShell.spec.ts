@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** DS-02's mobile shell below 768px (D-W0.22) against the gallery's
  *  standalone demo, both role configs, at 390x844: hit areas, no

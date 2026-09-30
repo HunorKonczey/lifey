@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** CalendarPopover + DateFields (D-W0.10) against the gallery's "Date
  *  picker" section: keyboard navigation, disabled future days, typed

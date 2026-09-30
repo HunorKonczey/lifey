@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** DS-02's trainer sidebar (D-W0.23) against the "Sidebar & account menu"
  *  gallery demo's Trainer toggle: grouped nav, the EDZŐ badge, and the

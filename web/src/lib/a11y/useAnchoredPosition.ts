@@ -3,7 +3,12 @@
 import { useLayoutEffect, useState, type RefObject } from "react";
 
 export interface AnchoredPosition {
+  /** Set when placed below the trigger. */
   top: number;
+  /** Set when flipped above: pinned by its bottom edge, so the gap to the
+   *  trigger holds whatever height the panel really has (not the estimate
+   *  `panelHeight` is only used to decide *whether* to flip). */
+  bottom: number;
   left: number;
   placement: "bottom" | "top";
 }
@@ -20,7 +25,7 @@ export function useAnchoredPosition(
   panelWidth = 280,
   panelHeight = 240,
 ): AnchoredPosition {
-  const [pos, setPos] = useState<AnchoredPosition>({ top: 0, left: 0, placement: "bottom" });
+  const [pos, setPos] = useState<AnchoredPosition>({ top: 0, bottom: 0, left: 0, placement: "bottom" });
 
   useLayoutEffect(() => {
     if (!open || !anchorRef.current) return;
@@ -29,9 +34,10 @@ export function useAnchoredPosition(
       const rect = anchorRef.current!.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
       const placement: "bottom" | "top" = spaceBelow < panelHeight && rect.top > panelHeight ? "top" : "bottom";
-      const top = placement === "bottom" ? rect.bottom + 4 : rect.top - panelHeight - 4;
+      const top = rect.bottom + 4;
+      const bottom = window.innerHeight - rect.top + 4;
       const left = Math.min(Math.max(8, rect.left), window.innerWidth - panelWidth - 8);
-      setPos({ top, left, placement });
+      setPos({ top, bottom, left, placement });
     }
 
     update();

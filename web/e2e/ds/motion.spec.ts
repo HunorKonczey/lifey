@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /**
  * AnimatedNumber / AnimatedFill (D-W0.13, W0.6) against the gallery's

@@ -45,8 +45,10 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000",
+    // Waiting on the gallery (not `/`) also compiles it before the first spec
+    // runs, so a cold CI runner doesn't spend the first test's timeout on it.
+    url: "http://localhost:3000/dev/design",
     reuseExistingServer: true,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });

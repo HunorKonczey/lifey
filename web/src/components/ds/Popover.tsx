@@ -24,7 +24,7 @@ export interface PopoverProps {
  */
 export function Popover({ open, onClose, anchorRef, width = 280, children, className }: PopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const { top, left, placement } = useAnchoredPosition(anchorRef, open, width);
+  const { top, bottom, left, placement } = useAnchoredPosition(anchorRef, open, width);
   useDismiss(open, onClose, panelRef);
   useFocusReturn(open);
 
@@ -35,7 +35,7 @@ export function Popover({ open, onClose, anchorRef, width = 280, children, class
       ref={panelRef}
       className={["fixed z-50 overflow-hidden", className].filter(Boolean).join(" ")}
       style={{
-        top,
+        ...(placement === "bottom" ? { top } : { bottom }),
         left,
         width,
         background: "var(--card)",

@@ -80,7 +80,7 @@ export function Sidebar({
   const width = collapsed ? 76 : 248;
 
   return (
-    <aside className="sticky top-0 self-stretch shrink-0" style={{ padding: 12, width: width + 24 }}>
+    <aside className="h-full shrink-0" style={{ padding: 12, width: width + 24 }}>
       <div
         className="flex flex-col h-full overflow-hidden"
         style={{

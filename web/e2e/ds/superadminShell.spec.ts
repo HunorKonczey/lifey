@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** DS-02's superadmin sidebar (D-W0.24) against the "Sidebar & account
  *  menu" gallery demo's Superadmin toggle: flat nav (no groups), the

@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** DS-02's client sidebar + account menu (D-W0.20) against the gallery's
  *  "Sidebar & account menu" section: collapse, persistence, the collapsed
@@ -58,4 +59,17 @@ test("the logout dialog defaults focus to Cancel, never the destructive action",
   const dialog = page.getByRole("dialog", { name: "Sign out?" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+});
+
+test("the account menu never overlaps the user chip it opens from", async ({ page }) => {
+  const chip = section(page).getByRole("button", { name: /Nagy Kata/ });
+  await chip.click();
+  const menu = page.locator("#lifey-overlay-root").getByRole("link", { name: "Settings" }).locator("xpath=ancestor::div[contains(@style,'position') or contains(@class,'fixed')][1]");
+  await expect(menu).toBeVisible();
+  // Flipped above the chip (it sits at the foot of the sidebar): the panel is
+  // pinned by its bottom edge, so a taller-than-estimated panel can't cover it.
+  const chipBox = (await chip.boundingBox())!;
+  const menuBox = (await menu.boundingBox())!;
+  const separated = menuBox.y + menuBox.height <= chipBox.y + 1 || menuBox.y >= chipBox.y + chipBox.height - 1;
+  expect(separated).toBe(true);
 });

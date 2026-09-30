@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** Form fields (D-W0.9) against the gallery's "Fields" section: every field
  *  has a label, an error is wired to its input via aria-describedby, and the

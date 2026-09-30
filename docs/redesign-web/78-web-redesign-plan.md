@@ -2860,4 +2860,48 @@ One entry per iteration-end web UI review (§4.1). Format: `### W<n> — <date> 
 <viewports>`, then *Scope* (frames and flows checked), *Matches*, *Deviations (intended)* with decision
 ids, *Bugs* with the `W<n>.fix-<k>` step that closed each.
 
-*(no reviews yet)*
+### W0 — 2026-09-30 — Playwright Chromium (bundled, headless), 1440×1024 / 1280×800 / 1024×768 / 390×844
+
+*Scope:* real stack (Postgres, backend `:8080`, chat `:8081`, `next dev`) with the handoff demo data. A scripted
+matrix of **3 roles** (client `kata.nagy`, trainer `bence.edzo`, superadmin `admin`) × **HU / EN** × **dark /
+light** × the four viewports × **18 pages** (8 client, 8 trainer, 2 superadmin) = **288 captures**, each with
+programmatic checks (horizontal overflow, raw i18n keys, `ROLE_`, ISO timestamps, console errors); a sample of
+the screenshots viewed by eye per role/viewport/theme. Plus an interactive pass on the real app: `?` help, `G W`
+/ `G I`, `[` collapse + persistence, account menu (theme/language, trainer weekly-report switch), logout dialog
+default focus, the "More" sheet and its focus return at 390, the date stepper (←/T), the chat unread badge with
+the chat service running, a 640×400 viewport (≈ 200 % zoom of a 1280 window) and `prefers-reduced-motion:
+reduce`.
+
+*Matches:* one shell on every logged-in page in all three roles — sidebar v2 with grouped trainer nav, the clay
+EDZŐ badge vs the neutral RENDSZER badge, plan chip "TRAINER · Pro", live pending-requests badge (12) and chat
+unread badge (1); top bar with the global date stepper on dated routes; floating bottom nav + More sheet below
+768 px with nothing hidden under it; `?` overlay in HU/EN; no raw keys, no `ROLE_`, no ISO timestamps on any of
+the 288 captures; no console errors beyond the pre-existing noise below; both themes legible.
+
+*Deviations (intended):* pages keep their old inner layout until their own iteration (W1 … W9) — e.g. the trainer
+pages still show their own page header under the shell's title, and the welcome "Your clients" modal on `/admin`
+is the existing once-per-session behaviour. The client demo account's language is pinned to HU in its settings
+(settings override the browser locale by design, D-W0.20), so EN client strings were verified in the gallery
+(default EN) rather than on the real pages. Not done: a side-by-side of app vs canvas frames (W0 has no derived
+screens; the DS-02 shell frames were compared by eye only), and a true browser-zoom pass (emulated by the
+640 px viewport). Pre-existing console noise, not W0: 401 on `/client-config` before sign-in, 404 on
+`/users/me/avatar` for users without one, dev-only CSP blocks on the Vercel analytics scripts and Google sign-in
+on `/login`.
+
+*Bugs* (all closed in the W0 review commit):
+- **W0.fix-1** — the sidebar was `self-stretch` (as tall as the *page*), so its account chip sat below the fold
+  on any long page. Now a `sticky top-0 h-screen` wrapper in `AppShell`; the gallery's fixed-height frame is
+  unaffected.
+- **W0.fix-2** — a flipped-above `Popover` (the account menu) was positioned from an *estimated* 240 px height
+  and overlapped its own trigger by ~20 px. `useAnchoredPosition` now also returns `bottom` and flipped panels
+  are pinned by it; `shell.spec` asserts the menu never overlaps the chip.
+- **W0.fix-3** — at 390 px `/admin/nutrition`, `/admin/assignments`, `/admin/invites` and both superadmin pages
+  (old fixed-width action cells) dragged the whole page sideways. The mobile `<main>` now `overflow-x-auto`, so
+  they scroll inside it and the header/bottom nav stay put; the pages' own 390 layouts stay with their
+  iterations (W8/W9).
+- **W0.fix-4** — (found earlier, on a month-end `ds` run) `CalendarPopover` with `disableFuture` could rove focus
+  onto a disabled day; clamped (W0.25).
+- **W0.fix-5** — CI: the `ds` project flaked on GitHub runners (clicks/keys landing before `next dev` hydrated
+  the big gallery page). Gallery now sets `data-hydrated`; `e2e/ds/fixtures.ts` makes `goto`/`reload` wait for
+  it; the webServer waits on `/dev/design` (pre-compiles it) with a 120 s timeout; the menu-flip spec no longer
+  depends on where Playwright happens to scroll. 89/89 green cold with `CI=1`, and 176/176 under 4 workers.

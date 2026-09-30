@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** Toast (D-W0.14) against the gallery's "Toast" section: one at a time,
  *  the sticky error variant with its own close button, and the undo

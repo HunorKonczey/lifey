@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** DataTable v2 (D-W0.15) against the gallery's "Data table" DS-03 foods
  *  sample: search, sort, density, keyboard nav, row menu, pagination, and

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** DS-06's shortcut layer (D-W0.17) against the gallery's standalone demo
  *  (`ShortcutsSection` mounts the same `useHotkeys` + `ShortcutHelp` pair

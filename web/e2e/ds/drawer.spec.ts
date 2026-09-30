@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /** Drawer (D-W0.13) against the gallery's "Drawer" section: Esc/scrim
  *  close it outright when clean (the recorded `trainer-011` bug was a
