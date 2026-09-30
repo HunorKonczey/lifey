@@ -10,7 +10,7 @@ import { CalorieHero } from "@/features/dashboard/components/CalorieHero";
 import { RecommendedSection } from "@/features/dashboard/components/RecommendedSection";
 import { TilesSection } from "@/features/dashboard/components/TilesSection";
 import { WeekCaloriesCard } from "@/features/dashboard/components/WeekCaloriesCard";
-import { RecentWorkoutsSection } from "@/features/dashboard/components/RecentWorkoutsSection";
+import { RecentWorkouts } from "@/features/dashboard/components/RecentWorkouts";
 
 /**
  * The dashboard is composition only (W1.1): `useDashboardData` owns the
@@ -59,7 +59,7 @@ export default function DashboardPage() {
           <TilesSection data={data} />
         </GridItem>
         <GridItem span={{ base: 4, md: 4, xl: 4 }} order={{ base: 3, xl: 4 }}>
-          <RecentWorkoutsSection data={data} />
+          <RecentWorkouts data={data} />
         </GridItem>
         <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 4, xl: 3 }}>
           <WeekCaloriesCard data={data} />

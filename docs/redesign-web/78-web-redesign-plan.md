@@ -1758,12 +1758,33 @@ running backend reports as `prCount7d` on the trainer's client list — Kata 15 
 13, Máté 17 = 17, Dóra 19 = 19, all five equal. Nothing renders in this step; `recordsBySession()` is what
 W1.10's row chip reads.
 
-### W1.10 — Web UI: recent workouts list
+### W1.10 — Web UI: recent workouts list ✅
 - Files: `features/dashboard/components/RecentWorkouts.tsx`, `features/workouts/activityType.ts` (labels
   through messages — no `humanizeEnum`), `features/workouts/cardioSummaryLine.ts` (reuse for meta).
 - Spec row 3 right; row click opens the session summary (W3.4 route; until W3 lands, today's session
   view).
 - **Verify:** no raw activity key in HU or EN; PR chip on the session that set a record.
+
+*As built:* `RecentWorkouts` replaces the old list (`RecentWorkoutsSection` deleted): a `RecentWorkoutsView`
+(rows in, so the gallery can show every state) plus a connected wrapper that builds the rows. Each row is a
+button with a 40 px tinted tile — strength in the primary tint with the dumbbell, cardio in the heart tint
+with the activity's own icon (`activityTypeIcon`) — the name, a `RecordChip` "PR" when that session set a
+record, one meta line and a relative day on the right ("tegnap", "szept. 25." via `relativeDay`). Names never
+show a raw key: cardio goes through `useFormat().activityLabel` (the `labels.activityTypes` catalog, "Séta"),
+strength shows the template name or the exercises; the meta is "40 perc · 6 342 kg · 12 szett" for strength
+(an unfinished session says "folyamatban", zero-length or set-less parts are left out rather than shown as 0)
+and the existing `buildCardioSummaryLine` for cardio, so it stays identical to the workouts list. The PR flag
+comes from `recordsBySession(setFactsFromSessions(...))` (W1.9), computed once in `useDashboardData` — on the
+demo account Láb + core and Pull nap carry the chip, the other two rows don't. A row opens the session through
+a new `?open=<sessionId>` deep link on the workouts page (`SessionsView` gained `autoOpenSessionId`, handled
+once like the existing `?start=`, and the URL is cleaned afterwards) — the plan's "today's session view until
+W3's summary route exists". "Mind" links to `/workouts`; below 640 px the fourth row drops (W1-C shows three);
+an account with no sessions gets a compact empty state with a start button instead of an empty card. The
+gallery section is titled "Recent workouts list" because the card's own h3 is "Recent workouts" and a
+duplicate heading broke role queries. `e2e/ds/recentWorkouts.spec.ts` covers the rows and meta, the PR chip
+only on the flagged row, words not keys, the two tints differing while two strength rows match, keyboard
+focus, the phone row count and the empty state. Verified on the real app with the demo data, including the
+click-through to the session.
 
 ### W1.11 — Web UI: first-steps card
 - Files: `features/dashboard/components/FirstSteps.tsx`, `components/app/OnboardingBanner.tsx` (removed

@@ -13,6 +13,7 @@ import { userDetailsApi } from "@/features/onboarding/api";
 import { workoutSessionApi, templateApi, exerciseApi } from "@/features/workouts/api";
 import { movingAverage, weeklyPace, weightPoints } from "@/features/weight/trend";
 import { recommendedTemplate } from "@/features/workouts/recommendation";
+import { recordsBySession, setFactsFromSessions } from "@/features/workouts/personalRecords";
 import { summarizeTemplate } from "@/features/workouts/recommendedSummary";
 import type { MealResponse } from "@/features/nutrition/types";
 import type { WaterEntryResponse } from "@/features/water/types";
@@ -82,6 +83,8 @@ export function useDashboardData(date: Date) {
     .slice()
     .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
   const recommended = recommendedTemplate(sessionsDesc, templatesQ.data ?? []);
+  // Records per session, replayed from the whole history (never stored).
+  const sessionRecords = recordsBySession(setFactsFromSessions(sessionsDesc));
   const exerciseNames = new Map((exercisesQ.data ?? []).map((e) => [e.id, e.name] as const));
   const recommendedSummary = recommended ? summarizeTemplate(recommended, sessionsDesc, exerciseNames) : null;
 
@@ -109,6 +112,7 @@ export function useDashboardData(date: Date) {
     weightPace,
     goalWeightKg,
     sessionsDesc,
+    sessionRecords,
     templates: templatesQ.data ?? [],
     recommended,
     recommendedSummary,

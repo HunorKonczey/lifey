@@ -22,11 +22,14 @@ export default function WorkoutsPage() {
   // card — jump to the Sessions tab so SessionsView can auto-start it.
   const startParam = searchParams.get("start");
   const autoStartTemplateId = startParam ? Number(startParam) : null;
+  // "?open=<sessionId>" arrives from the dashboard's recent-workouts rows.
+  const openParam = searchParams.get("open");
+  const autoOpenSessionId = openParam ? Number(openParam) : null;
 
   useEffect(() => {
-    if (autoStartTemplateId != null) setTab("sessions");
+    if (autoStartTemplateId != null || autoOpenSessionId != null) setTab("sessions");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoStartTemplateId]);
+  }, [autoStartTemplateId, autoOpenSessionId]);
 
   const TABS: { value: Tab; label: string; icon: string }[] = [
     { value: "sessions", label: t("sessions"), icon: "exercise" },
@@ -41,6 +44,7 @@ export default function WorkoutsPage() {
       {tab === "sessions" && (
         <SessionsView
           autoStartTemplateId={autoStartTemplateId}
+          autoOpenSessionId={autoOpenSessionId}
           onAutoStartHandled={() => router.replace("/workouts")}
         />
       )}

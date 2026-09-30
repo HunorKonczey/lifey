@@ -20,11 +20,15 @@ import { useFormat } from "@/lib/i18n/format";
 
 export function SessionsView({
   autoStartTemplateId,
+  autoOpenSessionId,
   onAutoStartHandled,
 }: {
   // Set when navigated here from the dashboard's recommended-workout card —
   // starts this template's session automatically once templates are loaded.
   autoStartTemplateId?: number | null;
+  // Set when navigated here from a dashboard recent-workouts row — opens that
+  // session once (until W3's own session summary route exists).
+  autoOpenSessionId?: number | null;
   onAutoStartHandled?: () => void;
 } = {}) {
   const t = useTranslations("workouts");
@@ -88,6 +92,17 @@ export function SessionsView({
     onAutoStartHandled?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStartTemplateId, templates, active]);
+
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRef.current || !autoOpenSessionId || !data) return;
+    if (!data.some((s) => s.id === autoOpenSessionId)) return;
+    autoOpenedRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot deep link, guarded by the ref
+    setActiveId(autoOpenSessionId);
+    onAutoStartHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenSessionId, data]);
 
   // ─── Active logger mode ───
   if (active) {

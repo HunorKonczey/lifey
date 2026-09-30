@@ -752,7 +752,13 @@
     "weekWorkouts": "edzés",
     "weekGoalLabel": "cél {goal}",
     "weekTodayShort": "Ma",
-    "weekChartLabel": "Kalória az elmúlt 7 napban"
+    "weekChartLabel": "Kalória az elmúlt 7 napban",
+    "recentAll": "Mind",
+    "recentDuration": "{n} perc",
+    "recentSets": "{n} szett",
+    "recentPr": "PR",
+    "recentInProgress": "folyamatban",
+    "recentEmptyBody": "Az első edzésed itt fog megjelenni."
   },
   "nutrition": {
     "meals": "Étkezések",

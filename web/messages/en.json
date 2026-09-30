@@ -752,7 +752,13 @@
     "weekWorkouts": "workouts",
     "weekGoalLabel": "goal {goal}",
     "weekTodayShort": "Today",
-    "weekChartLabel": "Calories over the last 7 days"
+    "weekChartLabel": "Calories over the last 7 days",
+    "recentAll": "All",
+    "recentDuration": "{n} min",
+    "recentSets": "{n, plural, one {# set} other {# sets}}",
+    "recentPr": "PR",
+    "recentInProgress": "in progress",
+    "recentEmptyBody": "Your first session will show up here."
   },
   "nutrition": {
     "meals": "Meals",
