@@ -718,7 +718,16 @@
     "heroRingLabel": "Kalória: {eaten} / {goal} kcal",
     "copyYesterday": "Tegnapi {meal} másolása",
     "copyYesterdayDone": "Tegnapi {meal} átmásolva",
-    "copyYesterdayFailed": "Nem sikerült átmásolni az étkezést"
+    "copyYesterdayFailed": "Nem sikerült átmásolni az étkezést",
+    "todaySuggestion": "Mai javaslat",
+    "lastPerformed": "utoljára {date}",
+    "workoutMeta": "{exercises} gyakorlat · kb. {minutes} perc · {sets} szett",
+    "setsTimesReps": "{sets} × {reps}",
+    "setsOnly": "{sets} szett",
+    "startWorkoutCta": "Edzés indítása",
+    "pickTemplateTitle": "Válassz sablont",
+    "pickTemplateBody": "Indíts edzést valamelyik sablonodból.",
+    "openTemplates": "Sablonok megnyitása"
   },
   "nutrition": {
     "meals": "Étkezések",

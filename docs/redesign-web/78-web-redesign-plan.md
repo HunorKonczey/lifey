@@ -1593,13 +1593,31 @@ jumps to the new total, Undo sends exactly one `DELETE` and the button returns; 
 afterwards. No Playwright spec — the `ds` project has no backend, so the logic lives in the unit tests and the
 flow was driven on the real app.
 
-### W1.4 — Web UI: `RecommendedWorkout`
+### W1.4 — Web UI: `RecommendedWorkout` ✅
 - Files: `features/workouts/components/RecommendedWorkoutCard.tsx` (rewritten), `recommendation.ts` (reuse;
   add "last performed" from session history).
 - Spec row 1 right; estimated minutes = the template's median past duration, else 8 min / exercise;
   sets = sum of template sets; "▶ Edzés indítása" starts the session exactly as today. No recommendation →
   the card shows the template picker entry ("Válassz sablont") instead of disappearing (keeps the grid).
 - **Verify:** 1440 / 1024 / 390 layouts; starting a workout still works.
+
+*As built:* The dashboard gets a new presentational `features/workouts/components/RecommendedWorkout.tsx` (a
+`Card.hero`, padding 24) and the old `RecommendedWorkoutCard` stays only for `SessionsView`, which W3 rewrites
+— so the workouts page didn't have to change in this step. The numbers come from a pure
+`summarizeTemplate(template, sessionsDesc, exerciseNames)` (`features/workouts/recommendedSummary.ts`, 8 unit
+tests): exercise count and summed target sets; the estimate is the median duration of the template's finished
+sessions, rounded to 5 minutes (minimum 5), ignoring unfinished sessions, zero-length ones (the demo's "Push
+nap · 0 perc") and other templates, and falls back to 8 minutes an exercise; `lastPerformed` is the newest
+finished session of the template; the first three exercises carry their names (a new `exercises` query in
+`useDashboardData`). One thing the canvas' "4 × 8" needed that the data doesn't have: templates store only
+`targetSets`, no target reps — so the reps are the median of the sets the user last logged for that exercise
+(newest session that contains it); an exercise never logged shows "4 sets" / "4 szett" instead of inventing a
+rep count. The start button keeps the existing contract (`/workouts?start=<templateId>`; verified on the real
+backend that it lands on the workouts page and creates the session — deleted again afterwards). With no
+suggestion the same grid cell becomes a template picker ("Válassz sablont", button opens the workouts page on
+its Templates tab), so the slot beside the hero never collapses. Copy in HU matches the canvas: "MAI
+JAVASLAT", "utoljára szept. 23.", "4 gyakorlat · kb. 40 perc · 12 szett". Gallery section "Recommended
+workout" shows with-history, no-history and the picker, covered by `e2e/ds/recommendedWorkout.spec.ts`.
 
 ### W1.5 — Web UI: water tile
 - Files: `features/dashboard/components/WaterTile.tsx` (replaces `components/data/WaterCard.tsx` here),

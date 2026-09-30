@@ -24,6 +24,7 @@ import { MobileShellSection } from "./sections/MobileShellSection";
 import { ShortcutsSection } from "./sections/ShortcutsSection";
 import { PageGridSection } from "./sections/PageGridSection";
 import { CalorieHeroSection } from "./sections/CalorieHeroSection";
+import { RecommendedWorkoutSection } from "./sections/RecommendedWorkoutSection";
 
 export interface GallerySection {
   id: string;
@@ -59,6 +60,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "mobile-shell", title: "Mobile shell (bottom nav)", Component: MobileShellSection },
   { id: "page-grid", title: "Page grid", Component: PageGridSection },
   { id: "calorie-hero", title: "Calorie hero", Component: CalorieHeroSection },
+  { id: "recommended-workout", title: "Recommended workout", Component: RecommendedWorkoutSection },
   { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

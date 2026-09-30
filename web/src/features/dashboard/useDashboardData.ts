@@ -10,8 +10,9 @@ import { weightApi } from "@/features/weight/api";
 import { waterApi } from "@/features/water/api";
 import { stepsApi } from "@/features/steps/api";
 import { mealApi } from "@/features/nutrition/api";
-import { workoutSessionApi, templateApi } from "@/features/workouts/api";
+import { workoutSessionApi, templateApi, exerciseApi } from "@/features/workouts/api";
 import { recommendedTemplate } from "@/features/workouts/recommendation";
+import { summarizeTemplate } from "@/features/workouts/recommendedSummary";
 import type { MealResponse } from "@/features/nutrition/types";
 import type { WaterEntryResponse } from "@/features/water/types";
 import type { DailyStepCountResponse } from "@/features/steps/types";
@@ -42,7 +43,7 @@ export function filterToday<T extends { dateTime?: string; consumedAt?: string; 
 export function useDashboardData(date: Date) {
   const dateStr = localDateStr(date);
 
-  const [statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ] =
+  const [statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ, exercisesQ] =
     useQueries({
       queries: [
         { queryKey: queryKeys.statistics.daily(dateStr), queryFn: () => statisticsApi.daily(dateStr) },
@@ -55,6 +56,7 @@ export function useDashboardData(date: Date) {
         { queryKey: queryKeys.meals.all(), queryFn: mealApi.list },
         { queryKey: queryKeys.workoutSessions.all(), queryFn: workoutSessionApi.list },
         { queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list },
+        { queryKey: queryKeys.exercises.all(), queryFn: exerciseApi.list },
       ],
     });
 
@@ -74,6 +76,8 @@ export function useDashboardData(date: Date) {
     .slice()
     .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
   const recommended = recommendedTemplate(sessionsDesc, templatesQ.data ?? []);
+  const exerciseNames = new Map((exercisesQ.data ?? []).map((e) => [e.id, e.name] as const));
+  const recommendedSummary = recommended ? summarizeTemplate(recommended, sessionsDesc, exerciseNames) : null;
   const streak = loggingStreak([...meals.map((m) => m.dateTime), ...sessionsDesc.map((s) => s.startedAt)]);
 
   const todayEntries = todayMeals.flatMap((m) => m.entries);
@@ -88,7 +92,7 @@ export function useDashboardData(date: Date) {
   return {
     date,
     dateStr,
-    queries: { statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ },
+    queries: { statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ, exercisesQ },
     settings: settingsQ.data,
     weeklyStats: weeklyStatsQ.data,
     meals,
@@ -100,6 +104,7 @@ export function useDashboardData(date: Date) {
     sessionsDesc,
     templates: templatesQ.data ?? [],
     recommended,
+    recommendedSummary,
     streak,
     totals,
     isLoading: statsQ.isLoading || weeklyStatsQ.isLoading || settingsQ.isLoading,
