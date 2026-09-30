@@ -157,6 +157,14 @@ describe("year view", () => {
     expect(year.calories.emptySlotsBefore).toBe(aug17);
   });
 
+  it("another year has no first-log date and no band", () => {
+    for (const y of [2025, 2027]) {
+      const other = buildPeriodStats({ raw, period: "year", start: d(y, 1, 1), now: NOW, goals: GOALS });
+      expect(other.calories.firstLog).toBeNull();
+      expect(other.calories.emptySlotsBefore).toBe(0);
+    }
+  });
+
   it("an empty previous year is no data, not a delta", () => {
     expect(year.calories.previousEmpty).toBe(true);
     expect(year.kpis.workouts.delta).toBeNull();

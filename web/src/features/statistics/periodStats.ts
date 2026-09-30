@@ -364,7 +364,9 @@ export function buildPeriodStats({ raw, period, start, now, goals }: StatsInput)
 
   // ── chart series ─────────────────────────────────────────────────────────────────────────────
   const calorieValues = slots.map((s) => slotValue(daily.calories, s, today, weekly ? "mean" : "sum", weekly));
-  const firstLog = daily.firstMeal;
+  // The "logging since" date and the hatched band only exist for the year logging *started* in: for an earlier year
+  // the first log is in the future, for a later one it is long behind.
+  const firstLog = daily.firstMeal != null && daily.firstMeal.getTime() >= range.start.getTime() && daily.firstMeal.getTime() <= range.end.getTime() ? daily.firstMeal : null;
   const emptySlotsBefore = weekly && firstLog ? slots.filter((s) => s.end.getTime() < firstLog.getTime()).length : 0;
 
   const weightValues = slots.map((s) => slotValue(daily.weight, s, today, "mean", false));
