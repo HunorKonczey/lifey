@@ -222,6 +222,9 @@
 
   --m-kcal:    #9D4602;
   --m-protein: #34742F;
+  /* The improvement chip (a loss toward the goal) on --nested or the page background was 4.19–4.34:1 with --m-protein's green;
+     this step darker clears 4.7:1 on card, nested and bg (W4 review). Protein bars keep --m-protein. */
+  --improvement: #2F6B2A;
   --m-carbs:   #7F5D00;
   --m-fat:     #5A57A8;
   --m-water:   #1A6C8F;

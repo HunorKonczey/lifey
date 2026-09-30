@@ -26,6 +26,7 @@ export function WeightStepper({
   const t = useTranslations("weight");
   const common = useTranslations("common");
   const locale = useLocale();
+  const [focused, setFocused] = useState(false);
   const [text, setText] = useState(() => formatLocaleNumber(value, locale, 1));
   const [synced, setSynced] = useState(value);
   // Resync the text when the value changes from outside (− / +, a keyboard step) — during render, not in an effect.
@@ -63,19 +64,30 @@ export function WeightStepper({
   return (
     <div className="flex items-center justify-center gap-3" data-testid="weight-stepper">
       <IconButton icon="remove" label={common("decrease")} size={40} onClick={() => step(-1, false)} />
-      <label className="flex min-w-0 items-baseline justify-center gap-2">
+      {/* The focus ring sits on the label, not the input: the global :focus-visible outline is an unlayered rule that
+          beat the `outline-none` utility and drew a hard black box around the 72 px number (W4 review). */}
+      <label
+        className="flex min-w-0 items-baseline justify-center gap-2 px-3"
+        style={{ borderRadius: "var(--r-control)", boxShadow: focused ? "0 0 0 2px var(--primary)" : "0 0 0 2px transparent", transition: "box-shadow var(--dur-hover) var(--ease-standard)" }}
+      >
         <input
           ref={inputRef}
           aria-label={t("weightKg")}
           inputMode="decimal"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onBlur={(e) => commit(e.target.value)}
-          onFocus={(e) => e.currentTarget.select()}
+          onBlur={(e) => {
+            setFocused(false);
+            commit(e.target.value);
+          }}
+          onFocus={(e) => {
+            setFocused(true);
+            e.currentTarget.select();
+          }}
           onKeyDown={onKeyDown}
           data-autofocus
           className="tabular min-w-0 bg-transparent text-center outline-none"
-          style={{ width: "4.2ch", fontSize: 72, lineHeight: "76px", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)" }}
+          style={{ outline: "none", boxShadow: "none", width: "4.2ch", fontSize: 72, lineHeight: "76px", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)" }}
         />
         <span className="type-title" style={{ color: "var(--text-2)" }}>
           kg
