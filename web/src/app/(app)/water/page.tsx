@@ -200,7 +200,7 @@ export default function WaterPage() {
         </div>
 
         {/* Sources management */}
-        <div className="w-full lg:w-[300px] shrink-0 rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+        <div id="sources" className="w-full lg:w-[300px] shrink-0 rounded-[var(--r-card)] p-4 scroll-mt-6" style={{ background: "var(--surface)" }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-bold">{t("sources")}</p>
             <button onClick={() => setManaging((m) => !m)} className="text-xs font-semibold" style={{ color: "var(--primary)" }}>

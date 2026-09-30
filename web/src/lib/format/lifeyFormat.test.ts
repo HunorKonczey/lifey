@@ -50,6 +50,17 @@ describe("grams", () => {
   });
 });
 
+describe("litres", () => {
+  it("shows one decimal at least and up to two, with the unit or without", () => {
+    expect(en.litres(0.25)).toBe("0.25 L");
+    expect(hu.litres(0.25)).toBe("0,25 L");
+    expect(hu.litres(0.5)).toBe("0,5 L");
+    expect(hu.litres(2)).toBe("2,0 L");
+    expect(hu.litreNumber(1.6)).toBe("1,6");
+    expect(en.litreNumber(1.6)).toBe("1.6");
+  });
+});
+
 describe("litresOfGoal", () => {
   it("joins current and goal with a trailing unit", () => {
     expect(en.litresOfGoal(1.6, 2.5)).toBe("1.6 / 2.5 L");

@@ -727,7 +727,13 @@
     "startWorkoutCta": "Start workout",
     "pickTemplateTitle": "Pick a template",
     "pickTemplateBody": "Start a workout from one of your templates.",
-    "openTemplates": "Open templates"
+    "openTemplates": "Open templates",
+    "waterLastAt": "last {time}",
+    "waterQuickAdd": "Add {volume}",
+    "waterMenuLabel": "Water options",
+    "waterManageSources": "Manage water sources",
+    "waterOpenPage": "Open Water",
+    "waterAddFailed": "Couldn't log the water"
   },
   "nutrition": {
     "meals": "Meals",

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "../../Card";
 import { MetricValue } from "../../MetricValue";
 import { DeltaChip } from "../../DeltaChip";
@@ -15,6 +16,30 @@ const STATES = [
   { label: "100%", value: 1 },
   { label: "130%", value: 1.3 },
 ];
+
+/** W1.5: a SegmentBar that can be nudged, to show only the delta animating. */
+function AddableSegmentBar() {
+  const [progress, setProgress] = useState(0.4);
+  return (
+    <Card className="flex flex-col gap-3 max-w-sm">
+      <span className="type-body-s" style={{ color: "var(--text-3)" }}>
+        SegmentBar, add 0.25 L (only the difference animates)
+      </span>
+      <div data-testid="segment-demo">
+        <SegmentBar progress={progress} color="var(--m-water)" height={8} />
+      </div>
+      <button
+        type="button"
+        data-testid="segment-demo-add"
+        className="lifey-button self-start px-4 h-10 type-button"
+        style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}
+        onClick={() => setProgress((p) => Math.min(1, p + 0.25))}
+      >
+        + 0.25 L
+      </button>
+    </Card>
+  );
+}
 
 /** D-W0.16 — ProgressRing/MetricBar/RatioBar/SegmentBar/MetricTile at the
  *  0 / 22 / 100 / 130% states the plan calls for; `ringSweeps` itself is
@@ -80,6 +105,8 @@ export function ProgressSection() {
           </div>
         ))}
       </Card>
+
+      <AddableSegmentBar />
 
       <div className="flex flex-wrap gap-4">
         <MetricTile

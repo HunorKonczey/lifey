@@ -1619,12 +1619,34 @@ its Templates tab), so the slot beside the hero never collapses. Copy in HU matc
 JAVASLAT", "utoljára szept. 23.", "4 gyakorlat · kb. 40 perc · 12 szett". Gallery section "Recommended
 workout" shows with-history, no-history and the picker, covered by `e2e/ds/recommendedWorkout.spec.ts`.
 
-### W1.5 — Web UI: water tile
+### W1.5 — Web UI: water tile ✅
 - Files: `features/dashboard/components/WaterTile.tsx` (replaces `components/data/WaterCard.tsx` here),
   `features/water/quickSources.ts` + test (two most used sources in the last 30 days).
 - Spec row 2 "Víz"; quick add posts a water entry now; "⋯" menu: "Vízforrások kezelése", "Víz oldal".
 - **Verify:** unit test for source ranking; adding updates the segments with a 900 ms fill of the delta
   only.
+
+*As built:* The old `WaterCard` is deleted; `features/dashboard/components/WaterTile.tsx` is a `MetricTile`
+(icon, "Víz", meta "utoljára 09:29" = the newest entry of the viewed day, value "0,75" with unit "/ 2,5 L", 10
+segments at 8 px) whose two quick-add buttons come from a pure `rankQuickSources()`
+(`features/water/quickSources.ts`, 8 tests): saved sources ranked by entries in the last 30 days (a tie goes
+to the more recent use, then the lower id; entries older than 30 days, in the future, without a source or
+pointing at a deleted source don't count), padded from the 0.25 / 0.5 L defaults when fewer than two qualify
+and never offering a default volume a used source already covers. A click posts a water entry stamped "now"
+(noon for another day, `logTimestampFor`) optimistically — the segments fill at once and roll back with an
+error toast if the POST fails; the "⋯" button opens a `Menu` with "Vízforrások kezelése" (→ `/water#sources`,
+the sources card on the water page got an `id` and `scroll-mt`) and "Víz oldal". Three supporting changes:
+`MetricTile` gained a `footer` slot and a per-tile segment `height` (the canvas' quick-add row sits below the
+bar, not in the header); `SegmentBar` now runs through `AnimatedFill`, so the first appearance fills from 0
+and a later change animates only the difference — during the motion the fill runs continuously across the
+segments and at rest it settles into the resting shapes (full / one fixed 45 % partial / empty) — covered by a
+gallery demo with an add button and `e2e/ds/segmentBar.spec.ts` (the four already-full segments stay full mid-
+flight, the end state is exact); `lifeyFormat` got `litres()` and `litreNumber()` so "0,25 L" and "1,6" come
+from DS-07 rather than ad-hoc `toFixed`. Verified on the real backend: the buttons read "+ 0,75 L" (the demo
+user's most used source) and "+ 0,25 L" (default fill), a click adds exactly one entry and fills the bar, the
+menu navigates to the sources card; the entry created for the check was deleted afterwards. The unit next to
+the number renders at the DS tile ratio (13 px), a little smaller than the canvas' "/ 2,5 L" — left as the
+shared `MetricTile` spec rather than special-casing one tile.
 
 ### W1.6 — Web data: weight trend port
 - Files: `features/weight/trend.ts` + `trend.test.ts` — port of `mobile/lib/features/weight/domain/

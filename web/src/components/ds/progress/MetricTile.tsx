@@ -20,11 +20,13 @@ export interface MetricTileProps {
   /** value / goal for a continuous `MetricBar` — omit when using `segments`. */
   progress?: number;
   /** A discrete `SegmentBar` instead (e.g. water's 10 glasses) — omit when using `progress`. */
-  segments?: { count?: number; progress: number };
+  segments?: { count?: number; progress: number; height?: number };
   /** Usually a `DeltaChip`, shown beside the value. */
   delta?: ReactNode;
   /** A secondary line under everything — "Latest entry · today". */
   subline?: string;
+  /** Below the bar — the water tile's quick-add row. */
+  footer?: ReactNode;
   /** Sits right of the value block (e.g. a sparkline). */
   trailing?: ReactNode;
   /** Quick-action buttons in the header (e.g. a quick-add `IconButton`). */
@@ -58,6 +60,7 @@ export function MetricTile({
   delta,
   subline,
   trailing,
+  footer,
   actions,
   rowMenu,
   rowMenuLabel,
@@ -105,7 +108,8 @@ export function MetricTile({
       </div>
 
       {progress != null && <MetricBar progress={progress} color={color} />}
-      {segments && <SegmentBar segments={segments.count} progress={segments.progress} color={color} />}
+      {segments && <SegmentBar segments={segments.count} progress={segments.progress} color={color} height={segments.height} />}
+      {footer}
     </Card>
   );
 }

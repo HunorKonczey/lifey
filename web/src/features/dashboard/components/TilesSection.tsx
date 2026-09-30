@@ -3,9 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/lib/i18n/format";
-import { useDateStore } from "@/lib/hooks/useDateStore";
 import { StatCard } from "@/components/data/StatCard";
-import { WaterCard } from "@/components/data/WaterCard";
+import { WaterTile } from "./WaterTile";
 import { Skeleton } from "@/components/status/Skeleton";
 import type { DashboardData } from "../useDashboardData";
 
@@ -16,20 +15,14 @@ export function TilesSection({ data }: { data: DashboardData }) {
   const t = useTranslations("dashboard");
   const fmt = useFormat();
   const router = useRouter();
-  const { date } = useDateStore();
-  const { settings, totals, todaySteps, latestWeight, queries } = data;
+  const { settings, todaySteps, latestWeight, queries } = data;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {queries.waterEntriesQ.isLoading ? (
         <Skeleton variant="card" className="h-40" />
       ) : (
-        <WaterCard
-          currentLiters={totals.waterL}
-          goalLiters={settings?.dailyWaterGoalLiters ?? 2.5}
-          sources={queries.waterSourcesQ.data ?? []}
-          date={date}
-        />
+        <WaterTile data={data} />
       )}
 
       {queries.stepsQ.isLoading ? (

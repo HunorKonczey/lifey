@@ -45,6 +45,10 @@ export interface LifeyFormat {
   weight(value: number): string;
   /** Up to one decimal (no trailing zero forced), plus " g": `grams(166.68)` → "166.7 g" / "166,7 g". */
   grams(value: number): string;
+  /** A litre amount without its unit, one decimal minimum: `litreNumber(1.6)` → "1.6" / "1,6", `litreNumber(0.25)` → "0.25" / "0,25". */
+  litreNumber(value: number): string;
+  /** A litre amount with its unit: `litres(0.5)` → "0.5 L" / "0,5 L". */
+  litres(value: number): string;
   /** Two litre amounts over a goal, one string: `litresOfGoal(1.6, 2.5)` → "1.6 / 2.5 L". */
   litresOfGoal(current: number, goal: number): string;
   /** Month + day for axes and rows: "Sep 26" / "szept. 26." */
@@ -121,6 +125,14 @@ export function createFormat(locale: string): LifeyFormat {
     return `${gramsFmt.format(value)} g`;
   }
 
+  function litreNumber(value: number): string {
+    return litresFmt.format(value);
+  }
+
+  function litres(value: number): string {
+    return `${litresFmt.format(value)} L`;
+  }
+
   function litresOfGoal(current: number, goal: number): string {
     return `${litresFmt.format(current)} / ${litresFmt.format(goal)} L`;
   }
@@ -186,6 +198,8 @@ export function createFormat(locale: string): LifeyFormat {
     integer,
     weight,
     grams,
+    litreNumber,
+    litres,
     litresOfGoal,
     shortDate,
     longDate,

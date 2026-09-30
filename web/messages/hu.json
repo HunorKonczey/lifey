@@ -727,7 +727,13 @@
     "startWorkoutCta": "Edzés indítása",
     "pickTemplateTitle": "Válassz sablont",
     "pickTemplateBody": "Indíts edzést valamelyik sablonodból.",
-    "openTemplates": "Sablonok megnyitása"
+    "openTemplates": "Sablonok megnyitása",
+    "waterLastAt": "utoljára {time}",
+    "waterQuickAdd": "{volume} hozzáadása",
+    "waterMenuLabel": "Víz beállítások",
+    "waterManageSources": "Vízforrások kezelése",
+    "waterOpenPage": "Víz oldal",
+    "waterAddFailed": "Nem sikerült rögzíteni a vizet"
   },
   "nutrition": {
     "meals": "Étkezések",
