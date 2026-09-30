@@ -50,6 +50,8 @@ export { NumberField } from "./field/NumberField";
 export type { NumberFieldProps } from "./field/NumberField";
 export { TimeField } from "./field/TimeField";
 export type { TimeFieldProps } from "./field/TimeField";
+export { SelectField } from "./field/SelectField";
+export type { SelectFieldProps } from "./field/SelectField";
 export { TextArea } from "./field/TextArea";
 export type { TextAreaProps } from "./field/TextArea";
 export { ReadOnlyField } from "./field/ReadOnlyField";

@@ -590,7 +590,8 @@ button:disabled { cursor: default; }
   box-shadow: 0 0 0 1.5px var(--heart) !important;
 }
 .lifey-field input,
-.lifey-field textarea {
+.lifey-field textarea,
+.lifey-field select {
   background: transparent;
   border: none;
   outline: none;
