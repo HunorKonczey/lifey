@@ -1937,10 +1937,31 @@ Gallery section "Day summary" (remaining / over / no goal, on the canvas' 1 041 
 `e2e/ds/daySummary.spec.ts` cover the three states and the macro rows; checked on the real page at 1440 (HU,
 dark), 1024 (light) and 390.
 
-### W2.3 — Web UI: `MealCard` v2 + item rows
+### W2.3 — Web UI: `MealCard` v2 + item rows ✅
 - Files: `features/nutrition/components/{MealCard,MealItemRow}.tsx`.
 - **Verify:** HU long food names wrap to two lines, never truncate; macros always visible; row "⋯"
   reachable by keyboard.
+
+*As built:* `MealCard` is rewritten on the DS `Card` with a new `MealItemRow`. The header is a 40 px icon tile
+tinted in the meal type's colour (`mealTypeStyle.ts`: breakfast carbs, lunch protein, snack kcal, dinner fat,
+all metric tokens), the type as the title, "7:15 · 3 tétel" under it (DS-07 time, so "7:15 AM · 3 items" in
+EN), the kcal total, a "＋" (add to this meal) and a "⋯" with Szerkesztés / Másolás / Törlés… (the Menu adds
+the ellipsis to the destructive one). A recipe meal — the meals `LogRecipeDialog` creates carry the recipe's
+name — is one row for the whole portion ("Csirkés rizstál brokkolival · 420 g", meta "12:30 · recept"), a food
+meal lists its foods. Rows are the planned 4-column grid (`1fr | 220 | 80 | 36`, left inset 74 so they line up
+under the title): the name (wraps to a second line, never truncates — a spec checks a 70-character Hungarian
+name gets more than one line and no ellipsis or hidden overflow), grams only under it (no household units,
+D-W0.19), protein / carbs / fat each behind an 8 px metric dot in **whole grams** as on the canvas (always
+visible, with screen-reader labels), the kcal, and a row "⋯" that is transparent until hover *or focus-within*
+— so it can be tabbed to — and always shown on a phone. `MealsView` lists the types in the canvas order
+(breakfast, lunch, snack, dinner) as bare cards; a type with nothing logged still shows the old dashed add /
+copy-yesterday buttons until W2.4 replaces them with slot cards. The row "⋯" offers Edit only for now — W2.8
+adds "delete item" there. `MealCard` is also the trainer's read-only view of a client's day
+(`ClientNutritionTab`), which has no handlers: it simply draws no actions and gets the new look for free (W8
+reworks that screen). Two small fixes the spec run caught: a unit next to a number needs a real space, not a
+margin, or the accessible name reads "379kcal". Gallery section "Meal card" (multi-item breakfast with the
+long name, recipe lunch, one-item snack, a read-only card) + `e2e/ds/mealCard.spec.ts` (7 tests); checked on
+the real page on 27 Sep (the canvas' 859 / 1 041 day): two recipe cards with their rows and dots.
 
 ### W2.4 — Web UI: empty meal-type slot cards
 - Files: `features/nutrition/components/EmptyMealSlot.tsx`, `copyMeal.ts` (`suggestCopy` from W1.3).

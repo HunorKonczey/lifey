@@ -924,7 +924,15 @@
     "tabsAria": "Nutrition sections",
     "addFood": "Add food",
     "copyFromDay": "Copy from an earlier day",
-    "goalLabel": "Goal"
+    "goalLabel": "Goal",
+    "mealMeta": "{time} · {count, plural, one {# item} other {# items}}",
+    "recipeMealMeta": "{time} · recipe",
+    "menuEdit": "Edit",
+    "menuDuplicate": "Duplicate",
+    "menuDelete": "Delete",
+    "mealMenuLabel": "Meal options",
+    "itemMenuLabel": "Item options",
+    "addToThisMeal": "Add to this meal"
   },
   "workouts": {
     "sessions": "Sessions",

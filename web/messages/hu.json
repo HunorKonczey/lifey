@@ -924,7 +924,15 @@
     "tabsAria": "Táplálkozás szakaszai",
     "addFood": "Étel hozzáadása",
     "copyFromDay": "Másolás korábbi napról",
-    "goalLabel": "Cél"
+    "goalLabel": "Cél",
+    "mealMeta": "{time} · {count} tétel",
+    "recipeMealMeta": "{time} · recept",
+    "menuEdit": "Szerkesztés",
+    "menuDuplicate": "Másolás",
+    "menuDelete": "Törlés",
+    "mealMenuLabel": "Étkezés műveletei",
+    "itemMenuLabel": "Tétel műveletei",
+    "addToThisMeal": "Hozzáadás ehhez az étkezéshez"
   },
   "workouts": {
     "sessions": "Edzések",

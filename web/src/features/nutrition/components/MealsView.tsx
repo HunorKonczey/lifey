@@ -15,6 +15,7 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddMealEntryDialog } from "./AddMealEntryDialog";
 import { GridItem, PageGrid } from "@/components/ds";
+import { MEAL_TYPE_STYLE } from "../mealTypeStyle";
 import { DaySummaryView } from "./DaySummary";
 import { MealCard, mealCarbs, mealFat, mealKcal, mealProtein } from "./MealCard";
 import { useNutritionUi } from "../nutritionUi";
@@ -38,10 +39,10 @@ export function MealsView() {
   const [removingMeal, setRemovingMeal] = useState<MealResponse | null>(null);
 
   const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
-    { type: "BREAKFAST", label: t("breakfast"), icon: "bakery_dining" },
-    { type: "LUNCH", label: t("lunch"), icon: "lunch_dining" },
-    { type: "DINNER", label: t("dinner"), icon: "dinner_dining" },
-    { type: "SNACK", label: t("snack"), icon: "icecream" },
+    { type: "BREAKFAST", label: t("breakfast"), icon: MEAL_TYPE_STYLE.BREAKFAST.icon },
+    { type: "LUNCH", label: t("lunch"), icon: MEAL_TYPE_STYLE.LUNCH.icon },
+    { type: "SNACK", label: t("snack"), icon: MEAL_TYPE_STYLE.SNACK.icon },
+    { type: "DINNER", label: t("dinner"), icon: MEAL_TYPE_STYLE.DINNER.icon },
   ];
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -134,39 +135,38 @@ export function MealsView() {
       <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 1, xl: 0 }} className="flex flex-col gap-6">
         {MEAL_GROUPS.map(({ type, label, icon }) => {
           const meals = todayMeals.filter((m) => m.mealType === type);
-          const groupKcal = meals.reduce((s, m) => s + mealKcal(m), 0);
           const prevMeals = previousDayMeals.filter((m) => m.mealType === type);
           // "Yesterday" is only a meaningful label while viewing today —
           // browsing a past day would make the wording ambiguous, so the
-          // shortcut only appears there (the panel's "Copy previous day"
-          // below works for any viewed day).
+          // shortcut only appears there.
           const canCopyYesterday = meals.length === 0 && prevMeals.length > 0 && isToday(date);
+
+          // A logged meal type is just its cards (each carries the type's icon and name);
+          // a type with nothing logged keeps the dashed slot until W2.4 replaces it.
+          if (meals.length > 0) {
+            return (
+              <div key={type} className="flex flex-col gap-3">
+                {meals.map((meal) => (
+                  <MealCard
+                    key={meal.id}
+                    meal={meal}
+                    onAdd={() => setAddingTo(type)}
+                    onEdit={() => setEditingMeal(meal)}
+                    onDuplicate={() => duplicateMutation.mutate(meal)}
+                    onDelete={() => setRemovingMeal(meal)}
+                    isDeleting={deleteMutation.isPending && deleteMutation.variables === meal.id}
+                  />
+                ))}
+              </div>
+            );
+          }
+
           return (
             <div key={type} className="flex flex-col gap-2">
-              {/* Section header */}
               <div className="flex items-center gap-2 px-1">
-                <span className="material-symbols-rounded text-xl" style={{ color: "var(--metric-kcal)" }}>{icon}</span>
+                <span className="material-symbols-rounded text-xl" style={{ color: MEAL_TYPE_STYLE[type].color }}>{icon}</span>
                 <span className="font-bold text-sm">{label}</span>
-                {groupKcal > 0 && (
-                  <span className="ml-auto text-sm font-semibold tabular" style={{ color: "var(--metric-kcal)" }}>
-                    {Math.round(groupKcal)} kcal
-                  </span>
-                )}
               </div>
-
-              {/* Meal cards */}
-              {meals.map((meal) => (
-                <MealCard
-                  key={meal.id}
-                  meal={meal}
-                  onEdit={() => setEditingMeal(meal)}
-                  onDuplicate={() => duplicateMutation.mutate(meal)}
-                  onDelete={() => setRemovingMeal(meal)}
-                  isDeleting={deleteMutation.isPending && deleteMutation.variables === meal.id}
-                />
-              ))}
-
-              {/* Add button */}
               <button
                 onClick={() => setAddingTo(type)}
                 className="w-full py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container"
@@ -174,8 +174,6 @@ export function MealsView() {
               >
                 <span className="material-symbols-rounded text-lg">add</span> {t("addTo", { meal: label })}
               </button>
-
-              {/* Copy yesterday's meals of this type */}
               {canCopyYesterday && (
                 <button
                   onClick={() => copyMealsMutation.mutate(prevMeals)}
@@ -186,7 +184,7 @@ export function MealsView() {
                   <span className="material-symbols-rounded text-lg">content_copy</span>
                   {t("copyPreviousDayGhost", {
                     meal: label,
-                    kcal: Math.round(prevMeals.reduce((s, m) => s + mealKcal(m), 0)),
+                    kcal: Math.round(prevMeals.reduce((sum, m) => sum + mealKcal(m), 0)),
                   })}
                 </button>
               )}
