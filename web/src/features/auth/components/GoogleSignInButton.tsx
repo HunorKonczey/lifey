@@ -116,7 +116,8 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
           type: "standard",
           theme: isDark ? "filled_black" : "outline",
           size: "large",
-          width: "320",
+          // The official button is a fixed-height iframe; it takes the column's width (GIS caps it at 400).
+          width: String(Math.min(400, Math.max(200, Math.round(containerRef.current.clientWidth || 320)))),
           text: "continue_with",
           locale,
         });
@@ -134,15 +135,15 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
   if (!env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return null;
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full mt-2">
-      <div className="flex items-center gap-3 w-full">
-        <div className="h-px flex-1" style={{ background: "var(--outline)" }} />
-        <span className="text-xs" style={{ color: "var(--on-surface-variant)" }}>
-          {t("orContinueWith")}
+    <div className="flex flex-col gap-5 w-full">
+      <div ref={containerRef} className="w-full flex justify-center min-h-10" />
+      <div className="flex items-center gap-3 w-full" aria-hidden>
+        <div className="h-px flex-1" style={{ background: "var(--hairline)" }} />
+        <span className="type-body-s" style={{ color: "var(--text-3)", fontWeight: 600 }}>
+          {t("orWithEmail")}
         </span>
-        <div className="h-px flex-1" style={{ background: "var(--outline)" }} />
+        <div className="h-px flex-1" style={{ background: "var(--hairline)" }} />
       </div>
-      <div ref={containerRef} className="w-full flex justify-center" />
     </div>
   );
 }

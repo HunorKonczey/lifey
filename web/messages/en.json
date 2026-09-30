@@ -596,7 +596,7 @@
     "firstName": "First name",
     "lastName": "Last name",
     "confirmPassword": "Confirm password",
-    "welcomeBack": "Welcome back",
+    "welcomeBack": "Welcome back!",
     "signingIn": "Signing in…",
     "creating": "Creating account…",
     "noAccount": "Don't have an account?",
@@ -624,7 +624,18 @@
     "googleSignInFailed": "Google sign-in failed. Please try again.",
     "invalidCredentials": "Invalid email or password",
     "firstNamePlaceholder": "Jane",
-    "lastNamePlaceholder": "Doe"
+    "lastNamePlaceholder": "Doe",
+    "brandTitle": "Meals, workouts and your coach, in one place.",
+    "brandBody": "The same account as in the mobile app. Whatever you log there shows up here at once, and your coach sees it too.",
+    "brandKcalLeft": "kcal left",
+    "brandRecord": "New record",
+    "brandRecordDetail": "Squat · 62.5 kg × 8",
+    "loginTagline": "Sign in with your email or your Google account.",
+    "orWithEmail": "or with email",
+    "invalidCredentialsLong": "Wrong email or password. Check them, or ask for a new password.",
+    "emailPlaceholder": "you@example.com",
+    "noAccountShort": "No account yet?",
+    "signUp": "Sign up"
   },
   "common": {
     "today": "Today",
@@ -679,7 +690,9 @@
     "rowDensity": "Row density",
     "densityComfortable": "Comfortable",
     "densityCompact": "Compact",
-    "done": "Done"
+    "done": "Done",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "status": {
     "emptyTitle": "Nothing here yet",

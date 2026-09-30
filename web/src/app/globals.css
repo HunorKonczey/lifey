@@ -731,3 +731,25 @@ input[type="number"] { -moz-appearance: textfield; }
   .rest-urgent { animation: none; }
 }
 :root[data-force-reduced-motion="true"] .rest-urgent { animation: none; }
+
+/* A surface that stays dark in both themes (W6-A's auth brand panel): re-declares the dark values of the tokens such a
+   surface reads, so components placed inside it keep their dark look under [data-theme="light"]. */
+.dark-island {
+  --bg:       #12130E;
+  --card:     #1A1C15;
+  --nested:   #22251C;
+  --control:  #2C2F24;
+  --raised:   #36392D;
+  --text:     #F2F1E6;
+  --text-2:   #B6B5A5;
+  --text-3:   #8F8F80;
+  --hairline: rgba(242, 241, 230, .07);
+  --primary:  #B5C47C;
+  --on-primary: #1A1F0A;
+  --m-kcal:   #EC9A66;
+  --m-carbs:  #E2BE62;
+  --record:   var(--m-carbs);
+  --chip-tint: 16%;
+  background: var(--bg);
+  color: var(--text);
+}

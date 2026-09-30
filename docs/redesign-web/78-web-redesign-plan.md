@@ -2757,14 +2757,18 @@ OptionCard,ConfirmSaveDetailsDialog}.tsx`; `app/(app)/settings/page.tsx` (461, s
   célok 1 900 kcal · Megjelenés Sötét · Nyelv Magyar · Egységek kg · L · Értesítések "3 be" · Biztonság),
   each opening its section as a sheet; "Kijelentkezés…" at the bottom.
 
-### W6.1 — Web UI: auth layout with the brand panel
+### W6.1 — Web UI: auth layout with the brand panel ✅
 - Files: `app/(auth)/layout.tsx`, `features/auth/components/BrandPanel.tsx`.
 - **Verify:** 1440 light + dark, 1024, 390 (brand panel reduced); the marketing header link still works.
 
-### W6.2 — Web UI: login form, Google button, error states
+*As built:* the auth layout is W6-A: `grid 1fr | 1fr` from 1024 px — the **dark brand panel** (`BrandPanel`: logo, "Étrend, edzés és az edződ, egy helyen.", the same-account sentence, and two real components with static demo values — a `ProgressRing` with "859 kcal maradt" and a `RecordChip` card "Új rekord · Guggolás · 62,5 kg × 8") beside the form column (max 440). The panel is **dark in both themes** through a new `.dark-island` class in `globals.css` that re-declares the dark values of the tokens such a surface reads (so the ring and chip inside keep their dark look under `[data-theme="light"]`; reusable for any future always-dark surface). Below 1024 the panel collapses to the logo row (`LifeyLogo`) and the form starts at the top with its main button pinned near the thumb. The old centred card is gone from every auth route (login, register, forgot-password all render inside the new column until W6.3/W6.4 restyle their content).
+
+### W6.2 — Web UI: login form, Google button, error states ✅
 - Files: `app/(auth)/login/page.tsx`, `features/auth/components/GoogleSignInButton.tsx` (restyle only — the
   GIS script handling is unchanged).
 - **Verify:** wrong password → form error + field rings; screen reader announces the error.
+
+*As built:* the login page is the canvas: "Üdv újra!", "Lépj be az e-mail címeddel vagy Google-fiókkal.", the **Google button first**, a divider "vagy e-maillel", then the DS `TextField` / `PasswordField` at the 52 px auth size (the password label row carries "Elfelejtetted?"), "Belépés" as a full-width 52 px `Button`, "Még nincs fiókod? Regisztráció". **Errors you cannot miss:** a wrong password no longer pins the message on the password field — both fields get the red ring (new `invalid` prop on `Field` / `TextField` / `PasswordField`: the ring without a message of its own, `aria-invalid` set) and a **heart-tinted `FormErrorBox`** with an icon and "Hibás e-mail cím vagy jelszó. Ellenőrizd, vagy kérj új jelszót." sits above the button as `role="alert"`, so a screen reader announces it; field-level validation messages (bad e-mail, short password) still show under their field. The show/hide-password button's label was hard-coded English; it is now `common.showPassword / hidePassword` in both languages. **Google button:** `GoogleSignInButton` keeps the official GIS-rendered button (its own iframe can neither be 52 px tall nor restyled — the old Q5 rule stands; the script handling is untouched), now placed above the divider and sized to the column (GIS caps it at 400 px); **deviation:** it is the 40 px official button, not the canvas' 52 px custom one. Checked with Playwright at 1440 light / dark, 1024 and 390 dark: the wrong-password state shows both rings and the box, the panel reduces to the logo row at 390, the button sits at the bottom.
 
 ### W6.3 — Web UI: register + trainer path
 - Files: `app/(auth)/register/page.tsx`, `features/auth/components/{PasswordStrength,TrainerSignupStepper}.tsx`.

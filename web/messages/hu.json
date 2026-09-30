@@ -596,7 +596,7 @@
     "firstName": "Keresztnév",
     "lastName": "Vezetéknév",
     "confirmPassword": "Jelszó megerősítése",
-    "welcomeBack": "Üdv vissza",
+    "welcomeBack": "Üdv újra!",
     "signingIn": "Bejelentkezés…",
     "creating": "Fiók létrehozása…",
     "noAccount": "Nincs még fiókod?",
@@ -624,7 +624,18 @@
     "googleSignInFailed": "A Google bejelentkezés sikertelen. Próbáld újra.",
     "invalidCredentials": "Hibás e-mail cím vagy jelszó",
     "firstNamePlaceholder": "Anna",
-    "lastNamePlaceholder": "Kovács"
+    "lastNamePlaceholder": "Kovács",
+    "brandTitle": "Étrend, edzés és az edződ, egy helyen.",
+    "brandBody": "Ugyanaz a fiók, mint a mobilappban. Amit ott naplózol, itt azonnal látod — és az edződ is.",
+    "brandKcalLeft": "kcal maradt",
+    "brandRecord": "Új rekord",
+    "brandRecordDetail": "Guggolás · 62,5 kg × 8",
+    "loginTagline": "Lépj be az e-mail címeddel vagy Google-fiókkal.",
+    "orWithEmail": "vagy e-maillel",
+    "invalidCredentialsLong": "Hibás e-mail cím vagy jelszó. Ellenőrizd, vagy kérj új jelszót.",
+    "emailPlaceholder": "pelda@email.hu",
+    "noAccountShort": "Még nincs fiókod?",
+    "signUp": "Regisztráció"
   },
   "common": {
     "today": "Ma",
@@ -679,7 +690,9 @@
     "rowDensity": "Sorok sűrűsége",
     "densityComfortable": "Kényelmes",
     "densityCompact": "Kompakt",
-    "done": "Kész"
+    "done": "Kész",
+    "showPassword": "Jelszó megjelenítése",
+    "hidePassword": "Jelszó elrejtése"
   },
   "status": {
     "emptyTitle": "Még nincs semmi itt",

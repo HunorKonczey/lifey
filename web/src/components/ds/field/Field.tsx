@@ -13,6 +13,8 @@ export interface FieldProps {
   label?: string;
   hint?: string;
   error?: string;
+  /** The red ring without a message of its own — for a failure a form-level box explains (W6.2). */
+  invalid?: boolean;
   required?: boolean;
   disabled?: boolean;
   /** Plain text, no field shape (DS-03) — for a value the viewer can't edit
@@ -41,6 +43,7 @@ export function Field({
   label,
   hint,
   error,
+  invalid,
   required,
   disabled,
   readOnly,
@@ -80,7 +83,7 @@ export function Field({
         data-ring-frame
         className={[
           "lifey-field",
-          error ? "lifey-field-error" : "",
+          error || invalid ? "lifey-field-error" : "",
           disabled ? "opacity-45 pointer-events-none" : "",
           autoHeight ? "lifey-field-autoheight" : "",
         ]
