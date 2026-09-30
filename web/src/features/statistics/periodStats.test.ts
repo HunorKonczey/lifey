@@ -201,7 +201,7 @@ describe("weight", () => {
   });
 
   it("a far goal stays off the scale and is flagged; a near one widens it", () => {
-    expect(weightScale([69, 70.5], 65)).toEqual({ min: 68.5, max: 71 });
+    expect(weightScale([69, 70.5], 65)).toEqual({ min: 68.5, max: 71.5 });
     const far = week({ ...EMPTY, weights: [{ id: 1, date: iso(2026, 9, 21), weight: 70.5 }, { id: 2, date: iso(2026, 9, 26), weight: 69 }] });
     expect(far.weight.goalOutsideScale).toBe(true);
     expect(weightScale([69, 70.5], 68.5)!.min).toBeLessThanOrEqual(68.5);
@@ -213,8 +213,14 @@ describe("movement", () => {
     const raw: RawData = { ...EMPTY, sessions: [lift(2026, 9, 22, 7240), lift(2026, 9, 24, 5880)] };
     const s = week(raw, new Date(2026, 8, 25, 9));
     expect(s.volume.values).toEqual([null, 7240, null, 5880, null, null, null]);
-    expect(s.volume.rest).toEqual([true, false, true, false, false, false, false]); // Fri is today, Sat and Sun are still to come
+    expect(s.volume.rest).toEqual([false, false, true, false, false, false, false]); // Mon precedes the first record; Fri is today, Sat and Sun are still to come
     expect(s.volume.total).toBe(13120);
+  });
+
+  it("a slot before anything was ever recorded is not a rest day", () => {
+    const raw: RawData = { ...EMPTY, sessions: [lift(2026, 9, 24, 5880)] };
+    const s = week(raw, new Date(2026, 8, 27, 9));
+    expect(s.volume.rest).toEqual([false, false, false, false, true, true, false]); // Mon-Wed precede the first record, Thu has the workout, Fri and Sat are rest, Sun is today
   });
 
   it("cardio counts distance and machine families, not games, and leaves other days null", () => {

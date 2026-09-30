@@ -25,10 +25,10 @@ describe("axisColumns", () => {
     expect(labels.filter(Boolean)).toEqual(["szept. 1.", "5", "10", "15", "20", "25", "30"]);
   });
 
-  it("year: one name per month over its first column", () => {
+  it("year: every second month named over its first column", () => {
     const slots = buildSlots("year", periodRange("year", d(2026, 1, 1)), NOW);
     const named = axisColumns("year", slots, en, "Today").map((c) => c.axisLabel).filter(Boolean);
-    expect(named).toEqual(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]);
+    expect(named).toEqual(["Jan", "Mar", "May", "Jul", "Sep", "Nov"]);
     expect(axisColumns("year", slots, hu, "Ma").every((c) => !c.isToday)).toBe(true);
   });
 });

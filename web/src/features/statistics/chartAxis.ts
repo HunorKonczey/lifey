@@ -9,7 +9,7 @@ import type { Slot } from "./periodStats";
  * - **week** — the weekday ("H K Sze Cs P Szo V"), today as "Ma";
  * - **month** — the 1st as "szept. 1.", then every fifth day as a bare number; everything else stays empty so 30
  *   labels never crowd a 358 px card;
- * - **year** — a month name over the first week of each month.
+ * - **year** — a month name over the first week of every second month (jan. márc. máj. …), so twelve names never crowd a third-width card.
  *
  * `key` is unique per column (the ISO date) — recharts keys its category axis by it, and the printed `axisLabel`
  * may be empty or repeat.
@@ -31,9 +31,10 @@ export function axisColumns(period: StatsPeriod, slots: Slot[], fmt: LifeyFormat
       if (day === 1) return { key, axisLabel: fmt.shortDate(slot.start), isToday };
       return { key, axisLabel: day % 5 === 0 && day <= 30 ? String(day) : "", isToday };
     }
-    // Year: name a month over its first column. A column belongs to the month holding its middle day, so a week
+    // Year: name every second month over its first column. A column belongs to the month holding its middle day, so a week
     // straddling two months is named once and "jan." always sits over the first column.
-    const label = monthStartsHere(slot, slots[i - 1]) ? fmt.monthShort(middleDay(slot)) : "";
+    const month = getMonth(middleDay(slot));
+    const label = monthStartsHere(slot, slots[i - 1]) && month % 2 === 0 ? fmt.monthShort(middleDay(slot)) : "";
     return { key, axisLabel: label, isToday: false };
   });
 }

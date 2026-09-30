@@ -151,8 +151,10 @@ interface Daily {
   cardioKm: Map<string, number>;
   workouts: Map<string, number>;
   weight: Map<string, number>;
-  /** Every day anything was logged in meals — the year view's "since when". */
+  /** The first day any meal was logged — the year view's "since when". */
   firstMeal: Date | null;
+  /** The first day anything at all was recorded; before it a missing workout is not a rest day, it is just before the account. */
+  firstData: Date | null;
 }
 
 /** Everything bucketed by local day, once. A day without an entry has no key — that is what "missing" means. */
@@ -164,18 +166,31 @@ export function bucketByDay(raw: RawData): Daily {
   const workouts = new Map<string, number>();
   const weight = new Map<string, number>();
   let firstMeal: Date | null = null;
+  let firstData: Date | null = null;
+  const seen = (d: Date) => {
+    if (firstData == null || d.getTime() < firstData.getTime()) firstData = d;
+  };
 
   for (const m of raw.meals) {
     const day = dayOf(m.dateTime);
     const key = iso(day);
     calories.set(key, (calories.get(key) ?? 0) + m.entries.reduce((s, e) => s + e.calories, 0));
     if (firstMeal == null || day.getTime() < firstMeal.getTime()) firstMeal = day;
+    seen(day);
   }
-  for (const s of raw.steps) if (s.steps > 0) steps.set(s.date, s.steps);
-  for (const w of raw.weights) weight.set(w.date, w.weight);
+  for (const w of raw.water) seen(dayOf(w.consumedAt));
+  for (const s of raw.steps) {
+    if (s.steps > 0) steps.set(s.date, s.steps);
+    seen(dayOf(s.date));
+  }
+  for (const w of raw.weights) {
+    weight.set(w.date, w.weight);
+    seen(dayOf(w.date));
+  }
 
   for (const session of raw.sessions) {
     const key = iso(dayOf(session.startedAt));
+    seen(dayOf(session.startedAt));
     workouts.set(key, (workouts.get(key) ?? 0) + 1);
     for (const set of session.sets) {
       const setKey = iso(dayOf(set.performedAt));
@@ -190,7 +205,7 @@ export function bucketByDay(raw: RawData): Daily {
       }
     }
   }
-  return { calories, steps, volume, cardioKm, workouts, weight, firstMeal };
+  return { calories, steps, volume, cardioKm, workouts, weight, firstMeal, firstData };
 }
 
 /** Cardio sessions in `range` that contributed a distance — the "2 alkalom" under the cardio chart. */
@@ -358,8 +373,10 @@ export function buildPeriodStats({ raw, period, start, now, goals }: StatsInput)
 
   const volumeValues = slots.map((s) => slotValue(daily.volume, s, today, "sum", false));
   const hadWorkout = slots.map((s) => valuesIn(daily.workouts, { start: s.start, end: s.end }, today, { excludeToday: false }).length > 0);
-  // A finished slot with no workout is a rest day (a dot on the axis); today and the future are simply not drawn yet.
-  const rest = slots.map((s, i) => !s.isFuture && !s.isCurrent && !hadWorkout[i]);
+  // A finished slot with no workout is a rest day (a dot on the axis); today and the future are simply not drawn yet,
+  // and neither is anything before the first thing the account ever recorded.
+  const firstData = daily.firstData;
+  const rest = slots.map((s, i) => !s.isFuture && !s.isCurrent && !hadWorkout[i] && firstData != null && s.end.getTime() >= firstData.getTime());
 
   const cardioValues = slots.map((s) => {
     const v = slotValue(daily.cardioKm, s, today, "sum", false);
@@ -418,5 +435,9 @@ export function weightScale(points: number[], goal: number | null): { min: numbe
       max = widenedMax;
     }
   }
-  return { min: Math.floor(min * 2) / 2, max: Math.ceil(max * 2) / 2 };
+  // Whole and half kilos at both ends, and a span of whole kilos so the middle tick is a clean .0 or .5 too.
+  const bottom = Math.floor(min * 2) / 2;
+  let top = Math.ceil(max * 2) / 2;
+  if (((top - bottom) * 2) % 2 !== 0) top += 0.5;
+  return { min: bottom, max: top };
 }
