@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Icon } from "../Icon";
 import { SegmentedControl } from "../SegmentedControl";
 import type { TableDensity } from "./DataTable";
@@ -26,6 +27,7 @@ export const TableToolbar = forwardRef<HTMLInputElement, TableToolbarProps>(func
   { searchValue, onSearchChange, searchPlaceholder, density, onDensityChange, filters, action },
   searchRef,
 ) {
+  const t = useTranslations("common");
   return (
     <div className="flex flex-wrap items-center gap-3 p-4" style={{ borderBottom: "1px solid var(--hairline)" }}>
       {onSearchChange && (
@@ -50,11 +52,11 @@ export const TableToolbar = forwardRef<HTMLInputElement, TableToolbarProps>(func
       {filters}
       <div className="flex-1 min-w-0" />
       <SegmentedControl
-        aria-label="Row density"
+        aria-label={t("rowDensity")}
         size="sm"
         options={[
-          { value: "comfortable", label: "Comfortable" },
-          { value: "compact", label: "Compact" },
+          { value: "comfortable", label: t("densityComfortable") },
+          { value: "compact", label: t("densityCompact") },
         ]}
         value={density}
         onChange={onDensityChange}

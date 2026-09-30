@@ -2125,7 +2125,7 @@ naphoz adódik, nem írja felül." (or "{nap} napjához …" when a past day is 
 Everything starts ticked on the first chip each time it opens, and the first chip takes focus (a frame late,
 so the Popover's focus-return still remembers the real trigger — Esc returns to the button). Copies are **new
 meals** at the source meal's time of day on the viewed day (`copyMealPayload`), so nothing is overwritten; the
-success toast "2 étkezés másolva" has Undo, which deletes exactly the meals that copy created. Pure helpers in
+success toast "2 étkezés átmásolva" has Undo, which deletes exactly the meals that copy created. Pure helpers in
 `copyFromDay.ts` (8 tests: quick days across month ends and DST, a day's meals in time order, logged-day keys,
 chip mapping). The old confirm, its `copyMealsMutation`, the `nutritionUi.ts` store it needed (the popover
 state now lives in the page next to its button) and four dead messages are removed. Verified on the real
@@ -2135,11 +2135,51 @@ button to "1 étkezés másolása", and Undo sent two `DELETE`s and returned to 
 popover" and `e2e/ds/copyFromDay.spec.ts` (10 tests, incl. the calendar dots, the empty day, focus return,
 reopening reset and the Hungarian copy).
 
-### W2.10 — Web UI: foods table + editor panel
+### W2.10 — Web UI: foods table + editor panel ✅
 - Files: `features/nutrition/components/{FoodsView,FoodEditor}.tsx`, `features/nutrition/macroCheck.ts` +
   test.
 - **Verify:** sorting by every column, `/` focuses search, row ⋯ "Naplózás ma" opens the add-food modal
   preselected; mismatch info line thresholds.
+
+*As built:* The foods tab is now the DS `DataTable` plus a 380 px editor panel, both presentational
+(`FoodsTable.tsx`, `FoodEditor.tsx`) under a connected `FoodsView`. The table works on the whole food list —
+the query the tab's count and the add-food dialog already use — so every column sorts across all foods,
+"Utoljára" included (from `usage.ts`: "ma", "tegnap", "szept. 25.", "—" for a food not logged in 90 days): Név
+· kcal / 100 g · Fehérje · Szénhidrát · Zsír (each macro header with its metric dot) · Utoljára, a search
+field (placeholder "Keresés /", `/` focuses it, matches ignore accents and case and need every word —
+`foodsTable.ts`, 4 tests), "＋ Új étel", "18 étel · 1–15" paging and one "⋯" per row: Szerkesztés, Duplikálás
+(creates "X (másolat)", "(másolat 2)"… and opens it in the editor), Naplózás ma (the add-food modal
+preselected on that food, logging to today) and a destructive Törlés… (a `ConfirmModal`, then the W2.8 undo
+toast: the food leaves the list at once, Undo sends nothing, the real `DELETE` — a soft delete on the backend,
+so meals that used the food keep it — goes out after 6 s). Clicking a row opens the editor beside the table
+from 1280 (above it below that; the phone layout is W2.12): Név, a fixed "Alapmennyiség 100 g", Kalória /
+Fehérje / Szénhidrát / Zsír as DS `NumberField`s (two decimals, the locale's comma), an optional barcode with
+a "Keresés" lookup for a new food (OpenFoodFacts prefill, or the existing food if the barcode is already
+yours), "Mégsem" + "Mentés". **Mentés stays disabled until something really changed** (`foodEdit.ts`, 9
+tests): a number counts as changed only at the two decimals the field shows, so tabbing through a stored
+13.3333 is not an edit, and untouched numbers are saved exactly as stored. The **macro line**
+(`macroCheck.ts`, 7 tests) appears while typing — "A makrók 72 kcal-t adnak ki — ez 1 kcal-lal tér el." — as a
+grey info note for any gap up to 10 % of the kcal and a red warning above it (kcal 0 with macros is a
+warning); it never blocks saving, and it updates live so it cannot shift "Mentés" away between mouse-down and
+click (found in the gallery spec: with blur-only commits the click was lost). A duplicate name comes back as a
+409 and shows under the name field. Called out: the editor no longer has the "hidden from search" switch and
+the table never listed hidden foods anyway (the backend list and the tab count exclude them), the always-
+visible "Add to meal" button moved into the row menu, and the barcode box moved from the toolbar into the new-
+food editor. Three platform fixes found on the way: (1) **`DataTable` sorted text by code point**, so
+"Édesburgonya" landed after "Zabpehely" — it now uses `Intl.Collator` for the current locale (numeric-aware);
+(2) its `/` shortcut now answers only when its own search box is on screen (several tables per page, e.g. the
+gallery); (3) the toolbar's "Row density / Comfortable / Compact" and the header cells were hard-coded English
+/ wrapped — now `common.*` ("Kényelmes / Kompakt") and `whitespace-nowrap`. Verified against the real backend
+(throwaway "ZZ W210" foods, removed afterwards; 18 foods before and after): 15 rows on page one with "18 étel
+· 1–15", `/` focuses the search, all six columns sort both ways (Név Alma → Zabpehely, Zsír Édesburgonya →
+Mandula, …), a new food with kcal 200 and macros giving 165 shows the red line "…165 kcal-t adnak ki — ez 35
+kcal-lal tér el.", Mentés sends one `POST`, editing kcal to 205 one `PUT` (stored 205), Duplikálás one `POST`
+and opens "ZZ W210 teszt (másolat)", Naplózás ma opens the modal with the food, and delete → Visszavonás sends
+nothing while a second delete sends exactly one `DELETE` after the window. Gallery section "Foods table and
+editor" (18 foods) and `e2e/ds/foodsTable.spec.ts` (10 tests: headers/count, Last used, every column's sort,
+search, row menu, editor open/Save gating, untouched tabbing, the three macro-line tones, new food + lookup,
+Hungarian); the gallery can't assert `/` focus because its Shortcuts demo answers `/` as well — that one was
+checked on the real page.
 
 ### W2.11 — Web UI: recipe cards + log-recipe modal
 - Files: `features/nutrition/components/{RecipesView,RecipeCard,LogRecipeDialog,RecipeEditor}.tsx`,

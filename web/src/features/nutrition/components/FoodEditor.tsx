@@ -1,200 +1,161 @@
 "use client";
 
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { foodApi } from "../api";
-import { foodSchema, type FoodFormValues } from "../schemas";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { useToast } from "@/lib/hooks/useToast";
-import type { FoodResponse } from "../types";
+import { Button, Card, Icon, IconButton, NumberField, ReadOnlyField, TextField } from "@/components/ds";
+import { EMPTY_FOOD, FOOD_DECIMALS, fieldsFromFood, foodRequest, isFoodDirty, type FoodFields } from "../foodEdit";
+import { macroCheck } from "../macroCheck";
+import type { FoodRequest, FoodResponse } from "../types";
 
-interface FoodEditorProps {
-  food: FoodResponse | null; // null = new food
-  prefill?: Partial<FoodFormValues> & { barcode?: string };
-  onSaved: () => void;
+export interface FoodEditorProps {
+  /** The food being edited; null = a new one. The caller remounts the editor (`key`) to switch food. */
+  food: FoodResponse | null;
+  /** Values a new food starts with (a barcode lookup, the add-food dialog's "create “yoghurt”"). */
+  prefill?: Partial<FoodResponse>;
+  pending?: boolean;
+  /** A server-side complaint about the name ("already exists"); shown until the name is edited. */
+  nameError?: string;
+  onNameEdit?: () => void;
+  onSave: (request: FoodRequest) => void;
   onCancel: () => void;
-  /** Log the (saved) food in a new meal — only offered for an existing food (docs/75 §2.9). */
-  onAddToMeal?: (food: FoodResponse) => void;
+  /** Barcode lookup, offered for a new food only. */
+  onLookupBarcode?: (barcode: string) => void;
+  lookupPending?: boolean;
 }
 
-export function FoodEditor({ food, prefill, onSaved, onCancel, onAddToMeal }: FoodEditorProps) {
+/**
+ * The foods tab's editor panel (W2.10, extra-005/006): name, the fixed 100 g basis, kcal and the three
+ * macros, an optional barcode, and a live line when the macros don't add up to the kcal — an info note for a
+ * small gap, a warning above 10 % (it never blocks saving). "Mentés" stays disabled until something really
+ * changed (see `isFoodDirty`).
+ */
+export function FoodEditor({ food, prefill, pending, nameError, onNameEdit, onSave, onCancel, onLookupBarcode, lookupPending }: FoodEditorProps) {
   const t = useTranslations("nutrition.foodEditor");
   const fv = useTranslations("nutrition.foodsView");
   const common = useTranslations("common");
-  const queryClient = useQueryClient();
-  const { show } = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const MACRO_FIELDS = [
-    { name: "caloriesPer100g" as const, label: t("caloriesPer100g"), color: "var(--metric-kcal)" },
-    { name: "proteinPer100g" as const, label: t("proteinPer100g"), color: "var(--metric-protein)" },
-    { name: "carbsPer100g" as const, label: t("carbsPer100g"), color: "var(--metric-carbs)" },
-    { name: "fatPer100g" as const, label: t("fatPer100g"), color: "var(--metric-fat)" },
-  ];
+  const baseline: FoodFields = food ? fieldsFromFood(food) : EMPTY_FOOD;
+  const [fields, setFields] = useState<FoodFields>(() => fieldsFromFood(food, prefill));
+  const [triedSave, setTriedSave] = useState(false);
+  const set = <K extends keyof FoodFields>(key: K, value: FoodFields[K]) => setFields((f) => ({ ...f, [key]: value }));
 
-  const { register, handleSubmit, reset, control, setValue, formState: { errors } } =
-    useForm<FoodFormValues>({
-      resolver: zodResolver(foodSchema),
-      defaultValues: {
-        name: "", caloriesPer100g: 0, proteinPer100g: 0,
-        carbsPer100g: 0, fatPer100g: 0, barcode: null, hidden: false,
-      },
-    });
-
-  useEffect(() => {
-    if (food) {
-      reset({
-        name: food.name,
-        caloriesPer100g: food.caloriesPer100g,
-        proteinPer100g: food.proteinPer100g,
-        carbsPer100g: food.carbsPer100g ?? 0,
-        fatPer100g: food.fatPer100g ?? 0,
-        barcode: food.barcode,
-        hidden: food.hidden,
-      });
-    } else if (prefill) {
-      reset({
-        name: prefill.name ?? "",
-        caloriesPer100g: prefill.caloriesPer100g ?? 0,
-        proteinPer100g: prefill.proteinPer100g ?? 0,
-        carbsPer100g: prefill.carbsPer100g ?? 0,
-        fatPer100g: prefill.fatPer100g ?? 0,
-        barcode: prefill.barcode ?? null,
-        hidden: false,
-      });
-    } else {
-      reset({
-        name: "", caloriesPer100g: 0, proteinPer100g: 0,
-        carbsPer100g: 0, fatPer100g: 0, barcode: null, hidden: false,
-      });
+  const nameMissing = fields.name.trim() === "";
+  const dirty = isFoodDirty(fields, baseline);
+  const check = macroCheck(fields);
+  const submit = () => {
+    if (nameMissing) {
+      setTriedSave(true);
+      return;
     }
-  }, [food, prefill, reset]);
+    onSave(foodRequest(fields, baseline, food?.hidden ?? false));
+  };
+  // Enter inside a number field commits it first (NumberField does that on Enter), then saves a frame later with the new value.
+  const submitSoon = () => requestAnimationFrame(() => formRef.current?.requestSubmit());
 
-  const mutation = useMutation({
-    mutationFn: (values: FoodFormValues) =>
-      food ? foodApi.update(food.id, values) : foodApi.create(values),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() });
-      show(food ? t("updated") : t("created"), "success");
-      onSaved();
-    },
-    onError: () => show(t("saveFailed"), "error"),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => foodApi.delete(food!.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() });
-      show(t("deleted"), "success");
-      onSaved();
-    },
-    onError: () => show(t("deleteFailed"), "error"),
-  });
-
-  const hidden = useWatch({ control, name: "hidden" });
+  const macroField = (key: "kcal" | "protein" | "carbs" | "fat", label: string, unit: string) => (
+    <NumberField
+      label={label}
+      size="dense"
+      unit={unit}
+      value={fields[key]}
+      onChange={(v) => set(key, v)}
+      min={0}
+      step={key === "kcal" ? 10 : 0.5}
+      maxDecimals={FOOD_DECIMALS}
+      selectOnFocus
+      // Live, so the macro line below appears while typing — not on blur, where it would shift "Mentés" away mid-click.
+      liveUpdate
+      onEnter={submitSoon}
+    />
+  );
 
   return (
-    <form
-      onSubmit={handleSubmit((v) => mutation.mutate(v))}
-      className="flex flex-col gap-4 p-5 rounded-[var(--r-card)]"
-      style={{ background: "var(--surface)" }}
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="font-bold text-base">{food ? t("editFood") : t("newFood")}</h3>
-        <button type="button" onClick={onCancel} aria-label={common("close")}
-          className="p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container"
-          style={{ color: "var(--on-surface-variant)" }}>
-          <span className="material-symbols-rounded">close</span>
-        </button>
+    <Card className="flex flex-col gap-4" data-testid="food-editor">
+      <div className="flex items-center justify-between gap-2">
+        <h3 style={{ fontSize: 16, fontWeight: 800 }}>{food ? t("editFood") : t("newFood")}</h3>
+        <IconButton icon="close" label={t("closeAria")} onClick={onCancel} />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("name")}</label>
-        <input
-          {...register("name")}
-          className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
-          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-        />
-        {errors.name && <p className="text-xs" style={{ color: "var(--error)" }}>{errors.name.message}</p>}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {MACRO_FIELDS.map(({ name, label, color }) => (
-          <div key={name} className="flex flex-col gap-1">
-            <label className="text-xs font-semibold" style={{ color }}>{label}</label>
-            <input
-              {...register(name, { valueAsNumber: true })}
-              type="number" step="0.1"
-              className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
-              style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-            />
-            {errors[name] && <p className="text-xs" style={{ color: "var(--error)" }}>{errors[name]?.message}</p>}
-          </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("barcodeOptional")}</label>
-        <input
-          {...register("barcode")}
-          className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
-          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-        />
-      </div>
-
-      {/* Hidden toggle */}
-      <button
-        type="button"
-        onClick={() => setValue("hidden", !hidden)}
-        className="flex items-center justify-between px-1"
+      <form
+        ref={formRef}
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+        className="flex flex-col gap-4"
       >
-        <span className="text-sm font-semibold">{t("hiddenFromSearch")}</span>
-        <span
-          className="relative w-10 h-6 rounded-[var(--r-pill)] transition-colors"
-          style={{ background: hidden ? "var(--primary)" : "var(--surface-highest)" }}
-        >
-          <span
-            className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
-            style={{ left: hidden ? 18 : 2 }}
-          />
-        </span>
-      </button>
+        <TextField
+          label={t("name")}
+          size="dense"
+          value={fields.name}
+          onChange={(e) => {
+            set("name", e.target.value);
+            onNameEdit?.();
+          }}
+          error={nameError ?? (triedSave && nameMissing ? t("nameRequired") : undefined)}
+          autoFocus={!food}
+          required
+        />
 
-      {food && onAddToMeal && (
-        <button
-          type="button"
-          onClick={() => onAddToMeal(food)}
-          className="flex items-center justify-center gap-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-colors"
-          style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}
-        >
-          <span className="material-symbols-rounded text-lg">add_circle</span> {fv("addToMeal")}
-        </button>
-      )}
+        <ReadOnlyField label={t("basis")} value={t("basisValue")} />
 
-      <div className="flex gap-2 mt-1">
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="flex-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}
-        >
-          {mutation.isPending ? common("saving") : common("save")}
-        </button>
-        {food && (
-          <button
-            type="button"
-            onClick={() => deleteMutation.mutate()}
-            disabled={deleteMutation.isPending}
-            className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-colors"
-            style={{ background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)" }}
-            aria-label={t("deleteAria")}
+        <div className="grid grid-cols-2 gap-3">
+          {macroField("kcal", t("caloriesPer100g"), "kcal")}
+          {macroField("protein", t("proteinPer100g"), "g")}
+          {macroField("carbs", t("carbsPer100g"), "g")}
+          {macroField("fat", t("fatPer100g"), "g")}
+        </div>
+
+        {check.tone !== "ok" && (
+          <p
+            role="status"
+            data-testid="macro-line"
+            data-tone={check.tone}
+            className="type-body-s flex items-start gap-2"
+            style={{ color: check.tone === "warning" ? "var(--heart)" : "var(--text-2)" }}
           >
-            <span className="material-symbols-rounded text-xl">delete</span>
-          </button>
+            <Icon name={check.tone === "warning" ? "warning" : "info"} size={18} className="mt-px shrink-0" />
+            <span>{t("macroLine", { computed: check.computedKcal, diff: check.diffKcal })}</span>
+          </p>
         )}
-      </div>
-    </form>
+
+        <div className="flex items-end gap-2">
+          <TextField
+            label={t("barcodeOptional")}
+            size="dense"
+            className="flex-1"
+            inputMode="numeric"
+            value={fields.barcode}
+            onChange={(e) => set("barcode", e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && onLookupBarcode && fields.barcode.trim()) {
+                e.preventDefault();
+                onLookupBarcode(fields.barcode.trim());
+              }
+            }}
+          />
+          {onLookupBarcode && !food && (
+            <Button
+              variant="secondary"
+              onClick={() => onLookupBarcode(fields.barcode.trim())}
+              disabled={lookupPending || fields.barcode.trim() === ""}
+            >
+              {lookupPending ? "…" : fv("lookUp")}
+            </Button>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={onCancel} className="flex-1">
+            {common("cancel")}
+          </Button>
+          <Button type="submit" disabled={pending || !dirty} className="flex-1">
+            {pending ? common("saving") : common("save")}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }

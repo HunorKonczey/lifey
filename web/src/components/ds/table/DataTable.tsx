@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLocale } from "next-intl";
 import { Icon } from "../Icon";
 import type { MenuItemDef } from "../Menu";
 import { RowMenuButton } from "../RowMenuButton";
@@ -80,6 +81,7 @@ export function DataTable<T>({
   const [page, setPage] = useState(0);
   const [openRowMenu, setOpenRowMenu] = useState<number | null>(null);
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const locale = useLocale();
   const searchRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<(HTMLElement | null)[]>([]);
 
@@ -88,6 +90,9 @@ export function DataTable<T>({
       if (e.key !== "/" || !search) return;
       const target = e.target as HTMLElement;
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      // With more than one table on a page (the design gallery), only the one whose search box is on screen answers.
+      const box = searchRef.current?.getBoundingClientRect();
+      if (!box || box.bottom < 0 || box.top > window.innerHeight) return;
       e.preventDefault();
       searchRef.current?.focus();
     }
@@ -100,13 +105,16 @@ export function DataTable<T>({
     const col = columns.find((c) => c.key === sortKey);
     if (!col?.sort) return rows;
     const extract = col.sort;
+    // Text sorts by the locale's alphabet ("Édesburgonya" among the E's, not after "Zab…"), numbers numerically.
+    const collator = new Intl.Collator(locale, { numeric: true });
     return [...rows].sort((a, b) => {
       const va = extract(a);
       const vb = extract(b);
-      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+      const cmp =
+        typeof va === "string" && typeof vb === "string" ? collator.compare(va, vb) : va < vb ? -1 : va > vb ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [rows, sortKey, sortDir, columns]);
+  }, [rows, sortKey, sortDir, columns, locale]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
@@ -189,7 +197,7 @@ export function DataTable<T>({
                 {columns.map((col) => (
                   <th
                     key={col.key}
-                    className="group type-table-head px-4 h-10 select-none"
+                    className="group type-table-head px-4 h-10 select-none whitespace-nowrap"
                     style={{
                       color: "var(--text-3)",
                       textAlign: col.align ?? "left",

@@ -48,7 +48,7 @@ test("Shift+F10 opens the active row's menu", async ({ page }) => {
 test("the density switch changes row height", async ({ page }) => {
   const row = page.getByRole("table", { name: "Foods" }).locator("tbody tr").first();
   const comfortableHeight = (await row.boundingBox())!.height;
-  await page.getByRole("radio", { name: "Compact" }).click();
+  await page.locator("#table").getByRole("radio", { name: "Compact" }).click();
   const compactHeight = (await row.boundingBox())!.height;
   expect(compactHeight).toBeLessThan(comfortableHeight);
 });
@@ -56,8 +56,8 @@ test("the density switch changes row height", async ({ page }) => {
 test("pagination shows 10 rows on the first page and the rest on the second", async ({ page }) => {
   const rows = page.getByRole("table", { name: "Foods" }).locator("tbody tr");
   await expect(rows).toHaveCount(10);
-  await expect(page.getByText("18 foods", { exact: false })).toBeVisible();
-  await page.getByRole("button", { name: "Next page" }).click();
+  await expect(page.locator("#table").getByText("18 foods", { exact: false })).toBeVisible();
+  await page.locator("#table").getByRole("button", { name: "Next page" }).click();
   await expect(rows).toHaveCount(8);
 });
 
