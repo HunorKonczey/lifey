@@ -14,6 +14,10 @@ import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import type { WeightResponse } from "@/features/weight/types";
 import { useFormat } from "@/lib/i18n/format";
+import { GridItem, PageGrid } from "@/components/ds";
+import { userDetailsApi } from "@/features/onboarding/api";
+import { WeightHero } from "@/features/weight/components/WeightHero";
+import { buildWeightHero } from "@/features/weight/weightHero";
 import { DatePicker } from "@/components/ui/DatePicker";
 
 type Range = "1M" | "3M" | "1Y";
@@ -48,6 +52,10 @@ export default function WeightPage() {
     queryFn: weightApi.list,
   });
 
+  // 404 = onboarding not done — no goal weight, not an error.
+  const { data: userDetails } = useQuery({ queryKey: queryKeys.userDetails.all(), queryFn: userDetailsApi.get, retry: false });
+  const goalKg = userDetails?.targetWeightKg ?? null;
+
   const createMutation = useMutation({
     mutationFn: () => weightApi.create({ date: newDate, weight: Number(newWeight) }),
     onSuccess: () => {
@@ -68,11 +76,12 @@ export default function WeightPage() {
   });
 
   const sorted = (data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
-  const latest = sorted.at(-1) ?? null;
   const start = rangeStart(range);
   const chartData: SeriesPoint[] = sorted
     .filter((w) => new Date(w.date) >= start)
     .map((w) => ({ date: fmt.date(w.date, "day"), value: w.weight }));
+
+  const hero = buildWeightHero(data ?? [], goalKg, new Date());
 
   // History newest-first with delta vs previous chronological entry
   const history = sorted.slice().reverse();
@@ -123,16 +132,14 @@ export default function WeightPage() {
         <EmptyState icon="monitor_weight" title={t("noEntries")}
           body={t("noEntriesBody")} />
       ) : (
-        <div className="flex flex-col lg:flex-row gap-6">
+        <PageGrid>
+          <GridItem span={{ base: 4, md: 8, xl: 4 }} className="xl:row-span-2">
+            {hero && <WeightHero hero={hero} />}
+          </GridItem>
           {/* Chart */}
-          <div className="flex-1 min-w-0 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("current")}</p>
-                <p className="text-3xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
-                  {latest != null && fmt.number(latest.weight, 1, 1)} <span className="text-base" style={{ color: "var(--on-surface-variant)" }}>kg</span>
-                </p>
-              </div>
+          <GridItem span={{ base: 4, md: 8, xl: 8 }}>
+          <div className="min-w-0 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
+            <div className="flex items-center justify-end mb-4">
               <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} size="sm" />
             </div>
             {chartData.length > 0 ? (
@@ -141,9 +148,11 @@ export default function WeightPage() {
               <p className="text-sm text-center py-12" style={{ color: "var(--muted)" }}>{t("noDataInRange")}</p>
             )}
           </div>
+          </GridItem>
 
           {/* History */}
-          <div className="w-full lg:w-[300px] shrink-0 rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+          <GridItem span={{ base: 4, md: 8, xl: 8 }}>
+          <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
             <p className="text-sm font-bold mb-3">{t("history")}</p>
             <div className="flex flex-col">
               {history.map((w, idx) => {
@@ -175,7 +184,8 @@ export default function WeightPage() {
               })}
             </div>
           </div>
-        </div>
+          </GridItem>
+        </PageGrid>
       )}
     </div>
   );

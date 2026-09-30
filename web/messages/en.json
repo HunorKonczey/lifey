@@ -1354,6 +1354,17 @@
     "noMatches": "No workouts of this type yet."
   },
   "weight": {
+    "heroWeekUnit": "kg this week",
+    "heroSinceUnit": "kg since {date}",
+    "heroStart": "Start {weight}",
+    "heroGoal": "Goal {weight}",
+    "heroBandAria": "Progress from the starting weight to the goal",
+    "heroReached": "Goal reached",
+    "heroRemaining": "{kg} to go",
+    "heroEta": "at this pace {part, select, early {early {month}} mid {mid {month}} other {late {month}}}",
+    "heroAverage": "7-day average",
+    "heroPace": "Pace",
+    "heroPaceUnit": "kg / week",
     "newEntry": "New entry",
     "date": "Date",
     "weightKg": "Weight (kg)",

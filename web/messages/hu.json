@@ -1354,6 +1354,17 @@
     "noMatches": "Még nincs ilyen típusú edzés."
   },
   "weight": {
+    "heroWeekUnit": "kg a héten",
+    "heroSinceUnit": "kg {date} óta",
+    "heroStart": "Kezdés {weight}",
+    "heroGoal": "Cél {weight}",
+    "heroBandAria": "Haladás a kezdősúlytól a célig",
+    "heroReached": "Cél elérve",
+    "heroRemaining": "Még {kg}",
+    "heroEta": "a mostani tempóval {part, select, early {{month} elejére} mid {{month} közepére} other {{month} végére}}",
+    "heroAverage": "7 napos átlag",
+    "heroPace": "Tempó",
+    "heroPaceUnit": "kg / hét",
     "newEntry": "Új bejegyzés",
     "date": "Dátum",
     "weightKg": "Testsúly (kg)",
