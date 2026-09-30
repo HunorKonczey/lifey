@@ -14,7 +14,6 @@ import { useFormat } from "@/lib/format/useFormat";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useReducedMotion } from "@/lib/hooks/useReducedMotion";
 import { useTheme } from "@/lib/hooks/useTheme";
-import { Icon } from "../Icon";
 import { yAxisTicks } from "./chartMath";
 
 export interface BarChartDatum {
@@ -93,8 +92,10 @@ export function LifeyBarChart({ data, color, goal, goalLabel, integer, yFormat, 
       <g>
         {shape}
         {payload.metGoal && (
-          <g transform={`translate(${x + width / 2 - 8}, ${y - 20})`}>
-            <Icon name="check_circle" size={16} fill={1} color={color} />
+          // Drawn as SVG — an icon-font <span> inside an <svg> is never rendered (W4.6: the ✓ over a goal day was invisible).
+          <g transform={`translate(${x + width / 2}, ${y - 12})`} data-testid="goal-check">
+            <circle r={8} fill={color} />
+            <path d="M-3.6 0.2 L-1.1 2.8 L3.8 -2.6" fill="none" stroke="var(--card)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </g>
         )}
         {payload.valueLabel && (

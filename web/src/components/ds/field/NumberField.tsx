@@ -32,8 +32,9 @@ export interface NumberFieldProps {
   liveUpdate?: boolean;
   /** Select the whole number on focus so typing replaces it. */
   selectOnFocus?: boolean;
-  /** Enter was pressed; the typed value has just been committed through `onChange`. */
-  onEnter?: () => void;
+  /** Enter was pressed; the typed value has just been committed through `onChange`. Receives that committed value — the
+   *  parent's own state has not caught up in this tick, so a save should use the argument, not its state. */
+  onEnter?: (value: number) => void;
 }
 
 /**
@@ -88,22 +89,22 @@ export function NumberField({
     setText(formatLocaleNumber(next, locale, maxDecimals));
   }
 
-  function commit(raw: string) {
+  function commit(raw: string): number {
     const parsed = parseLocaleNumber(raw, locale);
     if (parsed === null) {
       setText(formatLocaleNumber(value, locale, maxDecimals));
-      return;
+      return value;
     }
     const clamped = clampNumber(roundToDecimals(parsed, maxDecimals), min, max);
     onChange(clamped);
     setText(formatLocaleNumber(clamped, locale, maxDecimals));
+    return clamped;
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && onEnter) {
       e.preventDefault();
-      commit(e.currentTarget.value);
-      onEnter();
+      onEnter(commit(e.currentTarget.value));
       return;
     }
     if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;

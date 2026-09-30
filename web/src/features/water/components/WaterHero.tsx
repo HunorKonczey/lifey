@@ -100,7 +100,7 @@ export function WaterHero({
           min={0.05}
           max={5}
           maxDecimals={2}
-          onEnter={() => onAdd({ sourceId: null, volumeLiters: custom })}
+          onEnter={(v) => onAdd({ sourceId: null, volumeLiters: v })}
         />
         <Button variant="secondary" onClick={() => onAdd({ sourceId: null, volumeLiters: custom })} disabled={pending}>
           <Icon name="add" size={20} />
