@@ -758,7 +758,20 @@
     "recentSets": "{n, plural, one {# set} other {# sets}}",
     "recentPr": "PR",
     "recentInProgress": "in progress",
-    "recentEmptyBody": "Your first session will show up here."
+    "recentEmptyBody": "Your first session will show up here.",
+    "firstStepsTitle": "Hi, {name}! Three steps and your day comes into view.",
+    "firstStepsBody": "Tiles won't show zeros until then — each one tells you what to do next.",
+    "firstStepsDismiss": "Hide this card",
+    "stepDone": "Done",
+    "stepGoalsTitle": "Goals set",
+    "stepGoalsPending": "Set your daily goals",
+    "stepGoalsCta": "Set goals",
+    "stepMealTitle": "Log your first meal",
+    "stepMealBody": "Search a food or pick a recipe",
+    "stepMealCta": "Log it",
+    "stepWeightTitle": "Log your weight",
+    "stepWeightBody": "Your curve starts from here",
+    "stepWeightCta": "Log weight"
   },
   "nutrition": {
     "meals": "Meals",

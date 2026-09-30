@@ -2,10 +2,11 @@
 
 import { useDateStore } from "@/lib/hooks/useDateStore";
 import { GridItem, PageGrid } from "@/components/ds";
-import { OnboardingBanner } from "@/components/app/OnboardingBanner";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useDashboardData } from "@/features/dashboard/useDashboardData";
+import { FirstSteps } from "@/features/dashboard/components/FirstSteps";
+import { useFirstSteps } from "@/features/dashboard/useFirstSteps";
 import { CalorieHero } from "@/features/dashboard/components/CalorieHero";
 import { RecommendedSection } from "@/features/dashboard/components/RecommendedSection";
 import { TilesSection } from "@/features/dashboard/components/TilesSection";
@@ -24,6 +25,7 @@ import { RecentWorkouts } from "@/features/dashboard/components/RecentWorkouts";
 export default function DashboardPage() {
   const { date } = useDateStore();
   const data = useDashboardData(date);
+  const firstSteps = useFirstSteps(data);
 
   if (data.isLoading) {
     return (
@@ -47,17 +49,18 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <OnboardingBanner />
       <PageGrid>
         <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 0 }}>
-          <CalorieHero data={data} />
+          {firstSteps.show ? <FirstSteps data={data} state={firstSteps.state} onDismiss={firstSteps.dismiss} /> : <CalorieHero data={data} />}
         </GridItem>
         <GridItem span={{ base: 4, md: 4, xl: 4 }} order={{ base: 1, md: 2, xl: 1 }}>
           <RecommendedSection data={data} />
         </GridItem>
-        <GridItem span={{ base: 4, md: 8, xl: 12 }} order={{ base: 2, md: 1, xl: 2 }}>
-          <TilesSection data={data} />
-        </GridItem>
+        {!firstSteps.show && (
+          <GridItem span={{ base: 4, md: 8, xl: 12 }} order={{ base: 2, md: 1, xl: 2 }}>
+            <TilesSection data={data} />
+          </GridItem>
+        )}
         <GridItem span={{ base: 4, md: 4, xl: 4 }} order={{ base: 3, xl: 4 }}>
           <RecentWorkouts data={data} />
         </GridItem>

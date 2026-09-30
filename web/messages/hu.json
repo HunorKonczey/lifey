@@ -758,7 +758,20 @@
     "recentSets": "{n} szett",
     "recentPr": "PR",
     "recentInProgress": "folyamatban",
-    "recentEmptyBody": "Az első edzésed itt fog megjelenni."
+    "recentEmptyBody": "Az első edzésed itt fog megjelenni.",
+    "firstStepsTitle": "Szia, {name}! Három lépés, és kész a napod képe.",
+    "firstStepsBody": "A csempék addig nem mutatnak nullát — mindegyik azt mondja meg, mi a következő lépés.",
+    "firstStepsDismiss": "Kártya elrejtése",
+    "stepDone": "Kész",
+    "stepGoalsTitle": "Célok beállítva",
+    "stepGoalsPending": "Állítsd be a napi célodat",
+    "stepGoalsCta": "Beállítás",
+    "stepMealTitle": "Első étkezés naplózása",
+    "stepMealBody": "Keress ételt vagy válassz receptet",
+    "stepMealCta": "Naplózás",
+    "stepWeightTitle": "Súly rögzítése",
+    "stepWeightBody": "Ebből indul a görbéd",
+    "stepWeightCta": "Rögzítés"
   },
   "nutrition": {
     "meals": "Étkezések",

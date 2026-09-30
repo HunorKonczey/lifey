@@ -1786,11 +1786,35 @@ only on the flagged row, words not keys, the two tints differing while two stren
 focus, the phone row count and the empty state. Verified on the real app with the demo data, including the
 click-through to the session.
 
-### W1.11 — Web UI: first-steps card
+### W1.11 — Web UI: first-steps card ✅
 - Files: `features/dashboard/components/FirstSteps.tsx`, `components/app/OnboardingBanner.tsx` (removed
   from the dashboard).
 - Spec W1-D; each step completes independently; the card disappears once a meal and a weight exist.
 - **Verify:** a fresh demo account shows it; logging a meal ticks step 2 without reload.
+
+*As built:* `FirstSteps` (a presentational `FirstStepsView` + a connected wrapper) is the W1-D card: "Szia,
+Anna! Három lépés, és kész a napod képe." with the tiles-won't-show-zeros line, and three rows on a nested
+surface — a 32 px state icon (done = filled primary with a check announced as "Kész", pending = the metric-
+coloured icon on a control disc), title, detail, and a primary button on every pending step. *Célok beállítva*
+is done once a calorie goal exists (its detail then reads "1 850 kcal · 110 g fehérje"; pending it asks to set
+them and goes to `/onboarding`), *Első étkezés naplózása* opens the existing add-meal dialog (and the card
+registers the `N` shortcut, since the hero that normally owns it isn't on screen), *Súly rögzítése* goes to
+`/weight` until the W4 log-weight drawer exists. The rule is a pure module, `firstSteps.ts` (9 tests):
+**fresh** = no meal ever and no weight ever, **complete** = a meal and a weight (goals are a setting, not a
+log, so they're not required), and `showFirstSteps` — a fresh account shows the card in place of hero + tiles
+and, once it has shown, it **stays** while the user works through it, which is what lets "logging a meal ticks
+step 2 without reload" be true instead of the whole card vanishing and the zeroed hero jumping back; it ends
+when both exist or the user dismisses it (the ✕, remembered per browser like the banner it replaces). Two
+decisions the plan's wording left open: an established account that merely has no weight never sees the card
+(the W1.7 weight tile has its own empty state for that), and the card is only decided once the meals and
+weights queries have actually loaded, so it can't flash for an account with history. `OnboardingBanner` is
+deleted (the card's first step is its replacement); its `onboarding.banner*` message keys are left for the W10
+sweep. Verified on the real stack with a throwaway test account registered on the local backend for this
+check: the card shows instead of hero and tiles, the week chart and recent list keep their own empty states,
+and after adding a meal through the dialog step 2 turned into a check while the dialog was still open and the
+chart drew today's dashed 400 kcal bar — no reload. Gallery section "First steps" (goals done / nothing done /
+meal done) and `e2e/ds/firstSteps.spec.ts` cover the states, the buttons-only-on-pending rule and the dismiss
+button.
 
 **W1 acceptance** (plus §4.1 in §12): W1-A/B/C/D reproduced; no zero tiles for a new account; every
 number formatted per DS-07.
