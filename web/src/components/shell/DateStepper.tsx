@@ -10,6 +10,7 @@ import { CalendarPopover } from "@/components/ds/date/CalendarPopover";
 import { isSameDay } from "@/components/ds/date/monthGrid";
 import { useFormat } from "@/lib/format/useFormat";
 import { useDateStore } from "@/lib/hooks/useDateStore";
+import { isOverlaySuppressing } from "@/lib/hooks/useHotkeys";
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -36,7 +37,7 @@ export function DateStepper() {
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (isTypingTarget(e.target)) return;
+      if (isTypingTarget(e.target) || isOverlaySuppressing()) return;
       if (e.key === "ArrowLeft") setDate(subDays(date, 1));
       else if (e.key === "ArrowRight") setDate(addDays(date, 1));
       else if (e.key.toLowerCase() === "t") setDate(new Date());

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { isOverlaySuppressing, isTypingTarget } from "./useHotkeys";
 
 const STORAGE_KEY = "lifey-sidebar-collapsed";
 const COLLAPSE_BELOW = 1280;
@@ -58,7 +59,7 @@ export function useSidebarState() {
     function handleKey(e: KeyboardEvent) {
       if (e.key !== "[") return;
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      if (isTypingTarget(target.tagName, target.isContentEditable) || isOverlaySuppressing()) return;
       e.preventDefault();
       toggle();
     }

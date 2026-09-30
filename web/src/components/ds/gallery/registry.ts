@@ -21,6 +21,7 @@ import { LineChartSection } from "./sections/LineChartSection";
 import { ShellSection } from "./sections/ShellSection";
 import { DateStepperSection } from "./sections/DateStepperSection";
 import { MobileShellSection } from "./sections/MobileShellSection";
+import { ShortcutsSection } from "./sections/ShortcutsSection";
 
 export interface GallerySection {
   id: string;
@@ -54,5 +55,6 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "shell", title: "Sidebar & account menu", Component: ShellSection },
   { id: "date-stepper", title: "Date stepper", Component: DateStepperSection },
   { id: "mobile-shell", title: "Mobile shell (bottom nav)", Component: MobileShellSection },
+  { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

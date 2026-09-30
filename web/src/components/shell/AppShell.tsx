@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { avatarApi } from "@/features/settings/api";
@@ -8,6 +8,7 @@ import { billingApi } from "@/features/billing/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useSidebarState } from "@/lib/hooks/useSidebarState";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useHotkeys } from "@/lib/hooks/useHotkeys";
 import type { SessionUser } from "@/features/auth/types";
 import type { TrainerPlan } from "@/features/billing/types";
 import { Sidebar } from "./Sidebar";
@@ -15,6 +16,7 @@ import { TopBar } from "./TopBar";
 import { MobileHeader } from "./MobileHeader";
 import { BottomNav } from "./BottomNav";
 import { MoreSheet } from "./MoreSheet";
+import { ShortcutHelp } from "./ShortcutHelp";
 import {
   clientGroupsFor,
   CLIENT_BOTTOM_NAV_ITEMS,
@@ -89,7 +91,11 @@ export function AppShell({
       ? [admin("chip"), planLabel(billing, entitlements?.trainer?.plan)].filter(Boolean).join(" · ")
       : undefined;
 
-  const resolvedGroups = groups ?? clientGroupsFor(user);
+  const resolvedGroups = useMemo(() => groups ?? clientGroupsFor(user), [groups, user]);
+  const goToItems = useMemo(() => resolvedGroups.flatMap((g) => g.items), [resolvedGroups]);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  useHotkeys({ goToItems, onHelp: openHelp, suppressed: helpOpen });
 
   const { data: avatarBlob } = useQuery({
     queryKey: queryKeys.settings.avatar(),
@@ -130,6 +136,7 @@ export function AppShell({
         {moreSheetItems.length > 0 && (
           <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} items={moreSheetItems} />
         )}
+        <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
       </div>
     );
   }
@@ -156,6 +163,7 @@ export function AppShell({
           {children}
         </main>
       </div>
+      <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

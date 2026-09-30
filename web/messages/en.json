@@ -22,6 +22,21 @@
     "systemView": "System",
     "mainNavigation": "Main navigation"
   },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "globalSection": "Global",
+    "tableSection": "Tables",
+    "pageSection": "This page",
+    "toggleSidebar": "Toggle sidebar",
+    "dayStep": "Previous / next day",
+    "jumpToday": "Jump to today",
+    "goToPage": "Switch page — then a letter",
+    "help": "Show this help",
+    "tableRow": "Move between rows",
+    "tableOpen": "Open the active row",
+    "tableRowMenu": "Open the active row's menu",
+    "search": "Search"
+  },
   "admin": {
     "chip": "TRAINER",
     "nav": {

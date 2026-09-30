@@ -1396,13 +1396,37 @@ achievable in this environment: the real `/superadmin/*` pages in the new shell,
 backend) — covered instead by the gallery demo and the full lint / vitest / `ds` + `marketing` Playwright /
 build / `check:js-budget` suite, all green.
 
-### W0.25 — Web UI: keyboard shortcut layer + help overlay
+### W0.25 — Web UI: keyboard shortcut layer + help overlay ✅
 - Files: `src/lib/hooks/useHotkeys.ts` + `useHotkeys.test.ts`, `src/components/shell/ShortcutHelp.tsx`,
   shell wiring (`[`, `G …`, `?`, `/`, `←/→/T` from W0.21).
 - D-W0.17. Pages register their own `N` handler and search target through a small context
   (`usePageShortcuts({ onNew, searchRef })`); `?` lists global + page shortcuts in HU/EN.
 - **Verify:** unit tests (ignored inside inputs/textarea/contenteditable and while a modal is open; `G`
   chord timeout 1 s); `e2e/ds/shortcuts.spec.ts`.
+
+*As built:* one global listener, three collaborating pieces. `useHotkeys` (called once by `AppShell`) owns
+`G <letter>` (resolved against the *current role's* own `NavItemDef.shortcut` letters via `matchGoTo`, 1 s
+chord window from `createChordTracker`), `?` and the page-registered `N` / `/`; both the tracker and the
+matcher are framework-free pure functions, so the timeout and the resolution are covered by fake-timer
+Vitest tests in the node-only env (D-W0.12) rather than needing jsdom. Pages register through a tiny zustand
+store (`usePageShortcuts({ onNew, newLabel, searchRef })` — a page can't push context *up* to the shell that
+owns the listener, so a context provider was the wrong shape), which clears itself on unmount so the next
+route never inherits a stale `N`. "Never while a modal is open" is `isOverlaySuppressing()`: `Modal` and
+`Drawer` both lock `body` scroll, which is the cheapest reliable "something else owns focus" read without a
+second global overlay store; the existing `[` (sidebar) and `←/→/T` (date stepper) listeners kept their own
+code but now share that guard and `isTypingTarget`, so all shortcuts agree. `ShortcutHelp` is a `Modal`
+listing "This page" (only when the page registered something), global and table shortcuts (the table row
+conventions are DataTable's own, W0.15), HU/EN under a new `shortcuts.*` namespace. Two scope notes: DataTable
+already handles `/` for its own search locally, and no real feature page registers `N` yet — wiring pages
+belongs to their W1+ iterations, this step ships the mechanism. Gallery: `ShortcutsSection` mounts the same
+`useHotkeys` + `ShortcutHelp` pair with a fake page, and `e2e/ds/shortcuts.spec.ts` covers `?`, `G W`, the
+chord timeout, `N`, `/`, typing in a field and an open modal. While running the `ds` project on the last day
+of a month (2026-09-30) an old W0.10 test failed and exposed a real `CalendarPopover` bug: with
+`disableFuture`, arrow/PageDown could rove keyboard focus onto a disabled future day, which can't take focus,
+so focus was dropped (and at a month's end unmounted with the view swap). Fixed in the component (`focusDate`
+clamps to today) and the spec now asserts the clamp (Left/Right and PageUp/PageDown) instead of racing it.
+Not achievable in this environment: the real authenticated pages in the shell (no backend) — covered by the
+gallery demo and the full lint / vitest / `ds` + `marketing` Playwright / build / `check:js-budget` suite.
 
 **W0 derived screens:** none — but because tokens change in place, every page changes colour in W0.1
 and moves into the shell in W0.20–W0.24. Click through every client, trainer and superadmin page after

@@ -16,13 +16,20 @@ test("arrow keys move the focused day within the grid", async ({ page }) => {
   await focusable.focus();
   const before = await focusable.getAttribute("aria-label");
 
-  await page.keyboard.press("ArrowRight");
-  const afterRight = await grid.locator('[tabindex="0"]').getAttribute("aria-label");
-  expect(afterRight).not.toBe(before);
-
+  // Left first, then right: the grid is future-disabled, so from today the
+  // focus must clamp rather than rove onto a day that can't take focus.
   await page.keyboard.press("ArrowLeft");
-  const afterLeft = await grid.locator('[tabindex="0"]').getAttribute("aria-label");
-  expect(afterLeft).toBe(before);
+  await expect(grid.locator('[tabindex="0"]')).not.toHaveAttribute("aria-label", before!);
+  await expect(grid.locator('[tabindex="0"]')).toBeFocused();
+
+  await page.keyboard.press("ArrowRight");
+  await expect(grid.locator('[tabindex="0"]')).toHaveAttribute("aria-label", before!);
+  await expect(grid.locator('[tabindex="0"]')).toBeFocused();
+
+  // ...and one more right stays on today instead of dropping focus.
+  await page.keyboard.press("ArrowRight");
+  await expect(grid.locator('[tabindex="0"]')).toHaveAttribute("aria-label", before!);
+  await expect(grid.locator('[tabindex="0"]')).toBeFocused();
 
   await expect(cells.first()).toBeVisible();
 });
@@ -32,9 +39,11 @@ test("PageUp/PageDown move by a month", async ({ page }) => {
   const monthLabelBefore = await dialog.locator(".type-title-s").innerText();
 
   await dialog.getByRole("grid").locator('[tabindex="0"]').focus();
+  // PageUp: the grid is future-disabled, so PageDown from the current month clamps to today.
+  await page.keyboard.press("PageUp");
+  await expect(dialog.locator(".type-title-s")).not.toHaveText(monthLabelBefore);
   await page.keyboard.press("PageDown");
-  const monthLabelAfter = await dialog.locator(".type-title-s").innerText();
-  expect(monthLabelAfter).not.toBe(monthLabelBefore);
+  await expect(dialog.locator(".type-title-s")).toHaveText(monthLabelBefore);
 });
 
 test("a future day is disabled and cannot be selected", async ({ page }) => {

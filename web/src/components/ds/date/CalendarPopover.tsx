@@ -35,7 +35,10 @@ export function CalendarPopover({ value, onChange, today = new Date(), disableFu
   const monthLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(viewDate);
   const weekdayLabels = grid.slice(0, 7).map((d) => format.weekdayShort(d.date));
 
-  function focusDate(next: Date) {
+  function focusDate(target: Date) {
+    // Never rove onto a disabled future day: it can't take focus, so keyboard
+    // focus would be dropped (and, at a month's end, unmount with the view swap).
+    const next = disableFuture && isFuture(target, today) ? today : target;
     setFocusedDate(next);
     if (next.getMonth() !== viewDate.getMonth() || next.getFullYear() !== viewDate.getFullYear()) {
       setViewDate(new Date(next.getFullYear(), next.getMonth(), 1));

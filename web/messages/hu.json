@@ -22,6 +22,21 @@
     "systemView": "Rendszer",
     "mainNavigation": "Fő navigáció"
   },
+  "shortcuts": {
+    "title": "Billentyűparancsok",
+    "globalSection": "Globális",
+    "tableSection": "Táblázatok",
+    "pageSection": "Ezen az oldalon",
+    "toggleSidebar": "Oldalsáv ki/be",
+    "dayStep": "Előző / következő nap",
+    "jumpToday": "Ugrás a mai napra",
+    "goToPage": "Oldalváltás — utána egy betű",
+    "help": "Ez a súgó",
+    "tableRow": "Sorok közti mozgás",
+    "tableOpen": "Aktív sor megnyitása",
+    "tableRowMenu": "Aktív sor menüjének megnyitása",
+    "search": "Keresés"
+  },
   "admin": {
     "chip": "EDZŐ",
     "nav": {
