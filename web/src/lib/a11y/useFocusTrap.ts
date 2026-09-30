@@ -25,7 +25,9 @@ export function useFocusTrap(active: boolean, containerRef: RefObject<HTMLElemen
     (autofocusEl ?? getFocusable()[0])?.focus();
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Tab") return;
+      // A field that already moved focus itself (e.g. the add-food search jumping to the quantity) has
+      // handled this Tab — wrapping on top of that would undo it.
+      if (e.key !== "Tab" || e.defaultPrevented) return;
       const focusable = getFocusable();
       if (focusable.length === 0) return;
       const first = focusable[0];

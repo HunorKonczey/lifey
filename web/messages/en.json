@@ -937,7 +937,27 @@
     "slotBudget": "{kcal} kcal fits",
     "slotCopy": "Yesterday's {meal} · {kcal} kcal",
     "slotAdd": "Add",
-    "slotCopied": "Copied yesterday's {meal}"
+    "slotCopied": "Copied yesterday's {meal}",
+    "addFoodModal": {
+      "title": "Add food",
+      "searchLabel": "Search foods and recipes",
+      "searchPlaceholder": "Search foods and recipes",
+      "filtersLabel": "Filter results",
+      "filter_all": "All",
+      "filter_foods": "My foods",
+      "filter_recipes": "Recipes",
+      "filter_favorites": "Favourites",
+      "filter_recent": "Recent",
+      "results": "{count, plural, one {# result} other {# results}}",
+      "sourceOwn": "Own",
+      "sourceOwnRecent": "Own · last {when}",
+      "sourceRecipe": "Recipe · 1 serving {kcal} kcal",
+      "per100g": "{kcal} kcal / 100 g",
+      "noResults": "Nothing matches that.",
+      "noFoodsYet": "You have no foods yet.",
+      "createNamed": "Create a new food “{name}”",
+      "keyHint": "↑ ↓ select · Enter add · Tab quantity"
+    }
   },
   "workouts": {
     "sessions": "Sessions",

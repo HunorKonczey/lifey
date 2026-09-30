@@ -1983,13 +1983,43 @@ with the right kcal, one click adds the dinner card and hides its chip, Undo sen
 the chip returns. Gallery section "Empty meal slot" (with copy, budget only, no goal, used up) and
 `e2e/ds/emptyMealSlot.spec.ts`.
 
-### W2.5 — Web UI: add-food modal, search pane
+### W2.5 — Web UI: add-food modal, search pane ✅
 - Files: `features/nutrition/components/addFood/{AddFoodModal,FoodSearchPane}.tsx`,
   `features/nutrition/usage.ts` (recents, last used amount); `AddMealEntryDialog.tsx` is retired at the
   end of W2.6.
 - Filters, result ranking (exact prefix > recent > rest), keyboard ↑/↓/Enter/Tab, empty result → "Új
   étel létrehozása «joghurt» néven".
 - **Verify:** `foodSearch.test.ts` (ranking, filters); keyboard-only add in the browser.
+
+*As built:* The new dialog's shell and its left pane exist and are tested; it is not yet wired into the
+nutrition page (that happens with its right pane in W2.6, where `AddMealEntryDialog` is retired), so the
+plan's "keyboard-only add in the browser" is verified here on the gallery's version with a stub preview and
+again on the real app at the end of W2.6. **Search logic** is pure, in `features/nutrition/foodSearch.ts` (16
+tests in `foodSearch.test.ts`): rows are the user's foods (not the hidden one-off "enter macros" foods) and
+recipes; filters are All / My foods / Recipes / Favourites (favourite recipes) / Recent; matching ignores case
+and accents; with a query, names that **start with** it come first (an exact match before a longer prefix),
+then inside each group recently logged rows, then a word that starts with the query before a mere substring,
+then the newest use, then the alphabet; with no query the list leads with what you logged lately, then what
+you log often (≥ 2 times), then the rest alphabetically, and Recent is just the lately-logged rows. A recipe
+carries kcal per serving and per 100 g of the dish (from its ingredients). `usage.ts` gained
+`computeRecipeUsage` — a logged recipe is a meal carrying the recipe's name, so usage is found by that name
+within the same 90-day window (2 tests); "last used amount" was already `lastGrams` in `FoodUsage`. **The
+pane** (`addFood/FoodSearchPane.tsx`) is an ARIA combobox/listbox: autofocused search field with an `esc`
+hint, the five filter chips as toggle buttons (`aria-pressed`), "4 TALÁLAT" as a live region, rows with name,
+source line ("Saját · legutóbb tegnap 08:00" / "Recept · 1 adag 412 kcal") and "73 kcal / 100 g", the active
+row on `--nested` with a 3 px primary bar and scrolled into view; ↑ / ↓ move (and stop at the ends rather than
+wrap), Enter adds the active row, Tab jumps to the quantity, a row click selects it and does the same; an
+empty result offers "Új étel létrehozása „joghurt” néven". **The shell** (`addFood/AddFoodModal.tsx`) is an
+880 px `Modal` with the planned `400px | 1fr` grid — `AddFoodModalView` takes items and usage (gallery-
+friendly), `AddFoodModal` adds the three queries — and the right pane is whatever the caller renders, reading
+the dialog through `useAddFoodContext()` (highlighted row, a quantity-input callback, a commit hook for
+Enter). Two platform fixes the keyboard spec exposed: `useFocusTrap` wrapped focus on top of a Tab that a
+field had already handled (the search field moving focus to the quantity, now the last focusable, got bounced
+back to the first) — it now ignores `defaultPrevented` Tabs; and the React Compiler lint rejects reading ref
+objects off a render-prop argument, which is why the preview slot is context, not a function. Gallery section
+"Add food dialog" and `e2e/ds/addFoodSearch.spec.ts` (10 tests: autofocus, recents first, source lines,
+ranking, the full keyboard flow type → ↓ → Tab → 150 → Enter, Enter with the default quantity, the active
+marker, no wrap, every filter, the create shortcut, Esc).
 
 ### W2.6 — Web UI: add-food modal, preview pane + submit
 - Files: `features/nutrition/components/addFood/FoodPreviewPane.tsx`, `features/nutrition/budget.ts`

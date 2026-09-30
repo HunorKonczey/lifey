@@ -937,7 +937,27 @@
     "slotBudget": "{kcal} kcal fér bele",
     "slotCopy": "Tegnapi {meal} · {kcal} kcal",
     "slotAdd": "Hozzáadás",
-    "slotCopied": "Tegnapi {meal} átmásolva"
+    "slotCopied": "Tegnapi {meal} átmásolva",
+    "addFoodModal": {
+      "title": "Étel hozzáadása",
+      "searchLabel": "Ételek és receptek keresése",
+      "searchPlaceholder": "Ételek és receptek keresése",
+      "filtersLabel": "Találatok szűrése",
+      "filter_all": "Mind",
+      "filter_foods": "Saját ételek",
+      "filter_recipes": "Receptek",
+      "filter_favorites": "Kedvencek",
+      "filter_recent": "Legutóbbiak",
+      "results": "{count} találat",
+      "sourceOwn": "Saját",
+      "sourceOwnRecent": "Saját · legutóbb {when}",
+      "sourceRecipe": "Recept · 1 adag {kcal} kcal",
+      "per100g": "{kcal} kcal / 100 g",
+      "noResults": "Nincs ilyen találat.",
+      "noFoodsYet": "Még nincs ételed.",
+      "createNamed": "Új étel létrehozása „{name}” néven",
+      "keyHint": "↑ ↓ választás · Enter hozzáadás · Tab mennyiség"
+    }
   },
   "workouts": {
     "sessions": "Edzések",
