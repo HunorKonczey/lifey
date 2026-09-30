@@ -6,7 +6,7 @@ import { OnboardingBanner } from "@/components/app/OnboardingBanner";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useDashboardData } from "@/features/dashboard/useDashboardData";
-import { HeroSection } from "@/features/dashboard/components/HeroSection";
+import { CalorieHero } from "@/features/dashboard/components/CalorieHero";
 import { RecommendedSection } from "@/features/dashboard/components/RecommendedSection";
 import { TilesSection } from "@/features/dashboard/components/TilesSection";
 import { WeekSection } from "@/features/dashboard/components/WeekSection";
@@ -50,7 +50,7 @@ export default function DashboardPage() {
       <OnboardingBanner />
       <PageGrid>
         <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 0 }}>
-          <HeroSection data={data} />
+          <CalorieHero data={data} />
         </GridItem>
         <GridItem span={{ base: 4, md: 4, xl: 4 }} order={{ base: 1, md: 2, xl: 1 }}>
           <RecommendedSection data={data} />

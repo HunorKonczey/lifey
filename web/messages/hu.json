@@ -705,7 +705,17 @@
     "workoutFallback": "Edzés",
     "minutes": "perc",
     "setGoalsHint": "Állítsd be a napi céljaidat a haladás követéséhez",
-    "workoutsBreakdown": "{strength} erősítő · {cardio} cardio"
+    "workoutsBreakdown": "{strength} erősítő · {cardio} cardio",
+    "kcalLeft": "kcal maradt",
+    "kcalOver": "kcal túllépés",
+    "kcalEaten": "kcal elfogyasztva",
+    "eatenLabel": "Elfogyasztva",
+    "dailyGoalLabel": "Napi cél",
+    "addMeal": "Étkezés hozzáadása",
+    "addMealShort": "Étkezés",
+    "macroLeft": "még {n} g",
+    "macroOver": "{n} g túl",
+    "heroRingLabel": "Kalória: {eaten} / {goal} kcal"
   },
   "nutrition": {
     "meals": "Étkezések",

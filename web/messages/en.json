@@ -705,7 +705,17 @@
     "workoutFallback": "Workout",
     "minutes": "min",
     "setGoalsHint": "Set your daily goals to track progress",
-    "workoutsBreakdown": "{strength} strength · {cardio} cardio"
+    "workoutsBreakdown": "{strength} strength · {cardio} cardio",
+    "kcalLeft": "kcal left",
+    "kcalOver": "kcal over",
+    "kcalEaten": "kcal eaten",
+    "eatenLabel": "Eaten",
+    "dailyGoalLabel": "Daily goal",
+    "addMeal": "Add meal",
+    "addMealShort": "Meal",
+    "macroLeft": "{n} g left",
+    "macroOver": "{n} g over",
+    "heroRingLabel": "Calories: {eaten} of {goal} kcal"
   },
   "nutrition": {
     "meals": "Meals",

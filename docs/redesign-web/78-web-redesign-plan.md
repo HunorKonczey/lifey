@@ -1535,13 +1535,35 @@ errors), plus a gallery "Page grid" section and `e2e/ds/pageGrid.spec.ts` (colum
 4 on one row at 1440, the order flip at 1024, full-width stacking at 390) and `pageGrid.test.ts` for the
 custom-property mapping.
 
-### W1.2 — Web UI: `CalorieHero`
+### W1.2 — Web UI: `CalorieHero` ✅
 - Files: `features/dashboard/components/CalorieHero.tsx`, `features/nutrition/budget.ts` (reuse).
 - Spec row 1 left. States: remaining (canvas); **over budget** — ring second lap, number = overage,
   caption "kcal túllépés" in `--m-kcal`; **no calorie goal** — empty ring, number = eaten, caption "kcal
   elfogyasztva", no "Napi cél" line; macro without a goal = value only, no bar. Whole card is not a
   link (the buttons are the actions). HU at 200 % zoom: macro value wraps under its label.
 - **Verify:** `calorieHero.test.ts` for the three states' copy/number selection; 1440 dark vs W1-A.
+
+*As built:* `CalorieHero` is split in two: `CalorieHeroView` (presentational — kcal, goal, three macro
+`{value, goal}` pairs, `onAdd`, an optional `secondaryAction` slot for W1.3, a goals-hint flag) and the
+connected `CalorieHero` that feeds it the day's totals and owns the add-meal flow. The view is what the
+gallery's "Calorie hero" section shows in all three states, so `e2e/ds/calorieHero.spec.ts` asserts them on
+fixtures instead of depending on whatever the demo account ate today. The copy/number choice is a pure
+function, `heroState()` (+ `macroRowState()`) in `features/dashboard/calorieHero.ts`, covered by
+`calorieHero.test.ts`: under budget shows kcal left with the ring at eaten/goal; exactly on the goal is still
+"left" (0), not over; over budget shows the overage, the ring's second lap (`ProgressRing` already draws it)
+and the caption in `--m-kcal`; no goal (or a goal of 0 — never divided by) shows what was eaten, an empty ring
+and no "Daily goal" line; a macro without a goal is value-only with no bar. The card is a plain `Card.hero`,
+not interactive. Two calls the plan left open: the ring diameter is 220 only in the 1440 frame (168 at 1280
+where the hero shares its row with the workout card, 184 when it spans the full width at 1024, 128 on a phone,
+via `useMediaQuery` — the page renders a skeleton first, so there's no SSR mismatch), and the macro rows
+change shape per width instead of shrinking the bar to a stub — label | bar | value on one line at 2xl, label
++ value over a full-width bar at 1280 (the first cut left 35 px bars), three stacked columns at 1024 and mini
+rows at 390, all from one markup with `order`/grid classes. "Add meal" opens the existing `AddMealEntryDialog`
+(meal type from `defaultMealType()`, on the viewed day; W2.6 replaces that dialog) and registers the `N`
+shortcut through `usePageShortcuts`, which is also listed in the `?` help ("Add meal"). The old
+`HeroSection`/`HeroMetricCard`/`MacroRing` row is gone from the dashboard (`HeroMetricCard` and `MacroRing`
+stay in `components/data` until W10's sweep). The old "set your goals" link lives on under the buttons when
+neither a calorie nor a protein goal exists. Checked on the real app at 1440 (HU), 1280, 1024 (light) and 390.
 
 ### W1.3 — Web UI: "copy yesterday's <meal>" quick action
 - Files: `features/nutrition/copyMeal.ts` (+ `suggestCopy()` and tests), `CalorieHero.tsx`.

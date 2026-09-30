@@ -86,6 +86,7 @@ export function useDashboardData(date: Date) {
   };
 
   return {
+    date,
     dateStr,
     queries: { statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ },
     settings: settingsQ.data,
