@@ -1648,12 +1648,31 @@ menu navigates to the sources card; the entry created for the check was deleted 
 the number renders at the DS tile ratio (13 px), a little smaller than the canvas' "/ 2,5 L" — left as the
 shared `MetricTile` spec rather than special-casing one tile.
 
-### W1.6 — Web data: weight trend port
+### W1.6 — Web data: weight trend port ✅
 - Files: `features/weight/trend.ts` + `trend.test.ts` — port of `mobile/lib/features/weight/domain/
   weight_trend.dart` (docs/76 decisions): 7-day average over calendar days with gaps, weekly pace (kg /
   week), "since start" delta, projected goal date only when the pace points toward the goal and the
   remaining distance / pace ≤ 52 weeks.
 - **Verify:** the mobile test cases pass unchanged in TS.
+
+*As built:* `features/weight/trend.ts` is a line-for-line port of `weight_trend.dart`: the same constants
+(7-day window, two entries minimum, 28-day rate window, four points over fourteen days before it names a date,
+0.2 kg "reached" tolerance), `movingAverage` measured in calendar days rather than samples, and `projectGoal`
+with the same five states (`onTrack`, `reached`, `wrongWay`, `tooSlow`, `notEnoughData`), the trend (not the
+last raw weigh-in) as the current value, least-squares slope for the rate and the ETA counted from today.
+Every case of `weight_trend_test.dart` is ported one for one in `trend.test.ts` and passed unchanged — the
+window rule, a single entry, the gap, the six projection outcomes, gaining toward a higher goal and the null
+cases. Two deliberate differences from a mechanical translation: day arithmetic goes through whole calendar
+days (`dayNumber` from `Date.UTC`) instead of `ms / 24h`, so a daylight-saving change (the window crossing 29
+March in Europe) can't push a point over a window edge — Dart's local `Duration` arithmetic has that edge and
+a new test pins the web behaviour; and the ported types are plain objects (`state` is a string union, absent
+values are `undefined`). Three small helpers sit beside the port for W1.7 and the later weight page:
+`weightPoints()` (API weigh-ins → oldest-first one-per-day points on local midnights), `weeklyPace()` (the
+trend's slope per week, signed like the scale, null below the same 4-points / 14-days floor the projection
+uses, and tested to agree exactly with `projectGoal`'s rate) and `sinceStart()` (latest minus first). One
+discrepancy in the plan's own text: it says the projected date needs remaining / pace "≤ 52 weeks", while
+docs/76 D-W6 and the mobile code refuse only beyond 730 days — the port follows mobile so the two clients show
+the same date for the same data (a 53-week estimate still shows; the two-year refusal case is in the tests).
 
 ### W1.7 — Web UI: steps tile + weight tile
 - Files: `features/dashboard/components/{StepsTile,WeightTile}.tsx`, `features/steps/walking.ts`.
