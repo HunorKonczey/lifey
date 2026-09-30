@@ -1,3 +1,18 @@
+import type { MealResponse } from "@/features/nutrition/types";
+import type { WeightResponse } from "@/features/weight/types";
+import type { WaterEntryResponse } from "@/features/water/types";
+import type { DailyStepCountResponse } from "@/features/steps/types";
+import type { WorkoutSessionResponse } from "@/features/workouts/types";
+
+/** Every list the statistics page loads, as the API returned it. */
+export interface RawData {
+  meals: MealResponse[];
+  weights: WeightResponse[];
+  water: WaterEntryResponse[];
+  steps: DailyStepCountResponse[];
+  sessions: WorkoutSessionResponse[];
+}
+
 export interface StatisticsResponse {
   totalCalories: number | null;
   totalProtein: number | null;
