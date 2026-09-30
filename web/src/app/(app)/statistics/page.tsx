@@ -12,7 +12,9 @@ import { waterApi } from "@/features/water/api";
 import { stepsApi } from "@/features/steps/api";
 import { workoutSessionApi } from "@/features/workouts/api";
 import { aggregate, type RawData, type StatKindFilter } from "@/features/statistics/aggregate";
-import { Button, Icon } from "@/components/ds";
+import { Button, Icon, SectionLabel } from "@/components/ds";
+import { CaloriesChartCard } from "@/features/statistics/components/CaloriesChartCard";
+import { WeightChartCard } from "@/features/statistics/components/WeightChartCard";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { KpiRow } from "@/features/statistics/components/KpiRow";
 import { buildPeriodStats } from "@/features/statistics/periodStats";
@@ -197,22 +199,14 @@ function Statistics() {
 
       <KpiRow stats={stats} />
 
+      <SectionLabel>{t("sectionNutrition")}</SectionLabel>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+        <CaloriesChartCard stats={stats} compact={phone} />
+        <WeightChartCard stats={stats} compact={phone} />
+      </div>
+
       {/* Chart grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title={t("calories")}>
-          {/* Days without a single logged meal are missing data, not 0 kcal — plotting
-              them as 0 drew a months-long flat line in the year view. */}
-          <TimeSeriesChart data={current.caloriesSeries.filter((p) => p.value > 0)} color="var(--metric-kcal)" unit=" kcal" />
-        </ChartCard>
-
-        <ChartCard title={t("weight")}>
-          {current.weightSeries.length > 0 ? (
-            <TimeSeriesChart data={current.weightSeries} color="var(--metric-weight)" unit=" kg" />
-          ) : (
-            <p className="text-sm text-center py-16" style={{ color: "var(--muted)" }}>{t("noWeightEntries")}</p>
-          )}
-        </ChartCard>
-
         <ChartCard title={t("trainingVolume")}>
           {current.totalVolume > 0 ? (
             <TimeSeriesChart data={current.volumeSeries} color="var(--metric-protein)" unit=" kg" />
