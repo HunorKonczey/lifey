@@ -41,6 +41,8 @@ export interface LifeyFormat {
 
   /** Whole number with locale grouping, plus an optional unit: `integer(17519, "kcal")` → "17,519 kcal" / "17 519 kcal". */
   integer(value: number, unit?: string): string;
+  /** A number with up to `maxDigits` decimals and no trailing zero: `number(20)` → "20", `number(14.8)` → "14.8" / "14,8". */
+  number(value: number, maxDigits?: number): string;
   /** The weight without its unit: `weightNumber(69.6)` → "69.6" / "69,6". */
   weightNumber(value: number): string;
   /** A calendar day relative to today, no time: "today" / "ma", "yesterday" / "tegnap", else `shortDate` ("Sep 25" / "szept. 25."). */
@@ -124,6 +126,10 @@ export function createFormat(locale: string): LifeyFormat {
       maximumFractionDigits: digits,
       useGrouping: "always",
     }).format(value);
+  }
+
+  function number(value: number, maxDigits = 1): string {
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: maxDigits, useGrouping: "always" }).format(value);
   }
 
   function weightNumber(value: number): string {
@@ -224,6 +230,7 @@ export function createFormat(locale: string): LifeyFormat {
   return {
     locale,
     integer,
+    number,
     weightNumber,
     relativeDay,
     weight,

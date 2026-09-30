@@ -212,3 +212,12 @@ describe("dateRange / monthYear", () => {
     expect(en.monthYear(new Date(2026, 8, 1))).toBe("September 2026");
   });
 });
+
+describe("number", () => {
+  it("drops a trailing zero and groups thousands", () => {
+    expect(en.number(20)).toBe("20");
+    expect(hu.number(14.8)).toBe("14,8");
+    expect(hu.number(19360)).toBe("19 360");
+    expect(en.number(7.66, 1)).toBe("7.7");
+  });
+});

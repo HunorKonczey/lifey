@@ -1522,7 +1522,19 @@
     "previous_month": "Előző hónap",
     "next_month": "Következő hónap",
     "previous_year": "Előző év",
-    "next_year": "Következő év"
+    "next_year": "Következő év",
+    "volume": "Volumen",
+    "avgSteps": "Átlag lépés",
+    "toGoal": "a célhoz",
+    "improving": "javulás",
+    "worsening": "romlás",
+    "vsPrevious": "{period, select, week {előző hét} month {előző hónap} other {előző év}} {value}",
+    "vsPreviousShort": "{period, select, week {előző hét} month {előző hónap} other {előző év}}",
+    "noPrevious": "Nincs előző adat",
+    "noPreviousYear": "Nincs előző évi adat",
+    "noLoggedDays": "Nincs naplózott nap",
+    "needTwoWeighIns": "Legalább két mérés kell",
+    "noStepDays": "Nincs lépésadat"
   },
   "settings": {
     "profile": "Profil",

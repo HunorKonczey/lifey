@@ -23,6 +23,13 @@ export interface MetricTileProps {
   progress?: number;
   /** A discrete `SegmentBar` instead (e.g. water's 10 glasses) — omit when using `progress`. */
   segments?: { count?: number; progress: number; height?: number };
+  /** Value size in px; 26 by default, 28 for the statistics KPI row (W5.3). */
+  valueSize?: number;
+  /**
+   * The statistics KPI variant (W5.3): the chip and the subline share one wrapping row *under* the value
+   * ("[−77] a célhoz") instead of the chip sitting beside it and the subline below.
+   */
+  compact?: boolean;
   /** Usually a `DeltaChip`, shown beside the value. */
   delta?: ReactNode;
   /** A secondary line under the value — "Latest entry · today"; a node when it carries an icon. */
@@ -57,6 +64,8 @@ export function MetricTile({
   value,
   unit,
   unitRatio = 0.5,
+  valueSize = 26,
+  compact = false,
   color,
   progress,
   segments,
@@ -97,14 +106,32 @@ export function MetricTile({
 
       <div className="flex items-end gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <MetricValue value={value} unit={unit} size={26} unitRatio={unitRatio} />
-            {delta}
-          </div>
-          {subline && (
-            <p className="type-body-s mt-1.5" style={{ color: "var(--text-3)" }}>
-              {subline}
-            </p>
+          {compact ? (
+            <>
+              <MetricValue value={value} unit={unit} size={valueSize} unitRatio={unitRatio} />
+              {(delta || subline) && (
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-2.5">
+                  {delta}
+                  {subline && (
+                    <span className="type-body-s" style={{ color: "var(--text-3)" }}>
+                      {subline}
+                    </span>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <MetricValue value={value} unit={unit} size={valueSize} unitRatio={unitRatio} />
+                {delta}
+              </div>
+              {subline && (
+                <p className="type-body-s mt-1.5" style={{ color: "var(--text-3)" }}>
+                  {subline}
+                </p>
+              )}
+            </>
           )}
         </div>
         {trailing}

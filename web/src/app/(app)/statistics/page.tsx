@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { endOfDay } from "date-fns";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -14,11 +14,15 @@ import { workoutSessionApi } from "@/features/workouts/api";
 import { aggregate, type RawData, type StatKindFilter } from "@/features/statistics/aggregate";
 import { Button, Icon } from "@/components/ds";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { KpiRow } from "@/features/statistics/components/KpiRow";
+import { buildPeriodStats } from "@/features/statistics/periodStats";
+import { settingsApi } from "@/features/settings/api";
+import { userDetailsApi } from "@/features/onboarding/api";
+import { effectiveDailyStepGoal } from "@/features/steps/walking";
 import { PeriodControl } from "@/features/statistics/components/PeriodControl";
 import { parsePeriodState, periodRange, periodSearch, previousPeriod, type PeriodState } from "@/features/statistics/period";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useTopBarCentre, useTopBarTrailing } from "@/lib/hooks/useTopBarSlot";
-import { KpiCard } from "@/components/data/KpiCard";
 import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
@@ -84,6 +88,9 @@ function Statistics() {
   });
 
   const [mealsQ, weightsQ, waterQ, stepsQ, sessionsQ] = results;
+  // Goals come from settings and onboarding; neither is required (404 = onboarding not done — no goal weight).
+  const settingsQ = useQuery({ queryKey: queryKeys.settings.all(), queryFn: settingsApi.get, staleTime: 5 * 60_000 });
+  const userDetailsQ = useQuery({ queryKey: queryKeys.userDetails.all(), queryFn: userDetailsApi.get, retry: false });
   const isLoading = results.some((r) => r.isLoading);
   const isError = results.some((r) => r.isError);
 
@@ -105,6 +112,14 @@ function Statistics() {
       previous: aggregate(raw, prev.start, endOfDay(prev.end), label, kindFilter, dateLocale),
     };
   }, [raw, period, state.start, kindFilter, locale]);
+
+  const calorieGoal = settingsQ.data?.dailyCalorieGoal ?? null;
+  const stepGoal = effectiveDailyStepGoal(settingsQ.data);
+  const weightGoal = userDetailsQ.data?.targetWeightKg ?? null;
+  const stats = useMemo(
+    () => buildPeriodStats({ raw, period, start: state.start, now: new Date(), goals: { calories: calorieGoal, steps: stepGoal, weightKg: weightGoal } }),
+    [raw, period, state.start, calorieGoal, stepGoal, weightGoal],
+  );
 
   const exportCsv = () => {
     const rows = [["date", "calories", "protein", "water_l", "steps", "volume"]];
@@ -168,15 +183,6 @@ function Statistics() {
       body={t("logToSeeStats")} />;
   }
 
-  // A delta against an empty previous period ("+1659 vs previous" when there
-  // was nothing to compare with) is noise, not information — hide it.
-  const deltaVs = (cur: number, prev: number) => (prev === 0 ? null : cur - prev);
-
-  const weightDeltaPrev =
-    current.weightChange != null && previous.weightChange != null
-      ? Number((current.weightChange - previous.weightChange).toFixed(1))
-      : null;
-
   return (
     <div className="flex flex-col gap-5">
       {phone && (
@@ -189,18 +195,7 @@ function Statistics() {
         <SegmentedControl options={KIND_OPTIONS} value={kindFilter} onChange={setKindFilter} size="sm" />
       </div>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label={t("avgCalories")} value={fmt.number(current.avgCalories)} icon="local_fire_department"
-          color="var(--metric-kcal)" delta={deltaVs(current.avgCalories, previous.avgCalories)} higherIsBetter={false} />
-        <KpiCard label={t("workouts")} value={String(current.workoutCount)} icon="exercise"
-          color="var(--tertiary)" delta={deltaVs(current.workoutCount, previous.workoutCount)} higherIsBetter
-          subtitle={t("workoutsBreakdown", { strength: current.strengthWorkoutCount, cardio: current.cardioWorkoutCount })} />
-        <KpiCard label={t("weight")} value={current.latestWeight != null ? `${fmt.number(current.latestWeight, 1, 1)} kg` : "—"}
-          icon="monitor_weight" color="var(--metric-weight)" delta={weightDeltaPrev} higherIsBetter={false} deltaUnit=" kg" />
-        <KpiCard label={t("trainingVolume")} value={`${fmt.number(Math.round(current.totalVolume))} kg`} icon="fitness_center"
-          color="var(--metric-protein)" delta={previous.totalVolume === 0 ? null : Math.round(current.totalVolume - previous.totalVolume)} higherIsBetter deltaUnit=" kg" />
-      </div>
+      <KpiRow stats={stats} />
 
       {/* Chart grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

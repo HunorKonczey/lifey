@@ -1522,7 +1522,19 @@
     "previous_month": "Previous month",
     "next_month": "Next month",
     "previous_year": "Previous year",
-    "next_year": "Next year"
+    "next_year": "Next year",
+    "volume": "Volume",
+    "avgSteps": "Avg steps",
+    "toGoal": "to goal",
+    "improving": "improving",
+    "worsening": "worsening",
+    "vsPrevious": "{period, select, week {last week} month {last month} other {last year}} {value}",
+    "vsPreviousShort": "{period, select, week {last week} month {last month} other {last year}}",
+    "noPrevious": "No previous data",
+    "noPreviousYear": "No data from last year",
+    "noLoggedDays": "No logged days",
+    "needTwoWeighIns": "Needs two weigh-ins",
+    "noStepDays": "No step counts"
   },
   "settings": {
     "profile": "Profile",
