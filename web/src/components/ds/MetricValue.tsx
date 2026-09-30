@@ -15,7 +15,7 @@ export interface MetricValueProps {
   unit?: string;
   /** Number font-size in px (56 hero ring, 26–34 KPI, 28 tile…). Default 32. */
   size?: number;
-  /** Unit size as a fraction of `size`. Default 0.42 (D-W0.7); tiles use 0.5. */
+  /** Unit size as a fraction of `size`, in px (`size` is px too). Default 0.42 (D-W0.7); tiles use 0.5. */
   unitRatio?: number;
   label?: string;
   className?: string;
@@ -33,7 +33,7 @@ export function MetricValue({ value, unit, size = 32, unitRatio = 0.42, label, c
         {value}
       </span>
       {unit && (
-        <span className="text-fg-2 font-medium" style={{ fontSize: `${unitRatio}em` }} aria-hidden={hidden}>
+        <span className="text-fg-2 font-medium" style={{ fontSize: Math.round(size * unitRatio) }} aria-hidden={hidden}>
           {unit}
         </span>
       )}

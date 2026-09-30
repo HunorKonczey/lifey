@@ -174,3 +174,21 @@ describe("locale tags with a region", () => {
     expect(createFormat("hu-HU").weight(64.5)).toBe("64,5 kg");
   });
 });
+
+describe("weightNumber / relativeDay", () => {
+  const now = new Date(2026, 8, 30, 15, 0);
+
+  it("weightNumber keeps one decimal and drops the unit", () => {
+    expect(hu.weightNumber(69.6)).toBe("69,6");
+    expect(en.weightNumber(70)).toBe("70.0");
+  });
+
+  it("relativeDay says today / yesterday in words and anything older as a short date", () => {
+    expect(hu.relativeDay(new Date(2026, 8, 30, 7, 0), now)).toBe("ma");
+    expect(en.relativeDay(new Date(2026, 8, 30, 7, 0), now)).toBe("today");
+    expect(hu.relativeDay(new Date(2026, 8, 29, 23, 0), now)).toBe("tegnap");
+    expect(en.relativeDay(new Date(2026, 8, 29, 23, 0), now)).toBe("yesterday");
+    expect(hu.relativeDay(new Date(2026, 8, 25), now)).toBe("szept. 25.");
+    expect(en.relativeDay(new Date(2026, 8, 25), now)).toBe("Sep 25");
+  });
+});

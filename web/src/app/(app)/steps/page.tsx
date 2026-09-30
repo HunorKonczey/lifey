@@ -1,5 +1,6 @@
 "use client";
 
+import { effectiveDailyStepGoal } from "@/features/steps/walking";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -30,7 +31,7 @@ export default function StepsPage() {
 
   const byDate = new Map((stepsQ.data ?? []).map((s) => [s.date, s]));
   const todayEntry = byDate.get(dateStr) ?? null;
-  const goal = settingsQ.data?.dailyStepGoal ?? 10000;
+  const goal = effectiveDailyStepGoal(settingsQ.data);
 
   const saveMutation = useMutation({
     mutationFn: () => {

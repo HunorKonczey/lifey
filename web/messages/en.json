@@ -733,7 +733,18 @@
     "waterMenuLabel": "Water options",
     "waterManageSources": "Manage water sources",
     "waterOpenPage": "Open Water",
-    "waterAddFailed": "Couldn't log the water"
+    "waterAddFailed": "Couldn't log the water",
+    "stepsGoalMeta": "goal {goal}",
+    "stepsLeft": "{left} to go · about {minutes} min walk",
+    "stepsLeftShort": "{left} to {goal}",
+    "stepsReached": "Goal reached",
+    "weightPerWeekUnit": "kg / week",
+    "weightGoalLine": "Goal {goal} · {left} to go",
+    "weightGoalReached": "Goal reached",
+    "weightEmptyTitle": "Weigh yourself",
+    "weightEmptyBody": "Your first weigh-in starts the trend.",
+    "weightLog": "Log weight",
+    "weightPerWeekShort": "kg/wk"
   },
   "nutrition": {
     "meals": "Meals",

@@ -41,6 +41,10 @@ export interface LifeyFormat {
 
   /** Whole number with locale grouping, plus an optional unit: `integer(17519, "kcal")` → "17,519 kcal" / "17 519 kcal". */
   integer(value: number, unit?: string): string;
+  /** The weight without its unit: `weightNumber(69.6)` → "69.6" / "69,6". */
+  weightNumber(value: number): string;
+  /** A calendar day relative to today, no time: "today" / "ma", "yesterday" / "tegnap", else `shortDate` ("Sep 25" / "szept. 25."). */
+  relativeDay(date: Date, now: Date): string;
   /** One decimal, always shown, plus " kg": `weight(69.6)` → "69.6 kg" / "69,6 kg". */
   weight(value: number): string;
   /** Up to one decimal (no trailing zero forced), plus " g": `grams(166.68)` → "166.7 g" / "166,7 g". */
@@ -115,6 +119,17 @@ export function createFormat(locale: string): LifeyFormat {
       maximumFractionDigits: digits,
       useGrouping: "always",
     }).format(value);
+  }
+
+  function weightNumber(value: number): string {
+    return weightFmt.format(value);
+  }
+
+  function relativeDay(date: Date, now: Date): string {
+    const diff = diffCalendarDays(date, now);
+    if (diff === 0) return hu ? "ma" : "today";
+    if (diff === 1) return yesterdayWord;
+    return shortDate(date);
   }
 
   function weight(value: number): string {
@@ -196,6 +211,8 @@ export function createFormat(locale: string): LifeyFormat {
   return {
     locale,
     integer,
+    weightNumber,
+    relativeDay,
     weight,
     grams,
     litreNumber,

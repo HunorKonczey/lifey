@@ -1674,12 +1674,36 @@ discrepancy in the plan's own text: it says the projected date needs remaining /
 docs/76 D-W6 and the mobile code refuse only beyond 730 days — the port follows mobile so the two clients show
 the same date for the same data (a 53-week estimate still shows; the two-year refusal case is in the tests).
 
-### W1.7 — Web UI: steps tile + weight tile
+### W1.7 — Web UI: steps tile + weight tile ✅
 - Files: `features/dashboard/components/{StepsTile,WeightTile}.tsx`, `features/steps/walking.ts`.
 - Spec row 2 "Lépések" and "Testsúly". Effective step goal = settings goal or the same default the
   mobile app uses (`effectiveDailyStepGoal`, 77 R1.4) — one helper, used everywhere. Weight tile with no
   entry → `EmptyState` compact: "Mérd meg magad" + "Súly rögzítése".
 - **Verify:** goal reached shows ✓ in steps purple (no green); HU weight "69,6 kg", chip "−0,4 kg / hét".
+
+*As built:* `StepsTile` and `WeightTile` replace the old `StatCard`s (each a presentational `…View` for the
+gallery plus a thin connected wrapper), and `TilesSection` now lays the row out per the canvas: three equal
+tiles from 768, water and steps 2-up with weight full width on a phone, using the page grid's own gap. Steps:
+one purple for the bar, "cél 9 000" in the header, "Még 2 588 lépés · kb. 25 perc séta"
+(`features/steps/walking.ts`: 100 steps a minute, rounded to 5, never under 5) — shortened to "Még 2 588 a 9
+000-ig" below 1280 — and at or past the goal a ✓ with "Cél elérve" painted in the *same* purple as the bar (a
+spec compares the two computed colours, so a green can't creep in). The same file holds
+`effectiveDailyStepGoal()` (the user's positive goal, else mobile's 10 000 default), now used by the dashboard
+and the steps page — the settings page's own field keeps showing what is stored. Weight: the meta is a day
+word ("ma", "tegnap", else "szept. 27." — a new `relativeDay()` in `lifeyFormat`), the value via
+`weightNumber()`, a `DeltaChip` with the weekly pace from `weeklyPace()` (W1.6; absent until the trend has
+four points over two weeks) whose colour is goal-aware from the onboarding target weight (a new `user-details`
+query in `useDashboardData`, 404 = no goal, not an error), shortened to "−0,4 kg a héten" below 1280, and "Cél
+65 kg · még 4,6 kg" (or "Cél elérve" within the 0.2 kg tolerance). A fresh account gets a compact `EmptyState`
+("Mérd meg magad" + "Súly rögzítése" → `/weight` until W1.11/W4 add the drawer) — `EmptyState` gained a
+`compact` mode for tiles. Fixes found while checking the real page at four widths: `MetricValue` sized its
+unit in `em` of the *wrapper*, not of the number, so every unit ("kg", "kcal", "/ 2,5 L") rendered at roughly
+half its intended size — it is now `round(size × unitRatio)` px; `MetricTile` is a container (`@container`) so
+its header meta and the water tile's "⋯" react to the tile's own width — on a 2-up phone tile the meta hides
+and the "⋯" moves to the header instead of squeezing three buttons into 137 px; `MetricTile.subline` may be a
+node (the ✓) and it takes a `unitRatio`. `e2e/ds/dashboardTiles.spec.ts` covers all six states on a gallery
+section (steps under/over goal, weight with goal and losing pace, gaining without a goal, goal reached, empty)
+plus the 1024 shortening.
 
 ### W1.8 — Web UI: 7-day calories card
 - Files: `features/dashboard/components/WeekCaloriesCard.tsx` (uses `LifeyBarChart`), the dashboard's

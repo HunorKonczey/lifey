@@ -10,7 +10,9 @@ import { weightApi } from "@/features/weight/api";
 import { waterApi } from "@/features/water/api";
 import { stepsApi } from "@/features/steps/api";
 import { mealApi } from "@/features/nutrition/api";
+import { userDetailsApi } from "@/features/onboarding/api";
 import { workoutSessionApi, templateApi, exerciseApi } from "@/features/workouts/api";
+import { movingAverage, weeklyPace, weightPoints } from "@/features/weight/trend";
 import { recommendedTemplate } from "@/features/workouts/recommendation";
 import { summarizeTemplate } from "@/features/workouts/recommendedSummary";
 import type { MealResponse } from "@/features/nutrition/types";
@@ -43,7 +45,7 @@ export function filterToday<T extends { dateTime?: string; consumedAt?: string; 
 export function useDashboardData(date: Date) {
   const dateStr = localDateStr(date);
 
-  const [statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ, exercisesQ] =
+  const [statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ, exercisesQ, userDetailsQ] =
     useQueries({
       queries: [
         { queryKey: queryKeys.statistics.daily(dateStr), queryFn: () => statisticsApi.daily(dateStr) },
@@ -57,6 +59,8 @@ export function useDashboardData(date: Date) {
         { queryKey: queryKeys.workoutSessions.all(), queryFn: workoutSessionApi.list },
         { queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list },
         { queryKey: queryKeys.exercises.all(), queryFn: exerciseApi.list },
+        // 404 = onboarding not done — no goal weight, not an error.
+        { queryKey: queryKeys.userDetails.all(), queryFn: userDetailsApi.get, retry: false },
       ],
     });
 
@@ -71,6 +75,9 @@ export function useDashboardData(date: Date) {
   // newest — otherwise we'd show whatever entry happens to be last in insertion order.
   const weightsAsc = weightsQ.data ? [...weightsQ.data].sort((a, b) => a.date.localeCompare(b.date)) : [];
   const latestWeight = weightsAsc.at(-1) ?? null;
+  const points = weightPoints(weightsQ.data ?? []);
+  const weightPace = weeklyPace(points, movingAverage(points));
+  const goalWeightKg = userDetailsQ.data?.targetWeightKg ?? null;
 
   const sessionsDesc = (sessionsQ.data ?? [])
     .slice()
@@ -92,7 +99,7 @@ export function useDashboardData(date: Date) {
   return {
     date,
     dateStr,
-    queries: { statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ, exercisesQ },
+    queries: { statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ, templatesQ, exercisesQ, userDetailsQ },
     settings: settingsQ.data,
     weeklyStats: weeklyStatsQ.data,
     meals,
@@ -101,6 +108,8 @@ export function useDashboardData(date: Date) {
     todaySteps,
     weightsAsc,
     latestWeight,
+    weightPace,
+    goalWeightKg,
     sessionsDesc,
     templates: templatesQ.data ?? [],
     recommended,

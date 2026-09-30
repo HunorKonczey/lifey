@@ -733,7 +733,18 @@
     "waterMenuLabel": "Víz beállítások",
     "waterManageSources": "Vízforrások kezelése",
     "waterOpenPage": "Víz oldal",
-    "waterAddFailed": "Nem sikerült rögzíteni a vizet"
+    "waterAddFailed": "Nem sikerült rögzíteni a vizet",
+    "stepsGoalMeta": "cél {goal}",
+    "stepsLeft": "Még {left} lépés · kb. {minutes} perc séta",
+    "stepsLeftShort": "Még {left} a {goal}-ig",
+    "stepsReached": "Cél elérve",
+    "weightPerWeekUnit": "kg / hét",
+    "weightGoalLine": "Cél {goal} · még {left}",
+    "weightGoalReached": "Cél elérve",
+    "weightEmptyTitle": "Mérd meg magad",
+    "weightEmptyBody": "Az első mérés indítja el a trendet.",
+    "weightLog": "Súly rögzítése",
+    "weightPerWeekShort": "kg a héten"
   },
   "nutrition": {
     "meals": "Étkezések",

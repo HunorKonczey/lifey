@@ -15,6 +15,48 @@ import { useToast } from "@/lib/hooks/useToast";
 import { logTimestampFor } from "@/lib/utils/logTime";
 import type { DashboardData } from "../useDashboardData";
 
+/** The "⋯" menu to the water page. Rendered twice — a 32px header button on a
+ *  narrow (2-up, phone) tile, a 40px footer button beside the quick adds once the
+ *  tile is wide enough — and shown/hidden by the tile's own container width. */
+function WaterMenu({ className, size }: { className: string; size: number }) {
+  const t = useTranslations("dashboard");
+  const router = useRouter();
+  const anchor = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        ref={anchor}
+        type="button"
+        aria-label={t("waterMenuLabel")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className={["lifey-button items-center justify-center shrink-0", className].join(" ")}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "var(--r-control)",
+          background: size >= 40 ? "var(--nested)" : "transparent",
+          color: "var(--text-2)",
+        }}
+      >
+        <Icon name="more_horiz" size={20} />
+      </button>
+      <Menu
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={anchor}
+        items={[
+          { label: t("waterManageSources"), icon: "tune", onSelect: () => router.push("/water#sources") },
+          { label: t("waterOpenPage"), icon: "water_drop", onSelect: () => router.push("/water") },
+        ]}
+      />
+    </>
+  );
+}
+
 /**
  * The dashboard's water tile (W1.5): litres against the goal on the 10
  * segments, "last 14:10", and two quick-add buttons — the user's two most used
@@ -25,10 +67,7 @@ import type { DashboardData } from "../useDashboardData";
 export function WaterTile({ data }: { data: DashboardData }) {
   const t = useTranslations("dashboard");
   const fmt = useFormat();
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const menuAnchor = useRef<HTMLButtonElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const { settings, totals, todayWater, date, queries } = data;
   const goal = settings?.dailyWaterGoalLiters ?? 2.5;
@@ -65,9 +104,11 @@ export function WaterTile({ data }: { data: DashboardData }) {
       meta={lastAt ? t("waterLastAt", { time: fmt.time(lastAt) }) : undefined}
       value={fmt.litreNumber(totals.waterL)}
       unit={`/ ${fmt.litres(goal)}`}
+      unitRatio={0.6}
       color="var(--metric-water)"
       segments={{ count: 10, progress, height: 8 }}
       aria-label={fmt.litresOfGoal(totals.waterL, goal)}
+      actions={<WaterMenu className="@[200px]:hidden" size={32} />}
       footer={
         <div className="flex gap-2">
           {quick.map((q) => (
@@ -89,27 +130,7 @@ export function WaterTile({ data }: { data: DashboardData }) {
               + {fmt.litres(q.volumeLiters)}
             </button>
           ))}
-          <button
-            ref={menuAnchor}
-            type="button"
-            aria-label={t("waterMenuLabel")}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(true)}
-            className="lifey-button inline-flex items-center justify-center shrink-0"
-            style={{ width: 40, height: 40, borderRadius: "var(--r-control)", background: "var(--nested)", color: "var(--text-2)" }}
-          >
-            <Icon name="more_horiz" size={20} />
-          </button>
-          <Menu
-            open={menuOpen}
-            onClose={() => setMenuOpen(false)}
-            anchorRef={menuAnchor}
-            items={[
-              { label: t("waterManageSources"), icon: "tune", onSelect: () => router.push("/water#sources") },
-              { label: t("waterOpenPage"), icon: "water_drop", onSelect: () => router.push("/water") },
-            ]}
-          />
+          <WaterMenu className="hidden @[200px]:inline-flex" size={40} />
         </div>
       }
     />
