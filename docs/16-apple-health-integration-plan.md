@@ -760,6 +760,11 @@ weights are not of interest; only the most recent sample matters.
     `weightHealthImporterProvider.import()`.
 - No new UI/strings — this phase is a silent background import with no dialog.
 - `flutter analyze lib` clean; `flutter test` passes.
+- **2026-09-28 addendum**: `WeightController.refresh()` (the weight screen's
+  pull-to-refresh) also calls `WeightHealthImporter.import()` now, alongside
+  the existing resume/permission-grant triggers — covers the case where the
+  app has been foregrounded a while (no new "resumed" transition) and the
+  user pulls to refresh.
 
 ---
 
