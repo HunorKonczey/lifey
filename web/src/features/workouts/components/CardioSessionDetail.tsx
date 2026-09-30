@@ -134,7 +134,7 @@ export function CardioSessionDetail({
         </div>
         {session.rpe != null && (
           <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold flex-none"
-            style={{ background: "color-mix(in srgb, var(--secondary) 18%, transparent)", color: "var(--secondary)" }}>
+            style={{ background: "color-mix(in srgb, var(--secondary) 18%, transparent)", color: "var(--text)" }}>
             {t("sessionRpe", { rpe: session.rpe })}
           </span>
         )}

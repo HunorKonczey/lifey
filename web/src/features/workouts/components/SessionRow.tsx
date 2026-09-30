@@ -94,7 +94,7 @@ export function SessionRow({
         type="button"
         onClick={onOpen}
         aria-current={selected || undefined}
-        className="lifey-button grid min-w-0 flex-1 grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left md:grid-cols-[40px_minmax(0,1fr)_auto_90px]"
+        className="lifey-button grid min-w-0 flex-1 grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left md:grid-cols-[40px_minmax(0,1fr)_auto_112px]"
       >
         <span
           className="flex items-center justify-center"
@@ -128,7 +128,7 @@ export function SessionRow({
         <span className="type-body tabular text-right" style={{ fontWeight: 700 }}>
           {main}
         </span>
-        <span className="type-body-s tabular hidden text-right md:block" style={{ color: "var(--text-3)" }}>
+        <span className="type-body-s tabular hidden whitespace-nowrap text-right md:block" style={{ color: "var(--text-3)" }}>
           {date(started, "weekday")} · {date(started, "day")}
         </span>
       </button>

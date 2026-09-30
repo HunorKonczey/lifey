@@ -72,7 +72,7 @@ export function TemplatePicker({
           <Button variant="ghost" onClick={() => onStart(null)} disabled={starting}>
             {t("pickerEmpty")}
           </Button>
-          <Button onClick={() => onStart(selected)} disabled={starting || selected == null}>
+          <Button onClick={() => onStart(selected)} disabled={starting || selected == null} data-autofocus>
             <Icon name="play_arrow" size={20} />
             {t("pickerStart")}
           </Button>

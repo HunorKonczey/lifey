@@ -186,7 +186,7 @@ export function LiveSession({
         onFinish={() => setFeedbackContext("finish")}
       />
 
-      <div className={["grid flex-1 items-start gap-4 p-3 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_340px]", floatingRest ? "pb-32" : "pb-6"].join(" ")}>
+      <div className={["grid flex-1 grid-cols-[minmax(0,1fr)] items-start gap-4 p-3 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_340px]", floatingRest ? "pb-32" : "pb-6"].join(" ")}>
         <ExerciseRail items={railExercises(exercises, drafts, currentId)} onSelect={setPickedId} />
 
         <div className="flex min-w-0 flex-col gap-4">
@@ -258,7 +258,7 @@ export function LiveSession({
                   {next.exerciseName}
                 </span>
                 <span className="type-body-s tabular block" style={{ color: "var(--text-2)" }}>
-                  {[t("railNext"), targets.get(next.exerciseId) ? `${targets.get(next.exerciseId)} ×` : null].filter(Boolean).join(" · ")}
+                  {[t("railNext"), targets.get(next.exerciseId) ? t("setsSuffix", { count: targets.get(next.exerciseId)! }) : null].filter(Boolean).join(" · ")}
                 </span>
               </span>
               <Icon name="expand_more" size={22} color="var(--text-3)" />

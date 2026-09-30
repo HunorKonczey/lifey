@@ -63,7 +63,7 @@ export function SetRow({
       >
         {number}
       </span>
-      <span className="type-body-s tabular truncate" style={{ color: "var(--text-3)" }}>
+      <span className="type-body-s tabular truncate" style={{ color: "var(--text-2)" }}>
         {previous ? `${formatNumber(previous.weight, locale, 2)} kg × ${previous.reps}` : "—"}
       </span>
       <NumberField

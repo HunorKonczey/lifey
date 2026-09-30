@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Icon, TintedChip } from "@/components/ds";
+import { Icon } from "@/components/ds";
 import type { PickerTemplate } from "../templatePicker";
 
 /**
@@ -59,13 +59,18 @@ export function TemplateTile({
             <span className="type-body truncate" style={{ fontWeight: 700 }}>
               {item.template.name}
             </span>
-            {item.recommended && <TintedChip label={t("recommendedBadge")} color="var(--primary)" />}
+            {item.recommended && (
+              // Solid, not a tint on the selected tile's tint: primary-on-primary-tint was 4.25:1 in dark.
+              <span className="type-label rounded-[var(--r-pill)] px-2 py-0.5" style={{ background: "var(--primary)", color: "var(--on-primary)" }}>
+                {t("recommendedBadge")}
+              </span>
+            )}
           </span>
           <span className="type-body-s block" style={{ color: "var(--text-2)" }}>
             {t("pickerMeta", { exercises: item.exerciseCount, minutes: item.estimatedMinutes })}
           </span>
         </span>
-        <span className="type-body-s flex-none" style={{ color: "var(--text-3)" }}>
+        <span className="type-body-s flex-none" style={{ color: "var(--text-2)" }}>
           {daysAgo}
         </span>
       </button>

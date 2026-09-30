@@ -82,13 +82,13 @@ export function HrZonePanel({ breakdown }: HrZonePanelProps) {
           />
         )}
       </div>
-      <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: "var(--outline)" }}>
+      <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: "var(--text-3)" }}>
         <span>{t("hrZoneEasyEndLabel")}</span>
         <span>{t("hrZoneHardEndLabel")}</span>
       </div>
 
       {breakdown.isPartial && (
-        <div className="flex items-center gap-1.5 mt-2.5 text-[10.5px]" style={{ color: "var(--outline)" }}>
+        <div className="flex items-center gap-1.5 mt-2.5 text-[10.5px]" style={{ color: "var(--text-3)" }}>
           <span className="material-symbols-rounded text-xs">timelapse</span>
           {t("hrZonePartialCoverage", { percent: Math.round(breakdown.coverageFraction * 100) })}
         </div>
@@ -105,28 +105,28 @@ export function HrZonePanel({ breakdown }: HrZonePanelProps) {
                   className="w-6 flex-none text-center text-[10px] font-extrabold py-0.5 rounded-[5px]"
                   style={{
                     background: `color-mix(in srgb, ${color} ${empty ? 10 : 22}%, transparent)`,
-                    color: empty ? "var(--outline)" : "var(--on-surface)",
+                    color: empty ? "var(--text-3)" : "var(--on-surface)",
                   }}
                 >
                   Z{slice.zone}
                 </span>
-                <span className="text-[11.5px] truncate" style={{ color: empty ? "var(--outline)" : "var(--on-surface-variant)" }}>
+                <span className="text-[11.5px] truncate" style={{ color: empty ? "var(--text-3)" : "var(--on-surface-variant)" }}>
                   {t(ZONE_NAME_KEYS[i])}
                 </span>
               </span>
               <span className="h-2 rounded-[4px] overflow-hidden" style={{ background: "var(--surface-container)" }}>
                 <span className="block h-full rounded-[4px]" style={{ width: `${Math.min(1, slice.fraction) * 100}%`, background: color }} />
               </span>
-              <span className="text-right leading-tight tabular" style={{ color: empty ? "var(--outline)" : "var(--on-surface)" }}>
+              <span className="text-right leading-tight tabular" style={{ color: empty ? "var(--text-3)" : "var(--on-surface)" }}>
                 <span className="block text-xs font-extrabold" data-testid="hr-zone-percent">{percents[i]}%</span>
-                <span className="block text-[10.5px]" style={{ color: empty ? "var(--outline)" : "var(--on-surface-variant)" }}>{formatDuration(slice.seconds)}</span>
+                <span className="block text-[10.5px]" style={{ color: empty ? "var(--text-3)" : "var(--on-surface-variant)" }}>{formatDuration(slice.seconds)}</span>
               </span>
             </div>
           );
         })}
       </div>
 
-      <p className="text-[10px] leading-snug mt-3" style={{ color: "var(--outline)" }}>
+      <p className="text-[10px] leading-snug mt-3" style={{ color: "var(--text-3)" }}>
         {t("hrZoneSourceNote")}
       </p>
     </Card>

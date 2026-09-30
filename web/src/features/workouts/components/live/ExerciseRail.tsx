@@ -13,7 +13,7 @@ export function ExerciseRail({ items, onSelect }: { items: RailExercise[]; onSel
   const t = useTranslations("workouts");
 
   return (
-    <nav aria-label={t("railAria")}>
+    <nav aria-label={t("railAria")} className="min-w-0">
       <ul className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
         {items.map((item) => {
           const current = item.state === "current";
@@ -49,7 +49,7 @@ export function ExerciseRail({ items, onSelect }: { items: RailExercise[]; onSel
                     {item.exerciseName}
                   </span>
                   {item.totalSets > 0 && (
-                    <span className="type-label tabular block" style={{ color: "var(--text-3)" }}>
+                    <span className="type-label tabular block" style={{ color: "var(--text-2)" }}>
                       {item.doneSets} / {item.totalSets}
                     </span>
                   )}
