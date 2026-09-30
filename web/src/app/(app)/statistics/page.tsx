@@ -4,8 +4,8 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { endOfDay } from "date-fns";
-import { Button, Icon, SectionLabel } from "@/components/ds";
+import { SectionLabel } from "@/components/ds";
+import { ExportControl } from "@/features/statistics/components/ExportPopover";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
@@ -14,13 +14,12 @@ import { userDetailsApi } from "@/features/onboarding/api";
 import { settingsApi } from "@/features/settings/api";
 import { stepsApi } from "@/features/steps/api";
 import { effectiveDailyStepGoal } from "@/features/steps/walking";
-import { aggregate } from "@/features/statistics/aggregate";
 import { CaloriesChartCard } from "@/features/statistics/components/CaloriesChartCard";
 import { KpiRow } from "@/features/statistics/components/KpiRow";
 import { MovementSection } from "@/features/statistics/components/MovementSection";
-import { PeriodControl } from "@/features/statistics/components/PeriodControl";
+import { PeriodControl, usePeriodLabel } from "@/features/statistics/components/PeriodControl";
 import { WeightChartCard } from "@/features/statistics/components/WeightChartCard";
-import { parsePeriodState, periodRange, periodSearch, type PeriodState } from "@/features/statistics/period";
+import { parsePeriodState, periodSearch, type PeriodState } from "@/features/statistics/period";
 import { buildPeriodStats } from "@/features/statistics/periodStats";
 import type { RawData, StatKindFilter } from "@/features/statistics/types";
 import { waterApi } from "@/features/water/api";
@@ -29,7 +28,6 @@ import { workoutSessionApi } from "@/features/workouts/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useTopBarCentre, useTopBarTrailing } from "@/lib/hooks/useTopBarSlot";
-import { DATE_LOCALES, useFormat } from "@/lib/i18n/format";
 
 /** The period lives in the URL (`?period=week&start=2026-09-21`) so a view can be linked and survives a reload. */
 export default function StatisticsPage() {
@@ -42,7 +40,6 @@ export default function StatisticsPage() {
 
 function Statistics() {
   const t = useTranslations("statistics");
-  const fmt = useFormat();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -92,44 +89,18 @@ function Statistics() {
     [raw, period, state.start, calorieGoal, stepGoal, weightGoal],
   );
 
-  // Interim export, replaced by the period / data-set popover and the CSV builder in W5.7–W5.8.
-  const exportCsv = useCallback(() => {
-    const range = periodRange(period, state.start);
-    const current = aggregate(raw, range.start, endOfDay(range.end), "yyyy-MM-dd", "ALL", DATE_LOCALES[fmt.locale]);
-    const rows = [["date", "calories", "protein", "water_l", "steps", "volume"]];
-    current.caloriesSeries.forEach((p, i) => {
-      rows.push([
-        p.date,
-        String(p.value),
-        String(current.proteinSeries[i]?.value ?? 0),
-        String(current.waterSeries[i]?.value ?? 0),
-        String(current.stepsSeries[i]?.value ?? 0),
-        String(current.volumeSeries[i]?.value ?? 0),
-      ]);
-    });
-    const blob = new Blob([rows.map((r) => r.join(",")).join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `lifey-stats-${period}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [raw, period, state.start, fmt.locale]);
-
   // The period control sits in the top bar's centre and the export beside the theme toggle; a phone has no top bar
   // (W5-D), so both move into the page header below.
   const periodControl = useMemo(() => <PeriodControl state={state} onChange={setState} />, [state, setState]);
   useTopBarCentre(phone ? null : periodControl);
-  const exportButton = useMemo(
+  const periodLabel = usePeriodLabel()(state);
+  const exportControl = useMemo(
     () => (
-      <Button variant="secondary" onClick={exportCsv}>
-        <Icon name="download" size={20} />
-        {t("export")}
-      </Button>
+      <ExportControl raw={raw} viewed={stats.range} period={period} isCurrent={stats.isCurrent} periodLabel={periodLabel} iconOnly={phone} />
     ),
-    [exportCsv, t],
+    [raw, stats.range, stats.isCurrent, period, periodLabel, phone],
   );
-  useTopBarTrailing(phone ? null : exportButton);
+  useTopBarTrailing(phone ? null : exportControl);
 
   if (isLoading) {
     return (
@@ -153,7 +124,7 @@ function Statistics() {
     <div className="flex flex-col gap-5">
       {phone && (
         <div className="flex flex-col gap-3">
-          <div className="flex justify-end">{exportButton}</div>
+          <div className="flex justify-end">{exportControl}</div>
           <PeriodControl state={state} onChange={setState} stacked />
         </div>
       )}
