@@ -14,7 +14,12 @@ import { CardioSessionDetail } from "./CardioSessionDetail";
 import { RecommendedWorkoutCard } from "./RecommendedWorkoutCard";
 import { SessionRow } from "./SessionRow";
 import { WeekHeader } from "./WeekHeader";
+import { SessionSummary, sessionTitle, sessionWhenLabel } from "./SessionSummary";
 import { Card } from "@/components/ds";
+import { Drawer } from "@/components/ds/overlay/Drawer";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useFormat } from "@/lib/i18n/format";
+import type { WorkoutSessionResponse } from "../types";
 import { groupSessionsByWeek } from "../sessionGroups";
 import { recordsBySession, setFactsFromSessions } from "../personalRecords";
 import { recommendedTemplate } from "../recommendation";
@@ -42,9 +47,14 @@ export function SessionsView({
 } = {}) {
   const t = useTranslations("workouts");
   const common = useTranslations("common");
+  const d = useTranslations("dashboard");
+  const { locale } = useFormat();
+  const sidePanel = useMediaQuery("(min-width: 1280px)");
   const queryClient = useQueryClient();
   const { show } = useToast();
+  // `activeId` is the editor / cardio detail; `selectedId` the closed-session summary beside (or over) the list.
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const setStarting = (value: boolean) => onStartingChange?.(value);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -85,6 +95,12 @@ export function SessionsView({
   const visible = sessions.filter((s) => matchesTypeFilter(s.sessionKind, typeFilter));
 
   const active = activeId != null ? sessions.find((s) => s.id === activeId) ?? null : null;
+  const selected = selectedId != null ? sessions.find((s) => s.id === selectedId) ?? null : null;
+  // A finished strength session opens as its summary; a running one goes back to its logger, cardio to its detail.
+  const openSession = (s: WorkoutSessionResponse) => {
+    if (s.sessionKind === "STRENGTH" && s.finishedAt) setSelectedId(s.id);
+    else setActiveId(s.id);
+  };
   const weeks = groupSessionsByWeek(visible, new Date());
   // Records come from the whole history, not the filtered list — a filter must not change what counts as a PR.
   const records = recordsBySession(setFactsFromSessions(sessions));
@@ -106,10 +122,11 @@ export function SessionsView({
   const autoOpenedRef = useRef(false);
   useEffect(() => {
     if (autoOpenedRef.current || !autoOpenSessionId || !data) return;
-    if (!data.some((s) => s.id === autoOpenSessionId)) return;
+    const target = data.find((s) => s.id === autoOpenSessionId);
+    if (!target) return;
     autoOpenedRef.current = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot deep link, guarded by the ref
-    setActiveId(autoOpenSessionId);
+    openSession(target);
     onAutoStartHandled?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenSessionId, data]);
@@ -133,8 +150,23 @@ export function SessionsView({
     );
   }
 
+  const summary = selected && (
+    <SessionSummary
+      session={selected}
+      history={sessions}
+      bare={!sidePanel}
+      starting={startMutation.isPending}
+      onRepeat={() =>
+        startMutation.mutate({ exerciseIds: selected.exercises.map((e) => e.exerciseId), templateId: selected.templateId })
+      }
+      onEdit={() => setActiveId(selected.id)}
+      onDeleted={() => setSelectedId(null)}
+    />
+  );
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className={sidePanel ? "grid items-start gap-6" : undefined} style={sidePanel ? { gridTemplateColumns: "minmax(0, 1fr) 440px" } : undefined}>
+    <div className="flex min-w-0 flex-col gap-4">
       {recommended && (
         <RecommendedWorkoutCard
           template={recommended}
@@ -167,7 +199,7 @@ export function SessionsView({
                 <ul className="divide-y" style={{ borderColor: "var(--hairline)" }}>
                   {week.sessions.map((s) => (
                     <li key={s.id} style={{ borderColor: "var(--hairline)" }}>
-                      <SessionRow session={s} records={records.get(s.id)} onOpen={() => setActiveId(s.id)} />
+                      <SessionRow session={s} records={records.get(s.id)} selected={s.id === selectedId} onOpen={() => openSession(s)} />
                     </li>
                   ))}
                 </ul>
@@ -214,6 +246,29 @@ export function SessionsView({
         </div>
       )}
     </div>
-  );
 
+    {sidePanel && (
+      <aside className="sticky top-4" aria-label={t("summaryAria")}>
+        <Card>
+          {summary ?? (
+            <p className="type-body-s py-10 text-center" style={{ color: "var(--text-3)" }}>
+              {t("summaryPlaceholder")}
+            </p>
+          )}
+        </Card>
+      </aside>
+    )}
+    {!sidePanel && selected && (
+      <Drawer
+        open
+        onClose={() => setSelectedId(null)}
+        width={480}
+        overline={sessionWhenLabel(selected, locale)}
+        title={sessionTitle(selected, d("workoutFallback"))}
+      >
+        {summary}
+      </Drawer>
+    )}
+    </div>
+  );
 }
