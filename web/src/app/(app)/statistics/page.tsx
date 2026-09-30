@@ -123,10 +123,7 @@ function Statistics() {
   return (
     <div className="flex flex-col gap-5">
       {phone && (
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-end">{exportControl}</div>
-          <PeriodControl state={state} onChange={setState} stacked />
-        </div>
+        <PeriodControl state={state} onChange={setState} stacked endSlot={exportControl} />
       )}
 
       <KpiRow stats={stats} />

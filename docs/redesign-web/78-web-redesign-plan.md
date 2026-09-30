@@ -2673,7 +2673,7 @@ steps / session lists), `features/statistics/{aggregate,api,types}.ts` + `aggreg
 
 *As built:* **Exportálás** (top bar, right beside the theme toggle; a round download icon in the phone header) opens the W5-C popover, `ExportControl`: "Adatok exportálása", **Időszak** as three chips — the period on screen ("Ez a hét" when it is the current one, otherwise its range, e.g. "szept. 14–20."), **30 nap**, **Minden adat** — the four data sets as DS checkboxes on a nested surface (Étkezések és makrók, Testsúly, Edzések és szettek ticked, Víz és lépések not, as on the canvas), "CSV · UTF-8" and **Letöltés** (disabled with nothing ticked). It builds the files with `exportCsv.ts`, downloads them one after the other and closes, and a **success toast names what was saved** — "lifey-2026-09-21_27.csv letöltve", or "4 fájl letöltve: …" for several. The popover anchors to a wrapping span (so the labelled button and the icon button share one code path), closes on Esc / outside click and returns focus to its trigger through the DS `Popover`. The interim CSV of W5.1 and the old `aggregate.ts` (with its test) are **deleted** — nothing imports them any more; the cardio definitions its parity tests pinned (DISTANCE + MACHINE families, games excluded, no 0 km for a session with no distance, every session counted in "Edzések") live on in `periodStats.test.ts`. Checked in Chromium on the demo account (week of 21 Sep): the popover opens with the canvas' defaults; with all four sets ticked four downloads are triggered named `lifey-2026-09-21_27-meals|weight|workouts|waterSteps.csv`, each starting with the UTF-8 BOM (EF BB BF), `text/csv;charset=utf-8`, `;` separated with decimal commas ("2026-09-22;69,6", "Tojás;157,4;225;19,8"), accents intact in the headers ("Étkezés", "Mennyiség (g)"); the toast lists the files. Not verified here: opening the files in Excel / LibreOffice themselves (no spreadsheet on this machine) — the BOM, separator and decimal mark are the three things that decide it, and each is asserted in `exportCsv.test.ts`.
 
-### W5.9 — Web UI: statistics at 390
+### W5.9 — Web UI: statistics at 390 ✅
 - **Verify:** W5-D side by side; charts' Y axes not clipped at 358 px card width.
 
 **W5 acceptance** (plus §4.1): W5-A … W5-D reproduced; no chart draws a missing day as 0.
@@ -2683,6 +2683,8 @@ Cardio, export two data sets; check each chart's axis at 1024 and 390, both lang
 "2.4k").
 
 ---
+
+*As built:* at 390 the page follows W5-D: the `MobileHeader` carries the title, then the **full-width Hét · Hónap · Év switch** (44 px segments), the period stepper with the **export as a round download icon** beside it (`PeriodControl` got an `endSlot` for it), the **2 × 2 KPIs** (first four; Edzések and Volumen show their chips and "előző hét" lines, the last two tiles are hidden), then one chart per card, calories first, with the floating bottom nav clear of the content. The Mozgás filter becomes a full-width 44 px switch *under* its label (the small 32 px one would miss the 44 px touch target). Checked at 390 × 844 in Chromium on the demo account: document and `<main>` are both 390 wide (no sideways scroll), every chart card is 358 px with its 326 px plot, and each Y axis reads whole — "1,9 e / 950 / 0", "70 / 69 …", "6,4 e / 3,2 e / 0", "12 e / 6 e / 0" — in the 44 px axis column with nothing clipped; the three filter segments and the period segments measure 44 px.
 
 ## W6 — Settings, auth, onboarding · `Lifey Web 6 Settings Auth Onboarding.dc.html` (W6-A … W6-H)
 

@@ -30,14 +30,16 @@ export function MovementSection({
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="stats-movement-heading" data-testid="stats-movement">
-      <div className="flex items-center gap-3">
+      <div className={compact ? "flex flex-col gap-3" : "flex items-center gap-3"}>
         <h2 id="stats-movement-heading" className="type-section" style={{ color: "var(--text-3)" }}>
           {t("sectionMovement")}
         </h2>
-        <div className="flex-1 h-px" style={{ background: "var(--hairline)" }} aria-hidden />
+        {!compact && <div className="flex-1 h-px" style={{ background: "var(--hairline)" }} aria-hidden />}
         <SegmentedControl<StatKindFilter>
           aria-label={t("kindAria")}
           size="sm"
+          // A phone gets the full-width 44 px switch under the label (D-W0.18), the desktop the small one in the header.
+          fullWidth={compact}
           options={STAT_KIND_FILTERS.map((k) => ({ value: k, label: t(`kind_${k}`) }))}
           value={filter}
           onChange={onFilterChange}
