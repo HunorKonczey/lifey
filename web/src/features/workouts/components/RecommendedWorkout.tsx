@@ -61,14 +61,27 @@ export function RecommendedWorkout({ name, summary, onStart, onPickTemplate, sta
         )}
       </div>
 
-      <div>
-        <h3 style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>{name}</h3>
-        <p className="type-body-s mt-1" style={{ color: "var(--text-2)" }}>
-          {t("workoutMeta", { exercises: summary.exerciseCount, minutes: summary.estimatedMinutes, sets: summary.totalSets })}
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>{name}</h3>
+          <p className="type-body-s mt-1" style={{ color: "var(--text-2)" }}>
+            {t("workoutMeta", { exercises: summary.exerciseCount, minutes: summary.estimatedMinutes, sets: summary.totalSets })}
+          </p>
+        </div>
+        {/* On a phone the card is compact (W1-C): the start action is a round ▶ beside the title. */}
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={starting}
+          aria-label={t("startWorkoutCta")}
+          className="lifey-button flex shrink-0 items-center justify-center sm:hidden disabled:opacity-45"
+          style={{ width: 48, height: 48, borderRadius: "var(--r-pill)", background: "var(--primary)", color: "var(--on-primary)" }}
+        >
+          <Icon name="play_arrow" size={26} fill={1} />
+        </button>
       </div>
 
-      <ul className="flex flex-col gap-2.5">
+      <ul className="hidden flex-col gap-2.5 sm:flex">
         {summary.preview.map((e) => (
           <li key={e.exerciseId} className="flex items-baseline justify-between gap-3">
             <span className="truncate" style={{ fontSize: 14, fontWeight: 600 }}>
@@ -81,7 +94,7 @@ export function RecommendedWorkout({ name, summary, onStart, onPickTemplate, sta
         ))}
       </ul>
 
-      <div className="mt-auto pt-1">
+      <div className="mt-auto hidden pt-1 sm:block">
         <Button fullWidth onClick={onStart} disabled={starting}>
           <Icon name="play_arrow" size={20} fill={1} />
           {t("startWorkoutCta")}

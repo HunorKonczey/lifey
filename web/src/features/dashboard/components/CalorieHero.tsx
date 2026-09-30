@@ -32,7 +32,7 @@ function useRingSize(): number {
   if (wide) return 220;
   if (desktop) return 168;
   if (tablet) return 184;
-  return 128;
+  return 156;
 }
 
 export interface CalorieHeroViewProps {
@@ -68,7 +68,7 @@ export function CalorieHeroView({ kcal, goalKcal, macros, onAdd, secondaryAction
 
   return (
     <Card variant="hero" className="flex flex-col gap-6 xl:flex-row xl:items-center xl:gap-8" style={{ padding: 28 }} data-testid="calorie-hero">
-      <div className="flex items-center gap-5 sm:gap-8 xl:shrink-0">
+      <div className="flex items-center justify-center gap-5 sm:justify-start sm:gap-8 xl:shrink-0">
         <ProgressRing progress={state.ringProgress} color="var(--metric-kcal)" size={ringSize} aria-label={ringLabel}>
           <div className="flex flex-col items-center leading-none">
             <span data-testid="hero-number" style={{ fontSize: numberSize, fontWeight: 800, letterSpacing: "-0.03em" }}>
@@ -81,10 +81,16 @@ export function CalorieHeroView({ kcal, goalKcal, macros, onAdd, secondaryAction
             >
               {t(state.captionKey)}
             </span>
+            {/* The phone layout has no eaten/goal column beside the ring — it sits under the caption instead. */}
+            {goalKcal != null && goalKcal > 0 && (
+              <span className="tabular mt-1 sm:hidden" style={{ fontSize: 12, fontWeight: 600, color: "var(--text-3)" }} data-testid="hero-ring-sub">
+                {fmt.integer(kcal)} / {fmt.integer(goalKcal)}
+              </span>
+            )}
           </div>
         </ProgressRing>
 
-        <div className="flex flex-col gap-3 min-w-0">
+        <div className="hidden min-w-0 flex-col gap-3 sm:flex">
           <div>
             <p className="type-body-s" style={{ color: "var(--text-3)", fontWeight: 600 }}>
               {t("eatenLabel")}

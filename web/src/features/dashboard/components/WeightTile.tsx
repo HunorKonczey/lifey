@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Card, DeltaChip, Icon, MetricTile } from "@/components/ds";
+import { TrendSpark } from "@/components/ds/charts/TrendSpark";
 import { EmptyState } from "@/components/status/EmptyState";
 import { useFormat } from "@/lib/format/useFormat";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -17,6 +18,8 @@ export interface WeightTileViewProps {
   /** The trend's kg per week, signed like the scale; null while there isn't enough data. */
   pace: number | null;
   goalKg: number | null;
+  /** The last weeks of weigh-ins, oldest first, for the small trend line; omit or pass < 2 to hide it. */
+  trend?: number[];
   onClick?: () => void;
   onLog?: () => void;
 }
@@ -28,7 +31,7 @@ export interface WeightTileViewProps {
  * heart colour) and "Cél 65 kg · még 4,6 kg". With no weigh-in yet the tile
  * is a compact empty state that says what to do instead of a zero.
  */
-export function WeightTileView({ latest, pace, goalKg, onClick, onLog }: WeightTileViewProps) {
+export function WeightTileView({ latest, pace, goalKg, trend, onClick, onLog }: WeightTileViewProps) {
   const t = useTranslations("dashboard");
   const fmt = useFormat();
   const roomy = useMediaQuery("(min-width: 1280px)");
@@ -81,6 +84,13 @@ export function WeightTileView({ latest, pace, goalKg, onClick, onLog }: WeightT
         ) : undefined
       }
       subline={subline}
+      trailing={
+        trend && trend.length >= 2 ? (
+          <div className="hidden @[260px]:block">
+            <TrendSpark values={trend} color={WEIGHT_COLOR} />
+          </div>
+        ) : undefined
+      }
       onClick={onClick}
       aria-label={`${t("weight")}: ${fmt.weight(latest.weight)}`}
     />
@@ -95,6 +105,7 @@ export function WeightTile({ data }: { data: DashboardData }) {
       latest={latestWeight ? { weight: latestWeight.weight, date: parseLocalDate(latestWeight.date) } : null}
       pace={weightPace}
       goalKg={goalWeightKg}
+      trend={data.weightsAsc.slice(-30).map((w) => w.weight)}
       onClick={() => router.push("/weight")}
       onLog={() => router.push("/weight")}
     />

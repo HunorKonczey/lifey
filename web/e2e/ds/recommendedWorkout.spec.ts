@@ -39,3 +39,17 @@ test("with no suggestion the card becomes a template picker instead of disappear
   await expect(c.getByRole("button", { name: "Open templates" })).toBeVisible();
   await expect(c.getByRole("button", { name: "Start workout" })).toHaveCount(0);
 });
+
+test("on a phone the card is compact: no exercise list, a round start button beside the title", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  const c = card(page, "with-history");
+  await expect(c.getByRole("heading", { name: "Leg + core" })).toBeVisible();
+  await expect(c.getByText("Back squat")).toBeHidden();
+  const start = c.getByRole("button", { name: "Start workout" });
+  await expect(start).toBeVisible();
+  const box = (await start.boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.width).toBeLessThan(80); // round icon button, not the full-width one
+});

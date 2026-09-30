@@ -55,5 +55,8 @@ test("at 390 the add button shows the short label and nothing scrolls sideways",
   await page.reload();
   const hero = state(page, "remaining");
   await expect(hero.getByRole("button", { name: "Meal" })).toBeVisible();
+  // compact hero (W1-C): eaten / goal moves inside the ring, the side column goes
+  await expect(hero.getByTestId("hero-ring-sub")).toHaveText("1,041 / 1,900");
+  await expect(hero.getByText("Eaten", { exact: true })).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
 });

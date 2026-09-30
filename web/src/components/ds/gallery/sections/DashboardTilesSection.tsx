@@ -22,7 +22,7 @@ export function DashboardTilesSection() {
         <StepsTileView steps={9500} goal={9000} onClick={noop} />
       </div>
       <div data-state="weight-losing">
-        <WeightTileView latest={{ weight: 69.6, date: today }} pace={-0.4} goalKg={65} onClick={noop} />
+        <WeightTileView latest={{ weight: 69.6, date: today }} pace={-0.4} goalKg={65} trend={[70.4, 70.2, 70.3, 70.0, 69.9, 69.8, 69.6]} onClick={noop} />
       </div>
       <div data-state="weight-gaining-no-goal">
         <WeightTileView latest={{ weight: 61.2, date: daysAgo(1) }} pace={0.3} goalKg={null} onClick={noop} />

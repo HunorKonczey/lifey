@@ -46,6 +46,11 @@ test("weight with a goal: relative date, value, weekly pace chip and what's left
   await expect(t.getByText("Goal 65 kg · 4.6 kg to go")).toBeVisible();
 });
 
+test("the weight tile draws a trend line when it has history — and none without", async ({ page }) => {
+  await expect(tile(page, "weight-losing").getByTestId("trend-spark")).toBeVisible();
+  await expect(tile(page, "weight-gaining-no-goal").getByTestId("trend-spark")).toHaveCount(0);
+});
+
 test("weight without a goal: a gaining pace chip, yesterday, no goal line", async ({ page }) => {
   const t = tile(page, "weight-gaining-no-goal");
   await expect(t.getByText("yesterday", { exact: true })).toBeVisible();

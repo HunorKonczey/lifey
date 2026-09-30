@@ -3133,3 +3133,46 @@ on `/login`.
   the big gallery page). Gallery now sets `data-hydrated`; `e2e/ds/fixtures.ts` makes `goto`/`reload` wait for
   it; the webServer waits on `/dev/design` (pre-compiles it) with a 120 s timeout; the menu-flip spec no longer
   depends on where Playwright happens to scroll. 89/89 green cold with `CI=1`, and 176/176 under 4 workers.
+
+### W1 — 2026-09-30 — Playwright Chromium (bundled, headless), 1440×1024 / 1280×800 / 1024×768 / 390×844
+
+*Scope:* the real stack (Postgres, backend, chat, `next dev`) with the handoff demo data. The dashboard of the
+demo client (`kata.nagy`) in the full matrix **4 viewports × dark / light × HU / EN** = 16 full-page captures
+(the EN pass switched the account's language setting and restored it afterwards), each with overflow and
+console-error checks; the W1 canvas (`Lifey Web 1 Dashboard.dc.html`) rendered in the same browser and compared
+frame by frame — W1-A (1440 dark HU), W1-B (1024 light), W1-C (390 dark), W1-D (new account) — and every
+"Előtte → utána" note. Flows on the real app: date stepper three days back and `T` home (hero, tiles and the
+7-day chart follow the viewed day — on 27 Sep the hero reads **859 kcal left / 1 041 eaten**, the canvas' own
+numbers), `N` opens add-meal and is listed in `?`, copy-yesterday + Undo, water quick-add + the "⋯" menu, start
+the recommended workout, a recent-workouts row opening its session, a fresh throwaway account getting the
+first-steps card and ticking step 2 without a reload; plus a 640×500 viewport (≈ 200 % zoom) and
+`prefers-reduced-motion: reduce`.
+
+*Matches:* the three layouts (12-col 8 + 4 with the tiles across and week | recent below; 8-col with hero · tiles
+· workout | recent · week; 4-col single column with 2-up water + steps and the floating bottom nav); the 220 px
+ring, 56 px number, eaten / goal, three macro bars with "még 52 g"; "MAI JAVASLAT · utoljára szept. 23." with three
+exercises and "4 gyakorlat · kb. 40 perc · 12 szett"; water "0,75 L" with segments, quick adds and "⋯"; steps in
+one purple with "Még … lépés · kb. … perc séta"; weight with day word, "−0,4 kg / hét" chip (goal-aware),
+"Cél 65 kg · még 4,6 kg" and a trend line; the week card with average (today excluded), "4 / 6 nap", workouts, dashed
+goal and dashed today; recent workouts with icon tiles, PR chips only where a record was set and no raw activity
+key; both themes and both languages legible; no overflow and no console errors in any of the 16 captures; reduced
+motion lands on final values.
+
+*Deviations (intended):* the "Célok: <edző>" clay chip isn't built (D-W0.19); the streak card is gone (the canvas has
+none); cardio distance in the recent list keeps the shared two-decimal format ("6,20 km") rather than the canvas'
+"5,2 km" until W3 touches `cardioFormat`; on a phone the weight tile is the standard tile at full width, not the
+canvas' compact single row; Y-axis tops come from `niceAxisMax` (two significant digits), so they follow the data
+(1,9 e on the demo week, 2,4 e on the canvas'); `OnboardingBanner` became step 1 of the first-steps card.
+
+*Bugs* (closed in the commit that carries this entry):
+- **W1.fix-1** — the weight tile lacked the canvas' trend line; added a dependency-free `TrendSpark` (last 30
+  weigh-ins, hidden when the tile is narrower than 260 px).
+- **W1.fix-2** — on a phone the recommendation was the full desktop card; it is now the compact W1-C one (title +
+  meta and a round ▶ start button, no exercise list).
+- **W1.fix-3** — the phone hero repeated the desktop eaten / goal column beside a 128 px ring; it now centres a 156 px
+  ring with "1 041 / 1 900" under the caption and drops the side column.
+- Found while building, fixed in place (see the step notes): `MetricValue` sized units in `em` of the wrapper so every
+  unit rendered at about half size (W1.7). One process slip, caught and corrected: the local verification script reported "done" even though one
+  run's production build had failed on a *transient* `next/font/google` download error (W1.11's commit went out before
+  I noticed); the build and the whole checklist pass on the committed state, and the script now stops on any failing stage.
+
