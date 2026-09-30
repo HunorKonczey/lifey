@@ -1354,6 +1354,14 @@
     "noMatches": "Még nincs ilyen típusú edzés."
   },
   "weight": {
+    "logTitle": "Súly rögzítése",
+    "editTitle": "Bejegyzés szerkesztése",
+    "updated": "Bejegyzés frissítve",
+    "logHint": "↑/↓ ±0,1 kg · Shift ±1 kg · Enter mentés",
+    "replaceTitle": "Felülírod a nap bejegyzését?",
+    "replaceBody": "Erre a napra már van bejegyzés: {weights}. A mentés felülírja.",
+    "replaceConfirm": "Felülírás",
+    "fabLog": "Súly",
     "colDate": "Dátum",
     "colWeight": "Súly",
     "colChange": "Változás",

@@ -1354,6 +1354,14 @@
     "noMatches": "No workouts of this type yet."
   },
   "weight": {
+    "logTitle": "Log weight",
+    "editTitle": "Edit entry",
+    "updated": "Entry updated",
+    "logHint": "↑/↓ ±0.1 kg · Shift ±1 kg · Enter to save",
+    "replaceTitle": "Replace the entry for this day?",
+    "replaceBody": "This day already has {weights}. Saving replaces it.",
+    "replaceConfirm": "Replace",
+    "fabLog": "Weight",
     "colDate": "Date",
     "colWeight": "Weight",
     "colChange": "Change",
