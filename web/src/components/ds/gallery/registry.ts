@@ -33,6 +33,7 @@ import { DaySummarySection } from "./sections/DaySummarySection";
 import { MealCardSection } from "./sections/MealCardSection";
 import { EmptyMealSlotSection } from "./sections/EmptyMealSlotSection";
 import { AddFoodModalSection } from "./sections/AddFoodModalSection";
+import { EditMealDrawerSection } from "./sections/EditMealDrawerSection";
 
 export interface GallerySection {
   id: string;
@@ -77,6 +78,7 @@ export const GALLERY_SECTIONS: GallerySection[] = [
   { id: "meal-card", title: "Meal card", Component: MealCardSection },
   { id: "empty-slot", title: "Empty meal slot", Component: EmptyMealSlotSection },
   { id: "add-food", title: "Add food dialog", Component: AddFoodModalSection },
+  { id: "edit-meal", title: "Edit meal drawer", Component: EditMealDrawerSection },
   { id: "shortcuts", title: "Keyboard shortcuts", Component: ShortcutsSection },
   { id: "formatting", title: "Formatting", Component: FormattingSection },
 ];

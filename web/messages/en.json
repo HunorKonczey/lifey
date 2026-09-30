@@ -669,7 +669,13 @@
     "selectDate": "Select date",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
-    "selectTime": "Select time"
+    "selectTime": "Select time",
+    "discardChangesTitle": "Discard changes?",
+    "discardChangesBody": "Your changes haven't been saved.",
+    "discardConfirm": "Discard",
+    "keepEditing": "Keep editing",
+    "decrease": "Decrease",
+    "increase": "Increase"
   },
   "status": {
     "emptyTitle": "Nothing here yet",
@@ -973,7 +979,11 @@
       "submitTo": "{meal, select, BREAKFAST {Add to breakfast} LUNCH {Add to lunch} SNACK {Add to snack} other {Add to dinner}}",
       "added": "Added to {meal}",
       "addFailed": "Couldn't add it"
-    }
+    },
+    "editMealTitle": "Edit {meal}",
+    "unsavedChange": "Unsaved change",
+    "mealSaved": "Meal saved",
+    "mealSaveFailed": "Couldn't save the meal"
   },
   "workouts": {
     "sessions": "Sessions",

@@ -2054,9 +2054,31 @@ so there is no commit in which editing has no UI. Gallery: the "Add food dialog"
 preview pane; `e2e/ds/addFoodPreview.spec.ts` (10 tests) covers quantity/chips/live macros, "left after this"
 and its "over" flip, meal type and the submit label, recipes by servings, cancel and the empty result.
 
-### W2.7 — Web UI: edit-meal drawer
+### W2.7 — Web UI: edit-meal drawer ✅
 - Files: `features/nutrition/components/EditMealDrawer.tsx`.
 - **Verify:** unsaved guard on Esc/scrim; "166,7 g" round-trips; Save disabled until dirty.
+
+*As built:* `EditMealDrawer` (a presentational `EditMealDrawerView` plus the connected drawer) replaces the
+old auto-saving dialog for "edit meal", and `AddMealEntryDialog.tsx` is now deleted — nothing references it.
+The drawer is the DS `Drawer` (480) titled "Reggeli szerkesztése" with one row per food: name, a `NumberField`
+for the quantity (one decimal, the locale's comma) and the kcal, which follows the quantity live; the footer
+is "Elvetés" (closes) and "Mentés", **disabled until something really changed**, and the "Nem mentett
+változás" chip appears under the title with the first change. Two rules live in pure `mealEdit.ts` (9 tests):
+a row counts as changed only if it differs from what the drawer *showed* — the stored quantity at one decimal,
+so typing 166,7 against a stored 166.685… is not a change and editing away and back ends clean — and untouched
+rows are saved with their **stored, unrounded** quantity, never a rounded copy. Verified against the real
+backend: a meal seeded with 100.123456 g shows "100,1", typing "166,7" enables Mentés and the chip, Esc asks
+"Elveted a módosításokat?", Folytatom returns to the drawer, Mentés sends one `PUT` and the stored values are
+166.7 and — untouched — exactly 75; the test meal was deleted afterwards. Three platform fixes found on the
+way: (1) **a real `Drawer` bug** — its Esc listener was attached once per open and kept the *first* render's
+unsaved-guard, so a form that became dirty after opening closed on Esc without asking (the gallery's own spec
+only ever made it dirty *before* opening); it now reads the current guard through a ref; (2) the drawer's
+discard prompt, its close button and `NumberField`'s ± buttons were hard-coded English — they go through
+`common.*` now ("Elveted a módosításokat?", "Elvetés", "Folytatom a szerkesztést", "Csökkentés / Növelés");
+(3) the drawer's `badge` slot sits under the title, because beside it a Hungarian title was cut to "Reggeli
+szerkeszté…". `NumberField` also takes an `aria-label` for fields with no visible label. Gallery section "Edit
+meal drawer" and `e2e/ds/editMealDrawer.spec.ts` (9 tests, including the Hungarian copy and the decimal
+comma).
 
 ### W2.8 — Web UI: delete meal / item with confirm + undo
 - Files: `MealCard.tsx`, `MealItemRow.tsx` (deleting the last item deletes the meal — say so in the

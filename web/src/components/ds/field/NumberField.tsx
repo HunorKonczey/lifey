@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type KeyboardEvent, type Ref } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Icon } from "../Icon";
 import { Field, fieldDescribedBy } from "./Field";
 import { clampNumber, formatLocaleNumber, parseLocaleNumber, roundToDecimals } from "./numberFormat";
@@ -23,6 +23,8 @@ export interface NumberFieldProps {
   required?: boolean;
   id?: string;
   className?: string;
+  /** Names the input when there is no visible `label` (a quantity beside its food's name). */
+  "aria-label"?: string;
   /** The inner `<input>` — for a dialog that focuses the quantity on Tab. */
   inputRef?: Ref<HTMLInputElement>;
   /** Report every parseable keystroke through `onChange` instead of only on blur / Enter, so a
@@ -60,8 +62,10 @@ export function NumberField({
   liveUpdate,
   selectOnFocus,
   onEnter,
+  ...aria
 }: NumberFieldProps) {
   const locale = useLocale();
+  const common = useTranslations("common");
   const autoId = useId();
   const inputId = id ?? autoId;
   const [text, setText] = useState(() => formatLocaleNumber(value, locale, maxDecimals));
@@ -110,11 +114,12 @@ export function NumberField({
 
   return (
     <Field label={label} hint={hint} error={error} required={required} disabled={disabled} htmlFor={inputId} size={size} className={className}>
-      <button type="button" onClick={() => applyDelta(-step)} disabled={disabled} aria-label="Decrease" className="shrink-0">
+      <button type="button" onClick={() => applyDelta(-step)} disabled={disabled} aria-label={common("decrease")} className="shrink-0">
         <Icon name="remove" size={16} color="var(--text-2)" />
       </button>
       <input
         id={inputId}
+        aria-label={aria["aria-label"]}
         inputMode="decimal"
         value={text}
         disabled={disabled}
@@ -139,7 +144,7 @@ export function NumberField({
           {unit}
         </span>
       )}
-      <button type="button" onClick={() => applyDelta(step)} disabled={disabled} aria-label="Increase" className="shrink-0">
+      <button type="button" onClick={() => applyDelta(step)} disabled={disabled} aria-label={common("increase")} className="shrink-0">
         <Icon name="add" size={16} color="var(--text-2)" />
       </button>
     </Field>

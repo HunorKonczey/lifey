@@ -13,7 +13,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { AddMealEntryDialog } from "./AddMealEntryDialog";
+import { EditMealDrawer } from "./EditMealDrawer";
 import { AddFoodFlow } from "./addFood/AddFoodFlow";
 import { GridItem, PageGrid } from "@/components/ds";
 import { DaySummaryView } from "./DaySummary";
@@ -197,14 +197,7 @@ export function MealsView() {
 
       {addingTo && <AddFoodFlow date={date} mealType={addingTo} onClose={() => setAddingTo(null)} />}
 
-      {editingMeal && (
-        <AddMealEntryDialog
-          mealType={editingMeal.mealType}
-          date={new Date(editingMeal.dateTime)}
-          meal={editingMeal}
-          onClose={() => setEditingMeal(null)}
-        />
-      )}
+      {editingMeal && <EditMealDrawer meal={editingMeal} onClose={() => setEditingMeal(null)} />}
 
       <ConfirmDialog
         open={copyingPreviousDay}

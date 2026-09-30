@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { useFocusReturn } from "@/lib/a11y/useFocusReturn";
 import { useFocusTrap } from "@/lib/a11y/useFocusTrap";
 import { useUnsavedGuard } from "@/lib/a11y/useUnsavedGuard";
@@ -23,6 +24,8 @@ export interface DrawerProps {
   isDirty?: boolean;
   /** The sticky footer's own secondary + primary `Button`s. */
   footer?: ReactNode;
+  /** Under the title — e.g. an "unsaved change" chip (beside it, a long title would be cut off). */
+  badge?: ReactNode;
   children: ReactNode;
   "aria-label"?: string;
 }
@@ -42,9 +45,11 @@ export function Drawer({
   title,
   isDirty = false,
   footer,
+  badge,
   children,
   ...aria
 }: DrawerProps) {
+  const common = useTranslations("common");
   const panelRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery("(max-width: 767px)");
   const guard = useUnsavedGuard(isDirty, onClose);
@@ -52,10 +57,18 @@ export function Drawer({
   useFocusReturn(open);
   useFocusTrap(open, panelRef);
 
+  // The Esc listener is attached once per open, so it must reach the *current* guard: changes made
+  // after the drawer opened (the usual case for a form) flip `isDirty`, and a stale one would close
+  // a dirty drawer outright.
+  const requestCloseRef = useRef(guard.requestClose);
+  useEffect(() => {
+    requestCloseRef.current = guard.requestClose;
+  });
+
   useEffect(() => {
     if (!open) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") guard.requestClose();
+      if (e.key === "Escape") requestCloseRef.current();
     }
     document.addEventListener("keydown", handleKey);
     const prevOverflow = document.body.style.overflow;
@@ -64,7 +77,6 @@ export function Drawer({
       document.removeEventListener("keydown", handleKey);
       document.body.style.overflow = prevOverflow;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- guard.requestClose closes over isDirty/onClose directly
   }, [open]);
 
   if (!open || typeof document === "undefined") return null;
@@ -82,8 +94,9 @@ export function Drawer({
           </div>
         )}
         <h2 className="type-title-l truncate">{title}</h2>
+        {badge && <div className="mt-1.5">{badge}</div>}
       </div>
-      <IconButton icon="close" label="Close" size={40} onClick={() => guard.requestClose()} />
+      <IconButton icon="close" label={common("close")} size={40} onClick={() => guard.requestClose()} />
     </div>
   );
   const body = <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>;
@@ -138,10 +151,10 @@ export function Drawer({
         open={guard.confirmOpen}
         onClose={guard.cancelDiscard}
         onConfirm={guard.confirmDiscard}
-        title="Discard changes?"
-        body="Your changes haven't been saved."
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
+        title={common("discardChangesTitle")}
+        body={common("discardChangesBody")}
+        confirmLabel={common("discardConfirm")}
+        cancelLabel={common("keepEditing")}
       />
     </>,
     getOverlayContainer(),

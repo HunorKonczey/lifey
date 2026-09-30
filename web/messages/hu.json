@@ -669,7 +669,13 @@
     "selectDate": "Dátum kiválasztása",
     "previousMonth": "Előző hónap",
     "nextMonth": "Következő hónap",
-    "selectTime": "Időpont kiválasztása"
+    "selectTime": "Időpont kiválasztása",
+    "discardChangesTitle": "Elveted a módosításokat?",
+    "discardChangesBody": "A változtatásaid még nincsenek elmentve.",
+    "discardConfirm": "Elvetés",
+    "keepEditing": "Folytatom a szerkesztést",
+    "decrease": "Csökkentés",
+    "increase": "Növelés"
   },
   "status": {
     "emptyTitle": "Még nincs semmi itt",
@@ -973,7 +979,11 @@
       "submitTo": "{meal, select, BREAKFAST {Hozzáadás a reggelihez} LUNCH {Hozzáadás az ebédhez} SNACK {Hozzáadás a snackhez} other {Hozzáadás a vacsorához}}",
       "added": "Hozzáadva: {meal}",
       "addFailed": "Nem sikerült hozzáadni"
-    }
+    },
+    "editMealTitle": "{meal} szerkesztése",
+    "unsavedChange": "Nem mentett változás",
+    "mealSaved": "Étkezés elmentve",
+    "mealSaveFailed": "Nem sikerült elmenteni az étkezést"
   },
   "workouts": {
     "sessions": "Edzések",
