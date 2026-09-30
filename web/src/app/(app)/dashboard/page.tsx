@@ -1,159 +1,31 @@
 "use client";
 
-import { useQueries } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useTranslations, useLocale } from "next-intl";
-import { format } from "date-fns";
 import { useDateStore } from "@/lib/hooks/useDateStore";
-import { useFormat } from "@/lib/i18n/format";
-import { loggingStreak } from "@/features/statistics/streak";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { statisticsApi } from "@/features/statistics/api";
-import { settingsApi } from "@/features/settings/api";
-import { weightApi } from "@/features/weight/api";
-import { waterApi } from "@/features/water/api";
-import { stepsApi } from "@/features/steps/api";
-import { mealApi } from "@/features/nutrition/api";
-import { workoutSessionApi, templateApi } from "@/features/workouts/api";
-import { RecommendedWorkoutCard } from "@/features/workouts/components/RecommendedWorkoutCard";
-import { recommendedTemplate } from "@/features/workouts/recommendation";
-import { ActivityChip } from "@/features/workouts/components/ActivityChip";
-import { buildCardioSummaryLine } from "@/features/workouts/cardioSummaryLine";
+import { GridItem, PageGrid } from "@/components/ds";
 import { OnboardingBanner } from "@/components/app/OnboardingBanner";
-import { HeroMetricCard } from "@/components/data/HeroMetricCard";
-import { MacroRing } from "@/components/data/MacroRing";
-import { StatCard } from "@/components/data/StatCard";
-import { WaterCard } from "@/components/data/WaterCard";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
-import type { MealResponse } from "@/features/nutrition/types";
-import type { WaterEntryResponse } from "@/features/water/types";
-import type { DailyStepCountResponse } from "@/features/steps/types";
-import type { WorkoutSessionResponse } from "@/features/workouts/types";
+import { useDashboardData } from "@/features/dashboard/useDashboardData";
+import { HeroSection } from "@/features/dashboard/components/HeroSection";
+import { RecommendedSection } from "@/features/dashboard/components/RecommendedSection";
+import { TilesSection } from "@/features/dashboard/components/TilesSection";
+import { WeekSection } from "@/features/dashboard/components/WeekSection";
+import { RecentWorkoutsSection } from "@/features/dashboard/components/RecentWorkoutsSection";
 
-function localDateStr(date: Date) {
-  return format(date, "yyyy-MM-dd");
-}
-
-function filterToday<T extends { dateTime?: string; consumedAt?: string; date?: string }>(
-  items: T[],
-  dateStr: string,
-): T[] {
-  return items.filter((item) => {
-    const ts = item.dateTime ?? item.consumedAt ?? null;
-    if (ts) {
-      return format(new Date(ts), "yyyy-MM-dd") === dateStr;
-    }
-    if (item.date) return item.date === dateStr;
-    return false;
-  });
-}
-
+/**
+ * The dashboard is composition only (W1.1): `useDashboardData` owns the
+ * queries, each section owns its card, and `PageGrid` places them — the
+ * canvas' three layouts come from spans and orders, not per-width markup.
+ *
+ * 1440/1280 (12 cols): hero 8 | workout 4 · tiles 12 · week 8 | recent 4.
+ * 1024 (8 cols):       hero 8 · tiles 8 · workout 4 | recent 4 · week 8.
+ * 390 (4 cols):        hero · workout · tiles · recent · week, one column.
+ */
 export default function DashboardPage() {
-  const t = useTranslations("dashboard");
-  const tw = useTranslations("workouts");
-  const ta = useTranslations("workouts.activityTypes");
-  const locale = useLocale();
-  const fmt = useFormat();
   const { date } = useDateStore();
-  const router = useRouter();
-  const dateStr = localDateStr(date);
+  const data = useDashboardData(date);
 
-  const results = useQueries({
-    queries: [
-      {
-        queryKey: queryKeys.statistics.daily(dateStr),
-        queryFn: () => statisticsApi.daily(dateStr),
-      },
-      {
-        queryKey: queryKeys.statistics.weekly(dateStr),
-        queryFn: () => statisticsApi.weekly(dateStr),
-      },
-      {
-        queryKey: queryKeys.settings.all(),
-        queryFn: settingsApi.get,
-        staleTime: 5 * 60_000,
-      },
-      {
-        queryKey: queryKeys.weights.all(),
-        queryFn: weightApi.list,
-      },
-      {
-        queryKey: queryKeys.waterEntries.all(),
-        queryFn: waterApi.entries.list,
-      },
-      {
-        queryKey: queryKeys.waterSources.all(),
-        queryFn: waterApi.sources.list,
-      },
-      {
-        queryKey: queryKeys.steps.all(),
-        queryFn: stepsApi.list,
-      },
-      {
-        queryKey: queryKeys.meals.all(),
-        queryFn: mealApi.list,
-      },
-      {
-        queryKey: queryKeys.workoutSessions.all(),
-        queryFn: workoutSessionApi.list,
-      },
-      {
-        queryKey: queryKeys.workoutTemplates.all(),
-        queryFn: templateApi.list,
-      },
-    ],
-  });
-
-  const [
-    statsQ,
-    weeklyStatsQ,
-    settingsQ,
-    weightsQ,
-    waterEntriesQ,
-    waterSourcesQ,
-    stepsQ,
-    mealsQ,
-    sessionsQ,
-    templatesQ,
-  ] = results;
-
-  const weeklyStats = weeklyStatsQ.data;
-  const settings = settingsQ.data;
-  const todayMeals = mealsQ.data ? filterToday(mealsQ.data as MealResponse[], dateStr) : [];
-  const todayWater = waterEntriesQ.data
-    ? filterToday(waterEntriesQ.data as WaterEntryResponse[], dateStr)
-    : [];
-  const todaySteps = stepsQ.data
-    ? (filterToday(stepsQ.data as DailyStepCountResponse[], dateStr)[0] ?? null)
-    : null;
-  // The API list isn't guaranteed to be date-sorted, so sort before taking the
-  // newest — otherwise we'd show whatever entry happens to be last in insertion order.
-  const latestWeight = weightsQ.data
-    ? ([...weightsQ.data].sort((a, b) => a.date.localeCompare(b.date)).at(-1) ?? null)
-    : null;
-  const sessionsDesc = (sessionsQ.data ?? [])
-    .slice()
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
-  const recentSessions = sessionsDesc.slice(0, 5);
-  const recommended = recommendedTemplate(sessionsDesc, templatesQ.data ?? []);
-  const streak = loggingStreak([
-    ...((mealsQ.data as MealResponse[] | undefined) ?? []).map((m) => m.dateTime),
-    ...(sessionsQ.data ?? []).map((s) => s.startedAt),
-  ]);
-
-  const todayEntries = todayMeals.flatMap((m) => m.entries);
-  const totalKcal = todayEntries.reduce((s, e) => s + e.calories, 0);
-  const totalProtein = todayEntries.reduce((s, e) => s + e.protein, 0);
-  const totalCarbs = todayEntries.reduce((s, e) => s + e.carbs, 0);
-  const totalFat = todayEntries.reduce((s, e) => s + e.fat, 0);
-  const totalWaterL = todayWater.reduce((s, e) => s + e.volumeLiters, 0);
-
-  const isLoading = statsQ.isLoading || weeklyStatsQ.isLoading || settingsQ.isLoading;
-  const hasError = statsQ.isError || weeklyStatsQ.isError || settingsQ.isError;
-
-  if (isLoading) {
+  if (data.isLoading) {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton variant="card" className="h-40" />
@@ -171,230 +43,28 @@ export default function DashboardPage() {
     );
   }
 
-  if (hasError) {
-    return (
-      <ErrorState
-        onRetry={() => {
-          statsQ.refetch();
-          weeklyStatsQ.refetch();
-          settingsQ.refetch();
-        }}
-      />
-    );
-  }
+  if (data.hasError) return <ErrorState onRetry={data.refetchCore} />;
 
   return (
     <div className="flex flex-col gap-4">
-      {recommended && (
-        <RecommendedWorkoutCard
-          template={recommended}
-          onStart={() => router.push(`/workouts?start=${recommended.id}`)}
-        />
-      )}
       <OnboardingBanner />
-      <div className="flex gap-6">
-      {/* Main column */}
-      <div className="flex flex-col gap-4 flex-1 min-w-0">
-
-        {/* Hero calorie card */}
-        <HeroMetricCard value={totalKcal} goal={settings?.dailyCalorieGoal} />
-
-        {!settings?.dailyCalorieGoal && !settings?.dailyProteinGoal && (
-          <Link
-            href="/settings"
-            className="text-sm font-semibold -mt-2 hover:underline"
-            style={{ color: "var(--primary)" }}
-          >
-            {t("setGoalsHint")}
-          </Link>
-        )}
-
-        {/* Macro row */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="rounded-[var(--r-card)] p-4 flex justify-center" style={{ background: "var(--surface)" }}>
-            <MacroRing
-              label={t("protein")}
-              value={totalProtein}
-              goal={settings?.dailyProteinGoal}
-              color="var(--metric-protein)"
-            />
-          </div>
-          <div className="rounded-[var(--r-card)] p-4 flex justify-center" style={{ background: "var(--surface)" }}>
-            <MacroRing
-              label={t("carbs")}
-              value={totalCarbs}
-              goal={settings?.dailyCarbsGoal}
-              color="var(--metric-carbs)"
-            />
-          </div>
-          <div className="rounded-[var(--r-card)] p-4 flex justify-center" style={{ background: "var(--surface)" }}>
-            <MacroRing
-              label={t("fat")}
-              value={totalFat}
-              goal={settings?.dailyFatGoal}
-              color="var(--metric-fat)"
-            />
-          </div>
-        </div>
-
-        {/* Water / Steps / Weight row — one column on phones, three was unreadable at 390 px */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {waterEntriesQ.isLoading ? (
-            <Skeleton variant="card" className="h-40" />
-          ) : (
-            <WaterCard
-              currentLiters={totalWaterL}
-              goalLiters={settings?.dailyWaterGoalLiters ?? 2.5}
-              sources={waterSourcesQ.data ?? []}
-              date={date}
-            />
-          )}
-
-          {stepsQ.isLoading ? (
-            <Skeleton variant="card" className="h-40" />
-          ) : (
-            <StatCard
-              label={t("steps")}
-              value={todaySteps?.steps ?? 0}
-              icon="directions_walk"
-              color="var(--metric-steps)"
-              ratio={
-                settings?.dailyStepGoal
-                  ? (todaySteps?.steps ?? 0) / settings.dailyStepGoal
-                  : undefined
-              }
-              goalReached={(todaySteps?.steps ?? 0) >= (settings?.dailyStepGoal ?? 10000)}
-              subtitle={t("goal", { value: fmt.number(settings?.dailyStepGoal ?? 10000) })}
-              onClick={() => router.push("/steps")}
-            />
-          )}
-
-          {weightsQ.isLoading ? (
-            <Skeleton variant="card" className="h-40" />
-          ) : (
-            <StatCard
-              label={t("weight")}
-              value={latestWeight ? fmt.number(latestWeight.weight, 1, 1) : "—"}
-              unit={latestWeight ? "kg" : ""}
-              icon="monitor_weight"
-              color="var(--metric-weight)"
-              subtitle={latestWeight ? fmt.date(latestWeight.date, "dayYear") : t("noEntryYet")}
-              onClick={() => router.push("/weight")}
-            />
-          )}
-        </div>
-
-        {/* Recent workouts */}
-        <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-3">{t("recentWorkouts")}</p>
-          {sessionsQ.isLoading ? (
-            <Skeleton variant="table" />
-          ) : recentSessions.length === 0 ? (
-            <p className="text-sm py-4 text-center" style={{ color: "var(--on-surface-variant)" }}>
-              {t("noWorkoutsYet")}
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {recentSessions.map((s: WorkoutSessionResponse) => {
-                const isCardio = s.sessionKind === "CARDIO";
-                return (
-                  <div
-                    key={s.id}
-                    className="flex items-center gap-3 py-2 border-b last:border-0"
-                    style={{ borderColor: "var(--outline)" }}
-                  >
-                    {isCardio && <ActivityChip activityType={s.activityType} />}
-                    <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">
-                          {isCardio
-                            ? ta(s.activityType ?? "OTHER_CARDIO")
-                            : s.templateName ?? (s.exercises.map((e) => e.exerciseName).join(", ") || t("workoutFallback"))}
-                        </p>
-                        <p className="text-xs" style={{ color: "var(--muted)" }}>
-                          {fmt.date(s.startedAt, "dayTime")}
-                        </p>
-                      </div>
-                      {isCardio ? (
-                        <span className="text-xs font-semibold shrink-0 tabular" style={{ color: "var(--on-surface-variant)" }}>
-                          {buildCardioSummaryLine(s, tw, locale)}
-                        </span>
-                      ) : s.finishedAt && (
-                        <span className="text-xs font-semibold shrink-0" style={{ color: "var(--on-surface-variant)" }}>
-                          {Math.round(
-                            (new Date(s.finishedAt).getTime() - new Date(s.startedAt).getTime()) / 60000,
-                          )}{" "}
-                          {t("minutes")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right "This week" column */}
-      <div
-        className="hidden xl:flex flex-col gap-4 shrink-0"
-        style={{ width: 268 }}
-      >
-        <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-3">{t("thisWeek")}</p>
-          {weeklyStatsQ.isLoading ? (
-            <Skeleton variant="text" />
-          ) : (
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-between text-sm">
-                <span style={{ color: "var(--on-surface-variant)" }}>{t("avgCalories")}</span>
-                <span className="font-semibold tabular">
-                  {weeklyStats?.totalCalories != null
-                    ? fmt.number(Math.round(weeklyStats.totalCalories / 7))
-                    : "—"}
-                </span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: "var(--on-surface-variant)" }}>{t("workouts")}</span>
-                  <span className="font-semibold tabular">{weeklyStats?.workoutCount ?? "—"}</span>
-                </div>
-                {weeklyStats && weeklyStats.workoutCount != null && weeklyStats.workoutCount > 0 && (
-                  <p className="text-xs text-right" style={{ color: "var(--muted)" }}>
-                    {t("workoutsBreakdown", { strength: weeklyStats.strengthWorkoutCount, cardio: weeklyStats.cardioWorkoutCount })}
-                  </p>
-                )}
-              </div>
-              <div className="flex justify-between text-sm">
-                <span style={{ color: "var(--on-surface-variant)" }}>{t("avgWater")}</span>
-                <span className="font-semibold tabular">
-                  {weeklyStats?.totalWater != null
-                    ? fmt.number(weeklyStats.totalWater / 7, 1, 1) + " L"
-                    : "—"}
-                </span>
-              </div>
-              {weeklyStats?.latestWeight != null && (
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: "var(--on-surface-variant)" }}>{t("latestWeight")}</span>
-                  <span className="font-semibold tabular">{fmt.number(weeklyStats.latestWeight, 1, 1)} kg</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-2">{t("streak")}</p>
-          <p className="text-3xl font-extrabold tabular" style={{ color: "var(--primary)" }}>
-            {streak}
-          </p>
-          <p className="text-xs mt-1" style={{ color: "var(--on-surface-variant)" }}>
-            {t("streakDays", { count: streak })}
-          </p>
-        </div>
-      </div>
-      </div>
+      <PageGrid>
+        <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 0 }}>
+          <HeroSection data={data} />
+        </GridItem>
+        <GridItem span={{ base: 4, md: 4, xl: 4 }} order={{ base: 1, md: 2, xl: 1 }}>
+          <RecommendedSection data={data} />
+        </GridItem>
+        <GridItem span={{ base: 4, md: 8, xl: 12 }} order={{ base: 2, md: 1, xl: 2 }}>
+          <TilesSection data={data} />
+        </GridItem>
+        <GridItem span={{ base: 4, md: 4, xl: 4 }} order={{ base: 3, xl: 4 }}>
+          <RecentWorkoutsSection data={data} />
+        </GridItem>
+        <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 4, xl: 3 }}>
+          <WeekSection data={data} />
+        </GridItem>
+      </PageGrid>
     </div>
   );
 }

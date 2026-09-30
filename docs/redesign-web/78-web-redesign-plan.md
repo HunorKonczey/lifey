@@ -1510,12 +1510,30 @@ goal exists — else CTA → `/onboarding`), *Első étkezés naplózása* (CTA 
 port (W1.10); "last water at" = latest water entry today; "within goal n / 6" counts past days with
 0 < kcal ≤ goal (today excluded, zero days excluded).
 
-### W1.1 — Web UI: dashboard page grid + section components
+### W1.1 — Web UI: dashboard page grid + section components ✅
 - Files: `app/(app)/dashboard/page.tsx` (becomes composition only), new
   `features/dashboard/components/*.tsx` shells, `components/ds/layout/PageGrid.tsx` (D-W0.6).
 - Move the existing sections unchanged into their slots at 1440 / 1024 / 390 (W1-A/B/C order); no visual
   redesign of the cards yet.
 - **Verify:** the three widths show the canvas order; no horizontal scroll at 390.
+
+*As built:* The dashboard page is now composition only: `features/dashboard/useDashboardData.ts` owns the ten
+queries and the day's derived figures (today's meals / water / steps, sorted weights, sessions newest-first,
+the recommendation, the streak, macro totals) and hands one `data` object to five section shells —
+`HeroSection`, `RecommendedSection`, `TilesSection`, `WeekSection`, `RecentWorkoutsSection` — each the pre-
+redesign card moved unchanged into its slot (W1.2–W1.10 replace them one by one; `OnboardingBanner` stays
+above the grid until W1.11). `PageGrid` / `GridItem` (`components/ds/layout/PageGrid.tsx`, D-W0.6) are a CSS
+grid — 4 cols / gap 12 at mobile, 8 / 20 from md, 12 / 20 from xl, gap 24 from 2xl (`--breakpoint-2xl: 90rem`
+and `--breakpoint-3xl: 100rem` added to the theme) — where `GridItem` passes per-breakpoint `span` and `order`
+as custom properties that each fall back to the breakpoint below, so the three canvas layouts are data, not
+markup: 1280+ is hero 8 | workout 4 · tiles 12 · week 8 | recent 4; 1024 is hero · tiles · workout 4 | recent
+4 · week; 390 stacks hero, workout, tiles, recent, week. One deliberate call: spans are explicit per
+breakpoint (no `min(span, cols)` clamp) because CSS `span` only takes an integer literal, so a base span above
+4 would silently create implicit columns — the prop types document the ceilings (≤4 / ≤8 / ≤12). Verified on
+the real app with the demo data at 1440, 1024 and 390 (correct order, no horizontal scroll, no console
+errors), plus a gallery "Page grid" section and `e2e/ds/pageGrid.spec.ts` (column count and gap per width, 8 +
+4 on one row at 1440, the order flip at 1024, full-width stacking at 390) and `pageGrid.test.ts` for the
+custom-property mapping.
 
 ### W1.2 — Web UI: `CalorieHero`
 - Files: `features/dashboard/components/CalorieHero.tsx`, `features/nutrition/budget.ts` (reuse).

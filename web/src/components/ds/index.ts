@@ -93,3 +93,5 @@ export { MetricTile } from "./progress/MetricTile";
 export type { MetricTileProps } from "./progress/MetricTile";
 export { DelayedSkeleton } from "./states/DelayedSkeleton";
 export type { DelayedSkeletonProps } from "./states/DelayedSkeleton";
+export { PageGrid, GridItem } from "./layout/PageGrid";
+export type { PageGridProps, GridItemProps, Responsive, Breakpoint } from "./layout/PageGrid";

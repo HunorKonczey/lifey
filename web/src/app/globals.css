@@ -340,6 +340,10 @@
 
 /* ─── Tailwind theme extension ─── */
 @theme inline {
+  /* D-W0.6: 2xl = the 1440 "desktop · base" frame, 3xl = where the grid stops growing. */
+  --breakpoint-2xl: 90rem;
+  --breakpoint-3xl: 100rem;
+
   --color-bg:                 var(--bg);
   --color-surface:            var(--surface);
   --color-surface-container:  var(--surface-container);
@@ -682,3 +686,46 @@ input[type="number"] { -moz-appearance: textfield; }
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--outline); border-radius: var(--r-pill); }
+
+/* ─── PageGrid (D-W0.6) — 4 cols / 12 gap at mobile, 8 / 20 from md, 12 / 20
+   from xl, gap 24 from 2xl. `GridItem` hands its per-breakpoint span and order
+   in as custom properties; each breakpoint falls back to the one below it, and
+   an item with no span is full width. ─── */
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--grid-gap, 12px);
+  --grid-gap: 12px;
+}
+.grid-item {
+  grid-column: span var(--span-base, 4);
+  order: var(--order-base, 0);
+  min-width: 0;
+}
+@media (min-width: 768px) {
+  .page-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); --grid-gap: 20px; }
+  .grid-item {
+    grid-column: span var(--span-md, 8);
+    order: var(--order-md, var(--order-base, 0));
+  }
+}
+@media (min-width: 1024px) {
+  .grid-item {
+    grid-column: span var(--span-lg, var(--span-md, 8));
+    order: var(--order-lg, var(--order-md, var(--order-base, 0)));
+  }
+}
+@media (min-width: 1280px) {
+  .page-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .grid-item {
+    grid-column: span var(--span-xl, 12);
+    order: var(--order-xl, var(--order-lg, var(--order-md, var(--order-base, 0))));
+  }
+}
+@media (min-width: 1440px) {
+  .page-grid { --grid-gap: 24px; }
+  .grid-item {
+    grid-column: span var(--span-2xl, var(--span-xl, 12));
+    order: var(--order-2xl, var(--order-xl, var(--order-lg, var(--order-md, var(--order-base, 0)))));
+  }
+}
