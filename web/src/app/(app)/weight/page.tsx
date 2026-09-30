@@ -1,33 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { format, subMonths, subYears } from "date-fns";
+import { format } from "date-fns";
 import { weightApi } from "@/features/weight/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { TimeSeriesChart, type SeriesPoint } from "@/components/data/TimeSeriesChartLazy";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import type { WeightResponse } from "@/features/weight/types";
 import { useFormat } from "@/lib/i18n/format";
-import { GridItem, PageGrid } from "@/components/ds";
+import { GridItem, PageGrid, SegmentedControl } from "@/components/ds";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useTopBarCentre } from "@/lib/hooks/useTopBarSlot";
+import { WeightChart } from "@/features/weight/components/WeightChart";
+import { WEIGHT_RANGES, type WeightRange } from "@/features/weight/weightSeries";
 import { userDetailsApi } from "@/features/onboarding/api";
 import { WeightHero } from "@/features/weight/components/WeightHero";
 import { buildWeightHero } from "@/features/weight/weightHero";
 import { DatePicker } from "@/components/ui/DatePicker";
-
-type Range = "1M" | "3M" | "1Y";
-
-function rangeStart(range: Range): Date {
-  const now = new Date();
-  if (range === "1M") return subMonths(now, 1);
-  if (range === "3M") return subMonths(now, 3);
-  return subYears(now, 1);
-}
 
 export default function WeightPage() {
   const t = useTranslations("weight");
@@ -36,13 +29,23 @@ export default function WeightPage() {
   const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
-  const [range, setRange] = useState<Range>("3M");
+  const [range, setRange] = useState<WeightRange>("30d");
+  const phone = useMediaQuery("(max-width: 767px)");
 
-  const RANGE_OPTIONS: { value: Range; label: string }[] = [
-    { value: "1M", label: t("range1M") },
-    { value: "3M", label: t("range3M") },
-    { value: "1Y", label: t("range1Y") },
-  ];
+  // The range switcher lives in the top bar's centre (W4.2); on a phone there is no top bar, so it sits above the chart.
+  const switcher = useMemo(
+    () => (
+      <SegmentedControl<WeightRange>
+        aria-label={t("rangeAria")}
+        options={WEIGHT_RANGES.map((r) => ({ value: r, label: t(`range_${r}`) }))}
+        value={range}
+        onChange={setRange}
+        fullWidth={phone}
+      />
+    ),
+    [range, phone, t],
+  );
+  useTopBarCentre(phone ? null : switcher);
   const [adding, setAdding] = useState(false);
   const [newDate, setNewDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [newWeight, setNewWeight] = useState("");
@@ -76,10 +79,6 @@ export default function WeightPage() {
   });
 
   const sorted = (data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
-  const start = rangeStart(range);
-  const chartData: SeriesPoint[] = sorted
-    .filter((w) => new Date(w.date) >= start)
-    .map((w) => ({ date: fmt.date(w.date, "day"), value: w.weight }));
 
   const hero = buildWeightHero(data ?? [], goalKg, new Date());
 
@@ -137,17 +136,9 @@ export default function WeightPage() {
             {hero && <WeightHero hero={hero} />}
           </GridItem>
           {/* Chart */}
-          <GridItem span={{ base: 4, md: 8, xl: 8 }}>
-          <div className="min-w-0 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-            <div className="flex items-center justify-end mb-4">
-              <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} size="sm" />
-            </div>
-            {chartData.length > 0 ? (
-              <TimeSeriesChart data={chartData} color="var(--metric-weight)" unit=" kg" />
-            ) : (
-              <p className="text-sm text-center py-12" style={{ color: "var(--muted)" }}>{t("noDataInRange")}</p>
-            )}
-          </div>
+          <GridItem span={{ base: 4, md: 8, xl: 8 }} className="flex flex-col gap-3">
+            {phone && switcher}
+            <WeightChart weights={data ?? []} range={range} goalKg={goalKg} />
           </GridItem>
 
           {/* History */}

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { routeChrome } from "./routeChrome";
 import { DateStepper } from "./DateStepper";
+import { useTopBarSlotStore } from "@/lib/hooks/useTopBarSlot";
 
 /**
  * DS-02's top bar (D-W0.21) — desktop only (>=768px) since W0.22, which
@@ -28,6 +29,8 @@ export function TopBar() {
   }, []);
 
   const { titleKey, hasDateStepper } = routeChrome(pathname);
+  // A page can put its own control in the centre (the weight page's range switcher) — it wins over the date stepper.
+  const centre = useTopBarSlotStore((s) => s.centre);
   const title = titleKey ? t(titleKey) : "Lifey";
 
   return (
@@ -44,10 +47,8 @@ export function TopBar() {
     >
       <h1 className="type-page truncate">{title}</h1>
 
-      {hasDateStepper && (
-        <div className="flex-1 flex justify-center min-w-0">
-          <DateStepper />
-        </div>
+      {(centre || hasDateStepper) && (
+        <div className="flex-1 flex justify-center min-w-0">{centre ?? <DateStepper />}</div>
       )}
 
       <div className="flex items-center gap-2 shrink-0">

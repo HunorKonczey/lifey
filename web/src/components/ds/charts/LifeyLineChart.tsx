@@ -33,6 +33,14 @@ export interface LifeyLineChartProps {
   height?: number;
   /** Draws the 7-day moving average alongside the raw points (D-W0.9). */
   showAverage?: boolean;
+  /**
+   * Which series carries the weight (W4.2, docs/76 D-W3): `"raw"` (default) draws the measurements as the bold line
+   * with the average faint and dashed; `"average"` flips it — the measurements become faint dots and the 7-day
+   * average is the bold line. Only meaningful with `showAverage`.
+   */
+  emphasis?: "raw" | "average";
+  /** Label only the first, middle and last point on the X axis ("aug. 29. · szept. 13. · ma") instead of every other one. */
+  threeXLabels?: boolean;
   /** "napi mérés" / "7 napos átlag" / "cél" — omit any to hide that legend entry. */
   legend?: { raw?: string; average?: string; goal?: string };
   "aria-label"?: string;
@@ -67,6 +75,8 @@ export function LifeyLineChart({
   unit = "",
   height = 240,
   showAverage = false,
+  emphasis = "raw",
+  threeXLabels = false,
   legend,
   ...aria
 }: LifeyLineChartProps) {
@@ -108,9 +118,16 @@ export function LifeyLineChart({
   const dataMin = Math.min(...values.map((p) => p.value));
   const dataMax = Math.max(...values.map((p) => p.value));
   const [top, mid, bottom] = lineAxisTicks(dataMin, dataMax, goal);
+  const xTicks = chartData.length === 0 ? [] : [chartData[0].label, chartData[Math.floor((chartData.length - 1) / 2)].label, chartData[chartData.length - 1].label];
 
-  function renderLastDot(props: { cx?: number; cy?: number; payload?: { time: number } }) {
-    if (props.payload?.time !== lastTime) return <g />;
+  const averageLed = showAverage && emphasis === "average";
+
+  function renderLastDot(props: { cx?: number; cy?: number; payload?: { time: number; value: number | null } }) {
+    if (props.payload?.time !== lastTime) {
+      // Average-led: every other measurement is a faint dot (the line itself is hidden).
+      if (averageLed && props.payload?.value != null) return <circle cx={props.cx} cy={props.cy} r={3} fill={color} fillOpacity={0.4} />;
+      return <g />;
+    }
     return (
       <g>
         <circle cx={props.cx} cy={props.cy} r={8} fill="none" stroke="var(--card)" strokeWidth={4} />
@@ -129,7 +146,8 @@ export function LifeyLineChart({
             tickCount={3}
             ticks={[bottom, mid, top]}
             domain={[bottom, top]}
-            tickFormatter={(v: number) => format.compactAxis(v)}
+            // A half-way tick of 68.5 must read "68,5", not round to 69 (W4.2): whole numbers keep the compact form.
+            tickFormatter={(v: number) => (Number.isInteger(v) ? format.compactAxis(v) : v.toLocaleString(format.locale, { maximumFractionDigits: 1 }))}
             axisLine={false}
             tickLine={false}
             tick={{ fontSize: 11, fill: "var(--text-3)" }}
@@ -138,7 +156,9 @@ export function LifeyLineChart({
             dataKey="label"
             axisLine={false}
             tickLine={false}
-            interval="preserveStartEnd"
+            interval={threeXLabels ? 0 : "preserveStartEnd"}
+            tickMargin={threeXLabels ? 8 : 0}
+            ticks={threeXLabels ? xTicks : undefined}
             tick={{ fontSize: 11, fill: "var(--text-3)" }}
           />
           <Tooltip
@@ -161,7 +181,7 @@ export function LifeyLineChart({
               strokeOpacity={0.7}
               strokeWidth={1.5}
               strokeDasharray="5 4"
-              label={{ value: goalLabel, position: "insideTopRight", fill: color, fillOpacity: 0.7, fontSize: 11 }}
+              label={{ value: goalLabel, position: "insideTopRight", offset: -16, fill: color, fillOpacity: 0.85, fontSize: 11 }}
             />
           )}
           {showAverage && (
@@ -169,9 +189,9 @@ export function LifeyLineChart({
               type="linear"
               dataKey="average"
               stroke={color}
-              strokeOpacity={0.45}
-              strokeWidth={2}
-              strokeDasharray="4 3"
+              strokeOpacity={averageLed ? 1 : 0.45}
+              strokeWidth={averageLed ? 3 : 2}
+              strokeDasharray={averageLed ? undefined : "4 3"}
               dot={false}
               connectNulls={false}
               isAnimationActive={!reduced}
@@ -181,8 +201,8 @@ export function LifeyLineChart({
           <Line
             type="linear"
             dataKey="value"
-            stroke={color}
-            strokeWidth={3}
+            stroke={averageLed ? "transparent" : color}
+            strokeWidth={averageLed ? 0 : 3}
             dot={renderLastDot}
             activeDot={{ r: 5, fill: color }}
             connectNulls={false}
