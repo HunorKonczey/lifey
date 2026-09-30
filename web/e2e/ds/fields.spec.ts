@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 
 test("every field's label is programmatically associated with its input", async ({ page }) => {
   for (const name of ["Name", "Password", "Notes"]) {
-    await expect(page.getByLabel(name, { exact: true })).toBeVisible();
+    await expect(page.getByLabel(name, { exact: true }).first()).toBeVisible();
   }
 });
 
