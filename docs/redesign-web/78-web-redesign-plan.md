@@ -2263,7 +2263,7 @@ per tab and its geometry, the toast's clearance, the compact summary, the rows, 
 sheet, the foods cards, the desktop shapes at 1440 — no FAB, no clearance, title kept, toast 24 px — and
 Hungarian).
 
-**W2 acceptance** (plus §4.1): W2-A … W2-F reproduced; every delete undoable; keyboard-only meal logging.
+**W2 acceptance** (plus §4.1, logged in §12 ✅): W2-A … W2-F reproduced; every delete undoable; keyboard-only meal logging.
 
 **W2 web UI review focus:** all six frames; flows: add food by keyboard only (N → type → ↓ → Tab → 150 →
 Enter), edit quantity to 166,7 and discard, delete a meal + undo + delete again and wait 6 s, copy two
@@ -3481,3 +3481,50 @@ canvas' compact single row; Y-axis tops come from `niceAxisMax` (two significant
   run's production build had failed on a *transient* `next/font/google` download error (W1.11's commit went out before
   I noticed); the build and the whole checklist pass on the committed state, and the script now stops on any failing stage.
 
+### W2 — 2026-09-30 — Playwright Chromium (bundled, headless), 1440×1024 / 1280×800 / 1024×768 / 390×844
+
+*Scope:* the real stack (Postgres, backend, `next dev`) with the handoff demo data. The nutrition page of the demo
+client (`kata.nagy`) in the matrix **3 tabs (meals on Sep 27 via ←←←, foods, recipes) × 4 viewports × dark / light ×
+HU / EN** = 48 full-page captures (the EN pass switched the account's language setting and restored it), each with
+console-error, horizontal-overflow and raw-key / ISO / `ROLE_` / `NaN` checks; the W2 canvas
+(`Lifey Web 2 Nutrition.dc.html`) rendered in the same browser and compared — W2-A (meals, 1440 dark), W2-B
+(add-food modal), W2-C (copy popover, delete confirm, edit drawer), W2-D (foods), W2-E (recipes), W2-F (390) — and
+every "Előtte → utána" note. Flows on the real app, each cleaning up its throwaway data: **keyboard-only logging**
+(`N` → type "alma" → ↓ → Tab → 150 → Enter = one `POST /meals`, Alma 150 g), edit a quantity to 166,7 and discard
+(Esc → "Elveted a módosításokat?" → Elvetés: no request), delete a meal → Undo (no request) → delete again and wait
+6.5 s (exactly one `DELETE`), copy two meals from yesterday (two `POST`s, cards 0 → 2, never overwriting), create a
+food whose macros don't add up (red "A makrók 201 kcal-t adnak ki — ez 101 kcal-lal tér el."), log a recipe portion;
+**axe** (WCAG 2 A/AA) on the three tabs in both themes: 0 serious / critical on all six; 0 console errors across the
+flows. The phone flows (FAB, toast above it, copy sheet, foods editor sheet with its discard guard, recipe editor
+sheet) were driven at 390 × 844 while building W2.12.
+
+*Matches:* the meals layout (8 + 4 with the summary sticky on the right from 1280, above the list below it; ring 859
+"kcal maradt", eaten 1 041 / goal 1 900, three macro bars "63 / 130 g"), meal cards with tinted icon, "07:15 · 3
+tétel", kcal in the header, "＋" and "⋯" and always-visible P / C / F dots; empty slots "Még nincs naplózva · 859 kcal
+fér bele" with the quick "Hozzáadás"; the tab row "Étkezések · Ételek 18 · Receptek 4" with the actions beside it
+(a segmented control and a FAB at 390); the foods table with metric-dotted headers, "Utoljára", one "⋯" per row and
+the 380 px editor with the macro line; recipe cards with the dominant-macro icon, **kcal / adag** in HU and **kcal /
+serving** in EN, ratio bar and the coloured macro line, 3 → 2 → 1 columns with the pane; both themes and languages
+legible; no raw keys, no ISO dates, no overflow in any capture except the one below; reduced motion is covered by the
+component specs.
+
+*Deviations (intended):* the canvas' fibre / sugar tiles, the clay "a napi célokat … állította be" coach note, recipe
+meals' "1 adag · 420 g" sub-line (a logged recipe meal stores no serving count — the row shows its grams), portion
+chips and the foods tab's Saját / Katalógus / Kedvencek filters are not built (D-W0.19). The demo day differs from
+the canvas' (two recipe meals and 1 041 kcal, not three food meals), so the card contents differ while the structure,
+totals (859 left) and states match. Recipe-meal rows keep P / C / F and kcal like every other row. `hidden` foods
+(one-off macro entries) were never listed and still aren't; the editor has no "hidden" switch. Not done: a true
+browser-zoom pass (the 1024 and 390 captures stand in for it) and a side-by-side image of every frame (the canvas
+frames were compared by eye, strip by strip).
+
+*Bugs* (closed in the commit that carries this entry):
+- **W2.fix-1** — at 390 px in Hungarian the date stepper ("szept. 27., szombat" + the "Vissza a mai napra" chip) was
+  420 px wide: the *whole page* slid sideways (document `scrollWidth` 421). The chip is an icon under 768 px (its
+  label stays its accessible name); `dateStepper.spec` asserts the stepper fits at 390 in HU.
+- **W2.fix-2** — `DataTable` moved focus onto its first row as soon as it mounted (and after every sort), drawing a
+  focus ring under row one of every table on page load. Focus now follows the active row only while it is already
+  inside the table body; `foodsTable.spec` covers it.
+- Found while building and fixed in place (see the step notes): the DS `Drawer`'s stale Esc guard (W2.7), the toast
+  hidden behind drawers at the same z-index (W2.11), invisible tooltips widening `<main>` so a focus could slide the
+  page sideways at 390 (W2.12), `DataTable` sorting text by code point (W2.10), its `/` answering from off-screen
+  tables, and hard-coded English in its toolbar.

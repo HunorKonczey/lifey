@@ -85,10 +85,14 @@ export function DateStepper() {
         <button
           type="button"
           onClick={() => setDate(new Date())}
-          className="lifey-button px-3 h-8 rounded-[var(--r-pill)] type-body-s whitespace-nowrap"
+          aria-label={common("backToToday")}
+          // A phone has no room for the words beside the date ("szept. 27., szombat" + "Vissza mára" pushed the
+          // next arrow 30 px off a 390 screen): an icon there, the label stays as its name.
+          className="lifey-button inline-flex items-center justify-center gap-1 px-3 h-8 rounded-[var(--r-pill)] type-body-s whitespace-nowrap max-md:w-8 max-md:px-0"
           style={{ background: "var(--primary-tint)", color: "var(--on-primary-tint)" }}
         >
-          {common("backToToday")}
+          <Icon name="today" size={16} className="md:hidden" />
+          <span className="max-md:hidden">{common("backToToday")}</span>
         </button>
       )}
 

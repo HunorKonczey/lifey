@@ -129,3 +129,10 @@ test("in Hungarian: Utoljára, 'N étel', 'A makrók … kcal-t adnak ki' and Me
   await expect(editor(page).getByText("A makrók 72 kcal-t adnak ki — ez 1 kcal-lal tér el.")).toBeVisible();
   await expect(editor(page).getByRole("button", { name: "Mentés" })).toBeDisabled();
 });
+
+test("the table does not take focus on load, and arrow keys still move through its rows", async ({ page }) => {
+  await expect(table(page).locator("tbody tr").first()).not.toBeFocused();
+  await table(page).locator("tbody tr").first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(table(page).locator("tbody tr").nth(1)).toBeFocused();
+});

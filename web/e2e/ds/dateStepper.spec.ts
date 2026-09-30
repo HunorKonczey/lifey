@@ -34,3 +34,14 @@ test("clicking the pill opens the calendar popover", async ({ page }) => {
   await expect(popover.getByRole("dialog")).toBeVisible();
   await expect(popover.getByRole("grid")).toBeVisible();
 });
+
+test("at 390 the Back to today chip is an icon, so the whole stepper fits the screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "HU", exact: true }).click(); // the longest date strings
+  await page.getByRole("button", { name: "Előző nap" }).click();
+  const chip = page.getByRole("button", { name: "Vissza a mai napra" });
+  await expect(chip).toBeVisible();
+  expect((await chip.boundingBox())!.width).toBeLessThanOrEqual(40);
+  const next = (await page.getByRole("button", { name: "Következő nap" }).boundingBox())!;
+  expect(next.x + next.width).toBeLessThanOrEqual(390);
+});

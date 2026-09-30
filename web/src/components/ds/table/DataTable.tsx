@@ -84,6 +84,7 @@ export function DataTable<T>({
   const locale = useLocale();
   const searchRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<(HTMLElement | null)[]>([]);
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
 
   useEffect(() => {
     function handleSlash(e: KeyboardEvent) {
@@ -126,8 +127,11 @@ export function DataTable<T>({
     setActiveIndex(0);
   }, [safePage, sortKey, sortDir, setActiveIndex]);
 
+  // Roving focus follows the active row only while focus is already in the body — arrow keys moving through
+  // rows. Never on mount or after a sort: that stole focus from the page and drew a focus ring on row one.
   useEffect(() => {
-    rowRefs.current[activeIndex]?.focus();
+    const active = document.activeElement;
+    if (active && bodyRef.current?.contains(active)) rowRefs.current[activeIndex]?.focus();
   }, [activeIndex]);
 
   function toggleSort(key: string) {
@@ -228,7 +232,7 @@ export function DataTable<T>({
                 {rowMenu && <th className="w-10" style={{ borderBottom: "1px solid var(--hairline)" }} />}
               </tr>
             </thead>
-            <tbody onKeyDown={(e) => handleKeyDown(e, () => onRowOpen?.(pageRows[activeIndex]), () => setOpenRowMenu(activeIndex))}>
+            <tbody ref={bodyRef} onKeyDown={(e) => handleKeyDown(e, () => onRowOpen?.(pageRows[activeIndex]), () => setOpenRowMenu(activeIndex))}>
               {pageRows.map((row, i) => {
                 const key = rowKey(row);
                 const selected = key === selectedKey;
