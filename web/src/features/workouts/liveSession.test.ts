@@ -84,3 +84,61 @@ describe("hasUnsavedSets", () => {
     expect(hasUnsavedSets(saved, [d(1, true, 50, 8), d(1, true, 52.5, 8), d(1, false, 60, 5), d(1, true, 60, 0)])).toBe(false);
   });
 });
+
+import { baselineFromSets } from "./personalRecords";
+import { rowMarks, seedDrafts } from "./liveSession";
+
+describe("rowMarks", () => {
+  const baseline = baselineFromSets([{ weight: 50, reps: 8 }]);
+
+  it("a done set that beats the history is a record; the mark is there as soon as it is done", () => {
+    expect(rowMarks(baseline, [d(1, false, 55, 8)], [])[0]).toEqual({ record: false, better: false });
+    expect(rowMarks(baseline, [d(1, true, 55, 8)], [])[0]).toEqual({ record: true, better: false });
+  });
+
+  it("the running best includes the rows above: a repeat of a new record is not a record again", () => {
+    const marks = rowMarks(baseline, [d(1, true, 55, 8), d(1, true, 55, 8)], []);
+    expect(marks.map((m) => m.record)).toEqual([true, false]);
+  });
+
+  it("better than the same row last time shows ↑ only when it is not already a record", () => {
+    const prev = [{ weight: 50, reps: 8 }, { weight: 50, reps: 8 }];
+    const heavyBaseline = baselineFromSets([{ weight: 60, reps: 8 }]);
+    const marks = rowMarks(heavyBaseline, [d(1, true, 50, 9), d(1, true, 50, 8)], prev);
+    expect(marks[0]).toEqual({ record: false, better: true });
+    expect(marks[1]).toEqual({ record: false, better: false });
+    const rec = rowMarks(baseline, [d(1, true, 52.5, 8)], [{ weight: 50, reps: 8 }]);
+    expect(rec[0]).toEqual({ record: true, better: false });
+  });
+
+  it("an empty history has nothing to beat", () => {
+    expect(rowMarks(baselineFromSets([]), [d(1, true, 100, 5)], [])[0].record).toBe(false);
+  });
+});
+
+describe("seedDrafts", () => {
+  const saved = [{ exerciseId: 1, exerciseName: "E1", weight: 50, reps: 8, performedAt: "" }];
+  const targets = new Map([[1, 3], [2, 2]]);
+  const prev = (id: number) => (id === 1 ? [{ weight: 47.5, reps: 8 }, { weight: 50, reps: 8 }, { weight: 52.5, reps: 6 }] : []);
+
+  it("fills a running workout up to the planned sets with undone, prefilled rows", () => {
+    const drafts = seedDrafts([ex(1), ex(2)], saved, targets, prev, false);
+    expect(drafts.filter((x) => x.exerciseId === 1)).toEqual([
+      { exerciseId: 1, weight: 50, reps: 8, done: true },
+      { exerciseId: 1, weight: 50, reps: 8, done: false },
+      { exerciseId: 1, weight: 52.5, reps: 6, done: false },
+    ]);
+  });
+
+  it("without a previous session the row above is the prefill; the very first row is empty", () => {
+    const drafts = seedDrafts([ex(2)], [], targets, prev, false);
+    expect(drafts).toEqual([
+      { exerciseId: 2, weight: 0, reps: 0, done: false },
+      { exerciseId: 2, weight: 0, reps: 0, done: false },
+    ]);
+  });
+
+  it("a finished workout is only what was saved", () => {
+    expect(seedDrafts([ex(1), ex(2)], saved, targets, prev, true)).toEqual([{ exerciseId: 1, weight: 50, reps: 8, done: true }]);
+  });
+});

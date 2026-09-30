@@ -1,123 +1,116 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { delta } from "../../progress";
-import type { DraftSet } from "../../liveSession";
-import type { ExerciseSetResponse } from "../../types";
+import { Button, Card, Icon } from "@/components/ds";
+import { formatNumber, useFormat } from "@/lib/i18n/format";
+import type { DraftSet, RowMark } from "../../liveSession";
+import { SET_GRID, SetRow } from "./SetRow";
+
+/** The focusable inputs of one set row. */
+const rowInput = (root: HTMLElement | null, row: number) => root?.querySelector<HTMLInputElement>(`[data-set-row="${row}"] input`) ?? null;
 
 /**
- * The current exercise's set table (W3.6 lifts it out of the old `SessionLogger` unchanged; W3.7 rebuilds the
- * rows — 18 px fields, PR marks, keyboard). `rows` carry each draft's index in the whole session's draft list.
+ * The current exercise of the live logger (W3.7, W3-B): its name, "4 × 8 · legjobb eddig 60 kg × 8", the column
+ * header and the set rows, "+ Szett". Enter in a row ticks it and moves to the next row's kg field; on the last
+ * row it adds a set first, so a whole exercise can be logged without the mouse.
  */
 export function ExerciseCard({
   name,
   rows,
   previous,
+  marks,
+  planned,
+  best,
   onUpdate,
   onRemove,
   onAddSet,
 }: {
   name: string;
+  /** This exercise's drafts; `index` is the position in the whole session's draft list. */
   rows: { draft: DraftSet; index: number }[];
-  previous: ExerciseSetResponse[];
+  previous: { weight: number; reps: number }[];
+  marks: RowMark[];
+  /** Planned sets (the template's target) — 0 when there is none. */
+  planned: number;
+  /** The exercise's best set before this workout. */
+  best: { weight: number; reps: number } | null;
   onUpdate: (index: number, patch: Partial<DraftSet>) => void;
   onRemove: (index: number) => void;
   onAddSet: () => void;
 }) {
   const t = useTranslations("workouts");
+  const { locale } = useFormat();
+  const root = useRef<HTMLDivElement>(null);
+  // Set when Enter on the last row added a set: its kg field takes focus once it exists.
+  const focusNew = useRef(false);
+
+  useEffect(() => {
+    if (!focusNew.current) return;
+    focusNew.current = false;
+    rowInput(root.current, rows.length - 1)?.focus();
+  }, [rows.length]);
+
+  const typicalReps = previous[0]?.reps;
+  const target = planned > 0 ? `${planned}${typicalReps ? ` × ${typicalReps}` : ""}` : null;
+  const bestText = best ? t("bestSoFar", { value: `${formatNumber(best.weight, locale, 2)} kg × ${best.reps}` }) : null;
+
+  function enterOn(rowIndex: number, draftIndex: number) {
+    onUpdate(draftIndex, { done: true });
+    if (rowIndex + 1 < rows.length) {
+      requestAnimationFrame(() => rowInput(root.current, rowIndex + 1)?.focus());
+    } else {
+      focusNew.current = true;
+      onAddSet();
+    }
+  }
 
   return (
-    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-      <p className="font-bold text-sm mb-3">{name}</p>
-
-      <div className="grid grid-cols-[40px_1fr_1fr_1fr_44px_32px] gap-2 px-1 mb-2 text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-        <span>{t("setColumn")}</span>
-        <span>{t("previous")}</span>
-        <span>{t("kg")}</span>
-        <span>{t("reps")}</span>
-        <span></span>
-        <span></span>
+    <div ref={root}>
+    <Card>
+      <div className="mb-3">
+        <h2 className="type-title">{name}</h2>
+        {(target || bestText) && (
+          <p className="type-body-s tabular" style={{ color: "var(--text-2)" }}>
+            {[target, bestText].filter(Boolean).join(" · ")}
+          </p>
+        )}
       </div>
 
-      {rows.map(({ draft: d, index: i }, localIdx) => {
-        const prev = previous[localIdx];
-        const weightDelta = d.done ? delta(d.weight, prev?.weight) : null;
-        const repsDelta = d.done ? delta(d.reps, prev?.reps) : null;
-        return (
-          <div
-            key={i}
-            className="grid grid-cols-[40px_1fr_1fr_1fr_44px_32px] gap-2 items-center px-1 py-1 rounded-[var(--r-sm)]"
-            style={{ outline: d.done ? "1px solid color-mix(in srgb, var(--primary) 40%, transparent)" : "none" }}
-          >
-            <span className="text-sm tabular font-semibold">{localIdx + 1}</span>
-            <span className="text-xs tabular" style={{ color: "var(--muted)" }}>
-              {prev ? `${prev.weight}kg × ${prev.reps}` : "—"}
-            </span>
-            <div className="relative">
-              <input
-                type="number"
-                value={d.weight}
-                min={0}
-                step="0.5"
-                onChange={(e) => onUpdate(i, { weight: Number(e.target.value) })}
-                className="w-full px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
-                style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-              />
-              {weightDelta && (
-                <span
-                  className="material-symbols-rounded absolute right-1 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
-                  style={{ color: weightDelta === "up" ? "#4CAF50" : "#D66B5A" }}
-                >
-                  {weightDelta === "up" ? "arrow_upward" : "arrow_downward"}
-                </span>
-              )}
-            </div>
-            <div className="relative">
-              <input
-                type="number"
-                value={d.reps === 0 ? "" : d.reps}
-                min={0}
-                placeholder="0"
-                onChange={(e) => onUpdate(i, { reps: e.target.value === "" ? 0 : Number(e.target.value) })}
-                className="w-full px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
-                style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-              />
-              {repsDelta && (
-                <span
-                  className="material-symbols-rounded absolute right-1 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
-                  style={{ color: repsDelta === "up" ? "#4CAF50" : "#D66B5A" }}
-                >
-                  {repsDelta === "up" ? "arrow_upward" : "arrow_downward"}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => onUpdate(i, { done: !d.done })}
-              className="w-8 h-8 rounded-[var(--r-sm)] flex items-center justify-center transition-colors"
-              style={{ background: d.done ? "var(--primary)" : "var(--surface-container)", color: d.done ? "var(--bg)" : "var(--muted)" }}
-              aria-label={t("markSetDoneAria")}
-            >
-              <span className="material-symbols-rounded text-lg">check</span>
-            </button>
-            <button
-              onClick={() => onRemove(i)}
-              className="w-8 h-8 rounded-[var(--r-sm)] flex items-center justify-center"
-              style={{ color: "var(--muted)" }}
-              aria-label={t("removeSetAria")}
-            >
-              <span className="material-symbols-rounded text-lg">close</span>
-            </button>
-          </div>
-        );
-      })}
-
-      <button
-        onClick={onAddSet}
-        className="w-full mt-2 py-1.5 rounded-[var(--r-sm)] text-xs font-semibold flex items-center justify-center gap-1"
-        style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
+      <div
+        className="type-label grid gap-2 px-2 pb-1"
+        style={{ gridTemplateColumns: SET_GRID, color: "var(--text-3)" }}
+        aria-hidden
       >
-        <span className="material-symbols-rounded text-base">add</span> {t("addSet")}
-      </button>
+        <span className="text-center">{t("setColumn")}</span>
+        <span>{t("previous")}</span>
+        <span className="text-center">{t("kg")}</span>
+        <span className="text-center">{t("reps")}</span>
+        <span />
+        <span />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        {rows.map(({ draft, index }, i) => (
+          <SetRow
+            key={index}
+            index={i}
+            number={i + 1}
+            draft={draft}
+            previous={previous[i]}
+            mark={marks[i] ?? { record: false, better: false }}
+            onChange={(patch) => onUpdate(index, patch)}
+            onRemove={() => onRemove(index)}
+            onEnter={() => enterOn(i, index)}
+          />
+        ))}
+      </div>
+
+      <Button variant="ghost" onClick={onAddSet} className="mt-2">
+        <Icon name="add" size={20} />
+        {t("addSet")}
+      </Button>
+    </Card>
     </div>
   );
 }

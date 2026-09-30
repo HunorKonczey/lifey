@@ -50,7 +50,7 @@ function bestOf(sets: SetLine[]): SetLine {
 }
 
 /** Sets of finished strength sessions that started before `session` — the history its records are judged against. */
-function priorSets(session: WorkoutSessionResponse, history: readonly WorkoutSessionResponse[]): ExerciseSetResponse[] {
+export function priorSets(session: WorkoutSessionResponse, history: readonly WorkoutSessionResponse[]): ExerciseSetResponse[] {
   const started = new Date(session.startedAt).getTime();
   return history
     .filter((h) => h.id !== session.id && h.sessionKind === "STRENGTH" && h.finishedAt != null && new Date(h.startedAt).getTime() < started)

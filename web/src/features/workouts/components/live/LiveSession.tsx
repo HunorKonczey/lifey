@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
+import { Icon } from "@/components/ds";
 import { ConfirmModal } from "@/components/ds/overlay/ConfirmModal";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { workoutSessionApi } from "../../api";
-import { firstOpenExerciseId, hasUnsavedSets, liveProgress, railExercises, type DraftSet } from "../../liveSession";
+import { baselineFromSets } from "../../personalRecords";
+import { firstOpenExerciseId, hasUnsavedSets, liveProgress, railExercises, rowMarks, seedDrafts, type DraftSet } from "../../liveSession";
+import { priorSets } from "../../sessionSummary";
 import { computeWorkoutProgress, isWorkoutSuccess, previousSets, type WorkoutProgressResult } from "../../progress";
 import type { WorkoutSessionResponse } from "../../types";
 import { PostWorkoutFeedbackDialog } from "../PostWorkoutFeedbackDialog";
@@ -25,12 +28,15 @@ export function LiveSession({
   session,
   history,
   plannedSets,
+  targets,
   onLeave,
 }: {
   session: WorkoutSessionResponse;
   history: WorkoutSessionResponse[];
   /** The template's Σ target sets — 0 when the workout has no template. */
   plannedSets: number;
+  /** Planned sets per exercise (the template's target sets). */
+  targets: ReadonlyMap<number, number>;
   onLeave: () => void;
 }) {
   const t = useTranslations("workouts");
@@ -43,10 +49,16 @@ export function LiveSession({
   const [feedbackContext, setFeedbackContext] = useState<"finish" | "edit" | null>(null);
   const [rpe, setRpe] = useState<number | null>(session.rpe ?? null);
   const [feedbackNote, setFeedbackNote] = useState<string | null>(session.feedbackNote ?? null);
-  const [drafts, setDrafts] = useState<DraftSet[]>(
-    session.sets.map((s) => ({ exerciseId: s.exerciseId, weight: s.weight, reps: s.reps, done: true })),
-  );
   const exercises = session.exercises;
+  const [drafts, setDrafts] = useState<DraftSet[]>(() =>
+    seedDrafts(
+      exercises,
+      session.sets,
+      targets,
+      (exerciseId) => previousSets(history, session.id, exerciseId, session.templateId),
+      session.finishedAt != null,
+    ),
+  );
   const [pickedId, setPickedId] = useState<number | null>(null);
   const currentId = pickedId != null && exercises.some((e) => e.exerciseId === pickedId) ? pickedId : firstOpenExerciseId(exercises, drafts);
   const [leaving, setLeaving] = useState(false);
@@ -98,7 +110,8 @@ export function LiveSession({
 
   const addSet = (exerciseId: number) => {
     const last = [...drafts].reverse().find((x) => x.exerciseId === exerciseId);
-    setDrafts((prev) => [...prev, { exerciseId, weight: last?.weight ?? 0, reps: last?.reps ?? 0, done: true }]);
+    // A new row starts undone — ticking it is what logs the set.
+    setDrafts((prev) => [...prev, { exerciseId, weight: last?.weight ?? 0, reps: last?.reps ?? 0, done: false }]);
   };
   const updateDraft = (index: number, patch: Partial<DraftSet>) =>
     setDrafts((prev) => prev.map((x, i) => (i === index ? { ...x, ...patch } : x)));
@@ -106,6 +119,15 @@ export function LiveSession({
 
   const requestLeave = () => (unsaved ? setLeaving(true) : onLeave());
   const current = exercises.find((e) => e.exerciseId === currentId) ?? null;
+  const currentIdx = current ? exercises.indexOf(current) : -1;
+  const next = currentIdx >= 0 ? (exercises[currentIdx + 1] ?? null) : null;
+  const history0 = priorSets(session, history);
+  const exerciseHistory = (exerciseId: number) => history0.filter((x) => x.exerciseId === exerciseId);
+  const bestBefore = (exerciseId: number) =>
+    exerciseHistory(exerciseId).reduce<{ weight: number; reps: number } | null>(
+      (top, x) => (top == null || x.weight > top.weight || (x.weight === top.weight && x.reps > top.reps) ? { weight: x.weight, reps: x.reps } : top),
+      null,
+    );
   const name = session.templateName ?? t("activeWorkout");
 
   return (
@@ -168,11 +190,41 @@ export function LiveSession({
               name={current.exerciseName}
               rows={drafts.map((draft, index) => ({ draft, index })).filter(({ draft }) => draft.exerciseId === current.exerciseId)}
               previous={previousSets(history, session.id, current.exerciseId, session.templateId)}
+              marks={rowMarks(
+                baselineFromSets(exerciseHistory(current.exerciseId)),
+                drafts.filter((x) => x.exerciseId === current.exerciseId),
+                previousSets(history, session.id, current.exerciseId, session.templateId),
+              )}
+              planned={targets.get(current.exerciseId) ?? 0}
+              best={bestBefore(current.exerciseId)}
               onUpdate={updateDraft}
               onRemove={removeDraft}
               onAddSet={() => addSet(current.exerciseId)}
             />
           )}
+
+          {next && (
+            <button
+              type="button"
+              onClick={() => setPickedId(next.exerciseId)}
+              className="lifey-button flex items-center justify-between gap-3 p-4 text-left"
+              style={{ borderRadius: "var(--r-card)", background: "var(--nested)" }}
+            >
+              <span className="min-w-0">
+                <span className="type-body block truncate" style={{ fontWeight: 700 }}>
+                  {next.exerciseName}
+                </span>
+                <span className="type-body-s tabular block" style={{ color: "var(--text-2)" }}>
+                  {[t("railNext"), targets.get(next.exerciseId) ? `${targets.get(next.exerciseId)} ×` : null].filter(Boolean).join(" · ")}
+                </span>
+              </span>
+              <Icon name="expand_more" size={22} color="var(--text-3)" />
+            </button>
+          )}
+
+          <p className="type-body-s" style={{ color: "var(--text-3)" }}>
+            {t("liveKeyboardHint")}
+          </p>
         </div>
       </div>
 

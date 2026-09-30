@@ -52,7 +52,8 @@ export default function LiveSessionPage() {
 
   const template = session.templateId != null ? templates?.find((x) => x.id === session.templateId) : undefined;
   const plannedSets = template?.exercises.reduce((sum, e) => sum + e.targetSets, 0) ?? 0;
+  const targets = new Map((template?.exercises ?? []).map((e) => [e.exerciseId, e.targetSets]));
   const history = data.slice().sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
 
-  return <LiveSession key={session.id} session={session} history={history} plannedSets={plannedSets} onLeave={leave} />;
+  return <LiveSession key={session.id} session={session} history={history} plannedSets={plannedSets} targets={targets} onLeave={leave} />;
 }

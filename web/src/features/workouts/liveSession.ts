@@ -1,3 +1,4 @@
+import { detectPrs, extendBaseline, type PrBaseline } from "./personalRecords";
 import type { ExerciseSetResponse, ExerciseSummary } from "./types";
 
 /** A set as the live logger holds it while editing. */
@@ -81,4 +82,54 @@ const signature = (sets: readonly Pick<ExerciseSetResponse, "exerciseId" | "weig
 /** True when the drafts differ from what the server has saved — leaving then asks first. */
 export function hasUnsavedSets(saved: readonly ExerciseSetResponse[], drafts: readonly DraftSet[]): boolean {
   return signature(saved) !== signature(drafts.filter((d) => d.done && d.reps > 0));
+}
+
+export interface RowMark {
+  /** The set broke a personal record (🏆). */
+  record: boolean;
+  /** It beat the same row of the previous session (↑) — shown only when it is not already a record. */
+  better: boolean;
+}
+
+/**
+ * The 🏆 / ↑ marks of one exercise's rows, in row order (W3.7): a done row is judged against `baseline` (the
+ * exercise's history before this session) extended with the done rows above it, so the mark appears the moment a
+ * set is ticked. `previous` is the previous session's sets for the exercise, paired by row position.
+ */
+export function rowMarks(baseline: PrBaseline, rows: readonly DraftSet[], previous: readonly { weight: number; reps: number }[]): RowMark[] {
+  let running = baseline;
+  return rows.map((row, i) => {
+    if (!row.done || row.reps <= 0) return { record: false, better: false };
+    const record = detectPrs(running, row).length > 0;
+    running = extendBaseline(running, row);
+    const prev = previous[i];
+    const better = !record && prev != null && (row.weight > prev.weight || (row.weight === prev.weight && row.reps > prev.reps));
+    return { record, better };
+  });
+}
+
+/**
+ * The rows a workout opens with: what is already saved, then — for a workout still running — one undone row per
+ * planned set still missing, prefilled from the previous session (else the row above, else empty) so ticking a
+ * set is usually all there is to do. A finished workout being edited gets no extra rows.
+ */
+export function seedDrafts(
+  exercises: readonly ExerciseSummary[],
+  saved: readonly ExerciseSetResponse[],
+  targets: ReadonlyMap<number, number>,
+  previousFor: (exerciseId: number) => readonly { weight: number; reps: number }[],
+  finished: boolean,
+): DraftSet[] {
+  const drafts: DraftSet[] = saved.map((s) => ({ exerciseId: s.exerciseId, weight: s.weight, reps: s.reps, done: true }));
+  if (finished) return drafts;
+  for (const e of exercises) {
+    const own = drafts.filter((d) => d.exerciseId === e.exerciseId);
+    const previous = previousFor(e.exerciseId);
+    for (let i = own.length; i < (targets.get(e.exerciseId) ?? 0); i++) {
+      const above = i > 0 ? drafts.filter((d) => d.exerciseId === e.exerciseId)[i - 1] : undefined;
+      const source = previous[i] ?? above;
+      drafts.push({ exerciseId: e.exerciseId, weight: source?.weight ?? 0, reps: source?.reps ?? 0, done: false });
+    }
+  }
+  return drafts;
 }
