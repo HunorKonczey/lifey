@@ -28,7 +28,7 @@ test("a recipe meal is one row for the whole portion, labelled 'recipe'", async 
   await expect(lunch.getByText("12:30 PM · recipe")).toBeVisible();
   await expect(lunch.locator(".meal-item-row")).toHaveCount(1);
   await expect(lunch.getByText("Csirkés rizstál brokkolival")).toBeVisible();
-  await expect(lunch.getByText("420 g")).toBeVisible(); // 150 + 180 + 90
+  await expect(lunch.getByText("420 g", { exact: true })).toBeVisible(); // 150 + 180 + 90
 });
 
 test("each row shows grams only, and carbs and fat are always visible next to protein", async ({ page }) => {

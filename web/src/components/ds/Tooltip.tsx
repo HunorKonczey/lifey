@@ -20,7 +20,8 @@ export function Tooltip({ label, shortcut, children }: TooltipProps) {
       {children}
       <span
         role="tooltip"
-        className="lifey-tooltip pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-10 whitespace-nowrap opacity-0"
+        // Not on a phone: there is no hover, and a hidden tooltip near the right edge still widened the scrollable area (the page could slide sideways).
+        className="lifey-tooltip pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-10 whitespace-nowrap opacity-0 max-md:hidden"
         style={{
           background: "var(--text)",
           color: "var(--bg)",

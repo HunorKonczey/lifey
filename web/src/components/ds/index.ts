@@ -24,6 +24,8 @@ export { CountPill } from "./CountPill";
 export type { CountPillProps } from "./CountPill";
 export { Button } from "./Button";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button";
+export { Fab } from "./Fab";
+export type { FabProps } from "./Fab";
 export { IconButton } from "./IconButton";
 export type { IconButtonProps } from "./IconButton";
 export { Tooltip } from "./Tooltip";

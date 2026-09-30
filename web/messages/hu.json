@@ -825,7 +825,6 @@
       "menuEdit": "Szerkesztés",
       "menuDuplicate": "Duplikálás",
       "menuLogToday": "Naplózás ma",
-      "menuDelete": "Törlés…",
       "rowMenuLabel": "{food} műveletei",
       "deleteTitle": "Törlöd: {food}?",
       "deleteBody": "A már naplózott étkezéseidben megmarad. Utána még {seconds} másodpercig visszavonhatod.",
@@ -835,7 +834,8 @@
       "foodDuplicated": "Étel duplikálva",
       "duplicateFailed": "Nem sikerült duplikálni az ételt",
       "cardMacros": "F {protein} · Sz {carbs} · Zs {fat}",
-      "tableAria": "Ételek listája"
+      "tableAria": "Ételek listája",
+      "menuDelete": "Törlés"
     },
     "recipesView": {
       "searchPlaceholder": "Receptek keresése…",
@@ -854,13 +854,13 @@
       "log": "Naplózás",
       "menuEdit": "Szerkesztés",
       "menuDuplicate": "Duplikálás",
-      "menuDelete": "Törlés…",
       "rowMenuLabel": "{name} műveletei",
       "favoriteAria": "Kedvenc",
       "deleteTitle": "Törlöd: {name}?",
       "deleteBody": "A belőle már naplózott étkezések megmaradnak. Utána még {seconds} másodpercig visszavonhatod.",
       "recipeDeleted": "{name} törölve",
-      "deleteFailed": "Nem sikerült törölni a receptet"
+      "deleteFailed": "Nem sikerült törölni a receptet",
+      "menuDelete": "Törlés"
     },
     "foodEditor": {
       "editFood": "Étel szerkesztése",
@@ -1023,7 +1023,10 @@
     "copyNoteToday": "A mai naphoz adódik, nem írja felül.",
     "copyNoteDay": "{day} napjához adódik, nem írja felül.",
     "copyAction": "{count} étkezés másolása",
-    "newRecipe": "Új recept"
+    "newRecipe": "Új recept",
+    "fabFood": "Étel",
+    "fabRecipe": "Recept",
+    "itemMetaMobile": "{grams} · F {protein}"
   },
   "workouts": {
     "sessions": "Edzések",

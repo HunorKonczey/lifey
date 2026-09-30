@@ -14,6 +14,8 @@ export interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   size?: "sm" | "md";
+  /** Fill the row, each segment taking an equal share — a phone's three-part tab switch. */
+  fullWidth?: boolean;
   "aria-label"?: string;
 }
 
@@ -27,6 +29,7 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   size = "md",
+  fullWidth = false,
   ...aria
 }: SegmentedControlProps<T>) {
   const refs = useRef(new Map<string, HTMLButtonElement>());
@@ -40,13 +43,14 @@ export function SegmentedControl<T extends string>({
     refs.current.get(next.value)?.focus();
   }
 
-  const pad = size === "sm" ? "px-3 h-8 text-xs" : "px-4 h-9 type-body-s";
+  // Full width is the phone's tab switch: 44 px segments (D-W0.18) instead of the desktop 36.
+  const pad = fullWidth ? "px-2 h-11 type-body-s md:h-9" : size === "sm" ? "px-3 h-8 text-xs" : "px-4 h-9 type-body-s";
 
   return (
     <div
       role="radiogroup"
       aria-label={aria["aria-label"]}
-      className="inline-flex max-w-full overflow-x-auto gap-0.5 p-1 rounded-[var(--r-pill)]"
+      className={`${fullWidth ? "flex w-full" : "inline-flex max-w-full"} overflow-x-auto gap-0.5 p-1 rounded-[var(--r-pill)]`}
       style={{ background: "var(--control)" }}
     >
       {options.map((opt, i) => {
@@ -63,7 +67,7 @@ export function SegmentedControl<T extends string>({
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(opt.value)}
             onKeyDown={(e) => handleKeyDown(e, i)}
-            className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-[var(--r-pill)] ${pad}`}
+            className={`flex whitespace-nowrap items-center gap-1.5 rounded-[var(--r-pill)] ${fullWidth ? "min-w-0 flex-1 justify-center" : "shrink-0"} ${pad}`}
             style={{
               background: active ? "var(--segment-selected-bg)" : "transparent",
               // Composed with --shadow-focus (globals.css) — an inline

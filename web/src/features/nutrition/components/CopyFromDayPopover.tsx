@@ -4,10 +4,12 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, Checkbox, Icon, Popover } from "@/components/ds";
+import { Modal } from "@/components/ds/overlay/Modal";
 import { CalendarPopover } from "@/components/ds/date";
 import { createFormat } from "@/lib/format/lifeyFormat";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useFormat } from "@/lib/format/useFormat";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { mealApi } from "../api";
 import { dayKey, loggedDayKeys, mealsOnDay, quickSourceDays, sourceChip } from "../copyFromDay";
 import { MEAL_TYPE_STYLE } from "../mealTypeStyle";
@@ -36,6 +38,16 @@ export interface CopyFromDayViewProps {
  * kcal, and "N étkezés másolása". Copies are added to the viewed day and never overwrite anything.
  */
 export function CopyFromDayView({ open, onClose, anchorRef, meals, target, today, pending, onCopy }: CopyFromDayViewProps) {
+  const t = useTranslations("nutrition");
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  // On a phone a 392 px popover would not fit: the same panel as a bottom sheet (the Modal's phone shape).
+  if (isMobile) {
+    return (
+      <Modal open={open} onClose={onClose} width={480} aria-label={t("copyFromDay")}>
+        <Panel meals={meals} target={target} today={today} pending={pending} onCopy={onCopy} />
+      </Modal>
+    );
+  }
   return (
     <Popover open={open} onClose={onClose} anchorRef={anchorRef} width={392}>
       <Panel meals={meals} target={target} today={today} pending={pending} onCopy={onCopy} />

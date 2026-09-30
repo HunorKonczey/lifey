@@ -51,16 +51,19 @@ export const TableToolbar = forwardRef<HTMLInputElement, TableToolbarProps>(func
       )}
       {filters}
       <div className="flex-1 min-w-0" />
-      <SegmentedControl
-        aria-label={t("rowDensity")}
-        size="sm"
-        options={[
-          { value: "comfortable", label: t("densityComfortable") },
-          { value: "compact", label: t("densityCompact") },
-        ]}
-        value={density}
-        onChange={onDensityChange}
-      />
+      {/* Rows are cards under 768px, where density means nothing. */}
+      <div className="max-md:hidden">
+        <SegmentedControl
+          aria-label={t("rowDensity")}
+          size="sm"
+          options={[
+            { value: "comfortable", label: t("densityComfortable") },
+            { value: "compact", label: t("densityCompact") },
+          ]}
+          value={density}
+          onChange={onDensityChange}
+        />
+      </div>
       {action}
     </div>
   );

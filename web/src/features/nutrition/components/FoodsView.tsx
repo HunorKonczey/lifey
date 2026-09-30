@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, ConfirmModal, Icon } from "@/components/ds";
+import { Drawer } from "@/components/ds/overlay/Drawer";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useToast, TOAST_DURATION_MS } from "@/lib/hooks/useToast";
 import { useUndoableDelete } from "@/lib/hooks/useUndoableDelete";
 import { foodApi, mealApi } from "../api";
@@ -40,6 +42,8 @@ export function FoodsView() {
   const [deleting, setDeleting] = useState<FoodResponse | null>(null);
   const [logging, setLogging] = useState<FoodResponse | null>(null);
   const [now] = useState(() => new Date());
+  const [editorDirty, setEditorDirty] = useState(false);
+  const sidePanel = useMediaQuery("(min-width: 1280px)");
 
   const { data: foods, isLoading, isError, refetch } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
   const { data: meals } = useQuery({ queryKey: queryKeys.meals.all(), queryFn: mealApi.list });
@@ -53,7 +57,10 @@ export function FoodsView() {
     setNameError(undefined);
     setEditing({ food, key: `food:${food.id}` });
   };
-  const closeEditor = () => setEditing(null);
+  const closeEditor = () => {
+    setEditing(null);
+    setEditorDirty(false);
+  };
 
   // "?new=<name>" arrives from the add-food dialog's empty result ("Create a new food “yoghurt”"):
   // open the editor with that name and clear the param so a reload doesn't reopen it.
@@ -149,24 +156,28 @@ export function FoodsView() {
 
   const list = foods ?? [];
 
+  // Beside the table from 1280; below that a drawer (a bottom sheet on a phone) that asks before discarding edits.
+  const editor = editing && (
+    <FoodEditor
+      key={editing.key}
+      food={editing.food}
+      prefill={editing.prefill}
+      pending={saveMutation.isPending}
+      nameError={nameError}
+      onNameEdit={() => setNameError(undefined)}
+      onSave={(request) => saveMutation.mutate({ food: editing.food, request })}
+      onCancel={closeEditor}
+      onLookupBarcode={lookupBarcode}
+      lookupPending={barcodeLoading}
+      bare={!sidePanel}
+      onDirtyChange={setEditorDirty}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
-      {editing && (
-        // Above the table below 1280 (where it would otherwise open off-screen), beside it from there.
-        <div className="order-first w-full xl:order-last xl:w-[380px] xl:shrink-0 xl:sticky xl:top-6">
-          <FoodEditor
-            key={editing.key}
-            food={editing.food}
-            prefill={editing.prefill}
-            pending={saveMutation.isPending}
-            nameError={nameError}
-            onNameEdit={() => setNameError(undefined)}
-            onSave={(request) => saveMutation.mutate({ food: editing.food, request })}
-            onCancel={closeEditor}
-            onLookupBarcode={lookupBarcode}
-            lookupPending={barcodeLoading}
-          />
-        </div>
+      {editing && sidePanel && (
+        <div className="order-last w-[380px] shrink-0 sticky top-6">{editor}</div>
       )}
 
       <div className="min-w-0 flex-1">
@@ -196,6 +207,18 @@ export function FoodsView() {
           />
         )}
       </div>
+
+      {editing && !sidePanel && (
+        <Drawer
+          open
+          onClose={closeEditor}
+          width={480}
+          title={editing.food ? te("editFood") : te("newFood")}
+          isDirty={editorDirty}
+        >
+          {editor}
+        </Drawer>
+      )}
 
       <ConfirmModal
         open={deleting != null}

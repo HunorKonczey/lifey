@@ -825,7 +825,6 @@
       "menuEdit": "Edit",
       "menuDuplicate": "Duplicate",
       "menuLogToday": "Log today",
-      "menuDelete": "Delete…",
       "rowMenuLabel": "Actions for {food}",
       "deleteTitle": "Delete {food}?",
       "deleteBody": "Meals you already logged with it keep their entries. You can undo it for {seconds} seconds afterwards.",
@@ -835,7 +834,8 @@
       "foodDuplicated": "Food duplicated",
       "duplicateFailed": "Couldn't duplicate the food",
       "cardMacros": "P {protein} · C {carbs} · F {fat}",
-      "tableAria": "Food list"
+      "tableAria": "Food list",
+      "menuDelete": "Delete"
     },
     "recipesView": {
       "searchPlaceholder": "Search recipes…",
@@ -854,13 +854,13 @@
       "log": "Log",
       "menuEdit": "Edit",
       "menuDuplicate": "Duplicate",
-      "menuDelete": "Delete…",
       "rowMenuLabel": "Actions for {name}",
       "favoriteAria": "Favorite",
       "deleteTitle": "Delete {name}?",
       "deleteBody": "Meals you already logged from it stay. You can undo it for {seconds} seconds afterwards.",
       "recipeDeleted": "{name} deleted",
-      "deleteFailed": "Couldn't delete the recipe"
+      "deleteFailed": "Couldn't delete the recipe",
+      "menuDelete": "Delete"
     },
     "foodEditor": {
       "editFood": "Edit food",
@@ -1023,7 +1023,10 @@
     "copyNoteToday": "Added to today, nothing is overwritten.",
     "copyNoteDay": "Added to {day}, nothing is overwritten.",
     "copyAction": "{count, plural, one {Copy # meal} other {Copy # meals}}",
-    "newRecipe": "New recipe"
+    "newRecipe": "New recipe",
+    "fabFood": "Food",
+    "fabRecipe": "Recipe",
+    "itemMetaMobile": "{grams} · P {protein}"
   },
   "workouts": {
     "sessions": "Sessions",

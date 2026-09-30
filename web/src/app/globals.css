@@ -5,6 +5,8 @@
 
 /* ─── v2 design tokens — dark (default) (D-W0.4) ─── */
 :root {
+  /* Where a toast sits above the viewport bottom: 24px on desktop, above the floating bottom nav (top edge 80px) and the FAB on a phone. */
+  --toast-bottom: 24px;
   --bg:       #12130E;
   --card:     #1A1C15;
   --nested:   #22251C;
@@ -701,6 +703,9 @@ input[type="number"] { -moz-appearance: textfield; }
   grid-column: span var(--span-base, 4);
   order: var(--order-base, 0);
   min-width: 0;
+}
+@media (max-width: 767px) {
+  :root { --toast-bottom: calc(92px + var(--fab-clearance, 0px)); }
 }
 @media (min-width: 768px) {
   .page-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); --grid-gap: 20px; }

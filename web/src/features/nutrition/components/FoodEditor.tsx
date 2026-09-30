@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Card, Icon, IconButton, NumberField, ReadOnlyField, TextField } from "@/components/ds";
 import { EMPTY_FOOD, FOOD_DECIMALS, fieldsFromFood, foodRequest, isFoodDirty, type FoodFields } from "../foodEdit";
@@ -21,6 +21,10 @@ export interface FoodEditorProps {
   /** Barcode lookup, offered for a new food only. */
   onLookupBarcode?: (barcode: string) => void;
   lookupPending?: boolean;
+  /** Just the form — no card, title or close button — for a container that supplies its own (the drawer below 1280). */
+  bare?: boolean;
+  /** Tells the container whether there are unsaved changes (the drawer's discard guard). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 /**
@@ -29,7 +33,7 @@ export interface FoodEditorProps {
  * small gap, a warning above 10 % (it never blocks saving). "Mentés" stays disabled until something really
  * changed (see `isFoodDirty`).
  */
-export function FoodEditor({ food, prefill, pending, nameError, onNameEdit, onSave, onCancel, onLookupBarcode, lookupPending }: FoodEditorProps) {
+export function FoodEditor({ food, prefill, pending, nameError, onNameEdit, onSave, onCancel, onLookupBarcode, lookupPending, bare, onDirtyChange }: FoodEditorProps) {
   const t = useTranslations("nutrition.foodEditor");
   const fv = useTranslations("nutrition.foodsView");
   const common = useTranslations("common");
@@ -43,6 +47,7 @@ export function FoodEditor({ food, prefill, pending, nameError, onNameEdit, onSa
   const nameMissing = fields.name.trim() === "";
   const dirty = isFoodDirty(fields, baseline);
   const check = macroCheck(fields);
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const submit = () => {
     if (nameMissing) {
       setTriedSave(true);
@@ -70,12 +75,15 @@ export function FoodEditor({ food, prefill, pending, nameError, onNameEdit, onSa
     />
   );
 
+  const Shell = bare ? "div" : Card;
   return (
-    <Card className="flex flex-col gap-4" data-testid="food-editor">
-      <div className="flex items-center justify-between gap-2">
-        <h3 style={{ fontSize: 16, fontWeight: 800 }}>{food ? t("editFood") : t("newFood")}</h3>
-        <IconButton icon="close" label={t("closeAria")} onClick={onCancel} />
-      </div>
+    <Shell className="flex flex-col gap-4" data-testid="food-editor">
+      {!bare && (
+        <div className="flex items-center justify-between gap-2">
+          <h3 style={{ fontSize: 16, fontWeight: 800 }}>{food ? t("editFood") : t("newFood")}</h3>
+          <IconButton icon="close" label={t("closeAria")} onClick={onCancel} />
+        </div>
+      )}
 
       <form
         ref={formRef}
@@ -156,6 +164,6 @@ export function FoodEditor({ food, prefill, pending, nameError, onNameEdit, onSa
           </Button>
         </div>
       </form>
-    </Card>
+    </Shell>
   );
 }

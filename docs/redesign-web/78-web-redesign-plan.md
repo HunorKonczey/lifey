@@ -2225,9 +2225,43 @@ the log dialog has no close icon (Esc and "Mégsem" do that). Gallery section "R
 actions and menu, 3 → 1 columns, Hungarian, and the modal's preview, split, overrides, reset, payload, Esc and
 Hungarian).
 
-### W2.12 — Web UI: nutrition at 390
+### W2.12 — Web UI: nutrition at 390 ✅
 - Files: the W2 components' responsive variants; FAB via the W0.22 slot.
 - **Verify:** W2-F side by side; toast above the FAB; no overlap with the bottom nav.
+
+*As built:* Nutrition now has its phone shape (W2-F, client-079/087), built from the W2 components' own
+responsive variants and the FAB slot D-W0.22 promised. **Tab row** (`NutritionHeader.tsx`, extracted from the
+page so it can be shown in the gallery): under 768 px the three tabs are one full-width `SegmentedControl`
+(`fullWidth`, 44 px segments) — "Étkezések · Ételek 18 · Receptek 4" — with "Másolás korábbi napról" as an
+icon beside it on the meals tab; from 768 the underline tabs and the button row are unchanged. **FAB**
+(`Fab.tsx`): an extended 56 px primary pill, bottom right, 96 px above the bottom (16 px over the floating
+nav's top edge), `z-30` so every sheet covers it; "＋ Étel" on meals and foods, "＋ Recept" on recipes (`aria-
+label` still "Étel hozzáadása" / "Új recept"). While mounted it publishes `--fab-clearance: 72px` on the root,
+which the shell adds to `<main>`'s bottom padding (the last card scrolls clear of it) and the toast adds to
+its offset. **Toast**: its bottom offset is now `--toast-bottom` — 24 px on desktop, 92 px on a phone (above
+the nav, which it used to overlap on *every* page) plus the FAB's 72 px, so "Snack törölve · Visszavonás" sits
+12 px above the FAB (164 px from the bottom, measured on the real app: toast bottom 680, FAB top 692). **Day
+summary** under 768 px is the compact card: a 92 px ring with what is left ("1 345 kcal maradt") beside three
+mini macro rows — no title, no eaten / goal block — so the first meal is on the first screen. **Meal rows**:
+name + "150 g · F 15" with the kcal and "⋯" on the right (carbs and fat stay in the desktop row and the edit
+drawer); the 74 px indent is 16 px. **Panels**: the copy-from-day popover, 392 px wide, is the same panel as a
+bottom sheet under 768 px (`Modal`'s phone shape) instead of spilling off the screen; the foods editor is a
+`Drawer` (a sheet on a phone) below 1280 px instead of a card stacked above the table, with the discard guard
+("Elveted a módosításokat?" on Esc with unsaved edits, checked on the real app), and a side panel from 1280 as
+before (`FoodEditor` got `bare` and `onDirtyChange`); the foods table drops the density switch under 768 px,
+where rows are cards anyway. **Platform bugs found at 390**: (1) every `IconButton`'s tooltip is an absolutely
+positioned, invisible span — one near the right edge widened `<main>`'s scrollable area to 427 px and focus
+then slid the whole page 37 px sideways (caught by probing `main.scrollWidth` after a menu click; the gallery
+check only looked at the document); tooltips are `display: none` under 768 px now (there is no hover anyway);
+(2) the doubled ellipsis in the row menus ("Törlés……") — `Menu` already ends a destructive label with "…", so
+the foods and recipes `menuDelete` strings lost theirs. Verified on the real app at 390 × 844 with seeded
+meals (removed afterwards): no horizontal scroll, the compact summary, three rows "100 g · F 20", the FAB,
+delete → toast above the FAB → Undo, FAB → add-food sheet, copy sheet, foods editor sheet with the discard
+guard, recipes FAB → the recipe editor sheet. Gallery section "Nutrition on a phone" and
+`e2e/ds/nutritionMobile.spec.ts` (14 tests: segmented tabs ≥ 44 px with counts, the copy icon, the FAB's label
+per tab and its geometry, the toast's clearance, the compact summary, the rows, no sideways scroll, the copy
+sheet, the foods cards, the desktop shapes at 1440 — no FAB, no clearance, title kept, toast 24 px — and
+Hungarian).
 
 **W2 acceptance** (plus §4.1): W2-A … W2-F reproduced; every delete undoable; keyboard-only meal logging.
 

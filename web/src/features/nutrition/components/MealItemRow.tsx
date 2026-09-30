@@ -25,8 +25,9 @@ const MACROS = [
  * never truncates — with its quantity under it ("150 g" only), then P / C / F
  * each behind an 8 px dot in its metric colour (carbs and fat always visible),
  * the kcal, and a row "⋯" that appears on hover *and* on focus so it is
- * reachable from the keyboard. A 4-column grid from 768; on a phone the
- * macros and kcal drop under the name.
+ * reachable from the keyboard. A 4-column grid from 768; on a phone (W2.12,
+ * client-079) the row is name + "150 g · F 15" with the kcal and "⋯" on the right — carbs and fat stay in
+ * the desktop row and the edit drawer, where there is room for them.
  */
 export function MealItemRow({ item, menu }: { item: MealItemRowData; menu?: MenuItemDef[] }) {
   const t = useTranslations("nutrition");
@@ -35,17 +36,20 @@ export function MealItemRow({ item, menu }: { item: MealItemRowData; menu?: Menu
 
   return (
     <div
-      className="meal-item-row group grid items-center gap-x-3 gap-y-1 py-2.5 pl-[74px] pr-4 md:grid-cols-[minmax(0,1fr)_220px_80px_36px]"
+      className="meal-item-row group grid items-center gap-x-3 gap-y-1 py-2.5 pr-4 max-md:grid-cols-[minmax(0,1fr)_auto_auto] max-md:pl-4 md:grid-cols-[minmax(0,1fr)_220px_80px_36px] md:pl-[74px]"
       style={{ borderTop: "1px solid var(--hairline)" }}
     >
       <div className="min-w-0">
         <p style={{ fontSize: 15, fontWeight: 700, overflowWrap: "anywhere", hyphens: "auto" }}>{item.name}</p>
-        <p className="type-body-s tabular" style={{ color: "var(--text-3)" }}>
+        <p className="type-body-s tabular max-md:hidden" style={{ color: "var(--text-3)" }}>
           {fmt.grams(item.grams)}
+        </p>
+        <p className="type-body-s tabular md:hidden" style={{ color: "var(--text-3)" }}>
+          {t("itemMetaMobile", { grams: fmt.grams(item.grams), protein: fmt.integer(item.protein) })}
         </p>
       </div>
 
-      <dl className="flex items-center gap-4 tabular md:gap-0" style={{ fontSize: 13, fontWeight: 600 }}>
+      <dl className="flex items-center gap-4 tabular max-md:hidden md:gap-0" style={{ fontSize: 13, fontWeight: 600 }}>
         {MACROS.map(({ key, color }) => (
           <div key={key} className="flex items-center gap-1.5 md:w-[72px]">
             <dt className="sr-only">{d(key)}</dt>

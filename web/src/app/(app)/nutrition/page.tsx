@@ -4,14 +4,14 @@ import { useCallback, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, Icon, Tabs } from "@/components/ds";
 import { AddFoodFlow } from "@/features/nutrition/components/addFood/AddFoodFlow";
 import { CopyFromDayPopover } from "@/features/nutrition/components/CopyFromDayPopover";
+import { NutritionHeader } from "@/features/nutrition/components/NutritionHeader";
 import { FoodsView } from "@/features/nutrition/components/FoodsView";
 import { MealsView } from "@/features/nutrition/components/MealsView";
 import { RecipesView } from "@/features/nutrition/components/RecipesView";
 import { foodApi, recipeApi } from "@/features/nutrition/api";
-import { nutritionTabHref, parseNutritionTab, type NutritionTab } from "@/features/nutrition/nutritionTab";
+import { nutritionTabHref, parseNutritionTab } from "@/features/nutrition/nutritionTab";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDateStore } from "@/lib/hooks/useDateStore";
 import { usePageShortcuts } from "@/lib/hooks/usePageShortcuts";
@@ -39,45 +39,18 @@ export default function NutritionPage() {
   const openAdd = useCallback(() => setAdding(true), []);
   usePageShortcuts({ onNew: openAdd, newLabel: t("addFood") });
 
-  const items = [
-    { value: "meals" as const, label: t("meals") },
-    { value: "foods" as const, label: t("foods"), count: foods?.filter((f) => !f.hidden).length },
-    { value: "recipes" as const, label: t("recipes"), count: recipes?.length },
-  ];
-
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <div className="min-w-0 flex-1">
-          <Tabs<NutritionTab>
-            items={items}
-            value={tab}
-            onChange={(next) => router.replace(nutritionTabHref(next), { scroll: false })}
-            aria-label={t("tabsAria")}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          {tab === "meals" && (
-            <span ref={copyAnchor} className="inline-flex">
-              <Button variant="secondary" onClick={() => setCopying((o) => !o)} aria-haspopup="dialog" aria-expanded={copying}>
-                <Icon name="event_repeat" size={20} />
-                {t("copyFromDay")}
-              </Button>
-            </span>
-          )}
-          {tab === "recipes" && (
-            <Button onClick={() => setCreatingRecipe(true)}>
-              <Icon name="add" size={20} />
-              {t("newRecipe")}
-            </Button>
-          )}
-          <Button variant={tab === "recipes" ? "secondary" : "primary"} onClick={openAdd}>
-            <Icon name="add" size={20} />
-            {t("addFood")}
-            <kbd className="type-label ml-1 opacity-70">N</kbd>
-          </Button>
-        </div>
-      </div>
+      <NutritionHeader
+        tab={tab}
+        onTabChange={(next) => router.replace(nutritionTabHref(next), { scroll: false })}
+        counts={{ foods: foods?.filter((f) => !f.hidden).length, recipes: recipes?.length }}
+        copying={copying}
+        onToggleCopy={() => setCopying((o) => !o)}
+        copyAnchor={copyAnchor}
+        onNewRecipe={() => setCreatingRecipe(true)}
+        onAddFood={openAdd}
+      />
 
       {tab === "meals" && <MealsView />}
       {tab === "foods" && <FoodsView />}

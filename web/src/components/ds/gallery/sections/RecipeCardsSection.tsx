@@ -75,7 +75,7 @@ export function RecipeCardsSection() {
               menu={[
                 { label: "Edit", icon: "edit", onSelect: () => setLog(`edit ${r.id}`) },
                 { label: "Duplicate", icon: "content_copy", onSelect: () => setLog(`duplicate ${r.id}`) },
-                { label: "Delete…", icon: "delete", destructive: true, onSelect: () => setLog(`delete ${r.id}`) },
+                { label: "Delete", icon: "delete", destructive: true, onSelect: () => setLog(`delete ${r.id}`) },
               ]}
             />
           ))}

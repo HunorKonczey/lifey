@@ -124,7 +124,7 @@ export function AppShell({
       <div className="flex flex-col min-h-screen bg-bg">
         <MobileHeader user={user} avatarUrl={avatarUrl} onLogout={onLogout} roleRing={roleRing} trainerPrefs={trainerPrefs} />
         {/* `overflow-x-auto`: a page whose own layout is still wider than 390px (several trainer/superadmin pages until their iteration) scrolls inside <main> instead of dragging the whole page and header sideways. */}
-        <main className="flex-1 min-w-0 overflow-x-auto p-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 96px)" }}>
+        <main className="flex-1 min-w-0 overflow-x-auto p-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 96px + var(--fab-clearance, 0px))" }}>
           {extraContent}
           {children}
         </main>
