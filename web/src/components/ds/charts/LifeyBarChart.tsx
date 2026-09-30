@@ -31,6 +31,8 @@ export interface BarChartDatum {
   valueLabel?: string;
   /** No bar — a small dot sits on the axis instead (e.g. a rest day). */
   isRestDay?: boolean;
+  /** Drawn at 45 % instead of the usual past-bar opacity — the days that did *not* reach the goal in the water chart (W4.5). */
+  dimmed?: boolean;
   /** Read by screen readers instead of the raw value, e.g. "Monday, 1,680 kcal". */
   semanticsLabel?: string;
 }
@@ -41,6 +43,10 @@ export interface LifeyBarChartProps {
   goal?: number;
   goalLabel?: string;
   integer?: boolean;
+  /** Formats the three Y-axis labels — for a small-number metric (litres) the default whole-number form would read 3 / 1 / 0. */
+  yFormat?: (value: number) => string;
+  /** The top of the Y axis, when the two-significant-digit default ("4,1") is not a number worth labelling (litres: 5). */
+  yMax?: number;
   height?: number;
   /** e.g. "Average 1,812 kcal without today" — shown under the chart. */
   legend?: string;
@@ -63,13 +69,13 @@ interface BarShapeProps {
  * `chartMath.yAxisTicks`. A rest day (no bar) draws a small dot on the axis
  * instead of an empty column.
  */
-export function LifeyBarChart({ data, color, goal, goalLabel, integer, height = 220, legend, ...aria }: LifeyBarChartProps) {
+export function LifeyBarChart({ data, color, goal, goalLabel, integer, yFormat, yMax, height = 220, legend, ...aria }: LifeyBarChartProps) {
   const format = useFormat();
   const reduced = useReducedMotion();
   const isDark = useIsDarkTheme();
 
   const dataMax = Math.max(0, ...data.map((d) => d.value ?? 0));
-  const [top] = yAxisTicks(dataMax, { goal, integer });
+  const [top] = yMax != null ? [yMax] : yAxisTicks(dataMax, { goal, integer });
   const pastOpacity = isDark ? 0.6 : 0.8;
 
   function renderBar(props: BarShapeProps) {
@@ -81,7 +87,7 @@ export function LifeyBarChart({ data, color, goal, goalLabel, integer, height = 
     const shape = payload.isToday ? (
       <rect x={x} y={y} width={width} height={h} rx={6} ry={6} fill="none" stroke={color} strokeWidth={2} strokeDasharray="4 3" />
     ) : (
-      <rect x={x} y={y} width={width} height={h} rx={6} ry={6} fill={color} opacity={pastOpacity} />
+      <rect x={x} y={y} width={width} height={h} rx={6} ry={6} fill={color} opacity={payload.dimmed ? 0.45 : pastOpacity} />
     );
     return (
       <g>
@@ -123,7 +129,7 @@ export function LifeyBarChart({ data, color, goal, goalLabel, integer, height = 
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data} margin={{ top: 24, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} stroke="var(--grid)" />
-          <YAxis width={44} tickCount={3} ticks={[0, top / 2, top]} domain={[0, top]} tickFormatter={format.compactAxis} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "var(--text-3)" }} />
+          <YAxis width={44} tickCount={3} ticks={[0, top / 2, top]} domain={[0, top]} tickFormatter={yFormat ?? format.compactAxis} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "var(--text-3)" }} />
           <XAxis dataKey="label" axisLine={false} tickLine={false} tick={renderTick} interval={0} />
           {goal != null && (
             <ReferenceLine

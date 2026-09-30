@@ -69,3 +69,22 @@ describe("rankQuickSources", () => {
     ]);
   });
 });
+
+describe("rankQuickSources — four tiles for the water page (W4.5)", () => {
+  it("fills up to four with the page defaults, skipping a volume already offered", async () => {
+    const { PAGE_QUICK_VOLUMES } = await import("./quickSources");
+    const entries = [entry(1, 1, daysAgo(1)), entry(2, 1, daysAgo(2))];
+    const tiles = rankQuickSources(entries, [glass], now, 4, PAGE_QUICK_VOLUMES);
+    expect(tiles).toEqual([
+      { sourceId: 1, volumeLiters: 0.25 },
+      { sourceId: null, volumeLiters: 0.5 },
+      { sourceId: null, volumeLiters: 0.33 },
+      { sourceId: null, volumeLiters: 1 },
+    ]);
+  });
+
+  it("with no history at all the four defaults are offered in order", async () => {
+    const { PAGE_QUICK_VOLUMES } = await import("./quickSources");
+    expect(rankQuickSources([], [], now, 4, PAGE_QUICK_VOLUMES).map((t) => t.volumeLiters)).toEqual([0.25, 0.5, 0.33, 1]);
+  });
+});

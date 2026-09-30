@@ -8,7 +8,10 @@ export interface QuickSource {
 }
 
 /** What the tile offers when the user has used fewer than two sources lately. */
-export const DEFAULT_QUICK_VOLUMES = [0.25, 0.5] as const;
+export const DEFAULT_QUICK_VOLUMES: readonly number[] = [0.25, 0.5];
+
+/** The water page offers four tiles (W4.5): the same two plus a can and a litre. */
+export const PAGE_QUICK_VOLUMES: readonly number[] = [0.25, 0.5, 0.33, 1];
 
 const WINDOW_DAYS = 30;
 const DAY_MS = 86_400_000;
@@ -25,6 +28,7 @@ export function rankQuickSources(
   sources: WaterSourceResponse[],
   now: Date,
   limit = 2,
+  defaults: readonly number[] = DEFAULT_QUICK_VOLUMES,
 ): QuickSource[] {
   const since = now.getTime() - WINDOW_DAYS * DAY_MS;
   const usage = new Map<number, { count: number; last: number }>();
@@ -47,7 +51,7 @@ export function rankQuickSources(
     .slice(0, limit)
     .map((s) => ({ sourceId: s.id, volumeLiters: s.volumeLiters }));
 
-  for (const volume of DEFAULT_QUICK_VOLUMES) {
+  for (const volume of defaults) {
     if (ranked.length >= limit) break;
     if (!ranked.some((r) => r.volumeLiters === volume)) ranked.push({ sourceId: null, volumeLiters: volume });
   }
