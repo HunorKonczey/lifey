@@ -9,6 +9,9 @@ export interface RouteChrome {
   titleKey: string | null;
   /** Only pages with a "day" get the top-bar date stepper (D-W0.21). */
   hasDateStepper: boolean;
+  /** `focus` (W3.6): no sidebar, top bar, bottom nav or global shortcuts — the page owns the whole window
+   *  (the live workout logger). `standard` is everything else. */
+  chrome: "standard" | "focus";
 }
 
 const TITLE_KEYS: Record<string, string> = {
@@ -37,6 +40,9 @@ const TITLE_KEYS: Record<string, string> = {
 
 // Trainer client detail pages ("/admin/clients/[id]") also get the stepper —
 // listed by prefix like everything else here, per D-W0.21's own wording.
+// Routes that take over the window. "/workouts/session/" — with the slash — so "/workouts" itself stays standard.
+const FOCUS_PREFIXES = ["/workouts/session/"];
+
 const DATED_PREFIXES = ["/dashboard", "/nutrition", "/water", "/steps", "/admin/clients"];
 
 export function routeChrome(pathname: string): RouteChrome {
@@ -46,5 +52,6 @@ export function routeChrome(pathname: string): RouteChrome {
       .filter(([prefix]) => pathname.startsWith(prefix))
       .sort((a, b) => b[0].length - a[0].length)[0]?.[1] ?? null;
   const hasDateStepper = DATED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-  return { titleKey, hasDateStepper };
+  const chrome = FOCUS_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ? "focus" : "standard";
+  return { titleKey, hasDateStepper, chrome };
 }

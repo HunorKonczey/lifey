@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { workoutSessionApi, templateApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -9,7 +10,6 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
-import { SessionLogger } from "./SessionLogger";
 import { CardioSessionDetail } from "./CardioSessionDetail";
 import { RecommendedWorkoutCard } from "./RecommendedWorkoutCard";
 import { SessionRow } from "./SessionRow";
@@ -49,10 +49,12 @@ export function SessionsView({
   const t = useTranslations("workouts");
   const d = useTranslations("dashboard");
   const { locale } = useFormat();
+  const router = useRouter();
+  const logSession = (id: number) => router.push(`/workouts/session/${id}`);
   const sidePanel = useMediaQuery("(min-width: 1280px)");
   const queryClient = useQueryClient();
   const { show } = useToast();
-  // `activeId` is the editor / cardio detail; `selectedId` the closed-session summary beside (or over) the list.
+  // `activeId` is the cardio detail (the set logger is its own focus-mode route, W3.6); `selectedId` the closed-session summary beside (or over) the list.
   const [activeId, setActiveId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const setStarting = (value: boolean) => onStartingChange?.(value);
@@ -81,8 +83,8 @@ export function SessionsView({
       }),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
-      setActiveId(created.id);
       setStarting(false);
+      logSession(created.id);
       show(t("workoutStarted"), "success");
     },
     onError: () => show(t("startFailed"), "error"),
@@ -99,6 +101,7 @@ export function SessionsView({
   // A finished strength session opens as its summary; a running one goes back to its logger, cardio to its detail.
   const openSession = (s: WorkoutSessionResponse) => {
     if (s.sessionKind === "STRENGTH" && s.finishedAt) setSelectedId(s.id);
+    else if (s.sessionKind === "STRENGTH") logSession(s.id);
     else setActiveId(s.id);
   };
   const weeks = groupSessionsByWeek(visible, new Date());
@@ -131,7 +134,7 @@ export function SessionsView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenSessionId, data]);
 
-  // ─── Active logger mode ───
+  // ─── Cardio detail mode ───
   if (active) {
     return (
       <div>
@@ -141,11 +144,7 @@ export function SessionsView({
         </button>
         {/* Cardio never opens the set-logger — the web reads/filters/statisticizes
             cardio but never edits it (docs/cardio/58-cardio-web-plan.md D-W.2). */}
-        {active.sessionKind === "CARDIO" ? (
-          <CardioSessionDetail session={active} history={sessions} />
-        ) : (
-          <SessionLogger session={active} history={sessions} onFinished={() => setActiveId(null)} />
-        )}
+        <CardioSessionDetail session={active} history={sessions} />
       </div>
     );
   }
@@ -159,7 +158,7 @@ export function SessionsView({
       onRepeat={() =>
         startMutation.mutate({ exerciseIds: selected.exercises.map((e) => e.exerciseId), templateId: selected.templateId })
       }
-      onEdit={() => setActiveId(selected.id)}
+      onEdit={() => logSession(selected.id)}
       onDeleted={() => setSelectedId(null)}
     />
   );

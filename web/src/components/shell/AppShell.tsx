@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { avatarApi } from "@/features/settings/api";
@@ -17,6 +18,7 @@ import { MobileHeader } from "./MobileHeader";
 import { BottomNav } from "./BottomNav";
 import { MoreSheet } from "./MoreSheet";
 import { ShortcutHelp } from "./ShortcutHelp";
+import { routeChrome } from "./routeChrome";
 import {
   clientGroupsFor,
   CLIENT_BOTTOM_NAV_ITEMS,
@@ -95,7 +97,8 @@ export function AppShell({
   const goToItems = useMemo(() => resolvedGroups.flatMap((g) => g.items), [resolvedGroups]);
   const [helpOpen, setHelpOpen] = useState(false);
   const openHelp = useCallback(() => setHelpOpen(true), []);
-  useHotkeys({ goToItems, onHelp: openHelp, suppressed: helpOpen });
+  const focus = routeChrome(usePathname()).chrome === "focus";
+  useHotkeys({ goToItems, onHelp: openHelp, suppressed: helpOpen || focus });
 
   const { data: avatarBlob } = useQuery({
     queryKey: queryKeys.settings.avatar(),
@@ -118,6 +121,15 @@ export function AppShell({
     setAvatarUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [avatarBlob]);
+
+  // Focus mode (W3.6): the page owns the whole window — no sidebar, top bar, bottom nav or shortcut help.
+  if (focus) {
+    return (
+      <div className="min-h-screen bg-bg">
+        <main className="min-h-screen min-w-0">{children}</main>
+      </div>
+    );
+  }
 
   if (isMobile) {
     return (

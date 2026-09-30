@@ -3,8 +3,8 @@ import { routeChrome } from "./routeChrome";
 
 describe("routeChrome", () => {
   it("resolves a client page's title and date stepper", () => {
-    expect(routeChrome("/dashboard")).toEqual({ titleKey: "nav.dashboard", hasDateStepper: true });
-    expect(routeChrome("/settings")).toEqual({ titleKey: "nav.settings", hasDateStepper: false });
+    expect(routeChrome("/dashboard")).toEqual({ titleKey: "nav.dashboard", hasDateStepper: true, chrome: "standard" });
+    expect(routeChrome("/settings")).toEqual({ titleKey: "nav.settings", hasDateStepper: false, chrome: "standard" });
   });
 
   it("doesn't let /admin shadow a longer /admin/* prefix", () => {
@@ -17,11 +17,18 @@ describe("routeChrome", () => {
   });
 
   it("titles the superadmin pages without a date stepper", () => {
-    expect(routeChrome("/superadmin/users")).toEqual({ titleKey: "superadmin.usersTitle", hasDateStepper: false });
+    expect(routeChrome("/superadmin/users")).toEqual({ titleKey: "superadmin.usersTitle", hasDateStepper: false, chrome: "standard" });
     expect(routeChrome("/superadmin/trainer-requests").titleKey).toBe("superadmin.trainerRequestsTitle");
   });
 
   it("falls back to no title outside the known routes", () => {
-    expect(routeChrome("/onboarding")).toEqual({ titleKey: null, hasDateStepper: false });
+    expect(routeChrome("/onboarding")).toEqual({ titleKey: null, hasDateStepper: false, chrome: "standard" });
+  });
+
+  it("the live workout logger is focus mode; the workouts page itself is not", () => {
+    expect(routeChrome("/workouts/session/42").chrome).toBe("focus");
+    expect(routeChrome("/workouts").chrome).toBe("standard");
+    expect(routeChrome("/workouts?tab=templates").chrome).toBe("standard");
+    expect(routeChrome("/admin/workouts").chrome).toBe("standard");
   });
 });
