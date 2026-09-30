@@ -1896,9 +1896,27 @@ RecipeEditor (287), LogRecipeDialog (196), RecipeImageUploader, RecipeThumbnail}
 
 **Data:** everything used exists; see D-W0.19 for what is not built.
 
-### W2.1 — Web UI: nutrition header, tabs in the URL
+### W2.1 — Web UI: nutrition header, tabs in the URL ✅
 - Files: `app/(app)/nutrition/page.tsx`, `lib/hooks/useUiStore.ts` (`nutritionTab` removed).
 - **Verify:** `?tab=foods` deep link; tab counts; `N` opens add food on every tab.
+
+*As built:* The page is now a header plus the active tab: DS `Tabs` (underline) — Étkezések · Ételek **18** ·
+Receptek **4** — with the copy and add actions to the right. `Tabs` gained an optional `count` (a small
+`--text-3` number after the label, separated by a real space so the accessible name reads "Ételek 18", not
+"Ételek18"; gallery demo + spec). The tab lives in the URL: `features/nutrition/nutritionTab.ts`
+(`parseNutritionTab` — anything missing or unknown is the meals tab — and `nutritionTabHref`, where meals is
+the bare `/nutrition`; 5 tests round-trip it) and the page uses `useSearchParams` + `router.replace(…, {
+scroll: false })`, so `?tab=foods` deep links, reloads and the back button keep it; `nutritionTab` is removed
+from `useUiStore`. The counts come from the same `foods` / `recipes` list queries the tabs and the add dialog
+already use (hidden foods — the one-off "enter macros" entries — aren't counted), so they add no new request
+shape. "＋ Étel hozzáadása **N**" is primary and registers the `N` shortcut through `usePageShortcuts` (listed
+in `?` as "Étel hozzáadása") on every tab; it opens the existing `AddMealEntryDialog` with the clock's meal
+type until W2.5/W2.6 replace it. "Másolás korábbi napról" (secondary, `event_repeat`) shows on the meals tab
+and opens the existing copy-previous-day confirm through a tiny shared store (`nutritionUi.ts`), which
+`MealsView` now reads instead of its own local flag — W2.9 swaps that confirm for the day-chip popover.
+Verified on the real app: `?tab=foods` selects the tab and survives a reload, clicking tabs rewrites the URL
+(meals drops the query), `N` opens add-food on all three tabs, the copy button appears on meals only. The
+recipes count on the demo account is 4 (the canvas shows 3).
 
 ### W2.2 — Web UI: meals tab layout + `DaySummary` hero
 - Files: `features/nutrition/components/{MealsView,DaySummary}.tsx`.

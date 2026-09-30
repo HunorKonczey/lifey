@@ -5,6 +5,8 @@ import { useEffect, useRef, type KeyboardEvent } from "react";
 export interface TabItem<T extends string> {
   value: T;
   label: string;
+  /** A small `--text-3` number after the label — "Foods 18". */
+  count?: number;
 }
 
 export interface TabsProps<T extends string> {
@@ -77,6 +79,14 @@ export function Tabs<T extends string>({ items, value, onChange, variant = "unde
             }}
           >
             {item.label}
+            {item.count != null && (
+              <>
+                {" "}
+                <span className="tabular ml-0.5" style={{ color: "var(--text-3)", fontWeight: 600 }}>
+                  {item.count}
+                </span>
+              </>
+            )}
           </button>
         );
       })}

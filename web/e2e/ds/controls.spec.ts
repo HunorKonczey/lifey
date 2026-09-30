@@ -88,6 +88,12 @@ test("tabs scroll the selected tab into view", async ({ page }) => {
   await expect(workouts).toHaveAttribute("aria-selected", "true");
 });
 
+test("a tab can carry a count after its label", async ({ page }) => {
+  await scrollToHeading(page, "Tabs (underline)");
+  await expect(page.getByRole("tab", { name: "Nutrition 18" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Overview" })).toHaveText("Overview"); // no count, no stray space
+});
+
 for (const colorScheme of ["dark", "light"] as const) {
   test(`the focus ring is visible on bg/card/nested/primary in ${colorScheme} theme`, async ({ page }) => {
     await page.emulateMedia({ colorScheme });

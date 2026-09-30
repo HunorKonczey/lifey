@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddMealEntryDialog } from "./AddMealEntryDialog";
 import { MealCard, mealKcal, mealProtein } from "./MealCard";
 import { computeRemainingBudget, isOver, remainingOf } from "../budget";
+import { useNutritionUi } from "../nutritionUi";
 import type { MealResponse, MealType } from "../types";
 import { useFormat } from "@/lib/i18n/format";
 
@@ -30,7 +31,9 @@ export function MealsView() {
   const prevDateStr = format(subDays(date, 1), "yyyy-MM-dd");
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
   const [editingMeal, setEditingMeal] = useState<MealResponse | null>(null);
-  const [copyingPreviousDay, setCopyingPreviousDay] = useState(false);
+  // Opened by the page header's "Copy from an earlier day" as well as the summary panel's button.
+  const copyingPreviousDay = useNutritionUi((s) => s.copyOpen);
+  const setCopyingPreviousDay = useNutritionUi((s) => s.setCopyOpen);
   // Deleting used to fire on the first click with no way back (docs/redesign/web-redesign-prompt.md).
   const [removingMeal, setRemovingMeal] = useState<MealResponse | null>(null);
 

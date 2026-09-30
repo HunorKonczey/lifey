@@ -920,7 +920,10 @@
       "photoUploadFailed": "Nem sikerült frissíteni a recept fotóját",
       "photoRemoved": "Recept fotója eltávolítva",
       "photoRemoveFailed": "Nem sikerült eltávolítani a recept fotóját"
-    }
+    },
+    "tabsAria": "Táplálkozás szakaszai",
+    "addFood": "Étel hozzáadása",
+    "copyFromDay": "Másolás korábbi napról"
   },
   "workouts": {
     "sessions": "Edzések",

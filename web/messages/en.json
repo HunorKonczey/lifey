@@ -920,7 +920,10 @@
       "photoUploadFailed": "Failed to update recipe photo",
       "photoRemoved": "Recipe photo removed",
       "photoRemoveFailed": "Failed to remove recipe photo"
-    }
+    },
+    "tabsAria": "Nutrition sections",
+    "addFood": "Add food",
+    "copyFromDay": "Copy from an earlier day"
   },
   "workouts": {
     "sessions": "Sessions",

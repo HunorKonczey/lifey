@@ -65,8 +65,8 @@ export function ControlsSection() {
           onChange={setTab}
           items={[
             { value: "overview", label: "Overview" },
-            { value: "nutrition", label: "Nutrition" },
-            { value: "workouts", label: "Workouts" },
+            { value: "nutrition", label: "Nutrition", count: 18 },
+            { value: "workouts", label: "Workouts", count: 3 },
           ]}
         />
       </div>
