@@ -1734,12 +1734,29 @@ so it uses `locator("text")`. The dashboard's old `thisWeek` / `avgCalories` / `
 unused — left for W10's sweep. Checked on the real page at 1440 (HU) and 1024 (light): 4 / 6 nap, átlag 1 550
 kcal, edzés 3, axis "1,9 e / 950 / 0".
 
-### W1.9 — Web data: personal-record derivation port
+### W1.9 — Web data: personal-record derivation port ✅
 - Files: `features/workouts/personalRecords.ts` + test — port of `mobile/lib/features/workouts/domain/
   personal_record.dart` (docs/38: max weight, max reps at a weight, estimated 1RM; recomputed from
   history), **same definition as backend `trainer/PersonalRecordCounter.java`** (the trainer card's
   `prCount7d`).
 - **Verify:** the mobile test cases; a fixture where the backend counter and the TS function agree.
+
+*As built:* `features/workouts/personalRecords.ts` ports `personal_record.dart` — Epley `estimateOneRepMax`,
+the immutable `PrBaseline` (`baselineFromSets` / `extendBaseline`: max weight and best 1RM exclude 0 kg sets,
+max reps per *exact* weight includes them), strictly-greater `detectPrs` that never fires a kind without a
+baseline value to beat, `computePrHistory` and `detectPrsInOrder` — and adds what the backend's definition
+needs on top, so the dashboard and the trainer card count the same thing: `SetFact`, `recordsBySession()`
+(sets of one exercise judged against the running best, each record kind counted **once per exercise per
+session** — three ever-heavier sets in a row are one "heaviest set") and `countRecordsSince()` (=
+`PersonalRecordCounter.countSince`), plus `setFactsFromSessions()` which feeds them from API sessions
+(finished strength sessions only — in-progress and cardio sessions aren't history — oldest first, each
+session's sets by time). `personalRecords.test.ts` has 32 tests in two parts: every case of
+`personal_record_test.dart` ported unchanged, and every case of `PersonalRecordCounterTest.java` with the same
+data and the same expected counts. The plan asked for a fixture where backend and TS agree; beyond the shared
+cases, I also ran the TS function over the real demo accounts through the API and compared with what the
+running backend reports as `prCount7d` on the trainer's client list — Kata 15 = 15, Levente 15 = 15, Réka 13 =
+13, Máté 17 = 17, Dóra 19 = 19, all five equal. Nothing renders in this step; `recordsBySession()` is what
+W1.10's row chip reads.
 
 ### W1.10 — Web UI: recent workouts list
 - Files: `features/dashboard/components/RecentWorkouts.tsx`, `features/workouts/activityType.ts` (labels
