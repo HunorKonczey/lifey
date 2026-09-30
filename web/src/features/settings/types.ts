@@ -20,6 +20,10 @@ export interface SettingsResponse {
    */
   chatQuietHoursStart: string | null;
   chatQuietHoursEnd: string | null;
+  /** The live logger's rest countdown (W3.8). Absent on an older server — treated as on. */
+  restTimerEnabled?: boolean;
+  /** Rest after a set when the exercise has none of its own. */
+  defaultRestSeconds?: number;
 }
 
 /**

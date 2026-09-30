@@ -6,7 +6,9 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ds";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
-import { templateApi, workoutSessionApi } from "@/features/workouts/api";
+import { exerciseApi, templateApi, workoutSessionApi } from "@/features/workouts/api";
+import { settingsApi } from "@/features/settings/api";
+import { restSecondsFor } from "@/features/workouts/restTimer";
 import { LiveSession } from "@/features/workouts/components/live/LiveSession";
 import { queryKeys } from "@/lib/api/queryKeys";
 
@@ -24,7 +26,10 @@ export default function LiveSessionPage() {
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: queryKeys.workoutSessions.all(), queryFn: workoutSessionApi.list });
   const { data: templates, isLoading: templatesLoading } = useQuery({ queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list });
 
-  if (isLoading || templatesLoading) {
+  const { data: exercises, isLoading: exercisesLoading } = useQuery({ queryKey: queryKeys.exercises.all(), queryFn: exerciseApi.list });
+  const { data: settings, isLoading: settingsLoading } = useQuery({ queryKey: queryKeys.settings.all(), queryFn: settingsApi.get });
+
+  if (isLoading || templatesLoading || exercisesLoading || settingsLoading) {
     return (
       <div className="p-6">
         <Skeleton variant="table" />
@@ -55,5 +60,8 @@ export default function LiveSessionPage() {
   const targets = new Map((template?.exercises ?? []).map((e) => [e.exerciseId, e.targetSets]));
   const history = data.slice().sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
 
-  return <LiveSession key={session.id} session={session} history={history} plannedSets={plannedSets} targets={targets} onLeave={leave} />;
+  return <LiveSession key={session.id} session={session} history={history} plannedSets={plannedSets} targets={targets}
+      restFor={(id) => restSecondsFor(exercises?.find((e) => e.id === id)?.defaultRestSeconds, settings?.defaultRestSeconds)}
+      restEnabled={settings?.restTimerEnabled !== false}
+      onLeave={leave} />;
 }

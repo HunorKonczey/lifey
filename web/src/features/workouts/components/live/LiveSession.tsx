@@ -18,6 +18,9 @@ import { WorkoutSuccessDialog } from "../WorkoutSuccessDialog";
 import { ExerciseCard } from "./ExerciseCard";
 import { ExerciseRail } from "./ExerciseRail";
 import { LiveHeader } from "./LiveHeader";
+import { RestHero } from "./RestHero";
+import { useRestTimer } from "./useRestTimer";
+import { isTypingTarget } from "@/lib/hooks/useHotkeys";
 
 /**
  * The live workout logger in focus mode (W3.6, W3-B): header, exercise rail on the left, the current exercise
@@ -29,6 +32,8 @@ export function LiveSession({
   history,
   plannedSets,
   targets,
+  restFor,
+  restEnabled,
   onLeave,
 }: {
   session: WorkoutSessionResponse;
@@ -37,6 +42,10 @@ export function LiveSession({
   plannedSets: number;
   /** Planned sets per exercise (the template's target sets). */
   targets: ReadonlyMap<number, number>;
+  /** Rest after a set of this exercise, in seconds — its own, else the user's default. */
+  restFor: (exerciseId: number) => number;
+  /** The Settings switch; off = no countdown, only "Eddig ma". */
+  restEnabled: boolean;
   onLeave: () => void;
 }) {
   const t = useTranslations("workouts");
@@ -113,15 +122,52 @@ export function LiveSession({
     // A new row starts undone — ticking it is what logs the set.
     setDrafts((prev) => [...prev, { exerciseId, weight: last?.weight ?? 0, reps: last?.reps ?? 0, done: false }]);
   };
-  const updateDraft = (index: number, patch: Partial<DraftSet>) =>
+  const rest = useRestTimer();
+  const updateDraft = (index: number, patch: Partial<DraftSet>) => {
+    const row = drafts[index];
+    // Ticking a set starts its rest, announcing the set that follows in the same exercise.
+    if (restEnabled && row && patch.done === true && !row.done && session.finishedAt == null) {
+      const own = drafts.filter((x) => x.exerciseId === row.exerciseId);
+      const position = own.indexOf(row);
+      rest.start(restFor(row.exerciseId), position + 1 < own.length ? position + 2 : null);
+    }
     setDrafts((prev) => prev.map((x, i) => (i === index ? { ...x, ...patch } : x)));
+  };
   const removeDraft = (index: number) => setDrafts((prev) => prev.filter((_, i) => i !== index));
+
+  // Space pauses / resumes the rest — unless it is typing or pressing a button.
+  const { pauseResume } = rest;
+  useEffect(() => {
+    if (!restEnabled) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (isTypingTarget(el.tagName, el.isContentEditable) || ["BUTTON", "A", "SELECT"].includes(el.tagName))) return;
+      if (document.body.style.overflow === "hidden") return; // a modal owns the keyboard
+      e.preventDefault();
+      pauseResume();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [restEnabled, pauseResume]);
 
   const requestLeave = () => (unsaved ? setLeaving(true) : onLeave());
   const current = exercises.find((e) => e.exerciseId === currentId) ?? null;
   const currentIdx = current ? exercises.indexOf(current) : -1;
   const next = currentIdx >= 0 ? (exercises[currentIdx + 1] ?? null) : null;
   const history0 = priorSets(session, history);
+  // "Eddig ma": what the done rows add up to, and how many of them broke a record.
+  const volumeKg = drafts.reduce((sum, x) => (x.done ? sum + x.weight * x.reps : sum), 0);
+  const records = exercises.reduce(
+    (sum, e) =>
+      sum +
+      rowMarks(
+        baselineFromSets(history0.filter((x) => x.exerciseId === e.exerciseId)),
+        drafts.filter((x) => x.exerciseId === e.exerciseId),
+        previousSets(history, session.id, e.exerciseId, session.templateId),
+      ).filter((m) => m.record).length,
+    0,
+  );
   const exerciseHistory = (exerciseId: number) => history0.filter((x) => x.exerciseId === exerciseId);
   const bestBefore = (exerciseId: number) =>
     exerciseHistory(exerciseId).reduce<{ weight: number; reps: number } | null>(
@@ -143,7 +189,7 @@ export function LiveSession({
         onFinish={() => setFeedbackContext("finish")}
       />
 
-      <div className="grid flex-1 items-start gap-4 p-4 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid flex-1 items-start gap-4 p-4 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_340px]">
         <ExerciseRail items={railExercises(exercises, drafts, currentId)} onSelect={setPickedId} />
 
         <div className="flex min-w-0 flex-col gap-4">
@@ -225,6 +271,19 @@ export function LiveSession({
           <p className="type-body-s" style={{ color: "var(--text-3)" }}>
             {t("liveKeyboardHint")}
           </p>
+        </div>
+
+        <div className="lg:col-span-2 xl:col-span-1">
+          <RestHero
+            enabled={restEnabled}
+            state={rest.state}
+            now={rest.now}
+            onAdjust={rest.adjust}
+            onSkip={rest.skip}
+            onPauseResume={rest.pauseResume}
+            volumeKg={volumeKg}
+            records={records}
+          />
         </div>
       </div>
 

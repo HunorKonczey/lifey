@@ -193,6 +193,8 @@ function ExerciseEditor({
         category: (category || null) as MuscleGroup | null,
         equipment: (equipment || null) as Equipment | null,
         description: description.trim() || null,
+        // Sent back untouched — the editor has no rest field yet (W3.12), and a PUT without it would clear it.
+        defaultRestSeconds: exercise?.defaultRestSeconds ?? null,
       };
       return exercise ? exerciseApi.update(exercise.id, body) : exerciseApi.create(body);
     },

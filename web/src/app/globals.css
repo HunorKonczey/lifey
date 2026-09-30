@@ -734,3 +734,17 @@ input[type="number"] { -moz-appearance: textfield; }
     order: var(--order-2xl, var(--order-xl, var(--order-lg, var(--order-md, var(--order-base, 0)))));
   }
 }
+
+/* ─── Rest timer: the last seconds (W3.8) — the colour is the signal, the pulse is garnish and stays off under reduced motion ─── */
+@keyframes lifeyRestUrgent {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+.rest-urgent {
+  color: var(--m-kcal);
+  animation: lifeyRestUrgent 1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rest-urgent { animation: none; }
+}
+:root[data-force-reduced-motion="true"] .rest-urgent { animation: none; }
