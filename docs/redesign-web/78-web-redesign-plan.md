@@ -2979,11 +2979,13 @@ day limit); unread counts from the chat hooks already running in the trainer lay
 
 *As built:* `clientActivity.ts` (pure, 9 tests): `buildHeatmap` — four Monday-first weeks ending with the current one, one cell per local day with the kinds logged (meal, workout, weigh-in, fixed order), today flagged, future days never dotted; instants are bucketed into the viewer's local day. `recordEvents` / `buildFeed` — the latest events across records, workouts, meals and weigh-ins, newest first, meals within the same hour collapsed. **Records are only claimed against the loaded history:** a page of sessions cannot show whether an exercise's first loaded set beat something older, so the first set of each exercise only sets the baseline and only `maxWeight` records are announced (reusing `computePrHistory`). Tests cover the month boundary (30 Sep → 1 Oct) and a day with all three kinds.
 
-### W7.8 — Web UI: overview tab
+### W7.8 — Web UI: overview tab ✅
 - Files: `features/trainer/components/ClientOverviewTab.tsx` (rewritten), `LoggingHeatmap.tsx`,
   `UpcomingSchedule.tsx`, `ActivityFeed.tsx`.
 - **Verify:** W7-B side by side; KPI % bars relative to goals; heatmap keyboard-readable (each cell has a
   label "szept. 21., hétfő: étkezés, edzés").
+
+*As built:* the overview is W7-B's grid: four `MetricTile`s — **Kalória · 7 nap átlag** "1 439 / 2 100 kcal" with the goal bar and "69 % a célhoz", **Fehérje** likewise, **Edzések a héten** "0 / 4" (from the calendar feed, with "3 kimaradt ezen a héten" / "minden ütemezett kész"), **Testsúly** with the DS delta chip and "változás 30 nap alatt" — then the heatmap (`LoggingHeatmap`: a real `<table>`, four weeks Monday-first, a dot per kind, today ringed, every cell an `img` named like "szept. 21., hétfő: étkezés, edzés", legend with the three kinds) beside "Következő · Ütemterv" (next three workouts with time and program name) and "Legutóbb" (the latest five events with relative times). The averages come from `dailyAverages` — mean over the days that have meals (tested), so an unlogged day does not drag the number down; goals come from the existing nutrition-goals endpoint, and with no goal the bar is simply absent. The old "Edzések" list is gone (the Workouts tab is that list); **"Kiosztott tervek" is kept** below with its unassign button so no function is lost. The program chip "4 hetes · 3. hét" and the "5 / 6 nap célon belül" subline are not built (no program-week or per-day goal data on the trainer API). Playwright as the demo trainer at 1440 / 1024 / 390: no overflow, 0 console errors.
 
 ### W7.9 — Web UI: statistics + steps tabs
 - Files: `ClientStatisticsTab.tsx`, `ClientStepsTab.tsx` (reuse W5/W4 chart cards with a `clientId` source).

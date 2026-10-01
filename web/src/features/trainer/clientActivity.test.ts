@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFeed, buildHeatmap, dayKey, recordEvents } from "./clientActivity";
+import { buildFeed, buildHeatmap, dailyAverages, dayKey, recordEvents } from "./clientActivity";
 import type { MealResponse } from "@/features/nutrition/types";
 import type { WorkoutSessionResponse } from "@/features/workouts/types";
 
@@ -87,5 +87,21 @@ describe("buildFeed", () => {
 describe("dayKey", () => {
   it("uses the local day", () => {
     expect(dayKey(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
+  });
+});
+
+describe("dailyAverages", () => {
+  const entry = (calories: number, protein: number) => ({ foodId: 1, foodName: "x", quantityInGrams: 100, calories, protein, carbs: 0, fat: 0 });
+  const mealWith = (date: Date, ...entries: ReturnType<typeof entry>[]): MealResponse => ({ id: 1, dateTime: date.toISOString(), mealType: "LUNCH", name: null, entries }) as MealResponse;
+  it("averages over logged days only", () => {
+    const meals = [
+      mealWith(new Date(2026, 9, 1, 9), entry(500, 30), entry(300, 20)),
+      mealWith(new Date(2026, 8, 29, 9), entry(1000, 50)),
+    ];
+    expect(dailyAverages(meals, TODAY)).toEqual({ loggedDays: 2, kcal: 900, protein: 50 });
+  });
+  it("ignores meals outside the window and is null when nothing is left", () => {
+    expect(dailyAverages([mealWith(new Date(2026, 8, 20, 9), entry(500, 30))], TODAY)).toBeNull();
+    expect(dailyAverages([], TODAY)).toBeNull();
   });
 });

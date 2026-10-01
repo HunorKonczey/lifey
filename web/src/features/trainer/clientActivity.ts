@@ -124,3 +124,35 @@ export function buildFeed(input: ActivityInput, limit = 5): FeedEvent[] {
   for (const w of input.weights) events.push({ kind: "weight", at: new Date(w.date + "T12:00:00"), weightKg: w.weight });
   return events.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, limit);
 }
+
+export interface DailyAverages {
+  /** Days in the window with at least one meal. */
+  loggedDays: number;
+  kcal: number;
+  protein: number;
+}
+
+/**
+ * Mean daily calories and protein over the days with meals in the last `days` days (today included) — a day with
+ * nothing logged is a day we know nothing about, not a day of zero, so it does not pull the average down. Null when
+ * nothing was logged in the window.
+ */
+export function dailyAverages(meals: MealResponse[], today: Date, days = 7): DailyAverages | null {
+  const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
+  const fromKey = dayKey(from);
+  const toKey = dayKey(today);
+  const perDay = new Map<string, { kcal: number; protein: number }>();
+  for (const m of meals) {
+    const key = dayKey(new Date(m.dateTime));
+    if (key < fromKey || key > toKey) continue;
+    const day = perDay.get(key) ?? { kcal: 0, protein: 0 };
+    for (const e of m.entries) {
+      day.kcal += e.calories;
+      day.protein += e.protein;
+    }
+    perDay.set(key, day);
+  }
+  if (perDay.size === 0) return null;
+  const sum = [...perDay.values()].reduce((a, d) => ({ kcal: a.kcal + d.kcal, protein: a.protein + d.protein }), { kcal: 0, protein: 0 });
+  return { loggedDays: perDay.size, kcal: sum.kcal / perDay.size, protein: sum.protein / perDay.size };
+}
