@@ -67,7 +67,12 @@ export function TimeField({
 
   function commit(raw: string) {
     const trimmed = raw.trim();
-    if (isValidTime(trimmed)) {
+    if (trimmed === "" && !required) {
+      // An optional time can be cleared: empty stays empty (the placeholder shows), it never turns into 00:00.
+      onChange("");
+      setText("");
+      setPrevValue("");
+    } else if (isValidTime(trimmed)) {
       const [h, m] = trimmed.split(":");
       const normalized = `${h.padStart(2, "0")}:${m}`;
       onChange(normalized);
@@ -79,7 +84,7 @@ export function TimeField({
     setFocused(false);
   }
 
-  const displayValue = focused ? text : format.time(toDate(value));
+  const displayValue = focused ? text : value === "" ? "" : format.time(toDate(value));
 
   return (
     <div className={className}>

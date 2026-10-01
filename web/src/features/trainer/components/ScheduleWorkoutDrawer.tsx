@@ -9,15 +9,12 @@ import { templateApi } from "@/features/workouts/api";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { DatePicker } from "@/components/ui/DatePicker";
-import { TimePicker } from "@/components/ui/TimePicker";
+import { Button, DateFields, Drawer, Icon, SegmentedControl, TextField, TimeField } from "@/components/ds";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { DAYS_OF_WEEK, type DayOfWeek, type Recurrence } from "../types";
-import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 
 const JS_DAY_INDEX: Record<DayOfWeek, number> = {
   MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6, SUNDAY: 0,
@@ -55,7 +52,6 @@ export function ScheduleWorkoutDrawer({
   initialStartDate,
   onClose,
 }: ScheduleWorkoutDrawerProps) {
-  useEscapeKey(onClose);
   const t = useTranslations("admin.schedule");
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -161,83 +157,59 @@ export function ScheduleWorkoutDrawer({
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" data-testid="schedule-workout-drawer" role="dialog" aria-modal="true">
-      <div className="absolute inset-0" style={{ background: "rgba(8,9,6,.45)" }} onClick={onClose} />
-      <div
-        className="relative w-full max-w-[420px] h-full flex flex-col gap-4 p-5.5 overflow-y-auto"
-        style={{ background: "var(--surface-container)", boxShadow: "-20px 0 50px rgba(0,0,0,.45)" }}
-      >
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-extrabold tracking-tight" style={{ color: "var(--on-surface)" }}>
-            {fixedClientId != null ? t("drawerTitle", { name: clientName }) : t("drawerTitleGeneric")}
-          </p>
-          <button onClick={onClose} style={{ color: "var(--on-surface-variant)" }} aria-label={t("close")}>
-            <span className="material-symbols-rounded text-xl">close</span>
-          </button>
-        </div>
+  const parseIso = (iso: string) => (iso ? new Date(`${iso}T00:00:00`) : null);
+  const toIso = (d: Date | null) => (d ? format(d, "yyyy-MM-dd") : "");
+  const dirty = templateId !== (fixedTemplateId ?? null) || selectedClientId !== (fixedClientId ?? null) || recurrence !== "ONCE" || daysOfWeek.length > 0 || timeOfDay !== "" || endDate !== "" || startDate !== (initialStartDate ?? todayIso());
 
+  const rowStyle = (selected: boolean) => ({
+    background: selected ? "var(--primary-tint)" : "var(--nested)",
+    boxShadow: selected ? "inset 0 0 0 2px var(--primary)" : undefined,
+    borderRadius: "var(--r-control)",
+  });
+  const sectionLabel = (text: string) => (
+    <p className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{text}</p>
+  );
+
+  return (
+    <Drawer
+      open
+      onClose={onClose}
+      width={480}
+      title={fixedClientId != null ? t("drawerTitle", { name: clientName }) : t("drawerTitleGeneric")}
+      isDirty={dirty}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>{t("cancel")}</Button>
+          <Button onClick={() => createMutation.mutate()} disabled={!isValid || createMutation.isPending} data-testid="schedule-drawer-submit">
+            {createMutation.isPending ? t("scheduling") : t("scheduleAction")}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-6" data-testid="schedule-workout-drawer">
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-            {t("template")}
-          </p>
+          {sectionLabel(t("template"))}
           {fixedTemplateId != null ? (
-            <div className="flex items-center gap-3 rounded-2xl px-3 py-2.5" style={{ background: "var(--surface)" }}>
-              <span
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "var(--surface-high)", color: "var(--tertiary)" }}
-              >
-                <span className="material-symbols-rounded text-lg">fitness_center</span>
-              </span>
-              <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                {fixedTemplateName}
-              </span>
+            <div className="flex items-center gap-3 px-3 py-2.5" style={rowStyle(false)}>
+              <Icon name="fitness_center" size={20} fill={1} color="var(--role)" />
+              <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 700 }}>{fixedTemplateName}</span>
             </div>
           ) : (
             <>
-              <div className="rounded-2xl h-11 flex items-center gap-2.5 px-4" style={{ background: "var(--surface)" }} data-ring-frame>
-                <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>search</span>
-                <input
-                  value={templateSearch}
-                  onChange={(e) => setTemplateSearch(e.target.value)}
-                  placeholder={t("searchTemplatePlaceholder")}
-                  className="flex-1 bg-transparent outline-none text-sm"
-                  style={{ color: "var(--on-surface)" }}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto">
+              <TextField size="dense" leadingIcon="search" aria-label={t("template")} placeholder={t("searchTemplatePlaceholder")} value={templateSearch} onChange={(e) => setTemplateSearch(e.target.value)} />
+              <div className="flex flex-col gap-1.5 max-h-[220px] overflow-y-auto">
                 {templatesQ.isError ? (
                   <ErrorState inline onRetry={() => templatesQ.refetch()} />
                 ) : filteredTemplates.length === 0 ? (
-                  <p className="text-xs text-center py-3" style={{ color: "var(--muted)" }}>{t("noTemplatesFound")}</p>
+                  <p className="type-body-s text-center py-3" style={{ color: "var(--text-3)" }}>{t("noTemplatesFound")}</p>
                 ) : (
                   filteredTemplates.map((tpl) => {
                     const selected = tpl.id === templateId;
                     return (
-                      <button
-                        key={tpl.id}
-                        data-testid="schedule-drawer-template-row"
-                        onClick={() => setTemplateId(tpl.id)}
-                        className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors text-left"
-                        style={{
-                          background: selected ? "rgba(110,154,106,.14)" : "transparent",
-                          border: selected ? "1.5px solid var(--tertiary)" : "1.5px solid transparent",
-                        }}
-                      >
-                        <span
-                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: "var(--surface-high)", color: "var(--tertiary)" }}
-                        >
-                          <span className="material-symbols-rounded text-lg">fitness_center</span>
-                        </span>
-                        <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                          {tpl.name}
-                        </span>
-                        {selected && (
-                          <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>
-                            check_circle
-                          </span>
-                        )}
+                      <button key={tpl.id} type="button" data-testid="schedule-drawer-template-row" onClick={() => setTemplateId(tpl.id)} aria-pressed={selected} className="lifey-button flex items-center gap-3 px-3 py-2.5 text-left" style={rowStyle(selected)}>
+                        <Icon name="fitness_center" size={20} fill={1} color="var(--role)" />
+                        <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 700 }}>{tpl.name}</span>
+                        {selected && <Icon name="check_circle" size={20} fill={1} color="var(--primary)" />}
                       </button>
                     );
                   })
@@ -246,56 +218,30 @@ export function ScheduleWorkoutDrawer({
             </>
           )}
           {alreadyAssigned === false && (
-            <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: "var(--surface)" }}>
-              <span className="material-symbols-rounded text-base" style={{ color: "var(--on-surface-variant)" }}>info</span>
-              <span className="text-[11.5px]" style={{ color: "var(--on-surface-variant)" }}>{t("willCopyTemplate")}</span>
+            <div className="flex items-center gap-2 px-3 py-2" style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}>
+              <Icon name="info" size={18} color="var(--text-2)" />
+              <span className="type-body-s" style={{ color: "var(--text-2)" }}>{t("willCopyTemplate")}</span>
             </div>
           )}
         </div>
 
         {fixedClientId == null && (
           <div className="flex flex-col gap-2">
-            <p className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-              {t("client")}
-            </p>
-            <div className="rounded-2xl h-11 flex items-center gap-2.5 px-4" style={{ background: "var(--surface)" }} data-ring-frame>
-              <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>search</span>
-              <input
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-                placeholder={t("searchClientPlaceholder")}
-                className="flex-1 bg-transparent outline-none text-sm"
-                style={{ color: "var(--on-surface)" }}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto">
+            {sectionLabel(t("client"))}
+            <TextField size="dense" leadingIcon="search" aria-label={t("client")} placeholder={t("searchClientPlaceholder")} value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} />
+            <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto">
               {clientsQ.isError ? (
                 <ErrorState inline onRetry={() => clientsQ.refetch()} />
               ) : filteredClients.length === 0 ? (
-                <p className="text-xs text-center py-3" style={{ color: "var(--muted)" }}>{t("noClientsFound")}</p>
+                <p className="type-body-s text-center py-3" style={{ color: "var(--text-3)" }}>{t("noClientsFound")}</p>
               ) : (
                 filteredClients.map((c) => {
                   const selected = c.clientId === selectedClientId;
                   return (
-                    <button
-                      key={c.clientId}
-                      data-testid="schedule-drawer-client-row"
-                      onClick={() => setSelectedClientId(c.clientId)}
-                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors text-left"
-                      style={{
-                        background: selected ? "rgba(110,154,106,.14)" : "transparent",
-                        border: selected ? "1.5px solid var(--tertiary)" : "1.5px solid transparent",
-                      }}
-                    >
+                    <button key={c.clientId} type="button" data-testid="schedule-drawer-client-row" onClick={() => setSelectedClientId(c.clientId)} aria-pressed={selected} className="lifey-button flex items-center gap-3 px-3 py-2.5 text-left" style={rowStyle(selected)}>
                       <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={32} />
-                      <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                        {clientDisplayName(c)}
-                      </span>
-                      {selected && (
-                        <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>
-                          check_circle
-                        </span>
-                      )}
+                      <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 700 }}>{clientDisplayName(c)}</span>
+                      {selected && <Icon name="check_circle" size={20} fill={1} color="var(--primary)" />}
                     </button>
                   );
                 })
@@ -304,11 +250,10 @@ export function ScheduleWorkoutDrawer({
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-            {t("recurrence.label")}
-          </p>
-          <SegmentedControl
+        <div className="flex flex-col gap-3">
+          {sectionLabel(t("recurrence.label"))}
+          <SegmentedControl<Recurrence>
+            aria-label={t("recurrence.label")}
             options={[
               { value: "ONCE", label: t("recurrence.once") },
               { value: "DAILY", label: t("recurrence.daily") },
@@ -316,22 +261,19 @@ export function ScheduleWorkoutDrawer({
             ]}
             value={recurrence}
             onChange={setRecurrence}
-            activeBackground="var(--tertiary)"
-            activeColor="#161611"
           />
           {recurrence === "WEEKLY" && (
-            <div className="flex flex-wrap gap-1.5 mt-1">
+            <div className="flex flex-wrap gap-2" role="group" aria-label={t("recurrence.weekly")}>
               {DAYS_OF_WEEK.map((day) => {
                 const selected = daysOfWeek.includes(day);
                 return (
                   <button
                     key={day}
+                    type="button"
                     onClick={() => toggleDay(day)}
-                    className="w-9 h-9 rounded-full text-xs font-bold transition-colors"
-                    style={{
-                      background: selected ? "var(--tertiary)" : "var(--surface)",
-                      color: selected ? "#161611" : "var(--on-surface-variant)",
-                    }}
+                    aria-pressed={selected}
+                    className="lifey-button inline-flex items-center justify-center h-10 w-10"
+                    style={{ borderRadius: 999, fontWeight: 700, fontSize: 13, background: selected ? "var(--primary)" : "var(--control)", color: selected ? "var(--on-primary)" : "var(--text-2)" }}
                   >
                     {t(`daysShort.${day}`)}
                   </button>
@@ -341,50 +283,21 @@ export function ScheduleWorkoutDrawer({
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-            {t("dates")}
-          </p>
-          <DatePicker value={startDate} onChange={setStartDate} min={minDate} hasError={!startValid} />
+        <div className="flex flex-col gap-4">
+          {sectionLabel(t("dates"))}
+          <DateFields label={recurrence === "ONCE" ? t("date") : t("startDate")} value={parseIso(startDate)} onChange={(d) => setStartDate(toIso(d))} error={startValid ? undefined : t("dateInvalid")} />
           {recurrence !== "ONCE" && (
-            <DatePicker
-              value={endDate}
-              onChange={setEndDate}
-              min={new Date(`${startDate || todayIso()}T00:00:00`)}
-              max={maxEndDate}
-              placeholder={t("endDatePlaceholder")}
-              hasError={!endValid}
-            />
+            <DateFields label={t("endDate")} value={parseIso(endDate)} onChange={(d) => setEndDate(toIso(d))} error={endDate && !endValid ? t("endDateInvalid") : undefined} hint={t("endDatePlaceholder")} />
           )}
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold" style={{ color: "var(--muted)" }}>{t("timeOfDay")}</label>
-            <TimePicker value={timeOfDay} onChange={setTimeOfDay} />
-          </div>
+          <TimeField label={t("timeOfDay")} value={timeOfDay} onChange={setTimeOfDay} quickTimes={["07:00", "17:30", "18:00"]} />
         </div>
 
         {isValid && occurrenceCount > 0 && (
-          <div className="rounded-2xl p-4" style={{ background: "var(--surface)" }}>
-            <p className="text-[13px] font-bold" style={{ color: "var(--on-surface)" }}>
-              {t("previewCount", { count: occurrenceCount })}
-            </p>
+          <div className="p-4" style={{ borderRadius: "var(--r-card)", background: "var(--nested)" }}>
+            <p style={{ fontWeight: 700 }}>{t("previewCount", { count: occurrenceCount })}</p>
           </div>
         )}
-
-        <div className="mt-auto flex gap-2.5 pt-2">
-          <button onClick={onClose} className="flex-1 text-center text-[13.5px] font-bold py-3 rounded-2xl" style={{ color: "var(--on-surface-variant)" }}>
-            {t("cancel")}
-          </button>
-          <button
-            onClick={() => createMutation.mutate()}
-            disabled={!isValid || createMutation.isPending}
-            data-testid="schedule-drawer-submit"
-            className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
-            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-          >
-            {createMutation.isPending ? t("scheduling") : t("scheduleAction")}
-          </button>
-        </div>
       </div>
-    </div>
+    </Drawer>
   );
 }

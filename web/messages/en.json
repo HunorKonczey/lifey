@@ -351,6 +351,11 @@
       "assignFailed": "Failed to assign"
     },
     "schedule": {
+      "date": "Date",
+      "startDate": "First day",
+      "endDate": "Last day",
+      "dateInvalid": "Pick today or a later day",
+      "endDateInvalid": "Pick a day after the first one, within 3 months",
       "drawerTitle": "Schedule a workout for {name}",
       "drawerTitleGeneric": "Schedule a workout",
       "close": "Close",
@@ -471,6 +476,7 @@
       "unassignConfirm": "Remove"
     },
     "programs": {
+      "cancelAssignmentKeep": "Keep it",
       "title": "Programs",
       "newProgram": "New program",
       "weeksCount": "{count} {count, plural, one {week} other {weeks}}",

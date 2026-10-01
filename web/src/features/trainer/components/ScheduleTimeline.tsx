@@ -4,15 +4,14 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { differenceInCalendarWeeks, format, startOfWeek } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
-import { useLocale } from "@/lib/hooks/useLocale";
+import { Card, ConfirmModal, Icon, IconButton } from "@/components/ds";
+import { useFormat } from "@/lib/format/useFormat";
 import { STATUS_STYLE } from "../scheduleStatus";
 import type { ScheduledSessionResponse } from "../types";
 
-const DATE_LOCALES = { en: enUS, hu } as const;
 const PAGE_SIZE = 15;
 
 interface ScheduleTimelineProps {
@@ -29,7 +28,7 @@ export function ScheduleTimeline({ clientId, occurrences, onViewSession, program
   const tc = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
+  const fmt = useFormat();
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [page, setPage] = useState(0);
 
@@ -108,149 +107,92 @@ export function ScheduleTimeline({ clientId, occurrences, onViewSession, program
   if (occurrences.length === 0) return null;
 
   return (
-    <div className="rounded-[var(--r-card)] p-5" style={{ background: "var(--surface-container)" }}>
-      <p className="text-base font-extrabold mb-3.5" style={{ color: "var(--on-surface)" }}>{t("timeline")}</p>
-      <div className="flex flex-col gap-4">
+    <Card variant="card" className="flex flex-col gap-4" data-testid="schedule-timeline">
+      <h3 style={{ fontSize: 18, fontWeight: 800 }}>{t("timeline")}</h3>
+      <div className="flex flex-col gap-5">
         {pageGroups.map(({ key, label, items }) => (
-          <div key={key}>
-            <p className="text-[11px] font-bold tracking-wider uppercase mb-2" style={{ color: "var(--on-surface-variant)" }}>
-              {label}
-            </p>
-            <div className="flex flex-col gap-1.5">
+          <div key={key} className="grid grid-cols-1 md:grid-cols-[120px_minmax(0,1fr)] gap-2 md:gap-4">
+            <p className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</p>
+            <ul className="flex flex-col gap-2">
               {items.map((occ) => {
                 const style = STATUS_STYLE[occ.status];
                 const cancelled = occ.status === "CANCELLED";
                 const clickable = occ.status === "DONE" && !!onViewSession;
-                const Row = clickable ? "button" : "div";
-                return (
-                  <Row
-                    key={occ.sessionId}
-                    onClick={clickable ? () => onViewSession!(occ.sessionId) : undefined}
-                    className="rounded-2xl px-3.5 py-3 flex items-center gap-3.5 w-full text-left"
-                    style={{ background: "var(--surface)", opacity: cancelled ? 0.5 : 1 }}
-                  >
-                    <span className="text-xs tabular w-20 shrink-0" style={{ color: "var(--on-surface-variant)" }}>
-                      {format(new Date(`${occ.scheduledFor}T00:00:00`), "EEE, MMM d.", { locale: dateLocale })}
-                      {occ.scheduledTime && ` · ${occ.scheduledTime.slice(0, 5)}`}
+                const day = new Date(`${occ.scheduledFor}T00:00:00`);
+                const content = (
+                  <>
+                    <span className="num shrink-0" style={{ fontWeight: 800, width: 96 }}>
+                      {fmt.weekdayShort(day)} · {fmt.shortDate(day)}
+                      {occ.scheduledTime && <span className="block type-body-s" style={{ color: "var(--text-2)", fontWeight: 600 }}>{occ.scheduledTime.slice(0, 5)}</span>}
                     </span>
-                    <span className="flex-1 min-w-0">
-                      <span
-                        className="block text-[13.5px] font-bold truncate"
-                        style={{ color: "var(--on-surface)", textDecoration: cancelled ? "line-through" : "none" }}
-                      >
+                    <span className="flex-1 min-w-0 flex flex-col">
+                      <span className="truncate" style={{ fontWeight: 700, textDecoration: cancelled ? "line-through" : "none" }}>
                         {occ.templateName ?? t("unnamedTemplate")}
                       </span>
                       {occ.programAssignmentId != null && programNamesById?.[occ.programAssignmentId] && (
-                        <span className="flex items-center gap-1 text-[10.5px] mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-                          <span className="material-symbols-rounded text-xs">event_repeat</span>
+                        <span className="inline-flex items-center gap-1 type-body-s truncate" style={{ color: "var(--text-2)" }}>
+                          <Icon name="event_repeat" size={14} />
                           {programNamesById[occ.programAssignmentId]}
                         </span>
                       )}
                     </span>
                     <span
-                      className="flex items-center gap-1.5 rounded-full text-[11px] font-extrabold px-2.5 py-1 shrink-0"
-                      style={{ background: style.bg, color: style.color, border: style.bg === "transparent" ? "1px solid var(--outline)" : "none" }}
+                      className="inline-flex items-center gap-1.5 px-2.5 type-body-s shrink-0"
+                      style={{ height: 28, borderRadius: 999, background: style.bg, color: style.color, fontWeight: 700, boxShadow: style.bg === "transparent" ? "inset 0 0 0 1px var(--hairline)" : undefined }}
                     >
-                      <span className="material-symbols-rounded text-sm" style={{ fontVariationSettings: style.fill ? "'FILL' 1" : "'FILL' 0" }}>
-                        {style.icon}
-                      </span>
+                      <Icon name={style.icon} size={16} fill={style.fill ? 1 : 0} />
                       {t(`status.${occ.status}`)}
                     </span>
-                    {clickable && (
-                      <span className="material-symbols-rounded text-lg shrink-0" style={{ color: "var(--on-surface-variant)" }}>
-                        chevron_right
-                      </span>
-                    )}
-                    {occ.status === "UPCOMING" && (
-                      <button
-                        onClick={() => setConfirmingId(occ.sessionId)}
-                        className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0"
-                        style={{ background: "var(--surface-high)", color: "var(--on-surface-variant)" }}
-                        aria-label={t("cancelOccurrence")}
-                      >
-                        <span className="material-symbols-rounded text-base">event_busy</span>
+                    {clickable && <Icon name="chevron_right" size={20} color="var(--text-3)" />}
+                  </>
+                );
+                return (
+                  <li key={occ.sessionId} className="flex items-center gap-2" style={{ opacity: cancelled ? 0.55 : 1 }}>
+                    {clickable ? (
+                      <button type="button" onClick={() => onViewSession!(occ.sessionId)} className="lifey-button flex flex-1 min-w-0 items-center gap-3 px-3.5 py-3 text-left" style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}>
+                        {content}
                       </button>
+                    ) : (
+                      <div className="flex flex-1 min-w-0 items-center gap-3 px-3.5 py-3" style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}>
+                        {content}
+                      </div>
                     )}
-                  </Row>
+                    {occ.status === "UPCOMING" && <IconButton icon="event_busy" label={t("cancelOccurrence")} onClick={() => setConfirmingId(occ.sessionId)} />}
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
         ))}
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm" style={{ color: "var(--on-surface-variant)" }}>
-          <span className="tabular text-xs">
-            {tc("rangeOf", {
-              from: safePage * PAGE_SIZE + 1,
-              to: Math.min(safePage * PAGE_SIZE + PAGE_SIZE, totalCount),
-              total: totalCount,
-            })}
+        <div className="flex items-center justify-between type-body-s" style={{ color: "var(--text-2)" }}>
+          <span className="tabular">
+            {tc("rangeOf", { from: safePage * PAGE_SIZE + 1, to: Math.min(safePage * PAGE_SIZE + PAGE_SIZE, totalCount), total: totalCount })}
           </span>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={safePage === 0}
-              className="p-1 rounded-[var(--r-sm)] disabled:opacity-40 transition-colors"
-              aria-label={tc("previousPage")}
-            >
-              <span className="material-symbols-rounded text-xl">chevron_left</span>
-            </button>
-            <span className="tabular px-2 text-xs">{safePage + 1} / {totalPages}</span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={safePage >= totalPages - 1}
-              className="p-1 rounded-[var(--r-sm)] disabled:opacity-40 transition-colors"
-              aria-label={tc("nextPage")}
-            >
-              <span className="material-symbols-rounded text-xl">chevron_right</span>
-            </button>
+            <IconButton icon="chevron_left" label={tc("previousPage")} onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={safePage === 0} />
+            <span className="tabular px-2">{safePage + 1} / {totalPages}</span>
+            <IconButton icon="chevron_right" label={tc("nextPage")} onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={safePage >= totalPages - 1} />
           </div>
         </div>
       )}
 
-      {confirmingId != null && (
-        <div
-          className="fixed inset-0 z-30 flex items-center justify-center p-4"
-          style={{ background: "rgba(8,9,6,.6)" }}
-          onClick={() => setConfirmingId(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-[var(--r-lg)] p-6"
-            style={{ background: "var(--surface-container)", boxShadow: "0 18px 44px rgba(0,0,0,.4)" }}
-          >
-            <p className="text-base font-extrabold mb-2" style={{ color: "var(--on-surface)" }}>
-              {t("cancelOccurrenceConfirmTitle")}
-            </p>
-            <p className="text-[12.5px] leading-relaxed mb-5" style={{ color: "var(--on-surface-variant)" }}>
-              {t("cancelOccurrenceConfirmBody")}
-            </p>
-            <div className="flex gap-2.5 justify-end">
-              <button
-                onClick={() => setConfirmingId(null)}
-                className="text-sm font-bold px-4 py-2.5"
-                style={{ color: "var(--on-surface-variant)" }}
-              >
-                {t("keepOccurrence")}
-              </button>
-              <button
-                onClick={() => {
-                  const id = confirmingId;
-                  setConfirmingId(null);
-                  if (id != null) cancelMutation.mutate(id);
-                }}
-                disabled={cancelMutation.isPending}
-                className="rounded-xl px-4.5 py-2.5 text-sm font-extrabold disabled:opacity-60"
-                style={{ background: "var(--error)", color: "#161611" }}
-              >
-                {t("cancelOccurrenceConfirm")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <ConfirmModal
+        open={confirmingId != null}
+        onClose={() => setConfirmingId(null)}
+        onConfirm={() => {
+          const id = confirmingId;
+          setConfirmingId(null);
+          if (id != null) cancelMutation.mutate(id);
+        }}
+        icon="event_busy"
+        title={t("cancelOccurrenceConfirmTitle")}
+        body={t("cancelOccurrenceConfirmBody")}
+        cancelLabel={t("keepOccurrence")}
+        confirmLabel={t("cancelOccurrenceConfirm")}
+      />
+    </Card>
   );
 }

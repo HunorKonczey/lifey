@@ -351,6 +351,11 @@
       "assignFailed": "Nem sikerült hozzárendelni"
     },
     "schedule": {
+      "date": "Dátum",
+      "startDate": "Első nap",
+      "endDate": "Utolsó nap",
+      "dateInvalid": "Válassz mai vagy későbbi napot",
+      "endDateInvalid": "Az első nap után válassz, legfeljebb 3 hónapon belül",
       "drawerTitle": "Edzés ütemezése — {name}",
       "drawerTitleGeneric": "Edzés ütemezése",
       "close": "Bezárás",
@@ -471,6 +476,7 @@
       "unassignConfirm": "Eltávolítás"
     },
     "programs": {
+      "cancelAssignmentKeep": "Megtartom",
       "title": "Programok",
       "newProgram": "Új program",
       "weeksCount": "{count} hét",
