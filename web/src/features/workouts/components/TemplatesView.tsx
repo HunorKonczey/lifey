@@ -20,23 +20,13 @@ import type { WorkoutTemplateResponse } from "../types";
 import { TemplateEditorPanel } from "./TemplateEditorPanel";
 import { TemplateTile } from "./TemplateTile";
 
-interface TemplatesViewProps {
-  /** When provided, admin nav renders a "Kiosztás" button on every row — absent in the own view. */
-  onAssign?: (template: WorkoutTemplateResponse) => void;
-  /** When provided, admin nav renders a "schedule for a client" button on every row. */
-  onSchedule?: (template: WorkoutTemplateResponse) => void;
-}
-
 /**
  * The Templates tab (W3.11, W3-F): the picker's tiles as a list — exercise count, estimated time, last used, the
  * recommended one marked — with the selected template's editor in a 440 px panel on the right (a drawer below
  * 1280 px). With nothing selected the panel shows how often each template was used over the last four weeks.
- * The trainer's own templates page embeds the same view with its Assign / Schedule row actions.
  */
-export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {}) {
+export function TemplatesView() {
   const t = useTranslations("workouts");
-  const admin = useTranslations("admin.assignDrawer");
-  const schedule = useTranslations("admin.schedule");
   const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -113,17 +103,6 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
                     onClick={() => setSelectedId(tpl.id)}
                     footer={
                       <div className="flex items-center gap-1.5">
-                        {onSchedule && (
-                          <button
-                            onClick={() => onSchedule(tpl)}
-                            data-testid="schedule-template"
-                            className="lifey-button flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                            style={{ background: "var(--card)", color: "var(--text-2)" }}
-                            aria-label={schedule("scheduleForClientAria")}
-                          >
-                            <Icon name="calendar_month" size={18} />
-                          </button>
-                        )}
                         <button
                           onClick={() => setDuplicating(tpl)}
                           disabled={duplicateMutation.isPending}
@@ -133,16 +112,6 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
                         >
                           <Icon name="content_copy" size={18} />
                         </button>
-                        {onAssign && (
-                          <button
-                            onClick={() => onAssign(tpl)}
-                            data-testid="assign-template"
-                            className="lifey-button ml-auto flex h-7 shrink-0 items-center gap-1 rounded-lg px-2.5 text-[11px] font-extrabold"
-                            style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}
-                          >
-                            <Icon name="person_add" size={16} /> {admin("assignAction")}
-                          </button>
-                        )}
                       </div>
                     }
                   />

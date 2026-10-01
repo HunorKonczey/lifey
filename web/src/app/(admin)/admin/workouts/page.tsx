@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { TemplatesView } from "@/features/workouts/components/TemplatesView";
+import { TrainerTemplatesView } from "@/features/trainer/components/TrainerTemplatesView";
 import { ExercisesView } from "@/features/workouts/components/ExercisesView";
 import { exerciseApi } from "@/features/workouts/api";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -37,7 +37,7 @@ export default function AdminWorkoutsPage() {
     <div className="flex flex-col gap-5">
       <SegmentedControl options={TABS} value={tab} onChange={setTab} activeBackground="var(--tertiary)" activeColor="var(--bg)" />
 
-      {tab === "templates" && <TemplatesView onAssign={setAssignTarget} onSchedule={setScheduleTarget} />}
+      {tab === "templates" && <TrainerTemplatesView onAssign={setAssignTarget} onSchedule={setScheduleTarget} />}
       {tab === "exercises" && <ExercisesView />}
 
       {assignTarget && (

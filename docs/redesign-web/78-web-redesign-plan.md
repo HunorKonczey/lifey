@@ -3253,11 +3253,13 @@ trainer-requests (204)}/page.tsx`, `features/superadmin/{api,types,components/Us
   in a drawer from the users table (existing endpoint); the global page `/superadmin/role-history` only
   with W9.b3.
 
-### W9.1 — Web UI: trainer templates table + editor panel
+### W9.1 — Web UI: trainer templates table + editor panel ✅
 - Files: `app/(admin)/admin/workouts/page.tsx`, `features/workouts/components/TemplatesView.tsx` (trainer
   variant), `features/trainer/templateUsage.ts` + test (clients using a template from assignments /
   schedules).
 - **Verify:** W9-A side by side; the impact sentence counts the right clients; unsaved guard.
+
+*As built:* the trainer’s Edzésterveim is W9-A: a new `TrainerTemplatesView` (the client’s `TemplatesView` lost its Assign / Schedule props and is client-only again) with a DS `DataTable` — **Sablon** (name + a tag line of the template’s muscle groups, none when the exercises have no category) · **Gyakorlat** · **Idő** (the picker’s estimate) · **Használja** (up to three overlapping avatars + "3 kliens" / "senki"), all sortable, `/` searches, the selected row marked — beside the editor in a **520 px** panel from 1280 px (a drawer below). The subtitle says "3 sablon · 3 használatban". The panel is the existing `TemplateEditorPanel` with a `trainer` variant: header with the live name, the **"Nem mentett" chip** and a close button, "4 gyakorlat · 16 szett · kb. 30 perc", a detail line per exercise (muscle group · the exercise’s own rest), and the footer sentence **"A változás a 3 kliens jövőbeli edzéseire vonatkozik."** with **Elvetés** / **Mentés** (+ the delete icon). The clients behind "Használja" and the impact count come from the existing `GET /trainer/assignments/clients` per template (`templateUsers`, `templateTags`, `templateTotals` in `features/trainer/templateUsage.ts`, 6 tests). **Unsaved guard:** picking another row, ✕ or "Új sablon" while dirty asks "Elveted a nem mentett változtatásokat?" (the drawer keeps its own dirty guard). "⋯": Szerkesztés · Duplikálás · Kiosztás · Ütemezés · Törlés… (behind a confirmation). **Deviations:** the Idő is the picker’s estimate, not a stored duration; "Használja" counts clients with the template **assigned** (schedules created from it are not counted — that would need one request per client); the exercise rows show no reps (a template stores sets only). Checked in the browser as the demo trainer: the table at 1440, the 520 px panel, dirty chip, guard dialog → discard moved to the next template with the right count (5 clients); no horizontal overflow at 1440 / 390; the only console errors are the avatar 404s of clients without a picture.
 
 ### W9.2 — Web UI: trainer foods & recipes
 - Files: `app/(admin)/admin/nutrition/page.tsx`, `AssignToClientDrawer.tsx`.

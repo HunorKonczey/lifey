@@ -9,9 +9,11 @@ import {
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";
-import { Button, Icon, IconButton, TextField } from "@/components/ds";
+import { Button, Icon, IconButton, TextField, TintedChip } from "@/components/ds";
 import { ConfirmModal } from "@/components/ds/overlay/ConfirmModal";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { templateTotals } from "@/features/trainer/templateUsage";
+import { formatRest } from "../exerciseUi";
 import { useToast } from "@/lib/hooks/useToast";
 import { templateApi } from "../api";
 import type { ExerciseResponse, TemplateExerciseEntry, WorkoutTemplateResponse } from "../types";
@@ -39,6 +41,7 @@ export function TemplateEditorPanel({
   onDirtyChange,
   onSaved,
   onDeleted,
+  trainer,
 }: {
   template: WorkoutTemplateResponse | null;
   exercises: ExerciseResponse[];
@@ -46,6 +49,11 @@ export function TemplateEditorPanel({
   onDirtyChange?: (dirty: boolean) => void;
   onSaved: (id: number) => void;
   onDeleted: () => void;
+  /**
+   * The trainer's variant (W9-A): a header with the name, the "Nem mentett" chip and a close button, the totals
+   * line, a detail line per exercise, and a footer that says how many clients' future workouts a save reaches.
+   */
+  trainer?: { clientCount: number; onClose: () => void };
 }) {
   const t = useTranslations("workouts");
   const common = useTranslations("common");
@@ -58,6 +66,7 @@ export function TemplateEditorPanel({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const dirty = isTemplateDirty(template, name, rows);
+  const totals = templateTotals(rows);
   useEffect(() => {
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
@@ -73,6 +82,17 @@ export function TemplateEditorPanel({
     if (over && active.id !== over.id) {
       setRows((prev) => arrayMove(prev, prev.findIndex((r) => r.exerciseId === active.id), prev.findIndex((r) => r.exerciseId === over.id)));
     }
+  };
+
+  const discard = () => {
+    setName(template?.name ?? "");
+    setRows(template?.exercises ?? []);
+  };
+  const exerciseDetail = (e: ExerciseResponse | undefined) => {
+    if (!e) return undefined;
+    const group = e.category ? t(`muscleGroups.${e.category}`) : null;
+    const rest = formatRest(e.defaultRestSeconds);
+    return [group, rest ? t("restShort", { time: rest }) : null].filter(Boolean).join(" · ") || undefined;
   };
 
   const available = exercises.filter((e) => !rows.some((r) => r.exerciseId === e.id) && e.name.toLowerCase().includes(search.toLowerCase()));
@@ -102,7 +122,20 @@ export function TemplateEditorPanel({
 
   return (
     <div className="flex flex-col gap-4" data-testid="template-editor">
-      {!bare && <h2 className="type-title">{template ? t("editTemplate") : t("newTemplate")}</h2>}
+      {trainer ? (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <h2 className="type-title min-w-0 flex-1 truncate">{name.trim() || template?.name || t("newTemplate")}</h2>
+            {dirty && <TintedChip label={t("unsavedChip")} color="var(--tertiary)" />}
+            {!bare && <IconButton icon="close" label={common("close")} size={32} onClick={trainer.onClose} />}
+          </div>
+          <p className="type-body-s tabular" style={{ color: "var(--text-2)" }} data-testid="template-totals">
+            {t("templateTotals", { ...totals })}
+          </p>
+        </div>
+      ) : (
+        !bare && <h2 className="type-title">{template ? t("editTemplate") : t("newTemplate")}</h2>
+      )}
 
       <TextField label={t("templateNameLabel")} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("templateNamePlaceholder")} autoFocus={!template} />
 
@@ -114,6 +147,7 @@ export function TemplateEditorPanel({
                 key={row.exerciseId}
                 row={row}
                 name={exerciseName(row.exerciseId)}
+                detail={trainer ? exerciseDetail(exercises.find((e) => e.id === row.exerciseId)) : undefined}
                 onSetsChange={(n) => setRows((prev) => prev.map((r) => (r.exerciseId === row.exerciseId ? { ...r, targetSets: n } : r)))}
                 onRemove={() => setRows((prev) => prev.filter((r) => r.exerciseId !== row.exerciseId))}
               />
@@ -155,7 +189,17 @@ export function TemplateEditorPanel({
         </Button>
       )}
 
+      {trainer && (
+        <p className="type-body-s" style={{ color: "var(--text-2)" }} data-testid="template-impact">
+          {template ? t("templateImpact", { count: trainer.clientCount }) : t("templateImpactNew")}
+        </p>
+      )}
       <div className="flex gap-2">
+        {trainer && (
+          <Button variant="secondary" onClick={template ? discard : trainer.onClose} disabled={template != null && !dirty}>
+            {t("discardChanges")}
+          </Button>
+        )}
         <Button className="flex-1" onClick={() => saveMutation.mutate()} disabled={!name.trim() || rows.length === 0 || saveMutation.isPending}>
           {saveMutation.isPending ? common("saving") : t("saveTemplate")}
         </Button>
@@ -184,10 +228,11 @@ export function TemplateEditorPanel({
 }
 
 function SortableRow({
-  row, name, onSetsChange, onRemove,
+  row, name, detail, onSetsChange, onRemove,
 }: {
   row: TemplateExerciseEntry;
   name: string;
+  detail?: string;
   onSetsChange: (n: number) => void;
   onRemove: () => void;
 }) {
@@ -210,8 +255,15 @@ function SortableRow({
       <button {...attributes} {...listeners} type="button" className="cursor-grab touch-none" style={{ color: "var(--text-3)" }} aria-label={t("dragToReorderAria")}>
         <Icon name="drag_indicator" size={22} />
       </button>
-      <span className="type-body-s min-w-0 flex-1 truncate" style={{ fontWeight: 700 }}>
-        {name}
+      <span className="min-w-0 flex-1">
+        <span className="type-body-s block truncate" style={{ fontWeight: 700 }}>
+          {name}
+        </span>
+        {detail && (
+          <span className="type-body-s block truncate" style={{ color: "var(--text-3)" }}>
+            {detail}
+          </span>
+        )}
       </span>
 
       <div className="flex items-center gap-1" role="group" aria-label={t("targetSetsAria", { name })}>
