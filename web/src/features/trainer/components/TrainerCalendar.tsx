@@ -204,7 +204,7 @@ export function TrainerCalendar() {
         />
       )}
 
-      {peek && <CalendarSessionPeek key={peek.session.sessionId} session={peek.session} anchorEl={peek.anchor} onClose={() => setPeek(null)} />}
+      {peek && <CalendarSessionPeek key={peek.session.sessionId} session={peek.session} anchorEl={peek.anchor} clientName={names.get(peek.session.clientId)} onClose={() => setPeek(null)} />}
     </div>
   );
 }
