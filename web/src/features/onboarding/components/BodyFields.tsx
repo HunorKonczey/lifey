@@ -42,7 +42,7 @@ export function BodyFields({ register, setValue, errors, unitSystem }: Props) {
         {isImperial ? (
           <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)] w-40" style={inputStyle} data-ring-frame>
             <input
-              type="number" step="0.1" value={lb}
+              type="number" step="0.1" value={lb} aria-label={t("currentWeight")}
               onChange={(e) => applyWeightImperial(e.target.value)}
               className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
             />
@@ -52,7 +52,7 @@ export function BodyFields({ register, setValue, errors, unitSystem }: Props) {
           <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)] w-40" style={inputStyle} data-ring-frame>
             <input
               {...register("currentWeightKg", { valueAsNumber: true })}
-              type="number" step="0.1"
+              type="number" step="0.1" aria-label={t("currentWeight")}
               className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
             />
             <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>kg</span>

@@ -13,9 +13,9 @@ export function TrainerSignupStepper({ current = 1 }: { current?: 1 | 2 | 3 }) {
     <div className="flex items-center gap-2.5 flex-wrap" data-testid="trainer-stepper">
       <span
         className="inline-flex items-center gap-1.5 px-2.5 type-body-s"
-        style={{ height: 28, borderRadius: 999, background: "var(--role-tint)", color: "var(--role)", fontWeight: 700 }}
+        style={{ height: 28, borderRadius: 999, background: "var(--role-tint)", color: "var(--text)", fontWeight: 700 }}
       >
-        <Icon name="sports" size={16} />
+        <Icon name="sports" size={16} color="var(--role)" />
         {t("trainerBadge")}
       </span>
       <ol className="flex items-center gap-1.5 type-body-s" style={{ color: "var(--text-2)" }} aria-label={t("trainerStepsAria")}>

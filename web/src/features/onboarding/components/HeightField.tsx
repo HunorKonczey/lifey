@@ -45,7 +45,7 @@ export function HeightField({ register, setValue, errors, unitSystem }: Props) {
         <div className="flex gap-2">
           <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)]" style={inputStyle} data-ring-frame>
             <input
-              type="number" min={0} placeholder="5" value={feet}
+              type="number" min={0} placeholder="5" value={feet} aria-label={`${t("height")} (${t("feet")})`}
               onChange={(e) => applyHeightImperial(e.target.value, inches)}
               className="w-12 min-w-0 bg-transparent outline-none text-sm tabular"
             />
@@ -53,7 +53,7 @@ export function HeightField({ register, setValue, errors, unitSystem }: Props) {
           </div>
           <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)]" style={inputStyle} data-ring-frame>
             <input
-              type="number" min={0} max={11} placeholder="10" value={inches}
+              type="number" min={0} max={11} placeholder="10" value={inches} aria-label={`${t("height")} (${t("inches")})`}
               onChange={(e) => applyHeightImperial(feet, e.target.value)}
               className="w-12 min-w-0 bg-transparent outline-none text-sm tabular"
             />
@@ -64,7 +64,7 @@ export function HeightField({ register, setValue, errors, unitSystem }: Props) {
         <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)] w-40" style={inputStyle} data-ring-frame>
           <input
             {...register("heightCm", { valueAsNumber: true })}
-            type="number" step="0.1"
+            type="number" step="0.1" aria-label={t("height")}
             className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
           />
           <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>cm</span>

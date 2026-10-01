@@ -3665,3 +3665,16 @@ frames were compared by eye, strip by strip).
 
 *Bugs* (closed in the commit that carries this entry):
 - **W5.fix-1** — the year view of a year *before* logging started (2025) still said "heti átlag · naplózás aug. 17.-től": the first-log date was global, not the viewed year's. It (and the hatched band) now exist only for the year the first meal falls in; `periodStats.test.ts` covers 2025 and 2027.
+
+### W6 — 2026-10-01 — Playwright Chromium (bundled, headless), 1440×1000 / 1280×800 / 1024×768 / 390×844
+
+*Scope:* real stack, demo client `kata.nagy`. Per viewport × dark / light × HU / EN: login, login with a wrong password, register, trainer register (`?next=/admin`), forgot-password (logged out); settings, the goals drawer and the password drawer (≥ 768), the onboarding intro and steps 1–4 up to the suggested-plan hero (logged in; nothing saved). **200 captures** in the first pass; each with console-error, overflow (document and `<main>`), raw-key / `NaN` checks and **axe** (WCAG 2 A/AA). After the fixes below the HU pass was re-run: **100 captures, 0 problems**; the EN pass was not re-run (same code paths, its first-pass findings were identical to HU's).
+
+*Matches:* W6-A/C (brand panel, wrong-password box + rings), W6-B (clay badge + stepper), W6-D/E (rail with live answers, goal tiles with descriptions, plan hero with the sentence and the numbers), W6-G (anchor list + one page, drawers, logout dialog focusing "Mégsem"), W6-H (row list + sheets at 390, no overflow). "Tovább" is enabled after the first selection on step 3.
+
+*Not covered:* the finish celebration (W6.8) — finishing would write to the demo account; it is built and type-checked but was not seen in a browser. No 200 % zoom pass, no screen-reader pass; the trainer name on the Profile card is omitted (no endpoint).
+
+*Bugs* (closed in the commit that carries this entry):
+- **W6.fix-1** — leaving the optional target weight empty made `valueAsNumber` yield `NaN`, and the step showed/raised `MISSING_MESSAGE onboarding.Invalid input: expected number, received NaN`. The field now maps empty to `undefined`.
+- **W6.fix-2** — the height, weight and target-weight inputs had no accessible name (axe `label`); they have `aria-label`s now (feet / inches too).
+- **W6.fix-3** — the clay "Edzői fiók" badge on the light theme failed contrast; its text is `--text` now, the icon keeps the clay.

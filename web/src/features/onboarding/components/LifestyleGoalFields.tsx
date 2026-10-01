@@ -96,14 +96,14 @@ export function LifestyleGoalFields({ register, watch, setValue, errors, unitSys
             data-ring-frame>
             {isImperial ? (
               <input
-                type="number" step="0.1" value={targetLb}
+                type="number" step="0.1" value={targetLb} aria-label={t("targetWeightOptional")}
                 onChange={(e) => applyTargetImperial(e.target.value)}
                 className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
               />
             ) : (
               <input
-                {...register("targetWeightKg", { valueAsNumber: true })}
-                type="number" step="0.1"
+                {...register("targetWeightKg", { setValueAs: (v) => (v === "" || v == null || Number.isNaN(Number(v)) ? undefined : Number(v)) })}
+                type="number" step="0.1" aria-label={t("targetWeightOptional")}
                 className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
               />
             )}
