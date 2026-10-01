@@ -17,6 +17,7 @@ import { weightApi } from "@/features/weight/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { Button, Icon } from "@/components/ds";
 import { LifeyLogo } from "@/features/auth/components/BrandPanel";
+import { SuggestedPlan } from "@/features/onboarding/components/SuggestedPlan";
 import { OnboardingRail, type RailStep } from "@/features/onboarding/components/OnboardingRail";
 import { useFormat } from "@/lib/format/useFormat";
 import { useToast } from "@/lib/hooks/useToast";
@@ -27,7 +28,6 @@ const STEP_COUNT = 5; // Welcome, About you, Body, Lifestyle & goal, Suggested p
 
 export default function OnboardingPage() {
   const t = useTranslations("onboarding");
-  const d = useTranslations("dashboard");
   const router = useRouter();
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -193,25 +193,7 @@ export default function OnboardingPage() {
               <p className="type-body py-8" style={{ color: "var(--text-2)" }}>{t("calculating")}</p>
             ) : (
               <>
-                <p className="type-body-s" style={{ color: "var(--text-2)" }}>
-                  {t("suggestedFrom", { bmr: suggestion.bmr, tdee: suggestion.tdee })}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {[
-                    { label: d("calories"), value: suggestion.calories, unit: "kcal", color: "var(--metric-kcal)" },
-                    { label: d("protein"), value: suggestion.proteinGrams, unit: "g", color: "var(--metric-protein)" },
-                    { label: d("carbs"), value: suggestion.carbsGrams, unit: "g", color: "var(--metric-carbs)" },
-                    { label: d("fat"), value: suggestion.fatGrams, unit: "g", color: "var(--metric-fat)" },
-                    { label: d("water"), value: suggestion.waterLiters, unit: "L", color: "var(--metric-water)" },
-                  ].map((m) => (
-                    <div key={m.label} className="flex flex-col gap-1 p-3 rounded-[var(--r-card)]" style={{ background: "var(--card)" }}>
-                      <span className="type-body-s" style={{ color: m.color, fontWeight: 600 }}>{m.label}</span>
-                      <span className="num" style={{ fontSize: 24, fontWeight: 800 }}>
-                        {m.value} <span className="type-body-s" style={{ color: "var(--text-2)" }}>{m.unit}</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <SuggestedPlan plan={suggestion} />
                 <p className="type-body-s" style={{ color: "var(--text-3)" }}>{t("changeLater")}</p>
               </>
             ))}

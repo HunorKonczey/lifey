@@ -2796,9 +2796,11 @@ OptionCard,ConfirmSaveDetailsDialog}.tsx`; `app/(app)/settings/page.tsx` (461, s
 
 *As built:* gender, activity level and primary goal are all `ChoiceTileGroup` radiogroups now (arrows move focus, Space/Enter select — behaviour is in the DS component, so it is the same everywhere). `ChoiceTileGroup` gained `columns?: 2 | 3` (3 from 640 px up, one per row on a phone); gender and the goal row use 3, activity uses 3 as well. The three goals carry a description each — "Heti 0,25–0,75 kg" / "A mostani súly körül" / "Enyhe kalóriatöbblet" (new `goalDescription_*` keys, HU + EN). `OptionCard.tsx` is deleted — nothing else used it. Not re-driven in the browser after the last switch (only typecheck); the radiogroup semantics are the component's own.
 
-### W6.7 — Web UI: suggested-plan hero
+### W6.7 — Web UI: suggested-plan hero ✅
 - Files: `features/onboarding/components/SuggestedPlan.tsx`, `features/onboarding/planSentence.ts` + test.
 - **Verify:** sentence for lose / maintain / gain in HU and EN; numbers match `SuggestGoalsResponse`.
+
+*As built:* step 4 is a hero now (`SuggestedPlan`): the calorie number at 56 px with one sentence against the maintenance calories, then protein · carbs · fat · water as four tiles and the BMR/TDEE basis line. The sentence (`planSentence`, pure + 4 tests) follows the **numbers the backend returned**, not the goal picked: gap to TDEE within ±25 kcal reads as maintenance, below as deficit, above as surplus — so a lose-weight plan the backend clamped up to maintenance does not claim a deficit. Words live in `planHero_deficit/maintain/surplus` (HU + EN, figures through `lifeyFormat`). Typecheck, lint and unit tests pass; the step was not driven in a browser yet — it is covered by the W6 review pass.
 
 ### W6.8 — Web UI: onboarding finish celebration
 - Files: `features/onboarding/components/OnboardingDoneModal.tsx`.
