@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FieldErrors, UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
-import { OptionCard } from "./OptionCard";
+import { ChoiceTileGroup } from "@/components/ds";
 import { lbToKg } from "@/lib/utils/units";
 import type { UnitSystem } from "@/features/settings/types";
 import type { OnboardingFormValues } from "../schemas";
@@ -52,18 +52,18 @@ export function LifestyleGoalFields({ register, watch, setValue, errors, unitSys
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <label className="text-sm font-semibold">{t("activityLevel")}</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {ACTIVITY_LEVELS.map((a) => (
-            <OptionCard
-              key={a.value}
-              icon={a.icon}
-              label={t(`activity_${a.value}`)}
-              description={t(`activityDescription_${a.value}`)}
-              active={activityLevel === a.value}
-              onClick={() => setValue("activityLevel", a.value, { shouldValidate: true })}
-            />
-          ))}
-        </div>
+        <ChoiceTileGroup<ActivityLevel>
+          aria-label={t("activityLevel")}
+          columns={3}
+          value={activityLevel}
+          onChange={(v) => setValue("activityLevel", v, { shouldValidate: true })}
+          options={ACTIVITY_LEVELS.map((a) => ({
+            value: a.value,
+            icon: a.icon,
+            label: t(`activity_${a.value}`),
+            description: t(`activityDescription_${a.value}`),
+          }))}
+        />
         {errors.activityLevel && (
           <p className="text-xs" style={{ color: "var(--error)" }}>{t("required")}</p>
         )}
@@ -71,17 +71,18 @@ export function LifestyleGoalFields({ register, watch, setValue, errors, unitSys
 
       <div className="flex flex-col gap-2">
         <label className="text-sm font-semibold">{t("primaryGoal")}</label>
-        <div className="grid grid-cols-3 gap-3">
-          {GOALS.map((g) => (
-            <OptionCard
-              key={g.value}
-              icon={g.icon}
-              label={t(`goal_${g.value}`)}
-              active={primaryGoal === g.value}
-              onClick={() => setValue("primaryGoal", g.value, { shouldValidate: true })}
-            />
-          ))}
-        </div>
+        <ChoiceTileGroup<PrimaryGoal>
+          aria-label={t("primaryGoal")}
+          columns={3}
+          value={primaryGoal}
+          onChange={(v) => setValue("primaryGoal", v, { shouldValidate: true })}
+          options={GOALS.map((g) => ({
+            value: g.value,
+            icon: g.icon,
+            label: t(`goal_${g.value}`),
+            description: t(`goalDescription_${g.value}`),
+          }))}
+        />
         {errors.primaryGoal && (
           <p className="text-xs" style={{ color: "var(--error)" }}>{t("required")}</p>
         )}
