@@ -75,7 +75,7 @@ export function ChatAttachment({ message, uploading }: ChatAttachmentProps) {
           height: box.height,
           maxWidth: "100%",
           borderRadius: 14,
-          background: "var(--surface-container)",
+          background: "var(--nested)",
           cursor: messageId != null && !uploading ? "zoom-in" : "default",
         }}
       >
@@ -144,8 +144,8 @@ function ImageLightbox({ messageId, onClose }: { messageId: number; onClose: () 
       <button
         onClick={onClose}
         aria-label={t("closeImage")}
-        className="absolute top-5 right-6 w-10 h-10 rounded-full flex items-center justify-center"
-        style={{ background: "rgba(255,255,255,.12)", color: "#fff" }}
+        className="lifey-button absolute top-5 right-6 w-11 h-11 rounded-full flex items-center justify-center"
+        style={{ background: "rgba(255,255,255,.14)", color: "#fff" }}
       >
         <span className="material-symbols-rounded text-[22px]">close</span>
       </button>

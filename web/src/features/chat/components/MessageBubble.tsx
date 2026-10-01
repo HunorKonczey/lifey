@@ -1,15 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { format } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
-import { useLocale } from "@/lib/hooks/useLocale";
+import { IconButton } from "@/components/ds";
+import { useFormat } from "@/lib/format/useFormat";
 import { ChatAvatar } from "./ChatAvatar";
 import { ChatAttachment } from "./ChatAttachment";
 import { hasImage } from "../thread";
 import type { ChatReceiptState, ThreadMessage } from "../types";
-
-const DATE_LOCALES = { en: enUS, hu } as const;
 
 /**
  * The four-state ladder from the design: waiting → left this device → reached
@@ -26,11 +23,11 @@ const STATE_ICON = {
 } as const;
 
 const RECEIPT_COLOR: Record<ChatReceiptState, string> = {
-  pending: "var(--on-surface-variant)",
-  sent: "var(--on-surface-variant)",
-  delivered: "var(--on-surface-variant)",
+  pending: "var(--text-3)",
+  sent: "var(--text-3)",
+  delivered: "var(--text-3)",
   read: "var(--primary)",
-  failed: "var(--error)",
+  failed: "var(--heart)",
 };
 
 interface MessageBubbleProps {
@@ -62,10 +59,10 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const t = useTranslations("chat");
   const common = useTranslations("common");
-  const locale = useLocale((s) => s.locale);
+  const fmt = useFormat();
 
   const deleted = message.deletedAt !== null;
-  const time = format(new Date(message.createdAt), "H:mm", { locale: DATE_LOCALES[locale] });
+  const time = fmt.time(new Date(message.createdAt));
   const stateLabel = own ? t(`state.${receiptState}`) : "";
   const image = !deleted && hasImage(message);
   const text = deleted ? t("deletedMessage") : message.body ?? "";
@@ -95,7 +92,7 @@ export function MessageBubble({
           <div className="w-[30px] shrink-0" aria-hidden />
         ))}
 
-      <div className={`min-w-0 flex flex-col gap-1 ${own ? "items-end" : "items-start"}`} style={{ maxWidth: "65ch" }}>
+      <div className={`min-w-0 flex flex-col gap-1 ${own ? "items-end" : "items-start"}`} style={{ maxWidth: 720 }}>
         {/* The delete button belongs to the message, so it is centred on the
             bubble rather than on the row: the row also holds the time/state
             line, and aligning to that pushes the icon visibly low. */}
@@ -118,10 +115,9 @@ export function MessageBubble({
               <p
                 className="px-4 py-2.5 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words"
                 style={{
-                  background: own
-                    ? "color-mix(in srgb, var(--primary) 20%, transparent)"
-                    : "var(--surface-container)",
-                  color: deleted ? "var(--on-surface-variant)" : "var(--on-surface)",
+                  // Own = primary fill with its own on-colour; theirs = the nested surface (W8-D).
+                  background: own ? "var(--primary)" : "var(--nested)",
+                  color: deleted ? (own ? "var(--on-primary)" : "var(--text-2)") : own ? "var(--on-primary)" : "var(--text)",
                   fontStyle: deleted ? "italic" : undefined,
                   fontWeight: 500,
                   borderRadius: radius,
@@ -143,21 +139,15 @@ export function MessageBubble({
           </div>
 
           {own && !deleted && message.id !== null && (
-            <button
-              onClick={() => onDelete(message.id as number)}
-              title={t("deleteMessage")}
-              aria-label={t("deleteMessage")}
-              className="w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
-              style={{ color: "var(--on-surface-variant)" }}
-            >
-              <span className="material-symbols-rounded text-[17px]">delete</span>
-            </button>
+            <span className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              <IconButton icon="delete" label={t("deleteMessage")} size={32} onClick={() => onDelete(message.id as number)} />
+            </span>
           )}
         </div>
 
         {groupEnd && (
           <div className={`flex items-center gap-1 mt-1 ${own ? "mr-1" : "ml-1"}`}>
-            <span className="text-[10.5px] font-semibold" style={{ color: "var(--muted)" }}>
+            <span className="type-body-s tabular" style={{ color: "var(--text-3)", fontWeight: 500 }}>
               {time}
             </span>
             {own && (
@@ -181,15 +171,15 @@ export function MessageBubble({
           <div className="flex items-center gap-3 mt-0.5 mr-1">
             <button
               onClick={() => onRetry(message.clientMessageId)}
-              className="text-[11px] font-extrabold"
-              style={{ color: "var(--error)" }}
+              className="text-[12px] font-extrabold"
+              style={{ color: "var(--heart)" }}
             >
               {common("retry")}
             </button>
             <button
               onClick={() => onDiscard(message.clientMessageId)}
-              className="text-[11px] font-bold"
-              style={{ color: "var(--on-surface-variant)" }}
+              className="text-[12px] font-bold"
+              style={{ color: "var(--text-2)" }}
             >
               {t("discard")}
             </button>

@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Icon, IconButton } from "@/components/ds";
 import {
   ACCEPTED_IMAGE_TYPES,
   MAX_ATTACHMENT_BYTES,
@@ -85,14 +86,14 @@ export function ChatComposer({
   };
 
   return (
-    <div className="flex flex-col px-5 pb-4 shrink-0">
+    <div className="flex flex-col px-4 pb-4 shrink-0">
       <TypingBand active={peerTyping?.active ?? false} name={peerTyping?.name ?? ""} />
 
       {image && (
         <div className="flex items-center gap-3 mb-2.5 ml-1">
           <div
             className="relative rounded-[12px] overflow-hidden shrink-0"
-            style={{ width: 64, height: 64, background: "var(--surface-container)" }}
+            style={{ width: 64, height: 64, background: "var(--nested)" }}
           >
             {/* Object URLs aren't compatible with next/image's optimizer. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -100,8 +101,8 @@ export function ChatComposer({
           </div>
           <button
             onClick={clearImage}
-            className="text-[11.5px] font-bold"
-            style={{ color: "var(--on-surface-variant)" }}
+            className="type-body-s"
+            style={{ color: "var(--text-2)", fontWeight: 700 }}
           >
             {t("removeImage")}
           </button>
@@ -116,15 +117,7 @@ export function ChatComposer({
           onChange={(e) => pick(e.target.files?.[0])}
           className="hidden"
         />
-        <button
-          onClick={() => fileRef.current?.click()}
-          aria-label={t("attachImage")}
-          title={t("attachImage")}
-          className="w-[46px] h-[46px] shrink-0 rounded-[15px] flex items-center justify-center"
-          style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-        >
-          <span className="material-symbols-rounded text-[21px]">image</span>
-        </button>
+        <IconButton icon="add" label={t("attachImage")} size={46} onClick={() => fileRef.current?.click()} />
         <textarea
           ref={textareaRef}
           rows={1}
@@ -145,29 +138,30 @@ export function ChatComposer({
           aria-label={t("composerPlaceholder")}
           className="flex-1 min-w-0 resize-none px-4 py-3 text-sm font-medium outline-none"
           style={{
-            background: "var(--surface-container)",
-            color: "var(--on-surface)",
-            borderRadius: "var(--r-input)",
+            background: "var(--control)",
+            color: "var(--text)",
+            borderRadius: "var(--r-control)",
             maxHeight: MAX_ROWS_PX,
+            // The composer takes the primary focus ring (W8-D), composed with the system focus shadow.
+            boxShadow: focused ? "inset 0 0 0 2px var(--primary)" : undefined,
           }}
         />
         <button
+          type="button"
           onClick={submit}
           disabled={!sendable}
           aria-label={t("send")}
           title={t("send")}
-          className="w-[46px] h-[46px] shrink-0 rounded-[15px] flex items-center justify-center transition-opacity disabled:opacity-40"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}
+          className="lifey-button inline-flex h-[46px] w-[46px] shrink-0 items-center justify-center transition-opacity disabled:opacity-40"
+          style={{ borderRadius: "var(--r-control)", background: "var(--primary)", color: "var(--on-primary)" }}
         >
-          <span className="material-symbols-rounded text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-            send
-          </span>
+          <Icon name="send" size={22} fill={1} />
         </button>
       </div>
 
       <div className="flex items-center gap-3 mt-1.5 ml-1 min-h-[15px]">
         {focused && (
-          <span className="text-[10.5px] font-semibold" style={{ color: "var(--muted)" }}>
+          <span className="type-body-s" style={{ color: "var(--text-3)" }}>
             {t("keyboardHint")}
           </span>
         )}
@@ -221,7 +215,7 @@ export function ArchivedComposerNotice() {
   return (
     <div
       className="flex items-center gap-2.5 mx-5 mb-4 px-4 py-3.5 rounded-[var(--r-input)] shrink-0"
-      style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+      style={{ background: "var(--nested)", color: "var(--text-2)" }}
     >
       <span className="material-symbols-rounded text-[20px]">lock</span>
       <span className="text-[12.5px] font-semibold">{t("archivedNotice")}</span>
