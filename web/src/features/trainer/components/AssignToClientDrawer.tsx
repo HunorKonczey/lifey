@@ -12,7 +12,8 @@ import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import type { ContentType } from "../types";
-import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
+import { Button, Icon, TextField } from "@/components/ds";
+import { Drawer } from "@/components/ds/overlay/Drawer";
 
 export interface AssignSummaryRow {
   label: string;
@@ -31,7 +32,6 @@ interface AssignToClientDrawerProps {
 export function AssignToClientDrawer({
   contentType, sourceId, title, summary, moreCount = 0, onClose,
 }: AssignToClientDrawerProps) {
-  useEscapeKey(onClose);
   const t = useTranslations("admin.assignDrawer");
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -117,37 +117,35 @@ export function AssignToClientDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-to-client-drawer" role="dialog" aria-modal="true">
-      <div className="absolute inset-0" style={{ background: "rgba(8,9,6,.45)" }} onClick={onClose} />
-      <div
-        className="relative w-full max-w-[420px] h-full flex flex-col gap-4 p-5.5 overflow-y-auto"
-        style={{ background: "var(--surface-container)", boxShadow: "-20px 0 50px rgba(0,0,0,.45)" }}
-      >
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-extrabold tracking-tight" style={{ color: "var(--on-surface)" }}>
-            {t("drawerTitle", { name: title })}
-          </p>
-          <button onClick={onClose} style={{ color: "var(--on-surface-variant)" }} aria-label={t("close")}>
-            <span className="material-symbols-rounded text-xl">close</span>
-          </button>
-        </div>
+    <Drawer
+      open
+      onClose={onClose}
+      width={480}
+      title={t("drawerTitle", { name: title })}
+      isDirty={newClientIds.length > 0}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            {t("cancel")}
+          </Button>
+          <Button
+            onClick={() => assignMutation.mutate(newClientIds)}
+            disabled={newClientIds.length === 0 || assignMutation.isPending}
+            data-testid="assign-drawer-submit"
+          >
+            {assignMutation.isPending ? t("assigning") : newClientIds.length > 1 ? t("assignCount", { count: newClientIds.length }) : t("assign")}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4" data-testid="assign-to-client-drawer">
+        <TextField leadingIcon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("searchClientPlaceholder")} aria-label={t("searchClientPlaceholder")} />
 
-        <div className="rounded-2xl h-12 flex items-center gap-2.5 px-4.5" style={{ background: "var(--surface)" }} data-ring-frame>
-          <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>search</span>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("searchClientPlaceholder")}
-            className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: "var(--on-surface)" }}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5 max-h-[240px] overflow-y-auto">
+        <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
           {clientsQ.isError ? (
             <ErrorState inline onRetry={() => clientsQ.refetch()} />
           ) : filteredClients.length === 0 ? (
-            <p className="text-xs text-center py-4" style={{ color: "var(--muted)" }}>{t("noClientsFound")}</p>
+            <p className="type-body-s py-4 text-center" style={{ color: "var(--text-3)" }}>{t("noClientsFound")}</p>
           ) : (
             filteredClients.map((c) => {
               const selected = selectedClientIds.includes(c.clientId);
@@ -155,35 +153,27 @@ export function AssignToClientDrawer({
               return (
                 <button
                   key={c.clientId}
+                  type="button"
                   data-testid="assign-drawer-client-row"
                   onClick={() => toggleClient(c.clientId)}
                   disabled={locked}
-                  className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors text-left disabled:cursor-default"
+                  aria-pressed={selected}
+                  className="lifey-button flex items-center gap-3 px-3 py-2.5 text-left disabled:cursor-default"
                   style={{
-                    background: selected ? "rgba(110,154,106,.14)" : "transparent",
-                    border: selected ? "1.5px solid var(--tertiary)" : "1.5px solid transparent",
+                    borderRadius: "var(--r-control)",
+                    background: selected && !locked ? "color-mix(in srgb, var(--primary) 14%, transparent)" : "transparent",
+                    boxShadow: selected && !locked ? "inset 0 0 0 2px var(--primary)" : "none",
                   }}
                 >
                   <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={32} />
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                      {clientDisplayName(c)}
-                    </span>
-                    {locked && (
-                      <span className="block text-[11px]" style={{ color: "var(--muted)" }}>
-                        {t("alreadyAssignedBadge")}
-                      </span>
-                    )}
+                  <span className="min-w-0 flex-1">
+                    <span className="type-body-s block truncate" style={{ fontWeight: 700 }}>{clientDisplayName(c)}</span>
+                    {locked && <span className="type-body-s block" style={{ color: "var(--text-3)" }}>{t("alreadyAssignedBadge")}</span>}
                   </span>
                   {selected ? (
-                    <span
-                      className="material-symbols-rounded text-xl"
-                      style={{ color: locked ? "var(--muted)" : "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}
-                    >
-                      check_circle
-                    </span>
+                    <Icon name="check_circle" size={22} fill={1} color={locked ? "var(--text-3)" : "var(--primary)"} />
                   ) : (
-                    <span className="w-[18px] h-[18px] rounded-full shrink-0" style={{ border: "1.5px solid var(--outline)" }} />
+                    <span className="h-[18px] w-[18px] shrink-0 rounded-full" style={{ boxShadow: "inset 0 0 0 1.5px var(--hairline)" }} />
                   )}
                 </button>
               );
@@ -191,42 +181,19 @@ export function AssignToClientDrawer({
           )}
         </div>
 
-        <div className="rounded-2xl p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-[11px] font-bold tracking-wider uppercase mb-2.5" style={{ color: "var(--muted)" }}>
-            {t("content")}
-          </p>
+        <div className="p-4" style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}>
+          <p className="type-overline mb-2.5" style={{ color: "var(--text-3)" }}>{t("content")}</p>
           <div className="flex flex-col gap-2">
             {summary.map((row, i) => (
-              <div key={i} className="flex items-center justify-between text-[12.5px]">
-                <span className="font-semibold" style={{ color: "var(--on-surface)" }}>{row.label}</span>
-                <span className="tabular" style={{ color: "var(--on-surface-variant)" }}>{row.detail}</span>
+              <div key={i} className="type-body-s flex items-center justify-between gap-3">
+                <span style={{ fontWeight: 700 }}>{row.label}</span>
+                <span className="tabular" style={{ color: "var(--text-2)" }}>{row.detail}</span>
               </div>
             ))}
-            {moreCount > 0 && (
-              <p className="text-[11px]" style={{ color: "var(--muted)" }}>{t("moreItems", { count: moreCount })}</p>
-            )}
+            {moreCount > 0 && <p className="type-body-s" style={{ color: "var(--text-3)" }}>{t("moreItems", { count: moreCount })}</p>}
           </div>
         </div>
-
-        <div className="mt-auto flex gap-2.5 pt-2">
-          <button onClick={onClose} className="flex-1 text-center text-[13.5px] font-bold py-3 rounded-2xl" style={{ color: "var(--on-surface-variant)" }}>
-            {t("cancel")}
-          </button>
-          <button
-            onClick={() => assignMutation.mutate(newClientIds)}
-            disabled={newClientIds.length === 0 || assignMutation.isPending}
-            data-testid="assign-drawer-submit"
-            className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
-            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-          >
-            {assignMutation.isPending
-              ? t("assigning")
-              : newClientIds.length > 1
-                ? t("assignCount", { count: newClientIds.length })
-                : t("assign")}
-          </button>
-        </div>
       </div>
-    </div>
+    </Drawer>
   );
 }

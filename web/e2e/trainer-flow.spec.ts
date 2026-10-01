@@ -175,7 +175,7 @@ test.describe("Personal trainer flow", () => {
       const drawer = page.getByTestId("assign-to-client-drawer");
       await drawer.getByPlaceholder("Search client…").fill(clientEmail);
       await drawer.getByTestId("assign-drawer-client-row").filter({ hasText: clientDisplayName }).click();
-      await drawer.getByTestId("assign-drawer-submit").click();
+      await page.getByTestId("assign-drawer-submit").click();
       await expect(page.getByText(/Assigned/i)).toBeVisible();
     });
 
