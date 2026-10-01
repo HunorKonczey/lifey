@@ -487,6 +487,15 @@
       "unassignConfirm": "Eltávolítás"
     },
     "programs": {
+      "whoFor": "Kinek",
+      "alreadyUsing": "már használja",
+      "inactiveDays": "{count} napja inaktív",
+      "stateActive": "aktív",
+      "consequence": "{count} edzés kerül a naptárba {from} és {to} között.",
+      "conflicts": "{name} naptárában {count} időpont ütközik.",
+      "conflictsNote": "Semmi nem tolódik el automatikusan — az ütköző napokat felsoroltuk, utólag igazíthatod őket.",
+      "assignToN": "Kiosztás {count} kliensnek",
+      "assignedMany": "A program kiosztva {clients} kliensnek",
       "dragTemplate": "{name} húzása egy cellára",
       "dropHere": "Ide ejtve: {name}",
       "copyWeekAction": "Hét másolása",

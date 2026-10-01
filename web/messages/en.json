@@ -487,6 +487,15 @@
       "unassignConfirm": "Remove"
     },
     "programs": {
+      "whoFor": "For whom",
+      "alreadyUsing": "already on it",
+      "inactiveDays": "{count, plural, one {# day inactive} other {# days inactive}}",
+      "stateActive": "active",
+      "consequence": "{count, plural, one {# workout lands} other {# workouts land}} in the calendar between {from} and {to}.",
+      "conflicts": "{count, plural, one {# workout clashes} other {# workouts clash}} in {name}'s calendar.",
+      "conflictsNote": "Nothing is moved automatically — the clashing days are listed so you can adjust them afterwards.",
+      "assignToN": "Assign to {count} clients",
+      "assignedMany": "Program assigned to {clients} clients",
       "dragTemplate": "Drag {name} to a cell",
       "dropHere": "Drop {name} here",
       "copyWeekAction": "Copy week",
