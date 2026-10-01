@@ -36,7 +36,7 @@ export function ProgramTemplateRail({ templates, error, onRetry, selectedId, onS
     <Card variant="card" className="flex flex-col gap-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)]" data-testid="program-template-rail">
       <h2 style={{ fontSize: 18, fontWeight: 800 }}>{t("templatesTitle")}</h2>
       <TextField size="dense" leadingIcon="search" aria-label={t("templatesTitle")} placeholder={t("searchTemplatePlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
-      <div className="flex flex-col gap-1.5 min-h-0 overflow-y-auto" role="listbox" aria-label={t("templatesTitle")}>
+      <div className="flex flex-col gap-1.5 min-h-0 overflow-y-auto" role="group" aria-label={t("templatesTitle")}>
         {error ? (
           <ErrorState inline onRetry={onRetry} />
         ) : filtered.length === 0 ? (
@@ -80,8 +80,7 @@ function RailRow({ tpl, selected, onSelect }: { tpl: RailTemplate; selected: boo
       </button>
       <button
         type="button"
-        role="option"
-        aria-selected={selected}
+        aria-pressed={selected}
         data-testid="program-rail-template"
         data-template-id={tpl.id}
         onClick={() => onSelect(selected ? null : tpl.id)}

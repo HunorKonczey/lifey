@@ -439,6 +439,14 @@
       "showHistory": "Show history"
     },
     "calendar": {
+      "dragMove": "Move",
+      "dragCopy": "Copy",
+      "moved": "Workout moved",
+      "copied": "Workout copied",
+      "moveFailed": "Could not move the workout",
+      "copyFailed": "Could not copy the workout",
+      "copyUnavailable": "Only a workout from a schedule can be copied — not one from a program",
+      "dragHint": "Drag to move · Shift + drag to copy",
       "workoutsCount": "{count, plural, one {# workout} other {# workouts}}",
       "day": "Day",
       "viewAria": "Calendar view",

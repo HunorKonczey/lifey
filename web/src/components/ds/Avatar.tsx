@@ -61,7 +61,7 @@ export function Avatar({ name, email, size = 44, color, src, roleRing, className
   // for all eight metrics), where a fixed target color can't account for
   // where the avatar ends up in a wider page.
   const bg = color ? `color-mix(in srgb, ${color} var(--chip-tint), transparent)` : "var(--primary-tint)";
-  const fg = color ?? "var(--on-primary-tint)";
+  const fg = color ? `color-mix(in srgb, ${color} 55%, var(--text))` : "var(--on-primary-tint)";
   const initials = initialsFor(name, email);
   const label = name ?? email ?? undefined;
 

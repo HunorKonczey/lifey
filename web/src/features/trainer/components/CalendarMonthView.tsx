@@ -77,14 +77,13 @@ export function CalendarMonthView({ monthAnchor, sessions, onSelectDay, compact 
               style={{
                 borderRadius: "var(--r-control)",
                 minHeight: compact ? 56 : 92,
-                background: isToday ? "color-mix(in srgb, var(--primary) 6%, var(--card))" : "var(--card)",
+                background: isToday ? "color-mix(in srgb, var(--primary) 6%, var(--card))" : inMonth ? "var(--card)" : "var(--nested)",
                 boxShadow: isToday ? "inset 0 0 0 1.5px color-mix(in srgb, var(--primary) 50%, transparent)" : "var(--edge-card)",
-                opacity: inMonth ? 1 : 0.45,
               }}
             >
               <span
                 className="num inline-flex items-center justify-center"
-                style={{ minWidth: 24, height: 24, padding: "0 6px", borderRadius: 999, fontWeight: 800, fontSize: 13, background: isToday ? "var(--primary)" : "transparent", color: isToday ? "var(--on-primary)" : inMonth ? "var(--text)" : "var(--text-2)" }}
+                style={{ minWidth: 24, height: 24, padding: "0 6px", borderRadius: 999, fontWeight: 800, fontSize: 13, background: isToday ? "var(--primary)" : "transparent", color: isToday ? "var(--on-primary)" : "var(--text)" }}
               >
                 {format(day, "d")}
               </span>

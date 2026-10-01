@@ -3,12 +3,14 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isBefore, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useFormat } from "@/lib/format/useFormat";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useToast } from "@/lib/hooks/useToast";
+import { ApiError } from "@/lib/api/client";
 import { useTopBarCentre } from "@/lib/hooks/useTopBarSlot";
 import { Button, Icon, IconButton, SegmentedControl, Switch } from "@/components/ds";
 import { EmptyState } from "@/components/status/EmptyState";
@@ -21,6 +23,7 @@ import { CalendarSessionPeek } from "./CalendarSessionPeek";
 import { CalendarClientFilter } from "./CalendarClientFilter";
 import { clientDisplayName } from "./ClientAvatar";
 import { ScheduleWorkoutDrawer } from "./ScheduleWorkoutDrawer";
+import { moveBody, type DropSlot } from "../calendarGrid";
 import type { TrainerCalendarSessionResponse } from "../types";
 
 type View = "day" | "week" | "month";
@@ -35,6 +38,8 @@ export function TrainerCalendar() {
   const tDashboard = useTranslations("admin.dashboard");
   const tSchedule = useTranslations("admin.schedule");
   const fmt = useFormat();
+  const queryClient = useQueryClient();
+  const { show } = useToast();
   const phone = useMediaQuery("(max-width: 767px)");
   /* Below the desktop width the 7-column grid does not fit: the week becomes an agenda list, the month dots. */
   const narrow = useMediaQuery("(max-width: 1023px)");
@@ -90,6 +95,32 @@ export function TrainerCalendar() {
       : view === "day"
         ? fmt.longDate(anchorDate)
         : fmt.monthYear(anchorDate);
+
+  // Drag to move (W8.5b) and Shift + drag to copy. A move is the PATCH endpoint; a copy is a new one-off schedule of the same
+  // workout for the same client — which needs the schedule's template, so only an occurrence of a plain schedule can be copied.
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["trainer-calendar"] });
+  const moveMutation = useMutation({
+    mutationFn: ({ session, slot }: { session: TrainerCalendarSessionResponse; slot: DropSlot }) => trainerApi.moveOccurrence(session.sessionId, moveBody(slot)),
+    onSuccess: () => {
+      refresh();
+      show(t("moved"), "success");
+    },
+    onError: (e) => show(e instanceof ApiError && e.status === 422 ? tSchedule("horizonExceeded") : t("moveFailed"), "error"),
+  });
+  const copyMutation = useMutation({
+    mutationFn: async ({ session, slot }: { session: TrainerCalendarSessionResponse; slot: DropSlot }) => {
+      const schedules = await trainerApi.schedulesForClient(session.clientId);
+      const origin = schedules.find((x) => x.id === session.scheduleId);
+      if (!origin) throw new Error("no-template");
+      return trainerApi.createSchedule({ clientId: session.clientId, templateId: origin.templateId, recurrence: "ONCE", daysOfWeek: [], timeOfDay: slot.time, startDate: slot.date, endDate: slot.date });
+    },
+    onSuccess: () => {
+      refresh();
+      show(t("copied"), "success");
+    },
+    onError: (e) => show(e instanceof Error && e.message === "no-template" ? t("copyUnavailable") : t("copyFailed"), "error"),
+  });
+  const dropSession = (session: TrainerCalendarSessionResponse, slot: DropSlot, copy: boolean) => (copy ? copyMutation.mutate({ session, slot }) : moveMutation.mutate({ session, slot }));
 
   const step = useCallback(
     (dir: 1 | -1) => setAnchorDate((d) => (view === "month" ? addMonths(d, dir) : view === "day" ? addDays(d, dir) : addWeeks(d, dir))),
@@ -184,6 +215,7 @@ export function TrainerCalendar() {
             names={names}
             onScheduleSlot={(date, time) => setSlot({ date, time })}
             onSelectSession={(session, anchor) => setPeek({ session, anchor })}
+            onDropSession={dropSession}
           />
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-1 type-body-s" style={{ color: "var(--text-2)" }} aria-label={t("legendAria")}>
             {([["var(--primary)", "UPCOMING"], ["var(--metric-protein)", "DONE"], ["var(--heart)", "MISSED"]] as const).map(([color, status]) => (
@@ -192,6 +224,7 @@ export function TrainerCalendar() {
                 {tSchedule(`status.${status}`)}
               </li>
             ))}
+            <li className="inline-flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>{t("dragHint")}</li>
           </ul>
         </>
       )}

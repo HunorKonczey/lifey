@@ -439,6 +439,14 @@
       "showHistory": "Előzmények mutatása"
     },
     "calendar": {
+      "dragMove": "Áthelyezés",
+      "dragCopy": "Másolás",
+      "moved": "Edzés áthelyezve",
+      "copied": "Edzés lemásolva",
+      "moveFailed": "Nem sikerült áthelyezni az edzést",
+      "copyFailed": "Nem sikerült lemásolni az edzést",
+      "copyUnavailable": "Csak ütemezésből származó edzés másolható — programból nem",
+      "dragHint": "Húzással áthelyezhető · Shift + húzás = másolás",
       "workoutsCount": "{count} edzés",
       "day": "Nap",
       "viewAria": "Naptár nézet",

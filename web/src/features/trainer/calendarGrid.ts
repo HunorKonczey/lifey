@@ -92,3 +92,34 @@ export function occupiedHours(sessions: TrainerCalendarSessionResponse[]): Set<n
   }
   return out;
 }
+
+// ─── Drag to move, Shift + drag to copy (W8.5b) ───
+
+/** The slot a calendar cell stands for: its day and — for an hour cell — "HH:00", or no time for the "no time" row. */
+export interface DropSlot {
+  /** yyyy-MM-dd */
+  date: string;
+  /** "HH:00" for an hour cell, null for the "no time" row. */
+  time: string | null;
+}
+
+export const slotKey = (slot: DropSlot) => `${slot.date}|${slot.time ?? ""}`;
+
+/**
+ * What a drop should do: nothing (dropped where it already is — same day and the same hour, or the same day for an
+ * untimed event onto the "no time" row), or move / copy to the slot. A drop onto the day the event is already on, at
+ * the same hour, is not a move: the event keeps its exact minutes.
+ */
+export function dropAction(
+  session: Pick<TrainerCalendarSessionResponse, "scheduledFor" | "scheduledTime">,
+  slot: DropSlot,
+): "noop" | "place" {
+  const hour = sessionHour(session);
+  const sameHour = slot.time == null ? hour == null : hour != null && Number(slot.time.slice(0, 2)) === hour;
+  return session.scheduledFor === slot.date && sameHour ? "noop" : "place";
+}
+
+/** The request body for the move endpoint: the slot's day, and its time as "HH:mm" (an untimed slot sends none). */
+export function moveBody(slot: DropSlot): { scheduledFor: string; scheduledTime: string | null } {
+  return { scheduledFor: slot.date, scheduledTime: slot.time };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bucketSessions, buildHourRows, gapKey, occupiedHours, sessionHour } from "./calendarGrid";
+import { bucketSessions, buildHourRows, dropAction, gapKey, moveBody, occupiedHours, sessionHour } from "./calendarGrid";
 import type { TrainerCalendarSessionResponse } from "./types";
 
 const s = (id: number, scheduledFor: string, scheduledTime: string | null): TrainerCalendarSessionResponse => ({
@@ -69,5 +69,22 @@ describe("buildHourRows", () => {
 describe("occupiedHours", () => {
   it("collects the hours of timed sessions only", () => {
     expect([...occupiedHours([s(1, "2026-09-29", "18:00"), s(2, "2026-09-30", "18:30"), s(3, "2026-09-30", null)])]).toEqual([18]);
+  });
+});
+
+describe("dropAction / moveBody", () => {
+  it("is a no-op onto the same day and hour, and for an untimed event onto the no-time row of its day", () => {
+    expect(dropAction({ scheduledFor: "2026-10-02", scheduledTime: "18:30:00" }, { date: "2026-10-02", time: "18:00" })).toBe("noop");
+    expect(dropAction({ scheduledFor: "2026-10-02", scheduledTime: null }, { date: "2026-10-02", time: null })).toBe("noop");
+  });
+  it("places on another hour, another day, or between timed and untimed", () => {
+    expect(dropAction({ scheduledFor: "2026-10-02", scheduledTime: "18:30:00" }, { date: "2026-10-02", time: "19:00" })).toBe("place");
+    expect(dropAction({ scheduledFor: "2026-10-02", scheduledTime: "18:30:00" }, { date: "2026-10-03", time: "18:00" })).toBe("place");
+    expect(dropAction({ scheduledFor: "2026-10-02", scheduledTime: "18:30:00" }, { date: "2026-10-02", time: null })).toBe("place");
+    expect(dropAction({ scheduledFor: "2026-10-02", scheduledTime: null }, { date: "2026-10-02", time: "07:00" })).toBe("place");
+  });
+  it("builds the move request from the slot", () => {
+    expect(moveBody({ date: "2026-10-05", time: "07:00" })).toEqual({ scheduledFor: "2026-10-05", scheduledTime: "07:00" });
+    expect(moveBody({ date: "2026-10-05", time: null })).toEqual({ scheduledFor: "2026-10-05", scheduledTime: null });
   });
 });
