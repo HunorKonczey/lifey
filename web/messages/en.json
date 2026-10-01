@@ -139,11 +139,19 @@
       "pendingCount": "Pending · {count}",
       "sentAt": "sent {time}",
       "expiresIn": "{time} left",
-      "revoke": "Revoke",
+      "revoke": "Revoke…",
       "revoked": "Invite revoked",
       "revokeFailed": "Failed to revoke invite",
       "emptyTitle": "No pending invites",
-      "emptyBody": "Invites automatically expire after 24 hours — expired ones don't show up here."
+      "emptyBody": "Invites automatically expire after 24 hours — expired ones don't show up here.",
+      "cardTitle": "Invite a client",
+      "statusPending": "Pending",
+      "statusExpired": "Expired",
+      "resend": "Resend",
+      "revokeConfirmTitle": "Revoke this invite?",
+      "revokeConfirmBody": "The invite sent to {email} stops working. You can send a new one later.",
+      "revokeConfirm": "Revoke",
+      "cancel": "Cancel"
     },
     "billing": {
       "title": "Billing",

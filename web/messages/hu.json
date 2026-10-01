@@ -139,11 +139,19 @@
       "pendingCount": "Függőben · {count}",
       "sentAt": "küldve {time}",
       "expiresIn": "még {time}",
-      "revoke": "Visszavonás",
+      "revoke": "Visszavonás…",
       "revoked": "Meghívó visszavonva",
       "revokeFailed": "Nem sikerült visszavonni a meghívót",
       "emptyTitle": "Nincs függő meghívó",
-      "emptyBody": "A meghívó 24 óra után automatikusan lejár — a lejártak nem jelennek meg itt."
+      "emptyBody": "A meghívó 24 óra után automatikusan lejár — a lejártak nem jelennek meg itt.",
+      "cardTitle": "Kliens meghívása",
+      "statusPending": "Függő",
+      "statusExpired": "Lejárt",
+      "resend": "Újraküldés",
+      "revokeConfirmTitle": "Visszavonod a meghívót?",
+      "revokeConfirmBody": "A(z) {email} címre küldött meghívó érvénytelen lesz. Később újat küldhetsz.",
+      "revokeConfirm": "Visszavonás",
+      "cancel": "Mégse"
     },
     "billing": {
       "title": "Számlázás",
