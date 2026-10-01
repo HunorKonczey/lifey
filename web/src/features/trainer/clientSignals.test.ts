@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attentionItems, lastActivity, sortByAttention, weekSummary, weightChange } from "./clientSignals";
+import { attentionItems, lastActivity, pickForStrip, sortByAttention, sortForList, weekSummary, weightChange } from "./clientSignals";
 import type { TrainerCalendarSessionResponse, TrainerClientResponse } from "./types";
 
 const NOW = new Date("2026-09-29T12:00:00Z");
@@ -127,5 +127,30 @@ describe("lastActivity", () => {
     expect(lastActivity(client({ clientId: 1, lastActivityAt: "2026-09-29T08:00:00Z" }), NOW).kind).toBe("today");
     expect(lastActivity(client({ clientId: 1, lastActivityAt: "2026-09-28T08:00:00Z" }), NOW).kind).toBe("yesterday");
     expect(lastActivity(client({ clientId: 1, lastActivityAt: "2026-09-23T08:00:00Z" }), NOW)).toEqual({ kind: "daysAgo", days: 6 });
+  });
+});
+
+describe("sortForList", () => {
+  const a = client({ clientId: 1, clientFirstName: "Zita", lastActivityAt: "2026-09-29T08:00:00Z" });
+  const b = client({ clientId: 2, clientFirstName: "Anna", lastActivityAt: "2026-09-27T08:00:00Z" });
+  const never = client({ clientId: 3, clientFirstName: "Béla", lastActivityAt: null });
+  it("sorts by name", () => {
+    expect(sortForList([a, never, b], "name", [], NOW).map((c) => c.clientId)).toEqual([2, 3, 1]);
+  });
+  it("sorts by most recent activity with never-active last", () => {
+    expect(sortForList([never, b, a], "activity", [], NOW).map((c) => c.clientId)).toEqual([1, 2, 3]);
+  });
+});
+
+describe("pickForStrip", () => {
+  const item = (kind: "inactive" | "unread" | "missed" | "record", clientId: number) => ({ kind, clientId, count: 1 });
+  it("takes the first of each kind before a second of the same", () => {
+    const items = [item("inactive", 1), item("inactive", 2), item("unread", 3), item("record", 4)];
+    expect(pickForStrip(items, 3).map((i) => [i.kind, i.clientId])).toEqual([["inactive", 1], ["unread", 3], ["record", 4]]);
+  });
+  it("fills the remaining room in order", () => {
+    const items = [item("inactive", 1), item("inactive", 2), item("inactive", 3)];
+    expect(pickForStrip(items, 3).map((i) => i.clientId)).toEqual([1, 2, 3]);
+    expect(pickForStrip(items, 2).map((i) => i.clientId)).toEqual([1, 2]);
   });
 });

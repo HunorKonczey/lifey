@@ -141,3 +141,33 @@ export function lastActivity(client: TrainerClientResponse, now: Date = new Date
   const days = complianceFor(client, now).daysSinceLastLog;
   return { kind: days === 0 ? "today" : days === 1 ? "yesterday" : "daysAgo", days };
 }
+
+export type ClientListSort = "attention" | "name" | "activity";
+
+/** The clients page's three sorts: attention (see `sortByAttention`), name A–Z, or most recently active first (never-active last). */
+export function sortForList(clients: TrainerClientResponse[], sort: ClientListSort, threads: UnreadThread[], now: Date = new Date()): TrainerClientResponse[] {
+  if (sort === "attention") return sortByAttention(clients, threads, now);
+  if (sort === "name") return [...clients].sort((a, b) => clientDisplayName(a).localeCompare(clientDisplayName(b)));
+  return [...clients].sort((a, b) => (b.lastActivityAt ?? "").localeCompare(a.lastActivityAt ?? ""));
+}
+
+/**
+ * Which items the strip's cards show: the first of each kind in reading order, so one inactive client does not crowd
+ * out the unread message and the new record; any room left is filled with the next items in order.
+ */
+export function pickForStrip(items: AttentionItem[], max: number): AttentionItem[] {
+  const firstOfKind: AttentionItem[] = [];
+  const seen = new Set<AttentionKind>();
+  for (const i of items) {
+    if (!seen.has(i.kind)) {
+      seen.add(i.kind);
+      firstOfKind.push(i);
+    }
+  }
+  const picked = firstOfKind.slice(0, max);
+  for (const i of items) {
+    if (picked.length >= max) break;
+    if (!picked.includes(i)) picked.push(i);
+  }
+  return picked;
+}

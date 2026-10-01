@@ -53,9 +53,11 @@ interface ChatThreadProps {
   ownUserId: number;
   /** Rendered only below the two-column breakpoint, where the thread replaces the list. */
   onBack?: () => void;
+  /** A message to leave in the composer (the "?draft=" handover from the clients page). */
+  initialDraft?: string;
 }
 
-export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps) {
+export function ChatThread({ conversation, ownUserId, onBack, initialDraft }: ChatThreadProps) {
   const t = useTranslations("chat");
   const common = useTranslations("common");
   const locale = useLocale((s) => s.locale);
@@ -501,6 +503,7 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
           onError={(message) => show(message, "error")}
           onTyping={reportTyping}
           peerTyping={{ active: peerTyping, name: conversation.peer.displayName }}
+          initialDraft={initialDraft}
         />
       )}
 

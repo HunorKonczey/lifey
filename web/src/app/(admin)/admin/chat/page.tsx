@@ -9,6 +9,7 @@ import { ConversationList } from "@/features/chat/components/ConversationList";
 import { ChatThread } from "@/features/chat/components/ChatThread";
 import { useConversations, usePresence, useUnreadDocumentTitle } from "@/features/chat/hooks";
 import { totalUnread } from "@/features/chat/thread";
+import { DRAFT_PARAM } from "@/features/chat/draft";
 
 /**
  * The trainer's desktop alternative to the mobile chat (docs/chat/40-trainer-chat-plan.md I3).
@@ -30,6 +31,8 @@ export default function AdminChatPage() {
   // the handover the client detail page uses, and it survives a reload.
   const selectedParam = searchParams.get("c");
   const selectedId = selectedParam ? Number(selectedParam) : null;
+  // "?draft=" leaves a message waiting in the composer (the attention strip's CTAs); picking another thread drops it.
+  const draft = searchParams.get(DRAFT_PARAM) ?? undefined;
 
   // The open thread doubles as the presence signal: while it is on screen the
   // server treats messages in it as seen and skips the push (§5.1).
@@ -88,6 +91,7 @@ export default function AdminChatPage() {
               conversation={selected}
               ownUserId={user.id}
               onBack={twoColumn ? undefined : back}
+              initialDraft={draft}
             />
           ) : (
             <div

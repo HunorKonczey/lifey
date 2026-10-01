@@ -23,6 +23,8 @@ interface ChatComposerProps {
   onTyping?: () => void;
   /** Renders the "… is typing" band. Its space is reserved either way. */
   peerTyping?: { active: boolean; name: string };
+  /** Text waiting in the box when it opens (a trainer's prefilled nudge) — never sent on its own. */
+  initialDraft?: string;
 }
 
 export function ChatComposer({
@@ -31,9 +33,10 @@ export function ChatComposer({
   onError,
   onTyping,
   peerTyping,
+  initialDraft,
 }: ChatComposerProps) {
   const t = useTranslations("chat");
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialDraft ?? "");
   const [focused, setFocused] = useState(false);
   const [image, setImage] = useState<{ file: File; url: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

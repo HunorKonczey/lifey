@@ -2936,25 +2936,33 @@ day limit); unread counts from the chat hooks already running in the trainer lay
 
 *As built:* `TrainerClientResponse` is typed with `avgCalories7d` / `prCount7d` (the backend already sends them). `clientSignals.ts` (pure, 15 tests) holds the triage logic: `attentionItems` (inactive → unread → missed → record, bigger count first, ties by name, one item per client per kind), `sortByAttention` (inactive longest-silent first, unread, missed, then by name), `weekSummary` (a client's week from the calendar feed: scheduled/done dots, next upcoming session, missed dates; cancelled sessions do not count), `weightChange` (30-day delta; tone good/bad only when a goal weight is known, otherwise neutral; null with no weigh-ins) and `lastActivity` (none / today / yesterday / N days). Unread comes in as a small `UnreadThread` list so the module stays free of the chat hooks.
 
-### W7.2 — Web UI: clients page header, search, remove the modal
+### W7.2 — Web UI: clients page header, search, remove the modal ✅
 - Files: `app/(admin)/admin/page.tsx`, delete `ClientListModal.tsx`.
 - Behaviour change (called out): no modal on arrival.
 - **Verify:** `/` focuses search; filtering by name and e-mail.
 
-### W7.3 — Web UI: "needs attention" strip
+*As built:* the clients page is the W7-A page: sub-line "5 aktív kliens · nincs függő meghívó", the search ("Kliens keresése /" — `/` focuses it, filters by name and e-mail) and the primary "Kliens meghívása"; the "Klienseid" modal and its session flag are gone (`ClientListModal` deleted — **behaviour change:** nothing opens on arrival). The page title is the top bar's, so the page has no second `h1`. Sort and grid/table choice are remembered per device in `localStorage` (read after mount).
+
+### W7.3 — Web UI: "needs attention" strip ✅
 - Files: `features/trainer/components/AttentionStrip.tsx` (replaces `NeedsAttentionSection.tsx`),
   `features/chat/draft.ts` (open a conversation with a prefilled draft).
 - **Verify:** empty strip hidden; CTAs land in the right conversation with the draft, nothing sent
   automatically.
 
-### W7.4 — Web UI: client card v2 + sort + grid/table toggle
+*As built:* "Ma figyelmet igényel · N": up to three cards, the first of each kind in reading order (`pickForStrip`, tested) — inactive (heart ring, "Üzenet"), unread (primary, the last message quoted, "Válasz"), missed workout ("Ütemterv" → the client's schedule tab), new record (carbs tint trophy, "Gratulálok"). Messaging CTAs go to `/admin/chat?c=<id>&draft=…`: new `features/chat/draft.ts` (+test) builds the link and `ChatComposer` / `ChatThread` take an `initialDraft` — the text waits in the box, nothing is sent. No conversation yet → plain `/admin/chat`. The strip is absent when nothing needs attention. `NeedsAttentionSection` deleted.
+
+### W7.4 — Web UI: client card v2 + sort + grid/table toggle ✅
 - Files: `features/trainer/components/{ClientCard,ClientsTable,ClientSortControl}.tsx`, delete
   `ClientSortSelect.tsx`, `ComplianceBadges.tsx`.
 - **Verify:** W7-A side by side; toggle persisted per device; missing data shows "—" not 0 %.
 
-### W7.5 — Web UI: pending invites side card
+*As built:* `ClientCard` v2: avatar, name, last-activity line (heart when ≥ 3 days), three mini KPIs — Kalória · 7 nap (`avgCalories7d`, else "—"), Edzés · hét "0 / 4" with one dot per scheduled session (done green, missed heart, to-come ring), Súly · 30 nap with the DS `DeltaChip` ("nincs mérés" when none) — and the footer "P, okt. 2. · Láb + core" / "Kimaradt: H, Sze" / "Nincs ütemezve". **Deviations:** no 7-day calorie *percentage* (needs the optional W7.b1 goal field, not built — the card shows the average kcal as §7 allows); no program chip (no program data on this endpoint); the weight delta is neutral-coloured because the trainer has no client goal weight. The row "⋯" is the DS `Menu`, end-relationship uses `ConfirmModal`; the over-limit archive flow and its test ids are unchanged. Sort control Figyelem · Név · Utolsó aktivitás (`sortForList`) and Rács / Tábla toggle; the table is the DS `DataTable` with the same facts. `ClientSortSelect` and `ComplianceBadges` deleted; the old `sortClients` in `compliance.ts` stays (its tests) but the page no longer uses it. The e2e specs that mention the old modal flag / sort were not run or updated.
+
+### W7.5 — Web UI: pending invites side card ✅
 - Files: `features/trainer/components/PendingInvitesCard.tsx`.
 - **Verify:** relative dates "3 napja"; link to `/admin/invites`.
+
+*As built:* `PendingInvitesCard`: "N függő meghívó", the newest four e-mails with `lifeyFormat.relative` ("3 napja"), "és még N", "Meghívók kezelése →" to `/admin/invites`; shown as a 300 px column from 1280 px up only when there are pending invites (the page just says "nincs függő meghívó" otherwise). Checked with Playwright as the demo trainer (1440 light and dark, 390: 5 cards, 0 overflow, 0 console errors; grid and table, the search filtering to one card); the invites card itself has no demo data to show.
 
 ### W7.6 — Web UI: client detail header + tabs + inactive band
 - Files: `features/trainer/components/ClientDetailHeader.tsx`, `app/(admin)/admin/clients/[clientId]/page.tsx`
