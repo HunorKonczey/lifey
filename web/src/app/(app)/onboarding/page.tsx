@@ -17,6 +17,7 @@ import { weightApi } from "@/features/weight/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { Button, Icon } from "@/components/ds";
 import { LifeyLogo } from "@/features/auth/components/BrandPanel";
+import { OnboardingDoneModal } from "@/features/onboarding/components/OnboardingDoneModal";
 import { SuggestedPlan } from "@/features/onboarding/components/SuggestedPlan";
 import { OnboardingRail, type RailStep } from "@/features/onboarding/components/OnboardingRail";
 import { useFormat } from "@/lib/format/useFormat";
@@ -34,6 +35,7 @@ export default function OnboardingPage() {
 
   const [step, setStep] = useState(0);
   const [finishing, setFinishing] = useState(false);
+  const [done, setDone] = useState<{ applied: boolean } | null>(null);
   const [suggestion, setSuggestion] = useState<SuggestGoalsResponse | null>(null);
   const suggestRequested = useRef(false);
 
@@ -113,8 +115,7 @@ export default function OnboardingPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.userDetails.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.weights.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.all() });
-      show(t("onboardingComplete"), "success");
-      router.push("/dashboard");
+      setDone({ applied: applyGoals && !!suggestion && !!settings });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : t("saveFailed");
       show(message, "error");
@@ -221,6 +222,7 @@ export default function OnboardingPage() {
           )}
         </div>
       </div>
+      <OnboardingDoneModal open={done !== null} applied={done?.applied ?? false} plan={suggestion} onDone={() => router.push("/dashboard")} />
     </div>
   );
 }

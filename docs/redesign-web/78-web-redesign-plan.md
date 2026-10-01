@@ -2802,9 +2802,11 @@ OptionCard,ConfirmSaveDetailsDialog}.tsx`; `app/(app)/settings/page.tsx` (461, s
 
 *As built:* step 4 is a hero now (`SuggestedPlan`): the calorie number at 56 px with one sentence against the maintenance calories, then protein · carbs · fat · water as four tiles and the BMR/TDEE basis line. The sentence (`planSentence`, pure + 4 tests) follows the **numbers the backend returned**, not the goal picked: gap to TDEE within ±25 kcal reads as maintenance, below as deficit, above as surplus — so a lose-weight plan the backend clamped up to maintenance does not claim a deficit. Words live in `planHero_deficit/maintain/surplus` (HU + EN, figures through `lifeyFormat`). Typecheck, lint and unit tests pass; the step was not driven in a browser yet — it is covered by the W6 review pass.
 
-### W6.8 — Web UI: onboarding finish celebration
+### W6.8 — Web UI: onboarding finish celebration ✅
 - Files: `features/onboarding/components/OnboardingDoneModal.tsx`.
 - **Verify:** lands on the dashboard with W1's first-steps card ticking "Célok beállítva".
+
+*As built:* finishing no longer toasts: `OnboardingDoneModal` (DS `Modal` 480, bottom sheet on a phone) opens with the check popping once and the title, the daily calories / protein / water (only when the suggested goals were applied) and "Irány a kezdőlap" fading up in turn (`.celebrate-trophy` / `.celebrate-in`, static under reduced motion). Button, Esc and scrim all go to `/dashboard`, where the first-steps card ticks "Célok beállítva" off the saved goal. Typecheck + lint pass; not browser-driven yet — covered by the W6 review (it needs a fresh account, so the review will run it on a new registration).
 
 ### W6.9 — Web UI: settings page frame + anchors + profile section
 - Files: `app/(app)/settings/page.tsx` (split into `features/settings/components/sections/*.tsx`),
