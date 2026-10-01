@@ -71,7 +71,7 @@ export function PlanChooser({ currentPlan }: { currentPlan: TrainerPlan | null }
               className="flex flex-col gap-1 p-4"
               style={{
                 borderRadius: "var(--r-control)",
-                background: current ? "color-mix(in srgb, var(--primary) 10%, var(--nested))" : "var(--nested)",
+                background: "var(--nested)",
                 boxShadow: current ? "inset 0 0 0 2px var(--primary)" : "none",
               }}
             >

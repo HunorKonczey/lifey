@@ -46,3 +46,26 @@ export async function runBulk(ids: readonly number[], run: (id: number) => Promi
   }
   return result;
 }
+
+/** "Szabó Bence" or, without a profile name, the e-mail; null when neither is known (a deleted account). */
+export function personLabel(name: string | null | undefined, email: string | null | undefined): string | null {
+  return name?.trim() || email || null;
+}
+
+export interface AuditEntryLike {
+  role: string;
+  action: "GRANT" | "REVOKE";
+}
+
+export type AuditTransition = { icon: "how_to_reg" | "person_remove" | "shield_person"; tone: "grant" | "revoke" | "neutral"; from: UserRoleKind | null; to: UserRoleKind | null };
+
+/**
+ * What a role-audit entry did, for the timeline: a trainer grant is Kliens → Edző (a primary check icon), a revoke
+ * Edző → Kliens (a heart person-remove); any other role is a neutral shield with no arrow.
+ */
+export function auditTransition(entry: AuditEntryLike): AuditTransition {
+  if (entry.role !== "ROLE_TRAINER") return { icon: "shield_person", tone: "neutral", from: null, to: null };
+  return entry.action === "GRANT"
+    ? { icon: "how_to_reg", tone: "grant", from: "USER", to: "TRAINER" }
+    : { icon: "person_remove", tone: "revoke", from: "TRAINER", to: "USER" };
+}

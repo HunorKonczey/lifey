@@ -11,15 +11,20 @@ import { superAdminApi } from "@/features/superadmin/api";
 import { BulkRoleBar } from "@/features/superadmin/components/BulkRoleBar";
 import { RoleChip } from "@/features/superadmin/components/RoleChip";
 import { RoleHistoryDrawer } from "@/features/superadmin/components/RoleHistoryDrawer";
+import { SuperAdminStatsRow } from "@/features/superadmin/components/SuperAdminStatsRow";
 import { UserAvatar } from "@/features/superadmin/components/UserAvatar";
 import type { SuperAdminUserResponse } from "@/features/superadmin/types";
-import { bulkTargets, matchesRoleFilter, primaryRole, runBulk, type BulkRoleAction, type RoleFilter } from "@/features/superadmin/userRoles";
+import { bulkTargets, matchesRoleFilter, personLabel, primaryRole, runBulk, type BulkRoleAction, type RoleFilter } from "@/features/superadmin/userRoles";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useFormat } from "@/lib/i18n/format";
 import { useToast } from "@/lib/hooks/useToast";
 
 /** The users the table can show at once; a search goes to the server, so a longer list is still reachable. */
 const LIMIT = 500;
+
+function fullName(u: Pick<SuperAdminUserResponse, "firstName" | "lastName">): string | null {
+  return personLabel([u.firstName, u.lastName].filter(Boolean).join(" "), null);
+}
 
 interface PendingChange {
   action: BulkRoleAction;
@@ -30,7 +35,7 @@ interface PendingChange {
  * Superadmin users (W9-E): a DS `DataTable` — avatar and e-mail, the role in words (Kliens · Edző · Superadmin, never
  * `ROLE_`), registered date — with a role filter, search (server side), row ticks with a bulk "Szerepkör…" bar (trainer
  * grant / revoke, one request per user in turn with progress, failures reported) and a "⋯" with the role action and the
- * per-user history drawer. Names, the trainer column and the KPI row need the optional W9.b1 / b2 endpoints.
+ * per-user history drawer. Names and the trainer column come from W9.b1, the numbers row from W9.b2.
  */
 export default function SuperAdminUsersPage() {
   const t = useTranslations("superadmin");
@@ -113,14 +118,30 @@ export default function SuperAdminUsersPage() {
       render: (u) => (
         <span className="flex min-w-0 items-center gap-3">
           <UserAvatar userId={u.id} email={u.email} hasAvatar={u.hasAvatar} size={32} />
-          <span className="type-body truncate" style={{ fontWeight: 700 }}>
-            {u.email}
-            {u.id === me?.id && <span className="type-body-s ml-1.5" style={{ color: "var(--text-3)", fontWeight: 600 }}>{t("self")}</span>}
+          <span className="min-w-0">
+            <span className="type-body block truncate" style={{ fontWeight: 700 }}>
+              {fullName(u) ?? u.email}
+              {u.id === me?.id && <span className="type-body-s ml-1.5" style={{ color: "var(--text-3)", fontWeight: 600 }}>{t("self")}</span>}
+            </span>
+            {fullName(u) && <span className="type-body-s block truncate" style={{ color: "var(--text-3)" }}>{u.email}</span>}
           </span>
         </span>
       ),
     },
     { key: "role", header: t("colRole"), sort: (u) => primaryRole(u.roles), render: (u) => <RoleChip roles={u.roles} /> },
+    {
+      key: "trainer",
+      header: t("colTrainer"),
+      sort: (u) => u.trainerName ?? (u.clientCount != null ? `~${String(u.clientCount).padStart(6, "0")}` : "￿"),
+      render: (u) =>
+        u.clientCount != null ? (
+          <span className="type-body-s tabular" style={{ color: "var(--text-2)" }}>{t("clientsOfTrainer", { count: u.clientCount })}</span>
+        ) : u.trainerName ? (
+          <span className="type-body-s truncate" style={{ color: "var(--text-2)" }}>{u.trainerName}</span>
+        ) : (
+          <span className="type-body-s" style={{ color: "var(--text-3)" }}>—</span>
+        ),
+    },
     {
       key: "registered",
       header: t("colRegistered"),
@@ -140,6 +161,8 @@ export default function SuperAdminUsersPage() {
           {truncated ? t("usersCount", { count: data?.totalElements ?? 0 }) : t("usersSummary", { count: users.length, trainers })}
         </p>
       </div>
+
+      <SuperAdminStatsRow />
 
       {selected.size > 0 && (
         <BulkRoleBar
@@ -221,7 +244,7 @@ export default function SuperAdminUsersPage() {
         confirmLabel={t(grant ? "confirmMakeConfirm" : "confirmRevokeConfirm")}
       />
 
-      {history && <RoleHistoryDrawer userId={history.id} email={history.email} onClose={() => setHistory(null)} />}
+      {history && <RoleHistoryDrawer userId={history.id} name={fullName(history)} email={history.email} onClose={() => setHistory(null)} />}
     </div>
   );
 }

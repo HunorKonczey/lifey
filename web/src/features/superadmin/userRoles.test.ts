@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bulkTargets, matchesRoleFilter, primaryRole, runBulk } from "./userRoles";
+import { auditTransition, bulkTargets, matchesRoleFilter, personLabel, primaryRole, runBulk } from "./userRoles";
 import type { SuperAdminUserResponse } from "./types";
 
 const user = (id: number, ...roles: string[]) => ({ id, email: `u${id}@x.hu`, roles, createdAt: "2026-01-01T00:00:00Z", hasAvatar: false }) as SuperAdminUserResponse;
@@ -31,5 +31,18 @@ describe("runBulk", () => {
     const result = await runBulk([1, 2, 3], async (id) => { if (id === 2) throw new Error("no"); }, (n) => seen.push(n));
     expect(result).toEqual({ done: 2, failed: [2] });
     expect(seen).toEqual([1, 2, 3]);
+  });
+});
+
+describe("auditTransition / personLabel", () => {
+  it("maps a trainer grant and revoke to the role change and a neutral shield for anything else", () => {
+    expect(auditTransition({ role: "ROLE_TRAINER", action: "GRANT" })).toMatchObject({ icon: "how_to_reg", from: "USER", to: "TRAINER" });
+    expect(auditTransition({ role: "ROLE_TRAINER", action: "REVOKE" })).toMatchObject({ icon: "person_remove", from: "TRAINER", to: "USER" });
+    expect(auditTransition({ role: "ROLE_ADMIN", action: "GRANT" })).toMatchObject({ icon: "shield_person", from: null });
+  });
+  it("labels a person by name, else e-mail, else nothing", () => {
+    expect(personLabel("Szabó Bence", "b@x.hu")).toBe("Szabó Bence");
+    expect(personLabel(null, "b@x.hu")).toBe("b@x.hu");
+    expect(personLabel(" ", null)).toBeNull();
   });
 });

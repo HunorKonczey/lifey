@@ -15,6 +15,8 @@ export interface ConfirmModalProps {
   confirmLabel: string;
   /** Renders the confirm action in the danger variant. Default true. */
   destructive?: boolean;
+  /** `data-testid` of the confirm button, for specs that have several dialogs to tell apart. */
+  confirmTestId?: string;
 }
 
 /**
@@ -35,6 +37,7 @@ export function ConfirmModal({
   cancelLabel = "Cancel",
   confirmLabel,
   destructive = true,
+  confirmTestId,
 }: ConfirmModalProps) {
   return (
     <Modal open={open} onClose={onClose} width={480} aria-label={title}>
@@ -53,7 +56,7 @@ export function ConfirmModal({
           <Button variant="secondary" onClick={onClose} data-autofocus="true" className="flex-1 min-w-[140px]">
             {cancelLabel}
           </Button>
-          <Button variant={destructive ? "danger" : "primary"} onClick={onConfirm} className="flex-1 min-w-[140px]">
+          <Button variant={destructive ? "danger" : "primary"} onClick={onConfirm} data-testid={confirmTestId} className="flex-1 min-w-[140px]">
             {confirmLabel}
           </Button>
         </div>
