@@ -3099,10 +3099,12 @@ thread}.ts`.
 - **Mobile chat (W8-E):** thread only with back arrow, avatar, name, "ⓘ" → client info sheet; composer
   fixed above the safe area.
 
-### W8.1 — Web UI: calendar header + week grid
+### W8.1 — Web UI: calendar header + week grid ✅
 - Files: `TrainerCalendar.tsx`, `CalendarWeekView.tsx`, `features/trainer/calendarGrid.ts` + test (hour
   rows, collapsed empty runs, overlapping events side by side).
 - **Verify:** W8-A side by side; status readable without colour (text); times without seconds.
+
+*As built:* the calendar is W8-A: the **period navigator** ("Ma", ‹ ›, "szept. 28. – okt. 4., 2026") is in the top bar's centre (inline on a phone), the header row has the DS `SegmentedControl` **Nap · Hét · Hónap**, the client filter, the cancelled switch and the primary "Edzés ütemezése". The week is a real grid in one card (`64px | 7 × 1fr`, sticky header): day headers "H 28 … V 4" with today a primary pill and its column tinted primary @ 4 %, an hour row per hour, **runs of three or more empty hours fold into one "08:00–18:00 · nincs esemény · kinyitás" row** (click to expand; 07:00–20:00 is always the range, widened for a session outside it), sessions without a time in a "Nincs időpont" row on top. Events are cards with a 3 px status bar (scheduled primary, done protein green, missed heart) **and the status in words** ("Láb + core · kihagyta"), the client's real name (from the clients list, the e-mail-derived name as fallback); the legend sits under the grid. Times use `lifeyFormat.time` ("18:00" HU, "6:00 PM" EN) — no seconds anywhere. The logic is `calendarGrid.ts` (`bucketSessions`, `buildHourRows`, 8 tests: folding, expansion, range widening, the empty day). **Nap** is the same grid with one column. **Deviations:** two events in one hour are stacked in the cell rather than side by side (at 130 px a column, side by side cut every name to "Kata …"); the Shift-drag hint is absent (no W8.b1). Month and agenda views and the peek are the old ones until W8.2 / W8.3. Playwright as the demo trainer at 1440 dark and light: 12 cards, no overflow, 0 console errors.
 
 ### W8.2 — Web UI: empty-cell scheduling + peek popover
 - Files: `CalendarWeekView.tsx`, `CalendarSessionPeek.tsx` (on `Popover`), `ScheduleWorkoutDrawer.tsx`.

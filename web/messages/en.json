@@ -439,6 +439,16 @@
       "showHistory": "Show history"
     },
     "calendar": {
+      "day": "Day",
+      "viewAria": "Calendar view",
+      "previousDay": "Previous day",
+      "nextDay": "Next day",
+      "gridAria": "Week schedule",
+      "hourColumn": "Hour",
+      "noTimeRow": "No time",
+      "gapRow": "{from}–{to} · nothing scheduled · expand",
+      "scheduleSlotAria": "Schedule a workout on {date} at {time}",
+      "legendAria": "Status legend",
       "today": "Today",
       "previousWeek": "Previous week",
       "nextWeek": "Next week",

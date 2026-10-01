@@ -439,6 +439,16 @@
       "showHistory": "Előzmények mutatása"
     },
     "calendar": {
+      "day": "Nap",
+      "viewAria": "Naptár nézet",
+      "previousDay": "Előző nap",
+      "nextDay": "Következő nap",
+      "gridAria": "Heti ütemterv",
+      "hourColumn": "Óra",
+      "noTimeRow": "Nincs időpont",
+      "gapRow": "{from}–{to} · nincs esemény · kinyitás",
+      "scheduleSlotAria": "Edzés ütemezése {date}, {time}",
+      "legendAria": "Státusz jelmagyarázat",
       "today": "Ma",
       "previousWeek": "Előző hét",
       "nextWeek": "Következő hét",

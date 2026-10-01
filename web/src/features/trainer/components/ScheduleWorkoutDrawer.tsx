@@ -43,6 +43,8 @@ interface ScheduleWorkoutDrawerProps {
   templateName?: string;
   /* Calendar day-header "+" entry point: preloads the start date instead of defaulting to today. */
   initialStartDate?: string;
+  /* Calendar empty-cell entry point: preloads the time of day ("18:00") as well. */
+  initialTimeOfDay?: string;
   onClose: () => void;
 }
 
@@ -50,6 +52,7 @@ export function ScheduleWorkoutDrawer({
   clientId: fixedClientId, clientName: fixedClientName,
   templateId: fixedTemplateId, templateName: fixedTemplateName,
   initialStartDate,
+  initialTimeOfDay,
   onClose,
 }: ScheduleWorkoutDrawerProps) {
   const t = useTranslations("admin.schedule");
@@ -63,7 +66,7 @@ export function ScheduleWorkoutDrawer({
   const [selectedClientId, setSelectedClientId] = useState<number | null>(fixedClientId ?? null);
   const [recurrence, setRecurrence] = useState<Recurrence>("ONCE");
   const [daysOfWeek, setDaysOfWeek] = useState<DayOfWeek[]>([]);
-  const [timeOfDay, setTimeOfDay] = useState("");
+  const [timeOfDay, setTimeOfDay] = useState(initialTimeOfDay ?? "");
   const [startDate, setStartDate] = useState(initialStartDate ?? todayIso());
   const [endDate, setEndDate] = useState("");
 
@@ -159,7 +162,7 @@ export function ScheduleWorkoutDrawer({
 
   const parseIso = (iso: string) => (iso ? new Date(`${iso}T00:00:00`) : null);
   const toIso = (d: Date | null) => (d ? format(d, "yyyy-MM-dd") : "");
-  const dirty = templateId !== (fixedTemplateId ?? null) || selectedClientId !== (fixedClientId ?? null) || recurrence !== "ONCE" || daysOfWeek.length > 0 || timeOfDay !== "" || endDate !== "" || startDate !== (initialStartDate ?? todayIso());
+  const dirty = templateId !== (fixedTemplateId ?? null) || selectedClientId !== (fixedClientId ?? null) || recurrence !== "ONCE" || daysOfWeek.length > 0 || timeOfDay !== (initialTimeOfDay ?? "") || endDate !== "" || startDate !== (initialStartDate ?? todayIso());
 
   const rowStyle = (selected: boolean) => ({
     background: selected ? "var(--primary-tint)" : "var(--nested)",
