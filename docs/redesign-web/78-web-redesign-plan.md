@@ -2808,24 +2808,32 @@ OptionCard,ConfirmSaveDetailsDialog}.tsx`; `app/(app)/settings/page.tsx` (461, s
 
 *As built:* finishing no longer toasts: `OnboardingDoneModal` (DS `Modal` 480, bottom sheet on a phone) opens with the check popping once and the title, the daily calories / protein / water (only when the suggested goals were applied) and "Irány a kezdőlap" fading up in turn (`.celebrate-trophy` / `.celebrate-in`, static under reduced motion). Button, Esc and scrim all go to `/dashboard`, where the first-steps card ticks "Célok beállítva" off the saved goal. Typecheck + lint pass; not browser-driven yet — covered by the W6 review (it needs a fresh account, so the review will run it on a new registration).
 
-### W6.9 — Web UI: settings page frame + anchors + profile section
+### W6.9 — Web UI: settings page frame + anchors + profile section ✅
 - Files: `app/(app)/settings/page.tsx` (split into `features/settings/components/sections/*.tsx`),
   `SettingsAnchorNav.tsx` (IntersectionObserver).
 - **Verify:** anchors scroll and highlight; role label never `ROLE_USER`.
 
-### W6.10 — Web UI: goals + appearance sections
+*As built:* settings is **one page** now: `grid 220 | minmax(0,760)` from 768 px — the sticky anchor list (`SettingsAnchorNav`: Profil · Napi célok · Megjelenés és egységek · Értesítések · Biztonság · Kijelentkezés) and the six sections stacked, each a `SettingsSection` card with its own `id`. **Deviation:** the highlight is a small scroll-spy (last section whose top passed 35 % of the viewport, the last section once the page is at its end, a click pins its target for the smooth scroll) instead of an `IntersectionObserver` — a band observer can never reach the short sections at the bottom, which the first Playwright run showed. The old 467-line page is split: `useSettings` (one reader/writer of `/settings`: partial save merged onto the loaded response so un-modelled fields round-trip, optimistic with rollback), `SettingsSection`/`SettingsRow`, `sections/*`. **Profile:** avatar uploader, name, "e-mail · Kliens" (`roleNames` HU ROLE_USER is now "Kliens"; an unknown role falls back to its name without `ROLE_`, so the raw key never shows) and "Profil szerkesztése" → `ProfileDrawer` (the user-details form, mounted only while open, the existing confirm-and-recalculate step kept). The trainer name is **not** shown — no existing endpoint gives a client their trainer. Not yet restyled: `HeightField` and the target-weight input inside the drawer still use the old input style (onboarding shares them).
+
+### W6.10 — Web UI: goals + appearance sections ✅
 - Files: `sections/{GoalsSection,AppearanceSection}.tsx`, `GoalsDrawer.tsx`.
 - **Verify:** theme and language apply immediately and persist to settings; units switch re-formats every
   open number.
 
-### W6.11 — Web UI: notifications + security sections
+*As built:* **Napi célok** shows six tiles in their metric colours (the five targets plus steps, which is a real goal) and "Szerkesztés" opens `GoalsDrawer` (DS `NumberField`s, 0 clears a goal). **Megjelenés és egységek** is three rows with the DS `SegmentedControl`: Téma (Rendszer · Világos · Sötét), Nyelv (Rendszer · Magyar · Angol — the system option is kept, it is a real setting) and Mértékegységek (Metrikus · Angolszász). Each applies at once (`setTheme` / `setLanguage` plus the optimistic save). Verified with Playwright: a goals save round-trips the tile (1 900 → 1 950 → back, demo data restored).
+
+### W6.11 — Web UI: notifications + security sections ✅
 - Files: `sections/{NotificationsSection,SecuritySection}.tsx`, `ChangePasswordDrawer.tsx`.
 - **Verify:** toggles round-trip the fields this client doesn't model (the existing `SettingsRequest` rule);
   quiet hours "22:00", never "22:00:00".
 
-### W6.12 — Web UI: logout section
+*As built:* **Értesítések** has the two toggles this client models — chat messages and the quiet-hours window — as `SettingsRow`s with the DS `Switch`, and the DS `TimeField`s for the window ("22:00", checked: no seconds on the page; the save still sends `HH:mm:ss` and `chatQuietHoursSet`). The other push toggles in the canvas (workout reminder, trainer comment, …) are not in `SettingsResponse`, so they are not shown (§5). **Biztonság:** "Jelszó módosítása" → `ChangePasswordDrawer` (three DS `PasswordField`s; a wrong current password rings that field) and "Kijelentkezés mindenhol" now behind a confirmation. Bug found by the run: the untouched password form read as dirty (a registered input reads `""`, the default was `undefined`) so Esc asked "Elveted a módosításokat?" — defaults are empty strings now.
+
+### W6.12 — Web UI: logout section ✅
 - Files: `sections/LogoutSection.tsx` (uses the W0.20 `LogoutDialog`).
 - **Verify:** focus on "Mégse"; Esc cancels; logout lands on `/login`.
+
+*As built:* **Kijelentkezés** is the last section: "Csak ezen az eszközön. A naplózott adataid megmaradnak." + "Kijelentkezés…" → the shared `LogoutDialog`. Playwright: focus lands on "Mégsem", Esc closes it and the page stays on `/settings`. The actual sign-out → `/login` goes through the same store call the account menu uses (not exercised, to keep the demo session).
 
 ### W6.13 — Web UI: settings at 390
 - Files: `features/settings/components/SettingsMobileList.tsx`.
