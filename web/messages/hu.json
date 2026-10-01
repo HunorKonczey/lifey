@@ -606,6 +606,15 @@
     }
   },
   "chat": {
+    "contextTitle": "{name} adatai",
+    "contextTitleShort": "{name} · adatai",
+    "contextCalories": "Kalória · 7 nap",
+    "contextWorkouts": "Edzés · hét",
+    "contextWeight": "Testsúly",
+    "contextNext": "Következő",
+    "contextNothingNext": "Nincs ütemezve.",
+    "contextWorkout": "Edzés",
+    "clientInfo": "Kliens adatai",
     "title": "Chat",
     "messageCta": "Üzenet",
     "searchConversations": "Keresés név szerint",

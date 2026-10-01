@@ -606,6 +606,15 @@
     }
   },
   "chat": {
+    "contextTitle": "{name}'s details",
+    "contextTitleShort": "{name} · details",
+    "contextCalories": "Calories · 7 days",
+    "contextWorkouts": "Workouts · week",
+    "contextWeight": "Weight",
+    "contextNext": "Next",
+    "contextNothingNext": "Nothing scheduled.",
+    "contextWorkout": "Workout",
+    "clientInfo": "Client details",
     "title": "Chat",
     "messageCta": "Message",
     "searchConversations": "Search by name",

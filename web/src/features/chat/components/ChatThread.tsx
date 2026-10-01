@@ -12,7 +12,7 @@ import { useLocale } from "@/lib/hooks/useLocale";
 import { useToast } from "@/lib/hooks/useToast";
 import { ErrorState } from "@/components/status/ErrorState";
 import { EmptyState } from "@/components/status/EmptyState";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ConfirmModal, IconButton, Menu, TextField } from "@/components/ds";
 import { ChatAvatar } from "./ChatAvatar";
 import { ArchivedComposerNotice, ChatComposer } from "./ChatComposer";
 import { MessageBubble } from "./MessageBubble";
@@ -55,9 +55,11 @@ interface ChatThreadProps {
   onBack?: () => void;
   /** A message to leave in the composer (the "?draft=" handover from the clients page). */
   initialDraft?: string;
+  /** The client-info button (the context panel as a drawer / sheet) — absent when the panel is already beside the thread. */
+  onInfo?: () => void;
 }
 
-export function ChatThread({ conversation, ownUserId, onBack, initialDraft }: ChatThreadProps) {
+export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onInfo }: ChatThreadProps) {
   const t = useTranslations("chat");
   const common = useTranslations("common");
   const locale = useLocale((s) => s.locale);
@@ -324,21 +326,16 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft }: Ch
 
   return (
     <div
-      className="flex flex-col min-h-0 rounded-[var(--r-card)] overflow-hidden"
-      style={{ background: "var(--surface)" }}
+      className="flex flex-col min-h-0 overflow-hidden"
+      style={{ borderRadius: "var(--r-card)", background: "var(--card)", boxShadow: "var(--e1), var(--edge-card)" }}
     >
-      <header
-        className="flex items-center gap-3 px-5 h-[66px] shrink-0"
-        style={{ borderBottom: "1px solid var(--surface-container)" }}
-      >
-        {onBack && (
-          <button onClick={onBack} aria-label={t("backToList")} style={{ color: "var(--on-surface-variant)" }}>
-            <span className="material-symbols-rounded text-2xl">arrow_back</span>
-          </button>
-        )}
+      <header className="flex items-center gap-3 px-4 h-[68px] shrink-0" style={{ borderBottom: "1px solid var(--hairline)" }}>
+        {onBack && <IconButton icon="arrow_back" label={t("backToList")} onClick={onBack} />}
         {searching ? (
           <>
-            <input
+            <TextField
+              size="dense"
+              leadingIcon="search"
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -347,72 +344,32 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft }: Ch
               }}
               placeholder={t("searchPlaceholder")}
               aria-label={t("searchPlaceholder")}
-              className="flex-1 min-w-0 h-[38px] px-3.5 text-sm font-medium outline-none"
-              style={{
-                background: "var(--surface-container)",
-                color: "var(--on-surface)",
-                borderRadius: "var(--r-input)",
-              }}
+              className="flex-1 min-w-0"
             />
-            <button
-              onClick={() => setSearchQuery(null)}
-              title={t("searchClose")}
-              aria-label={t("searchClose")}
-              className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-            >
-              <span className="material-symbols-rounded text-[21px]">close</span>
-            </button>
+            <IconButton icon="close" label={t("searchClose")} onClick={() => setSearchQuery(null)} />
           </>
         ) : (
           <>
-            <ChatAvatar userId={conversation.peer.userId} displayName={conversation.peer.displayName} size={40} />
+            <ChatAvatar userId={conversation.peer.userId} displayName={conversation.peer.displayName} size={44} />
             <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-extrabold truncate" style={{ color: "var(--on-surface)" }}>
-                {conversation.peer.displayName}
-              </p>
-              {/* No "online / last seen" line: presence lands with I4, and the design
-                  rules out a status signal that isn't backed by real data. */}
-              <p className="text-[11px] font-semibold truncate" style={{ color: "var(--muted)" }}>
+              <p className="truncate" style={{ fontSize: 16, fontWeight: 800 }}>{conversation.peer.displayName}</p>
+              {/* No "online / last seen" line: presence is not a real signal here (D-W0.19). */}
+              <p className="type-body-s truncate" style={{ color: "var(--text-2)" }}>
                 {streamConnected === false ? t("reconnecting") : conversation.peer.email}
               </p>
             </div>
-            <button
-              onClick={() => setSearchQuery("")}
-              title={t("searchInThread")}
-              aria-label={t("searchInThread")}
-              className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-            >
-              <span className="material-symbols-rounded text-[21px]">search</span>
-            </button>
+            <IconButton icon="search" label={t("searchInThread")} onClick={() => setSearchQuery("")} />
+            {archived && (
+              <span className="px-2.5 type-body-s" style={{ borderRadius: 6, background: "var(--control)", fontWeight: 700 }}>{t("archivedBadge")}</span>
+            )}
+            <MuteMenu muted={muted} onMute={(hours) => muteMutation.mutate(muteUntil(hours))} onUnmute={() => muteMutation.mutate(null)} />
+            {onInfo && <IconButton icon="info" label={t("clientInfo")} onClick={onInfo} />}
+            {conversation.peer.role === "CLIENT" && !onInfo && (
+              <Link href={`/admin/clients/${conversation.peer.userId}`} title={t("openClient")} aria-label={t("openClient")} className="inline-flex h-9 w-9 items-center justify-center" style={{ borderRadius: "var(--r-control)", color: "var(--text-2)" }}>
+                <span className="material-symbols-rounded text-[21px]">person</span>
+              </Link>
+            )}
           </>
-        )}
-        {!searching && archived && (
-          <span
-            className="rounded-[var(--r-sm)] px-2.5 py-1 text-[10.5px] font-extrabold"
-            style={{ background: "var(--surface-high)", color: "var(--on-surface-variant)" }}
-          >
-            {t("archivedBadge")}
-          </span>
-        )}
-        {!searching && (
-          <MuteMenu
-            muted={muted}
-            onMute={(hours) => muteMutation.mutate(muteUntil(hours))}
-            onUnmute={() => muteMutation.mutate(null)}
-          />
-        )}
-        {!searching && conversation.peer.role === "CLIENT" && (
-          <Link
-            href={`/admin/clients/${conversation.peer.userId}`}
-            title={t("openClient")}
-            aria-label={t("openClient")}
-            className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-          >
-            <span className="material-symbols-rounded text-[21px]">person</span>
-          </Link>
         )}
       </header>
 
@@ -461,10 +418,7 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft }: Ch
               {items.map((item) =>
                 item.kind === "day" ? (
                   <div key={item.key} className="flex justify-center my-3">
-                    <span
-                      className="rounded-[10px] px-3 py-1 text-[11px] font-bold"
-                      style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-                    >
+                    <span className="px-3 py-1 type-body-s" style={{ borderRadius: 10, background: "var(--nested)", color: "var(--text-2)", fontWeight: 700 }}>
                       {dayLabel(item.at, locale, t("today"), t("yesterday"))}
                     </span>
                   </div>
@@ -507,17 +461,18 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft }: Ch
         />
       )}
 
-      <ConfirmDialog
+      <ConfirmModal
         open={pendingDeleteId !== null}
-        title={t("deleteMessageConfirmTitle")}
-        body={t("deleteMessageConfirmBody")}
-        confirmLabel={common("delete")}
-        confirming={deleteMutation.isPending}
-        onCancel={() => setPendingDeleteId(null)}
+        onClose={() => setPendingDeleteId(null)}
         onConfirm={() => {
           if (pendingDeleteId !== null) deleteMutation.mutate(pendingDeleteId);
           setPendingDeleteId(null);
         }}
+        icon="delete"
+        title={t("deleteMessageConfirmTitle")}
+        body={t("deleteMessageConfirmBody")}
+        cancelLabel={common("cancel")}
+        confirmLabel={common("delete")}
       />
     </div>
   );
@@ -528,75 +483,25 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft }: Ch
  * mute was I5 work, and until it landed a one-item dropdown was worse than the
  * bare link it would have wrapped (see the plan §14.2).
  */
-function MuteMenu({
-  muted,
-  onMute,
-  onUnmute,
-}: {
-  muted: boolean;
-  onMute: (hours: number | null) => void;
-  onUnmute: () => void;
-}) {
+function MuteMenu({ muted, onMute, onUnmute }: { muted: boolean; onMute: (hours: number | null) => void; onUnmute: () => void }) {
   const t = useTranslations("chat");
   const [open, setOpen] = useState(false);
-
+  const anchor = useRef<HTMLSpanElement>(null);
   return (
-    <div className="relative shrink-0">
-      <button
-        onClick={() => (muted ? onUnmute() : setOpen((o) => !o))}
-        title={muted ? t("unmute") : t("mute")}
-        aria-label={muted ? t("unmute") : t("mute")}
-        className="w-[38px] h-[38px] rounded-xl flex items-center justify-center"
-        style={{
-          background: "var(--surface-container)",
-          color: muted ? "var(--on-surface)" : "var(--on-surface-variant)",
-        }}
-      >
-        <span className="material-symbols-rounded text-[21px]">
-          {muted ? "notifications_off" : "notifications"}
-        </span>
-      </button>
-
-      {open && !muted && (
-        <>
-          {/* Click-away layer: cheaper and more reliable than a document
-              listener that has to be careful not to catch the opening click. */}
-          <button
-            className="fixed inset-0 z-10 cursor-default"
-            aria-label={t("closeMenu")}
-            onClick={() => setOpen(false)}
-          />
-          <div
-            className="absolute right-0 top-11 z-20 w-[200px] rounded-[var(--r-md)] p-1.5"
-            style={{ background: "var(--surface-high)", boxShadow: "0 12px 30px rgba(0,0,0,.5)" }}
-          >
-            {MUTE_DURATIONS_HOURS.map((hours) => (
-              <button
-                key={hours}
-                onClick={() => {
-                  onMute(hours);
-                  setOpen(false);
-                }}
-                className="w-full text-left px-3 py-2 rounded-[10px] text-[12.5px] font-bold transition-colors hover:bg-surface-highest"
-                style={{ color: "var(--on-surface)" }}
-              >
-                {t("muteForHours", { hours })}
-              </button>
-            ))}
-            <button
-              onClick={() => {
-                onMute(null);
-                setOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-[10px] text-[12.5px] font-bold transition-colors hover:bg-surface-highest"
-              style={{ color: "var(--on-surface)" }}
-            >
-              {t("muteUntilFurtherNotice")}
-            </button>
-          </div>
-        </>
-      )}
-    </div>
+    <>
+      <span ref={anchor} className="inline-flex">
+        <IconButton icon={muted ? "notifications_off" : "notifications"} label={muted ? t("unmute") : t("mute")} onClick={() => (muted ? onUnmute() : setOpen(true))} />
+      </span>
+      <Menu
+        open={open && !muted}
+        onClose={() => setOpen(false)}
+        anchorRef={anchor}
+        items={[
+          ...MUTE_DURATIONS_HOURS.map((hours) => ({ label: t("muteForHours", { hours }), onSelect: () => onMute(hours) })),
+          { label: t("muteUntilFurtherNotice"), onSelect: () => onMute(null) },
+        ]}
+      />
+    </>
   );
 }
 
