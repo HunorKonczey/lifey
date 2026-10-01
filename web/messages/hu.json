@@ -487,6 +487,14 @@
       "unassignConfirm": "Eltávolítás"
     },
     "programs": {
+      "dragTemplate": "{name} húzása egy cellára",
+      "dropHere": "Ide ejtve: {name}",
+      "copyWeekAction": "Hét másolása",
+      "copyFrom": "Forrás hét",
+      "copyTo": "Ide másolja",
+      "willOverwrite": "van benne edzés, felülíródik",
+      "allOtherWeeks": "Minden másik hét",
+      "copyApply": "Másolás",
       "templatesTitle": "Sablonok",
       "exerciseCount": "{count} gyakorlat",
       "placeHint": "Most kattints egy cellára a lerakáshoz.",

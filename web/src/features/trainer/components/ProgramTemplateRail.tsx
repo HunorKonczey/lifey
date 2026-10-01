@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDraggable } from "@dnd-kit/core";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card, Icon, TextField } from "@/components/ds";
@@ -41,28 +42,7 @@ export function ProgramTemplateRail({ templates, error, onRetry, selectedId, onS
         ) : filtered.length === 0 ? (
           <p className="type-body-s text-center py-3" style={{ color: "var(--text-3)" }}>{t("noTemplatesFound")}</p>
         ) : (
-          filtered.map((tpl) => {
-            const selected = tpl.id === selectedId;
-            return (
-              <button
-                key={tpl.id}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                data-testid="program-rail-template"
-                data-template-id={tpl.id}
-                onClick={() => onSelect(selected ? null : tpl.id)}
-                className="lifey-button flex items-center gap-2.5 px-2.5 py-2.5 text-left"
-                style={{ borderRadius: "var(--r-control)", background: selected ? "var(--primary-tint)" : "var(--nested)", boxShadow: selected ? "inset 0 0 0 2px var(--primary)" : undefined }}
-              >
-                <Icon name="drag_indicator" size={20} color="var(--text-3)" />
-                <span className="flex flex-col flex-1 min-w-0">
-                  <span className="truncate" style={{ fontWeight: 700 }}>{tpl.name}</span>
-                  <span className="type-body-s" style={{ color: "var(--text-2)" }}>{t("exerciseCount", { count: tpl.exercises.length })}</span>
-                </span>
-              </button>
-            );
-          })
+          filtered.map((tpl) => <RailRow key={tpl.id} tpl={tpl} selected={tpl.id === selectedId} onSelect={onSelect} />)
         )}
       </div>
       {selectedId != null && <p className="type-body-s" style={{ color: "var(--primary)", fontWeight: 600 }}>{t("placeHint")}</p>}
@@ -71,5 +51,46 @@ export function ProgramTemplateRail({ templates, error, onRetry, selectedId, onS
         {t("newTemplate")}
       </Link>
     </Card>
+  );
+}
+
+/**
+ * One template row: the row itself picks (click / Space) for the click-to-place path, and its grip is the drag handle —
+ * a separate button, so Space on the row never starts a drag and the drag keeps its own keyboard sensor.
+ */
+function RailRow({ tpl, selected, onSelect }: { tpl: RailTemplate; selected: boolean; onSelect: (id: number | null) => void }) {
+  const t = useTranslations("admin.programs");
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `tpl-${tpl.id}`, data: { kind: "template", templateId: tpl.id } });
+  return (
+    <div
+      ref={setNodeRef}
+      className="flex items-stretch gap-0.5"
+      style={{ borderRadius: "var(--r-control)", background: selected ? "var(--primary-tint)" : "var(--nested)", boxShadow: selected ? "inset 0 0 0 2px var(--primary)" : undefined, opacity: isDragging ? 0.45 : 1 }}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        aria-label={t("dragTemplate", { name: tpl.name })}
+        data-testid="program-rail-grip"
+        className="lifey-button inline-flex w-9 items-center justify-center touch-none cursor-grab"
+        style={{ borderRadius: "var(--r-control)", color: "var(--text-3)" }}
+      >
+        <Icon name="drag_indicator" size={20} />
+      </button>
+      <button
+        type="button"
+        role="option"
+        aria-selected={selected}
+        data-testid="program-rail-template"
+        data-template-id={tpl.id}
+        onClick={() => onSelect(selected ? null : tpl.id)}
+        className="lifey-button flex flex-1 min-w-0 flex-col py-2.5 pr-2.5 text-left"
+        style={{ borderRadius: "var(--r-control)" }}
+      >
+        <span className="truncate" style={{ fontWeight: 700 }}>{tpl.name}</span>
+        <span className="type-body-s" style={{ color: "var(--text-2)" }}>{t("exerciseCount", { count: tpl.exercises.length })}</span>
+      </button>
+    </div>
   );
 }

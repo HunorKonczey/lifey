@@ -128,3 +128,44 @@ export function weeksBetween(startDateIso: string, endDateIso: string): number {
   const diffDays = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
   return Math.max(1, Math.round((diffDays + 1) / 7));
 }
+
+// ─── Drag, keyboard placement and "copy week" (W8.5) ───
+
+/**
+ * Puts `templateId` on (week, day), keeping that cell's time and note if it already held a workout — dropping a
+ * different template on a filled cell swaps the workout, not the time the trainer chose for it.
+ */
+export function placeTemplate(
+  workouts: ProgramWorkoutRequest[],
+  weekNumber: number,
+  dayOfWeek: DayOfWeek,
+  templateId: number,
+): ProgramWorkoutRequest[] {
+  const existing = findSlot(workouts, weekNumber, dayOfWeek);
+  return setSlot(workouts, { weekNumber, dayOfWeek, templateId, timeOfDay: existing?.timeOfDay ?? null, note: existing?.note ?? null });
+}
+
+/**
+ * Moves a placed workout to another cell, taking its time and note along. Whatever was in the target cell is replaced;
+ * dropping a workout on its own cell changes nothing. A source with no workout is a no-op.
+ */
+export function moveSlot(
+  workouts: ProgramWorkoutRequest[],
+  from: { weekNumber: number; dayOfWeek: DayOfWeek },
+  to: { weekNumber: number; dayOfWeek: DayOfWeek },
+): ProgramWorkoutRequest[] {
+  if (from.weekNumber === to.weekNumber && from.dayOfWeek === to.dayOfWeek) return workouts;
+  const source = findSlot(workouts, from.weekNumber, from.dayOfWeek);
+  if (!source) return workouts;
+  return setSlot(clearSlot(workouts, from.weekNumber, from.dayOfWeek), { ...source, weekNumber: to.weekNumber, dayOfWeek: to.dayOfWeek });
+}
+
+/** Copies `sourceWeek`'s slots onto each of `targetWeeks` (overwriting them); the source week is never its own target. */
+export function copyWeek(workouts: ProgramWorkoutRequest[], sourceWeek: number, targetWeeks: number[]): ProgramWorkoutRequest[] {
+  let result = workouts;
+  for (const target of new Set(targetWeeks)) {
+    if (target === sourceWeek) continue;
+    result = duplicateWeek(result, sourceWeek, target);
+  }
+  return result;
+}

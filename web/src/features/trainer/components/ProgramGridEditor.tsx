@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DndContext, DragOverlay, pointerWithin, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { templateApi } from "@/features/workouts/api";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { Button, Icon, Modal, TextArea, TextField, TimeField } from "@/components/ds";
+import { Button, Checkbox, Icon, Modal, SelectField, TextArea, TextField, TimeField } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
 import {
   clearSlot,
-  copyWeekToAll,
+  copyWeek,
   dropOverflowWeeks,
-  duplicateWeek,
   findSlot,
+  moveSlot,
+  placeTemplate,
   isProgramValid,
   MAX_WEEKS,
   MIN_WEEKS,
@@ -55,6 +57,8 @@ export function ProgramGridEditor({ initialName, initialWeeksCount, initialWorko
   const [workouts, setWorkouts] = useState(initialWorkouts);
   const [pickedTemplate, setPickedTemplate] = useState<number | null>(null);
   const [editingSlot, setEditingSlot] = useState<{ week: number; day: DayOfWeek } | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [drag, setDrag] = useState<{ label: string; slotKey: string | null } | null>(null);
   const [saved, setSaved] = useState(() => ({ snapshot: snapshotOf(initialName, initialWeeksCount, initialWorkouts), at: null as Date | null }));
 
   const templatesQ = useQuery({ queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list });
@@ -85,10 +89,7 @@ export function ProgramGridEditor({ initialName, initialWeeksCount, initialWorko
   const templateName = (id: number) => templates.find((tpl) => tpl.id === id)?.name ?? `#${id}`;
   const templateExercises = (id: number) => templates.find((tpl) => tpl.id === id)?.exercises.length ?? null;
 
-  const place = (week: number, day: DayOfWeek, templateId: number) => {
-    const existing = findSlot(workouts, week, day);
-    setWorkouts((prev) => setSlot(prev, { weekNumber: week, dayOfWeek: day, templateId, timeOfDay: existing?.timeOfDay ?? null, note: existing?.note ?? null }));
-  };
+  const place = (week: number, day: DayOfWeek, templateId: number) => setWorkouts((prev) => placeTemplate(prev, week, day, templateId));
 
   const onCell = (week: number, day: DayOfWeek) => {
     if (pickedTemplate != null) place(week, day, pickedTemplate);
@@ -98,6 +99,26 @@ export function ProgramGridEditor({ initialName, initialWeeksCount, initialWorko
   const save = async () => {
     await onSave({ name, weeksCount, workouts });
     setSaved({ snapshot: snapshotOf(name, weeksCount, workouts), at: new Date() });
+  };
+
+  // A drag starts after 6 px of movement, so a plain click on a tile still opens it; the keyboard sensor is the grip's own.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor));
+  const onDragStart = (e: DragStartEvent) => {
+    const data = e.active.data.current as { kind: "template"; templateId: number } | { kind: "slot"; week: number; day: DayOfWeek } | undefined;
+    if (!data) return;
+    if (data.kind === "template") setDrag({ label: templateName(data.templateId), slotKey: null });
+    else {
+      const from = findSlot(workouts, data.week, data.day);
+      setDrag({ label: from ? templateName(from.templateId) : "", slotKey: `${data.week}-${data.day}` });
+    }
+  };
+  const onDragEnd = (e: DragEndEvent) => {
+    setDrag(null);
+    const data = e.active.data.current as { kind: "template"; templateId: number } | { kind: "slot"; week: number; day: DayOfWeek } | undefined;
+    const target = e.over?.data.current as { week: number; day: DayOfWeek } | undefined;
+    if (!data || !target) return;
+    if (data.kind === "template") place(target.week, target.day, data.templateId);
+    else setWorkouts((prev) => moveSlot(prev, { weekNumber: data.week, dayOfWeek: data.day }, { weekNumber: target.week, dayOfWeek: target.day }));
   };
 
   const state = dirty ? t("unsaved") : saved.at ? t("savedAt", { when: fmt.relative(saved.at, new Date()) }) : t("savedPlain");
@@ -129,6 +150,10 @@ export function ProgramGridEditor({ initialName, initialWeeksCount, initialWorko
               <Icon name="add" size={18} />
             </button>
           </div>
+          <Button variant="secondary" onClick={() => setCopying(true)} disabled={weeksCount < 2} data-testid="program-copy-week">
+            <Icon name="content_copy" size={18} />
+            {t("copyWeekAction")}
+          </Button>
           {onAssign && (
             <Button variant="secondary" onClick={onAssign} data-testid="program-assign-button">
               <Icon name="person_add" size={18} />
@@ -153,6 +178,7 @@ export function ProgramGridEditor({ initialName, initialWeeksCount, initialWorko
         )}
       </header>
 
+      <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDrag(null)}>
       <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
         <ProgramTemplateRail templates={templates} error={templatesQ.isError} onRetry={() => templatesQ.refetch()} selectedId={pickedTemplate} onSelect={setPickedTemplate} />
         <ProgramWeekGrid
@@ -162,10 +188,29 @@ export function ProgramGridEditor({ initialName, initialWeeksCount, initialWorko
           templateExercises={templateExercises}
           placing={pickedTemplate != null ? templateName(pickedTemplate) : null}
           onCell={onCell}
-          onDuplicateBelow={(week) => setWorkouts((prev) => duplicateWeek(prev, week, week + 1))}
-          onCopyToAll={(week) => setWorkouts((prev) => copyWeekToAll(prev, week, weeksCount))}
+          dragging={drag?.slotKey ?? null}
         />
       </div>
+      <DragOverlay dropAnimation={null}>
+        {drag && (
+          <div className="px-3.5 py-2.5" style={{ borderRadius: 12, background: "var(--card)", boxShadow: "var(--e2), inset 0 0 0 2px var(--primary)", fontWeight: 700 }}>
+            {drag.label}
+          </div>
+        )}
+      </DragOverlay>
+      </DndContext>
+
+      {copying && (
+        <CopyWeekDialog
+          weeksCount={weeksCount}
+          workouts={workouts}
+          onApply={(source, targets) => {
+            setWorkouts((prev) => copyWeek(prev, source, targets));
+            setCopying(false);
+          }}
+          onClose={() => setCopying(false)}
+        />
+      )}
 
       {editingSlot && (
         <SlotEditor
@@ -245,6 +290,43 @@ function SlotEditor({ week, day, existing, templates, onSave, onClear, onClose }
           <Button disabled={templateId == null} data-testid="program-slot-save" onClick={() => onSave({ weekNumber: week, dayOfWeek: day, templateId: templateId as number, timeOfDay: timeOfDay || null, note: note || null })}>
             {t("save")}
           </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * "Hét másolása" (W8.5): pick the source week and the week(s) it should overwrite. Weeks that already hold workouts are
+ * marked, so nobody overwrites one by accident; the copy itself is the tested `copyWeek`.
+ */
+function CopyWeekDialog({ weeksCount, workouts, onApply, onClose }: { weeksCount: number; workouts: ProgramWorkoutRequest[]; onApply: (source: number, targets: number[]) => void; onClose: () => void }) {
+  const t = useTranslations("admin.programs");
+  const weeks = Array.from({ length: weeksCount }, (_, i) => i + 1);
+  const [source, setSource] = useState(1);
+  const [targets, setTargets] = useState<number[]>([]);
+  const others = weeks.filter((w) => w !== source);
+  const filled = (w: number) => workouts.some((x) => x.weekNumber === w);
+  const toggle = (w: number) => setTargets((prev) => (prev.includes(w) ? prev.filter((x) => x !== w) : [...prev, w]));
+  const chosen = targets.filter((w) => w !== source);
+
+  return (
+    <Modal open onClose={onClose} width={480} aria-label={t("copyWeekAction")}>
+      <div className="flex flex-col gap-4 p-6">
+        <h2 className="type-title-l">{t("copyWeekAction")}</h2>
+        <SelectField label={t("copyFrom")} value={source} onChange={(e) => { setSource(Number(e.target.value)); setTargets([]); }}>
+          {weeks.map((w) => <option key={w} value={w}>{t("weekRowLabel", { number: w })} · {t("workoutsInWeek", { count: workouts.filter((x) => x.weekNumber === w).length })}</option>)}
+        </SelectField>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="type-body-s mb-1" style={{ color: "var(--text-2)", fontWeight: 700 }}>{t("copyTo")}</legend>
+          {others.map((w) => (
+            <Checkbox key={w} checked={targets.includes(w)} onChange={() => toggle(w)} label={`${t("weekRowLabel", { number: w })}${filled(w) ? ` · ${t("willOverwrite")}` : ""}`} />
+          ))}
+          <button type="button" className="self-start type-body-s" style={{ color: "var(--primary)", fontWeight: 700 }} onClick={() => setTargets(others)}>{t("allOtherWeeks")}</button>
+        </fieldset>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="secondary" onClick={onClose}>{t("cancel")}</Button>
+          <Button disabled={chosen.length === 0} onClick={() => onApply(source, chosen)} data-testid="program-copy-week-apply">{t("copyApply")}</Button>
         </div>
       </div>
     </Modal>

@@ -487,6 +487,14 @@
       "unassignConfirm": "Remove"
     },
     "programs": {
+      "dragTemplate": "Drag {name} to a cell",
+      "dropHere": "Drop {name} here",
+      "copyWeekAction": "Copy week",
+      "copyFrom": "Copy from",
+      "copyTo": "onto",
+      "willOverwrite": "has workouts, will be replaced",
+      "allOtherWeeks": "All other weeks",
+      "copyApply": "Copy",
       "templatesTitle": "Templates",
       "exerciseCount": "{count, plural, one {# exercise} other {# exercises}}",
       "placeHint": "Now click a cell to place it.",

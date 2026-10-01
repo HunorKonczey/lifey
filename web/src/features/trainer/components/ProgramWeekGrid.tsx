@@ -1,5 +1,6 @@
 "use client";
 
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useTranslations } from "next-intl";
 import { Card, Icon } from "@/components/ds";
 import { DAYS_OF_WEEK, findSlot } from "../program";
@@ -13,8 +14,8 @@ interface ProgramWeekGridProps {
   /** True while a template is picked: an empty cell then reads "Ide: Láb + core" and places on click. */
   placing: string | null;
   onCell: (week: number, day: DayOfWeek) => void;
-  onDuplicateBelow: (week: number) => void;
-  onCopyToAll: (week: number) => void;
+  /** The tile being dragged (week-day key), so its source cell can fade. */
+  dragging?: string | null;
 }
 
 /**
@@ -23,7 +24,7 @@ interface ProgramWeekGridProps {
  * hairline. Each cell is a button, so the grid works from the keyboard: Tab to a cell, Enter places the picked
  * template or opens the slot.
  */
-export function ProgramWeekGrid({ weeksCount, workouts, templateName, templateExercises, placing, onCell, onDuplicateBelow, onCopyToAll }: ProgramWeekGridProps) {
+export function ProgramWeekGrid({ weeksCount, workouts, templateName, templateExercises, placing, onCell, dragging = null }: ProgramWeekGridProps) {
   const t = useTranslations("admin.programs");
   const weeks = Array.from({ length: weeksCount }, (_, i) => i + 1);
 
@@ -43,52 +44,21 @@ export function ProgramWeekGrid({ weeksCount, workouts, templateName, templateEx
               <div role="rowheader" className="flex flex-col justify-center gap-0.5 pr-1">
                 <span style={{ fontSize: 13, fontWeight: 800 }}>{t("weekRowLabel", { number: week })}</span>
                 <span className="type-body-s" style={{ color: "var(--text-2)" }}>{t("workoutsInWeek", { count })}</span>
-                <span className="flex flex-col">
-                  {week < weeksCount && (
-                    <button type="button" onClick={() => onDuplicateBelow(week)} className="text-left" style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)" }}>
-                      {t("duplicateWeekBelow")}
-                    </button>
-                  )}
-                  {weeksCount > 1 && (
-                    <button type="button" onClick={() => onCopyToAll(week)} className="text-left" style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)" }}>
-                      {t("copyWeekToAll")}
-                    </button>
-                  )}
-                </span>
               </div>
               {DAYS_OF_WEEK.map((day) => {
                 const slot = findSlot(workouts, week, day);
-                const exercises = slot ? templateExercises(slot.templateId) : null;
                 return (
-                  <button
+                  <Cell
                     key={day}
-                    type="button"
-                    role="gridcell"
-                    data-testid={`program-cell-${week}-${day}`}
-                    onClick={() => onCell(week, day)}
-                    aria-label={slot ? `${t("weekRowLabel", { number: week })}, ${t(`days.${day}`)}: ${templateName(slot.templateId)}` : `${t("weekRowLabel", { number: week })}, ${t(`days.${day}`)}: ${placing ? t("placeHere", { name: placing }) : t("emptySlot")}`}
-                    className="lifey-button relative flex min-h-[72px] flex-col items-start justify-center gap-0.5 py-2 pl-3.5 pr-2 text-left"
-                    style={
-                      slot
-                        ? { borderRadius: 12, background: "color-mix(in srgb, var(--primary) 10%, transparent)" }
-                        : { borderRadius: 12, boxShadow: "inset 0 0 0 1.5px var(--hairline)", borderStyle: "dashed" }
-                    }
-                  >
-                    {slot ? (
-                      <>
-                        <span aria-hidden className="absolute left-0 top-2 bottom-2" style={{ width: 3, borderRadius: 2, background: "var(--primary)" }} />
-                        <span className="w-full truncate" style={{ fontSize: 13, fontWeight: 700 }}>{templateName(slot.templateId)}</span>
-                        <span className="type-body-s" style={{ color: "var(--text-2)" }}>
-                          {exercises != null ? t("exerciseCount", { count: exercises }) : ""}
-                          {slot.timeOfDay ? `${exercises != null ? " · " : ""}${slot.timeOfDay.slice(0, 5)}` : ""}
-                        </span>
-                      </>
-                    ) : placing ? (
-                      <Icon name="add" size={20} color="var(--primary)" />
-                    ) : (
-                      <span className="type-body-s" style={{ color: "var(--text-3)" }}>{t("emptySlot")}</span>
-                    )}
-                  </button>
+                    week={week}
+                    day={day}
+                    slot={slot}
+                    placing={placing}
+                    templateName={templateName}
+                    exercises={slot ? templateExercises(slot.templateId) : null}
+                    dragging={dragging}
+                    onCell={onCell}
+                  />
                 );
               })}
             </div>
@@ -96,5 +66,75 @@ export function ProgramWeekGrid({ weeksCount, workouts, templateName, templateEx
         })}
       </div>
     </Card>
+  );
+}
+
+interface CellProps {
+  week: number;
+  day: DayOfWeek;
+  slot: ProgramWorkoutRequest | undefined;
+  placing: string | null;
+  templateName: (id: number) => string;
+  exercises: number | null;
+  dragging: string | null;
+  onCell: (week: number, day: DayOfWeek) => void;
+}
+
+/**
+ * One cell: a drop target (while something is over it: a 2 px primary ring and "Ide ejtve"), and — when it holds a
+ * workout — also the drag source of that workout. Only the pointer part of the drag listeners is on the tile, so Enter
+ * and Space still click it (open the slot / place the picked template).
+ */
+function Cell({ week, day, slot, placing, templateName, exercises, dragging, onCell }: CellProps) {
+  const t = useTranslations("admin.programs");
+  const key = `${week}-${day}`;
+  const { setNodeRef: dropRef, isOver, active } = useDroppable({ id: `cell-${key}`, data: { week, day } });
+  const { attributes, listeners, setNodeRef: dragRef } = useDraggable({ id: `slot-${key}`, data: { kind: "slot", week, day }, disabled: !slot });
+  const overlayName = active?.data.current?.kind === "template" ? templateName(active.data.current.templateId as number) : slot ? templateName(slot.templateId) : "";
+  const label = slot
+    ? `${t("weekRowLabel", { number: week })}, ${t(`days.${day}`)}: ${templateName(slot.templateId)}`
+    : `${t("weekRowLabel", { number: week })}, ${t(`days.${day}`)}: ${placing ? t("placeHere", { name: placing }) : t("emptySlot")}`;
+
+  return (
+    <div role="gridcell" className="contents">
+      <button
+        ref={(el) => {
+          dropRef(el);
+          dragRef(el);
+        }}
+        type="button"
+        data-testid={`program-cell-${week}-${day}`}
+        onClick={() => onCell(week, day)}
+        onPointerDown={slot ? (listeners?.onPointerDown as React.PointerEventHandler<HTMLButtonElement> | undefined) : undefined}
+        {...(slot ? { "aria-roledescription": attributes["aria-roledescription"] } : {})}
+        aria-label={label}
+        className="lifey-button relative flex min-h-[72px] flex-col items-start justify-center gap-0.5 py-2 pl-3.5 pr-2 text-left touch-manipulation"
+        style={{
+          borderRadius: 12,
+          opacity: dragging === key ? 0.45 : 1,
+          ...(slot
+            ? { background: "color-mix(in srgb, var(--primary) 10%, transparent)", cursor: "grab" }
+            : { boxShadow: "inset 0 0 0 1.5px var(--hairline)" }),
+          ...(isOver ? { boxShadow: "inset 0 0 0 2px var(--primary)", background: "var(--primary-tint)" } : null),
+        }}
+      >
+        {isOver ? (
+          <span className="type-body-s" style={{ color: "var(--primary)", fontWeight: 700 }}>{t("dropHere", { name: overlayName })}</span>
+        ) : slot ? (
+          <>
+            <span aria-hidden className="absolute left-0 top-2 bottom-2" style={{ width: 3, borderRadius: 2, background: "var(--primary)" }} />
+            <span className="w-full truncate" style={{ fontSize: 13, fontWeight: 700 }}>{templateName(slot.templateId)}</span>
+            <span className="type-body-s" style={{ color: "var(--text-2)" }}>
+              {exercises != null ? t("exerciseCount", { count: exercises }) : ""}
+              {slot.timeOfDay ? `${exercises != null ? " · " : ""}${slot.timeOfDay.slice(0, 5)}` : ""}
+            </span>
+          </>
+        ) : placing ? (
+          <Icon name="add" size={20} color="var(--primary)" />
+        ) : (
+          <span className="type-body-s" style={{ color: "var(--text-3)" }}>{t("emptySlot")}</span>
+        )}
+      </button>
+    </div>
   );
 }
