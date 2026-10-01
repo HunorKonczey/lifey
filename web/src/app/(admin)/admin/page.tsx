@@ -9,6 +9,7 @@ import { trainerApi } from "@/features/trainer/api";
 import { queryKeys, invalidationMap } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { ClientCard } from "@/features/trainer/components/ClientCard";
+import { ClientRows } from "@/features/trainer/components/ClientRows";
 import { ClientsTable } from "@/features/trainer/components/ClientsTable";
 import { ClientSortControl, type ClientView } from "@/features/trainer/components/ClientSortControl";
 import { AttentionStrip } from "@/features/trainer/components/AttentionStrip";
@@ -25,6 +26,7 @@ import { useConversations } from "@/features/chat/hooks";
 import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { TrainerOnboardingChecklist } from "@/features/billing/components/TrainerOnboardingChecklist";
 import { Button, Icon, TextField } from "@/components/ds";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 
@@ -58,6 +60,7 @@ export default function AdminClientsPage() {
   const { show } = useToast();
   const gate = useTrainerBillingGate();
   const searchRef = useRef<HTMLInputElement>(null);
+  const phone = useMediaQuery("(max-width: 767px)");
   const [query, setQuery] = useState("");
   // Read after mount so the server and the first client render agree; the stored choice then applies.
   const [sort, setSort] = useState<ClientListSort>("attention");
@@ -183,7 +186,7 @@ export default function AdminClientsPage() {
         </div>
       ) : (
         <>
-          <AttentionStrip items={items} clients={clients} conversations={conversations} />
+          <AttentionStrip items={items} clients={clients} conversations={conversations} compact={phone} />
 
           <div className={`grid grid-cols-1 gap-6 items-start ${invites && invites.length > 0 ? "xl:grid-cols-[minmax(0,1fr)_300px]" : ""}`}>
             <section aria-labelledby="all-clients-title" className="flex flex-col gap-4 min-w-0">
@@ -191,13 +194,15 @@ export default function AdminClientsPage() {
                 <h2 id="all-clients-title" className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                   {t("allClients")}
                 </h2>
-                <ClientSortControl sort={sort} onSort={changeSort} view={view} onView={changeView} />
+                <ClientSortControl sort={sort} onSort={changeSort} view={view} onView={changeView} showView={!phone} />
               </div>
 
               {visible.length === 0 ? (
                 <p className="type-body p-6 text-center" style={{ color: "var(--text-2)", borderRadius: "var(--r-card)", background: "var(--card)" }}>
                   {t("noMatches")}
                 </p>
+              ) : phone ? (
+                <ClientRows clients={visible} weeks={weeks} />
               ) : view === "table" ? (
                 <ClientsTable clients={visible} weeks={weeks} />
               ) : (

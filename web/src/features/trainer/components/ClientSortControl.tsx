@@ -7,7 +7,7 @@ import type { ClientListSort } from "../clientSignals";
 export type ClientView = "grid" | "table";
 
 /** The sort segmented control (Figyelem · Név · Utolsó aktivitás) and the grid / table toggle of W7-A. */
-export function ClientSortControl({ sort, onSort, view, onView }: { sort: ClientListSort; onSort: (s: ClientListSort) => void; view: ClientView; onView: (v: ClientView) => void }) {
+export function ClientSortControl({ sort, onSort, view, onView, showView = true }: { sort: ClientListSort; onSort: (s: ClientListSort) => void; view: ClientView; onView: (v: ClientView) => void; /** A phone has one shape (rows), so no grid / table toggle there. */ showView?: boolean }) {
   const t = useTranslations("admin.dashboard");
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -21,7 +21,7 @@ export function ClientSortControl({ sort, onSort, view, onView }: { sort: Client
           { value: "activity", label: t("sortActivity") },
         ]}
       />
-      <SegmentedControl<ClientView>
+      {showView && <SegmentedControl<ClientView>
         aria-label={t("viewAria")}
         value={view}
         onChange={onView}
@@ -29,7 +29,7 @@ export function ClientSortControl({ sort, onSort, view, onView }: { sort: Client
           { value: "grid", label: t("viewGrid"), icon: "grid_view" },
           { value: "table", label: t("viewTable"), icon: "table_rows" },
         ]}
-      />
+      />}
     </div>
   );
 }

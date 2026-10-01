@@ -23,18 +23,18 @@ const MAX_CARDS = 3;
  * unread message, a missed workout or a new record — each with one button. The messaging ones open that client's
  * conversation with a draft already in the composer (nothing is sent); the strip is absent when nothing needs the eye.
  */
-export function AttentionStrip({ items, clients, conversations }: { items: AttentionItem[]; clients: TrainerClientResponse[]; conversations: ConversationResponse[] | undefined }) {
+export function AttentionStrip({ items, clients, conversations, compact = false }: { items: AttentionItem[]; clients: TrainerClientResponse[]; conversations: ConversationResponse[] | undefined; compact?: boolean }) {
   const t = useTranslations("admin.dashboard");
   if (items.length === 0) return null;
   const byId = new Map(clients.map((c) => [c.clientId, c]));
-  const shown = pickForStrip(items, MAX_CARDS);
+  const shown = pickForStrip(items, compact ? 1 : MAX_CARDS);
 
   return (
     <section aria-labelledby="attention-title" data-testid="attention-strip" className="flex flex-col gap-3">
       <h2 id="attention-title" className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
         {t("attentionTitle", { count: items.length })}
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className={compact ? "flex flex-col gap-2" : "grid grid-cols-1 md:grid-cols-3 gap-3"}>
         {shown.map((item) => {
           const client = byId.get(item.clientId);
           if (!client) return null;
