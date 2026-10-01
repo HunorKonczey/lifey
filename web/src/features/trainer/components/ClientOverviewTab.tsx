@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { addDays, format, startOfWeek, subDays } from "date-fns";
-import { Card, DeltaChip, Icon, MetricTile } from "@/components/ds";
+import { Card, Icon, MetricTile } from "@/components/ds";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 import { templateApi } from "@/features/workouts/api";
@@ -18,6 +18,7 @@ import { ActivityFeed } from "./ActivityFeed";
 import { LoggingHeatmap } from "./LoggingHeatmap";
 import { UnassignButton } from "./UnassignButton";
 import { UpcomingSchedule } from "./UpcomingSchedule";
+import { WeightDelta } from "./WeightDelta";
 import type { ContentType } from "../types";
 
 const CONTENT_ICON: Record<ContentType, string> = { TEMPLATE: "fitness_center", RECIPE: "restaurant" };
@@ -131,7 +132,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
           color="var(--metric-weight)"
           value={weight ? fmt.number(weight.latestKg, 1) : "—"}
           unit={weight ? "kg" : undefined}
-          delta={weight?.deltaKg != null ? <DeltaChip value={weight.deltaKg} unit="kg" size="small" /> : undefined}
+          delta={weight?.deltaKg != null ? <WeightDelta kg={weight.deltaKg} /> : undefined}
           subline={weight ? (weight.deltaKg != null ? o("weightIn30") : o("weightSingle")) : o("noWeighIn")}
         />
       </div>

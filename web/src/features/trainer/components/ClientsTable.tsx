@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { DataTable, DeltaChip, type DataTableColumn } from "@/components/ds";
+import { DataTable, type DataTableColumn } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
 import { weightChange, type WeekSummary } from "../clientSignals";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { sessionDay, useLastActivityLabel } from "./ClientCard";
+import { WeightDelta } from "./WeightDelta";
 import type { TrainerClientResponse } from "../types";
 
 /** The table view of the clients (W7-A): the same facts as the card, one row per client, a row opens the client. */
@@ -64,7 +65,7 @@ export function ClientsTable({ clients, weeks }: { clients: TrainerClientRespons
         return (
           <span className="inline-flex items-center justify-end gap-2">
             <span className="num">{fmt.number(w.latestKg, 1)} kg</span>
-            {w.deltaKg != null && <DeltaChip value={w.deltaKg} unit="kg" size="small" />}
+            {w.deltaKg != null && <WeightDelta kg={w.deltaKg} />}
           </span>
         );
       },

@@ -153,8 +153,8 @@ export default function AdminClientsPage() {
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 sm:w-[260px]"
           />
-          <Link href="/admin/invites" aria-label={t("inviteClient")} className="shrink-0">
-            <Button>
+          <Link href="/admin/invites" className="shrink-0" tabIndex={-1}>
+            <Button aria-label={t("inviteClient")}>
               <Icon name="person_add" size={20} />
               <span className="hidden sm:inline">{t("inviteClient")}</span>
             </Button>

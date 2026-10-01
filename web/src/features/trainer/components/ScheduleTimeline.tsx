@@ -157,7 +157,12 @@ export function ScheduleTimeline({ clientId, occurrences, onViewSession, program
                         {content}
                       </div>
                     )}
-                    {occ.status === "UPCOMING" && <IconButton icon="event_busy" label={t("cancelOccurrence")} onClick={() => setConfirmingId(occ.sessionId)} />}
+                    {occ.status === "UPCOMING" && (
+                      // The row sits at the card edge: the tooltip hangs from the button's right edge so its hidden box never widens the page.
+                      <span className="inline-flex [&_.lifey-tooltip]:left-auto [&_.lifey-tooltip]:right-0 [&_.lifey-tooltip]:translate-x-0">
+                        <IconButton icon="event_busy" label={t("cancelOccurrence")} onClick={() => setConfirmingId(occ.sessionId)} />
+                      </span>
+                    )}
                   </li>
                 );
               })}

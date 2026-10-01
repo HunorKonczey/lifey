@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, ConfirmModal, DeltaChip, Icon, Menu, Modal } from "@/components/ds";
+import { Button, ConfirmModal, Icon, Menu, Modal } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
 import { lastActivity, weightChange, type WeekSummary } from "../clientSignals";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
+import { WeightDelta } from "./WeightDelta";
 import type { TrainerClientResponse } from "../types";
 
 export interface ClientCardProps {
@@ -124,7 +125,7 @@ export function ClientCard({ client, week, onRevoke, revoking, overLimit }: Clie
             <>
               <span className="num">{fmt.number(weight.latestKg, 1)}</span> <Unit>kg</Unit>
               {weight.deltaKg != null && (
-                <div className="mt-1"><DeltaChip value={weight.deltaKg} unit="kg" size="small" /></div>
+                <div className="mt-1"><WeightDelta kg={weight.deltaKg} /></div>
               )}
             </>
           ) : (
