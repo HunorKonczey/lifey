@@ -2928,11 +2928,13 @@ from the first occurrence); heatmap + feed from `clientMeals`, `clientWorkoutSes
 over 28 days; attention rules reuse `features/trainer/compliance.ts` thresholds (inactive ≥ its current
 day limit); unread counts from the chat hooks already running in the trainer layout.
 
-### W7.1 — Web data: client summary types + signals
+### W7.1 — Web data: client summary types + signals ✅
 - Files: `features/trainer/types.ts` (`avgCalories7d: number | null`, `prCount7d: number`),
   `features/trainer/clientSignals.ts` + test (attention list and order, week dots, next session, weight
   direction vs goal, "last activity" label kind).
 - **Verify:** unit tests; the "Figyelem" order = inactive → unread → missed → rest by name.
+
+*As built:* `TrainerClientResponse` is typed with `avgCalories7d` / `prCount7d` (the backend already sends them). `clientSignals.ts` (pure, 15 tests) holds the triage logic: `attentionItems` (inactive → unread → missed → record, bigger count first, ties by name, one item per client per kind), `sortByAttention` (inactive longest-silent first, unread, missed, then by name), `weekSummary` (a client's week from the calendar feed: scheduled/done dots, next upcoming session, missed dates; cancelled sessions do not count), `weightChange` (30-day delta; tone good/bad only when a goal weight is known, otherwise neutral; null with no weigh-ins) and `lastActivity` (none / today / yesterday / N days). Unread comes in as a small `UnreadThread` list so the module stays free of the chat hooks.
 
 ### W7.2 — Web UI: clients page header, search, remove the modal
 - Files: `app/(admin)/admin/page.tsx`, delete `ClientListModal.tsx`.

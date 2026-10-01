@@ -28,6 +28,10 @@ export interface TrainerClientResponse {
   lastActivityAt: string | null;
   lastWeightAt: string | null;
   missedWorkoutCount: number;
+  /** Mean daily kcal over the days with meals in the last 7 days; null when nothing was logged. */
+  avgCalories7d: number | null;
+  /** Strength personal records set in the last 7 days; 0 is a real answer. */
+  prCount7d: number;
 }
 
 export type ContentType = "TEMPLATE" | "RECIPE";
