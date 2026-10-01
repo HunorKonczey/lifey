@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +26,9 @@ export default function EditProgramPage() {
     queryFn: () => trainerApi.program(programId),
   });
 
+  const { data: summaries } = useQuery({ queryKey: queryKeys.trainerPrograms.all(), queryFn: trainerApi.programs });
+  const summary = summaries?.find((p) => p.id === programId);
+
   const updateMutation = useMutation({
     mutationFn: (body: ProgramRequest) => trainerApi.updateProgram(programId, body),
     onSuccess: (updated) => {
@@ -39,25 +41,6 @@ export default function EditProgramPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <Link href="/admin/programs" className="flex items-center gap-1.5 text-[13px] font-semibold w-fit" style={{ color: "var(--on-surface-variant)" }}>
-          <span className="material-symbols-rounded text-lg">arrow_back</span>
-          {t("backToList")}
-        </Link>
-        {program && (
-          <button
-            type="button"
-            onClick={() => setAssignDrawerOpen(true)}
-            data-testid="program-assign-button"
-            className="flex items-center gap-1.5 rounded-2xl px-4 py-2 text-[13px] font-bold"
-            style={{ background: "var(--surface-container)", color: "var(--on-surface)" }}
-          >
-            <span className="material-symbols-rounded text-lg">person_add</span>
-            {t("assignAction")}
-          </button>
-        )}
-      </div>
-
       {isLoading ? (
         <Skeleton variant="card" />
       ) : isError || !program ? (
@@ -76,7 +59,9 @@ export default function EditProgramPage() {
           saving={updateMutation.isPending}
           saveLabel={t("save")}
           savingLabel={t("saving")}
-          onSave={(data) => updateMutation.mutate(data)}
+          onSave={(data) => updateMutation.mutateAsync(data)}
+          activeAssignmentCount={summary?.activeAssignmentCount}
+          onAssign={() => setAssignDrawerOpen(true)}
         />
       )}
 

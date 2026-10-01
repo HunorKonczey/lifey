@@ -1,56 +1,78 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { templateApi } from "@/features/workouts/api";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { Dialog } from "@/components/ui/Dialog";
-import { TimePicker } from "@/components/ui/TimePicker";
-import { ErrorState } from "@/components/status/ErrorState";
+import { Button, Icon, Modal, TextArea, TextField, TimeField } from "@/components/ds";
+import { useFormat } from "@/lib/format/useFormat";
 import {
-  DAYS_OF_WEEK,
-  findSlot,
-  setSlot,
   clearSlot,
-  duplicateWeek,
   copyWeekToAll,
   dropOverflowWeeks,
-  validateProgram,
+  duplicateWeek,
+  findSlot,
   isProgramValid,
-  MIN_WEEKS,
   MAX_WEEKS,
+  MIN_WEEKS,
+  setSlot,
+  validateProgram,
 } from "../program";
+import { ProgramTemplateRail } from "./ProgramTemplateRail";
+import { ProgramWeekGrid } from "./ProgramWeekGrid";
 import type { DayOfWeek, ProgramWorkoutRequest } from "../types";
 
 interface ProgramGridEditorProps {
   initialName: string;
   initialWeeksCount: number;
   initialWorkouts: ProgramWorkoutRequest[];
-  onSave: (data: { name: string; weeksCount: number; workouts: ProgramWorkoutRequest[] }) => void;
+  /** Resolves once the program is saved — the editor then shows "Mentve". */
+  onSave: (data: { name: string; weeksCount: number; workouts: ProgramWorkoutRequest[] }) => Promise<unknown>;
   saving: boolean;
   saveLabel: string;
   savingLabel: string;
+  /** How many clients are on this program now (an existing program only). */
+  activeAssignmentCount?: number;
+  /** "Kiosztás" — only an existing program can be assigned. */
+  onAssign?: () => void;
 }
 
-export function ProgramGridEditor({
-  initialName, initialWeeksCount, initialWorkouts, onSave, saving, saveLabel, savingLabel,
-}: ProgramGridEditorProps) {
+const snapshotOf = (name: string, weeksCount: number, workouts: ProgramWorkoutRequest[]) =>
+  JSON.stringify({ name: name.trim(), weeksCount, workouts: [...workouts].sort((a, b) => a.weekNumber - b.weekNumber || a.dayOfWeek.localeCompare(b.dayOfWeek)) });
+
+/**
+ * The program editor (W8-B): a header with the name, the meta line ("4 hét · 12 edzés · 3 kliens használja · Nem mentett
+ * változás"), the weeks stepper and Mentés / Kiosztás; below it the template rail on the left and the week grid on the
+ * right. A cell takes the picked template on click or Enter; a filled cell opens its slot (time, note, clear).
+ */
+export function ProgramGridEditor({ initialName, initialWeeksCount, initialWorkouts, onSave, saving, saveLabel, savingLabel, activeAssignmentCount, onAssign }: ProgramGridEditorProps) {
   const t = useTranslations("admin.programs");
+  const fmt = useFormat();
   const [name, setName] = useState(initialName);
   const [weeksCount, setWeeksCount] = useState(initialWeeksCount);
   const [workouts, setWorkouts] = useState(initialWorkouts);
+  const [pickedTemplate, setPickedTemplate] = useState<number | null>(null);
   const [editingSlot, setEditingSlot] = useState<{ week: number; day: DayOfWeek } | null>(null);
+  const [saved, setSaved] = useState(() => ({ snapshot: snapshotOf(initialName, initialWeeksCount, initialWorkouts), at: null as Date | null }));
 
   const templatesQ = useQuery({ queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list });
-
+  const templates = useMemo(() => templatesQ.data ?? [], [templatesQ.data]);
   const validation = validateProgram(name, weeksCount, workouts);
+  const dirty = snapshotOf(name, weeksCount, workouts) !== saved.snapshot;
+
+  // Leaving with unsaved work asks first (the browser's own prompt).
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   /**
-   * Takes a delta (not an absolute value) and updates both states via functional
-   * updaters — reading `weeksCount` from the render closure would compute the
-   * same stale value for two clicks batched into one React update, silently
-   * swallowing the second click.
+   * Takes a delta (not an absolute value) and updates both states via functional updaters — reading `weeksCount` from
+   * the render closure would compute the same stale value for two clicks batched into one React update.
    */
   const changeWeeksCount = (delta: number) => {
     setWeeksCount((prev) => {
@@ -60,115 +82,98 @@ export function ProgramGridEditor({
     });
   };
 
-  const templateName = (templateId: number) =>
-    (templatesQ.data ?? []).find((tpl) => tpl.id === templateId)?.name ?? `#${templateId}`;
+  const templateName = (id: number) => templates.find((tpl) => tpl.id === id)?.name ?? `#${id}`;
+  const templateExercises = (id: number) => templates.find((tpl) => tpl.id === id)?.exercises.length ?? null;
 
-  const weeks = Array.from({ length: weeksCount }, (_, i) => i + 1);
+  const place = (week: number, day: DayOfWeek, templateId: number) => {
+    const existing = findSlot(workouts, week, day);
+    setWorkouts((prev) => setSlot(prev, { weekNumber: week, dayOfWeek: day, templateId, timeOfDay: existing?.timeOfDay ?? null, note: existing?.note ?? null }));
+  };
+
+  const onCell = (week: number, day: DayOfWeek) => {
+    if (pickedTemplate != null) place(week, day, pickedTemplate);
+    else setEditingSlot({ week, day });
+  };
+
+  const save = async () => {
+    await onSave({ name, weeksCount, workouts });
+    setSaved({ snapshot: snapshotOf(name, weeksCount, workouts), at: new Date() });
+  };
+
+  const state = dirty ? t("unsaved") : saved.at ? t("savedAt", { when: fmt.relative(saved.at, new Date()) }) : t("savedPlain");
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
-          <label className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-            {t("nameLabel")}
-          </label>
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/admin/programs" aria-label={t("backToList")} className="lifey-button inline-flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: "var(--r-control)", background: "var(--nested)" }}>
+            <Icon name="arrow_back" size={20} />
+          </Link>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("namePlaceholder")}
+            aria-label={t("nameLabel")}
+            aria-invalid={validation.nameError}
             data-testid="program-name-input"
-            className="h-11 rounded-2xl px-4 text-sm outline-none"
-            style={{
-              background: "var(--surface)",
-              color: "var(--on-surface)",
-              border: `1px solid ${validation.nameError ? "var(--error)" : "transparent"}`,
-            }}
+            className="flex-1 min-w-[200px] bg-transparent outline-none"
+            style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", borderBottom: `2px solid ${validation.nameError ? "var(--heart)" : "transparent"}` }}
           />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-            {t("weeksLabel")}
-          </label>
-          <div className="flex items-center gap-2 rounded-2xl h-11 px-2" style={{ background: "var(--surface)" }}>
-            <button
-              type="button"
-              onClick={() => changeWeeksCount(-1)}
-              disabled={weeksCount <= MIN_WEEKS}
-              className="w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-30"
-              style={{ color: "var(--on-surface)" }}
-              aria-label="-"
-            >
-              <span className="material-symbols-rounded text-lg">remove</span>
+          <div className="flex items-center gap-1 pl-3 pr-1" style={{ height: 40, borderRadius: "var(--r-control)", background: "var(--control)" }} role="group" aria-label={t("weeksLabel")}>
+            <span className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 600 }}>{t("weeksLabel")}</span>
+            <button type="button" onClick={() => changeWeeksCount(-1)} disabled={weeksCount <= MIN_WEEKS} aria-label="-" className="lifey-button inline-flex h-8 w-8 items-center justify-center disabled:opacity-30">
+              <Icon name="remove" size={18} />
             </button>
-            <span className="w-8 text-center text-sm font-bold tabular" style={{ color: "var(--on-surface)" }}>
-              {weeksCount}
-            </span>
-            <button
-              type="button"
-              onClick={() => changeWeeksCount(1)}
-              disabled={weeksCount >= MAX_WEEKS}
-              className="w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-30"
-              style={{ color: "var(--on-surface)" }}
-              aria-label="+"
-            >
-              <span className="material-symbols-rounded text-lg">add</span>
+            <span className="num text-center" style={{ minWidth: 22, fontWeight: 800 }}>{weeksCount}</span>
+            <button type="button" onClick={() => changeWeeksCount(1)} disabled={weeksCount >= MAX_WEEKS} aria-label="+" className="lifey-button inline-flex h-8 w-8 items-center justify-center disabled:opacity-30">
+              <Icon name="add" size={18} />
             </button>
           </div>
+          {onAssign && (
+            <Button variant="secondary" onClick={onAssign} data-testid="program-assign-button">
+              <Icon name="person_add" size={18} />
+              {t("assignAction")}
+            </Button>
+          )}
+          <Button onClick={save} disabled={!isProgramValid(validation) || saving || !dirty} data-testid="program-save-button">
+            {saving ? savingLabel : saveLabel}
+          </Button>
         </div>
+        <p className="type-body-s" style={{ color: "var(--text-2)" }} aria-live="polite">
+          {[t("metaWeeks", { count: weeksCount }), t("metaWorkouts", { count: workouts.length }), activeAssignmentCount != null ? t("metaUsers", { count: activeAssignmentCount }) : null].filter(Boolean).join(" · ")}
+          {" · "}
+          <span style={{ color: dirty ? "var(--primary)" : undefined, fontWeight: dirty ? 700 : 400 }}>{state}</span>
+        </p>
+        {(validation.nameError || validation.weeksCountError || validation.noSlotsError) && (
+          <div className="flex flex-col gap-1 type-body-s" style={{ color: "var(--heart)" }} role="alert">
+            {validation.nameError && <span>{t("nameRequired")}</span>}
+            {validation.weeksCountError && <span>{t("weeksOutOfRange")}</span>}
+            {validation.noSlotsError && <span>{t("noSlots")}</span>}
+          </div>
+        )}
+      </header>
 
-        <button
-          type="button"
-          onClick={() => onSave({ name, weeksCount, workouts })}
-          disabled={!isProgramValid(validation) || saving}
-          data-testid="program-save-button"
-          className="h-11 px-6 rounded-2xl text-[13.5px] font-extrabold disabled:opacity-40"
-          style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-        >
-          {saving ? savingLabel : saveLabel}
-        </button>
-      </div>
-
-      {(validation.nameError || validation.weeksCountError || validation.noSlotsError) && (
-        <div className="flex flex-col gap-1 text-xs" style={{ color: "var(--error)" }}>
-          {validation.nameError && <span>{t("nameRequired")}</span>}
-          {validation.weeksCountError && <span>{t("weeksOutOfRange")}</span>}
-          {validation.noSlotsError && <span>{t("noSlots")}</span>}
-        </div>
-      )}
-
-      <div className="flex flex-col gap-2 overflow-x-auto">
-        <div className="grid gap-2" style={{ gridTemplateColumns: "70px repeat(7, minmax(120px, 1fr))", minWidth: 760 }}>
-          <div />
-          {DAYS_OF_WEEK.map((day) => (
-            <div key={day} className="text-[11px] font-bold tracking-wider uppercase text-center py-1" style={{ color: "var(--muted)" }}>
-              {t(`days.${day}`)}
-            </div>
-          ))}
-
-          {weeks.map((week) => (
-            <WeekRow
-              key={week}
-              week={week}
-              weeksCount={weeksCount}
-              workouts={workouts}
-              templateName={templateName}
-              onCellClick={(day) => setEditingSlot({ week, day })}
-              onDuplicateBelow={() => setWorkouts((prev) => duplicateWeek(prev, week, week + 1))}
-              onCopyToAll={() => setWorkouts((prev) => copyWeekToAll(prev, week, weeksCount))}
-            />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
+        <ProgramTemplateRail templates={templates} error={templatesQ.isError} onRetry={() => templatesQ.refetch()} selectedId={pickedTemplate} onSelect={setPickedTemplate} />
+        <ProgramWeekGrid
+          weeksCount={weeksCount}
+          workouts={workouts}
+          templateName={templateName}
+          templateExercises={templateExercises}
+          placing={pickedTemplate != null ? templateName(pickedTemplate) : null}
+          onCell={onCell}
+          onDuplicateBelow={(week) => setWorkouts((prev) => duplicateWeek(prev, week, week + 1))}
+          onCopyToAll={(week) => setWorkouts((prev) => copyWeekToAll(prev, week, weeksCount))}
+        />
       </div>
 
       {editingSlot && (
-        <SlotEditorDialog
+        <SlotEditor
+          key={`${editingSlot.week}-${editingSlot.day}`}
           week={editingSlot.week}
           day={editingSlot.day}
           existing={findSlot(workouts, editingSlot.week, editingSlot.day)}
-          templates={templatesQ.data ?? []}
-          templatesError={templatesQ.isError}
-          onRetryTemplates={() => templatesQ.refetch()}
+          templates={templates}
           onSave={(slot) => {
             setWorkouts((prev) => setSlot(prev, slot));
             setEditingSlot(null);
@@ -184,210 +189,64 @@ export function ProgramGridEditor({
   );
 }
 
-interface WeekRowProps {
-  week: number;
-  weeksCount: number;
-  workouts: ProgramWorkoutRequest[];
-  templateName: (id: number) => string;
-  onCellClick: (day: DayOfWeek) => void;
-  onDuplicateBelow: () => void;
-  onCopyToAll: () => void;
-}
-
-function WeekRow({ week, weeksCount, workouts, templateName, onCellClick, onDuplicateBelow, onCopyToAll }: WeekRowProps) {
-  const t = useTranslations("admin.programs");
-  return (
-    <>
-      <div className="flex flex-col gap-1 justify-center">
-        <span className="text-[12px] font-extrabold" style={{ color: "var(--on-surface)" }}>{t("week", { number: week })}</span>
-        <div className="flex flex-col gap-0.5">
-          {week < weeksCount && (
-            <button
-              type="button"
-              onClick={onDuplicateBelow}
-              className="text-[10px] font-semibold text-left"
-              style={{ color: "var(--tertiary)" }}
-            >
-              {t("duplicateWeekBelow")}
-            </button>
-          )}
-          {weeksCount > 1 && (
-            <button
-              type="button"
-              onClick={onCopyToAll}
-              className="text-[10px] font-semibold text-left"
-              style={{ color: "var(--tertiary)" }}
-            >
-              {t("copyWeekToAll")}
-            </button>
-          )}
-        </div>
-      </div>
-      {DAYS_OF_WEEK.map((day) => {
-        const slot = findSlot(workouts, week, day);
-        return (
-          <button
-            key={day}
-            type="button"
-            data-testid={`program-cell-${week}-${day}`}
-            onClick={() => onCellClick(day)}
-            className="rounded-2xl p-2.5 min-h-[62px] flex flex-col items-start justify-center gap-0.5 text-left transition-colors"
-            style={{
-              background: slot ? "rgba(110,154,106,.14)" : "var(--surface)",
-              border: slot ? "1.5px solid var(--tertiary)" : "1.5px solid transparent",
-            }}
-          >
-            {slot ? (
-              <>
-                <span className="text-[12px] font-bold truncate w-full" style={{ color: "var(--on-surface)" }}>
-                  {templateName(slot.templateId)}
-                </span>
-                {slot.timeOfDay && (
-                  <span className="text-[10px]" style={{ color: "var(--on-surface-variant)" }}>{slot.timeOfDay.slice(0, 5)}</span>
-                )}
-              </>
-            ) : (
-              <span className="text-[11px]" style={{ color: "var(--muted)" }}>{t("emptySlot")}</span>
-            )}
-          </button>
-        );
-      })}
-    </>
-  );
-}
-
-interface SlotEditorDialogProps {
+interface SlotEditorProps {
   week: number;
   day: DayOfWeek;
   existing?: ProgramWorkoutRequest;
   templates: { id: number; name: string }[];
-  templatesError: boolean;
-  onRetryTemplates: () => void;
   onSave: (slot: ProgramWorkoutRequest) => void;
   onClear: () => void;
   onClose: () => void;
 }
 
-function SlotEditorDialog({
-  week, day, existing, templates, templatesError, onRetryTemplates, onSave, onClear, onClose,
-}: SlotEditorDialogProps) {
+/** One cell's details (W8-B): which template, at what time, with what note — a short decision, so a DS modal. */
+function SlotEditor({ week, day, existing, templates, onSave, onClear, onClose }: SlotEditorProps) {
   const t = useTranslations("admin.programs");
   const [search, setSearch] = useState("");
   const [templateId, setTemplateId] = useState<number | null>(existing?.templateId ?? null);
-  const [timeOfDay, setTimeOfDay] = useState(existing?.timeOfDay ?? "");
+  const [timeOfDay, setTimeOfDay] = useState(existing?.timeOfDay ? existing.timeOfDay.slice(0, 5) : "");
   const [note, setNote] = useState(existing?.note ?? "");
-
   const filtered = templates.filter((tpl) => tpl.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <Dialog open onClose={onClose} title={`${t("week", { number: week })} · ${t(`days.${day}`)}`}>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-            {t("pickTemplate")}
-          </p>
-          <div className="rounded-2xl h-11 flex items-center gap-2.5 px-4" style={{ background: "var(--surface-container)" }}>
-            <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>search</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("searchTemplatePlaceholder")}
-              className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: "var(--on-surface)" }}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto">
-            {templatesError ? (
-              <ErrorState inline onRetry={onRetryTemplates} />
-            ) : filtered.length === 0 ? (
-              <p className="text-xs text-center py-3" style={{ color: "var(--muted)" }}>{t("noTemplatesFound")}</p>
-            ) : (
-              filtered.map((tpl) => {
-                const selected = tpl.id === templateId;
-                return (
-                  <button
-                    key={tpl.id}
-                    type="button"
-                    data-testid="program-slot-template-row"
-                    onClick={() => setTemplateId(tpl.id)}
-                    className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors text-left"
-                    style={{
-                      background: selected ? "rgba(110,154,106,.14)" : "transparent",
-                      border: selected ? "1.5px solid var(--tertiary)" : "1.5px solid transparent",
-                    }}
-                  >
-                    <span
-                      className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: "var(--surface-container)", color: "var(--tertiary)" }}
-                    >
-                      <span className="material-symbols-rounded text-lg">fitness_center</span>
-                    </span>
-                    <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                      {tpl.name}
-                    </span>
-                    {selected && (
-                      <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>
-                        check_circle
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold" style={{ color: "var(--muted)" }}>{t("timeOfDay")}</label>
-          <TimePicker value={timeOfDay} onChange={setTimeOfDay} />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold" style={{ color: "var(--muted)" }}>{t("note")}</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={t("notePlaceholder")}
-            rows={2}
-            maxLength={500}
-            className="rounded-2xl px-3.5 py-2.5 text-sm outline-none resize-none"
-            style={{ background: "var(--surface-container)", color: "var(--on-surface)" }}
-          />
-        </div>
-
-        <div className="flex gap-2.5 pt-2">
-          {existing && (
-            <button
-              type="button"
-              onClick={onClear}
-              className="flex-1 text-center text-[13.5px] font-bold py-3 rounded-2xl"
-              style={{ color: "var(--error)" }}
-            >
-              {t("clearSlot")}
-            </button>
+    <Modal open onClose={onClose} width={480} aria-label={`${t("weekRowLabel", { number: week })} · ${t(`days.${day}`)}`}>
+      <div className="flex flex-col gap-4 p-6">
+        <h2 className="type-title-l">{t("weekRowLabel", { number: week })} · {t(`days.${day}`)}</h2>
+        <TextField size="dense" leadingIcon="search" aria-label={t("pickTemplate")} placeholder={t("searchTemplatePlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto">
+          {filtered.length === 0 ? (
+            <p className="type-body-s text-center py-3" style={{ color: "var(--text-3)" }}>{t("noTemplatesFound")}</p>
+          ) : (
+            filtered.map((tpl) => {
+              const selected = tpl.id === templateId;
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  data-testid="program-slot-template-row"
+                  onClick={() => setTemplateId(tpl.id)}
+                  aria-pressed={selected}
+                  className="lifey-button flex items-center gap-3 px-3 py-2.5 text-left"
+                  style={{ borderRadius: "var(--r-control)", background: selected ? "var(--primary-tint)" : "var(--nested)", boxShadow: selected ? "inset 0 0 0 2px var(--primary)" : undefined }}
+                >
+                  <Icon name="fitness_center" size={20} fill={1} color="var(--role)" />
+                  <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 700 }}>{tpl.name}</span>
+                  {selected && <Icon name="check_circle" size={20} fill={1} color="var(--primary)" />}
+                </button>
+              );
+            })
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 text-center text-[13.5px] font-bold py-3 rounded-2xl"
-            style={{ color: "var(--on-surface-variant)" }}
-          >
-            {t("cancel")}
-          </button>
-          <button
-            type="button"
-            disabled={templateId == null}
-            data-testid="program-slot-save"
-            onClick={() =>
-              onSave({ weekNumber: week, dayOfWeek: day, templateId: templateId as number, timeOfDay: timeOfDay || null, note: note || null })
-            }
-            className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
-            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-          >
+        </div>
+        <TimeField label={t("timeOfDay")} value={timeOfDay} onChange={setTimeOfDay} quickTimes={["07:00", "17:30", "18:00"]} />
+        <TextArea label={t("note")} placeholder={t("notePlaceholder")} value={note} rows={2} maxLength={500} onChange={(e) => setNote(e.target.value)} />
+        <div className="flex flex-wrap justify-end gap-2 pt-1">
+          {existing && <Button variant="ghost" onClick={onClear}>{t("clearSlot")}</Button>}
+          <Button variant="secondary" onClick={onClose}>{t("cancel")}</Button>
+          <Button disabled={templateId == null} data-testid="program-slot-save" onClick={() => onSave({ weekNumber: week, dayOfWeek: day, templateId: templateId as number, timeOfDay: timeOfDay || null, note: note || null })}>
             {t("save")}
-          </button>
+          </Button>
         </div>
       </div>
-    </Dialog>
+    </Modal>
   );
 }

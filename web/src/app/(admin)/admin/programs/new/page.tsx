@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,11 +27,6 @@ export default function NewProgramPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/admin/programs" className="flex items-center gap-1.5 text-[13px] font-semibold w-fit" style={{ color: "var(--on-surface-variant)" }}>
-        <span className="material-symbols-rounded text-lg">arrow_back</span>
-        {t("backToList")}
-      </Link>
-
       <ProgramGridEditor
         initialName={t("newProgramName")}
         initialWeeksCount={4}
@@ -40,7 +34,7 @@ export default function NewProgramPage() {
         saving={createMutation.isPending}
         saveLabel={t("save")}
         savingLabel={t("saving")}
-        onSave={(data) => createMutation.mutate(data)}
+        onSave={(data) => createMutation.mutateAsync(data)}
       />
     </div>
   );
