@@ -124,7 +124,7 @@ export function StepsChartCard({ stats, compact = false }: CardProps) {
   const hasData = steps.values.some((v) => v != null);
   const showToday = stats.period !== "year" && stats.isCurrent && slots.some((s, i) => s.isCurrent && steps.values[i] != null);
 
-  const legend: LegendItem[] = [{ kind: "dashed", color: "var(--m-steps)", label: t("legendGoal", { goal: fmt.integer(steps.goal) }) }];
+  const legend: LegendItem[] = steps.goal != null ? [{ kind: "dashed", color: "var(--m-steps)", label: t("legendGoal", { goal: fmt.integer(steps.goal) }) }] : [];
   if (steps.average != null) legend.push({ kind: "bar", color: "var(--m-steps)", label: t("legendSteps") });
   if (showToday) legend.push({ kind: "outline", color: "var(--m-steps)", label: t("legendToday") });
 
@@ -133,7 +133,7 @@ export function StepsChartCard({ stats, compact = false }: CardProps) {
       testId="stats-steps"
       title={t("steps")}
       note={steps.average != null && <span>{t("averageLabel")} <b style={{ color: "var(--text)" }}>{fmt.integer(steps.average)}</b></span>}
-      footnote={hasData ? t("stepsFootnote", { goal: fmt.integer(steps.goal) }) : undefined}
+      footnote={hasData && steps.goal != null ? t("stepsFootnote", { goal: fmt.integer(steps.goal) }) : undefined}
     >
       {hasData ? (
         <>
@@ -141,7 +141,7 @@ export function StepsChartCard({ stats, compact = false }: CardProps) {
             aria-label={t("stepsAria")}
             data={data}
             color="var(--m-steps)"
-            goal={steps.goal}
+            goal={steps.goal ?? undefined}
             height={compact ? 180 : 200}
           />
           <ChartLegend items={legend} />

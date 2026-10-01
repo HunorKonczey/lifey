@@ -1,66 +1,50 @@
 "use client";
 
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
-import { trainerApi } from "../api";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
-import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
-import { useLocale } from "@/lib/hooks/useLocale";
-import { useFormat } from "@/lib/i18n/format";
-
-const DATE_LOCALES = { en: enUS, hu } as const;
+import { Skeleton } from "@/components/status/Skeleton";
+import { StepsStats } from "@/features/steps/components/StepsStats";
+import { StepsTrendCard } from "@/features/steps/components/StepsTrendCard";
+import { stepsWindow } from "@/features/steps/stats";
+import { queryKeys } from "@/lib/api/queryKeys";
+import { trainerApi } from "../api";
 
 interface ClientStepsTabProps {
   clientId: number;
 }
 
+/**
+ * The client's steps (W7-C): the last 14 days in the client's own chart — one colour, today dashed — and the average
+ * and best-day cards. The trainer cannot read the client's step goal, so there is no goal line and no "goal days"
+ * card (the "Cél módosítása" action stays unbuilt, D-W0.19).
+ */
 export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
   const t = useTranslations("admin.clientDetail");
-  const fmt = useFormat();
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
-
+  const from = useMemo(() => format(subDays(new Date(), 29), "yyyy-MM-dd"), []);
   const stepsQ = useQuery({
     queryKey: [...queryKeys.trainerClientData.steps(clientId), "30d"],
-    queryFn: () => trainerApi.clientSteps(clientId, format(subDays(new Date(), 29), "yyyy-MM-dd")),
+    queryFn: () => trainerApi.clientSteps(clientId, from),
   });
 
   if (stepsQ.isLoading) return <Skeleton variant="chart" />;
   if (stepsQ.isError) return <ErrorState inline onRetry={() => stepsQ.refetch()} />;
 
-  const sorted = (stepsQ.data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
-  if (sorted.length === 0) {
-    return <EmptyState icon="directions_walk" title={t("noSteps")} body={t("noStepsBody")} />;
-  }
+  const entries = stepsQ.data ?? [];
+  if (entries.length === 0) return <EmptyState icon="directions_walk" title={t("noSteps")} body={t("noStepsBody")} />;
 
-  const chartData = sorted.map((s) => ({ date: format(new Date(s.date), "MMM d", { locale: dateLocale }), value: s.steps }));
-  const history = sorted.slice().reverse();
+  const now = new Date();
+  const stats = stepsWindow(entries, 0, now, now);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-3.5">
-      <div className="flex-1 min-w-0 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-        <p className="text-sm font-bold mb-4" style={{ color: "var(--on-surface)" }}>{t("last30Days")}</p>
-        <TimeSeriesChart data={chartData} color="var(--metric-steps)" />
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-2 gap-4">
+        <StepsStats stats={stats} showGoal={false} />
       </div>
-      <div className="w-full lg:w-[280px] shrink-0 rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-        <p className="text-sm font-bold mb-3" style={{ color: "var(--on-surface)" }}>{t("history")}</p>
-        <div className="flex flex-col max-h-[320px] overflow-y-auto">
-          {history.map((s) => (
-            <div key={s.id} className="flex items-center justify-between py-2" style={{ borderBottom: "1px solid var(--outline)" }}>
-              <span className="text-sm tabular" style={{ color: "var(--on-surface-variant)" }}>
-                {format(new Date(s.date), "MMM d, yyyy", { locale: dateLocale })}
-              </span>
-              <span className="text-sm font-semibold tabular" style={{ color: "var(--on-surface)" }}>
-                {fmt.number(s.steps)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <StepsTrendCard window={stats} goal={null} />
     </div>
   );
 }

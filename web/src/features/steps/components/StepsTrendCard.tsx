@@ -12,7 +12,7 @@ import type { StepsWindow } from "../stats";
  * ("H K Sze Cs P Szo V"), Y "14 e / 7 e / 0". The ✓ is drawn only over *complete* days that met the goal: today is
  * still accumulating, so it never claims one.
  */
-export function StepsTrendCard({ window: w, goal }: { window: StepsWindow; goal: number }) {
+export function StepsTrendCard({ window: w, goal }: { window: StepsWindow; goal: number | null }) {
   const t = useTranslations("steps");
   const fmt = useFormat();
 
@@ -32,10 +32,10 @@ export function StepsTrendCard({ window: w, goal }: { window: StepsWindow; goal:
           aria-label={t("trendAria")}
           data={data}
           color="var(--metric-steps)"
-          goal={goal}
-          goalLabel={fmt.integer(goal)}
+          goal={goal ?? undefined}
+          goalLabel={goal != null ? fmt.integer(goal) : undefined}
           height={240}
-          legend={t("trendLegend", { goal: fmt.integer(goal) })}
+          legend={goal != null ? t("trendLegend", { goal: fmt.integer(goal) }) : undefined}
         />
       </div>
     </Card>

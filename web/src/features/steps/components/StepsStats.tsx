@@ -24,14 +24,14 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 }
 
 /** The three stat cards beside the hero (W4.6): 14-day average, goal days out of the complete ones, the best day. */
-export function StepsStats({ stats }: { stats: StepsWindow }) {
+export function StepsStats({ stats, showGoal = true }: { stats: StepsWindow; showGoal?: boolean }) {
   const t = useTranslations("steps");
   const fmt = useFormat();
 
   return (
     <>
       <Stat label={t("statAverage")} value={stats.average != null ? fmt.integer(stats.average) : "—"} />
-      <Stat label={t("statMet")} value={t("statMetValue", { met: stats.metDays, total: stats.completeDays })} />
+      {showGoal && <Stat label={t("statMet")} value={t("statMetValue", { met: stats.metDays, total: stats.completeDays })} />}
       <Stat label={t("statBest")} value={stats.best ? fmt.integer(stats.best.steps) : "—"} sub={stats.best ? fmt.shortDate(stats.best.date) : undefined} />
     </>
   );

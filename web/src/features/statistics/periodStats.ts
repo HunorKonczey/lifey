@@ -20,8 +20,8 @@ import { isCurrentPeriod, periodRange, previousPeriod, type PeriodRange, type St
 export interface StatsGoals {
   /** Daily kcal goal; null when the user never set one. */
   calories: number | null;
-  /** Daily step goal (already defaulted). */
-  steps: number;
+  /** Daily step goal (already defaulted); null for a client whose goal the trainer cannot read — no goal line then. */
+  steps: number | null;
   /** Goal weight in kg; null when onboarding never asked for one. */
   weightKg: number | null;
 }
@@ -113,7 +113,7 @@ export interface PeriodStats {
     /** Per slot: steps of a counted day / mean per counted day for a week; null = no count. */
     values: (number | null)[];
     average: number | null;
-    goal: number;
+    goal: number | null;
   };
 }
 
