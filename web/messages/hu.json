@@ -1994,6 +1994,8 @@
     "errorAlreadyOpen": "Már van egy nyitott kérelmed",
     "errorGeneric": "Valami hiba történt. Kérjük, próbáld újra.",
     "rejectedNote": "Az előző kérelmedet nem hagytuk jóvá. Nyugodtan küldj be egy újat.",
+    "statusPending": "Elbírálás alatt",
+    "statusApproved": "Jóváhagyva",
     "pendingTitle": "Elbíráljuk a jelentkezésedet",
     "pendingBody": "Az edzői jelentkezéseket kézzel bíráljuk el, általában egy munkanapon belül. A 14 napos próbaidőszakod akkor indul, amikor jóváhagyunk, nem most.",
     "approvedTitle": "Jóváhagyva!",

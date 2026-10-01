@@ -9,6 +9,9 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { useSessionStore } from "@/features/auth/store";
 import { ApiError } from "@/lib/api/client";
 import { extractAttribution, readAttributionCookie } from "@/lib/attribution";
+import { Button, Card, Icon, TextArea, TextField, TintedChip } from "@/components/ds";
+import { LifeyLogo } from "@/features/auth/components/BrandPanel";
+import { TrainerSignupStepper } from "@/features/auth/components/TrainerSignupStepper";
 import { ErrorState } from "@/components/status/ErrorState";
 
 // Fixed-interval polling (matches the chat feature's own precedent,
@@ -75,20 +78,15 @@ export default function AdminPendingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
-        <span
-          className="material-symbols-rounded text-4xl animate-pulse"
-          style={{ color: "var(--tertiary)" }}
-        >
-          eco
-        </span>
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--bg)" }}>
+        <LifeyLogo size={40} />
       </div>
     );
   }
 
   if (isError && !notFound) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+      <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "var(--bg)" }}>
         <ErrorState onRetry={refetch} />
       </div>
     );
@@ -98,19 +96,12 @@ export default function AdminPendingPage() {
   const showForm = notFound || request?.status === "REJECTED";
   const showWaiting = request?.status === "PENDING" || isApproved;
 
+  // Focus mode (W9.6): no sidebar, no top bar — the logo, the trainer stepper at step 2 and one card.
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg px-4 py-12">
-      <div className="w-full max-w-md rounded-[var(--r-lg)] p-8" style={{ background: "var(--surface)" }}>
-        <div className="flex items-center gap-2 mb-6">
-          <span
-            className="material-symbols-rounded text-3xl"
-            style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
-          >
-            eco
-          </span>
-          <span className="text-xl font-bold tracking-tight">Lifey</span>
-        </div>
-
+    <div className="flex min-h-screen flex-col items-center gap-6 px-4 py-10" style={{ background: "var(--bg)" }}>
+      <LifeyLogo size={40} />
+      <TrainerSignupStepper current={2} />
+      <Card variant="hero" className="w-full max-w-md">
         {showWaiting ? (
           <WaitingState redirecting={isApproved} t={t} />
         ) : showForm ? (
@@ -132,30 +123,20 @@ export default function AdminPendingPage() {
             onSubmit={() => submitMutation.mutate()}
           />
         ) : null}
-      </div>
+      </Card>
     </div>
   );
 }
 
-function WaitingState({
-  redirecting,
-  t,
-}: {
-  redirecting: boolean;
-  t: ReturnType<typeof useTranslations>;
-}) {
+function WaitingState({ redirecting, t }: { redirecting: boolean; t: ReturnType<typeof useTranslations> }) {
   return (
-    <div className="flex flex-col items-center text-center gap-3">
-      <div
-        className="w-14 h-14 rounded-full flex items-center justify-center"
-        style={{ background: "var(--surface-container)", color: "var(--tertiary)" }}
-      >
-        <span className="material-symbols-rounded text-2xl animate-pulse">hourglass_top</span>
-      </div>
-      <p className="text-lg font-extrabold" style={{ color: "var(--on-surface)" }}>
-        {redirecting ? t("approvedTitle") : t("pendingTitle")}
-      </p>
-      <p className="text-sm leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
+    <div className="flex flex-col items-center gap-3 text-center" data-testid="trainer-request-status">
+      <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "var(--role-tint)" }}>
+        <Icon name={redirecting ? "check_circle" : "hourglass_top"} size={28} fill={1} color="var(--role)" />
+      </span>
+      <TintedChip label={redirecting ? t("statusApproved") : t("statusPending")} color={redirecting ? "var(--primary)" : "var(--m-carbs)"} />
+      <h1 className="type-title">{redirecting ? t("approvedTitle") : t("pendingTitle")}</h1>
+      <p className="type-body" style={{ color: "var(--text-2)" }}>
         {redirecting ? t("approvedBody") : t("pendingBody")}
       </p>
     </div>
@@ -184,19 +165,16 @@ function RequestForm({
   onSubmit: () => void;
 }) {
   return (
-    <>
-      <h1 className="text-2xl font-bold mb-1">{t("title")}</h1>
-      <p className="text-sm mb-6" style={{ color: "var(--on-surface-variant)" }}>
-        {t("formIntro")}
-      </p>
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="type-title">{t("title")}</h1>
+        <p className="type-body-s mt-1" style={{ color: "var(--text-2)" }}>{t("formIntro")}</p>
+      </div>
 
       {wasRejected && (
-        <div
-          className="mb-5 px-3.5 py-2.5 rounded-[var(--r-card)] text-sm"
-          style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-        >
-          {t("rejectedNote")}
-        </div>
+        <Card variant="nested">
+          <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("rejectedNote")}</p>
+        </Card>
       )}
 
       <form
@@ -206,48 +184,28 @@ function RequestForm({
         }}
         className="flex flex-col gap-4"
       >
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold">{t("motivationLabel")}</label>
-          <textarea
-            value={motivation}
-            onChange={(e) => onMotivationChange(e.target.value)}
-            placeholder={t("motivationPlaceholder")}
-            rows={4}
-            className="rounded-[var(--r-input)] px-3 py-2.5 text-sm bg-transparent outline-none resize-none"
-            style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-            data-ring-frame
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold">{t("clientCountLabel")}</label>
-          <input
-            type="number"
-            min={1}
-            value={clientCount}
-            onChange={(e) => onClientCountChange(e.target.value)}
-            placeholder={t("clientCountPlaceholder")}
-            className="rounded-[var(--r-input)] h-11 px-3 text-sm bg-transparent outline-none"
-            style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-            data-ring-frame
-          />
-        </div>
-
+        <TextArea
+          label={t("motivationLabel")}
+          value={motivation}
+          onChange={(e) => onMotivationChange(e.target.value)}
+          placeholder={t("motivationPlaceholder")}
+          rows={4}
+        />
+        <TextField
+          label={t("clientCountLabel")}
+          type="number"
+          min={1}
+          value={clientCount}
+          onChange={(e) => onClientCountChange(e.target.value)}
+          placeholder={t("clientCountPlaceholder")}
+        />
         {error && (
-          <p className="text-xs" style={{ color: "var(--error)" }}>
-            {error}
-          </p>
+          <p className="type-body-s" role="alert" style={{ color: "var(--heart)" }}>{error}</p>
         )}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}
-        >
+        <Button type="submit" disabled={submitting} fullWidth>
           {submitting ? t("submitting") : t("submit")}
-        </button>
+        </Button>
       </form>
-    </>
+    </div>
   );
 }

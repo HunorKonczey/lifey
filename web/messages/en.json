@@ -1994,6 +1994,8 @@
     "errorAlreadyOpen": "You already have an open request",
     "errorGeneric": "Something went wrong. Please try again.",
     "rejectedNote": "Your previous request wasn't approved. You're welcome to submit a new one.",
+    "statusPending": "In review",
+    "statusApproved": "Approved",
     "pendingTitle": "We're reviewing your application",
     "pendingBody": "We review trainer applications by hand, usually within one working day. Your 14-day trial starts when we approve you, not now.",
     "approvedTitle": "You're approved!",
