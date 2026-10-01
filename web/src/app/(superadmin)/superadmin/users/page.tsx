@@ -1,285 +1,227 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { superAdminApi } from "@/features/superadmin/api";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { useToast } from "@/lib/hooks/useToast";
-import { useSessionStore } from "@/features/auth/store";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Checkbox, ConfirmModal, DataTable, SegmentedControl, type DataTableColumn } from "@/components/ds";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
+import { useSessionStore } from "@/features/auth/store";
+import { superAdminApi } from "@/features/superadmin/api";
+import { BulkRoleBar } from "@/features/superadmin/components/BulkRoleBar";
+import { RoleChip } from "@/features/superadmin/components/RoleChip";
+import { RoleHistoryDrawer } from "@/features/superadmin/components/RoleHistoryDrawer";
 import { UserAvatar } from "@/features/superadmin/components/UserAvatar";
 import type { SuperAdminUserResponse } from "@/features/superadmin/types";
+import { bulkTargets, matchesRoleFilter, primaryRole, runBulk, type BulkRoleAction, type RoleFilter } from "@/features/superadmin/userRoles";
+import { queryKeys } from "@/lib/api/queryKeys";
 import { useFormat } from "@/lib/i18n/format";
+import { useToast } from "@/lib/hooks/useToast";
 
-const PAGE_SIZE = 20;
+/** The users the table can show at once; a search goes to the server, so a longer list is still reachable. */
+const LIMIT = 500;
 
-function RoleBadge({ role }: { role: string }) {
-  if (role === "ROLE_TRAINER") {
-    return (
-      <span
-        className="rounded-[var(--r-pill)] text-[10.5px] font-extrabold tracking-wide px-2.5 py-1"
-        style={{ background: "var(--tertiary-container)", color: "var(--on-tertiary-container)" }}
-      >
-        TRAINER
-      </span>
-    );
-  }
-  if (role === "ROLE_ADMIN" || role === "ROLE_SUPER_ADMIN") {
-    return (
-      <span
-        className="rounded-[var(--r-pill)] text-[10.5px] font-extrabold tracking-wide px-2.5 py-1"
-        style={{ border: "1.5px solid var(--on-surface-variant)", color: "var(--on-surface)" }}
-      >
-        {role.replace("ROLE_", "")}
-      </span>
-    );
-  }
-  return (
-    <span
-      className="rounded-[var(--r-pill)] text-[10.5px] font-bold tracking-wide px-2.5 py-1"
-      style={{ border: "1px solid var(--outline)", color: "var(--on-surface-variant)" }}
-    >
-      USER
-    </span>
-  );
+interface PendingChange {
+  action: BulkRoleAction;
+  users: SuperAdminUserResponse[];
 }
 
-function AuditHistory({ userId }: { userId: number }) {
-  const fmt = useFormat();
-  const t = useTranslations("superadmin");
-  const { data, isLoading } = useQuery({
-    queryKey: queryKeys.superAdminUsers.roleAudit(userId),
-    queryFn: () => superAdminApi.roleAudit(userId),
-  });
-
-  return (
-    <div className="pl-[62px] pr-4 pb-3.5 flex flex-col gap-1.5">
-      <p className="text-[10.5px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-        {t("auditHistory")}
-      </p>
-      {isLoading ? (
-        <Skeleton variant="text" />
-      ) : !data || data.length === 0 ? (
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {t("noAuditHistory")}
-        </p>
-      ) : (
-        data.map((entry) => (
-          <div key={entry.id} className="flex items-center gap-2.5 text-xs">
-            <span className="font-mono" style={{ color: "var(--on-surface-variant)" }}>
-              {fmt.date(entry.createdAt, "dateTime")}
-            </span>
-            <span className="font-bold" style={{ color: "var(--on-surface)" }}>
-              {entry.action} {entry.role}
-            </span>
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
+/**
+ * Superadmin users (W9-E): a DS `DataTable` — avatar and e-mail, the role in words (Kliens · Edző · Superadmin, never
+ * `ROLE_`), registered date — with a role filter, search (server side), row ticks with a bulk "Szerepkör…" bar (trainer
+ * grant / revoke, one request per user in turn with progress, failures reported) and a "⋯" with the role action and the
+ * per-user history drawer. Names, the trainer column and the KPI row need the optional W9.b1 / b2 endpoints.
+ */
 export default function SuperAdminUsersPage() {
   const t = useTranslations("superadmin");
-  const common = useTranslations("common");
+  const fmt = useFormat();
   const queryClient = useQueryClient();
   const { show } = useToast();
-  const { user: me } = useSessionStore();
+  const me = useSessionStore((s) => s.user);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [confirmTarget, setConfirmTarget] = useState<{ user: SuperAdminUserResponse; grant: boolean } | null>(null);
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [confirm, setConfirm] = useState<PendingChange | null>(null);
+  const [history, setHistory] = useState<SuperAdminUserResponse | null>(null);
+  const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.superAdminUsers.page({ page, size: PAGE_SIZE, search: search || undefined }),
-    queryFn: () => superAdminApi.users({ page, size: PAGE_SIZE, search: search || undefined }),
+    queryKey: queryKeys.superAdminUsers.page({ page: 0, size: LIMIT, search: search || undefined }),
+    queryFn: () => superAdminApi.users({ page: 0, size: LIMIT, search: search || undefined }),
+    placeholderData: keepPreviousData,
   });
 
-  const grantMutation = useMutation({
-    mutationFn: (userId: number) => superAdminApi.grantTrainer(userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["superadmin-users"] });
-      show(t("granted"), "success");
+  const users = useMemo(() => data?.content ?? [], [data]);
+  const rows = useMemo(() => users.filter((u) => matchesRoleFilter(u, roleFilter)), [users, roleFilter]);
+  const truncated = data != null && data.totalElements > users.length;
+  const trainers = users.filter((u) => primaryRole(u.roles) === "TRAINER").length;
+  const selectedUsers = users.filter((u) => selected.has(u.id));
+  const allVisibleSelected = rows.length > 0 && rows.every((u) => selected.has(u.id));
+
+  const toggle = (id: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  const apply = useMutation({
+    mutationFn: async ({ action, users: targets }: PendingChange) => {
+      const run = action === "grant" ? superAdminApi.grantTrainer : superAdminApi.revokeTrainer;
+      setProgress({ completed: 0, total: targets.length });
+      try {
+        return await runBulk(targets.map((u) => u.id), (id) => run(id), (completed) => setProgress({ completed, total: targets.length }));
+      } finally {
+        setProgress(null);
+      }
     },
-    onError: () => show(t("grantFailed"), "error"),
+    onSuccess: (result, { action, users: targets }) => {
+      queryClient.invalidateQueries({ queryKey: ["superadmin-users"] });
+      setSelected(new Set());
+      if (result.failed.length === 0) {
+        show(targets.length === 1 ? t(action === "grant" ? "granted" : "revoked") : t("bulkDone", { count: result.done }), "success");
+      } else {
+        show(t("bulkPartial", { done: result.done, failed: result.failed.length }), "error");
+      }
+    },
   });
 
-  const revokeMutation = useMutation({
-    mutationFn: (userId: number) => superAdminApi.revokeTrainer(userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["superadmin-users"] });
-      show(t("revoked"), "success");
+  const ask = (action: BulkRoleAction, from: SuperAdminUserResponse[]) => {
+    const targets = bulkTargets(from, action, me?.id);
+    if (targets.length === 0) {
+      show(t("bulkNothing"), "error");
+      return;
+    }
+    setConfirm({ action, users: targets });
+  };
+
+  const columns: DataTableColumn<SuperAdminUserResponse>[] = [
+    {
+      key: "select",
+      header: "",
+      width: 32,
+      render: (u) => (
+        <span onClick={(e) => e.stopPropagation()}>
+          <Checkbox checked={selected.has(u.id)} onChange={() => toggle(u.id)} aria-label={t("selectUser", { email: u.email })} />
+        </span>
+      ),
     },
-    onError: () => show(t("revokeFailed"), "error"),
-  });
+    {
+      key: "user",
+      header: t("colUser"),
+      sort: (u) => u.email,
+      render: (u) => (
+        <span className="flex min-w-0 items-center gap-3">
+          <UserAvatar userId={u.id} email={u.email} hasAvatar={u.hasAvatar} size={32} />
+          <span className="type-body truncate" style={{ fontWeight: 700 }}>
+            {u.email}
+            {u.id === me?.id && <span className="type-body-s ml-1.5" style={{ color: "var(--text-3)", fontWeight: 600 }}>{t("self")}</span>}
+          </span>
+        </span>
+      ),
+    },
+    { key: "role", header: t("colRole"), sort: (u) => primaryRole(u.roles), render: (u) => <RoleChip roles={u.roles} /> },
+    {
+      key: "registered",
+      header: t("colRegistered"),
+      sort: (u) => u.createdAt,
+      render: (u) => <span className="type-body-s tabular" style={{ color: "var(--text-2)" }}>{fmt.date(u.createdAt, "dayYear")}</span>,
+    },
+  ];
+
+  const confirmUsers = confirm?.users ?? [];
+  const grant = confirm?.action === "grant";
 
   return (
-    <div className="flex flex-col gap-3.5 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <p className="text-lg font-extrabold tracking-tight" style={{ color: "var(--on-surface)" }}>
-          {t("usersTitle")}
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="type-title">{t("usersTitle")}</h2>
+        <p className="type-body-s" style={{ color: "var(--text-2)" }} data-testid="users-summary">
+          {truncated ? t("usersCount", { count: data?.totalElements ?? 0 }) : t("usersSummary", { count: users.length, trainers })}
         </p>
-        <div
-          className="rounded-2xl h-12 w-80 flex items-center gap-2.5 px-4.5"
-          style={{ background: "var(--surface)" }}
-          data-ring-frame
-        >
-          <span className="material-symbols-rounded text-xl" style={{ color: "var(--muted)" }}>
-            search
-          </span>
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            placeholder={t("searchPlaceholder")}
-            className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: "var(--on-surface)" }}
-          />
-        </div>
       </div>
+
+      {selected.size > 0 && (
+        <BulkRoleBar
+          selectedCount={selected.size}
+          progress={progress}
+          onGrant={() => ask("grant", selectedUsers)}
+          onRevoke={() => ask("revoke", selectedUsers)}
+          onClear={() => setSelected(new Set())}
+        />
+      )}
 
       {isLoading ? (
         <Skeleton variant="table" />
       ) : isError ? (
         <ErrorState onRetry={refetch} />
-      ) : !data || data.content.length === 0 ? (
-        <p className="text-sm text-center py-10" style={{ color: "var(--on-surface-variant)" }}>
-          {t("noResults")}
-        </p>
       ) : (
         <>
-          <div className="rounded-[var(--r-lg)] p-2 flex flex-col gap-1" style={{ background: "var(--surface)" }}>
-            {data.content.map((u) => {
-              const isSelf = u.id === me?.id;
-              const isTrainer = u.roles.includes("ROLE_TRAINER");
-              const expanded = expandedId === u.id;
-              return (
-                <div key={u.id} className="rounded-[13px]" style={{ background: expanded ? "var(--surface-container)" : "transparent" }}>
-                  <div className="flex items-center gap-3.5 px-3.5 py-3">
-                    <button
-                      onClick={() => setExpandedId(expanded ? null : u.id)}
-                      className="shrink-0"
-                      style={{ color: "var(--on-surface-variant)" }}
-                      aria-label={t("auditHistory")}
-                    >
-                      <span className="material-symbols-rounded text-xl">
-                        {expanded ? "expand_more" : "chevron_right"}
-                      </span>
-                    </button>
-                    <UserAvatar userId={u.id} email={u.email} hasAvatar={u.hasAvatar} />
-                    <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                      {u.email}
-                      {isSelf && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: "var(--muted)" }}>{t("self")}</span>}
-                    </span>
-                    <div className="flex gap-1.5 shrink-0">
-                      {u.roles.map((r) => (
-                        <RoleBadge key={r} role={r} />
-                      ))}
-                    </div>
-                    <div className="w-[170px] flex justify-end shrink-0">
-                      {isSelf ? (
-                        <span className="text-sm font-bold" style={{ color: "var(--muted)" }}>—</span>
-                      ) : isTrainer ? (
-                        <button
-                          onClick={() => setConfirmTarget({ user: u, grant: false })}
-                          className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold"
-                          style={{ border: "1.5px solid rgba(207,102,121,.5)", color: "var(--error)" }}
-                        >
-                          <span className="material-symbols-rounded text-base">remove_moderator</span>
-                          {t("revokeTrainer")}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmTarget({ user: u, grant: true })}
-                          className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold"
-                          style={{ background: "var(--primary)", color: "var(--bg)" }}
-                        >
-                          <span className="material-symbols-rounded text-base">add_moderator</span>
-                          {t("makeTrainer")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {expanded && <AuditHistory userId={u.id} />}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-center gap-1.5">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={data.number === 0}
-              className="p-1.5 disabled:opacity-30"
-              style={{ color: "var(--on-surface-variant)" }}
-              aria-label={common("previousPage")}
-            >
-              <span className="material-symbols-rounded text-xl">chevron_left</span>
-            </button>
-            <span className="text-xs font-bold px-2" style={{ color: "var(--on-surface-variant)" }}>
-              {data.number + 1} / {Math.max(1, data.totalPages)}
-            </span>
-            <button
-              onClick={() => setPage((p) => (data.last ? p : p + 1))}
-              disabled={data.last}
-              className="p-1.5 disabled:opacity-30"
-              style={{ color: "var(--on-surface-variant)" }}
-              aria-label={common("nextPage")}
-            >
-              <span className="material-symbols-rounded text-xl">chevron_right</span>
-            </button>
-          </div>
+          <DataTable
+            aria-label={t("usersTitle")}
+            columns={columns}
+            rows={rows}
+            rowKey={(u) => u.id}
+            pageSize={20}
+            search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
+            filters={
+              <div className="flex flex-wrap items-center gap-3">
+                <SegmentedControl
+                  size="sm"
+                  aria-label={t("colRole")}
+                  value={roleFilter}
+                  onChange={setRoleFilter}
+                  options={[
+                    { value: "all", label: t("filterAll") },
+                    { value: "USER", label: t("role.USER") },
+                    { value: "TRAINER", label: t("role.TRAINER") },
+                    { value: "ADMIN", label: t("role.ADMIN") },
+                  ]}
+                />
+                <Checkbox
+                  checked={allVisibleSelected}
+                  onChange={(on) => setSelected(on ? new Set(rows.map((u) => u.id)) : new Set())}
+                  label={t("selectAllShown")}
+                />
+              </div>
+            }
+            totalLabel={(n) => t("usersCount", { count: n })}
+            rowMenuLabel={(u) => t("rowMenuAria", { email: u.email })}
+            rowMenu={(u) => [
+              u.roles.includes("ROLE_TRAINER")
+                ? { label: t("revokeTrainer"), icon: "remove_moderator", onSelect: () => ask("revoke", [u]) }
+                : { label: t("makeTrainer"), icon: "add_moderator", onSelect: () => ask("grant", [u]) },
+              { label: t("auditHistory"), icon: "history", onSelect: () => setHistory(u) },
+            ]}
+            renderCardRow={(u) => ({ title: u.email, meta: fmt.date(u.createdAt, "dayYear"), value: <RoleChip roles={u.roles} /> })}
+          />
+          {data && data.totalElements > users.length && (
+            <p className="type-body-s" style={{ color: "var(--text-3)" }}>{t("limitNote", { shown: users.length, total: data.totalElements })}</p>
+          )}
         </>
       )}
 
-      {confirmTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(8,9,6,.6)" }}
-          onClick={() => setConfirmTarget(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-[var(--r-lg)] p-5.5"
-            style={{ background: "var(--surface-container)", boxShadow: "0 18px 44px rgba(0,0,0,.4)" }}
-          >
-            <p className="text-base font-extrabold mb-1.5" style={{ color: "var(--on-surface)" }}>
-              {confirmTarget.grant ? t("confirmMakeTitle") : t("confirmRevokeTitle")}
-            </p>
-            <p className="text-[12.5px] leading-relaxed mb-4.5" style={{ color: "var(--on-surface-variant)" }}>
-              <span style={{ color: "var(--on-surface)", fontWeight: 800 }}>{confirmTarget.user.email}</span>{" "}
-              {confirmTarget.grant ? t("confirmMakeBody") : t("confirmRevokeBody")}
-            </p>
-            <div className="flex gap-2.5 justify-end">
-              <button
-                onClick={() => setConfirmTarget(null)}
-                className="text-sm font-bold px-4 py-2.5"
-                style={{ color: "var(--on-surface-variant)" }}
-              >
-                {t("cancel")}
-              </button>
-              <button
-                onClick={() => {
-                  if (confirmTarget.grant) grantMutation.mutate(confirmTarget.user.id);
-                  else revokeMutation.mutate(confirmTarget.user.id);
-                  setConfirmTarget(null);
-                }}
-                className="rounded-xl px-4.5 py-2.5 text-sm font-extrabold"
-                style={{
-                  background: confirmTarget.grant ? "var(--primary)" : "var(--error)",
-                  color: "#161611",
-                }}
-              >
-                {confirmTarget.grant ? t("confirmMakeConfirm") : t("confirmRevokeConfirm")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={confirm !== null}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => {
+          if (confirm) apply.mutate(confirm);
+          setConfirm(null);
+        }}
+        icon={grant ? "add_moderator" : "remove_moderator"}
+        tint={grant ? "var(--role)" : "var(--heart)"}
+        destructive={!grant}
+        title={confirmUsers.length > 1 ? t(grant ? "bulkMakeTitle" : "bulkRevokeTitle", { count: confirmUsers.length }) : t(grant ? "confirmMakeTitle" : "confirmRevokeTitle")}
+        body={
+          confirmUsers.length > 1
+            ? t(grant ? "bulkMakeBody" : "bulkRevokeBody", { count: confirmUsers.length })
+            : `${confirmUsers[0]?.email ?? ""} ${t(grant ? "confirmMakeBody" : "confirmRevokeBody")}`
+        }
+        cancelLabel={t("cancel")}
+        confirmLabel={t(grant ? "confirmMakeConfirm" : "confirmRevokeConfirm")}
+      />
+
+      {history && <RoleHistoryDrawer userId={history.id} email={history.email} onClose={() => setHistory(null)} />}
     </div>
   );
 }
