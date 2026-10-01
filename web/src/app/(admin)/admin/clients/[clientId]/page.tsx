@@ -2,12 +2,12 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { trainerApi } from "@/features/trainer/api";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { ClientDetailHeader, type ClientTab } from "@/features/trainer/components/ClientDetailHeader";
+import { ClientDetailHeader, CLIENT_TABS, type ClientTab } from "@/features/trainer/components/ClientDetailHeader";
 import { ClientOverviewTab } from "@/features/trainer/components/ClientOverviewTab";
 import { ClientStatisticsTab } from "@/features/trainer/components/ClientStatisticsTab";
 import { ClientStepsTab } from "@/features/trainer/components/ClientStepsTab";
@@ -32,15 +32,19 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   const clientId = Number(clientIdParam);
   const t = useTranslations("admin.clientDetail");
   const searchParams = useSearchParams();
-  /* Deep-linked from the trainer calendar's session-peek ("Kliens ütemterve" / "Edzés
-   * megnyitása") — e.g. ?tab=schedule or ?tab=workouts&focusSessionId=123 — takes
-   * priority over the remembered tab; otherwise fall back to what was last active. */
-  const [tab, setTabState] = useState<ClientTab>(
-    () => (searchParams.get("tab") as ClientTab | null) ?? lastActiveTabByClient.get(clientId) ?? "overview",
-  );
+  /* The tab lives in "?tab=" so it survives a reload and can be linked (the calendar's session peek deep-links
+   * ?tab=schedule or ?tab=workouts&focusSessionId=123); with no param, the tab last used for this client in this
+   * session, else the overview. */
+  const router = useRouter();
+  const pathname = usePathname();
+  const fromUrl = searchParams.get("tab") as ClientTab | null;
+  const tab: ClientTab = fromUrl && CLIENT_TABS.includes(fromUrl) ? fromUrl : (lastActiveTabByClient.get(clientId) ?? "overview");
   const setTab = (next: ClientTab) => {
     lastActiveTabByClient.set(clientId, next);
-    setTabState(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", next);
+    params.delete("focusSessionId");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
   const [scheduleDrawerOpen, setScheduleDrawerOpen] = useState(false);
   const [focusSessionId, setFocusSessionId] = useState<number | null>(() => {

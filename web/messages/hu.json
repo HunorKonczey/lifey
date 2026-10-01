@@ -216,6 +216,15 @@
       "stepMessage": "Küldd el az első üzeneted"
     },
     "clientDetail": {
+      "clientSince": "kliens {date} óta",
+      "scheduleAction": "Ütemezés",
+      "moreAria": "További műveletek",
+      "removeClient": "Kliens eltávolítása",
+      "tabsAria": "Kliens szakaszai",
+      "inactiveBand": "{count} napja nem naplózott semmit. Utolsó aktivitás: {date}",
+      "inactiveBandNever": "{count} napja nem naplózott semmit.",
+      "inactiveBandMissed": "{count} ütemezett edzés kimaradt.",
+      "sendReminder": "Emlékeztető küldése",
       "relationshipSince": "Kapcsolat: {date} óta",
       "readOnly": "Csak olvasható",
       "tabs": {

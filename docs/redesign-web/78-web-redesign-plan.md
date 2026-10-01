@@ -2964,11 +2964,13 @@ day limit); unread counts from the chat hooks already running in the trainer lay
 
 *As built:* `PendingInvitesCard`: "N függő meghívó", the newest four e-mails with `lifeyFormat.relative` ("3 napja"), "és még N", "Meghívók kezelése →" to `/admin/invites`; shown as a 300 px column from 1280 px up only when there are pending invites (the page just says "nincs függő meghívó" otherwise). Checked with Playwright as the demo trainer (1440 light and dark, 390: 5 cards, 0 overflow, 0 console errors; grid and table, the search filtering to one card); the invites card itself has no demo data to show.
 
-### W7.6 — Web UI: client detail header + tabs + inactive band
+### W7.6 — Web UI: client detail header + tabs + inactive band ✅
 - Files: `features/trainer/components/ClientDetailHeader.tsx`, `app/(admin)/admin/clients/[clientId]/page.tsx`
   (tab in `?tab=`), `routeChrome.ts` (breadcrumb + date stepper).
 - **Verify:** at 1024 and 390 nothing clips (`trainer-005`); actions wrap; the band only for inactive
   clients.
+
+*As built:* the client page header is W7-B's card: a crumb back to the list, 56 px avatar, name at 26/800, "e-mail · kliens 2026. szept. 27. óta", and the actions in a wrapping row — Üzenet (opens the conversation, lazily created), Ütemezés (the schedule drawer, from any tab) and "⋯" with "Kliens eltávolítása" behind a `ConfirmModal` — then the DS underline `Tabs` (the active tab scrolled into view at 390). The tab is in `?tab=` now (`router.replace`, the remembered per-client tab is only the fallback); `focusSessionId` deep links still work. **The inactive band** (heart tint, inside the card, `role=status`) shows only when the client is past the inactivity threshold: "3 napja nem naplózott semmit. Utolsó aktivitás: … 3 ütemezett edzés kimaradt." with "Emlékeztető küldése" opening the chat with the reminder draft (same `draftInactive` text as the strip). **Deviations:** the canvas meta "34 éves · 168 cm · cél: fogyás" is not shown — the trainer has no endpoint for a client's profile; the "Kiosztás" action is not in the header (assigning stays on the programs / plans pages, which already pick the client); the breadcrumb is the crumb link in the card, not the top bar (the top bar keeps "Klienseim" and the date stepper). Checked with Playwright as the demo trainer at 1440 / 1024 / 390: no overflow, no console errors, the band present for the (3 days inactive) demo client.
 
 ### W7.7 — Web data: heatmap + activity feed derivation
 - Files: `features/trainer/clientActivity.ts` + test (28-day grid Monday-first, dots per kind, feed of

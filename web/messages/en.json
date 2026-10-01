@@ -216,6 +216,15 @@
       "stepMessage": "Send your first message"
     },
     "clientDetail": {
+      "clientSince": "client since {date}",
+      "scheduleAction": "Schedule",
+      "moreAria": "More actions",
+      "removeClient": "Remove client",
+      "tabsAria": "Client sections",
+      "inactiveBand": "Has not logged anything for {count} days. Last activity: {date}.",
+      "inactiveBandNever": "Has not logged anything for {count} days.",
+      "inactiveBandMissed": "{count, plural, one {# scheduled workout} other {# scheduled workouts}} missed.",
+      "sendReminder": "Send a reminder",
       "relationshipSince": "Client since {date}",
       "readOnly": "Read only",
       "tabs": {
