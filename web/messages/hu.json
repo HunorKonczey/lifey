@@ -155,6 +155,8 @@
     },
     "billing": {
       "title": "Számlázás",
+      "currentPlanOverline": "Jelenlegi csomag",
+      "trialDaysLeft": "Még {days, plural, one {# nap} other {# nap}} a próbaidőből",
       "planStarter": "Starter",
       "planPro": "Pro",
       "planStudio": "Studio",

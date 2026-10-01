@@ -40,3 +40,11 @@ export function statusPillFor(status: SubscriptionStatus): StatusPill {
       return { labelKey: "statusRefunded", tone: "muted" };
   }
 }
+
+/** A trainer trial runs 14 days (`TrainerTrialListener.TRIAL_LENGTH`). */
+export const TRIAL_LENGTH_DAYS = 14;
+
+/** How much of the trial is used, 0–1, from the days still left (clamped, so a stale or odd value never overflows the bar). */
+export function trialElapsedFraction(daysLeft: number, lengthDays = TRIAL_LENGTH_DAYS): number {
+  return Math.min(1, Math.max(0, (lengthDays - daysLeft) / lengthDays));
+}

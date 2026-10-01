@@ -155,6 +155,8 @@
     },
     "billing": {
       "title": "Billing",
+      "currentPlanOverline": "Current plan",
+      "trialDaysLeft": "{days, plural, one {# day} other {# days}} left in the trial",
       "planStarter": "Starter",
       "planPro": "Pro",
       "planStudio": "Studio",
