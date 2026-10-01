@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useFormat } from "@/lib/format/useFormat";
 import { Icon } from "@/components/ds";
-import type { WeekSummary } from "../clientSignals";
+import { calorieCompliance, type WeekSummary } from "../clientSignals";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { useLastActivityLabel } from "./ClientCard";
 import type { TrainerClientResponse } from "../types";
@@ -35,7 +35,7 @@ export function ClientRows({ clients, weeks }: { clients: TrainerClientResponse[
                 <span className="truncate type-body-s" style={{ color: a.alert ? "var(--heart)" : "var(--text-2)", fontWeight: a.alert ? 700 : 400 }}>{a.text}</span>
               </span>
               <span className="num shrink-0 text-right" style={{ fontWeight: 800 }}>
-                {w && w.scheduled > 0 ? `${w.done} / ${w.scheduled}` : c.avgCalories7d != null ? `${fmt.number(c.avgCalories7d, 0)}` : "—"}
+                {calorieCompliance(c) != null ? `${calorieCompliance(c)} %` : w && w.scheduled > 0 ? `${w.done} / ${w.scheduled}` : c.avgCalories7d != null ? `${fmt.number(c.avgCalories7d, 0)}` : "—"}
               </span>
               <Icon name="chevron_right" size={20} color="var(--text-3)" />
             </Link>

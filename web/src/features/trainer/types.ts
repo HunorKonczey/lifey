@@ -32,6 +32,8 @@ export interface TrainerClientResponse {
   avgCalories7d: number | null;
   /** Strength personal records set in the last 7 days; 0 is a real answer. */
   prCount7d: number;
+  /** The client's own daily calorie goal; null when none is set (W7.b1) — the card then shows the average only. */
+  dailyCalorieGoal?: number | null;
 }
 
 export type ContentType = "TEMPLATE" | "RECIPE";

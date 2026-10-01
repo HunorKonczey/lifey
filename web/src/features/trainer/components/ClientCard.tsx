@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, ConfirmModal, Icon, Menu, Modal } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
-import { lastActivity, weightChange, type WeekSummary } from "../clientSignals";
+import { calorieCompliance, lastActivity, weightChange, type WeekSummary } from "../clientSignals";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { WeightDelta } from "./WeightDelta";
 import type { TrainerClientResponse } from "../types";
@@ -68,6 +68,7 @@ export function ClientCard({ client, week, onRevoke, revoking, overLimit }: Clie
   const name = clientDisplayName(client);
   const weight = weightChange(client.weightTrend);
   const next = week?.next ?? null;
+  const compliance = calorieCompliance(client);
 
   return (
     <div
@@ -102,7 +103,14 @@ export function ClientCard({ client, week, onRevoke, revoking, overLimit }: Clie
 
       <dl className="grid grid-cols-3 gap-2">
         <Kpi label={t("kpiCalories")}>
-          {client.avgCalories7d != null ? (
+          {compliance != null ? (
+            <>
+              <span className="num">{compliance} %</span>
+              <div className="mt-1.5" style={{ height: 5, borderRadius: 3, background: "var(--control)", overflow: "hidden" }} aria-hidden>
+                <div style={{ width: `${Math.min(100, compliance)}%`, height: "100%", background: "var(--metric-kcal)" }} />
+              </div>
+            </>
+          ) : client.avgCalories7d != null ? (
             <>
               <span className="num">{fmt.number(client.avgCalories7d, 0)}</span> <Unit>kcal</Unit>
             </>

@@ -171,3 +171,13 @@ export function pickForStrip(items: AttentionItem[], max: number): AttentionItem
   }
   return picked;
 }
+
+/**
+ * The 7-day calorie average as a share of the client's goal, rounded: 1 823 of 1 900 → 96. Null when either number is
+ * missing (no meals logged, or no goal set) — the card then shows the plain average instead of an invented 0 %.
+ */
+export function calorieCompliance(client: Pick<TrainerClientResponse, "avgCalories7d" | "dailyCalorieGoal">): number | null {
+  const goal = client.dailyCalorieGoal;
+  if (client.avgCalories7d == null || goal == null || goal <= 0) return null;
+  return Math.round((client.avgCalories7d / goal) * 100);
+}

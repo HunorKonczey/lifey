@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { DataTable, type DataTableColumn } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
-import { weightChange, type WeekSummary } from "../clientSignals";
+import { calorieCompliance, weightChange, type WeekSummary } from "../clientSignals";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import { sessionDay, useLastActivityLabel } from "./ClientCard";
 import { WeightDelta } from "./WeightDelta";
@@ -44,7 +44,11 @@ export function ClientsTable({ clients, weeks }: { clients: TrainerClientRespons
       header: t("kpiCalories"),
       align: "right",
       sort: (c) => c.avgCalories7d ?? -1,
-      render: (c) => (c.avgCalories7d != null ? <span className="num">{fmt.number(c.avgCalories7d, 0)} kcal</span> : dash),
+      render: (c) => {
+        const pct = calorieCompliance(c);
+        if (pct != null) return <span className="num">{pct} %</span>;
+        return c.avgCalories7d != null ? <span className="num">{fmt.number(c.avgCalories7d, 0)} kcal</span> : dash;
+      },
     },
     {
       key: "workouts",

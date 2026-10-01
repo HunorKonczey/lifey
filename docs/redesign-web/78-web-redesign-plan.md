@@ -3018,13 +3018,15 @@ day limit); unread counts from the chat hooks already running in the trainer lay
 
 *As built:* below 768 px the clients page is W7-E: the title sub-line, search and invite icon, **one attention row** instead of three cards (the first of the strip's picks, with its single button), the sort control, and the clients as **rows** (`ClientRows`: avatar, name, last-activity line in heart when quiet, and on the right "2 / 4" workouts this week or the 7-day kcal average, chevron) — the grid / table toggle is hidden there. The trainer's bottom nav is the existing shell one (Klienseim · Naptár · Chat · Tervek · …). The client page's tabs are the DS `Tabs` (horizontal scroll, active one scrolled into view) and the header actions wrap under the name; checked at 390: no horizontal overflow on the list or the client page, 0 console errors. Not built: the canvas' compliance "96%" per row — it needs the optional W7.b1 goal field.
 
-### W7.b1 — Backend (optional): `dailyCalorieGoal` on the trainer client summary
+### W7.b1 — Backend (optional): `dailyCalorieGoal` on the trainer client summary ✅
 - Files: `backend/.../trainer/dto/TrainerClientResponse.java` (+ nullable `Integer dailyCalorieGoal`, read
   from the client's settings in the same service call that computes `avgCalories7d`),
   `TrainerAccessServiceImpl.java`, controller test.
 - No migration, no new table — a read-only field, like mobile R6.2. The web card computes the % when it
   is present and shows avg kcal otherwise. Needs the go-ahead (§10 Q4).
 - **Verify:** `./mvnw test -Dtest=TrainerClient*`; the web card shows 96 % with the field.
+
+*As built:* **Done with the go-ahead.** `TrainerClientResponse` has a nullable `Integer dailyCalorieGoal`, read in the same service call that computes `avgCalories7d`: `TrainerAccessServiceImpl` asks `UserSettingsRepository.findByUserId` — a client who never opened settings has no row, which is *no goal* (null), and reading does not create one (the test verifies no `save`). No migration, no new table, read-only; the value is the one the trainer's nutrition-goals endpoint already returns. Tests: `TrainerAccessServiceImplTest` (a client with 1900 and one without a row, 12 tests green) and `TrainerClientControllerTest` (the JSON carries `dailyCalorieGoal: 1900`, and the field is absent when null; 5 green). **Web:** the type gained `dailyCalorieGoal?`, `calorieCompliance` (pure, tested: 1 823 / 1 900 → 96, null without an average or a goal) and the client card now shows **"96 %" with a thin bar** in the Kalória · 7 nap tile, the table "96 %" and the phone row the percentage; with no goal (or an older server) every one of them falls back to the plain kcal average, never 0 %. The running dev backend must be restarted to send the field.
 
 **W7 acceptance** (plus §4.1): W7-A … W7-E reproduced; no modal on arrival; all six tabs on v2 without
 losing any function.

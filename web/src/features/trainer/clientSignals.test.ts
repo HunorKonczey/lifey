@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attentionItems, lastActivity, pickForStrip, sortByAttention, sortForList, weekSummary, weightChange } from "./clientSignals";
+import { attentionItems, calorieCompliance, lastActivity, pickForStrip, sortByAttention, sortForList, weekSummary, weightChange } from "./clientSignals";
 import type { TrainerCalendarSessionResponse, TrainerClientResponse } from "./types";
 
 const NOW = new Date("2026-09-29T12:00:00Z");
@@ -152,5 +152,18 @@ describe("pickForStrip", () => {
     const items = [item("inactive", 1), item("inactive", 2), item("inactive", 3)];
     expect(pickForStrip(items, 3).map((i) => i.clientId)).toEqual([1, 2, 3]);
     expect(pickForStrip(items, 2).map((i) => i.clientId)).toEqual([1, 2]);
+  });
+});
+
+describe("calorieCompliance", () => {
+  it("is the average over the goal, rounded", () => {
+    expect(calorieCompliance({ avgCalories7d: 1823, dailyCalorieGoal: 1900 })).toBe(96);
+    expect(calorieCompliance({ avgCalories7d: 2100, dailyCalorieGoal: 1900 })).toBe(111);
+  });
+  it("is null without an average, without a goal, or with a zero goal", () => {
+    expect(calorieCompliance({ avgCalories7d: null, dailyCalorieGoal: 1900 })).toBeNull();
+    expect(calorieCompliance({ avgCalories7d: 1800, dailyCalorieGoal: null })).toBeNull();
+    expect(calorieCompliance({ avgCalories7d: 1800, dailyCalorieGoal: 0 })).toBeNull();
+    expect(calorieCompliance({ avgCalories7d: 1800 })).toBeNull();
   });
 });
