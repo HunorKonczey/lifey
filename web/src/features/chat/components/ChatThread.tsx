@@ -57,9 +57,11 @@ interface ChatThreadProps {
   initialDraft?: string;
   /** The client-info button (the context panel as a drawer / sheet) — absent when the panel is already beside the thread. */
   onInfo?: () => void;
+  /** Full-screen on a phone: no card radius or shadow. */
+  flush?: boolean;
 }
 
-export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onInfo }: ChatThreadProps) {
+export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onInfo, flush = false }: ChatThreadProps) {
   const t = useTranslations("chat");
   const common = useTranslations("common");
   const locale = useLocale((s) => s.locale);
@@ -327,7 +329,7 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onIn
   return (
     <div
       className="flex flex-col min-h-0 overflow-hidden"
-      style={{ borderRadius: "var(--r-card)", background: "var(--card)", boxShadow: "var(--e1), var(--edge-card)" }}
+      style={{ borderRadius: flush ? 0 : "var(--r-card)", background: "var(--card)", boxShadow: flush ? "none" : "var(--e1), var(--edge-card)" }}
     >
       <header className="flex items-center gap-3 px-4 h-[68px] shrink-0" style={{ borderBottom: "1px solid var(--hairline)" }}>
         {onBack && <IconButton icon="arrow_back" label={t("backToList")} onClick={onBack} />}

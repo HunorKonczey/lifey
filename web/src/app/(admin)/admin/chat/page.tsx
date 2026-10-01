@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useSessionStore } from "@/features/auth/store";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useVisualViewport } from "@/lib/hooks/useVisualViewport";
 import { Drawer } from "@/components/ds";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ConversationList } from "@/features/chat/components/ConversationList";
@@ -49,7 +50,31 @@ export default function AdminChatPage() {
   const showThread = twoColumn || selected !== null;
   const isClientPeer = selected?.peer.role === "CLIENT";
   const inlinePanel = threeColumn && isClientPeer;
+  // On a phone an open thread is the whole screen (W8-E): above the bottom nav, sized to the visual viewport so the keyboard never covers the composer.
+  const phoneThread = !twoColumn && selected !== null && !!user;
+  const viewport = useVisualViewport(phoneThread);
   const columns = twoColumn ? (inlinePanel ? "320px minmax(0, 1fr) 300px" : "320px minmax(0, 1fr)") : "minmax(0, 1fr)";
+
+  if (phoneThread && selected && user) {
+    return (
+      <div className="fixed left-0 right-0 z-40 grid" style={{ gridTemplateRows: "minmax(0, 1fr)", top: viewport?.offsetTop ?? 0, height: viewport?.height ?? "100dvh", background: "var(--bg)", paddingBottom: "env(safe-area-inset-bottom)" }} data-testid="chat-phone-thread">
+        <ChatThread
+          key={selected.id}
+          conversation={selected}
+          ownUserId={user.id}
+          onBack={back}
+          initialDraft={draft}
+          onInfo={isClientPeer ? () => setInfoOpen(true) : undefined}
+          flush
+        />
+        {infoOpen && isClientPeer && (
+          <Drawer open onClose={() => setInfoOpen(false)} width={480} title={t("contextTitleShort", { name: selected.peer.displayName })}>
+            <ClientContextPanel clientUserId={selected.peer.userId} displayName={selected.peer.displayName} bare />
+          </Drawer>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4 h-[calc(100dvh-7rem)] min-h-[480px]" style={{ gridTemplateColumns: columns }}>
