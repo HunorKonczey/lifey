@@ -41,6 +41,8 @@ export function SessionSummary({
   history,
   bare = false,
   starting = false,
+  readOnly = false,
+  after,
   onRepeat,
   onEdit,
   onDeleted,
@@ -49,9 +51,13 @@ export function SessionSummary({
   history: WorkoutSessionResponse[];
   bare?: boolean;
   starting?: boolean;
-  onRepeat: () => void;
-  onEdit: () => void;
-  onDeleted: () => void;
+  /** The trainer's view: no menu, no repeat / edit / delete, and the trainer comment is the caller's (`after`). */
+  readOnly?: boolean;
+  /** Rendered under the exercises — the trainer's comment editor. */
+  after?: React.ReactNode;
+  onRepeat?: () => void;
+  onEdit?: () => void;
+  onDeleted?: () => void;
 }) {
   const t = useTranslations("workouts");
   const d = useTranslations("dashboard");
@@ -71,7 +77,7 @@ export function SessionSummary({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
       show(t("sessionDeleted"), "success");
-      onDeleted();
+      onDeleted?.();
     },
     onError: () => show(t("deleteFailed"), "error"),
   });
@@ -94,12 +100,12 @@ export function SessionSummary({
             </p>
             <h2 className="type-title truncate">{title}</h2>
           </div>
-          {menu}
+          {!readOnly && menu}
         </header>
       )}
-      {bare && <div className="-mt-2 flex justify-end">{menu}</div>}
+      {bare && !readOnly && <div className="-mt-2 flex justify-end">{menu}</div>}
 
-      {session.trainerComment && (
+      {session.trainerComment && !readOnly && (
         <Card variant="nested">
           <p className="type-label" style={{ color: "var(--text-3)" }}>
             {t("trainerComment")}
@@ -164,6 +170,9 @@ export function SessionSummary({
         )}
       </section>
 
+      {after}
+
+      {!readOnly && (
       <div className="flex flex-wrap gap-2">
         <Button variant="tonal" onClick={onRepeat} disabled={starting}>
           <Icon name="replay" size={20} />
@@ -174,6 +183,7 @@ export function SessionSummary({
           {t("editSession")}
         </Button>
       </div>
+      )}
 
       <ConfirmModal
         open={confirmingDelete}

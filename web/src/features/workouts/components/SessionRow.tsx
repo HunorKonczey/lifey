@@ -22,12 +22,15 @@ export function SessionRow({
   session,
   records,
   selected = false,
+  readOnly = false,
   onOpen,
 }: {
   session: WorkoutSessionResponse;
   /** Records this session set (personalRecords.recordsBySession) — 0 or missing: no chip. */
   records?: number;
   selected?: boolean;
+  /** The trainer's view of a client's history: no delete on the row. */
+  readOnly?: boolean;
   onOpen: () => void;
 }) {
   const t = useTranslations("workouts");
@@ -132,9 +135,11 @@ export function SessionRow({
           {date(started, "weekday")} · {date(started, "day")}
         </span>
       </button>
-      <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 max-md:hidden">
-        <IconButton icon="delete" label={t("deleteSessionAria")} size={32} onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} />
-      </span>
+      {!readOnly && (
+        <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 max-md:hidden">
+          <IconButton icon="delete" label={t("deleteSessionAria")} size={32} onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} />
+        </span>
+      )}
     </div>
   );
 }

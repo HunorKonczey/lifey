@@ -216,6 +216,7 @@
       "stepMessage": "Send your first message"
     },
     "clientDetail": {
+      "clientNote": "Client note",
       "goalsInvalid": "Enter a whole number, or leave it empty",
       "goalsDrawerHint": "Leave a goal empty to clear it. The client sees the new goals at once.",
       "overview": {

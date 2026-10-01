@@ -2999,10 +2999,12 @@ day limit); unread counts from the chat hooks already running in the trainer lay
 
 *As built:* **Étkezések** is the client's day, read-only: the W2 `MealCard`s without any handler (so no add / edit / delete / duplicate anywhere — the card already draws no actions then), grouped Reggeli · Ebéd · Vacsora · Snack with the group's kcal, beside the sticky "Napi összesítő" (kcal against the goal with the DS `MetricBar`, protein / carbs / fat against theirs, meal and item counts). **The day is the top bar's date stepper** (`useDateStore`) — the tab's own day navigator is gone. "Célok szerkesztése" opens `NutritionGoalsDrawer` (DS drawer; the existing `nutritionGoalsEditor` rules: blank clears a goal, a non-integer is flagged and blocks saving; Esc / ✕ ask first when dirty) instead of editing inside the panel; it saves through the same endpoint and invalidates the same query. Saving was not exercised in the browser (it would change the demo client's goals); the drawer's save path is the old mutation moved as is.
 
-### W7.11 — Web UI: workouts tab + summary drawer
+### W7.11 — Web UI: workouts tab + summary drawer ✅
 - Files: `ClientWorkoutsTab.tsx` (W3 `SessionsView` in read-only mode, `SessionSummary` in a `Drawer` with
   the existing comment editor).
 - **Verify:** comments save/delete; activity labels translated.
+
+*As built:* **Edzések** is the W3 history in read-only mode: the same week-grouped rows (`WeekHeader`, `SessionRow` with the 🏆 PR chips — records judged against the loaded history), `SessionRow` and `SessionSummary` gained a `readOnly` prop (no row delete; no menu, no "Ismétlés ma" / "Szerkesztés", no delete in the summary — checked: 0 such buttons in the drawer). A click opens the session in a DS `Drawer`: the strength summary (time, volume, RPE, record hero, best set per exercise) or the read-only cardio detail, with `SessionCommentEditor` under it — the client's own note for context, then "Megjegyzés hozzáadása" / the composer (DS `TextArea`, 2000 cap, same `sessionComment` rules) / the saved comment with edit and delete behind a `ConfirmModal`. Deep links (`focusSessionId` from the schedule tab / calendar) open the drawer once. The newest 100 sessions load in one page (the old prev / next pager is gone). Playwright as the demo trainer: added a comment on a session, saw it render, deleted it again (demo data restored), Esc closes the drawer, 0 console errors. Activity labels come from the existing `workouts.activityTypes` messages — no raw `CYCLING`.
 
 ### W7.12 — Web UI: schedule tab + drawer on the W0.13 primitive
 - Files: `ClientScheduleTab.tsx`, `ScheduleTimeline.tsx`, `ScheduleWorkoutDrawer.tsx`, `UnassignButton.tsx`.

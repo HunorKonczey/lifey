@@ -216,6 +216,7 @@
       "stepMessage": "Küldd el az első üzeneted"
     },
     "clientDetail": {
+      "clientNote": "A kliens megjegyzése",
       "goalsInvalid": "Egész számot adj meg, vagy hagyd üresen",
       "goalsDrawerHint": "Üresen hagyva a cél törlődik. A kliens azonnal látja az új célokat.",
       "overview": {
