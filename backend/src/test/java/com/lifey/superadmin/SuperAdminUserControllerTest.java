@@ -46,11 +46,15 @@ class SuperAdminUserControllerTest {
         Pageable pageable = PageRequest.of(0, 50);
         when(roleManagementService.findUsers(any(), any())).thenReturn(new PageImpl<>(List.of(
                 new SuperAdminUserResponse(2L, "client@example.com", Set.of("ROLE_USER"),
-                        Instant.parse("2026-06-01T00:00:00Z"), false)), pageable, 1));
+                        Instant.parse("2026-06-01T00:00:00Z"), false,
+                        "Anna", "Kiss", "Bence Edzo", null)), pageable, 1));
 
         mockMvc.perform(get("/api/v1/superadmin/users"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].email").value("client@example.com"));
+                .andExpect(jsonPath("$.content[0].email").value("client@example.com"))
+                .andExpect(jsonPath("$.content[0].firstName").value("Anna"))
+                .andExpect(jsonPath("$.content[0].trainerName").value("Bence Edzo"))
+                .andExpect(jsonPath("$.content[0].clientCount").doesNotExist());
     }
 
     @Test
@@ -102,7 +106,8 @@ class SuperAdminUserControllerTest {
     @Test
     void findAuditLog_returnsList() throws Exception {
         when(roleManagementService.findAuditLog(2L)).thenReturn(List.of(new RoleAuditLogResponse(
-                5L, 1L, Role.ROLE_TRAINER, RoleAuditAction.GRANT, Instant.parse("2026-06-01T00:00:00Z"))));
+                5L, 1L, "Admin Aranka", "admin@example.com", Role.ROLE_TRAINER, RoleAuditAction.GRANT,
+                Instant.parse("2026-06-01T00:00:00Z"))));
 
         mockMvc.perform(get("/api/v1/superadmin/users/2/role-audit"))
                 .andExpect(status().isOk())

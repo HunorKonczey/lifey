@@ -10,6 +10,10 @@ import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
+import com.lifey.superadmin.dto.GlobalRoleAuditResponse;
+import com.lifey.trainer.TrainerClientRepository;
+import com.lifey.trainer.TrainerClientStatus;
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import com.lifey.user.UserAvatar;
@@ -37,6 +41,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,6 +58,9 @@ class RoleManagementServiceImplTest {
 
     @Mock
     UserAvatarRepository userAvatarRepository;
+
+    @Mock
+    TrainerClientRepository trainerClientRepository;
 
     @Mock
     CurrentUserProvider currentUserProvider;
@@ -106,6 +114,93 @@ class RoleManagementServiceImplTest {
         Page<SuperAdminUserResponse> result = service.findUsers(null, pageable);
 
         assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.hasAvatar()).isTrue());
+    }
+
+    @Test
+    void findUsers_namesTheTrainerOfAClientAndCountsTheClientsOfATrainer() {
+        Pageable pageable = PageRequest.of(0, 10);
+        User trainer = user(10L, "bence@example.com", Role.ROLE_USER, Role.ROLE_TRAINER);
+        trainer.setFirstName("Bence");
+        trainer.setLastName("Edzo");
+        User client = user(11L, "anna@example.com", Role.ROLE_USER);
+        client.setFirstName("Anna");
+        client.setLastName("Kiss");
+        User loner = user(12L, "solo@example.com", Role.ROLE_USER);
+        when(userRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(trainer, client, loner)));
+        TrainerClient link = new TrainerClient();
+        link.setTrainer(trainer);
+        link.setClient(client);
+        when(trainerClientRepository.findWithTrainerByClientIds(any(), eq(TrainerClientStatus.ACTIVE))).thenReturn(List.of(link));
+        TrainerClientRepository.TrainerClientCount count = mock(TrainerClientRepository.TrainerClientCount.class);
+        when(count.getTrainerId()).thenReturn(10L);
+        when(count.getClientCount()).thenReturn(3L);
+        when(trainerClientRepository.countByTrainerIds(any(), eq(TrainerClientStatus.ACTIVE))).thenReturn(List.of(count));
+
+        List<SuperAdminUserResponse> rows = service.findUsers(null, pageable).getContent();
+
+        assertThat(rows.get(0).clientCount()).isEqualTo(3);
+        assertThat(rows.get(0).trainerName()).isNull();
+        assertThat(rows.get(1).trainerName()).isEqualTo("Bence Edzo");
+        assertThat(rows.get(1).firstName()).isEqualTo("Anna");
+        assertThat(rows.get(1).clientCount()).isNull();
+        assertThat(rows.get(2).trainerName()).isNull();
+        assertThat(rows.get(2).clientCount()).isNull();
+    }
+
+    @Test
+    void findUsers_aTrainerWithoutClientsHasACountOfZero_andAnUnnamedTrainerShowsTheEmail() {
+        Pageable pageable = PageRequest.of(0, 10);
+        User trainer = user(10L, "bence@example.com", Role.ROLE_USER, Role.ROLE_TRAINER);
+        User client = user(11L, "anna@example.com", Role.ROLE_USER);
+        when(userRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(trainer, client)));
+        TrainerClient link = new TrainerClient();
+        link.setTrainer(trainer);
+        link.setClient(client);
+        when(trainerClientRepository.findWithTrainerByClientIds(any(), eq(TrainerClientStatus.ACTIVE))).thenReturn(List.of(link));
+        when(trainerClientRepository.countByTrainerIds(any(), eq(TrainerClientStatus.ACTIVE))).thenReturn(List.of());
+
+        List<SuperAdminUserResponse> rows = service.findUsers(null, pageable).getContent();
+
+        assertThat(rows.get(0).clientCount()).isZero();
+        assertThat(rows.get(1).trainerName()).isEqualTo("bence@example.com");
+    }
+
+    @Test
+    void findAuditLog_namesTheActor() {
+        User actor = user(ACTOR_ID, "admin@example.com", Role.ROLE_SUPER_ADMIN);
+        actor.setFirstName("Admin");
+        actor.setLastName("Aranka");
+        when(userRepository.existsById(TARGET_ID)).thenReturn(true);
+        when(userRepository.findAllById(any())).thenReturn(List.of(actor));
+        RoleAuditLog entry = auditLog(5L, ACTOR_ID, TARGET_ID, RoleAuditAction.GRANT);
+        when(roleAuditLogRepository.findByTargetUserIdOrderByCreatedAtDesc(TARGET_ID)).thenReturn(List.of(entry));
+
+        List<RoleAuditLogResponse> result = service.findAuditLog(TARGET_ID);
+
+        assertThat(result).singleElement().satisfies(r -> {
+            assertThat(r.actorName()).isEqualTo("Admin Aranka");
+            assertThat(r.actorEmail()).isEqualTo("admin@example.com");
+        });
+    }
+
+    @Test
+    void findGlobalAuditLog_namesActorAndTarget_andSurvivesADeletedUser() {
+        Pageable pageable = PageRequest.of(0, 30);
+        User actor = user(ACTOR_ID, "admin@example.com", Role.ROLE_SUPER_ADMIN);
+        actor.setFirstName("Admin");
+        User target = user(TARGET_ID, "anna@example.com", Role.ROLE_USER);
+        RoleAuditLog first = auditLog(6L, ACTOR_ID, TARGET_ID, RoleAuditAction.REVOKE);
+        RoleAuditLog orphan = auditLog(5L, ACTOR_ID, 99L, RoleAuditAction.GRANT);
+        when(roleAuditLogRepository.findAllByOrderByCreatedAtDescIdDesc(pageable)).thenReturn(new PageImpl<>(List.of(first, orphan)));
+        when(userRepository.findAllById(any())).thenReturn(List.of(actor, target));
+
+        List<GlobalRoleAuditResponse> result = service.findGlobalAuditLog(pageable).getContent();
+
+        assertThat(result.get(0).actorName()).isEqualTo("Admin");
+        assertThat(result.get(0).targetEmail()).isEqualTo("anna@example.com");
+        assertThat(result.get(0).targetName()).isNull();
+        assertThat(result.get(0).action()).isEqualTo(RoleAuditAction.REVOKE);
+        assertThat(result.get(1).targetEmail()).isNull();
     }
 
     @Test
@@ -243,6 +338,17 @@ class RoleManagementServiceImplTest {
         when(userRepository.existsById(99L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.findAuditLog(99L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    private static RoleAuditLog auditLog(Long id, Long actorId, Long targetId, RoleAuditAction action) {
+        RoleAuditLog log = new RoleAuditLog();
+        log.setId(id);
+        log.setActorId(actorId);
+        log.setTargetUserId(targetId);
+        log.setRole(Role.ROLE_TRAINER);
+        log.setAction(action);
+        log.setCreatedAt(Instant.parse("2026-08-12T10:00:00Z"));
+        return log;
     }
 
     private static User user(Long id, String email, Role... roles) {

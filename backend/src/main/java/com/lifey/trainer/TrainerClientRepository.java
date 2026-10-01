@@ -12,6 +12,28 @@ import java.util.Optional;
 
 public interface TrainerClientRepository extends JpaRepository<TrainerClient, Long> {
 
+    /** Active-client count of one trainer, for the super-admin user list ({@link #countByTrainerIds}). */
+    interface TrainerClientCount {
+        Long getTrainerId();
+
+        Long getClientCount();
+    }
+
+    /** Super-admin user list: the trainer behind each of these clients, one query for the whole page. */
+    @Query("select tc from TrainerClient tc join fetch tc.trainer where tc.client.id in :clientIds and tc.status = :status")
+    List<TrainerClient> findWithTrainerByClientIds(@Param("clientIds") java.util.Collection<Long> clientIds,
+                                                   @Param("status") TrainerClientStatus status);
+
+    /** Super-admin user list: how many clients each of these trainers has, one query for the whole page. */
+    @Query("select tc.trainer.id as trainerId, count(tc) as clientCount from TrainerClient tc "
+            + "where tc.trainer.id in :trainerIds and tc.status = :status group by tc.trainer.id")
+    List<TrainerClientCount> countByTrainerIds(@Param("trainerIds") java.util.Collection<Long> trainerIds,
+                                               @Param("status") TrainerClientStatus status);
+
+    /** Super-admin stats: clients that currently have a trainer. */
+    @Query("select count(distinct tc.client.id) from TrainerClient tc where tc.status = :status")
+    long countDistinctClientsByStatus(@Param("status") TrainerClientStatus status);
+
     boolean existsByTrainerIdAndClientIdAndStatus(Long trainerId, Long clientId, TrainerClientStatus status);
 
     /** Rate-limit check: the most recent invite between this pair, regardless of outcome. */

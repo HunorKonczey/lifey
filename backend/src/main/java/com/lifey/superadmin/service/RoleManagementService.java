@@ -1,5 +1,6 @@
 package com.lifey.superadmin.service;
 
+import com.lifey.superadmin.dto.GlobalRoleAuditResponse;
 import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.user.Role;
@@ -18,6 +19,9 @@ public interface RoleManagementService {
     void revoke(Long targetUserId, Role role);
 
     List<RoleAuditLogResponse> findAuditLog(Long targetUserId);
+
+    /** Every role change, newest first, with the names of who changed whose role. */
+    Page<GlobalRoleAuditResponse> findGlobalAuditLog(Pageable pageable);
 
     /**
      * @throws com.lifey.common.exception.ResourceNotFoundException if the user has no avatar set

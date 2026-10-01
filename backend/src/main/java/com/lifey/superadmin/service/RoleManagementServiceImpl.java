@@ -6,10 +6,14 @@ import com.lifey.superadmin.RoleAuditAction;
 import com.lifey.superadmin.RoleAuditLog;
 import com.lifey.superadmin.RoleAuditLogRepository;
 import com.lifey.superadmin.TrainerRoleGrantedEvent;
+import com.lifey.superadmin.dto.GlobalRoleAuditResponse;
 import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
+import com.lifey.trainer.TrainerClientRepository;
+import com.lifey.trainer.TrainerClientStatus;
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import com.lifey.user.UserAvatar;
@@ -24,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -46,6 +53,7 @@ public class RoleManagementServiceImpl implements RoleManagementService {
     private final UserRepository userRepository;
     private final RoleAuditLogRepository roleAuditLogRepository;
     private final UserAvatarRepository userAvatarRepository;
+    private final TrainerClientRepository trainerClientRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -57,7 +65,27 @@ public class RoleManagementServiceImpl implements RoleManagementService {
                 : userRepository.findByEmailContainingIgnoreCase(search.trim(), pageable);
         Set<Long> userIds = page.getContent().stream().map(User::getId).collect(Collectors.toSet());
         Set<Long> withAvatar = userAvatarRepository.findUserIdsWithAvatar(userIds);
-        return page.map(user -> toUserResponse(user, withAvatar.contains(user.getId())));
+
+        // Two read-only lookups for the whole page (not one per row): the trainer of each client, the client count of each trainer.
+        Map<Long, String> trainerNameByClient = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            for (TrainerClient link : trainerClientRepository.findWithTrainerByClientIds(userIds, TrainerClientStatus.ACTIVE)) {
+                trainerNameByClient.put(link.getClient().getId(), displayName(link.getTrainer()));
+            }
+        }
+        Set<Long> trainerIds = page.getContent().stream()
+                .filter(user -> user.getRoles().contains(Role.ROLE_TRAINER))
+                .map(User::getId)
+                .collect(Collectors.toSet());
+        Map<Long, Integer> clientCountByTrainer = new HashMap<>();
+        if (!trainerIds.isEmpty()) {
+            for (TrainerClientRepository.TrainerClientCount count : trainerClientRepository.countByTrainerIds(trainerIds, TrainerClientStatus.ACTIVE)) {
+                clientCountByTrainer.put(count.getTrainerId(), count.getClientCount().intValue());
+            }
+        }
+        return page.map(user -> toUserResponse(user, withAvatar.contains(user.getId()),
+                trainerNameByClient.get(user.getId()),
+                user.getRoles().contains(Role.ROLE_TRAINER) ? clientCountByTrainer.getOrDefault(user.getId(), 0) : null));
     }
 
     @Override
@@ -105,9 +133,59 @@ public class RoleManagementServiceImpl implements RoleManagementService {
         if (!userRepository.existsById(targetUserId)) {
             throw new ResourceNotFoundException("User not found: " + targetUserId);
         }
-        return roleAuditLogRepository.findByTargetUserIdOrderByCreatedAtDesc(targetUserId).stream()
-                .map(log -> new RoleAuditLogResponse(log.getId(), log.getActorId(), log.getRole(), log.getAction(), log.getCreatedAt()))
+        List<RoleAuditLog> logs = roleAuditLogRepository.findByTargetUserIdOrderByCreatedAtDesc(targetUserId);
+        Map<Long, User> actors = usersById(logs.stream().map(RoleAuditLog::getActorId).collect(Collectors.toSet()));
+        return logs.stream()
+                .map(log -> {
+                    User actor = actors.get(log.getActorId());
+                    return new RoleAuditLogResponse(log.getId(), log.getActorId(), fullName(actor), actor == null ? null : actor.getEmail(),
+                            log.getRole(), log.getAction(), log.getCreatedAt());
+                })
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<GlobalRoleAuditResponse> findGlobalAuditLog(Pageable pageable) {
+        Page<RoleAuditLog> page = roleAuditLogRepository.findAllByOrderByCreatedAtDescIdDesc(pageable);
+        Set<Long> ids = new HashSet<>();
+        page.getContent().forEach(log -> {
+            ids.add(log.getActorId());
+            ids.add(log.getTargetUserId());
+        });
+        Map<Long, User> users = usersById(ids);
+        return page.map(log -> {
+            User actor = users.get(log.getActorId());
+            User target = users.get(log.getTargetUserId());
+            return new GlobalRoleAuditResponse(log.getId(), log.getActorId(), fullName(actor), actor == null ? null : actor.getEmail(),
+                    log.getTargetUserId(), fullName(target), target == null ? null : target.getEmail(),
+                    log.getRole(), log.getAction(), log.getCreatedAt());
+        });
+    }
+
+    private Map<Long, User> usersById(Set<Long> ids) {
+        Map<Long, User> result = new HashMap<>();
+        if (ids.isEmpty()) {
+            return result;
+        }
+        userRepository.findAllById(ids).forEach(user -> result.put(user.getId(), user));
+        return result;
+    }
+
+    /** "First Last", or null when the user has no profile name (or does not exist any more). */
+    private static String fullName(User user) {
+        if (user == null) {
+            return null;
+        }
+        String name = ((user.getFirstName() == null ? "" : user.getFirstName()) + " "
+                + (user.getLastName() == null ? "" : user.getLastName())).trim();
+        return name.isEmpty() ? null : name;
+    }
+
+    /** The name shown for a trainer next to a client: the full name, else the e-mail. */
+    private static String displayName(User user) {
+        String name = fullName(user);
+        return name != null ? name : user.getEmail();
     }
 
     private void requireManageable(Role role) {
@@ -139,8 +217,9 @@ public class RoleManagementServiceImpl implements RoleManagementService {
         roleAuditLogRepository.save(log);
     }
 
-    private static SuperAdminUserResponse toUserResponse(User user, boolean hasAvatar) {
+    private static SuperAdminUserResponse toUserResponse(User user, boolean hasAvatar, String trainerName, Integer clientCount) {
         Set<String> roleNames = user.getRoles().stream().map(Enum::name).collect(Collectors.toUnmodifiableSet());
-        return new SuperAdminUserResponse(user.getId(), user.getEmail(), roleNames, user.getCreatedAt(), hasAvatar);
+        return new SuperAdminUserResponse(user.getId(), user.getEmail(), roleNames, user.getCreatedAt(), hasAvatar,
+                user.getFirstName(), user.getLastName(), trainerName, clientCount);
     }
 }
