@@ -3343,7 +3343,7 @@ every page.
 
 **Goal:** nothing left on the old system; the audit proves it.
 
-### W10.1 — Tooling: style-debt audit script
+### W10.1 — Tooling: style-debt audit script ✅
 - Files: `web/scripts/style-debt-audit.mjs` (+ `npm run audit:styles`).
 - Counts in `src/` excluding `components/marketing`, `app/(marketing*)`: legacy variables (D-W0.3 list),
   hex literals, inline `style={{` with colour/radius/font-size, `rounded-[var(--r-(sm|md|input|lg|nav))]`,
@@ -3352,6 +3352,8 @@ every page.
   zero for the hard rules (legacy vars, `components/ui|data` imports, native date inputs). Useful early —
   may be pulled into W0 (M1).
 - **Verify:** runs in CI after W10.3 as a blocking step.
+
+*As built:* `web/scripts/style-debt-audit.mjs` (`npm run audit:styles`, `-- --summary` for totals). Scope: `src/` without `components/marketing`, `app/(marketing)`, `app/(marketing-bare)`, the dev gallery and `app/globals.css` (the token definitions, until W10.3 deletes the aliases); tests are skipped. **Hard rules** (exit 1): legacy variables from the D-W0.3 table (`var(--surface)`, `--tertiary`, `--on-surface-variant`, `--r-card` …), imports from `components/ui|data|layout`, native `type="date"|"time"`, `rounded-[var(--r-sm|md|input|lg|nav)]`. **Soft counts**: hex literals, inline `style={{` with colour / radius / font-size, `date-fns` `format(` and `.toFixed(` in components, `humanizeEnum(`. **Baseline on 2026-10-01 (before W10.2 / W10.3):** legacy-var 473 in ~60 files, legacy-import 6, native-date 4, legacy-radius 34; soft: hex 136, inline-style 1001, date-fns-format 42, toFixed 3, humanizeEnum 1. The CI step is added after W10.3, when the hard rules reach zero.
 
 ### W10.2 — Web UI: remaining undesigned screens
 - `app/not-found.tsx` is marketing (untouched); in scope: the app error boundary page, chat search results,

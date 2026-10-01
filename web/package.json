@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "audit:styles": "node scripts/style-debt-audit.mjs",
     "check:js-budget": "node scripts/check-js-budget.mjs",
     "lhci": "lhci autorun",
     "test:e2e:marketing": "playwright test --project=marketing",
