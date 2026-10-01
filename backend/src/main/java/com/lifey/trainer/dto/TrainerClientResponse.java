@@ -42,6 +42,13 @@ public record TrainerClientResponse(
          * the phone derives them ({@link com.lifey.trainer.PersonalRecordCounter}).
          * Null only if it could not be computed; 0 is a real answer.
          */
-        Integer prCount7d
+        Integer prCount7d,
+        /**
+         * The client's own daily calorie goal from their settings, or null when they never set one (or have no
+         * settings row yet) — what lets the trainer's client card show "96 % of the goal" instead of a bare average
+         * (docs/redesign-web/78-web-redesign-plan.md W7.b1). Read-only, the same value the trainer's nutrition-goals
+         * endpoint returns.
+         */
+        Integer dailyCalorieGoal
 ) {
 }

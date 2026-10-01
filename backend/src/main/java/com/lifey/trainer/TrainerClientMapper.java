@@ -33,7 +33,7 @@ public final class TrainerClientMapper {
     public static TrainerClientResponse toClientResponse(
             TrainerClient tc, List<WeightTrendPoint> weightTrend, int assignedPlanCount, int workoutsPerWeek,
             Instant lastActivityAt, LocalDate lastWeightAt, int missedWorkoutCount,
-            Integer avgCalories7d, Integer prCount7d) {
+            Integer avgCalories7d, Integer prCount7d, Integer dailyCalorieGoal) {
         return new TrainerClientResponse(
                 tc.getClient().getId(),
                 tc.getClient().getEmail(),
@@ -47,7 +47,8 @@ public final class TrainerClientMapper {
                 lastWeightAt,
                 missedWorkoutCount,
                 avgCalories7d,
-                prCount7d);
+                prCount7d,
+                dailyCalorieGoal);
     }
 
     public static MyTrainerResponse toMyTrainerResponse(TrainerClient tc) {
