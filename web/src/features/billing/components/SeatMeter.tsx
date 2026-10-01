@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Card } from "@/components/ds";
+import { RatioBar } from "@/components/ds/progress/RatioBar";
 
 /**
  * `11 / 25 active clients` + pending invites shown separately, since pending
@@ -18,36 +20,25 @@ export function SeatMeter({
 }) {
   const t = useTranslations("admin.billing");
   const overLimit = maxClients != null && activeClients > maxClients;
-  const pct = maxClients != null && maxClients > 0 ? Math.min(100, (activeClients / maxClients) * 100) : 0;
 
   return (
-    <div className="rounded-[var(--r-lg)] p-4.5" style={{ background: "var(--surface-container)" }}>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-extrabold" style={{ color: "var(--on-surface)" }}>
-          {t("seatMeterTitle")}
-        </p>
-        <p
-          className="text-sm font-bold tabular-nums"
-          style={{ color: overLimit ? "var(--error)" : "var(--on-surface-variant)" }}
-        >
+    <Card className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="type-body" style={{ fontWeight: 800 }}>{t("seatMeterTitle")}</h2>
+        <p className="type-body-s tabular" style={{ fontWeight: 700, color: overLimit ? "var(--heart)" : "var(--text-2)" }}>
           {maxClients != null
             ? t("seatCount", { active: activeClients, max: maxClients })
             : t("seatCountUnlimited", { active: activeClients })}
         </p>
       </div>
-      {maxClients != null && (
-        <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-highest)" }}>
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, background: overLimit ? "var(--error)" : "var(--tertiary)" }}
-          />
-        </div>
+      {maxClients != null && maxClients > 0 && (
+        <RatioBar segments={[{ value: Math.min(activeClients, maxClients), color: overLimit ? "var(--heart)" : "var(--primary)" }]} total={maxClients} />
       )}
       {pendingCount > 0 && (
-        <p className="text-xs mt-2" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="type-body-s" style={{ color: "var(--text-2)" }}>
           {t("pendingInvitesCount", { count: pendingCount })}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

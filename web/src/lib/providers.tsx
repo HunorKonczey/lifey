@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { Toaster } from "@/components/ui/Toaster";
+import { Toast } from "@/components/ds/overlay/Toast";
+import { OverlayRoot } from "@/components/ds/overlay/OverlayRoot";
 import { useSessionStore } from "@/features/auth/store";
 import { loadClientConfig } from "@/lib/api/client-config";
 import { useLocale } from "@/lib/hooks/useLocale";
@@ -33,14 +34,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // account changes keeps a second user on this tab from inheriting the first
   // one's answer.
   useEffect(() => {
-    void loadClientConfig();
+    void loadClientConfig({ signedIn: userId !== null });
   }, [userId]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider locale={locale}>
         {children}
-        <Toaster />
+        <Toast />
+        <OverlayRoot />
       </I18nProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

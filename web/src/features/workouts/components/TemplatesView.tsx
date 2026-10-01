@@ -2,90 +2,53 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";
-import { templateApi, exerciseApi } from "../api";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { useToast } from "@/lib/hooks/useToast";
-import { Skeleton } from "@/components/status/Skeleton";
+import { Button, Card, Icon } from "@/components/ds";
+import { ConfirmModal } from "@/components/ds/overlay/ConfirmModal";
+import { Drawer } from "@/components/ds/overlay/Drawer";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { MUSCLE_GROUPS } from "../types";
-import type {
-  WorkoutTemplateResponse, TemplateExerciseEntry, ExerciseResponse,
-} from "../types";
+import { Skeleton } from "@/components/status/Skeleton";
+import { queryKeys } from "@/lib/api/queryKeys";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useToast } from "@/lib/hooks/useToast";
+import { exerciseApi, templateApi, workoutSessionApi } from "../api";
+import { recommendedTemplate } from "../recommendation";
+import { pickerTemplates } from "../templatePicker";
+import { templateUsage } from "../templateUsage";
+import type { WorkoutTemplateResponse } from "../types";
+import { TemplateEditorPanel } from "./TemplateEditorPanel";
+import { TemplateTile } from "./TemplateTile";
 
-function muscleGroupColor(code: string): string {
-  switch (code) {
-    case "CHEST": case "QUADS":                        return "var(--metric-kcal)";
-    case "SHOULDERS": case "GLUTES":                   return "var(--metric-carbs)";
-    case "TRICEPS": case "FOREARMS": case "ABS":       return "var(--metric-fat)";
-    case "BACK":                                       return "var(--metric-water)";
-    case "BICEPS":                                     return "var(--metric-protein)";
-    case "HAMSTRINGS": case "CALVES":                  return "var(--metric-steps)";
-    default:                                           return "var(--metric-weight)";
-  }
-}
-
-function templateCategories(t: WorkoutTemplateResponse, exercisesById: Map<number, ExerciseResponse>): string[] {
-  const seen = new Set<string>();
-  const ordered: string[] = [];
-  for (const code of MUSCLE_GROUPS) {
-    if (t.exercises.some((e) => exercisesById.get(e.exerciseId)?.category === code)) {
-      if (!seen.has(code)) { seen.add(code); ordered.push(code); }
-    }
-  }
-  return ordered;
-}
-
-interface TemplatesViewProps {
-  /** When provided, admin nav renders a "Kiosztás" button on every row — absent in the own view. */
-  onAssign?: (template: WorkoutTemplateResponse) => void;
-  /** When provided, admin nav renders a "schedule for a client" button on every row. */
-  onSchedule?: (template: WorkoutTemplateResponse) => void;
-}
-
-export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {}) {
+/**
+ * The Templates tab (W3.11, W3-F): the picker's tiles as a list — exercise count, estimated time, last used, the
+ * recommended one marked — with the selected template's editor in a 440 px panel on the right (a drawer below
+ * 1280 px). With nothing selected the panel shows how often each template was used over the last four weeks.
+ */
+export function TemplatesView() {
   const t = useTranslations("workouts");
-  const admin = useTranslations("admin.assignDrawer");
-  const schedule = useTranslations("admin.schedule");
-  const tm = useTranslations("workouts.muscleGroups");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
+  const sidePanel = useMediaQuery("(min-width: 1280px)");
   const [selectedId, setSelectedId] = useState<number | "new" | null>(null);
   const [duplicating, setDuplicating] = useState<WorkoutTemplateResponse | null>(null);
+  const [editorDirty, setEditorDirty] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.workoutTemplates.all(),
-    queryFn: templateApi.list,
-  });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list });
+  const { data: exercises } = useQuery({ queryKey: queryKeys.exercises.all(), queryFn: exerciseApi.list });
+  const { data: sessions } = useQuery({ queryKey: queryKeys.workoutSessions.all(), queryFn: workoutSessionApi.list });
 
-  const { data: exercises } = useQuery({
-    queryKey: queryKeys.exercises.all(),
-    queryFn: exerciseApi.list,
-  });
-
-  const selected =
-    selectedId === "new" ? null
-    : selectedId != null ? (data ?? []).find((t) => t.id === selectedId) ?? null
-    : null;
-
-  const exercisesById = new Map((exercises ?? []).map((e) => [e.id, e]));
+  const templates = data ?? [];
+  const sessionsDesc = (sessions ?? []).slice().sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  const now = new Date();
+  const recommended = recommendedTemplate(sessionsDesc, templates);
+  const items = pickerTemplates(templates, sessionsDesc, recommended?.id ?? null, now, false);
+  const selected = typeof selectedId === "number" ? templates.find((x) => x.id === selectedId) ?? null : null;
 
   const duplicateMutation = useMutation({
     mutationFn: (tpl: WorkoutTemplateResponse) =>
-      templateApi.create({
-        name: t("copyOf", { name: tpl.name }),
-        exercises: tpl.exercises.map((e) => ({ exerciseId: e.exerciseId, targetSets: e.targetSets })),
-      }),
+      templateApi.create({ name: t("copyOf", { name: tpl.name }), exercises: tpl.exercises.map((e) => ({ exerciseId: e.exerciseId, targetSets: e.targetSets })) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutTemplates.all() });
       show(t("templateDuplicated"), "success");
@@ -94,285 +57,139 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
     onError: () => show(t("duplicateTemplateFailed"), "error"),
   });
 
+  const closeEditor = () => {
+    setSelectedId(null);
+    setEditorDirty(false);
+  };
+
+  const editor =
+    selectedId != null ? (
+      <TemplateEditorPanel
+        key={selectedId}
+        template={selected}
+        exercises={exercises ?? []}
+        bare={!sidePanel}
+        onDirtyChange={setEditorDirty}
+        onSaved={(id) => setSelectedId(id)}
+        onDeleted={closeEditor}
+      />
+    ) : null;
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      {/* Master list */}
-      <div className="w-full lg:w-[280px] lg:shrink-0 flex flex-col gap-2">
-        <button onClick={() => setSelectedId("new")}
-          className="flex items-center gap-1 px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm justify-center"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}>
-          <span className="material-symbols-rounded text-lg">add</span> {t("newTemplate")}
-        </button>
+    <div className={sidePanel ? "grid items-start gap-6" : undefined} style={sidePanel ? { gridTemplateColumns: "minmax(0, 1fr) 440px" } : undefined}>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={() => setSelectedId("new")}>
+            <Icon name="add" size={20} />
+            {t("newTemplate")}
+          </Button>
+        </div>
 
         {isLoading ? (
           <Skeleton variant="table" />
         ) : isError ? (
           <ErrorState onRetry={refetch} />
-        ) : (data ?? []).length === 0 ? (
+        ) : items.length === 0 ? (
           <EmptyState icon="list_alt" title={t("noTemplates")} body={t("createTemplate")} />
         ) : (
-          (data ?? []).map((tpl) => {
-            const cats = templateCategories(tpl, exercisesById);
-            return (
-              <div key={tpl.id}
-                data-testid="template-row"
-                className="flex flex-col gap-3 p-4 rounded-[var(--r-card)] transition-colors"
-                style={{
-                  background: "var(--surface)",
-                  outline: selectedId === tpl.id ? "2px solid var(--primary)" : "none",
-                }}>
-                <button onClick={() => setSelectedId(tpl.id)} className="flex items-start gap-3 text-left">
-                  <span className="material-symbols-rounded text-2xl mt-0.5" style={{ color: "var(--tertiary)" }}>list_alt</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{tpl.name}</p>
-                    <p className="text-xs mb-1.5" style={{ color: "var(--muted)" }}>{t("exercisesCount", { count: tpl.exercises.length })}</p>
-                    {cats.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {cats.map((c) => {
-                          const color = muscleGroupColor(c);
-                          return (
-                            <span key={c} className="text-[10px] font-bold leading-none px-2 py-1 rounded-[var(--r-pill)]"
-                              style={{ color, background: `color-mix(in srgb, ${color} 15%, transparent)` }}>
-                              {tm(c)}
-                            </span>
-                          );
-                        })}
+          <div className="flex flex-col gap-2">
+            {items.map((item) => {
+              const tpl = item.template;
+              return (
+                <div key={tpl.id} data-testid="template-row">
+                  <TemplateTile
+                    item={item}
+                    selected={selectedId === tpl.id}
+                    onClick={() => setSelectedId(tpl.id)}
+                    footer={
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setDuplicating(tpl)}
+                          disabled={duplicateMutation.isPending}
+                          className="lifey-button flex h-7 w-7 shrink-0 items-center justify-center rounded-lg disabled:opacity-50"
+                          style={{ background: "var(--card)", color: "var(--text-2)" }}
+                          aria-label={t("duplicateTemplateAria")}
+                        >
+                          <Icon name="content_copy" size={18} />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                </button>
-
-                {/* Compact action row — small icon buttons on the left, Assign pinned to the bottom-right corner */}
-                <div className="flex items-center gap-1.5">
-                  {onSchedule && (
-                    <button onClick={() => onSchedule(tpl)}
-                      data-testid="schedule-template"
-                      className="flex items-center justify-center rounded-lg w-7 h-7 shrink-0"
-                      style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-                      aria-label={schedule("scheduleForClientAria")}>
-                      <span className="material-symbols-rounded text-base">calendar_month</span>
-                    </button>
-                  )}
-                  <button onClick={() => setDuplicating(tpl)} disabled={duplicateMutation.isPending}
-                    className="flex items-center justify-center rounded-lg w-7 h-7 shrink-0 disabled:opacity-50"
-                    style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-                    aria-label={t("duplicateTemplateAria")}>
-                    <span className="material-symbols-rounded text-base">content_copy</span>
-                  </button>
-                  {onAssign && (
-                    <button onClick={() => onAssign(tpl)}
-                      data-testid="assign-template"
-                      className="ml-auto flex items-center gap-1 rounded-lg px-2.5 h-7 text-[11px] font-extrabold shrink-0"
-                      style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
-                      <span className="material-symbols-rounded text-sm">person_add</span> {admin("assignAction")}
-                    </button>
-                  )}
+                    }
+                  />
                 </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Detail editor */}
-      <div className="flex-1 min-w-0">
-        {selectedId == null ? (
-          <div className="flex items-center justify-center h-64 rounded-[var(--r-card)]"
-            style={{ background: "var(--surface)", color: "var(--muted)" }}>
-            {t("selectOrCreate")}
+              );
+            })}
           </div>
-        ) : (
-          <TemplateEditor
-            key={selectedId}
-            template={selected}
-            exercises={exercises ?? []}
-            onSaved={(id) => setSelectedId(id)}
-            onDeleted={() => setSelectedId(null)}
-          />
         )}
       </div>
 
-      <ConfirmDialog
+      {sidePanel && (
+        <aside className="sticky top-4" aria-label={t("templatePanelAria")}>
+          <Card>{editor ?? <UsagePanel templates={templates} sessions={sessions ?? []} now={now} />}</Card>
+        </aside>
+      )}
+      {!sidePanel && editor && (
+        <Drawer open onClose={closeEditor} width={520} title={selected ? t("editTemplate") : t("newTemplate")} isDirty={editorDirty}>
+          {editor}
+        </Drawer>
+      )}
+
+      <ConfirmModal
         open={duplicating !== null}
+        onClose={() => setDuplicating(null)}
+        onConfirm={() => duplicating && duplicateMutation.mutate(duplicating)}
+        icon="content_copy"
+        tint="var(--primary)"
+        destructive={false}
         title={t("duplicateTemplateConfirmTitle")}
         body={t("duplicateTemplateConfirmBody")}
+        cancelLabel={common("cancel")}
         confirmLabel={t("duplicateTemplateConfirmAction")}
-        confirming={duplicateMutation.isPending}
-        onConfirm={() => duplicating && duplicateMutation.mutate(duplicating)}
-        onCancel={() => setDuplicating(null)}
       />
     </div>
   );
 }
 
-function TemplateEditor({
-  template, exercises, onSaved, onDeleted,
-}: {
-  template: WorkoutTemplateResponse | null;
-  exercises: ExerciseResponse[];
-  onSaved: (id: number) => void;
-  onDeleted: () => void;
-}) {
+/** Nothing selected: per template, four little bars (one per week, this week last) and the total of the four weeks. */
+function UsagePanel({ templates, sessions, now }: { templates: WorkoutTemplateResponse[]; sessions: Parameters<typeof templateUsage>[1]; now: Date }) {
   const t = useTranslations("workouts");
-  const common = useTranslations("common");
-  const queryClient = useQueryClient();
-  const { show } = useToast();
-  // Component is remounted via `key={selectedId}` in the parent, so initializing
-  // from props here is safe and avoids syncing state in an effect.
-  const [name, setName] = useState(template?.name ?? "");
-  const [rows, setRows] = useState<TemplateExerciseEntry[]>(template?.exercises ?? []);
-  const [picking, setPicking] = useState(false);
-  const [search, setSearch] = useState("");
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const exerciseName = (id: number) =>
-    exercises.find((e) => e.id === id)?.name ?? `#${id}`;
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setRows((prev) => {
-        const oldIndex = prev.findIndex((r) => r.exerciseId === active.id);
-        const newIndex = prev.findIndex((r) => r.exerciseId === over.id);
-        return arrayMove(prev, oldIndex, newIndex);
-      });
-    }
-  };
-
-  const available = exercises.filter(
-    (e) => !rows.some((r) => r.exerciseId === e.id) &&
-      e.name.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  const mutation = useMutation({
-    mutationFn: () => {
-      const body = { name, exercises: rows };
-      return template ? templateApi.update(template.id, body) : templateApi.create(body);
-    },
-    onSuccess: (saved) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workoutTemplates.all() });
-      show(template ? t("templateUpdated") : t("templateCreated"), "success");
-      onSaved(saved.id);
-    },
-    onError: () => show(t("saveTemplateFailed"), "error"),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => templateApi.delete(template!.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.workoutTemplates.all() });
-      show(t("templateDeleted"), "success");
-      onDeleted();
-    },
-    onError: () => show(t("deleteFailed"), "error"),
-  });
+  const usage = templateUsage(templates, sessions, now, 4);
+  const peak = Math.max(1, ...usage.flatMap((u) => u.perWeek));
 
   return (
-    <div className="flex flex-col gap-4 p-5 rounded-[var(--r-card)]" style={{ background: "var(--surface)" }}>
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("templateNamePlaceholder")}
-        className="px-3 h-11 rounded-[var(--r-input)] outline-none text-base font-bold"
-        style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
-
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={rows.map((r) => r.exerciseId)} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-col gap-2">
-            {rows.map((row) => (
-              <SortableRow key={row.exerciseId} row={row} name={exerciseName(row.exerciseId)}
-                onSetsChange={(n) => setRows((prev) => prev.map((r) =>
-                  r.exerciseId === row.exerciseId ? { ...r, targetSets: n } : r))}
-                onRemove={() => setRows((prev) => prev.filter((r) => r.exerciseId !== row.exerciseId))} />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
-
-      {/* Add exercise */}
-      {picking ? (
-        <div className="flex flex-col gap-2 p-3 rounded-[var(--r-md)]" style={{ background: "var(--surface-container)" }}>
-          <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("searchExercisesPlaceholder")}
-            className="px-3 h-9 rounded-[var(--r-sm)] outline-none text-sm"
-            style={{ background: "var(--surface)", border: "1px solid var(--outline)" }} />
-          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-            {available.map((e) => (
-              <button key={e.id} onClick={() => {
-                setRows((prev) => [...prev, { exerciseId: e.id, targetSets: 3 }]);
-                setSearch(""); setPicking(false);
-              }} className="text-left px-3 py-1.5 rounded-[var(--r-sm)] text-sm transition-colors hover:bg-surface">
-                {e.name}
-              </button>
-            ))}
-            {available.length === 0 && <p className="text-xs text-center py-2" style={{ color: "var(--muted)" }}>{t("noExercisesFound")}</p>}
-          </div>
-        </div>
+    <div className="flex flex-col gap-4" data-testid="template-usage">
+      <div>
+        <h2 className="type-title">{t("usageTitle")}</h2>
+        <p className="type-body-s" style={{ color: "var(--text-2)" }}>
+          {t("usageBody")}
+        </p>
+      </div>
+      {usage.length === 0 ? (
+        <p className="type-body-s" style={{ color: "var(--text-3)" }}>
+          {t("selectOrCreate")}
+        </p>
       ) : (
-        <button onClick={() => setPicking(true)}
-          className="py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1"
-          style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}>
-          <span className="material-symbols-rounded text-lg">add</span> {t("addExercise")}
-        </button>
+        <ul className="flex flex-col gap-3">
+          {usage.map((u) => (
+            <li key={u.templateId} data-testid="usage-row" className="flex items-center gap-3">
+              <span className="type-body-s min-w-0 flex-1 truncate" style={{ fontWeight: 700 }}>
+                {u.name}
+              </span>
+              <span className="flex h-8 items-end gap-1" aria-hidden>
+                {u.perWeek.map((n, i) => (
+                  <span
+                    key={i}
+                    data-testid="usage-bar"
+                    style={{ width: 10, height: `${Math.max(12, (n / peak) * 100)}%`, borderRadius: 3, background: n > 0 ? "var(--primary)" : "var(--nested)" }}
+                  />
+                ))}
+              </span>
+              <span className="type-body-s tabular w-10 text-right" style={{ color: u.total > 0 ? "var(--text)" : "var(--text-3)", fontWeight: 700 }}>
+                {t("usageTotal", { count: u.total })}
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
-
-      <div className="flex gap-2 mt-1">
-        <button onClick={() => mutation.mutate()} disabled={!name.trim() || rows.length === 0 || mutation.isPending}
-          className="flex-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}>
-          {mutation.isPending ? common("saving") : t("saveTemplate")}
-        </button>
-        {template && (
-          <button onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}
-            className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
-            style={{ background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)" }}
-            aria-label={t("deleteTemplateAria")}>
-            <span className="material-symbols-rounded text-xl">delete</span>
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SortableRow({
-  row, name, onSetsChange, onRemove,
-}: {
-  row: TemplateExerciseEntry;
-  name: string;
-  onSetsChange: (n: number) => void;
-  onRemove: () => void;
-}) {
-  const t = useTranslations("workouts");
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: row.exerciseId });
-
-  return (
-    <div ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.6 : 1,
-        background: "var(--surface-container)",
-      }}
-      className="flex items-center gap-2 px-3 py-2.5 rounded-[var(--r-md)]">
-      <button {...attributes} {...listeners} className="cursor-grab touch-none" style={{ color: "var(--muted)" }} aria-label={t("dragToReorderAria")}>
-        <span className="material-symbols-rounded">drag_indicator</span>
-      </button>
-      <span className="flex-1 text-sm font-semibold truncate">{name}</span>
-
-      {/* Sets stepper */}
-      <div className="flex items-center gap-1">
-        <button onClick={() => onSetsChange(Math.max(1, row.targetSets - 1))}
-          className="w-6 h-6 rounded-[var(--r-sm)] flex items-center justify-center" style={{ background: "var(--surface-highest)" }}>
-          <span className="material-symbols-rounded text-base">remove</span>
-        </button>
-        <span className="w-12 text-center text-sm tabular font-semibold">{t("setsSuffix", { count: row.targetSets })}</span>
-        <button onClick={() => onSetsChange(row.targetSets + 1)}
-          className="w-6 h-6 rounded-[var(--r-sm)] flex items-center justify-center" style={{ background: "var(--surface-highest)" }}>
-          <span className="material-symbols-rounded text-base">add</span>
-        </button>
-      </div>
-
-      <button onClick={onRemove} style={{ color: "var(--muted)" }} aria-label={t("removeExerciseAria")}>
-        <span className="material-symbols-rounded text-lg">close</span>
-      </button>
     </div>
   );
 }

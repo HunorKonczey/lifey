@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&display=block" rel="stylesheet">
+<style>
+html{background:#E7E5DA}body{margin:0;background:#E7E5DA;color:#1C1D16;font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#4E6530;text-decoration:none;font-weight:600}a:hover{color:#2F3F1B;text-decoration:underline}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr}
+</style>
+</helmet>
+
+<section style="padding:64px 80px 24px;display:flex;flex-direction:column;gap:14px;width:2080px;box-sizing:border-box">
+  <div style="font:600 14px/1.2 'JetBrains Mono';color:#56574B;letter-spacing:0.04em">LIFEY WEB · W2 · TÁPLÁLKOZÁS · /nutrition</div>
+  <h1 style="margin:0;font:800 48px/1.08 'Plus Jakarta Sans';letter-spacing:-0.03em;max-width:1200px;text-wrap:balance">Táplálkozás: napló balra, a nap összesítője jobbra, étel-hozzáadás egy kétpaneles keresőben</h1>
+  <div style="display:flex;gap:16px;font-size:15px"><a href="Lifey%20Web%20Design%20System.dc.html">← Web design system</a><a href="Lifey%20Web%201%20Dashboard.dc.html">← W1 Áttekintő</a></div>
+</section>
+
+<section data-screen-label="W2 Étkezések 1440" style="padding:24px 80px;display:flex;gap:40px;align-items:flex-start;width:2080px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1440 · sötét · Étkezések fül</div>
+    <div style="width:1440px;height:1024px;background:#12130E;border-radius:18px;overflow:hidden;position:relative;color:#F2F1E6;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5)">
+      <div style="position:absolute;left:12px;top:12px;bottom:12px;width:248px;box-sizing:border-box;background:#1A1C15;border-radius:22px;padding:16px 12px;display:flex;flex-direction:column;gap:4px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)">
+        <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><div style="width:36px;height:36px;border-radius:12px;background:#B5C47C;color:#1A1F0A;font:800 18px/36px 'Plus Jakarta Sans';text-align:center">L</div><div style="font:800 20px/1 'Plus Jakarta Sans';letter-spacing:-0.02em">Lifey</div><div style="flex:1"></div><span class="ms" style="font-size:20px;color:#8F8F80">left_panel_close</span></div>
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+          <sc-if value="{{ n.on }}" hint-placeholder-val="{{ false }}"><div style="height:44px;border-radius:14px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:12px;padding:0 12px;font:700 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+          <sc-if value="{{ n.off }}" hint-placeholder-val="{{ true }}"><div style="height:44px;border-radius:14px;color:#B6B5A5;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+        </sc-for>
+        <div style="flex:1"></div>
+        <div style="height:44px;border-radius:14px;color:#B6B5A5;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">settings</span>Beállítások</div>
+        <div style="height:1px;background:rgba(242,241,230,0.06);margin:8px 4px"></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:14px;background:#22251C"><div style="width:36px;height:36px;border-radius:999px;background:#3A4228;color:#D6E2A6;font:800 13px/36px 'Plus Jakarta Sans';text-align:center;flex:none">KN</div><div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:2px"><div style="font:700 14px/1.2 'Plus Jakarta Sans'">Nagy Kata</div><div style="font:500 12px/1.2 'Plus Jakarta Sans';color:#8F8F80">kata.nagy@demo.hu</div></div><span class="ms" style="font-size:20px;color:#8F8F80">unfold_more</span></div>
+      </div>
+
+      <div style="position:absolute;left:292px;right:32px;top:12px;display:flex;flex-direction:column;gap:20px">
+        <div style="height:64px;display:flex;align-items:center;gap:20px">
+          <div style="flex:1;font:800 28px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Táplálkozás</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:4px;border-radius:999px;background:#1A1C15;box-shadow:inset 0 0 0 1px rgba(242,241,230,0.06)">
+            <div style="width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#B6B5A5"><span class="ms" style="font-size:22px">chevron_left</span></div>
+            <div style="height:40px;padding:0 16px;border-radius:999px;background:#2C2F24;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.4)"><span class="ms" style="font-size:18px;color:#B6B5A5">calendar_today</span><span style="font:700 15px/1 'Plus Jakarta Sans'">Ma</span><span style="font:600 14px/1 'Plus Jakarta Sans';color:#B6B5A5">szept. 27., szombat</span></div>
+            <div style="width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#5C5D50"><span class="ms" style="font-size:22px">chevron_right</span></div>
+          </div>
+          <div style="flex:1;display:flex;justify-content:flex-end"><div style="width:40px;height:40px;border-radius:999px;background:#1A1C15;display:flex;align-items:center;justify-content:center;color:#B6B5A5"><span class="ms" style="font-size:20px">light_mode</span></div></div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:28px;box-shadow:inset 0 -1px 0 rgba(242,241,230,0.08)">
+          <div style="padding:0 0 14px;font:700 16px/1 'Plus Jakarta Sans';box-shadow:inset 0 -3px 0 #B5C47C">Étkezések</div>
+          <div style="padding:0 0 14px;font:600 16px/1 'Plus Jakarta Sans';color:#B6B5A5">Ételek <span style="color:#8F8F80">18</span></div>
+          <div style="padding:0 0 14px;font:600 16px/1 'Plus Jakarta Sans';color:#B6B5A5">Receptek <span style="color:#8F8F80">3</span></div>
+          <div style="flex:1"></div>
+          <div style="display:flex;gap:10px;padding-bottom:10px">
+            <div style="height:44px;padding:0 16px;border-radius:14px;background:#22251C;display:flex;align-items:center;gap:8px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:20px;color:#B6B5A5">event_repeat</span>Másolás korábbi napról</div>
+            <div style="height:44px;padding:0 18px 0 14px;border-radius:14px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">add</span>Étel hozzáadása<span style="font:600 12px 'JetBrains Mono';opacity:0.6;margin-left:6px">N</span></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;align-items:start">
+          <div style="grid-column:span 8;display:flex;flex-direction:column;gap:16px">
+            <sc-for list="{{ meals }}" as="m" hint-placeholder-count="3">
+              <div style="background:#1A1C15;border-radius:22px;padding:6px 0 8px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)">
+                <div style="display:flex;align-items:center;gap:14px;padding:14px 20px 10px">
+                  <div style="width:40px;height:40px;border-radius:14px;background:{{ m.tint }};display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:21px;color:{{ m.col }}">{{ m.i }}</span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:3px"><div style="font:800 18px/1.2 'Plus Jakarta Sans'">{{ m.n }}</div><div style="font:500 13px/1 'Plus Jakarta Sans';color:#B6B5A5">{{ m.meta }}</div></div>
+                  <div style="font:800 20px/1 'Plus Jakarta Sans'">{{ m.k }}<span style="font:600 13px 'Plus Jakarta Sans';color:#B6B5A5"> kcal</span></div>
+                  <div style="width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#B6B5A5"><span class="ms" style="font-size:20px">add</span></div>
+                  <div style="width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#B6B5A5"><span class="ms" style="font-size:20px">more_horiz</span></div>
+                </div>
+                <sc-for list="{{ m.items }}" as="it" hint-placeholder-count="2">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr) 220px 80px 36px;align-items:center;gap:12px;padding:10px 20px 10px 74px;background:{{ it.bg }}">
+                    <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="font:700 15px/1.3 'Plus Jakarta Sans'">{{ it.n }}</div><div style="font:500 13px/1.2 'Plus Jakarta Sans';color:#B6B5A5">{{ it.q }}</div></div>
+                    <div style="display:flex;gap:12px;justify-content:flex-end;font:600 13px/1 'Plus Jakarta Sans';color:#B6B5A5"><span style="display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:999px;background:#93C98C"></span>{{ it.p }}</span><span style="display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:999px;background:#E2BE62"></span>{{ it.c }}</span><span style="display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:999px;background:#A3A1DB"></span>{{ it.f }}</span></div>
+                    <div style="font:700 15px/1 'Plus Jakarta Sans';text-align:right">{{ it.k }}</div>
+                    <div style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:{{ it.menuC }};background:{{ it.menuBg }}"><span class="ms" style="font-size:20px">more_horiz</span></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+            <div style="background:#1A1C15;border-radius:22px;padding:18px 20px;display:flex;align-items:center;gap:14px;box-shadow:inset 0 0 0 1px rgba(242,241,230,0.06)">
+              <div style="width:40px;height:40px;border-radius:14px;background:rgba(163,161,219,0.14);display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:21px;color:#A3A1DB">dinner_dining</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px"><div style="font:800 18px/1.2 'Plus Jakarta Sans'">Vacsora</div><div style="font:500 13px/1.3 'Plus Jakarta Sans';color:#B6B5A5">Még nincs naplózva · 859 kcal fér bele</div></div>
+              <div style="height:40px;padding:0 14px;border-radius:14px;background:#22251C;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:18px;color:#B6B5A5">content_copy</span>Tegnapi vacsora · 612 kcal</div>
+              <div style="height:40px;padding:0 14px;border-radius:14px;background:rgba(181,196,124,0.14);color:#B5C47C;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:20px">add</span>Hozzáadás</div>
+            </div>
+          </div>
+
+          <div style="grid-column:span 4;display:flex;flex-direction:column;gap:16px">
+            <div style="background:#22251C;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:20px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 10px 24px -12px rgba(0,0,0,0.8)">
+              <div style="font:700 12px/1 'Plus Jakarta Sans';letter-spacing:0.08em;color:#B6B5A5">NAPI ÖSSZESÍTŐ</div>
+              <div style="display:flex;align-items:center;gap:20px">
+                <div style="position:relative;width:132px;height:132px;flex:none">
+                  <svg width="132" height="132" viewBox="0 0 200 200" style="transform:rotate(-90deg)"><circle cx="100" cy="100" r="88" fill="none" stroke="#2C2F24" stroke-width="20"></circle><circle cx="100" cy="100" r="88" fill="none" stroke="#EC9A66" stroke-width="20" stroke-linecap="round" stroke-dasharray="303 553"></circle></svg>
+                  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font:800 32px/1 'Plus Jakarta Sans';letter-spacing:-0.03em">859</div><div style="font:600 12px/1.3 'Plus Jakarta Sans';color:#B6B5A5">kcal maradt</div></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;font:600 14px/1 'Plus Jakarta Sans'">
+                  <div style="display:flex;flex-direction:column;gap:4px"><span style="color:#B6B5A5;font-size:13px">Elfogyasztva</span><span style="font:800 20px/1 'Plus Jakarta Sans'">1 041<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> kcal</span></span></div>
+                  <div style="display:flex;flex-direction:column;gap:4px"><span style="color:#B6B5A5;font-size:13px">Cél</span><span style="font:800 20px/1 'Plus Jakarta Sans'">1 900<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> kcal</span></span></div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <sc-for list="{{ macros }}" as="m" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:7px"><div style="display:flex;justify-content:space-between;font:600 14px/1 'Plus Jakarta Sans'"><span style="color:#B6B5A5">{{ m.l }}</span><span style="font-weight:700;white-space:nowrap">{{ m.v }}<span style="color:#B6B5A5;font-weight:600"> / {{ m.g }} g</span></span></div><div style="height:8px;border-radius:4px;background:#2C2F24"><div style="width:{{ m.pct }};height:8px;border-radius:4px;background:{{ m.cd }}"></div></div></div>
+                </sc-for>
+              </div>
+              <div style="height:1px;background:rgba(242,241,230,0.06)"></div>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+                <div style="display:flex;flex-direction:column;gap:4px"><span style="font:600 13px/1 'Plus Jakarta Sans';color:#B6B5A5">Rost</span><span style="font:800 18px/1 'Plus Jakarta Sans'">14<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> g</span></span></div>
+                <div style="display:flex;flex-direction:column;gap:4px"><span style="font:600 13px/1 'Plus Jakarta Sans';color:#B6B5A5">Cukor</span><span style="font:800 18px/1 'Plus Jakarta Sans'">31<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> g</span></span></div>
+              </div>
+            </div>
+            <div style="background:#1A1C15;border-radius:22px;padding:18px 20px;display:flex;align-items:center;gap:12px">
+              <span class="ms" style="font-size:20px;color:#C49A6C">sports</span>
+              <div style="flex:1;font:500 13px/1.45 'Plus Jakarta Sans';color:#B6B5A5">A napi célokat <b style="color:#F2F1E6">Szabó Bence</b> edződ állította be, szept. 12-én.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:520px;flex:none;display:flex;flex-direction:column;gap:18px;padding-top:26px">
+    <div style="font:800 26px/1.2 'Plus Jakarta Sans';letter-spacing:-0.01em">Előtte → utána</div>
+    <sc-for list="{{ notes }}" as="n" hint-placeholder-count="6">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ n.ids }}" as="id" hint-placeholder-count="1"><span style="height:22px;padding:0 8px;border-radius:8px;background:#FFFFFF;font:600 12px/22px 'JetBrains Mono';color:#3A3B31">{{ id }}</span></sc-for></div>
+        <div style="font:700 16px/1.35 'Plus Jakarta Sans'">{{ n.t }}</div>
+        <div style="font:500 14px/1.55 'Plus Jakarta Sans';color:#3A3B31;text-wrap:pretty">{{ n.b }}</div>
+        <div style="font:600 13px/1.45 'Plus Jakarta Sans';color:#4E6530">{{ n.v2 }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section data-screen-label="W2 Étel hozzáadása" style="padding:40px 80px;display:flex;gap:40px;align-items:flex-start;width:2080px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1440 · sötét · étel hozzáadása · kétpaneles modal 880 px</div>
+    <div style="width:1440px;height:820px;background:#12130E;border-radius:18px;overflow:hidden;position:relative;color:#F2F1E6;font-variant-numeric:tabular-nums">
+      <div style="position:absolute;left:12px;top:12px;bottom:12px;width:248px;background:#1A1C15;border-radius:22px"></div>
+      <div style="position:absolute;left:292px;right:32px;top:100px;display:grid;grid-template-columns:2fr 1fr;gap:24px"><div style="height:600px;border-radius:22px;background:#1A1C15"></div><div style="height:480px;border-radius:30px;background:#22251C"></div></div>
+      <div style="position:absolute;inset:0;background:rgba(8,9,6,0.62)"></div>
+      <div style="position:absolute;left:280px;top:70px;width:880px;height:660px;background:#22251C;border-radius:30px;display:grid;grid-template-columns:400px minmax(0,1fr);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 40px 80px -20px rgba(0,0,0,0.9)">
+        <div style="background:#1A1C15;display:flex;flex-direction:column">
+          <div style="padding:20px 20px 12px;display:flex;flex-direction:column;gap:12px">
+            <div style="font:800 20px/1.2 'Plus Jakarta Sans'">Étel hozzáadása</div>
+            <div style="height:48px;border-radius:14px;background:#2C2F24;display:flex;align-items:center;gap:10px;padding:0 14px;box-shadow:inset 0 0 0 2px #B5C47C"><span class="ms" style="font-size:20px;color:#B6B5A5">search</span><span style="font:600 15px/1 'Plus Jakarta Sans';flex:1">joghurt<span style="display:inline-block;width:1.5px;height:18px;background:#F2F1E6;vertical-align:middle;margin-left:1px"></span></span><span style="font:600 12px 'JetBrains Mono';color:#8F8F80">esc</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ filters }}" as="f" hint-placeholder-count="5"><div style="height:32px;padding:0 12px;border-radius:999px;background:{{ f.bg }};color:{{ f.fg }};font:700 13px/32px 'Plus Jakarta Sans'">{{ f.l }}</div></sc-for>
+            </div>
+          </div>
+          <div style="font:700 11px/1 'Plus Jakarta Sans';letter-spacing:0.08em;color:#8F8F80;padding:8px 20px">6 TALÁLAT</div>
+          <sc-for list="{{ results }}" as="r" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;background:{{ r.bg }};box-shadow:{{ r.ring }}">
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="font:700 15px/1.3 'Plus Jakarta Sans'">{{ r.n }}</div><div style="font:500 13px/1.2 'Plus Jakarta Sans';color:#B6B5A5">{{ r.s }}</div></div>
+              <div style="font:700 14px/1 'Plus Jakarta Sans';white-space:nowrap">{{ r.k }}<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> kcal / 100 g</span></div>
+            </div>
+          </sc-for>
+          <div style="flex:1"></div>
+          <div style="padding:12px 20px;font:500 12px/1.4 'JetBrains Mono';color:#8F8F80;box-shadow:inset 0 1px 0 rgba(242,241,230,0.06)">↑ ↓ választás · Enter hozzáadás · Tab mennyiség</div>
+        </div>
+        <div style="padding:24px 28px;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="font:800 26px/1.15 'Plus Jakarta Sans';letter-spacing:-0.02em">Görög joghurt 2%</div><div style="font:500 14px/1 'Plus Jakarta Sans';color:#B6B5A5">Saját étel · 73 kcal / 100 g</div></div><div style="width:40px;height:40px;border-radius:999px;background:#2C2F24;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px">close</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="font:600 14px/1 'Plus Jakarta Sans'">Mennyiség</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;white-space:nowrap"><div style="width:120px;height:56px;border-radius:14px;background:#2C2F24;display:flex;align-items:center;gap:8px;padding:0 16px;box-sizing:border-box"><span style="flex:1;font:800 24px/1 'Plus Jakarta Sans'">150</span><span style="font:600 15px/1 'Plus Jakarta Sans';color:#B6B5A5">g</span></div>
+              <div style="height:40px;padding:0 14px;border-radius:999px;background:#1A1C15;font:600 14px/40px 'Plus Jakarta Sans';color:#B6B5A5">100 g</div><div style="height:40px;padding:0 14px;border-radius:999px;background:rgba(181,196,124,0.16);color:#B5C47C;font:700 14px/40px 'Plus Jakarta Sans'">1 pohár · 150 g</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="font:600 14px/1 'Plus Jakarta Sans'">Étkezés</div>
+            <div style="display:flex;padding:4px;border-radius:999px;background:#1A1C15;align-self:flex-start">
+              <sc-for list="{{ mealSeg }}" as="s" hint-placeholder-count="4"><div style="height:38px;padding:0 16px;border-radius:999px;background:{{ s.bg }};color:{{ s.fg }};font:{{ s.w }} 14px/38px 'Plus Jakarta Sans'">{{ s.l }}</div></sc-for>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+            <div style="background:rgba(236,154,102,0.14);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px"><span style="font:600 13px/1 'Plus Jakarta Sans';color:#EC9A66">Kalória</span><span style="font:800 22px/1 'Plus Jakarta Sans'">110</span></div>
+            <div style="background:#1A1C15;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px"><span style="font:600 13px/1 'Plus Jakarta Sans';color:#93C98C">Fehérje</span><span style="font:800 22px/1 'Plus Jakarta Sans'">15<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> g</span></span></div>
+            <div style="background:#1A1C15;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px"><span style="font:600 13px/1 'Plus Jakarta Sans';color:#E2BE62">Szénhidrát</span><span style="font:800 22px/1 'Plus Jakarta Sans'">5,4<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> g</span></span></div>
+            <div style="background:#1A1C15;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px"><span style="font:600 13px/1 'Plus Jakarta Sans';color:#A3A1DB">Zsír</span><span style="font:800 22px/1 'Plus Jakarta Sans'">3<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> g</span></span></div>
+          </div>
+          <div style="background:#1A1C15;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;font:600 14px/1 'Plus Jakarta Sans'"><span style="color:#B6B5A5">Utána marad</span><span><b style="font-size:18px">749</b><span style="color:#B6B5A5"> kcal · fehérje még 37 g</span></span></div>
+            <div style="height:10px;border-radius:5px;background:#2C2F24;display:flex;overflow:hidden"><div style="width:54.8%;background:#EC9A66"></div><div style="width:5.8%;background:repeating-linear-gradient(45deg,#EC9A66 0 4px,rgba(236,154,102,0.45) 4px 8px)"></div></div>
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;justify-content:flex-end;gap:10px"><div style="height:48px;padding:0 18px;border-radius:16px;background:#2C2F24;font:700 15px/48px 'Plus Jakarta Sans'">Mégse</div><div style="height:48px;padding:0 20px;border-radius:16px;background:#B5C47C;color:#1A1F0A;font:700 15px/48px 'Plus Jakarta Sans'">Hozzáadás a vacsorához</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="width:520px;flex:none;display:flex;flex-direction:column;gap:16px;padding-top:26px">
+    <div style="font:500 12px/1 'JetBrains Mono';color:#56574B">ÁLLAPOTOK · törlés, másolás, szerkesztés</div>
+    <div style="background:#22251C;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:14px;color:#F2F1E6;box-shadow:0 20px 40px -16px rgba(0,0,0,0.5)">
+      <div style="font:800 18px/1.25 'Plus Jakarta Sans'">Másolás korábbi napról</div>
+      <div style="display:flex;gap:6px">
+        <div style="height:36px;padding:0 12px;border-radius:999px;background:#B5C47C;color:#1A1F0A;font:700 13px/36px 'Plus Jakarta Sans'">Tegnap · szept. 26.</div>
+        <div style="height:36px;padding:0 12px;border-radius:999px;background:#1A1C15;color:#B6B5A5;font:600 13px/36px 'Plus Jakarta Sans'">szept. 25.</div>
+        <div style="height:36px;padding:0 12px;border-radius:999px;background:#1A1C15;color:#B6B5A5;font:600 13px/36px 'Plus Jakarta Sans';display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:16px">calendar_today</span>Másik nap</div>
+      </div>
+      <div style="background:#1A1C15;border-radius:18px;padding:4px 0;font-variant-numeric:tabular-nums">
+        <sc-for list="{{ copyMeals }}" as="c" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px"><div style="width:22px;height:22px;border-radius:7px;background:{{ c.box }};box-shadow:{{ c.ring }};display:flex;align-items:center;justify-content:center;color:#1A1F0A"><span class="ms" style="font-size:16px">{{ c.ic }}</span></div><div style="flex:1;font:600 15px/1.3 'Plus Jakarta Sans'">{{ c.n }}</div><div style="font:600 14px/1 'Plus Jakarta Sans';color:#B6B5A5">{{ c.k }} kcal</div></div>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:500 13px/1.3 'Plus Jakarta Sans';color:#B6B5A5">A mai naphoz adódik, nem írja felül.</span><div style="height:44px;padding:0 16px;border-radius:14px;background:#B5C47C;color:#1A1F0A;font:700 14px/44px 'Plus Jakarta Sans'">1 étkezés másolása</div></div>
+    </div>
+    <div style="background:#22251C;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:14px;color:#F2F1E6">
+      <div style="display:flex;gap:14px;align-items:flex-start"><div style="width:44px;height:44px;border-radius:14px;background:rgba(224,127,118,0.16);display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:22px;color:#E07F76">delete</span></div><div style="display:flex;flex-direction:column;gap:6px"><div style="font:800 18px/1.25 'Plus Jakarta Sans'">Törlöd a snacket?</div><div style="font:500 14px/1.5 'Plus Jakarta Sans';color:#B6B5A5">2 tétel, 134 kcal. Utána még 6 másodpercig visszavonhatod.</div></div></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><div style="height:44px;padding:0 16px;border-radius:14px;background:#2C2F24;font:700 14px/44px 'Plus Jakarta Sans'">Mégse</div><div style="height:44px;padding:0 16px;border-radius:14px;background:#E07F76;color:#2A0E0B;font:700 14px/44px 'Plus Jakarta Sans'">Törlés</div></div>
+    </div>
+    <div style="background:#FFFFFF;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18);font-variant-numeric:tabular-nums">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div style="font:800 17px/1.2 'Plus Jakarta Sans'">Reggeli szerkesztése</div><span style="height:24px;padding:0 10px;border-radius:999px;background:rgba(140,106,12,0.12);color:#765808;font:700 12px/24px 'Plus Jakarta Sans'">Nem mentett változás</span></div>
+      <sc-for list="{{ editRows }}" as="e" hint-placeholder-count="3">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 64px;gap:10px;align-items:center"><span style="font:600 15px/1.3 'Plus Jakarta Sans'">{{ e.n }}</span><div style="height:40px;border-radius:12px;background:#F0EEE3;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font:700 15px/1 'Plus Jakarta Sans';box-shadow:{{ e.ring }}">{{ e.q }}<span style="color:#56574B;font-weight:600;font-size:13px">g</span></div><span style="font:700 14px/1 'Plus Jakarta Sans';text-align:right">{{ e.k }}</span></div>
+      </sc-for>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:4px"><div style="height:40px;padding:0 14px;border-radius:12px;background:#F0EEE3;font:700 14px/40px 'Plus Jakarta Sans'">Elvetés</div><div style="height:40px;padding:0 16px;border-radius:12px;background:#4E6530;color:#FFFFFF;font:700 14px/40px 'Plus Jakarta Sans'">Mentés</div></div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="W2 Ételek 1440 világos" style="padding:40px 80px;display:flex;flex-direction:column;gap:12px;width:2080px;box-sizing:border-box">
+  <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1440 · világos · Ételek fül · táblázat + szerkesztő panel</div>
+  <div style="width:1440px;height:900px;background:#F4F2E9;border-radius:18px;overflow:hidden;position:relative;color:#1C1D16;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5)">
+    <div style="position:absolute;left:12px;top:12px;bottom:12px;width:248px;box-sizing:border-box;background:#FFFFFF;border-radius:22px;padding:16px 12px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><div style="width:36px;height:36px;border-radius:12px;background:#4E6530;color:#FFFFFF;font:800 18px/36px 'Plus Jakarta Sans';text-align:center">L</div><div style="font:800 20px/1 'Plus Jakarta Sans';letter-spacing:-0.02em">Lifey</div></div>
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+        <sc-if value="{{ n.on }}" hint-placeholder-val="{{ false }}"><div style="height:44px;border-radius:14px;background:#4E6530;color:#FFFFFF;display:flex;align-items:center;gap:12px;padding:0 12px;font:700 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+        <sc-if value="{{ n.off }}" hint-placeholder-val="{{ true }}"><div style="height:44px;border-radius:14px;color:#56574B;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+      </sc-for>
+    </div>
+    <div style="position:absolute;left:292px;right:32px;top:12px;display:flex;flex-direction:column;gap:20px">
+      <div style="height:64px;display:flex;align-items:center"><div style="font:800 28px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Táplálkozás</div></div>
+      <div style="display:flex;align-items:flex-end;gap:28px;box-shadow:inset 0 -1px 0 rgba(28,29,22,0.1)">
+        <div style="padding:0 0 14px;font:600 16px/1 'Plus Jakarta Sans';color:#56574B">Étkezések</div>
+        <div style="padding:0 0 14px;font:700 16px/1 'Plus Jakarta Sans';box-shadow:inset 0 -3px 0 #4E6530">Ételek <span style="color:#6B6C5F">18</span></div>
+        <div style="padding:0 0 14px;font:600 16px/1 'Plus Jakarta Sans';color:#56574B">Receptek <span style="color:#6B6C5F">3</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:start">
+        <div style="background:#FFFFFF;border-radius:22px;overflow:hidden;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+          <div style="display:flex;align-items:center;gap:10px;padding:16px 20px">
+            <div style="flex:1;max-width:280px;height:40px;border-radius:14px;background:#F0EEE3;display:flex;align-items:center;gap:8px;padding:0 12px;color:#6B6C5F;font:500 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:20px">search</span>Keresés<span style="margin-left:auto;font:600 12px 'JetBrains Mono'">/</span></div>
+            <div style="display:flex;padding:3px;border-radius:999px;background:#F0EEE3"><div style="height:34px;padding:0 14px;border-radius:999px;background:#FFFFFF;font:700 13px/34px 'Plus Jakarta Sans';box-shadow:0 1px 3px rgba(40,38,20,0.14)">Saját</div><div style="height:34px;padding:0 14px;font:600 13px/34px 'Plus Jakarta Sans';color:#56574B">Katalógus</div><div style="height:34px;padding:0 14px;font:600 13px/34px 'Plus Jakarta Sans';color:#56574B">Kedvencek</div></div>
+            <div style="flex:1"></div>
+            <div style="flex:none;white-space:nowrap;height:40px;padding:0 16px 0 12px;border-radius:14px;background:#4E6530;color:#FFFFFF;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:20px">add</span>Új étel</div>
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(0,2.2fr) 90px repeat(3,minmax(0,1fr)) 120px 44px;align-items:center;padding:0 20px;height:40px;background:#F0EEE3;font:600 13px/1 'Plus Jakarta Sans';color:#56574B;gap:8px">
+            <div style="display:flex;align-items:center;gap:4px;color:#1C1D16">Név<span class="ms" style="font-size:16px">arrow_upward</span></div>
+            <div style="text-align:right">kcal / 100 g</div>
+            <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:999px;background:#34742F"></span>Fehérje</div>
+            <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:999px;background:#7F5D00"></span>Szénhidrát</div>
+            <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:999px;background:#5A57A8"></span>Zsír</div>
+            <div style="text-align:right">Utoljára</div><div></div>
+          </div>
+          <sc-for list="{{ foods }}" as="f" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:minmax(0,2.2fr) 90px repeat(3,minmax(0,1fr)) 120px 44px;align-items:center;gap:8px;padding:0 20px;min-height:52px;background:{{ f.bg }};box-shadow:{{ f.ring }};font:500 15px/1.3 'Plus Jakarta Sans'">
+              <div style="display:flex;flex-direction:column;gap:1px;padding:6px 0"><span style="font-weight:700">{{ f.n }}</span><span style="font-size:12px;color:#56574B">{{ f.s }}</span></div>
+              <div style="text-align:right;font-weight:700">{{ f.k }}</div>
+              <div style="text-align:right">{{ f.p }}<span style="color:#56574B;font-size:13px"> g</span></div>
+              <div style="text-align:right">{{ f.c }}<span style="color:#56574B;font-size:13px"> g</span></div>
+              <div style="text-align:right">{{ f.f }}<span style="color:#56574B;font-size:13px"> g</span></div>
+              <div style="text-align:right;font-size:13px;color:#56574B">{{ f.u }}</div>
+              <div style="display:flex;justify-content:flex-end"><span class="ms" style="font-size:20px;color:#56574B">more_horiz</span></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 16px 36px -16px rgba(40,38,20,0.28)">
+          <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;font:800 20px/1.2 'Plus Jakarta Sans'">Görög joghurt 2%</div><span class="ms" style="font-size:22px;color:#56574B">close</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><div style="font:600 14px/1 'Plus Jakarta Sans'">Név</div><div style="height:44px;border-radius:14px;background:#F0EEE3;padding:0 14px;display:flex;align-items:center;font:600 15px/1 'Plus Jakarta Sans'">Görög joghurt 2%</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font:600 14px/1 'Plus Jakarta Sans'">Alapmennyiség</div><div style="height:44px;border-radius:14px;background:#F0EEE3;padding:0 14px;display:flex;align-items:center;justify-content:space-between;font:700 15px/1 'Plus Jakarta Sans'">100<span style="color:#56574B;font-weight:600">g</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font:600 14px/1 'Plus Jakarta Sans'">Kalória</div><div style="height:44px;border-radius:14px;background:#F0EEE3;padding:0 14px;display:flex;align-items:center;justify-content:space-between;font:700 15px/1 'Plus Jakarta Sans'">73<span style="color:#56574B;font-weight:600">kcal</span></div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <sc-for list="{{ edMac }}" as="m" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:6px"><div style="font:600 13px/1 'Plus Jakarta Sans';display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:999px;background:{{ m.c }}"></span>{{ m.l }}</div><div style="height:44px;border-radius:14px;background:#F0EEE3;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font:700 15px/1 'Plus Jakarta Sans';box-shadow:{{ m.ring }}">{{ m.v }}<span style="color:#56574B;font-weight:600">g</span></div></div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font:600 13px/1.35 'Plus Jakarta Sans';color:#7F5D00"><span class="ms" style="font-size:18px">info</span>A makrók 72 kcal-t adnak ki — ez 1 kcal-lal tér el.</div>
+          <div style="display:flex;flex-direction:column;gap:6px"><div style="font:600 14px/1 'Plus Jakarta Sans'">Adagok <span style="color:#6B6C5F;font-weight:500">· gyors választás naplózáskor</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><div style="height:32px;padding:0 12px;border-radius:999px;background:#F0EEE3;font:600 13px/32px 'Plus Jakarta Sans'">1 pohár · 150 g</div><div style="height:32px;padding:0 12px;border-radius:999px;background:#F0EEE3;font:600 13px/32px 'Plus Jakarta Sans'">1 ek. · 20 g</div><div style="height:32px;padding:0 10px;border-radius:999px;color:#4E6530;font:700 13px/32px 'Plus Jakarta Sans'">+ Adag</div></div></div>
+          <div style="height:1px;background:rgba(28,29,22,0.08)"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end"><div style="height:44px;padding:0 16px;border-radius:14px;background:#F0EEE3;font:700 14px/44px 'Plus Jakarta Sans'">Mégse</div><div style="height:44px;padding:0 18px;border-radius:14px;background:#4E6530;color:#FFFFFF;font:700 14px/44px 'Plus Jakarta Sans'">Mentés</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="W2 Receptek 1024 + mobil" style="padding:40px 80px 96px;display:flex;gap:40px;align-items:flex-start;width:2080px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1024 · világos · Receptek fül</div>
+    <div style="width:1024px;background:#F4F2E9;border-radius:18px;overflow:hidden;color:#1C1D16;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5);display:flex">
+      <div style="width:76px;margin:12px 0 12px 12px;background:#FFFFFF;border-radius:22px;flex:none;padding:16px 0;display:flex;flex-direction:column;align-items:center;gap:4px;box-sizing:border-box;box-shadow:0 1px 2px rgba(40,38,20,0.06)">
+        <div style="width:36px;height:36px;border-radius:12px;background:#4E6530;color:#FFFFFF;font:800 18px/36px 'Plus Jakarta Sans';text-align:center;margin:4px 0 18px">L</div>
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+          <sc-if value="{{ n.on }}" hint-placeholder-val="{{ false }}"><div style="width:48px;height:44px;border-radius:14px;background:#4E6530;color:#FFFFFF;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">{{ n.i }}</span></div></sc-if>
+          <sc-if value="{{ n.off }}" hint-placeholder-val="{{ true }}"><div style="width:48px;height:44px;border-radius:14px;color:#56574B;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px">{{ n.i }}</span></div></sc-if>
+        </sc-for>
+      </div>
+      <div style="flex:1;min-width:0;padding:12px 24px 32px;display:flex;flex-direction:column;gap:20px">
+        <div style="height:64px;display:flex;align-items:center"><div style="font:800 26px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Táplálkozás</div></div>
+        <div style="display:flex;align-items:flex-end;gap:28px;box-shadow:inset 0 -1px 0 rgba(28,29,22,0.1)">
+          <div style="padding:0 0 14px;font:600 16px/1 'Plus Jakarta Sans';color:#56574B">Étkezések</div>
+          <div style="padding:0 0 14px;font:600 16px/1 'Plus Jakarta Sans';color:#56574B">Ételek</div>
+          <div style="padding:0 0 14px;font:700 16px/1 'Plus Jakarta Sans';box-shadow:inset 0 -3px 0 #4E6530">Receptek</div>
+          <div style="flex:1"></div>
+          <div style="height:40px;padding:0 14px 0 10px;border-radius:14px;background:#4E6530;color:#FFFFFF;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans';margin-bottom:8px"><span class="ms" style="font-size:20px">add</span>Új recept</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px">
+          <sc-for list="{{ recipes }}" as="r" hint-placeholder-count="3">
+            <div style="background:#FFFFFF;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="width:48px;height:48px;border-radius:16px;background:{{ r.tint }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px;color:{{ r.col }}">{{ r.i }}</span></div><sc-if value="{{ r.fromTrainer }}" hint-placeholder-val="{{ false }}"><span style="height:24px;padding:0 9px;border-radius:999px;background:rgba(126,97,60,0.12);color:#6A5031;font:700 12px/24px 'Plus Jakarta Sans'">Bence ajánlása</span></sc-if></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><div style="font:800 18px/1.25 'Plus Jakarta Sans';text-wrap:pretty">{{ r.n }}</div><div style="font:500 13px/1.3 'Plus Jakarta Sans';color:#56574B">{{ r.meta }}</div></div>
+              <div style="display:flex;align-items:baseline;gap:14px"><div style="font:800 26px/1 'Plus Jakarta Sans'">{{ r.k }}<span style="font:600 13px 'Plus Jakarta Sans';color:#56574B"> kcal / adag</span></div></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><div style="height:8px;border-radius:4px;overflow:hidden;display:flex;gap:2px"><div style="width:{{ r.pp }};background:#34742F"></div><div style="width:{{ r.cp }};background:#7F5D00"></div><div style="width:{{ r.fp }};background:#5A57A8"></div></div><div style="display:flex;gap:12px;font:600 12px/1 'Plus Jakarta Sans';color:#56574B"><span>F {{ r.p }} g</span><span>Sz {{ r.c }} g</span><span>Zs {{ r.f }} g</span></div></div>
+              <div style="display:flex;gap:8px;padding-top:4px"><div style="flex:1;height:40px;border-radius:14px;background:rgba(78,101,48,0.12);color:#3E5226;font:700 14px/40px 'Plus Jakarta Sans';text-align:center">Naplózás</div><div style="width:40px;height:40px;border-radius:14px;background:#F0EEE3;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;color:#56574B">more_horiz</span></div></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B;max-width:640px">A kártya a meglévő adatból él: domináns makró szerinti ikon és tint, adagonkénti kcal, makró-arány sáv. Recept-fotó új adat lenne (<b>külön jelölve</b>) — ha lesz, a tint-ikon helyére kerül.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">390 · sötét · Étkezések · törlés utáni toast</div>
+    <div style="width:390px;height:1180px;background:#12130E;border-radius:36px;overflow:hidden;position:relative;color:#F2F1E6;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5)">
+      <div style="padding:18px 20px 12px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font:800 26px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Táplálkozás</div><div style="width:44px;height:44px;border-radius:999px;background:#3A4228;color:#D6E2A6;font:800 14px/44px 'Plus Jakarta Sans';text-align:center">KN</div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;height:44px;border-radius:999px;background:#1A1C15"><span class="ms" style="font-size:22px;color:#B6B5A5;width:44px;text-align:center">chevron_left</span><span style="font:700 15px/1 'Plus Jakarta Sans'">Ma · szept. 27.</span><span class="ms" style="font-size:22px;color:#5C5D50;width:44px;text-align:center">chevron_right</span></div>
+        <div style="display:flex;padding:4px;border-radius:999px;background:#1A1C15"><div style="flex:1;height:40px;border-radius:999px;background:#2C2F24;font:700 14px/40px 'Plus Jakarta Sans';text-align:center">Étkezések</div><div style="flex:1;height:40px;color:#B6B5A5;font:600 14px/40px 'Plus Jakarta Sans';text-align:center">Ételek</div><div style="flex:1;height:40px;color:#B6B5A5;font:600 14px/40px 'Plus Jakarta Sans';text-align:center">Receptek</div></div>
+      </div>
+      <div style="padding:4px 20px;display:flex;flex-direction:column;gap:14px">
+        <div style="background:#22251C;border-radius:22px;padding:16px;display:flex;align-items:center;gap:16px">
+          <div style="position:relative;width:88px;height:88px;flex:none"><svg width="88" height="88" viewBox="0 0 200 200" style="transform:rotate(-90deg)"><circle cx="100" cy="100" r="84" fill="none" stroke="#2C2F24" stroke-width="24"></circle><circle cx="100" cy="100" r="84" fill="none" stroke="#EC9A66" stroke-width="24" stroke-linecap="round" stroke-dasharray="289 528"></circle></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font:800 22px/1 'Plus Jakarta Sans'">859</div><div style="font:600 10px/1.3 'Plus Jakarta Sans';color:#B6B5A5">maradt</div></div></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ macros }}" as="m" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;font:600 12px/1 'Plus Jakarta Sans'"><span style="color:#B6B5A5">{{ m.l }}</span><span>{{ m.v }} / {{ m.g }} g</span></div><div style="height:5px;border-radius:3px;background:#2C2F24"><div style="width:{{ m.pct }};height:5px;border-radius:3px;background:{{ m.cd }}"></div></div></div></sc-for>
+          </div>
+        </div>
+        <sc-for list="{{ mealsMobile }}" as="m" hint-placeholder-count="2">
+          <div style="background:#1A1C15;border-radius:22px;padding:4px 0 6px">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px 6px"><div style="width:36px;height:36px;border-radius:12px;background:{{ m.tint }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;color:{{ m.col }}">{{ m.i }}</span></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="font:800 16px/1.2 'Plus Jakarta Sans'">{{ m.n }}</div><div style="font:500 12px/1 'Plus Jakarta Sans';color:#B6B5A5">{{ m.meta }}</div></div><div style="font:800 17px/1 'Plus Jakarta Sans'">{{ m.k }}<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> kcal</span></div></div>
+            <sc-for list="{{ m.items }}" as="it" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:10px;padding:9px 16px 9px 64px;min-height:44px;box-sizing:border-box"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="font:700 14px/1.3 'Plus Jakarta Sans'">{{ it.n }}</div><div style="font:500 12px/1.2 'Plus Jakarta Sans';color:#B6B5A5">{{ it.q }} · F {{ it.p }}</div></div><div style="font:700 14px/1 'Plus Jakarta Sans'">{{ it.k }}</div></div></sc-for>
+          </div>
+        </sc-for>
+        <div style="background:#1A1C15;border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 0 0 1px rgba(242,241,230,0.06)"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:12px;background:rgba(163,161,219,0.14);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;color:#A3A1DB">dinner_dining</span></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="font:800 16px/1.2 'Plus Jakarta Sans'">Vacsora</div><div style="font:500 12px/1.3 'Plus Jakarta Sans';color:#B6B5A5">859 kcal fér bele</div></div></div><div style="display:flex;gap:8px"><div style="flex:1;height:44px;border-radius:14px;background:#22251C;font:700 13px/44px 'Plus Jakarta Sans';text-align:center">Tegnapi másolása</div><div style="flex:1;height:44px;border-radius:14px;background:rgba(181,196,124,0.14);color:#B5C47C;font:700 13px/44px 'Plus Jakarta Sans';text-align:center">Hozzáadás</div></div></div>
+      </div>
+      <div style="position:absolute;left:20px;right:20px;bottom:164px;height:52px;border-radius:18px;background:#F2F1E6;color:#12130E;display:flex;align-items:center;gap:12px;padding:0 8px 0 16px;box-shadow:0 20px 40px -12px rgba(0,0,0,0.9);overflow:hidden"><span class="ms" style="font-size:20px;color:#34742F;font-variation-settings:'FILL' 1">check_circle</span><span style="flex:1;font:600 14px/1 'Plus Jakarta Sans'">Snack törölve</span><span style="height:40px;padding:0 12px;color:#3E5226;font:800 14px/40px 'Plus Jakarta Sans'">Visszavonás</span><div style="position:absolute;left:0;bottom:0;height:3px;width:58%;background:#4E6530"></div></div>
+      <div style="position:absolute;right:20px;bottom:96px;height:56px;padding:0 20px 0 16px;border-radius:20px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:6px;font:700 15px/1 'Plus Jakarta Sans';box-shadow:0 12px 24px -8px rgba(181,196,124,0.35)"><span class="ms" style="font-size:24px">add</span>Étel</div>
+      <div style="position:absolute;left:12px;right:12px;bottom:16px;height:68px;border-radius:30px;background:rgba(40,44,32,0.92);display:flex;align-items:center;justify-content:space-between;padding:0 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07),0 20px 40px -12px rgba(0,0,0,0.9)">
+        <span class="ms" style="font-size:24px;color:#B6B5A5;width:48px;text-align:center">space_dashboard</span>
+        <div style="height:48px;padding:0 14px;border-radius:999px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">restaurant</span>Táplálkozás</div>
+        <span class="ms" style="font-size:24px;color:#B6B5A5;width:48px;text-align:center">fitness_center</span>
+        <span class="ms" style="font-size:24px;color:#B6B5A5;width:48px;text-align:center">monitor_weight</span>
+        <span class="ms" style="font-size:24px;color:#B6B5A5;width:48px;text-align:center">more_horiz</span>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const navL = [['space_dashboard', 'Áttekintő'], ['restaurant', 'Táplálkozás'], ['fitness_center', 'Edzések'], ['monitor_weight', 'Testsúly'], ['water_drop', 'Víz'], ['directions_walk', 'Lépések'], ['bar_chart', 'Statisztika']];
+    const item = (n, q, p, c, f, k, hover) => ({ n, q, p: p + ' g', c: c + ' g', f: f + ' g', k, bg: hover ? '#22251C' : 'transparent', menuBg: hover ? '#2C2F24' : 'transparent', menuC: hover ? '#F2F1E6' : 'transparent' });
+    const meals = [
+      { n: 'Reggeli', meta: '07:15 · 3 tétel', k: 379, i: 'bakery_dining', tint: 'rgba(226,190,98,0.14)', col: '#E2BE62', items: [item('Zabpehely', '60 g', 8, 35, 4, 223), item('Görög joghurt 2%', '150 g · 1 pohár', 15, 5, 3, 110, true), item('Áfonya', '80 g', 1, 11, 0, 46)] },
+      { n: 'Ebéd', meta: '12:30 · recept, 1 adag', k: 528, i: 'lunch_dining', tint: 'rgba(147,201,140,0.14)', col: '#93C98C', items: [item('Csirkés rizstál brokkolival', '1 adag · 420 g', 38, 58, 14, 528)] },
+      { n: 'Snack', meta: '15:40 · 2 tétel', k: 134, i: 'nutrition', tint: 'rgba(236,154,102,0.14)', col: '#EC9A66', items: [item('Alma', '180 g · 1 db', 1, 25, 0, 94), item('Mandula', '7 g · 5 szem', 1, 1, 4, 41)] }
+    ];
+    const pick = (sel) => ({ bg: sel ? '#B5C47C' : '#22251C', fg: sel ? '#1A1F0A' : '#B6B5A5' });
+    return {
+      nav: navL.map(([i, l]) => ({ i, l, on: l === 'Táplálkozás', off: l !== 'Táplálkozás' })),
+      meals, mealsMobile: meals.slice(0, 2),
+      macros: [
+        { l: 'Fehérje', v: 68, g: 120, pct: '57%', cd: '#93C98C' },
+        { l: 'Szénhidrát', v: 112, g: 210, pct: '53%', cd: '#E2BE62' },
+        { l: 'Zsír', v: 34, g: 63, pct: '54%', cd: '#A3A1DB' }
+      ],
+      filters: [['Mind', true], ['Saját ételek', false], ['Receptek', false], ['Kedvencek', false], ['Legutóbbiak', false]].map(([l, s]) => ({ l, ...pick(s) })),
+      results: [
+        ['Görög joghurt 2%', 'Saját · legutóbb ma reggel', 73, true], ['Natúr joghurt 3,5%', 'Katalógus', 61], ['Görög joghurt 10%', 'Katalógus', 133], ['Joghurtos zabkása', 'Recept · 1 adag 412 kcal', 118], ['Skyr natúr', 'Katalógus', 63], ['Kefir', 'Katalógus', 52]
+      ].map(([n, s, k, sel]) => ({ n, s, k, bg: sel ? '#22251C' : 'transparent', ring: sel ? 'inset 3px 0 0 #B5C47C' : 'none' })),
+      mealSeg: ['Reggeli', 'Ebéd', 'Snack', 'Vacsora'].map(l => ({ l, bg: l === 'Vacsora' ? '#2C2F24' : 'transparent', fg: l === 'Vacsora' ? '#F2F1E6' : '#B6B5A5', w: l === 'Vacsora' ? 700 : 600 })),
+      copyMeals: [['Reggeli', 402, false], ['Ebéd', 566, false], ['Snack', 200, false], ['Vacsora', 612, true]].map(([n, k, on]) => ({ n, k, ic: on ? 'check' : '', box: on ? '#B5C47C' : 'transparent', ring: on ? 'none' : 'inset 0 0 0 2px #5C5D50' })),
+      editRows: [['Zabpehely', '60', '223', false], ['Görög joghurt 2%', '166,7', '122', true], ['Áfonya', '80', '46', false]].map(([n, q, k, f]) => ({ n, q, k, ring: f ? 'inset 0 0 0 2px #4E6530' : 'none' })),
+      foods: [
+        ['Áfonya', 'Saját', 57, '0,7', '14,5', '0,3', 'ma'], ['Alma', 'Saját · 1 db = 180 g', 52, '0,3', '13,8', '0,2', 'ma'], ['Barna rizs, főtt', 'Saját', 123, '2,7', '25,6', '1', 'szept. 25.'], ['Brokkoli', 'Saját', 34, '2,8', '6,6', '0,4', 'szept. 26.'], ['Csirkemell, sült', 'Saját', 165, '31', '0', '3,6', 'szept. 26.'], ['Görög joghurt 2%', 'Saját · 1 pohár = 150 g', 73, '10', '3,6', '2', 'ma', true], ['Mandula', 'Saját · 5 szem = 7 g', 579, '21,2', '21,6', '49,9', 'ma'], ['Olívaolaj', 'Saját · 1 ek. = 10 g', 884, '0', '0', '100', 'szept. 24.'], ['Tojás', 'Saját · 1 db = 55 g', 143, '12,6', '0,7', '9,5', 'szept. 26.'], ['Zabpehely', 'Saját', 372, '13,5', '58,7', '7', 'ma']
+      ].map(([n, s, k, p, c, f, u, sel]) => ({ n, s, k, p, c, f, u, bg: sel ? 'rgba(78,101,48,0.08)' : '#FFFFFF', ring: sel ? 'inset 3px 0 0 #4E6530' : 'inset 0 -1px 0 rgba(28,29,22,0.06)' })),
+      edMac: [['Fehérje', '10', '#34742F', true], ['Szénhidrát', '3,6', '#7F5D00'], ['Zsír', '2', '#5A57A8']].map(([l, v, c, f]) => ({ l, v, c, ring: f ? 'inset 0 0 0 2px #4E6530,0 0 0 4px rgba(78,101,48,0.18)' : 'none' })),
+      recipes: [
+        { n: 'Csirkés rizstál brokkolival', meta: '4 adag · 5 hozzávaló', k: 528, p: 38, c: 58, f: 14, i: 'egg_alt', tint: 'rgba(52,116,47,0.12)', col: '#34742F', fromTrainer: true },
+        { n: 'Joghurtos zabkása banánnal', meta: '2 adag · 4 hozzávaló', k: 412, p: 18, c: 64, f: 9, i: 'grain', tint: 'rgba(127,93,0,0.12)', col: '#7F5D00', fromTrainer: false },
+        { n: 'Lencsefőzelék', meta: '6 adag · 7 hozzávaló', k: 386, p: 22, c: 52, f: 10, i: 'grain', tint: 'rgba(127,93,0,0.12)', col: '#7F5D00', fromTrainer: false }
+      ].map(r => { const t = r.p * 4 + r.c * 4 + r.f * 9; return { ...r, pp: Math.round(r.p * 4 / t * 100) + '%', cp: Math.round(r.c * 4 / t * 100) + '%', fp: Math.round(r.f * 9 / t * 100) + '%' }; }),
+      notes: [
+        { ids: ['client-004'], t: 'Napló + összesítő, két súllyal', b: 'Minden étkezés egy kártya: ikon, idő, kcal-összeg a fejlécben, a tételek alatta, egy vonalon: név és mennyiség balra, három makró pont-jelöléssel, kcal jobbra. A szénhidrát és a zsír végig látszik, nem csak a tételsorokban.', v2: 'v2: lista-sor csoportban, metrikapontok.' },
+        { ids: ['client-004'], t: 'A Napi összesítő lett a hős', b: 'A jobb oldali panel megmaradt, de hős kártyát kapott gyűrűvel, a hátralévő kcal-val és a három makró sávjával. Alatta clay jelzés, hogy a célt az edző állította be (client-033 kérdése).', v2: 'v2: hős kártya e2, edzői szerep = clay.' },
+        { ids: ['client-005', 'client-006', 'client-007'], t: 'Kétpaneles étel-hozzáadás', b: 'A 380 px-es modal helyett 880 px: balra kereső szűrőkkel (Saját, Receptek, Kedvencek, Legutóbbiak), jobbra előnézet adag-chipekkel, étkezés-választóval és az „utána marad” sávval, ami megmaradt. Teljesen billentyűzettel kezelhető.', v2: 'Kiterjesztés: modal 880, szegmentált vezérlő.' },
+        { ids: ['extra-001', 'extra-002'], t: 'Szerkesztés mentéssel, törlés megerősítéssel', b: 'A mennyiség max. 1 tizedes, magyar tizedesjellel („166.68 g” helyett 166,7). A szerkesztés explicit Mentés/Elvetés, „Nem mentett változás” jelzéssel. Törlésnél megerősítő modal, utána toast Visszavonással.', v2: 'Kiterjesztés: modal, toast visszavonással (Web DS 03).' },
+        { ids: ['extra-003'], t: 'Másolás: melyik nap, mely étkezések', b: 'A gomb popovert nyit: napválasztó chipek, alatta a nap étkezései jelölőnégyzettel. Az üres Vacsora kártyán egykattintásos „Tegnapi vacsora · 612 kcal” marad.', v2: 'v2: „Copy a day” üres állapot.' },
+        { ids: ['extra-004', 'extra-005', 'extra-006'], t: 'Ételek: táblázat + szerkesztő panel', b: 'A jó asztali minta marad, de a táblázat rendezhető, szűrhető (Saját / Katalógus / Kedvencek), a makró-fejlécen metrikapont, soronként egy ⋯ menü. A panel figyelmeztet, ha a makrók nem adják ki a kalóriát, és itt adhatók meg a gyors adagok.', v2: 'Kiterjesztés: adattáblázat, űrlapmezők.' },
+        { ids: ['client-008', 'client-009'], t: 'Receptek a meglévő adatból', b: 'A monoton szürke ikonok helyett domináns makró szerinti tint, adagonkénti kcal nagyban, makró-arány sáv. „528 / serving” helyett „528 kcal / adag”. Az edzőtől jött recept clay chipet kap.', v2: 'v2: tinted ikon-tartó, tinted chip.' },
+        { ids: ['client-079', 'client-087'], t: 'Mobil: egy hasáb, semmi nem csúszik egymásra', b: '390 px-en az összesítő kompakt kártyaként a lista fölé kerül, a fülsor háromrészes szegmentált vezérlő, a hozzáadás FAB az alsó nav fölött. A toast a FAB fölött jelenik meg.', v2: 'v2: alsó nav, FAB, szegmentált váltó.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

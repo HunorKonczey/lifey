@@ -1,5 +1,5 @@
 import { useTranslations, useLocale } from "next-intl";
-import { StatCard } from "@/components/data/StatCard";
+import { Card, MetricTile } from "@/components/ds";
 import { ActivityChip } from "./ActivityChip";
 import { RouteSvg } from "./RouteSvg";
 import { CardioSplitsTable } from "./CardioSplitsTable";
@@ -15,7 +15,7 @@ import { activityFamilyOf, activityTypeColor } from "../activityType";
 import { buildCardioTiles } from "../cardioTiles";
 import { detectBestEffortRecords } from "../cardioBestEffortRecords";
 import { buildHrZoneBreakdown } from "../hrZoneBreakdown";
-import { totalWorkKj } from "../cardioFormat";
+import { formatDistanceKm, formatDuration, formatPace, totalWorkKj } from "../cardioFormat";
 import { flattenAltitudes } from "../routeGeometry";
 import type { WorkoutSessionResponse } from "../types";
 import { useFormat } from "@/lib/i18n/format";
@@ -91,12 +91,30 @@ export function CardioSessionDetail({
   const activityType = session.activityType ?? "OTHER_CARDIO";
   const family = activityFamilyOf(activityType);
   const color = activityTypeColor(activityType);
-  const tiles = buildCardioTiles(session, t, locale);
+  const allTiles = buildCardioTiles(session, t, locale);
   const polyline = session.cardio?.routePolyline;
   const bestEffortRecords = detectBestEffortRecords(history, session);
   const hrZoneBreakdown = buildHrZoneBreakdown(session);
   const workKj = totalWorkKj(session.cardio?.avgWatts ?? null, session.movingSeconds);
   const altitudes = polyline ? flattenAltitudes(polyline) : [];
+  // DISTANCE sessions lead with the W3-D hero (distance · time · pace · heart rate); the tiles below keep only what
+  // the hero does not already say (elevation, peak altitude, backpack, GAP).
+  const effectiveSeconds =
+    session.movingSeconds ?? (session.finishedAt ? (new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) / 1000 : null);
+  const distanceM = session.cardio?.distanceMeters ?? null;
+  const hero =
+    family === "DISTANCE"
+      ? [
+          distanceM != null && distanceM > 0 ? { label: t("cardioDistanceLabel"), value: formatDistanceKm(distanceM, locale) } : null,
+          effectiveSeconds != null ? { label: t("cardioDurationLabel"), value: formatDuration(effectiveSeconds) } : null,
+          distanceM != null && distanceM > 0 && effectiveSeconds != null && formatPace(distanceM, effectiveSeconds)
+            ? { label: t("cardioAvgPaceLabel"), value: formatPace(distanceM, effectiveSeconds)! }
+            : null,
+          session.averageHeartRate != null ? { label: t("cardioAvgHeartRateLabel"), value: t("bpmValue", { value: Math.round(session.averageHeartRate) }) } : null,
+        ].filter((x): x is { label: string; value: string } => x != null)
+      : [];
+  const heroLabels = new Set([t("cardioDistanceLabel"), t("cardioDurationLabel"), t("cardioPaceLabel")]);
+  const tiles = family === "DISTANCE" ? allTiles.filter((tile) => !heroLabels.has(tile.label)) : allTiles;
   const hasWeatherData =
     session.cardio?.weatherTempC != null ||
     session.cardio?.weatherWindKph != null ||
@@ -105,37 +123,57 @@ export function CardioSessionDetail({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3 rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+      <Card className="flex items-center gap-3">
         <ActivityChip activityType={activityType} size={40} />
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-base truncate">{ta(activityType)}</p>
-          <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
+          <h2 className="type-title truncate">{ta(activityType)}</h2>
+          <p className="type-body-s tabular" style={{ color: "var(--text-3)" }}>
             {fmt.date(session.startedAt, "dayYearTime")}
           </p>
         </div>
         {session.rpe != null && (
           <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold flex-none"
-            style={{ background: "color-mix(in srgb, var(--secondary) 18%, transparent)", color: "var(--secondary)" }}>
+            style={{ background: "color-mix(in srgb, var(--role) 18%, transparent)", color: "var(--text)" }}>
             {t("sessionRpe", { rpe: session.rpe })}
           </span>
         )}
-        <div className="flex items-center gap-1 rounded-[var(--r-pill)] px-3 py-1.5 flex-none" style={{ background: "var(--surface-container)" }}>
-          <span className="material-symbols-rounded text-sm" style={{ color: "var(--muted)" }}>lock</span>
-          <span className="text-xs font-bold" style={{ color: "var(--muted)" }}>{t("readOnly")}</span>
+        <div className="flex items-center gap-1 rounded-[var(--r-pill)] px-3 py-1.5 flex-none" style={{ background: "var(--nested)" }}>
+          <span className="material-symbols-rounded text-sm" style={{ color: "var(--text-3)" }}>lock</span>
+          <span className="text-xs font-bold" style={{ color: "var(--text-3)" }}>{t("readOnly")}</span>
         </div>
-      </div>
+      </Card>
+
+      {hero.length > 0 && (
+        <Card variant="hero" data-testid="cardio-hero">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+            {hero.map((stat) => (
+              <div key={stat.label}>
+                <dt className="type-label" style={{ color: "var(--text-3)" }}>{stat.label}</dt>
+                <dd className="tabular" style={{ fontSize: 28, lineHeight: "34px", fontWeight: 800, letterSpacing: "-0.02em" }}>{stat.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+      )}
+
+      {family === "DISTANCE" && (
+        <div className="grid items-start gap-4 lg:grid-cols-[1.4fr_1fr]" data-testid="cardio-charts">
+          <PaceBarChart splits={session.splits} />
+          {hrZoneBreakdown && <HrZonePanel breakdown={hrZoneBreakdown} />}
+        </div>
+      )}
 
       {session.feedbackNote && (
-        <p className="text-sm rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)", color: "var(--on-surface-variant)" }}>
+        <p className="text-sm rounded-[var(--r-card)] p-4" style={{ background: "var(--card)", color: "var(--text-2)" }}>
           {session.feedbackNote}
         </p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {tiles.length > 0 && <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {tiles.map((tile) => (
-          <StatCard key={tile.label} label={tile.label} value={tile.value} icon={tile.icon} color={color} />
+          <MetricTile key={tile.label} label={tile.label} value={tile.value} icon={tile.icon} color={color} />
         ))}
-      </div>
+      </div>}
 
       {family === "GAME" && hrZoneBreakdown && <HrZonePanel breakdown={hrZoneBreakdown} />}
 
@@ -178,8 +216,8 @@ export function CardioSessionDetail({
       )}
 
       {family === "DISTANCE" && polyline && (
-        <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-semibold mb-3" style={{ color: "var(--on-surface-variant)" }}>
+        <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
+          <p className="text-sm font-semibold mb-3" style={{ color: "var(--text-2)" }}>
             {t("cardioRouteHeading")}
           </p>
           <RouteSvg polyline={polyline} waypoints={session.waypoints} />
@@ -194,14 +232,13 @@ export function CardioSessionDetail({
         <WaypointsList waypoints={session.waypoints} accent={color} />
       )}
 
-      {family === "DISTANCE" && (
-        <CardioSplitsTable
-          splits={session.splits}
-          chart={<PaceBarChart splits={session.splits} accent={color} />}
-        />
-      )}
+      {family === "DISTANCE" && <CardioSplitsTable splits={session.splits} />}
 
-      {family === "DISTANCE" && hrZoneBreakdown && <HrZonePanel breakdown={hrZoneBreakdown} />}
+      {family === "DISTANCE" && !polyline && (
+        <p className="type-body-s" style={{ color: "var(--text-3)" }} data-testid="cardio-route-note">
+          {t("cardioRouteNote")}
+        </p>
+      )}
     </div>
   );
 }

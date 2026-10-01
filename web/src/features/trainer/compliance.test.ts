@@ -26,6 +26,8 @@ function client(overrides: Partial<TrainerClientResponse> = {}): TrainerClientRe
     lastActivityAt: null,
     lastWeightAt: null,
     missedWorkoutCount: 0,
+    avgCalories7d: null,
+    prCount7d: 0,
     ...overrides,
   };
 }

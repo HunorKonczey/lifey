@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { Button, Icon, IconButton, NumberField, Switch, TextArea, TextField } from "@/components/ds";
+import { Drawer } from "@/components/ds/overlay/Drawer";
+import { useFormat } from "@/lib/format/useFormat";
 import { foodApi, recipeApi } from "../api";
 import { RecipeImageUploader } from "./RecipeImageUploader";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -13,6 +16,8 @@ import type { RecipeResponse, RecipeIngredientRequest, FoodResponse } from "../t
 interface RecipeEditorProps {
   recipe: RecipeResponse | null;
   onClose: () => void;
+  /** Delete the recipe being edited (its id is known once the first auto-save created it) — the parent asks first. */
+  onDelete?: (recipeId: number) => void;
 }
 
 interface DraftIngredient extends RecipeIngredientRequest {
@@ -21,9 +26,15 @@ interface DraftIngredient extends RecipeIngredientRequest {
   proteinPer100g: number;
 }
 
-export function RecipeEditor({ recipe, onClose }: RecipeEditorProps) {
+/**
+ * The recipe editor (W2.11), a DS `Drawer`: photo, name, description, servings, favourite, the ingredient
+ * rows with their grams, the add-ingredient search and the totals. There is no Save button — every valid
+ * change is saved automatically (debounced, one request at a time), and the header says so.
+ */
+export function RecipeEditor({ recipe, onClose, onDelete }: RecipeEditorProps) {
   const t = useTranslations("nutrition.recipeEditor");
   const common = useTranslations("common");
+  const fmt = useFormat();
   const queryClient = useQueryClient();
   const { show } = useToast();
 
@@ -31,8 +42,7 @@ export function RecipeEditor({ recipe, onClose }: RecipeEditorProps) {
   const [name, setName] = useState(recipe?.name ?? "");
   const [description, setDescription] = useState(recipe?.description ?? "");
   const [favorite, setFavorite] = useState(recipe?.favorite ?? false);
-  const [servingsText, setServingsText] = useState(String(recipe?.servings ?? 1));
-  const servings = Math.max(1, Number(servingsText) || 1);
+  const [servings, setServings] = useState(Math.max(1, recipe?.servings ?? 1));
   const [ingredients, setIngredients] = useState<DraftIngredient[]>(
     recipe
       ? recipe.ingredients.map((i) => ({
@@ -63,7 +73,13 @@ export function RecipeEditor({ recipe, onClose }: RecipeEditorProps) {
     setSearch("");
   };
 
+  // A newly added ingredient takes focus so its grams can be typed at once — but not on open.
+  const skipFirstFocus = useRef(true);
   useEffect(() => {
+    if (skipFirstFocus.current) {
+      skipFirstFocus.current = false;
+      return;
+    }
     const last = gramsRefs.current[ingredients.length - 1];
     if (last) {
       last.focus();
@@ -149,113 +165,142 @@ export function RecipeEditor({ recipe, onClose }: RecipeEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, description, favorite, servings, ingredients, canPersist]);
 
-  const deleteMutation = useMutation({
-    mutationFn: () => recipeApi.delete(recipeId!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() });
-      show(t("deleted"), "success");
-      onClose();
-    },
-    onError: () => show(t("deleteFailed"), "error"),
-  });
+  const saveState = persistMutation.isPending ? t("saving") : canPersist ? t("autoSaved") : t("needsIngredient");
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,.5)" }} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-[var(--r-lg)] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
-        style={{ background: "var(--surface)" }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-base">{recipe ? t("editRecipe") : t("newRecipe")}</h3>
-          <div className="flex items-center gap-2">
-            {persistMutation.isPending && (
-              <span className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{common("saving")}</span>
-            )}
-            <button onClick={onClose} aria-label={common("close")} className="p-1 rounded-[var(--r-sm)]">
-              <span className="material-symbols-rounded">close</span>
-            </button>
-          </div>
-        </div>
-
+    <Drawer
+      open
+      onClose={onClose}
+      width={520}
+      title={recipe ? t("editRecipe") : t("newRecipe")}
+      badge={
+        <span role="status" className="type-body-s" style={{ color: "var(--text-3)" }} data-testid="recipe-save-state">
+          {saveState}
+        </span>
+      }
+      footer={
+        <>
+          {recipeId != null && onDelete && (
+            <Button variant="ghost" onClick={() => onDelete(recipeId)} aria-label={t("deleteAria")}>
+              <Icon name="delete" size={20} color="var(--heart)" />
+              {t("delete")}
+            </Button>
+          )}
+          <Button onClick={onClose} className="ml-auto">
+            {common("done")}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-5">
         {recipeId != null && <RecipeImageUploader recipeId={recipeId} />}
 
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")}
-          className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm font-semibold"
-          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
+        <TextField
+          label={t("name")}
+          size="dense"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t("namePlaceholder")}
+          autoFocus={!recipe}
+          required
+        />
 
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-          placeholder={t("descriptionPlaceholder")} rows={2}
-          className="px-3 py-2 rounded-[var(--r-input)] outline-none text-sm resize-none"
-          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
+        <TextArea
+          label={t("description")}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={t("descriptionPlaceholder")}
+          rows={2}
+        />
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-semibold">{t("servings")}</label>
-            <input type="number" min={1} value={servingsText}
-              onChange={(e) => setServingsText(e.target.value)}
-              onBlur={() => setServingsText(String(servings))}
-              className="w-16 px-2 h-9 rounded-[var(--r-md)] outline-none text-sm tabular"
-              style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+          <NumberField
+            label={t("servings")}
+            size="dense"
+            className="w-40"
+            value={servings}
+            onChange={(v) => setServings(Math.max(1, Math.round(v)))}
+            min={1}
+            max={99}
+            maxDecimals={0}
+            selectOnFocus
+          />
+          <div className="pb-2.5">
+            <Switch checked={favorite} onChange={setFavorite} label={t("favorite")} />
           </div>
-          <button onClick={() => setFavorite((f) => !f)} className="flex items-center gap-1 text-sm font-semibold">
-            <span className="material-symbols-rounded text-xl"
-              style={{ color: favorite ? "var(--metric-carbs)" : "var(--muted)", fontVariationSettings: favorite ? "'FILL' 1" : "'FILL' 0" }}>
-              star
-            </span>
-            {t("favorite")}
-          </button>
         </div>
 
         {/* Ingredients */}
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("ingredients")}</p>
+          <p className="type-label" style={{ color: "var(--text-3)", fontWeight: 700 }}>
+            {t("ingredients")}
+          </p>
           {ingredients.map((ing, idx) => (
-            <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-[var(--r-md)]"
-              style={{ background: "var(--surface-container)" }}>
-              <div className="flex-1 min-w-0 flex flex-col">
-                <span className="text-sm font-semibold truncate">{ing.foodName}</span>
-                <span className="flex gap-2 text-xs tabular">
-                  <span style={{ color: "var(--metric-kcal)" }}>
-                    {Math.round((ing.caloriesPer100g * ing.quantityInGrams) / 100)} kcal
+            <div
+              key={idx}
+              className="flex items-center gap-3 px-3 py-2"
+              style={{ background: "var(--nested)", borderRadius: "var(--r-control)" }}
+              data-testid="recipe-ingredient"
+            >
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="type-body-s truncate" style={{ fontWeight: 700 }}>
+                  {ing.foodName}
+                </span>
+                <span className="type-label tabular flex gap-2">
+                  <span style={{ color: "var(--m-kcal)" }}>
+                    {fmt.integer((ing.caloriesPer100g * ing.quantityInGrams) / 100)} kcal
                   </span>
-                  <span style={{ color: "var(--metric-protein)" }}>
-                    {Math.round((ing.proteinPer100g * ing.quantityInGrams) / 100)}g P
+                  <span style={{ color: "var(--m-protein)" }}>
+                    {fmt.integer((ing.proteinPer100g * ing.quantityInGrams) / 100)} g P
                   </span>
                 </span>
               </div>
-              <input type="number" min={1} placeholder="100"
-                value={ing.quantityInGrams === 0 ? "" : ing.quantityInGrams}
-                ref={(el) => { gramsRefs.current[idx] = el; }}
-                onChange={(e) => setIngredients((prev) =>
-                  prev.map((x, i) => i === idx
-                    ? { ...x, quantityInGrams: e.target.value === "" ? 0 : Math.max(1, Number(e.target.value)) }
-                    : x))}
-                className="w-16 px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
-                style={{ background: "var(--surface)", border: "1px solid var(--outline)" }} />
-              <span className="text-xs" style={{ color: "var(--muted)" }}>g</span>
-              <button onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
-                style={{ color: "var(--muted)" }} aria-label={t("removeIngredientAria")}>
-                <span className="material-symbols-rounded text-lg">close</span>
-              </button>
+              <NumberField
+                aria-label={ing.foodName}
+                size="dense"
+                className="w-36"
+                unit="g"
+                value={ing.quantityInGrams}
+                onChange={(v) => setIngredients((prev) => prev.map((x, i) => (i === idx ? { ...x, quantityInGrams: Math.max(0, v) } : x)))}
+                min={0}
+                step={5}
+                inputRef={(el) => {
+                  gramsRefs.current[idx] = el;
+                }}
+                liveUpdate
+                selectOnFocus
+              />
+              <IconButton
+                icon="close"
+                label={t("removeIngredientAria")}
+                onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
+              />
             </div>
           ))}
 
           {/* Ingredient picker */}
-          <div className="flex items-center gap-2 px-3 h-9 rounded-[var(--r-md)]"
-            style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-            data-ring-frame>
-            <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>add</span>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("addIngredientPlaceholder")}
-              className="flex-1 min-w-0 bg-transparent outline-none text-sm" />
-          </div>
+          <TextField
+            size="dense"
+            leadingIcon="add"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("addIngredientPlaceholder")}
+            aria-label={t("addIngredientPlaceholder")}
+          />
           {search && (
             <div className="flex flex-col gap-1">
               {matches.map((f) => (
-                <button key={f.id} onClick={() => addIngredient(f)}
-                  className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-[var(--r-sm)] text-sm transition-colors hover:bg-surface-container">
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => addIngredient(f)}
+                  className="lifey-button type-body-s flex items-center justify-between gap-2 px-3 py-2 text-left"
+                  style={{ borderRadius: "var(--r-control)" }}
+                >
                   <span className="truncate">{f.name}</span>
-                  <span className="flex gap-2 text-xs tabular shrink-0">
-                    <span style={{ color: "var(--metric-kcal)" }}>{Math.round(f.caloriesPer100g)} kcal</span>
-                    <span style={{ color: "var(--metric-protein)" }}>{Math.round(f.proteinPer100g)}g P</span>
+                  <span className="type-label tabular flex shrink-0 gap-2">
+                    <span style={{ color: "var(--m-kcal)" }}>{fmt.integer(f.caloriesPer100g)} kcal</span>
+                    <span style={{ color: "var(--m-protein)" }}>{fmt.integer(f.proteinPer100g)} g P</span>
                   </span>
                 </button>
               ))}
@@ -263,25 +308,16 @@ export function RecipeEditor({ recipe, onClose }: RecipeEditorProps) {
           )}
         </div>
 
-        <div className="flex justify-between text-sm tabular pt-2" style={{ borderTop: "1px solid var(--outline)" }}>
-          <span style={{ color: "var(--on-surface-variant)" }}>{t("total")}</span>
-          <span className="font-semibold" style={{ color: "var(--metric-kcal)" }}>
+        <div className="type-body-s tabular flex flex-wrap justify-between gap-x-4 gap-y-1 pt-3" style={{ borderTop: "1px solid var(--hairline)" }}>
+          <span style={{ color: "var(--text-2)" }}>{t("total")}</span>
+          <span style={{ color: "var(--m-kcal)", fontWeight: 700 }}>
             {t("totalPerServingKcal", { total: Math.round(totalKcal), perServing: Math.round(totalKcal / servings) })}
           </span>
-          <span className="font-semibold" style={{ color: "var(--metric-protein)" }}>
+          <span style={{ color: "var(--m-protein)", fontWeight: 700 }}>
             {t("totalPerServingProtein", { total: Math.round(totalProtein), perServing: Math.round(totalProtein / servings) })}
           </span>
         </div>
-
-        {recipeId != null && (
-          <button onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}
-            className="h-10 rounded-[var(--r-input)] font-semibold text-sm"
-            style={{ background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)" }}
-            aria-label={t("deleteAria")}>
-            <span className="material-symbols-rounded text-xl align-middle">delete</span>
-          </button>
-        )}
       </div>
-    </div>
+    </Drawer>
   );
 }

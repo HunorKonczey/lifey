@@ -49,10 +49,16 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         />
       </head>
-      <body className="min-h-full antialiased bg-bg text-on-surface" suppressHydrationWarning>
+      <body className="min-h-full antialiased bg-bg text-fg" suppressHydrationWarning>
         {children}
-        <SpeedInsights />
-        <Analytics />
+        {/* Vercel's scripts are blocked by our dev CSP and meaningless off Vercel,
+            so `next dev` would log two errors per page for nothing. */}
+        {process.env.NODE_ENV === "production" && (
+          <>
+            <SpeedInsights />
+            <Analytics />
+          </>
+        )}
       </body>
     </html>
   );

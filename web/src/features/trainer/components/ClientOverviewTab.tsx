@@ -3,57 +3,54 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
-import { trainerApi } from "../api";
+import { addDays, format, startOfWeek, subDays } from "date-fns";
+import { Card, Icon, MetricTile } from "@/components/ds";
+import { ErrorState } from "@/components/status/ErrorState";
+import { Skeleton } from "@/components/status/Skeleton";
 import { templateApi } from "@/features/workouts/api";
 import { recipeApi } from "@/features/nutrition/api";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { KpiCard } from "@/components/data/KpiCard";
-import { Skeleton } from "@/components/status/Skeleton";
-import { ErrorState } from "@/components/status/ErrorState";
-import { useLocale } from "@/lib/hooks/useLocale";
-import { activityTypeColor, activityTypeIcon } from "@/features/workouts/activityType";
-import { buildCardioSummaryLine } from "@/features/workouts/cardioSummaryLine";
+import { useFormat } from "@/lib/format/useFormat";
+import { trainerApi } from "../api";
+import { buildFeed, buildHeatmap, dailyAverages } from "../clientActivity";
+import { weekSummary, weightChange } from "../clientSignals";
+import { ActivityFeed } from "./ActivityFeed";
+import { LoggingHeatmap } from "./LoggingHeatmap";
 import { UnassignButton } from "./UnassignButton";
+import { UpcomingSchedule } from "./UpcomingSchedule";
+import { WeightDelta } from "./WeightDelta";
 import type { ContentType } from "../types";
-import { useFormat } from "@/lib/i18n/format";
 
 const CONTENT_ICON: Record<ContentType, string> = { TEMPLATE: "fitness_center", RECIPE: "restaurant" };
-const DATE_LOCALES = { en: enUS, hu } as const;
+const HEATMAP_DAYS = 28;
 
 interface ClientOverviewTabProps {
   clientId: number;
 }
 
+/**
+ * The client overview (W7-B): four KPI tiles relative to the client's goals, the four-week logging heatmap with the
+ * next scheduled workouts and the latest activity beside it, and the plans assigned to the client (kept from the old
+ * page — unassigning must stay possible). Every number is derived from what the client logged; a missing goal or a
+ * missing week just drops the bar, it never shows as zero.
+ */
 export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
   const t = useTranslations("admin.clientDetail");
-  const tw = useTranslations("workouts");
-  const ta = useTranslations("workouts.activityTypes");
+  const o = useTranslations("admin.clientDetail.overview");
   const fmt = useFormat();
-  const locale = useLocale((s) => s.locale);
-  const dateLocale = DATE_LOCALES[locale];
 
-  const statsQ = useQuery({
-    queryKey: queryKeys.trainerClientData.statistics(clientId, "weekly"),
-    queryFn: () => trainerApi.clientStatistics(clientId, "weekly"),
-  });
-  const weightsQ = useQuery({
-    queryKey: queryKeys.trainerClientData.weights(clientId),
-    queryFn: () => trainerApi.clientWeights(clientId),
-  });
-  const stepsQ = useQuery({
-    queryKey: queryKeys.trainerClientData.steps(clientId),
-    queryFn: () => trainerApi.clientSteps(clientId, format(subDays(new Date(), 6), "yyyy-MM-dd")),
-  });
-  const assignmentsQ = useQuery({
-    queryKey: queryKeys.trainerAssignments.forClient(clientId),
-    queryFn: () => trainerApi.assignmentsForClient(clientId),
-  });
-  const sessionsQ = useQuery({
-    queryKey: queryKeys.trainerClientData.sessions(clientId, 0, 4),
-    queryFn: () => trainerApi.clientWorkoutSessions(clientId, 0, 4),
-  });
+  const today = useMemo(() => new Date(), []);
+  const from = format(subDays(today, HEATMAP_DAYS + 6), "yyyy-MM-dd");
+  const to = format(today, "yyyy-MM-dd");
+  const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const rangeEnd = format(addDays(new Date(weekStart + "T00:00:00"), 20), "yyyy-MM-dd");
+
+  const mealsQ = useQuery({ queryKey: queryKeys.trainerClientData.meals(clientId, `${from}_${to}`), queryFn: () => trainerApi.clientMeals(clientId, from, to) });
+  const weightsQ = useQuery({ queryKey: queryKeys.trainerClientData.weights(clientId), queryFn: () => trainerApi.clientWeights(clientId) });
+  const sessionsQ = useQuery({ queryKey: queryKeys.trainerClientData.sessions(clientId, 0, 50), queryFn: () => trainerApi.clientWorkoutSessions(clientId, 0, 50) });
+  const goalsQ = useQuery({ queryKey: queryKeys.trainerClientData.nutritionGoals(clientId), queryFn: () => trainerApi.clientNutritionGoals(clientId) });
+  const calendarQ = useQuery({ queryKey: queryKeys.trainerCalendar.range(weekStart, rangeEnd), queryFn: () => trainerApi.calendarSessions(weekStart, rangeEnd) });
+  const assignmentsQ = useQuery({ queryKey: queryKeys.trainerAssignments.forClient(clientId), queryFn: () => trainerApi.assignmentsForClient(clientId) });
   const templatesQ = useQuery({ queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list });
   const recipesQ = useQuery({ queryKey: queryKeys.recipes.all(), queryFn: recipeApi.list });
 
@@ -64,174 +61,120 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
     return (type: ContentType, sourceId: number) => map.get(`${type}:${sourceId}`) ?? t("unknownContent");
   }, [templatesQ.data, recipesQ.data, t]);
 
-  const sortedWeights = (weightsQ.data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
-  const latestWeight = sortedWeights.at(-1) ?? null;
-  const prevWeight = sortedWeights.at(-2) ?? null;
-  const weightDelta = latestWeight && prevWeight ? Number((latestWeight.weight - prevWeight.weight).toFixed(1)) : null;
+  const meals = useMemo(() => mealsQ.data ?? [], [mealsQ.data]);
+  const weights = useMemo(() => weightsQ.data ?? [], [weightsQ.data]);
+  const sessions = useMemo(() => sessionsQ.data?.content ?? [], [sessionsQ.data]);
 
-  const avgSteps = stepsQ.data && stepsQ.data.length > 0
-    ? Math.round(stepsQ.data.reduce((sum, s) => sum + s.steps, 0) / stepsQ.data.length)
-    : 0;
+  const averages = useMemo(() => dailyAverages(meals, today), [meals, today]);
+  const week = useMemo(() => weekSummary(calendarQ.data ?? [], clientId, weekStart, to), [calendarQ.data, clientId, weekStart, to]);
+  const weight = useMemo(() => weightChange(weights.map((w) => ({ date: w.date, weightKg: w.weight })), today), [weights, today]);
+  const heat = useMemo(() => buildHeatmap({ meals, sessions, weights }, today), [meals, sessions, weights, today]);
+  const feed = useMemo(() => buildFeed({ meals, sessions, weights }, 5), [meals, sessions, weights]);
+  const upcoming = useMemo(
+    () => (calendarQ.data ?? []).filter((s) => s.clientId === clientId && s.status === "UPCOMING" && s.scheduledFor >= to).sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor) || (a.scheduledTime ?? "").localeCompare(b.scheduledTime ?? "")),
+    [calendarQ.data, clientId, to],
+  );
 
-  const isLoading = statsQ.isLoading || weightsQ.isLoading || stepsQ.isLoading || assignmentsQ.isLoading || sessionsQ.isLoading;
-  const isError = statsQ.isError || weightsQ.isError || stepsQ.isError || assignmentsQ.isError || sessionsQ.isError;
+  const isLoading = mealsQ.isLoading || weightsQ.isLoading || sessionsQ.isLoading;
+  const isError = mealsQ.isError || weightsQ.isError || sessionsQ.isError;
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-3.5">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} variant="card" className="h-24" />)}
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} variant="card" className="h-32" />)}
         </div>
         <Skeleton variant="card" className="h-72" />
       </div>
     );
   }
-
   if (isError) {
-    return (
-      <ErrorState
-        inline
-        onRetry={() => {
-          statsQ.refetch();
-          weightsQ.refetch();
-          stepsQ.refetch();
-          assignmentsQ.refetch();
-          sessionsQ.refetch();
-        }}
-      />
-    );
+    return <ErrorState inline onRetry={() => { mealsQ.refetch(); weightsQ.refetch(); sessionsQ.refetch(); }} />;
   }
 
+  const calGoal = goalsQ.data?.dailyCalorieGoal ?? null;
+  const proteinGoal = goalsQ.data?.dailyProteinGoal ?? null;
+  const pct = (v: number, goal: number | null) => (goal ? Math.round((v / goal) * 100) : null);
+  const kcalPct = averages && calGoal ? pct(averages.kcal, calGoal) : null;
+
   return (
-    <div className="flex flex-col gap-3.5">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <KpiCard
-          label={t("kpi.avgCalories")}
-          value={`${fmt.number(Math.round((statsQ.data?.totalCalories ?? 0) / 7))} kcal`}
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricTile
           icon="local_fire_department"
-          color="var(--metric-kcal)"
+          label={o("kpiCalories")}
+          color="var(--m-kcal)"
+          value={averages ? fmt.number(averages.kcal, 0) : "—"}
+          unit={averages ? (calGoal ? `/ ${fmt.number(calGoal, 0)} kcal` : "kcal") : undefined}
+          progress={averages && calGoal ? Math.min(1, averages.kcal / calGoal) : undefined}
+          subline={averages ? (kcalPct != null ? o("percentOfGoal", { pct: kcalPct }) : o("loggedDays", { count: averages.loggedDays })) : o("nothingLogged7")}
         />
-        <KpiCard
-          label={t("kpi.currentWeight")}
-          value={latestWeight ? `${fmt.number(latestWeight.weight, 1, 1)} kg` : "—"}
-          icon="monitor_weight"
-          color="var(--metric-weight)"
-          delta={weightDelta}
-          higherIsBetter={false}
-          deltaUnit=" kg"
+        <MetricTile
+          icon="egg_alt"
+          label={o("kpiProtein")}
+          color="var(--m-protein)"
+          value={averages ? fmt.number(averages.protein, 0) : "—"}
+          unit={averages ? (proteinGoal ? `/ ${fmt.number(proteinGoal, 0)} g` : "g") : undefined}
+          progress={averages && proteinGoal ? Math.min(1, averages.protein / proteinGoal) : undefined}
+          subline={averages ? o("loggedDays", { count: averages.loggedDays }) : o("nothingLogged7")}
         />
-        <KpiCard
-          label={t("kpi.workoutsPerWeek")}
-          value={String(statsQ.data?.workoutCount ?? 0)}
+        <MetricTile
           icon="fitness_center"
-          color="var(--tertiary)"
+          label={o("kpiWorkouts")}
+          color="var(--primary)"
+          value={week.scheduled > 0 ? `${week.done} / ${week.scheduled}` : "—"}
+          progress={week.scheduled > 0 ? week.done / week.scheduled : undefined}
+          subline={week.scheduled === 0 ? o("nothingScheduledWeek") : week.missedDates.length > 0 ? o("missedThisWeek", { count: week.missedDates.length }) : week.done === week.scheduled ? o("allDone") : o("scheduledThisWeek", { count: week.scheduled })}
         />
-        <KpiCard
-          label={t("kpi.avgSteps")}
-          value={fmt.number(avgSteps)}
-          icon="directions_walk"
-          color="var(--metric-steps)"
+        <MetricTile
+          icon="monitor_weight"
+          label={o("kpiWeight")}
+          color="var(--m-weight)"
+          value={weight ? fmt.number(weight.latestKg, 1) : "—"}
+          unit={weight ? "kg" : undefined}
+          delta={weight?.deltaKg != null ? <WeightDelta kg={weight.deltaKg} /> : undefined}
+          subline={weight ? (weight.deltaKg != null ? o("weightIn30") : o("weightSingle")) : o("noWeighIn")}
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-3.5 items-start">
-        <div className="rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-          <p className="text-base font-extrabold mb-3.5" style={{ color: "var(--on-surface)" }}>
-            {t("assignedPlans")}
-          </p>
-          {!assignmentsQ.data || assignmentsQ.data.length === 0 ? (
-            <p className="text-xs" style={{ color: "var(--muted)" }}>{t("noAssignedPlans")}</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {assignmentsQ.data.map((a) => (
-                <div key={a.id} className="rounded-[15px] px-3.5 py-3 flex items-center gap-3" style={{ background: "var(--surface-container)" }}>
-                  <div
-                    className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: "var(--surface-high)", color: "var(--tertiary)" }}
-                  >
-                    <span className="material-symbols-rounded text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
-                      {CONTENT_ICON[a.contentType]}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                      {sourceName(a.contentType, a.sourceId)}
-                    </p>
-                    <p className="text-[11px] mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-                      {t(a.contentType === "TEMPLATE" ? "planTypeTemplate" : "planTypeRecipe")}
-                    </p>
-                  </div>
-                  <span className="text-[11.5px] tabular shrink-0" style={{ color: "var(--muted)" }}>
-                    {format(new Date(a.assignedAt), "MMM d.", { locale: dateLocale })}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5 items-start">
+        <LoggingHeatmap weeks={heat} />
+        <div className="flex flex-col gap-5">
+          <UpcomingSchedule sessions={upcoming} clientId={clientId} />
+          <ActivityFeed events={feed} />
+        </div>
+      </div>
+
+      <Card variant="card" className="flex flex-col gap-3">
+        <h3 style={{ fontSize: 18, fontWeight: 800 }}>{t("assignedPlans")}</h3>
+        {!assignmentsQ.data || assignmentsQ.data.length === 0 ? (
+          <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("noAssignedPlans")}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {assignmentsQ.data.map((a) => (
+              <li key={a.id} className="flex items-center gap-3 p-3" style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}>
+                <span className="inline-flex items-center justify-center shrink-0" style={{ width: 38, height: 38, borderRadius: 12, background: "var(--card)" }}>
+                  <Icon name={CONTENT_ICON[a.contentType]} size={20} fill={1} color="var(--role)" />
+                </span>
+                <span className="flex flex-col flex-1 min-w-0">
+                  <span className="truncate" style={{ fontWeight: 700 }}>{sourceName(a.contentType, a.sourceId)}</span>
+                  <span className="type-body-s" style={{ color: "var(--text-2)" }}>
+                    {t(a.contentType === "TEMPLATE" ? "planTypeTemplate" : "planTypeRecipe")}
                   </span>
-                  <UnassignButton
-                    assignmentId={a.id}
-                    clientId={clientId}
-                    contentType={a.contentType}
-                    sourceId={a.sourceId}
-                    contentName={sourceName(a.contentType, a.sourceId)}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-          <p className="text-base font-extrabold mb-0.5" style={{ color: "var(--on-surface)" }}>
-            {t("workouts")}
-          </p>
-          <p className="text-[11.5px] mb-3.5" style={{ color: "var(--on-surface-variant)" }}>
-            {t("workoutsHint")}
-          </p>
-          {!sessionsQ.data || sessionsQ.data.content.length === 0 ? (
-            <p className="text-xs" style={{ color: "var(--muted)" }}>{t("noSessions")}</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {sessionsQ.data.content.map((s) => {
-                const isCardio = s.sessionKind === "CARDIO";
-                const volume = s.sets.reduce((sum, set) => sum + set.reps * set.weight, 0);
-                return (
-                  <div key={s.id} className="rounded-[15px] px-3.5 py-3 flex items-center gap-3.5" style={{ background: "var(--surface-container)" }}>
-                    <span className="text-xs tabular w-[52px] shrink-0" style={{ color: "var(--on-surface-variant)" }}>
-                      {format(new Date(s.startedAt), "MMM d.", { locale: dateLocale })}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                        {isCardio ? ta(s.activityType ?? "OTHER_CARDIO") : s.exercises[0]?.exerciseName ?? t("freeWorkout")}
-                      </p>
-                      <p className="text-[11px] mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-                        {isCardio
-                          ? buildCardioSummaryLine(s, tw, locale)
-                          : t("sessionSummary", { count: s.exercises.length, volume: fmt.number(Math.round(volume)) })}
-                      </p>
-                    </div>
-                    {isCardio ? (
-                      <span
-                        className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[11px] font-extrabold px-2.5 py-1.5 shrink-0"
-                        style={{
-                          background: `color-mix(in srgb, ${activityTypeColor(s.activityType)} 18%, transparent)`,
-                          color: activityTypeColor(s.activityType),
-                        }}
-                      >
-                        <span className="material-symbols-rounded text-sm">{activityTypeIcon(s.activityType)}</span>
-                      </span>
-                    ) : s.templateName && (
-                      <span
-                        className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[11px] font-extrabold px-2.5 py-1.5 shrink-0"
-                        style={{ background: "var(--tertiary-container)", color: "var(--on-tertiary-container)" }}
-                      >
-                        <span className="material-symbols-rounded text-sm">assignment</span>
-                        {s.templateName}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+                </span>
+                <span className="type-body-s tabular shrink-0" style={{ color: "var(--text-3)" }}>{fmt.shortDate(new Date(a.assignedAt))}</span>
+                <UnassignButton
+                  assignmentId={a.id}
+                  clientId={clientId}
+                  contentType={a.contentType}
+                  sourceId={a.sourceId}
+                  contentName={sourceName(a.contentType, a.sourceId)}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
     </div>
   );
 }

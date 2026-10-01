@@ -1,128 +1,104 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { Button, PasswordField, TextField } from "@/components/ds";
 import { loginSchema, type LoginFormValues } from "@/features/auth/schemas";
 import { authApi } from "@/features/auth/api";
 import { useSessionStore } from "@/features/auth/store";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
+import { FormErrorBox } from "@/features/auth/components/FormErrorBox";
 import { ApiError } from "@/lib/api/client";
 import { useValidationMessage } from "@/lib/i18n/useValidationMessage";
 
+/**
+ * W6-A / W6.2: "Üdv újra!", the Google button, a divider, then the form. A wrong password is not pinned on one field:
+ * both get the red ring and a tinted box above the button says what to do (W6 note "Hiba, amit nem lehet nem
+ * észrevenni") — announced to screen readers as an alert.
+ */
 export default function LoginPage() {
   const t = useTranslations("auth");
   const vm = useValidationMessage();
   const router = useRouter();
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    setError,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-  });
+  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
   const onSubmit = async (data: LoginFormValues) => {
+    setFormError(null);
     try {
       const res = await authApi.login(data);
       applyAccessToken(res.accessToken, res.refreshToken);
       router.push("/dashboard");
     } catch (err) {
       // 401 is always bad credentials; the backend's English text must not reach a Hungarian UI.
-      const message =
-        err instanceof ApiError
-          ? err.status === 401 ? t("invalidCredentials") : err.message
-          : t("unexpectedError");
-      setError("password", { message });
+      setFormError(err instanceof ApiError ? (err.status === 401 ? t("invalidCredentialsLong") : err.message) : t("unexpectedError"));
     }
   };
 
+  const rung = !!formError;
+
   return (
-    <div
-      className="w-full max-w-sm rounded-[var(--r-lg)] p-8"
-      style={{ background: "var(--surface)" }}
-    >
-      {/* Logo */}
-      <div className="flex items-center gap-2 mb-8">
-        <span
-          className="material-symbols-rounded text-3xl"
-          style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
-        >
-          eco
-        </span>
-        <span className="text-xl font-bold tracking-tight">Lifey</span>
+    <div className="flex flex-col gap-[22px] flex-1 lg:flex-none">
+      <div className="flex flex-col gap-2">
+        <h1 style={{ fontSize: 34, lineHeight: 1.1, fontWeight: 800, letterSpacing: "-0.02em" }}>{t("welcomeBack")}</h1>
+        <p style={{ fontSize: 16, lineHeight: 1.5, color: "var(--text-2)" }}>{t("loginTagline")}</p>
       </div>
-
-      <h1 className="text-2xl font-bold mb-1">{t("welcomeBack")}</h1>
-      <p className="text-sm mb-8" style={{ color: "var(--on-surface-variant)" }}>
-        {t("tagline")}
-      </p>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold">{t("email")}</label>
-          <div className="flex items-center gap-2 px-4 rounded-[var(--r-input)] h-11"
-            style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-            data-ring-frame>
-            <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>mail</span>
-            <input
-              {...register("email")}
-              type="email"
-              placeholder="you@example.com"
-              className="flex-1 min-w-0 bg-transparent outline-none text-sm"
-              autoComplete="email"
-            />
-          </div>
-          {errors.email && (
-            <p className="text-xs" style={{ color: "var(--error)" }}>{vm(errors.email.message)}</p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold">{t("password")}</label>
-            <Link href="/forgot-password" className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
-              {t("forgotPassword")}
-            </Link>
-          </div>
-          <div className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
-            style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-            data-ring-frame>
-            <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>lock</span>
-            <input
-              {...register("password")}
-              type="password"
-              placeholder="••••••••"
-              className="flex-1 min-w-0 bg-transparent outline-none text-sm"
-              autoComplete="current-password"
-            />
-          </div>
-          {errors.password && (
-            <p className="text-xs" style={{ color: "var(--error)" }}>{vm(errors.password.message)}</p>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}
-        >
-          {isSubmitting ? t("signingIn") : t("signIn")}
-        </button>
-      </form>
 
       <GoogleSignInButton />
 
-      <p className="mt-6 text-center text-sm" style={{ color: "var(--on-surface-variant)" }}>
-        {t("noAccount")}{" "}
-        <Link href="/register" className="font-semibold" style={{ color: "var(--primary)" }}>
-          {t("createOne")}
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[22px] flex-1" noValidate>
+        <TextField
+          size="auth"
+          label={t("email")}
+          type="email"
+          placeholder="you@example.com"
+          autoComplete="email"
+          error={errors.email ? vm(errors.email.message) : undefined}
+          invalid={rung}
+          {...register("email")}
+        />
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="type-label" style={{ color: "var(--text-3)" }} aria-hidden>
+              {t("password")}
+            </span>
+            <Link href="/forgot-password" className="type-body-s" style={{ color: "var(--primary)", fontWeight: 700 }}>
+              {t("forgotPassword")}
+            </Link>
+          </div>
+          <PasswordField
+            size="auth"
+            aria-label={t("password")}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            error={errors.password ? vm(errors.password.message) : undefined}
+            invalid={rung}
+            {...register("password")}
+          />
+        </div>
+
+        {formError && <FormErrorBox message={formError} />}
+
+        <div className="flex-1 lg:hidden" />
+        <Button type="submit" size="auth" fullWidth disabled={isSubmitting}>
+          {isSubmitting ? t("signingIn") : t("signIn")}
+        </Button>
+      </form>
+
+      <p className="text-center type-body" style={{ color: "var(--text-2)" }}>
+        {t("noAccountShort")}{" "}
+        <Link href="/register" style={{ color: "var(--primary)", fontWeight: 700 }}>
+          {t("signUp")}
         </Link>
       </p>
     </div>

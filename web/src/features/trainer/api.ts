@@ -105,6 +105,9 @@ export const trainerApi = {
     ),
   cancelSchedule: (scheduleId: number) => api.delete(`/trainer/schedules/${scheduleId}`),
   cancelOccurrence: (sessionId: number) => api.delete(`/trainer/scheduled-sessions/${sessionId}`),
+  /** W8.b1: the whole new slot of one upcoming occurrence; a null time means no time of day. */
+  moveOccurrence: (sessionId: number, body: { scheduledFor: string; scheduledTime: string | null }) =>
+    api.patch<ScheduledSessionResponse>(`/trainer/scheduled-sessions/${sessionId}`, body),
   calendarSessions: (from: string, to: string) =>
     api.get<TrainerCalendarSessionResponse[]>(`/trainer/scheduled-sessions?from=${from}&to=${to}`),
 

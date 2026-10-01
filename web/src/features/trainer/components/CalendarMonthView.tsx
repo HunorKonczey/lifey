@@ -2,176 +2,103 @@
 
 import { useTranslations } from "next-intl";
 import { eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
-import { useLocale } from "@/lib/hooks/useLocale";
-import { ClientAvatar } from "./ClientAvatar";
-import { STATUS_STYLE } from "../scheduleStatus";
-import type { TrainerCalendarSessionResponse } from "../types";
+import { useFormat } from "@/lib/format/useFormat";
+import type { OccurrenceStatus, TrainerCalendarSessionResponse } from "../types";
 
-const DATE_LOCALES = { en: enUS, hu } as const;
-const MAX_CHIPS_PER_DAY = 3;
+const MAX_DOTS = 6;
+const DOT: Record<OccurrenceStatus, string> = {
+  UPCOMING: "var(--primary)",
+  DONE: "var(--m-protein)",
+  MISSED: "var(--heart)",
+  CANCELLED: "var(--text-3)",
+};
 
 interface CalendarMonthViewProps {
   monthAnchor: Date;
   sessions: TrainerCalendarSessionResponse[];
+  /** A day was chosen: the calendar opens it (the day view). */
   onSelectDay: (date: Date) => void;
-  onSelectSession: (session: TrainerCalendarSessionResponse, anchorEl: HTMLElement) => void;
-  /* Narrow-viewport variant (design: D frame) — day cells shrink to a day number
-   * + up to 3 status dots instead of chips; tapping a day still opens the agenda. */
+  /** Kept for the shared signature with the week view; the month shows counts, so there is no event to pick. */
+  onSelectSession?: (session: TrainerCalendarSessionResponse, anchorEl: HTMLElement) => void;
+  /** The phone variant: smaller cells, the count only. */
   compact?: boolean;
 }
 
-function dotColor(status: TrainerCalendarSessionResponse["status"]) {
-  const style = STATUS_STYLE[status];
-  return style.color === "var(--error)" ? "var(--error)" : "var(--tertiary)";
-}
-
-/** Classic month grid (design: B frame) — up to 3 compact chips per cell, "+N further" overflow. */
-export function CalendarMonthView({ monthAnchor, sessions, onSelectDay, onSelectSession, compact = false }: CalendarMonthViewProps) {
+/**
+ * The month (W8.3): a Monday-first grid where every day is one button — the day number (today a primary pill), "3
+ * edzés" and a row of status dots (one per workout, up to six, then "+N"). Counts rather than chips: text in a cell
+ * a seventh of the width cut every name, and the dots keep the status without colour alone because the cell's label
+ * spells it out ("szept. 29., hétfő: 2 kész, 1 kihagyott"). A click opens that day.
+ */
+export function CalendarMonthView({ monthAnchor, sessions, onSelectDay, compact = false }: CalendarMonthViewProps) {
   const t = useTranslations("admin.calendar");
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
+  const tSchedule = useTranslations("admin.schedule");
+  const fmt = useFormat();
   const today = new Date();
 
-  const monthStart = startOfMonth(monthAnchor);
-  const monthEnd = endOfMonth(monthAnchor);
-  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
-
-  const sessionsByDay = new Map<string, TrainerCalendarSessionResponse[]>();
-  for (const session of sessions) {
-    const key = session.scheduledFor;
-    if (!sessionsByDay.has(key)) sessionsByDay.set(key, []);
-    sessionsByDay.get(key)!.push(session);
+  const days = eachDayOfInterval({ start: startOfWeek(startOfMonth(monthAnchor), { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(monthAnchor), { weekStartsOn: 1 }) });
+  const byDay = new Map<string, TrainerCalendarSessionResponse[]>();
+  for (const s of sessions) {
+    if (!byDay.has(s.scheduledFor)) byDay.set(s.scheduledFor, []);
+    byDay.get(s.scheduledFor)!.push(s);
   }
 
-  const weekdayLabels = Array.from({ length: 7 }, (_, i) =>
-    format(days[i], compact ? "EEEEEE" : "EEEE", { locale: dateLocale }).toUpperCase(),
-  );
+  const summary = (list: TrainerCalendarSessionResponse[]) => {
+    const parts = (["DONE", "UPCOMING", "MISSED", "CANCELLED"] as const)
+      .map((st) => [st, list.filter((s) => s.status === st).length] as const)
+      .filter(([, n]) => n > 0)
+      .map(([st, n]) => `${n} ${tSchedule(`status.${st}`)}`);
+    return parts.join(", ");
+  };
 
   return (
-    <div className="flex-1 flex flex-col gap-1.5 min-h-0">
-      <div className="grid grid-cols-7 gap-1.5 flex-none">
-        {weekdayLabels.map((label) => (
-          <span key={label} className="text-[10px] font-extrabold tracking-wider px-1" style={{ color: "var(--muted)" }}>
-            {label}
+    <div className="flex flex-col gap-2" data-testid="calendar-month-grid">
+      <div className="grid grid-cols-7 gap-1.5" aria-hidden>
+        {days.slice(0, 7).map((d) => (
+          <span key={d.getTime()} className="type-body-s px-1.5" style={{ color: "var(--text-3)", fontWeight: 700 }}>
+            {fmt.weekdayShort(d)}
           </span>
         ))}
       </div>
-      <div className="flex-1 grid grid-cols-7 gap-1.5 min-h-0" style={{ gridAutoRows: "1fr" }}>
+      <div className="grid grid-cols-7 gap-1.5">
         {days.map((day) => {
-          const dayIso = format(day, "yyyy-MM-dd");
-          const dayIsToday = isSameDay(day, today);
+          const iso = format(day, "yyyy-MM-dd");
+          const isToday = isSameDay(day, today);
           const inMonth = isSameMonth(day, monthAnchor);
-          const daySessions = sessionsByDay.get(dayIso) ?? [];
-          const shown = daySessions.slice(0, MAX_CHIPS_PER_DAY);
-          const moreCount = daySessions.length - shown.length;
-
+          const list = byDay.get(iso) ?? [];
+          const dots = list.slice(0, MAX_DOTS);
           return (
-            <div
-              key={dayIso}
-              role="button"
-              tabIndex={0}
+            <button
+              key={iso}
+              type="button"
               onClick={() => onSelectDay(day)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelectDay(day);
-                }
-              }}
-              className={`rounded-xl p-1.5 flex flex-col gap-1 min-w-0 text-left cursor-pointer ${compact ? "items-center justify-center" : ""}`}
+              aria-label={`${fmt.shortDate(day)}${list.length ? `: ${summary(list)}` : ""}`}
+              className="lifey-button flex flex-col items-start gap-1 text-left p-2 min-w-0"
               style={{
-                background: dayIsToday
-                  ? "color-mix(in srgb, var(--tertiary) 6%, var(--surface))"
-                  : "var(--surface)",
-                border: dayIsToday
-                  ? "1.5px solid color-mix(in srgb, var(--tertiary) 50%, transparent)"
-                  : "1.5px solid transparent",
-                opacity: inMonth ? 1 : 0.4,
-                minHeight: compact ? 52 : undefined,
+                borderRadius: "var(--r-control)",
+                minHeight: compact ? 56 : 92,
+                background: isToday ? "color-mix(in srgb, var(--primary) 6%, var(--card))" : inMonth ? "var(--card)" : "var(--nested)",
+                boxShadow: isToday ? "inset 0 0 0 1.5px color-mix(in srgb, var(--primary) 50%, transparent)" : "var(--edge-card)",
               }}
             >
-              {dayIsToday ? (
-                <span
-                  className="self-start rounded-full px-2 text-[10px] font-extrabold"
-                  style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-                >
-                  {compact ? format(day, "d") : `${format(day, "d")} · ${t("today").toUpperCase()}`}
-                </span>
-              ) : (
-                <span
-                  className="text-[11.5px] font-extrabold"
-                  style={{ color: inMonth ? "var(--on-surface)" : "var(--on-surface-variant)" }}
-                >
-                  {inMonth ? format(day, "d") : format(day, "MMM d.", { locale: dateLocale })}
-                </span>
-              )}
-
-              {compact ? (
+              <span
+                className="num inline-flex items-center justify-center"
+                style={{ minWidth: 24, height: 24, padding: "0 6px", borderRadius: 999, fontWeight: 800, fontSize: 13, background: isToday ? "var(--primary)" : "transparent", color: isToday ? "var(--on-primary)" : "var(--text)" }}
+              >
+                {format(day, "d")}
+              </span>
+              {list.length > 0 && (
                 <>
-                  {daySessions.length > 0 && (
-                    <div className="flex items-center gap-[3px]">
-                      {daySessions.slice(0, MAX_CHIPS_PER_DAY).map((session) => (
-                        <span
-                          key={session.sessionId}
-                          className="w-[5px] h-[5px] rounded-full"
-                          style={{ background: dotColor(session.status) }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {daySessions.length > MAX_CHIPS_PER_DAY && (
-                    <span className="text-[8px] font-bold" style={{ color: "var(--on-tertiary-container)" }}>
-                      {t("moreCount", { count: daySessions.length - MAX_CHIPS_PER_DAY })}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  {shown.map((session) => {
-                    const style = STATUS_STYLE[session.status];
-                    const cancelled = session.status === "CANCELLED";
-                    return (
-                      <button
-                        key={session.sessionId}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectSession(session, e.currentTarget);
-                        }}
-                        className="flex items-center gap-1 rounded-md px-1.5 py-0.5 min-w-0 text-left w-full"
-                        style={{ background: "var(--surface-container)", opacity: cancelled ? 0.45 : 1 }}
-                      >
-                        {session.scheduledTime && (
-                          <span className="text-[9.5px] font-extrabold tabular shrink-0" style={{ color: "var(--on-surface)" }}>
-                            {session.scheduledTime.slice(0, 5)}
-                          </span>
-                        )}
-                        <ClientAvatar clientId={session.clientId} email={session.clientEmail} size={13} />
-                        <span
-                          className="flex-1 min-w-0 text-[9.5px] font-semibold truncate"
-                          style={{ color: "var(--on-surface-variant)", textDecoration: cancelled ? "line-through" : "none" }}
-                        >
-                          {session.templateName ?? "—"}
-                        </span>
-                        <span
-                          className="material-symbols-rounded text-[11px] shrink-0"
-                          style={{ color: style.color, fontVariationSettings: style.fill ? "'FILL' 1" : "'FILL' 0" }}
-                        >
-                          {style.icon}
-                        </span>
-                      </button>
-                    );
-                  })}
-
-                  {moreCount > 0 && (
-                    <span className="text-[9.5px] font-bold pl-0.5" style={{ color: "var(--on-tertiary-container)" }}>
-                      {t("moreCount", { count: moreCount })}
-                    </span>
-                  )}
+                  {!compact && <span className="type-body-s" style={{ fontWeight: 700 }}>{t("workoutsCount", { count: list.length })}</span>}
+                  <span className="flex flex-wrap items-center gap-[3px]" aria-hidden>
+                    {dots.map((s) => (
+                      <span key={s.sessionId} style={{ width: 7, height: 7, borderRadius: 999, background: DOT[s.status], opacity: s.status === "CANCELLED" ? 0.5 : 1 }} />
+                    ))}
+                    {list.length > MAX_DOTS && <span className="type-body-s" style={{ color: "var(--text-2)", fontSize: 11 }}>+{list.length - MAX_DOTS}</span>}
+                  </span>
                 </>
               )}
-            </div>
+            </button>
           );
         })}
       </div>

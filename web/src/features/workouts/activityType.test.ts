@@ -31,11 +31,11 @@ describe("activityTypeIcon", () => {
 
 describe("activityTypeColor", () => {
   it("returns a metric-token CSS variable per code", () => {
-    expect(activityTypeColor("RUNNING")).toBe("var(--metric-kcal)");
-    expect(activityTypeColor("HIKING")).toBe("var(--tertiary)");
-    expect(activityTypeColor("STRENGTH")).toBe("var(--metric-weight)");
+    expect(activityTypeColor("RUNNING")).toBe("var(--m-kcal)");
+    expect(activityTypeColor("HIKING")).toBe("var(--primary)");
+    expect(activityTypeColor("STRENGTH")).toBe("var(--m-weight)");
   });
   it("falls back to on-surface-variant for null/undefined/unknown", () => {
-    expect(activityTypeColor(null)).toBe("var(--on-surface-variant)");
+    expect(activityTypeColor(null)).toBe("var(--text-2)");
   });
 });

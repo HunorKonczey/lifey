@@ -1,8 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { format } from "date-fns";
+import { Card, Icon, IconButton } from "@/components/ds";
+import { RowMenuButton } from "@/components/ds/RowMenuButton";
+import type { MenuItemDef } from "@/components/ds/Menu";
+import { useFormat } from "@/lib/format/useFormat";
+import { MEAL_TYPE_STYLE } from "../mealTypeStyle";
 import type { MealResponse } from "../types";
+import { MealItemRow, type MealItemRowData } from "./MealItemRow";
 
 export function mealKcal(m: MealResponse) {
   return m.entries.reduce((s, e) => s + e.calories, 0);
@@ -17,92 +22,115 @@ export function mealFat(m: MealResponse) {
   return m.entries.reduce((s, e) => s + e.fat, 0);
 }
 
+/** A recipe logged as a meal carries the recipe's name (`LogRecipeDialog`); a meal built
+ *  from foods has none — the card then lists its foods individually. */
+export function isRecipeMeal(meal: MealResponse): boolean {
+  return meal.name != null && meal.name.trim() !== "";
+}
+
+/** The rows a card shows: each food, or — for a recipe — one row for the whole portion. */
+export function mealItemRows(meal: MealResponse): MealItemRowData[] {
+  if (isRecipeMeal(meal)) {
+    return [
+      {
+        name: meal.name!,
+        grams: meal.entries.reduce((s, e) => s + e.quantityInGrams, 0),
+        kcal: mealKcal(meal),
+        protein: mealProtein(meal),
+        carbs: mealCarbs(meal),
+        fat: mealFat(meal),
+      },
+    ];
+  }
+  return meal.entries.map((e) => ({
+    name: e.foodName,
+    grams: e.quantityInGrams,
+    kcal: e.calories,
+    protein: e.protein,
+    carbs: e.carbs,
+    fat: e.fat,
+  }));
+}
+
 interface MealCardProps {
   meal: MealResponse;
+  /** "＋" in the header: add another food to this meal. */
+  onAdd?: () => void;
   onEdit?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
-  isDeleting?: boolean;
+  /** Delete one food (index into `meal.entries`); the parent asks first, and the last food takes the meal with it. */
+  onDeleteItem?: (index: number) => void;
 }
 
-export function MealCard({ meal, onEdit, onDuplicate, onDelete, isDeleting }: MealCardProps) {
+/**
+ * One logged meal (W2.3, client-004): a 40 px tinted icon in the meal type's
+ * colour, the type as the title, "07:15 · 3 tétel" (or "12:30 · recept") under
+ * it, the kcal total, "＋" and a "⋯" (edit, copy, delete) in the header; the
+ * foods below as `MealItemRow`s. Without any handler (the trainer's read-only
+ * view of a client's day) the actions simply aren't drawn.
+ */
+export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, onDeleteItem }: MealCardProps) {
   const t = useTranslations("nutrition");
-  const readOnly = !onEdit && !onDelete;
-  const kcal = Math.round(mealKcal(meal));
-  const protein = Math.round(mealProtein(meal));
-  const carbs = Math.round(mealCarbs(meal));
-  const fat = Math.round(mealFat(meal));
-  const time = format(new Date(meal.dateTime), "HH:mm");
-  const title = meal.name ?? (meal.entries.length === 1 ? meal.entries[0].foodName : t("meals"));
+  const fmt = useFormat();
+  const style = MEAL_TYPE_STYLE[meal.mealType];
+  const recipe = isRecipeMeal(meal);
+  const time = fmt.time(new Date(meal.dateTime));
+
+  const menu: MenuItemDef[] = [
+    ...(onEdit ? [{ label: t("menuEdit"), icon: "edit", onSelect: onEdit }] : []),
+    ...(onDuplicate ? [{ label: t("menuDuplicate"), icon: "content_copy", onSelect: onDuplicate }] : []),
+    ...(onDelete ? [{ label: t("menuDelete"), icon: "delete", destructive: true, onSelect: onDelete }] : []),
+  ];
+  // A recipe card is one row for the whole portion, so its row "⋯" deletes the meal; a food meal deletes just that food.
+  const rowDelete = recipe ? onDelete : onDeleteItem ? (i: number) => onDeleteItem(i) : undefined;
+  const rowMenu = (i: number): MenuItemDef[] => [
+    ...(onEdit ? [{ label: t("menuEdit"), icon: "edit", onSelect: onEdit }] : []),
+    ...(rowDelete ? [{ label: t("menuDelete"), icon: "delete", destructive: true, onSelect: () => rowDelete(i) }] : []),
+  ];
 
   return (
-    <div
-      className="rounded-[var(--r-card)] p-4 group"
-      style={{ background: "var(--surface)" }}
-    >
-      {/* Card header */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm truncate">{title}</p>
-          <p className="text-xs tabular mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-            {time} · {kcal} kcal · {protein}g P
-            {readOnly && <> · {carbs}g C · {fat}g F</>}
+    <Card className="overflow-hidden" style={{ padding: 0 }} data-testid="meal-card" data-meal-type={meal.mealType}>
+      <div className="flex items-center gap-4 px-4 py-3.5">
+        <span
+          className="flex shrink-0 items-center justify-center"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "var(--r-control)",
+            background: `color-mix(in srgb, ${style.color} var(--chip-tint), transparent)`,
+          }}
+        >
+          <Icon name={style.icon} size={22} fill={1} color={style.color} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 style={{ fontSize: 16, fontWeight: 800 }}>{t(MEAL_TYPE_KEY[meal.mealType])}</h3>
+          <p className="type-body-s tabular" style={{ color: "var(--text-3)" }}>
+            {recipe ? t("recipeMealMeta", { time }) : t("mealMeta", { time, count: meal.entries.length })}
           </p>
         </div>
-        {!readOnly && (
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {onEdit && (
-              <button
-                onClick={onEdit}
-                className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container"
-                style={{ color: "var(--muted)" }}
-                aria-label={t("editMealAria")}
-              >
-                <span className="material-symbols-rounded text-lg">edit</span>
-              </button>
-            )}
-            {onDuplicate && (
-              <button
-                onClick={onDuplicate}
-                className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container"
-                style={{ color: "var(--muted)" }}
-                aria-label={t("duplicateMealAria")}
-              >
-                <span className="material-symbols-rounded text-lg">content_copy</span>
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={onDelete}
-                disabled={isDeleting}
-                className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container disabled:opacity-30"
-                style={{ color: "var(--muted)" }}
-                aria-label={t("removeMealAria")}
-              >
-                <span className="material-symbols-rounded text-lg">delete</span>
-              </button>
-            )}
-          </div>
-        )}
+        <p className="tabular" style={{ fontSize: 17, fontWeight: 800 }}>
+          {fmt.integer(mealKcal(meal))}{" "}
+          <span className="type-body-s" style={{ color: "var(--text-3)", fontWeight: 600 }}>
+            kcal
+          </span>
+        </p>
+        {onAdd && <IconButton icon="add" label={t("addToThisMeal")} onClick={onAdd} />}
+        {menu.length > 0 && <RowMenuButton items={menu} label={t("mealMenuLabel")} />}
       </div>
 
-      {/* Ingredient rows */}
-      <div className="flex flex-col">
-        {meal.entries.map((e, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between py-1.5"
-            style={{ borderTop: "1px solid var(--outline)" }}
-          >
-            <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
-              {e.foodName}
-            </span>
-            <span className="text-xs tabular ml-4 shrink-0" style={{ color: "var(--muted)" }}>
-              {Math.round(e.quantityInGrams)}g · {Math.round(e.calories)} kcal · {Math.round(e.protein)}g P
-            </span>
-          </div>
+      <div>
+        {mealItemRows(meal).map((item, i) => (
+          <MealItemRow key={i} item={item} menu={rowMenu(i)} />
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
+
+const MEAL_TYPE_KEY = {
+  BREAKFAST: "breakfast",
+  LUNCH: "lunch",
+  SNACK: "snack",
+  DINNER: "dinner",
+} as const;

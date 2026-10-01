@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { computeFoodUsage, recentFoodsByUsage, rankFoodsByUsage, RECENT_FOODS_COUNT } from "./usage";
-import type { FoodResponse, MealResponse } from "./types";
+import { computeFoodUsage, computeRecipeUsage, recentFoodsByUsage, rankFoodsByUsage, RECENT_FOODS_COUNT } from "./usage";
+import type { FoodResponse, MealResponse, RecipeResponse } from "./types";
 
 function food(id: number, name: string): FoodResponse {
   return { id, name, caloriesPer100g: 100, proteinPer100g: 10, carbsPer100g: null, fatPer100g: null, barcode: null, hidden: false };
@@ -139,5 +139,21 @@ describe("rankFoodsByUsage", () => {
     const ranked = rankFoodsByUsage(foods, usage);
 
     expect(ranked.slice(6, 8).map((f) => f.id)).toEqual([101, 100]);
+  });
+});
+
+describe("computeRecipeUsage", () => {
+  const recipe = (id: number, name: string): RecipeResponse => ({ id, name, description: null, favorite: false, servings: 1, ingredients: [], imageUpdatedAt: null });
+  const named = (id: number, daysAgo: number, name: string | null): MealResponse => ({ ...meal(id, daysAgo, [{ foodId: 1, grams: 100 }]), name });
+
+  it("finds a recipe's logs by the meal name (case and spacing insensitive), newest and count", () => {
+    const usage = computeRecipeUsage([named(1, 5, "Lentil soup"), named(2, 1, " lentil SOUP "), named(3, 2, "Other")], [recipe(10, "Lentil soup")]);
+    expect(usage.get(10)?.useCount).toBe(2);
+    expect(usage.get(10)!.lastUsedAt).toBeGreaterThan(Date.now() - 2 * 24 * 60 * 60 * 1000);
+  });
+
+  it("ignores unnamed meals, meals of unknown names and logs older than the 90-day window", () => {
+    const usage = computeRecipeUsage([named(1, 1, null), named(2, 1, "Nope"), named(3, 120, "Lentil soup")], [recipe(10, "Lentil soup")]);
+    expect(usage.size).toBe(0);
   });
 });

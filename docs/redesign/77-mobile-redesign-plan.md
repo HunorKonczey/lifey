@@ -1957,7 +1957,8 @@ priorities change; the canvas priority order (dashboard, nutrition, workouts, �
 - **Writing weight to Health Connect / HealthKit** — the app imports only; the "Also saved to
   Health Connect" line stays hidden until a write path exists.
 - **Web redesign** — the Next.js app shares the palette today (see the light `secondary` note
-  in `app_theme.dart`); it will diverge after R0.1. Follow-up plan for `web/`.
+  in `app_theme.dart`); it will diverge after R0.1. Follow-up plan:
+  [docs/redesign-web/78-web-redesign-plan.md](../redesign-web/78-web-redesign-plan.md).
 - **Watch apps, iOS widget / Live Activity, Android widget / ongoing notification** — native
   styling, not covered. Colour alignment is a follow-up.
 - **Material Symbols** icon font (D-R0.10).

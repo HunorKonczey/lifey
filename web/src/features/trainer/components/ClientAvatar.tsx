@@ -2,9 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { trainerApi } from "../api";
+import { Avatar, colorForSeed } from "@/components/ds";
 import { queryKeys } from "@/lib/api/queryKeys";
-
-const PALETTE = ["#C49A6C", "#8AA0B4", "#B08AC8", "#D8B35A", "#6FA8C4", "#9DAE6B", "#E0915A"];
 
 /**
  * Object URLs cached by client id, kept alive for the life of the tab instead
@@ -25,10 +24,6 @@ function objectUrlFor(clientId: number, blob: Blob | null | undefined): string |
   const url = URL.createObjectURL(blob);
   avatarUrlCache.set(clientId, { blob, url });
   return url;
-}
-
-function colorFor(seed: number) {
-  return PALETTE[seed % PALETTE.length];
 }
 
 export function initialsFor(email: string) {
@@ -72,24 +67,6 @@ export function ClientAvatar({ clientId, email, size = 42 }: ClientAvatarProps) 
 
   const objectUrl = objectUrlFor(clientId, blob);
 
-  return (
-    <div
-      className="rounded-full flex items-center justify-center font-extrabold shrink-0 overflow-hidden"
-      style={{
-        width: size,
-        height: size,
-        background: colorFor(clientId),
-        color: "#161611",
-        fontSize: size * 0.36,
-      }}
-    >
-      {objectUrl ? (
-        // Blob object URLs aren't compatible with next/image's optimizer.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={objectUrl} alt="" className="w-full h-full object-cover" />
-      ) : (
-        initialsFor(email)
-      )}
-    </div>
-  );
+  // The DS avatar: the per-client metric hue, the photo over it when there is one.
+  return <Avatar name={nameFor(email)} email={email} size={size} color={colorForSeed(String(clientId))} src={objectUrl ?? undefined} />;
 }

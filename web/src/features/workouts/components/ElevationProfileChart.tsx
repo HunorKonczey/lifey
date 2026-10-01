@@ -41,19 +41,19 @@ export function ElevationProfileChart({ altitudes, elevationGainMeters }: Elevat
   });
 
   return (
-    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-sm font-semibold" style={{ color: "var(--text-2)" }}>
           {t("cardioElevationProfileHeading")}
         </p>
         <div className="flex items-center gap-1.5">
           <span
             className="px-1.5 py-0.5 rounded-[var(--r-pill)] text-[9px] font-extrabold uppercase"
-            style={{ background: "var(--surface-highest)", color: "var(--on-surface-variant)" }}
+            style={{ background: "var(--control)", color: "var(--text-2)" }}
           >
             {t("cardioElevationProfileSimplifiedBadge")}
           </span>
-          <span className="text-xs font-bold tabular" style={{ color: "var(--on-surface-variant)" }}>
+          <span className="text-xs font-bold tabular" style={{ color: "var(--text-2)" }}>
             +{formatElevation(elevationGainMeters)}
           </span>
         </div>

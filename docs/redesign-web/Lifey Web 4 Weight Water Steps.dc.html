@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&display=block" rel="stylesheet">
+<style>
+html{background:#E7E5DA}body{margin:0;background:#E7E5DA;color:#1C1D16;font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#4E6530;text-decoration:none;font-weight:600}a:hover{color:#2F3F1B;text-decoration:underline}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr}
+</style>
+</helmet>
+
+<section style="padding:64px 80px 24px;display:flex;flex-direction:column;gap:14px;width:2720px;box-sizing:border-box">
+  <div style="font:600 14px/1.2 'JetBrains Mono';color:#56574B;letter-spacing:0.04em">LIFEY WEB · W4 · TESTSÚLY, VÍZ, LÉPÉSEK · /weight /water /steps</div>
+  <h1 style="margin:0;font:800 48px/1.08 'Plus Jakarta Sans';letter-spacing:-0.03em;max-width:1240px;text-wrap:balance">Metrikaoldalak: egy hős szám, a cél mindig látszik, a trend a zaj helyett</h1>
+  <div style="display:flex;gap:16px;font-size:15px"><a href="Lifey%20Web%20Design%20System.dc.html">← Web design system</a><a href="Lifey%20Web%203%20Workouts.dc.html">← W3 Edzések</a></div>
+</section>
+
+<section data-screen-label="W4 Testsúly 1440" style="padding:24px 80px;display:flex;gap:40px;align-items:flex-start;width:2720px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1440 · sötét · Testsúly</div>
+    <div style="width:1440px;height:1024px;background:#12130E;border-radius:18px;overflow:hidden;position:relative;color:#F2F1E6;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5)">
+      <div style="position:absolute;left:12px;top:12px;bottom:12px;width:248px;box-sizing:border-box;background:#1A1C15;border-radius:22px;padding:16px 12px;display:flex;flex-direction:column;gap:4px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)">
+        <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><div style="width:36px;height:36px;border-radius:12px;background:#B5C47C;color:#1A1F0A;font:800 18px/36px 'Plus Jakarta Sans';text-align:center">L</div><div style="font:800 20px/1 'Plus Jakarta Sans';letter-spacing:-0.02em">Lifey</div><div style="flex:1"></div><span class="ms" style="font-size:20px;color:#8F8F80">left_panel_close</span></div>
+        <sc-for list="{{ navW }}" as="n" hint-placeholder-count="7">
+          <sc-if value="{{ n.on }}" hint-placeholder-val="{{ false }}"><div style="height:44px;border-radius:14px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:12px;padding:0 12px;font:700 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+          <sc-if value="{{ n.off }}" hint-placeholder-val="{{ true }}"><div style="height:44px;border-radius:14px;color:#B6B5A5;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+        </sc-for>
+        <div style="flex:1"></div>
+        <div style="height:44px;border-radius:14px;color:#B6B5A5;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">settings</span>Beállítások</div>
+        <div style="height:1px;background:rgba(242,241,230,0.06);margin:8px 4px"></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:14px;background:#22251C"><div style="width:36px;height:36px;border-radius:999px;background:#3A4228;color:#D6E2A6;font:800 13px/36px 'Plus Jakarta Sans';text-align:center;flex:none">KN</div><div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:2px"><div style="font:700 14px/1.2 'Plus Jakarta Sans'">Nagy Kata</div><div style="font:500 12px/1.2 'Plus Jakarta Sans';color:#8F8F80">kata.nagy@demo.hu</div></div><span class="ms" style="font-size:20px;color:#8F8F80">unfold_more</span></div>
+      </div>
+      <div style="position:absolute;left:292px;right:32px;top:12px;display:flex;flex-direction:column;gap:24px">
+        <div style="height:64px;display:flex;align-items:center;gap:16px">
+          <div style="flex:1;font:800 28px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Testsúly</div>
+          <div style="display:flex;padding:4px;border-radius:999px;background:#1A1C15;box-shadow:inset 0 0 0 1px rgba(242,241,230,0.06)">
+            <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="4"><div style="height:36px;padding:0 16px;border-radius:999px;background:{{ r.bg }};color:{{ r.fg }};font:{{ r.w }} 14px/36px 'Plus Jakarta Sans'">{{ r.l }}</div></sc-for>
+          </div>
+          <div style="height:44px;padding:0 18px 0 14px;border-radius:14px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans';white-space:nowrap"><span class="ms" style="font-size:22px">add</span>Súly rögzítése</div>
+          <div style="width:40px;height:40px;border-radius:999px;background:#1A1C15;display:flex;align-items:center;justify-content:center;color:#B6B5A5"><span class="ms" style="font-size:20px">light_mode</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;align-items:start">
+          <div style="grid-column:span 4;background:#22251C;border-radius:30px;padding:28px;display:flex;flex-direction:column;gap:22px;min-height:400px;box-sizing:border-box;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 10px 24px -12px rgba(0,0,0,0.8)">
+            <div style="display:flex;flex-direction:column;gap:8px"><div style="font:600 14px/1 'Plus Jakarta Sans';color:#B6B5A5">Ma reggel, 07:02</div><div style="font:800 72px/68px 'Plus Jakarta Sans';letter-spacing:-0.03em">69,6<span style="font:600 26px 'Plus Jakarta Sans';color:#B6B5A5;letter-spacing:0"> kg</span></div></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="height:30px;padding:0 12px;border-radius:999px;background:rgba(152,173,192,0.16);color:#98ADC0;font:700 13px/30px 'Plus Jakarta Sans'">−0,4 kg a héten</span><span style="height:30px;padding:0 12px;border-radius:999px;background:rgba(147,201,140,0.16);color:#93C98C;font:700 13px/30px 'Plus Jakarta Sans'">−2,4 kg aug. 18. óta</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;font:600 14px/1 'Plus Jakarta Sans'"><span style="color:#B6B5A5">Kezdés 72 kg</span><span>Cél <b>65 kg</b></span></div>
+              <div style="height:10px;border-radius:5px;background:#2C2F24"><div style="width:34%;height:10px;border-radius:5px;background:#98ADC0"></div></div>
+              <div style="font:600 14px/1.4 'Plus Jakarta Sans';color:#B6B5A5">Még <b style="color:#F2F1E6">4,6 kg</b> · a mostani tempóval <b style="color:#F2F1E6">dec. közepére</b></div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+              <div style="background:#1A1C15;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px"><span style="font:600 12px/1 'Plus Jakarta Sans';color:#B6B5A5">7 napos átlag</span><span style="font:800 22px/1 'Plus Jakarta Sans'">69,8<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> kg</span></span></div>
+              <div style="background:#1A1C15;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px"><span style="font:600 12px/1 'Plus Jakarta Sans';color:#B6B5A5">Tempó</span><span style="font:800 22px/1 'Plus Jakarta Sans'">−0,42<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> kg / hét</span></span></div>
+            </div>
+          </div>
+          <div style="grid-column:span 8;background:#1A1C15;border-radius:22px;padding:22px 24px;display:flex;flex-direction:column;gap:12px;min-height:400px;box-sizing:border-box">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 17px/1 'Plus Jakarta Sans'">Az elmúlt 30 nap</div><div style="display:flex;gap:16px;font:600 12px/1 'Plus Jakarta Sans';color:#B6B5A5"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:999px;background:#98ADC0;opacity:0.6"></span>mérés</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;border-radius:2px;background:#98ADC0"></span>7 napos átlag</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dashed #93C98C"></span>cél</span></div></div>
+            <svg viewBox="0 0 740 320" style="width:100%;height:auto;display:block">
+              <g font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#8F8F80" text-anchor="end"><text x="40" y="24">72</text><text x="40" y="149">68,5</text><text x="40" y="274">65</text></g>
+              <g stroke="rgba(242,241,230,0.06)"><line x1="52" y1="20" x2="740" y2="20"></line><line x1="52" y1="145" x2="740" y2="145"></line><line x1="52" y1="270" x2="740" y2="270"></line></g>
+              <line x1="52" y1="270" x2="740" y2="270" stroke="#93C98C" stroke-width="1.5" stroke-dasharray="5 5"></line>
+              <text x="740" y="262" text-anchor="end" font-family="Plus Jakarta Sans" font-size="12" font-weight="700" fill="#93C98C">cél 65 kg</text>
+              <sc-for list="{{ wPts }}" as="p" hint-placeholder-count="26"><circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" fill="#98ADC0" opacity="0.55"></circle></sc-for>
+              <polyline fill="none" stroke="#98ADC0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="{{ wAvg }}"></polyline>
+              <circle cx="{{ wLast.x }}" cy="{{ wLast.y }}" r="7" fill="#98ADC0" stroke="#1A1C15" stroke-width="3"></circle>
+              <g font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#8F8F80" text-anchor="middle"><text x="64" y="300">aug. 29.</text><text x="396" y="300">szept. 13.</text><text x="722" y="300" fill="#F2F1E6">ma</text></g>
+            </svg>
+          </div>
+          <div style="grid-column:span 8;background:#1A1C15;border-radius:22px;padding:8px 0">
+            <div style="display:grid;grid-template-columns:minmax(0,1.3fr) 110px 140px minmax(0,1fr) 44px;gap:12px;padding:12px 24px;font:600 13px/1 'Plus Jakarta Sans';color:#8F8F80"><span>Dátum</span><span style="text-align:right">Súly</span><span>Változás</span><span>Megjegyzés</span><span></span></div>
+            <sc-for list="{{ wLog }}" as="e" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(0,1.3fr) 110px 140px minmax(0,1fr) 44px;gap:12px;align-items:center;padding:10px 24px;box-shadow:inset 0 1px 0 rgba(242,241,230,0.05)">
+                <span style="font:600 15px/1.3 'Plus Jakarta Sans'">{{ e.d }}<span style="color:#8F8F80;font-weight:500"> · {{ e.t }}</span></span>
+                <span style="font:800 16px/1 'Plus Jakarta Sans';text-align:right">{{ e.w }}<span style="font:600 12px 'Plus Jakarta Sans';color:#B6B5A5"> kg</span></span>
+                <span><span style="height:24px;padding:0 9px;border-radius:999px;background:{{ e.cbg }};color:{{ e.cfg }};font:700 12px/24px 'Plus Jakarta Sans';display:inline-block">{{ e.ch }}</span></span>
+                <span style="font:500 14px/1.3 'Plus Jakarta Sans';color:#B6B5A5">{{ e.note }}</span>
+                <span class="ms" style="font-size:20px;color:#8F8F80;text-align:right">more_horiz</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="grid-column:span 4;background:#22251C;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 20px 40px -16px rgba(0,0,0,0.8)">
+            <div style="display:flex;justify-content:space-between;align-items:center"><div style="font:800 18px/1.2 'Plus Jakarta Sans'">Súly rögzítése</div><span class="ms" style="font-size:22px;color:#B6B5A5">close</span></div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 0">
+              <div style="width:48px;height:48px;border-radius:16px;background:#2C2F24;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">remove</span></div>
+              <div style="font:800 72px/68px 'Plus Jakarta Sans';letter-spacing:-0.03em">69,6<span style="font:600 22px 'Plus Jakarta Sans';color:#B6B5A5;letter-spacing:0"> kg</span></div>
+              <div style="width:48px;height:48px;border-radius:16px;background:#2C2F24;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">add</span></div>
+            </div>
+            <div style="display:flex;gap:8px"><div style="flex:1;height:44px;border-radius:14px;background:#2C2F24;display:flex;align-items:center;gap:8px;padding:0 12px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:18px;color:#B6B5A5">calendar_today</span>Ma, szept. 27.</div><div style="width:96px;height:44px;border-radius:14px;background:#2C2F24;display:flex;align-items:center;gap:6px;padding:0 12px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:18px;color:#B6B5A5">schedule</span>07:02</div></div>
+            <div style="height:48px;border-radius:16px;background:#B5C47C;color:#1A1F0A;font:700 15px/48px 'Plus Jakarta Sans';text-align:center">Mentés</div>
+            <div style="font:500 12px/1.4 'JetBrains Mono';color:#8F8F80">drawer · ↑/↓ ±0,1 kg · Shift ±1 kg · Enter mentés</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="width:520px;flex:none;display:flex;flex-direction:column;gap:18px;padding-top:26px">
+    <div style="font:800 26px/1.2 'Plus Jakarta Sans';letter-spacing:-0.01em">Előtte → utána</div>
+    <sc-for list="{{ notes }}" as="n" hint-placeholder-count="7">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ n.ids }}" as="id" hint-placeholder-count="1"><span style="height:22px;padding:0 8px;border-radius:8px;background:#FFFFFF;font:600 12px/22px 'JetBrains Mono';color:#3A3B31">{{ id }}</span></sc-for></div>
+        <div style="font:700 16px/1.35 'Plus Jakarta Sans'">{{ n.t }}</div>
+        <div style="font:500 14px/1.55 'Plus Jakarta Sans';color:#3A3B31;text-wrap:pretty">{{ n.b }}</div>
+        <div style="font:600 13px/1.45 'Plus Jakarta Sans';color:#4E6530">{{ n.v2 }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section data-screen-label="W4 Víz + Lépések 1280" style="padding:40px 80px;display:flex;gap:40px;align-items:flex-start;width:2720px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1280 · világos · Víz</div>
+    <div style="width:1280px;background:#F4F2E9;border-radius:18px;overflow:hidden;color:#1C1D16;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5);display:flex">
+      <div style="width:248px;margin:12px 0 12px 12px;box-sizing:border-box;background:#FFFFFF;border-radius:22px;padding:16px 12px;display:flex;flex-direction:column;gap:4px;flex:none;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+        <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><div style="width:36px;height:36px;border-radius:12px;background:#4E6530;color:#FFFFFF;font:800 18px/36px 'Plus Jakarta Sans';text-align:center">L</div><div style="font:800 20px/1 'Plus Jakarta Sans';letter-spacing:-0.02em">Lifey</div></div>
+        <sc-for list="{{ navV }}" as="n" hint-placeholder-count="7">
+          <sc-if value="{{ n.on }}" hint-placeholder-val="{{ false }}"><div style="height:44px;border-radius:14px;background:#4E6530;color:#FFFFFF;display:flex;align-items:center;gap:12px;padding:0 12px;font:700 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+          <sc-if value="{{ n.off }}" hint-placeholder-val="{{ true }}"><div style="height:44px;border-radius:14px;color:#56574B;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+        </sc-for>
+      </div>
+      <div style="flex:1;min-width:0;padding:12px 24px 28px;display:flex;flex-direction:column;gap:20px">
+        <div style="height:64px;display:flex;align-items:center;gap:16px">
+          <div style="flex:1;font:800 26px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Víz</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:4px;border-radius:999px;background:#FFFFFF;box-shadow:0 1px 2px rgba(40,38,20,0.08)"><div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#56574B"><span class="ms" style="font-size:22px">chevron_left</span></div><div style="height:40px;padding:0 14px;border-radius:999px;background:#F0EEE3;display:flex;align-items:center;gap:8px;white-space:nowrap"><span style="font:700 15px/1 'Plus Jakarta Sans'">Ma</span><span style="font:600 14px/1 'Plus Jakarta Sans';color:#56574B">szept. 27., szombat</span></div><div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#A8A89A"><span class="ms" style="font-size:22px">chevron_right</span></div></div>
+          <div style="flex:1"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start">
+          <div style="background:#FFFFFF;border-radius:30px;padding:26px;display:flex;flex-direction:column;gap:20px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 12px 28px -14px rgba(40,38,20,0.22)">
+            <div style="display:flex;align-items:center;gap:24px">
+              <div style="position:relative;width:150px;height:150px;flex:none"><svg width="150" height="150" viewBox="0 0 200 200" style="transform:rotate(-90deg)"><circle cx="100" cy="100" r="88" fill="none" stroke="#F0EEE3" stroke-width="18"></circle><circle cx="100" cy="100" r="88" fill="none" stroke="#1A6C8F" stroke-width="18" stroke-linecap="round" stroke-dasharray="354 553"></circle></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font:800 34px/1 'Plus Jakarta Sans'">64<span style="font:600 16px 'Plus Jakarta Sans';color:#56574B">%</span></div></div></div>
+              <div style="display:flex;flex-direction:column;gap:8px"><div style="font:800 48px/1 'Plus Jakarta Sans';letter-spacing:-0.025em">1,6<span style="font:600 20px 'Plus Jakarta Sans';color:#56574B;letter-spacing:0"> / 2,5 L</span></div><div style="font:600 14px/1.4 'Plus Jakarta Sans';color:#56574B">Még 0,9 L · kb. 4 pohár</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px"><div style="font:600 14px/1 'Plus Jakarta Sans'">Gyors hozzáadás</div>
+              <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+                <sc-for list="{{ sources }}" as="s" hint-placeholder-count="4"><div style="height:68px;border-radius:18px;background:rgba(26,108,143,0.1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="font:800 17px/1 'Plus Jakarta Sans';color:#155A78">{{ s.v }}</div><div style="font:600 12px/1 'Plus Jakarta Sans';color:#56574B">{{ s.l }}</div></div></sc-for>
+              </div>
+              <div style="font:700 14px/1 'Plus Jakarta Sans';color:#4E6530;padding-top:6px">Vízforrások kezelése</div>
+            </div>
+          </div>
+          <div style="background:#FFFFFF;border-radius:22px;padding:8px 0;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+            <div style="font:700 16px/1 'Plus Jakarta Sans';padding:14px 20px 8px">Mai bejegyzések</div>
+            <sc-for list="{{ waterLog }}" as="w" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;background:{{ w.bg }}"><div style="width:36px;height:36px;border-radius:12px;background:rgba(26,108,143,0.1);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;color:#1A6C8F">{{ w.i }}</span></div><div style="flex:1;font:700 15px/1.3 'Plus Jakarta Sans'">{{ w.n }}<span style="color:#6B6C5F;font-weight:500"> · {{ w.t }}</span></div><div style="font:800 15px/1 'Plus Jakarta Sans'">{{ w.v }}<span style="font:600 12px 'Plus Jakarta Sans';color:#56574B"> L</span></div><div style="width:32px;height:32px;border-radius:10px;background:{{ w.mbg }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;color:{{ w.mc }}">more_horiz</span></div></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border-radius:22px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 16px/1 'Plus Jakarta Sans'">Az elmúlt 14 nap</div><div style="font:600 13px/1 'Plus Jakarta Sans';color:#56574B">átlag <b style="color:#1C1D16">2,2 L</b> · cél teljesítve <b style="color:#1C1D16">6 / 13</b> nap</div></div>
+          <svg viewBox="0 0 960 180" style="width:100%;height:auto;display:block">
+            <g font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F" text-anchor="end"><text x="36" y="18">3 L</text><text x="36" y="83">1,5 L</text><text x="36" y="148">0</text></g>
+            <g stroke="rgba(28,29,22,0.07)"><line x1="48" y1="14" x2="960" y2="14"></line><line x1="48" y1="79" x2="960" y2="79"></line><line x1="48" y1="144" x2="960" y2="144"></line></g>
+            <sc-for list="{{ waterBars }}" as="b" hint-placeholder-count="14"><rect x="{{ b.x }}" y="{{ b.y }}" width="44" height="{{ b.h }}" rx="7" fill="{{ b.fill }}" stroke="{{ b.st }}" stroke-width="2" stroke-dasharray="{{ b.dash }}"></rect></sc-for>
+            <line x1="48" y1="36" x2="960" y2="36" stroke="#1A6C8F" stroke-width="1.5" stroke-dasharray="5 5"></line>
+            <text x="960" y="30" text-anchor="end" font-family="Plus Jakarta Sans" font-size="12" font-weight="700" fill="#1A6C8F">cél 2,5 L</text>
+          <g><text x="84" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">V</text><text x="148" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">H</text><text x="212" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">K</text><text x="276" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Sze</text><text x="340" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Cs</text><text x="404" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">P</text><text x="468" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Szo</text><text x="532" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">V</text><text x="596" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">H</text><text x="660" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">K</text><text x="724" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Sze</text><text x="788" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Cs</text><text x="852" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">P</text><text x="916" y="170" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="800" fill="#1C1D16">Ma</text></g></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1280 · világos · Lépések</div>
+    <div style="width:1280px;background:#F4F2E9;border-radius:18px;overflow:hidden;color:#1C1D16;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5);display:flex">
+      <div style="width:248px;margin:12px 0 12px 12px;box-sizing:border-box;background:#FFFFFF;border-radius:22px;padding:16px 12px;display:flex;flex-direction:column;gap:4px;flex:none;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+        <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><div style="width:36px;height:36px;border-radius:12px;background:#4E6530;color:#FFFFFF;font:800 18px/36px 'Plus Jakarta Sans';text-align:center">L</div><div style="font:800 20px/1 'Plus Jakarta Sans';letter-spacing:-0.02em">Lifey</div></div>
+        <sc-for list="{{ navS }}" as="n" hint-placeholder-count="7">
+          <sc-if value="{{ n.on }}" hint-placeholder-val="{{ false }}"><div style="height:44px;border-radius:14px;background:#4E6530;color:#FFFFFF;display:flex;align-items:center;gap:12px;padding:0 12px;font:700 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+          <sc-if value="{{ n.off }}" hint-placeholder-val="{{ true }}"><div style="height:44px;border-radius:14px;color:#56574B;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">{{ n.i }}</span>{{ n.l }}</div></sc-if>
+        </sc-for>
+      </div>
+      <div style="flex:1;min-width:0;padding:12px 24px 28px;display:flex;flex-direction:column;gap:20px">
+        <div style="height:64px;display:flex;align-items:center;gap:16px">
+          <div style="flex:1;font:800 26px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Lépések</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:4px;border-radius:999px;background:#FFFFFF;box-shadow:0 1px 2px rgba(40,38,20,0.08)"><div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#56574B"><span class="ms" style="font-size:22px">chevron_left</span></div><div style="height:40px;padding:0 14px;border-radius:999px;background:#F0EEE3;display:flex;align-items:center;gap:8px;white-space:nowrap"><span style="font:700 15px/1 'Plus Jakarta Sans'">Ma</span><span style="font:600 14px/1 'Plus Jakarta Sans';color:#56574B">szept. 27., szombat</span></div><div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#A8A89A"><span class="ms" style="font-size:22px">chevron_right</span></div></div>
+          <div style="flex:1"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(0,0.5fr));gap:20px">
+          <div style="background:#FFFFFF;border-radius:30px;padding:26px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 12px 28px -14px rgba(40,38,20,0.22)">
+            <div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 14px/1 'Plus Jakarta Sans';color:#56574B">Ma eddig</div><div style="height:36px;padding:0 12px;border-radius:12px;background:#F0EEE3;display:flex;align-items:center;gap:6px;font:700 13px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:18px;color:#56574B">edit</span>Szerkesztés</div></div>
+            <div style="font:800 56px/1 'Plus Jakarta Sans';letter-spacing:-0.03em">6 412</div>
+            <div style="height:10px;border-radius:5px;background:#F0EEE3"><div style="width:71%;height:10px;border-radius:5px;background:#83488D"></div></div>
+            <div style="font:600 14px/1.4 'Plus Jakarta Sans';color:#56574B">Még <b style="color:#1C1D16">2 588</b> a 9 000-es célig · kb. 25 perc séta</div>
+          </div>
+          <div style="background:#FFFFFF;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 2px rgba(40,38,20,0.06)"><span style="font:600 13px/1.3 'Plus Jakarta Sans';color:#56574B">14 napos átlag</span><span style="font:800 28px/1 'Plus Jakarta Sans'">8 240</span></div>
+          <div style="background:#FFFFFF;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 2px rgba(40,38,20,0.06)"><span style="font:600 13px/1.3 'Plus Jakarta Sans';color:#56574B">Cél teljesítve</span><span style="font:800 28px/1 'Plus Jakarta Sans'">6<span style="font:600 14px 'Plus Jakarta Sans';color:#56574B"> / 13 nap</span></span></div>
+          <div style="background:#FFFFFF;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 2px rgba(40,38,20,0.06)"><span style="font:600 13px/1.3 'Plus Jakarta Sans';color:#56574B">Legjobb nap</span><span style="font:800 28px/1 'Plus Jakarta Sans'">12 480</span><span style="font:500 12px/1 'Plus Jakarta Sans';color:#56574B">szept. 21.</span></div>
+        </div>
+        <div style="background:#FFFFFF;border-radius:22px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 16px/1 'Plus Jakarta Sans'">Az elmúlt 14 nap</div><div style="display:flex;gap:16px;font:600 12px/1 'Plus Jakarta Sans';color:#56574B"><span style="display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:14px;color:#83488D">check</span>cél elérve</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dashed #1C1D16"></span>9 000</span></div></div>
+          <svg viewBox="0 0 960 220" style="width:100%;height:auto;display:block">
+            <g font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F" text-anchor="end"><text x="36" y="28">14 e</text><text x="36" y="108">7 e</text><text x="36" y="188">0</text></g>
+            <g stroke="rgba(28,29,22,0.07)"><line x1="48" y1="24" x2="960" y2="24"></line><line x1="48" y1="104" x2="960" y2="104"></line><line x1="48" y1="184" x2="960" y2="184"></line></g>
+            <sc-for list="{{ stepBars }}" as="b" hint-placeholder-count="14"><rect x="{{ b.x }}" y="{{ b.y }}" width="44" height="{{ b.h }}" rx="7" fill="{{ b.fill }}" stroke="{{ b.st }}" stroke-width="2" stroke-dasharray="{{ b.dash }}"></rect></sc-for>
+            <line x1="48" y1="81" x2="960" y2="81" stroke="#1C1D16" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.5"></line>
+          <g><text x="84" y="35" text-anchor="middle" font-family="Material Symbols Rounded" font-size="16" fill="#83488D">check</text><text x="212" y="71" text-anchor="middle" font-family="Material Symbols Rounded" font-size="16" fill="#83488D">check</text><text x="404" y="66" text-anchor="middle" font-family="Material Symbols Rounded" font-size="16" fill="#83488D">check</text><text x="468" y="61" text-anchor="middle" font-family="Material Symbols Rounded" font-size="16" fill="#83488D">check</text><text x="596" y="74" text-anchor="middle" font-family="Material Symbols Rounded" font-size="16" fill="#83488D">check</text><text x="788" y="68" text-anchor="middle" font-family="Material Symbols Rounded" font-size="16" fill="#83488D">check</text></g><g><text x="84" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">V</text><text x="148" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">H</text><text x="212" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">K</text><text x="276" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Sze</text><text x="340" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Cs</text><text x="404" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">P</text><text x="468" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Szo</text><text x="532" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">V</text><text x="596" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">H</text><text x="660" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">K</text><text x="724" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Sze</text><text x="788" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">Cs</text><text x="852" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="600" fill="#6B6C5F">P</text><text x="916" y="210" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" font-weight="800" fill="#1C1D16">Ma</text></g></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="W4 mobil" style="padding:40px 80px 96px;display:flex;gap:40px;align-items:flex-start;width:2720px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">390 · sötét · Testsúly</div>
+    <div style="width:390px;height:844px;background:#12130E;border-radius:36px;overflow:hidden;position:relative;color:#F2F1E6;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5)">
+      <div style="padding:18px 20px 12px;display:flex;align-items:center;justify-content:space-between"><div style="font:800 26px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Testsúly</div><div style="width:44px;height:44px;border-radius:999px;background:#3A4228;color:#D6E2A6;font:800 14px/44px 'Plus Jakarta Sans';text-align:center">KN</div></div>
+      <div style="padding:4px 20px;display:flex;flex-direction:column;gap:14px">
+        <div style="background:#22251C;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:14px">
+          <div style="font:600 13px/1 'Plus Jakarta Sans';color:#B6B5A5">Ma reggel, 07:02</div>
+          <div style="font:800 64px/1 'Plus Jakarta Sans';letter-spacing:-0.03em">69,6<span style="font:600 22px 'Plus Jakarta Sans';color:#B6B5A5;letter-spacing:0"> kg</span></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><span style="height:28px;padding:0 10px;border-radius:999px;background:rgba(152,173,192,0.16);color:#98ADC0;font:700 12px/28px 'Plus Jakarta Sans'">−0,4 kg a héten</span></div>
+          <div style="height:8px;border-radius:4px;background:#2C2F24"><div style="width:34%;height:8px;border-radius:4px;background:#98ADC0"></div></div>
+          <div style="font:600 13px/1.4 'Plus Jakarta Sans';color:#B6B5A5">Cél 65 kg · még <b style="color:#F2F1E6">4,6 kg</b></div>
+        </div>
+        <div style="display:flex;padding:4px;border-radius:999px;background:#1A1C15"><sc-for list="{{ ranges }}" as="r" hint-placeholder-count="4"><div style="flex:1;height:40px;border-radius:999px;background:{{ r.bg }};color:{{ r.fg }};font:{{ r.w }} 14px/40px 'Plus Jakarta Sans';text-align:center">{{ r.l }}</div></sc-for></div>
+        <div style="background:#1A1C15;border-radius:22px;padding:14px">
+          <svg viewBox="0 0 740 320" style="width:100%;height:auto;display:block">
+            <g font-family="Plus Jakarta Sans" font-size="26" font-weight="600" fill="#8F8F80" text-anchor="end"><text x="60" y="30">72</text><text x="60" y="279">65</text></g>
+            <line x1="70" y1="270" x2="740" y2="270" stroke="#93C98C" stroke-width="3" stroke-dasharray="10 10"></line>
+            <polyline fill="none" stroke="#98ADC0" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" points="{{ wAvg }}"></polyline>
+            <circle cx="{{ wLast.x }}" cy="{{ wLast.y }}" r="12" fill="#98ADC0" stroke="#1A1C15" stroke-width="5"></circle>
+          </svg>
+        </div>
+        <div style="background:#1A1C15;border-radius:22px;padding:4px 0">
+          <sc-for list="{{ wLogShort }}" as="e" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px;padding:12px 16px;min-height:44px;box-sizing:border-box"><span style="flex:1;font:600 14px/1.3 'Plus Jakarta Sans'">{{ e.d }}</span><span style="font:800 15px/1 'Plus Jakarta Sans'">{{ e.w }} kg</span><span style="height:24px;padding:0 8px;border-radius:999px;background:{{ e.cbg }};color:{{ e.cfg }};font:700 12px/24px 'Plus Jakarta Sans'">{{ e.ch }}</span></div></sc-for>
+        </div>
+      </div>
+      <div style="position:absolute;right:20px;bottom:96px;height:56px;padding:0 20px 0 16px;border-radius:20px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:6px;font:700 15px/1 'Plus Jakarta Sans';box-shadow:0 12px 24px -8px rgba(181,196,124,0.35)"><span class="ms" style="font-size:24px">add</span>Súly</div>
+      <div style="position:absolute;left:12px;right:12px;bottom:16px;height:68px;border-radius:30px;background:rgba(40,44,32,0.92);display:flex;align-items:center;justify-content:space-between;padding:0 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07),0 20px 40px -12px rgba(0,0,0,0.9)">
+        <span class="ms" style="font-size:24px;color:#B6B5A5;width:48px;text-align:center">space_dashboard</span>
+        <span class="ms" style="font-size:24px;color:#B6B5A5;width:48px;text-align:center">restaurant</span>
+        <span class="ms" style="font-size:24px;color:#B6B5A5;width:48px;text-align:center">fitness_center</span>
+        <div style="height:48px;padding:0 14px;border-radius:999px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">monitor_weight</span>Testsúly</div>
+        <span class="ms" style="font-size:24px;color:#B6B5A5;width:48px;text-align:center">more_horiz</span>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const navL = [['space_dashboard', 'Áttekintő'], ['restaurant', 'Táplálkozás'], ['fitness_center', 'Edzések'], ['monitor_weight', 'Testsúly'], ['water_drop', 'Víz'], ['directions_walk', 'Lépések'], ['bar_chart', 'Statisztika']];
+    const navFor = a => navL.map(([i, l]) => ({ i, l, on: l === a, off: l !== a }));
+    // 30 days weight, with gaps
+    const raw = [];
+    let seed = 7;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    for (let d = 0; d < 30; d++) { const base = 71.5 - d * (1.9 / 29); raw.push([4, 5, 12, 13, 19].includes(d) ? null : Math.round((base + (rnd() - 0.5) * 0.7) * 10) / 10); }
+    raw[29] = 69.6;
+    const X = d => Math.round(64 + d * (658 / 29)), Y = v => Math.round(20 + (72 - v) / 7 * 250);
+    const wPts = raw.map((v, d) => v == null ? null : { x: X(d), y: Y(v) }).filter(Boolean);
+    const avg = raw.map((_, d) => { const w = raw.slice(Math.max(0, d - 6), d + 1).filter(v => v != null); return w.length ? w.reduce((a, b) => a + b) / w.length : null; });
+    const wAvg = avg.map((v, d) => v == null ? '' : X(d) + ',' + Y(v)).join(' ');
+    const chip = (c) => c < 0 ? { cbg: 'rgba(147,201,140,0.16)', cfg: '#93C98C' } : c > 0 ? { cbg: 'rgba(236,154,102,0.16)', cfg: '#EC9A66' } : { cbg: '#2C2F24', cfg: '#B6B5A5' };
+    const wLog = [['Ma, szept. 27.', '07:02', '69,6', -0.3, ''], ['Péntek, szept. 26.', '06:58', '69,9', 0.2, 'edzés utáni nap'], ['Csütörtök, szept. 25.', '07:10', '69,7', -0.2, ''], ['Szerda, szept. 24.', '07:05', '69,9', 0, ''], ['Hétfő, szept. 22.', '07:15', '69,9', -0.4, '2 nap kimaradt'], ['Szombat, szept. 20.', '08:30', '70,3', -0.1, '']]
+      .map(([d, t, w, c, note]) => ({ d, t, w, note, ch: c === 0 ? '±0 kg' : (c < 0 ? '−' : '+') + String(Math.abs(c)).replace('.', ',') + ' kg', ...chip(c) }));
+    const days = ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V', 'H', 'K', 'Sze', 'Cs', 'P', 'Ma'];
+    const wv = [2.6, 2.1, 2.4, 2.7, 1.9, 2.5, 2.2, 2.8, 2.0, 2.6, 2.3, 1.8, 2.5, 1.6];
+    const sv = [12480, 7200, 9400, 8100, 6600, 9800, 10200, 7400, 9100, 5600, 8800, 9600, 7300, 6412];
+    const bars = (vals, max, top, base, goal, light) => vals.map((v, i) => { const today = i === 13; const h = Math.round(v / max * (base - top)); return { x: 62 + i * 64, tx: 84 + i * 64, y: base - h, h, l: days[i], fill: today ? 'transparent' : light, st: today ? light : 'none', dash: today ? '5 4' : '0', fw: today ? 800 : 600, lc: today ? '#1C1D16' : '#6B6C5F', met: v >= goal }; });
+    return {
+      navW: navFor('Testsúly'), navV: navFor('Víz'), navS: navFor('Lépések'),
+      ranges: ['30 nap', '90 nap', '1 év', 'Mind'].map((l, i) => ({ l, bg: i === 0 ? '#2C2F24' : 'transparent', fg: i === 0 ? '#F2F1E6' : '#B6B5A5', w: i === 0 ? 700 : 600 })),
+      wPts, wAvg, wLast: wPts[wPts.length - 1], wLog, wLogShort: wLog.slice(0, 3),
+      sources: [['+0,25 L', 'Víz · pohár'], ['+0,5 L', 'Víz · palack'], ['+0,2 L', 'Kávé'], ['+0,3 L', 'Tea']].map(([v, l]) => ({ v, l })),
+      waterLog: [['Tea', '14:10', '0,3', 'emoji_food_beverage', true], ['Víz · palack', '11:00', '0,5', 'water_bottle'], ['Víz · pohár', '10:20', '0,35', 'local_drink'], ['Kávé', '09:10', '0,2', 'coffee'], ['Víz · pohár', '07:30', '0,25', 'local_drink']].map(([n, t, v, i, h]) => ({ n, t, v, i, bg: h ? '#F0EEE3' : 'transparent', mbg: h ? '#E6E4D6' : 'transparent', mc: h ? '#1C1D16' : '#6B6C5F' })),
+      waterBars: bars(wv, 3, 14, 144, 2.5, '#1A6C8F').map(b => ({ ...b, fill: b.fill === 'transparent' ? b.fill : (b.met ? '#1A6C8F' : 'rgba(26,108,143,0.45)') })),
+      stepBars: bars(sv, 14000, 24, 184, 9000, '#83488D').map(b => ({ ...b, fill: b.fill === 'transparent' ? b.fill : '#83488D', chk: b.met ? 'check' : '', cy: b.y - 6 })),
+      notes: [
+        { ids: ['client-018'], t: 'A cél mindig látszik', b: 'A hős kártya a 72 px-es aktuális súly mellett mutatja a kezdő és a cél súlyt egy sávon, a hátralévő 4,6 kg-ot és a trendből számolt várható dátumot. A grafikonon szaggatott célvonal.', v2: 'v2: display-xl, hős kártya, célvonal.' },
+        { ids: ['client-018', 'client-019'], t: 'Trend a napi zaj helyett', b: 'A mérések halvány pontok, a vastag vonal a 7 napos átlag. A kimaradt napok nem kapnak kitalált értéket. Y tengely 44 px szélesen, magyar tizedesjellel; X tengelyen „szept. 13.”, a mai pont kiemelve.', v2: 'v2: 7 napos átlag, kiemelt „ma”.' },
+        { ids: ['client-018'], t: 'Napló táblázatként, a diagram alatt', b: 'A túl hosszú jobb oszlop helyett a bejegyzések a diagram alatt, teljes szélességben: dátum, súly, változás-chip (megmaradt), megjegyzés, ⋯ menü. A csökkenés zöld chip, mert fogyásnál az a javulás.', v2: 'v2: szemantikus szerepek (javulás), tinted chip.' },
+        { ids: ['client-020'], t: 'Nagy számos rögzítés', b: 'A kicsi beviteli sor helyett drawer 72 px-es számmal, ± léptetővel és billentyűkkel; a dátum magyar formátumú választó, nem natív „09/27/2026” mező.', v2: 'v2: log sheet → drawer.' },
+        { ids: ['client-021', 'client-022'], t: 'Víz: gyűrű, forrás-gombok, heti trend', b: '„1,6 / 2,5 L” magyar tizedesjellel és szóközzel. A vízforrások nagy gyors-gombok, a mai bejegyzések soronként ⋯ menüvel törölhetők. Alul 14 napos oszlopdiagram célvonallal — az üres oldalrész helyett.', v2: 'v2: add water sheet gombjai, oszlop + cél.' },
+        { ids: ['client-023', 'client-024'], t: 'Lépések: egy szín, a cél jel', b: 'Minden oszlop lépés-lila; a „cél elérve” egy pipa az oszlop fölött és egy szaggatott 9 000-es vonal, nem második szín. Napnevek magyarul, a mai nap szaggatott körvonal. Szerkesztés a hős kártyáról.', v2: 'v2: a szín csak adatot jelent.' },
+        { ids: ['client-081', 'client-083'], t: 'Mobil', b: 'Hős kártya, időszak-váltó, egyszerűsített görbe (átlag + cél), rövid lista, FAB a rögzítéshez. Víz és Lépések ugyanígy, a „Több” menüből érhetők el.', v2: 'v2: alsó nav, FAB.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

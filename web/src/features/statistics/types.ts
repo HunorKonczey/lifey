@@ -1,3 +1,18 @@
+import type { MealResponse } from "@/features/nutrition/types";
+import type { WeightResponse } from "@/features/weight/types";
+import type { WaterEntryResponse } from "@/features/water/types";
+import type { DailyStepCountResponse } from "@/features/steps/types";
+import type { WorkoutSessionResponse } from "@/features/workouts/types";
+
+/** Every list the statistics page loads, as the API returned it. */
+export interface RawData {
+  meals: MealResponse[];
+  weights: WeightResponse[];
+  water: WaterEntryResponse[];
+  steps: DailyStepCountResponse[];
+  sessions: WorkoutSessionResponse[];
+}
+
 export interface StatisticsResponse {
   totalCalories: number | null;
   totalProtein: number | null;
@@ -14,3 +29,10 @@ export interface StatisticsResponse {
   totalDistanceMeters: number;
   totalElevationGainMeters: number;
 }
+
+/**
+ * The Mozgás section's filter (docs/cardio/56 D-C3.4, W5.5): which movement cards show. It never changes a number —
+ * calories and weight sit outside it, and so do the KPI tiles.
+ */
+export const STAT_KIND_FILTERS = ["ALL", "STRENGTH", "CARDIO"] as const;
+export type StatKindFilter = (typeof STAT_KIND_FILTERS)[number];

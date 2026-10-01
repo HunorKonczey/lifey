@@ -40,15 +40,15 @@ export function RecipeThumbnail({ recipeId, hasImage, size = 80 }: RecipeThumbna
 
   return (
     <div
-      className="rounded-[var(--r-md)] flex items-center justify-center shrink-0 overflow-hidden"
-      style={{ width: size, height: size, background: "var(--surface-container)" }}
+      className="rounded-[var(--r-control)] flex items-center justify-center shrink-0 overflow-hidden"
+      style={{ width: size, height: size, background: "var(--nested)" }}
     >
       {objectUrl ? (
         // Blob object URLs aren't compatible with next/image's optimizer.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={objectUrl} alt="" className="w-full h-full object-cover" />
       ) : (
-        <span className="material-symbols-rounded" style={{ color: "var(--secondary)", fontSize: size * 0.5 }}>
+        <span className="material-symbols-rounded" style={{ color: "var(--role)", fontSize: size * 0.5 }}>
           menu_book
         </span>
       )}

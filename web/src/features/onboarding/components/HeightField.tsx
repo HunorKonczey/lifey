@@ -14,7 +14,7 @@ interface Props {
   unitSystem: UnitSystem;
 }
 
-const inputStyle = { background: "var(--surface-container)", border: "1px solid var(--outline)" };
+const inputStyle = { background: "var(--nested)", border: "1px solid var(--outline)" };
 
 /** Height input, unit-aware (cm vs ft/in). Shared between the onboarding
  *  wizard's Body step and Settings > Profile. Settings seeds the form's
@@ -43,35 +43,35 @@ export function HeightField({ register, setValue, errors, unitSystem }: Props) {
       <label className="text-sm font-semibold">{t("height")}</label>
       {isImperial ? (
         <div className="flex gap-2">
-          <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)]" style={inputStyle} data-ring-frame>
+          <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-control)]" style={inputStyle} data-ring-frame>
             <input
-              type="number" min={0} placeholder="5" value={feet}
+              type="number" min={0} placeholder="5" value={feet} aria-label={`${t("height")} (${t("feet")})`}
               onChange={(e) => applyHeightImperial(e.target.value, inches)}
               className="w-12 min-w-0 bg-transparent outline-none text-sm tabular"
             />
-            <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>{t("feet")}</span>
+            <span className="text-sm" style={{ color: "var(--text-2)" }}>{t("feet")}</span>
           </div>
-          <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)]" style={inputStyle} data-ring-frame>
+          <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-control)]" style={inputStyle} data-ring-frame>
             <input
-              type="number" min={0} max={11} placeholder="10" value={inches}
+              type="number" min={0} max={11} placeholder="10" value={inches} aria-label={`${t("height")} (${t("inches")})`}
               onChange={(e) => applyHeightImperial(feet, e.target.value)}
               className="w-12 min-w-0 bg-transparent outline-none text-sm tabular"
             />
-            <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>{t("inches")}</span>
+            <span className="text-sm" style={{ color: "var(--text-2)" }}>{t("inches")}</span>
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)] w-40" style={inputStyle} data-ring-frame>
+        <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-control)] w-40" style={inputStyle} data-ring-frame>
           <input
             {...register("heightCm", { valueAsNumber: true })}
-            type="number" step="0.1"
+            type="number" step="0.1" aria-label={t("height")}
             className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
           />
-          <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>cm</span>
+          <span className="text-sm" style={{ color: "var(--text-2)" }}>cm</span>
         </div>
       )}
       {errors.heightCm && (
-        <p className="text-xs" style={{ color: "var(--error)" }}>{t(errors.heightCm.message ?? "heightRange")}</p>
+        <p className="text-xs" style={{ color: "var(--heart)" }}>{t(errors.heightCm.message ?? "heightRange")}</p>
       )}
     </div>
   );

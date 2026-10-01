@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Avatar, colorForSeed } from "@/components/ds";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { chatApi } from "../api";
-
-const PALETTE = ["#C49A6C", "#8AA0B4", "#B08AC8", "#D8B35A", "#6FA8C4", "#9DAE6B", "#E0915A"];
 
 /**
  * Monogram from the peer's display name — the fallback whenever there is no
@@ -56,32 +55,11 @@ export function ChatAvatar({ userId, displayName, size = 42, muted = false }: Ch
 
   const objectUrl = objectUrlFor(userId, blob);
 
+  // The DS monogram (a per-person hue from the metric palette, the same hashing the phone uses) with the peer's picture over it
+  // when there is one; an archived row is muted as a whole, picture included.
   return (
-    <div
-      aria-hidden
-      className="rounded-full flex items-center justify-center font-extrabold shrink-0 overflow-hidden"
-      style={{
-        width: size,
-        height: size,
-        background: muted ? "var(--surface-high)" : PALETTE[userId % PALETTE.length],
-        color: muted ? "var(--on-surface-variant)" : "#161611",
-        fontSize: size * 0.33,
-      }}
-    >
-      {objectUrl ? (
-        // Blob object URLs aren't compatible with next/image's optimizer.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={objectUrl}
-          alt=""
-          className="w-full h-full object-cover"
-          // The archived row is muted as a whole; the picture follows it rather
-          // than staying the one bright thing in a greyed-out line.
-          style={{ opacity: muted ? 0.45 : 1 }}
-        />
-      ) : (
-        initialsFromName(displayName)
-      )}
-    </div>
+    <span className="inline-flex shrink-0" style={{ opacity: muted ? 0.5 : 1 }}>
+      <Avatar name={displayName} size={size} color={colorForSeed(displayName)} src={objectUrl ?? undefined} />
+    </span>
   );
 }

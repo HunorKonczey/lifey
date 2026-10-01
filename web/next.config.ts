@@ -37,7 +37,8 @@ const csp = [
   // without a nonce setup. 'unsafe-eval' is dev-only (Turbopack/HMR).
   // accounts.google.com/gsi/client is the Google Identity Services button script.
   `script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}`,
-  `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
+  // accounts.google.com/gsi/style is the Google Identity Services button's stylesheet.
+  `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style`,
   `font-src 'self' https://fonts.gstatic.com`,
   `img-src 'self' data: blob:`,
   `connect-src 'self' ${connectOrigins()} https://accounts.google.com${process.env.NODE_ENV === "production" ? "" : " ws:"}`,

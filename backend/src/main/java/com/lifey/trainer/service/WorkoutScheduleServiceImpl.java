@@ -9,6 +9,7 @@ import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.WorkoutScheduleRepository;
 import com.lifey.trainer.dto.OccurrenceStatus;
+import com.lifey.trainer.dto.MoveOccurrenceRequest;
 import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
 import com.lifey.trainer.dto.ScheduleSummaryResponse;
@@ -20,6 +21,7 @@ import com.lifey.trainer.entity.WorkoutSchedule;
 import com.lifey.trainer.exception.CalendarRangeExceededException;
 import com.lifey.trainer.exception.EmptyRecurrenceException;
 import com.lifey.trainer.exception.OccurrenceNotCancellableException;
+import com.lifey.trainer.exception.OccurrenceNotMovableException;
 import com.lifey.trainer.exception.ScheduleHorizonExceededException;
 import com.lifey.trainer.exception.ScheduleInPastException;
 import com.lifey.trainer.exception.ScheduleNotFoundException;
@@ -264,7 +266,42 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
 
     @Override
     public void cancelOccurrence(Long sessionId) {
-        Long trainerId = currentUserProvider.getUserId();
+        WorkoutSession occurrence = requireOwnedOccurrence(sessionId, currentUserProvider.getUserId());
+
+        if (occurrence.getStartedAt() != null || occurrence.getDeletedAt() != null
+                || occurrence.getScheduledFor().isBefore(LocalDate.now())) {
+            throw new OccurrenceNotCancellableException(
+                    "Only a future, not-yet-started occurrence can be cancelled: " + sessionId);
+        }
+        occurrence.setDeletedAt(Instant.now());
+    }
+
+    @Override
+    public ScheduledSessionResponse moveOccurrence(Long sessionId, MoveOccurrenceRequest request) {
+        LocalDate today = LocalDate.now();
+        WorkoutSession occurrence = requireOwnedOccurrence(sessionId, currentUserProvider.getUserId());
+
+        if (occurrence.getStartedAt() != null || occurrence.getDeletedAt() != null
+                || occurrence.getScheduledFor().isBefore(today)) {
+            throw new OccurrenceNotMovableException(
+                    "Only a future, not-yet-started occurrence can be moved: " + sessionId);
+        }
+        if (request.scheduledFor().isBefore(today)) {
+            throw new OccurrenceNotMovableException("An occurrence cannot be moved into the past");
+        }
+        if (request.scheduledFor().isAfter(today.plusMonths(3))) {
+            throw new ScheduleHorizonExceededException("An occurrence cannot be moved more than 3 months ahead");
+        }
+
+        occurrence.setScheduledFor(request.scheduledFor());
+        occurrence.setScheduledTime(request.scheduledTime());
+        // The reminder is for the old slot; the job must send one for the new one.
+        occurrence.setReminderSentAt(null);
+        return toOccurrenceResponse(occurrence);
+    }
+
+    /** The occurrence, if it belongs to a schedule or program assignment of this trainer; otherwise "not found" (never "forbidden"). */
+    private WorkoutSession requireOwnedOccurrence(Long sessionId, Long trainerId) {
         WorkoutSession occurrence = workoutSessionRepository.findById(sessionId)
                 .filter(session -> session.getScheduleId() != null || session.getProgramAssignmentId() != null)
                 .orElseThrow(() -> sessionNotFound(sessionId));
@@ -276,13 +313,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
             programAssignmentRepository.findByIdAndTrainerId(occurrence.getProgramAssignmentId(), trainerId)
                     .orElseThrow(() -> sessionNotFound(sessionId));
         }
-
-        if (occurrence.getStartedAt() != null || occurrence.getDeletedAt() != null
-                || occurrence.getScheduledFor().isBefore(LocalDate.now())) {
-            throw new OccurrenceNotCancellableException(
-                    "Only a future, not-yet-started occurrence can be cancelled: " + sessionId);
-        }
-        occurrence.setDeletedAt(Instant.now());
+        return occurrence;
     }
 
     @Override

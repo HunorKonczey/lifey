@@ -34,7 +34,7 @@ class TrainerClientControllerTest {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
                 new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
                         Instant.parse("2026-06-01T00:00:00Z"),
-                        List.of(), 0, 0, null, null, 0, null, null)));
+                        List.of(), 0, 0, null, null, 0, null, null, null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())
@@ -49,12 +49,13 @@ class TrainerClientControllerTest {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
                 new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
                         Instant.parse("2026-06-01T00:00:00Z"),
-                        List.of(), 0, 6, null, null, 0, 1631, 2)));
+                        List.of(), 0, 6, null, null, 0, 1631, 2, 1900)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].avgCalories7d").value(1631))
-                .andExpect(jsonPath("$[0].prCount7d").value(2));
+                .andExpect(jsonPath("$[0].prCount7d").value(2))
+                .andExpect(jsonPath("$[0].dailyCalorieGoal").value(1900));
     }
 
     @Test
@@ -62,12 +63,14 @@ class TrainerClientControllerTest {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
                 new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
                         Instant.parse("2026-06-01T00:00:00Z"),
-                        List.of(), 0, 0, null, null, 0, null, 0)));
+                        List.of(), 0, 0, null, null, 0, null, 0, null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].avgCalories7d").doesNotExist())
-                .andExpect(jsonPath("$[0].prCount7d").value(0));
+                .andExpect(jsonPath("$[0].prCount7d").value(0))
+                // No goal set: the field is absent (null), never 0.
+                .andExpect(jsonPath("$[0].dailyCalorieGoal").doesNotExist());
     }
 
     @Test

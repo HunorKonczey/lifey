@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isBefore, startOfDay, startOfMonth, startOfWeek } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { useLocale } from "@/lib/hooks/useLocale";
+import { useFormat } from "@/lib/format/useFormat";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { Switch } from "@/components/ui/Switch";
+import { useToast } from "@/lib/hooks/useToast";
+import { ApiError } from "@/lib/api/client";
+import { useTopBarCentre } from "@/lib/hooks/useTopBarSlot";
+import { Button, Icon, IconButton, SegmentedControl, Switch } from "@/components/ds";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { CalendarWeekView } from "./CalendarWeekView";
@@ -20,75 +21,63 @@ import { CalendarAgendaView } from "./CalendarAgendaView";
 import { CalendarWeekSkeleton, CalendarMonthSkeleton, CalendarAgendaSkeleton } from "./CalendarSkeleton";
 import { CalendarSessionPeek } from "./CalendarSessionPeek";
 import { CalendarClientFilter } from "./CalendarClientFilter";
+import { clientDisplayName } from "./ClientAvatar";
 import { ScheduleWorkoutDrawer } from "./ScheduleWorkoutDrawer";
+import { moveBody, type DropSlot } from "../calendarGrid";
 import type { TrainerCalendarSessionResponse } from "../types";
 
-const DATE_LOCALES = { en: enUS, hu } as const;
-
-type View = "week" | "month";
-
-function formatWeekRange(start: Date, end: Date, locale: typeof enUS) {
-  const sameMonth = start.getMonth() === end.getMonth();
-  if (sameMonth) return `${format(start, "MMM d", { locale })}–${format(end, "d.", { locale })}`;
-  return `${format(start, "MMM d.", { locale })} – ${format(end, "MMM d.", { locale })}`;
-}
+type View = "day" | "week" | "month";
 
 /**
- * Trainer calendar (docs/personal_trainer/12-edzo-naptar-terv.md, design:
- * design/Lifey Calendar.dc.html) — every active client's scheduled workouts
- * in one view.
+ * The trainer calendar (W8-A): every active client's scheduled workouts in one view. The period navigator ("‹ szept.
+ * 22–28., 2026 ›" and "Ma") sits in the top bar's centre; the header row carries Nap · Hét · Hónap, the client filter,
+ * the cancelled switch and the primary "Ütemezés". "Nap" is one column of the week grid.
  */
 export function TrainerCalendar() {
   const t = useTranslations("admin.calendar");
   const tDashboard = useTranslations("admin.dashboard");
   const tSchedule = useTranslations("admin.schedule");
-  const locale = useLocale((s) => s.locale);
-  const dateLocale = DATE_LOCALES[locale];
-  /* Below tablet width the 7-column week grid doesn't fit — collapse to an
-   * agenda list / dot-month instead (design: D frame, "tablet alatt"). */
+  const fmt = useFormat();
+  const queryClient = useQueryClient();
+  const { show } = useToast();
+  const phone = useMediaQuery("(max-width: 767px)");
+  /* Below the desktop width the 7-column grid does not fit: the week becomes an agenda list, the month dots. */
   const narrow = useMediaQuery("(max-width: 1023px)");
 
   const [view, setView] = useState<View>("week");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
-  const [scheduleDrawerDate, setScheduleDrawerDate] = useState<string | null>(null);
+  const [slot, setSlot] = useState<{ date: string; time: string | null } | null>(null);
   const [peek, setPeek] = useState<{ session: TrainerCalendarSessionResponse; anchor: HTMLElement } | null>(null);
-  /* Empty set = every client shown (decision: default to "all clients", track exclusions
-   * instead of inclusions so no async client-list load is needed to initialize it). */
+  /* Empty set = every client shown: exclusions are tracked, not inclusions, so no async client list is needed to initialise it. */
   const [deselectedClientIds, setDeselectedClientIds] = useState<Set<number>>(new Set());
   /* Cancelled occurrences are hidden by default (decision #7 in the design doc). */
   const [showCancelled, setShowCancelled] = useState(false);
 
-  const clientsQ = useQuery({
-    queryKey: queryKeys.trainerClients.all(),
-    queryFn: trainerApi.clients,
-  });
+  const clientsQ = useQuery({ queryKey: queryKeys.trainerClients.all(), queryFn: trainerApi.clients });
   const clients = clientsQ.data;
   const noClients = clientsQ.isSuccess && clientsQ.data.length === 0;
+  const names = useMemo(() => new Map((clients ?? []).map((c) => [c.clientId, clientDisplayName(c)])), [clients]);
 
   const weekStart = startOfWeek(anchorDate, { weekStartsOn: 1 });
   const weekEnd = addDays(weekStart, 6);
-
   const monthStart = startOfMonth(anchorDate);
   const monthEnd = endOfMonth(anchorDate);
   const monthGridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const monthGridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
 
-  /* The whole displayed period has already passed (not just "today is later in
-   * the week than Monday") — scheduling only allows a start date of today or later. */
-  const isPastPeriod = isBefore(view === "week" ? weekEnd : monthEnd, startOfDay(new Date()));
+  const periodEnd = view === "month" ? monthEnd : view === "day" ? anchorDate : weekEnd;
+  /* The whole displayed period has passed — scheduling only allows a start date of today or later. */
+  const isPastPeriod = isBefore(periodEnd, startOfDay(new Date()));
 
-  const rangeStart = view === "week" ? weekStart : monthGridStart;
-  const rangeEnd = view === "week" ? weekEnd : monthGridEnd;
-  const from = format(rangeStart, "yyyy-MM-dd");
-  const to = format(rangeEnd, "yyyy-MM-dd");
+  const from = format(view === "month" ? monthGridStart : weekStart, "yyyy-MM-dd");
+  const to = format(view === "month" ? monthGridEnd : weekEnd, "yyyy-MM-dd");
 
   const { data: sessions, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.trainerCalendar.range(from, to),
     queryFn: () => trainerApi.calendarSessions(from, to),
   });
-  const visibleSessions = (sessions ?? []).filter(
-    (s) => (showCancelled || s.status !== "CANCELLED") && !deselectedClientIds.has(s.clientId),
-  );
+  const visibleSessions = (sessions ?? []).filter((s) => (showCancelled || s.status !== "CANCELLED") && !deselectedClientIds.has(s.clientId));
+  const daySessions = view === "day" ? visibleSessions.filter((s) => s.scheduledFor === format(anchorDate, "yyyy-MM-dd")) : visibleSessions;
 
   const toggleClient = (clientId: number) => {
     setDeselectedClientIds((prev) => {
@@ -98,184 +87,157 @@ export function TrainerCalendar() {
       return next;
     });
   };
-  const toggleAllClients = () => {
-    setDeselectedClientIds((prev) => (prev.size === 0 ? new Set((clients ?? []).map((c) => c.clientId)) : new Set()));
-  };
+  const toggleAllClients = () => setDeselectedClientIds((prev) => (prev.size === 0 ? new Set((clients ?? []).map((c) => c.clientId)) : new Set()));
 
   const periodLabel =
     view === "week"
-      ? formatWeekRange(weekStart, weekEnd, dateLocale)
-      : locale === "hu"
-        ? format(anchorDate, "yyyy. MMMM", { locale: dateLocale })
-        : format(anchorDate, "MMMM yyyy", { locale: dateLocale });
+      ? `${fmt.dateRange(weekStart, weekEnd)}, ${weekStart.getFullYear()}`
+      : view === "day"
+        ? fmt.longDate(anchorDate)
+        : fmt.monthYear(anchorDate);
 
-  const goToday = () => setAnchorDate(new Date());
-  const goPrev = () => setAnchorDate((d) => (view === "week" ? addWeeks(d, -1) : addMonths(d, -1)));
-  const goNext = () => setAnchorDate((d) => (view === "week" ? addWeeks(d, 1) : addMonths(d, 1)));
-  /* Toolbar CTA — always defaults to today, regardless of which week/month is displayed. */
-  const openScheduleDrawer = () => setScheduleDrawerDate(format(new Date(), "yyyy-MM-dd"));
+  // Drag to move (W8.5b) and Shift + drag to copy. A move is the PATCH endpoint; a copy is a new one-off schedule of the same
+  // workout for the same client — which needs the schedule's template, so only an occurrence of a plain schedule can be copied.
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["trainer-calendar"] });
+  const moveMutation = useMutation({
+    mutationFn: ({ session, slot }: { session: TrainerCalendarSessionResponse; slot: DropSlot }) => trainerApi.moveOccurrence(session.sessionId, moveBody(slot)),
+    onSuccess: () => {
+      refresh();
+      show(t("moved"), "success");
+    },
+    onError: (e) => show(e instanceof ApiError && e.status === 422 ? tSchedule("horizonExceeded") : t("moveFailed"), "error"),
+  });
+  const copyMutation = useMutation({
+    mutationFn: async ({ session, slot }: { session: TrainerCalendarSessionResponse; slot: DropSlot }) => {
+      const schedules = await trainerApi.schedulesForClient(session.clientId);
+      const origin = schedules.find((x) => x.id === session.scheduleId);
+      if (!origin) throw new Error("no-template");
+      return trainerApi.createSchedule({ clientId: session.clientId, templateId: origin.templateId, recurrence: "ONCE", daysOfWeek: [], timeOfDay: slot.time, startDate: slot.date, endDate: slot.date });
+    },
+    onSuccess: () => {
+      refresh();
+      show(t("copied"), "success");
+    },
+    onError: (e) => show(e instanceof Error && e.message === "no-template" ? t("copyUnavailable") : t("copyFailed"), "error"),
+  });
+  const dropSession = (session: TrainerCalendarSessionResponse, slot: DropSlot, copy: boolean) => (copy ? copyMutation.mutate({ session, slot }) : moveMutation.mutate({ session, slot }));
+
+  const step = useCallback(
+    (dir: 1 | -1) => setAnchorDate((d) => (view === "month" ? addMonths(d, dir) : view === "day" ? addDays(d, dir) : addWeeks(d, dir))),
+    [view],
+  );
+  const prevLabel = view === "month" ? t("previousMonth") : view === "day" ? t("previousDay") : t("previousWeek");
+  const nextLabel = view === "month" ? t("nextMonth") : view === "day" ? t("nextDay") : t("nextWeek");
+  const todayLabel = t("today");
+
+  const navNode = useMemo(
+    () => (
+      <div className="flex items-center gap-1.5">
+        <Button variant="secondary" onClick={() => setAnchorDate(new Date())}>{todayLabel}</Button>
+        <IconButton icon="chevron_left" label={prevLabel} onClick={() => step(-1)} />
+        <span className="type-body px-1 whitespace-nowrap" style={{ fontWeight: 800 }} aria-live="polite">{periodLabel}</span>
+        <IconButton icon="chevron_right" label={nextLabel} onClick={() => step(1)} />
+      </div>
+    ),
+    [todayLabel, prevLabel, nextLabel, periodLabel, step],
+  );
+  useTopBarCentre(phone ? null : navNode);
+
+  /* Toolbar CTA — always defaults to today, whatever period is displayed. */
+  const openSchedule = () => setSlot({ date: format(new Date(), "yyyy-MM-dd"), time: null });
+
+  const days = view === "day" ? [anchorDate] : Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <div className="flex flex-col gap-3" style={{ minHeight: "calc(100vh - 120px)" }}>
-      <div
-        className="rounded-2xl px-2.5 py-2 flex items-center gap-2.5 flex-none flex-wrap"
-        style={{ background: "var(--surface-high)" }}
-      >
-        <button
-          onClick={goToday}
-          className="rounded-[11px] px-3.5 py-2 text-[12.5px] font-bold"
-          style={{ border: "1px solid var(--outline)", color: "var(--on-surface)" }}
-        >
-          {t("today")}
-        </button>
-        <div className="flex gap-1">
-          <button
-            onClick={goPrev}
-            aria-label={view === "week" ? t("previousWeek") : t("previousMonth")}
-            className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center"
-            style={{ background: "var(--bg)", color: "var(--on-surface-variant)" }}
-          >
-            <span className="material-symbols-rounded text-[19px]">chevron_left</span>
-          </button>
-          <button
-            onClick={goNext}
-            aria-label={view === "week" ? t("nextWeek") : t("nextMonth")}
-            className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center"
-            style={{ background: "var(--bg)", color: "var(--on-surface-variant)" }}
-          >
-            <span className="material-symbols-rounded text-[19px]">chevron_right</span>
-          </button>
-        </div>
-        <span className="text-[15.5px] font-extrabold ml-1" style={{ color: "var(--on-surface)" }}>
-          {periodLabel}
-        </span>
-        <div className="flex-1" />
-        <SegmentedControl
+    <div className="flex flex-col gap-4">
+      {phone && <div className="flex justify-center">{navNode}</div>}
+      <div className="flex flex-wrap items-center gap-3">
+        <SegmentedControl<View>
+          aria-label={t("viewAria")}
+          size="sm"
+          value={view}
+          onChange={setView}
           options={[
+            { value: "day", label: t("day") },
             { value: "week", label: t("week") },
             { value: "month", label: t("month") },
           ]}
-          value={view}
-          onChange={setView}
-          size="sm"
-          activeBackground="var(--tertiary)"
-          activeColor="#161611"
         />
         {clients && clients.length > 0 && (
-          <CalendarClientFilter
-            clients={clients}
-            deselectedClientIds={deselectedClientIds}
-            onToggleClient={toggleClient}
-            onToggleAll={toggleAllClients}
-          />
+          <CalendarClientFilter clients={clients} deselectedClientIds={deselectedClientIds} onToggleClient={toggleClient} onToggleAll={toggleAllClients} />
         )}
         <Switch checked={showCancelled} onChange={setShowCancelled} label={t("showCancelled")} />
-        <button
-          onClick={openScheduleDrawer}
-          disabled={isPastPeriod}
-          className="flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-[12.5px] font-extrabold disabled:cursor-not-allowed"
-          style={{
-            background: isPastPeriod ? "var(--surface-highest)" : "var(--tertiary)",
-            color: isPastPeriod ? "var(--on-surface-variant)" : "#161611",
-          }}
-        >
-          <span className="material-symbols-rounded text-lg">add</span>
+        <div className="flex-1" />
+        <Button onClick={openSchedule} disabled={isPastPeriod}>
+          <Icon name="add" size={20} />
           {tSchedule("scheduleWorkout")}
-        </button>
+        </Button>
       </div>
 
       {noClients ? (
-        <div className="rounded-2xl p-8 text-center" style={{ background: "var(--surface)" }}>
-          <div
-            className="w-[58px] h-[58px] rounded-[18px] flex items-center justify-center mx-auto mb-3"
-            style={{ background: "var(--surface-container)", color: "var(--tertiary)" }}
-          >
-            <span className="material-symbols-rounded text-3xl">group</span>
-          </div>
-          <p className="text-[15px] font-extrabold" style={{ color: "var(--on-surface)" }}>
-            {tDashboard("noClientsTitle")}
-          </p>
-          <p className="text-xs mt-1" style={{ color: "var(--on-surface-variant)" }}>
-            {tDashboard("noClientsBody")}
-          </p>
-          <Link
-            href="/admin/invites"
-            className="inline-flex items-center gap-2 rounded-2xl px-4.5 py-2.5 text-[13px] font-extrabold mt-4"
-            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-          >
-            <span className="material-symbols-rounded text-lg">person_add</span>
-            {tDashboard("inviteFirst")}
+        <div className="flex flex-col items-center gap-3 p-10 text-center" style={{ borderRadius: "var(--r-card)", background: "var(--card)" }}>
+          <Icon name="group" size={36} color="var(--text-3)" />
+          <p style={{ fontSize: 18, fontWeight: 800 }}>{tDashboard("noClientsTitle")}</p>
+          <p className="type-body" style={{ color: "var(--text-2)" }}>{tDashboard("noClientsBody")}</p>
+          <Link href="/admin/invites">
+            <Button>
+              <Icon name="person_add" size={20} />
+              {tDashboard("inviteFirst")}
+            </Button>
           </Link>
         </div>
       ) : isLoading ? (
-        view === "week" ? (
-          narrow ? <CalendarAgendaSkeleton /> : <CalendarWeekSkeleton />
-        ) : (
-          <CalendarMonthSkeleton />
-        )
+        view === "month" ? <CalendarMonthSkeleton /> : narrow && view === "week" ? <CalendarAgendaSkeleton /> : <CalendarWeekSkeleton />
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
-      ) : visibleSessions.length === 0 ? (
-        <EmptyState
-          icon="calendar_month"
-          title={t("emptyTitle")}
-          body={t("emptyBody")}
-          action={
-            isPastPeriod ? undefined : (
-              <button
-                onClick={openScheduleDrawer}
-                className="flex items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[13px] font-extrabold"
-                style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-              >
-                <span className="material-symbols-rounded text-lg">add</span>
-                {tSchedule("scheduleWorkout")}
-              </button>
-            )
-          }
-        />
-      ) : view === "week" ? (
-        narrow ? (
-          <CalendarAgendaView
-            weekStart={weekStart}
-            sessions={visibleSessions}
-            onSelectSession={(session, anchor) => setPeek({ session, anchor })}
-          />
-        ) : (
-          <CalendarWeekView
-            weekStart={weekStart}
-            sessions={visibleSessions}
-            onScheduleDay={setScheduleDrawerDate}
-            onSelectSession={(session, anchor) => setPeek({ session, anchor })}
-          />
-        )
-      ) : (
+      ) : view === "month" ? (
         <CalendarMonthView
           monthAnchor={anchorDate}
           sessions={visibleSessions}
           compact={narrow}
           onSelectDay={(day) => {
             setAnchorDate(day);
-            setView("week");
+            setView("day");
           }}
           onSelectSession={(session, anchor) => setPeek({ session, anchor })}
         />
+      ) : view === "week" && narrow ? (
+        visibleSessions.length === 0 ? (
+          <EmptyState icon="calendar_month" title={t("emptyTitle")} body={t("emptyBody")} />
+        ) : (
+          <CalendarAgendaView weekStart={weekStart} sessions={visibleSessions} names={names} onSelectSession={(session, anchor) => setPeek({ session, anchor })} />
+        )
+      ) : (
+        <>
+          <CalendarWeekView
+            days={days}
+            sessions={daySessions}
+            names={names}
+            onScheduleSlot={(date, time) => setSlot({ date, time })}
+            onSelectSession={(session, anchor) => setPeek({ session, anchor })}
+            onDropSession={dropSession}
+          />
+          <ul className="flex flex-wrap items-center gap-x-5 gap-y-1 type-body-s" style={{ color: "var(--text-2)" }} aria-label={t("legendAria")}>
+            {([["var(--primary)", "UPCOMING"], ["var(--m-protein)", "DONE"], ["var(--heart)", "MISSED"]] as const).map(([color, status]) => (
+              <li key={status} className="inline-flex items-center gap-1.5">
+                <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
+                {tSchedule(`status.${status}`)}
+              </li>
+            ))}
+            <li className="inline-flex items-center gap-1.5" style={{ color: "var(--text-3)" }}>{t("dragHint")}</li>
+          </ul>
+        </>
       )}
 
-      {scheduleDrawerDate && (
+      {slot && (
         <ScheduleWorkoutDrawer
-          initialStartDate={scheduleDrawerDate}
-          onClose={() => setScheduleDrawerDate(null)}
+          initialStartDate={slot.date}
+          initialTimeOfDay={slot.time ?? undefined}
+          onClose={() => setSlot(null)}
         />
       )}
 
-      {peek && (
-        <CalendarSessionPeek
-          key={peek.session.sessionId}
-          session={peek.session}
-          anchorEl={peek.anchor}
-          onClose={() => setPeek(null)}
-        />
-      )}
+      {peek && <CalendarSessionPeek key={peek.session.sessionId} session={peek.session} anchorEl={peek.anchor} clientName={names.get(peek.session.clientId)} onClose={() => setPeek(null)} />}
     </div>
   );
 }

@@ -71,6 +71,7 @@ class TrainerRequestServiceImplTest {
         User user = new User();
         user.setId(id);
         user.setEmail("user" + id + "@example.com");
+        user.setCreatedAt(java.time.Instant.parse("2026-08-01T09:00:00Z"));
         user.setRoles(new HashSet<>(Set.of(roles)));
         return user;
     }
@@ -168,6 +169,7 @@ class TrainerRequestServiceImplTest {
             assertThat(r.id()).isEqualTo(7L);
             assertThat(r.userId()).isEqualTo(USER_ID);
             assertThat(r.userEmail()).isEqualTo(requester.getEmail());
+            assertThat(r.userCreatedAt()).isEqualTo(requester.getCreatedAt());
         });
     }
 

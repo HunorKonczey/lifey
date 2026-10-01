@@ -1,5 +1,6 @@
 package com.lifey.trainer.controller;
 
+import com.lifey.trainer.dto.MoveOccurrenceRequest;
 import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
 import com.lifey.trainer.dto.ScheduleSummaryResponse;
@@ -71,6 +72,16 @@ public class WorkoutScheduleController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancelSchedule(@PathVariable Long scheduleId) {
         workoutScheduleService.cancelSchedule(scheduleId);
+    }
+
+    @Operation(summary = "Move a single scheduled occurrence to another day and time",
+            description = "Only an upcoming occurrence (not started, not cancelled, not in the past) of the trainer's own "
+                    + "schedule or program assignment, onto today or a later day within three months. 409 if it cannot be "
+                    + "moved, 422 if the target is beyond the horizon, 404 if it is not the trainer's.")
+    @PatchMapping("/scheduled-sessions/{sessionId}")
+    public ScheduledSessionResponse moveOccurrence(@PathVariable Long sessionId,
+                                                   @Valid @RequestBody MoveOccurrenceRequest request) {
+        return workoutScheduleService.moveOccurrence(sessionId, request);
     }
 
     @Operation(summary = "Cancel a single scheduled occurrence",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildHrZoneBreakdown } from "./hrZoneBreakdown";
+import { buildHrZoneBreakdown, wholePercents } from "./hrZoneBreakdown";
 import type { WorkoutSessionResponse, CardioDetailsResponse } from "./types";
 
 /**
@@ -156,5 +156,36 @@ describe("the spoken verdict (M43 — colour alone is not accessible)", () => {
     )!;
     expect(breakdown.intensity).toBe("hard");
     expect(breakdown.isPartial).toBe(true);
+  });
+});
+
+describe("wholePercents (W3.10) — largest remainder, always 100", () => {
+  const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+
+  it("three equal thirds are 34 / 33 / 33, not 33 / 33 / 33", () => {
+    expect(wholePercents([1, 1, 1])).toEqual([34, 33, 33]);
+  });
+
+  it("50.4 / 25.3 / 24.3 floors to 99; the spare point goes to the largest remainder", () => {
+    const p = wholePercents([504, 253, 243]);
+    expect(sum(p)).toBe(100);
+    expect(p).toEqual([51, 25, 24]);
+  });
+
+  it("zones with no time stay 0 and the rest still add up", () => {
+    const p = wholePercents([0, 600, 0, 1300, 100]);
+    expect(p[0]).toBe(0);
+    expect(p[2]).toBe(0);
+    expect(sum(p)).toBe(100);
+  });
+
+  it("holds for arbitrary zone seconds", () => {
+    for (const secs of [[7, 11, 13, 17, 19], [1, 0, 0, 0, 0], [333, 333, 334, 0, 0], [59, 61, 421, 77, 3]]) {
+      expect(sum(wholePercents(secs))).toBe(100);
+    }
+  });
+
+  it("all-zero input is all zero", () => {
+    expect(wholePercents([0, 0, 0, 0, 0])).toEqual([0, 0, 0, 0, 0]);
   });
 });

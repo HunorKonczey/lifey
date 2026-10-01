@@ -1,5 +1,5 @@
 import { api, ApiError, type Page } from "@/lib/api/client";
-import type { RoleAuditLogResponse, SuperAdminUserResponse } from "./types";
+import type { GlobalRoleAuditResponse, RoleAuditLogResponse, SuperAdminStatsResponse, SuperAdminUserResponse } from "./types";
 
 export const superAdminApi = {
   users: (params: { page: number; size?: number; search?: string }) => {
@@ -16,6 +16,10 @@ export const superAdminApi = {
     api.delete(`/superadmin/users/${userId}/roles/ROLE_TRAINER`),
   roleAudit: (userId: number) =>
     api.get<RoleAuditLogResponse[]>(`/superadmin/users/${userId}/role-audit`),
+  stats: () => api.get<SuperAdminStatsResponse>("/superadmin/stats"),
+  /** The global role-change feed, newest first. */
+  globalRoleAudit: (params: { page: number; size?: number }) =>
+    api.get<Page<GlobalRoleAuditResponse>>(`/superadmin/role-audit?page=${params.page}&size=${params.size ?? 30}`),
   /** Returns null (not an error) when the user has no profile picture set. */
   userAvatar: async (userId: number): Promise<Blob | null> => {
     try {

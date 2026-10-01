@@ -24,12 +24,12 @@ export function RecommendedWorkoutCard({
       disabled={starting}
       className="w-full flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] text-left disabled:opacity-60"
       style={{
-        background: "color-mix(in srgb, var(--primary) 12%, var(--surface))",
+        background: "color-mix(in srgb, var(--primary) 12%, var(--card))",
         border: "1px solid color-mix(in srgb, var(--primary) 45%, transparent)",
       }}
     >
       <div
-        className="flex items-center justify-center w-11 h-11 rounded-[var(--r-input)] shrink-0"
+        className="flex items-center justify-center w-11 h-11 rounded-[var(--r-control)] shrink-0"
         style={{ background: "color-mix(in srgb, var(--primary) 18%, transparent)" }}
       >
         <span className="material-symbols-rounded text-2xl" style={{ color: "var(--primary)" }}>

@@ -219,23 +219,22 @@ test.describe("Trainer compliance overview", () => {
       await page.waitForURL("**/dashboard");
 
       await page.goto("/admin");
-      await page.getByRole("button", { name: "Close" }).click();
 
-      const needsAttention = page.getByText(/Needs attention/);
-      await expect(needsAttention).toBeVisible();
-      await expect(page.getByText("1 missed workout").first()).toBeVisible();
+      // W7: "Needs your attention today" - one card per kind (inactive / missed workouts / record); the clients
+      // themselves are cards below with one attention line under the name.
+      await expect(page.getByText(/Needs your attention today/)).toBeVisible();
+      await expect(page.getByText(/1 missed workout/).first()).toBeVisible();
       await expect(page.getByText(/days inactive/).first()).toBeVisible();
-      await expect(page.getByText(/no weight for \d+ days/).first()).toBeVisible();
 
       const flaggedCard = page.locator(`[data-testid="client-card"][data-client-email="${flaggedEmail}"]`);
-      await expect(flaggedCard.getByText("1 missed workout")).toBeVisible();
+      await expect(flaggedCard.getByText(/days inactive/)).toBeVisible();
 
       const freshCard = page.locator(`[data-testid="client-card"][data-client-email="${freshEmail}"]`);
-      await expect(freshCard.getByText(/missed workout|inactive|no weight/)).toHaveCount(0);
+      await expect(freshCard.getByText(/missed workout|inactive/)).toHaveCount(0);
     });
 
-    await test.step("sorting by Least active first moves the flagged client to the top", async () => {
-      await page.getByLabel("Sort clients").selectOption("leastActive");
+    await test.step("the Attention sort puts the flagged client first", async () => {
+      await page.getByRole("radio", { name: "Attention" }).click();
       const cards = page.getByTestId("client-card");
       await expect(cards.first()).toHaveAttribute("data-client-email", flaggedEmail);
     });

@@ -2,27 +2,33 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { format, subDays, isToday } from "date-fns";
 import { mealApi } from "../api";
 import { copyMealPayload } from "../copyMeal";
 import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDateStore } from "@/lib/hooks/useDateStore";
-import { useToast } from "@/lib/hooks/useToast";
+import { TOAST_DURATION_MS, useToast } from "@/lib/hooks/useToast";
+import { useUndoableDelete } from "@/lib/hooks/useUndoableDelete";
+import { keepalivePut } from "@/lib/api/client";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { AddMealEntryDialog } from "./AddMealEntryDialog";
-import { MealCard, mealKcal, mealProtein } from "./MealCard";
-import { computeRemainingBudget, isOver, remainingOf } from "../budget";
+import { EditMealDrawer } from "./EditMealDrawer";
+import { AddFoodFlow } from "./addFood/AddFoodFlow";
+import { ConfirmModal, GridItem, PageGrid } from "@/components/ds";
+import { DaySummaryView } from "./DaySummary";
+import { EmptyMealSlot } from "./EmptyMealSlot";
+import { MealCard, mealCarbs, mealFat, mealKcal, mealProtein } from "./MealCard";
+import { useCopyMeals } from "../useCopyMeals";
 import type { MealResponse, MealType } from "../types";
 import { useFormat } from "@/lib/i18n/format";
 
 export function MealsView() {
   const t = useTranslations("nutrition");
-  const d = useTranslations("dashboard");
+  const common = useTranslations("common");
   const fmt = useFormat();
+  const locale = useLocale();
   const { date } = useDateStore();
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -30,16 +36,20 @@ export function MealsView() {
   const prevDateStr = format(subDays(date, 1), "yyyy-MM-dd");
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
   const [editingMeal, setEditingMeal] = useState<MealResponse | null>(null);
-  const [copyingPreviousDay, setCopyingPreviousDay] = useState(false);
   // Deleting used to fire on the first click with no way back (docs/redesign/web-redesign-prompt.md).
   const [removingMeal, setRemovingMeal] = useState<MealResponse | null>(null);
+  const [removingItem, setRemovingItem] = useState<{ meal: MealResponse; index: number } | null>(null);
+  const undoableDelete = useUndoableDelete();
+  const undoSeconds = TOAST_DURATION_MS / 1000;
 
-  const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
-    { type: "BREAKFAST", label: t("breakfast"), icon: "bakery_dining" },
-    { type: "LUNCH", label: t("lunch"), icon: "lunch_dining" },
-    { type: "DINNER", label: t("dinner"), icon: "dinner_dining" },
-    { type: "SNACK", label: t("snack"), icon: "icecream" },
+  const MEAL_GROUPS: { type: MealType; label: string }[] = [
+    { type: "BREAKFAST", label: t("breakfast") },
+    { type: "LUNCH", label: t("lunch") },
+    { type: "SNACK", label: t("snack") },
+    { type: "DINNER", label: t("dinner") },
   ];
+
+  const mealLabel = (type: MealType) => MEAL_GROUPS.find((g) => g.type === type)!.label;
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.meals.all(),
@@ -52,15 +62,40 @@ export function MealsView() {
     staleTime: 5 * 60_000,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => mealApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show(t("mealRemoved"), "success");
-    },
-    onError: () => show(t("removeFailed"), "error"),
-    onSettled: () => setRemovingMeal(null),
-  });
+  const setCachedMeals = (update: (meals: MealResponse[]) => MealResponse[]) =>
+    queryClient.setQueryData<MealResponse[]>(queryKeys.meals.all(), (old) => update(old ?? []));
+
+  // Delete = confirm, then the meal leaves the list at once and a toast offers Undo; the real DELETE
+  // goes out only when the 6 s window closes (or the tab is left). Undo never touches the network.
+  const deleteMeal = (meal: MealResponse) =>
+    undoableDelete({
+      message: t("mealDeleted", { meal: mealLabel(meal.mealType) }),
+      path: `/meals/${meal.id}`,
+      remove: () => setCachedMeals((list) => list.filter((m) => m.id !== meal.id)),
+      restore: () => setCachedMeals((list) => (list.some((m) => m.id === meal.id) ? list : [...list, meal])),
+      errorMessage: t("removeFailed"),
+    });
+
+  // One food out of a meal is a PUT of the rest, deferred the same way; the last food takes the meal with it.
+  const deleteItem = (meal: MealResponse, index: number) => {
+    if (meal.entries.length <= 1) return deleteMeal(meal);
+    const remaining = meal.entries.filter((_, i) => i !== index);
+    undoableDelete({
+      message: t("itemDeleted", { food: meal.entries[index].foodName }),
+      remove: () => setCachedMeals((list) => list.map((m) => (m.id === meal.id ? { ...m, entries: remaining } : m))),
+      restore: () => setCachedMeals((list) => list.map((m) => (m.id === meal.id ? meal : m))),
+      commit: async () => {
+        await keepalivePut(`/meals/${meal.id}`, {
+          dateTime: meal.dateTime,
+          mealType: meal.mealType,
+          name: meal.name,
+          entries: remaining.map((e) => ({ foodId: e.foodId, quantityInGrams: e.quantityInGrams })),
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
+      },
+      errorMessage: t("removeFailed"),
+    });
+  };
 
   const duplicateMutation = useMutation({
     // Lands on the currently viewed day, not "now" — duplicating while
@@ -73,18 +108,8 @@ export function MealsView() {
     onError: () => show(t("duplicateMealFailed"), "error"),
   });
 
-  const copyMealsMutation = useMutation({
-    mutationFn: async (mealsToCopy: MealResponse[]) => {
-      await Promise.all(mealsToCopy.map((m) => mealApi.create(copyMealPayload(m, date))));
-      return mealsToCopy.length;
-    },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show(t("mealsCopied", { count }), "success");
-      setCopyingPreviousDay(false);
-    },
-    onError: () => show(t("copyDayFailed"), "error"),
-  });
+  // "Yesterday's dinner" on an empty slot: copy + toast with Undo.
+  const copySlot = useCopyMeals(date);
 
   const todayMeals = (data ?? []).filter(
     (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === dateStr,
@@ -92,238 +117,147 @@ export function MealsView() {
   const previousDayMeals = (data ?? []).filter(
     (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === prevDateStr,
   );
-  const previousDayKcal = previousDayMeals.reduce((s, m) => s + mealKcal(m), 0);
 
-  const totalKcal = todayMeals.reduce((s, m) => s + mealKcal(m), 0);
-  const totalProtein = todayMeals.reduce((s, m) => s + mealProtein(m), 0);
-  const totalItems = todayMeals.reduce((s, m) => s + m.entries.length, 0);
-
-  const budget = computeRemainingBudget(
-    { calories: totalKcal, protein: totalProtein },
-    { dailyCalorieGoal: settings?.dailyCalorieGoal ?? null, dailyProteinGoal: settings?.dailyProteinGoal ?? null },
+  const totalKcal = todayMeals.reduce((sum, m) => sum + mealKcal(m), 0);
+  const goalKcal = settings?.dailyCalorieGoal ?? null;
+  const remainingKcal = goalKcal != null ? goalKcal - totalKcal : null;
+  const summary = (
+    <DaySummaryView
+      kcal={totalKcal}
+      goalKcal={goalKcal}
+      macros={{
+        protein: { value: todayMeals.reduce((sum, m) => sum + mealProtein(m), 0), goal: settings?.dailyProteinGoal ?? null },
+        carbs: { value: todayMeals.reduce((sum, m) => sum + mealCarbs(m), 0), goal: settings?.dailyCarbsGoal ?? null },
+        fat: { value: todayMeals.reduce((sum, m) => sum + mealFat(m), 0), goal: settings?.dailyFatGoal ?? null },
+      }}
+    />
   );
-  const remainingKcal = remainingOf(budget.calories);
-  const remainingProtein = remainingOf(budget.protein);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 flex flex-col gap-3">
-          {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}
-        </div>
-        <Skeleton variant="card" className="w-full lg:w-[300px] h-80" />
-      </div>
+      <PageGrid>
+        <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 1, xl: 0 }}>
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}
+          </div>
+        </GridItem>
+        <GridItem span={{ base: 4, md: 8, xl: 4 }} order={{ base: 0, xl: 1 }}>
+          <Skeleton variant="card" className="h-72" />
+        </GridItem>
+      </PageGrid>
     );
   }
 
   if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
-    // Stacks below lg — side by side, the fixed 300 px summary left the meal
-    // column a few pixels wide on a phone.
-    <div className="flex flex-col lg:flex-row gap-6">
+    // 8 + 4 from 1280 (the summary sticky); below that the summary sits above the list (W2-A/B/F).
+    <PageGrid>
       {/* Meal groups */}
-      <div className="flex-1 min-w-0 flex flex-col gap-6">
-        {MEAL_GROUPS.map(({ type, label, icon }) => {
+      <GridItem span={{ base: 4, md: 8, xl: 8 }} order={{ base: 1, xl: 0 }} className="flex flex-col gap-6">
+        {MEAL_GROUPS.map(({ type, label }) => {
           const meals = todayMeals.filter((m) => m.mealType === type);
-          const groupKcal = meals.reduce((s, m) => s + mealKcal(m), 0);
           const prevMeals = previousDayMeals.filter((m) => m.mealType === type);
           // "Yesterday" is only a meaningful label while viewing today —
           // browsing a past day would make the wording ambiguous, so the
-          // shortcut only appears there (the panel's "Copy previous day"
-          // below works for any viewed day).
+          // shortcut only appears there.
           const canCopyYesterday = meals.length === 0 && prevMeals.length > 0 && isToday(date);
-          return (
-            <div key={type} className="flex flex-col gap-2">
-              {/* Section header */}
-              <div className="flex items-center gap-2 px-1">
-                <span className="material-symbols-rounded text-xl" style={{ color: "var(--metric-kcal)" }}>{icon}</span>
-                <span className="font-bold text-sm">{label}</span>
-                {groupKcal > 0 && (
-                  <span className="ml-auto text-sm font-semibold tabular" style={{ color: "var(--metric-kcal)" }}>
-                    {Math.round(groupKcal)} kcal
-                  </span>
-                )}
+
+          // A logged meal type is just its cards (each carries the type's icon and name);
+          // a type with nothing logged is a quiet slot with the budget that still fits (W2.4).
+          if (meals.length > 0) {
+            return (
+              <div key={type} className="flex flex-col gap-3">
+                {meals.map((meal) => (
+                  <MealCard
+                    key={meal.id}
+                    meal={meal}
+                    onAdd={() => setAddingTo(type)}
+                    onEdit={() => setEditingMeal(meal)}
+                    onDuplicate={() => duplicateMutation.mutate(meal)}
+                    onDelete={() => setRemovingMeal(meal)}
+                    onDeleteItem={(index) => setRemovingItem({ meal, index })}
+                  />
+                ))}
               </div>
+            );
+          }
 
-              {/* Meal cards */}
-              {meals.map((meal) => (
-                <MealCard
-                  key={meal.id}
-                  meal={meal}
-                  onEdit={() => setEditingMeal(meal)}
-                  onDuplicate={() => duplicateMutation.mutate(meal)}
-                  onDelete={() => setRemovingMeal(meal)}
-                  isDeleting={deleteMutation.isPending && deleteMutation.variables === meal.id}
-                />
-              ))}
-
-              {/* Add button */}
-              <button
-                onClick={() => setAddingTo(type)}
-                className="w-full py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container"
-                style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
-              >
-                <span className="material-symbols-rounded text-lg">add</span> {t("addTo", { meal: label })}
-              </button>
-
-              {/* Copy yesterday's meals of this type */}
-              {canCopyYesterday && (
-                <button
-                  onClick={() => copyMealsMutation.mutate(prevMeals)}
-                  disabled={copyMealsMutation.isPending}
-                  className="w-full py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container disabled:opacity-50"
-                  style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
-                >
-                  <span className="material-symbols-rounded text-lg">content_copy</span>
-                  {t("copyPreviousDayGhost", {
-                    meal: label,
-                    kcal: Math.round(prevMeals.reduce((s, m) => s + mealKcal(m), 0)),
-                  })}
-                </button>
-              )}
-            </div>
+          return (
+            <EmptyMealSlot
+              key={type}
+              mealType={type}
+              remainingKcal={remainingKcal}
+              copyOffer={
+                canCopyYesterday
+                  ? {
+                      kcal: Math.round(prevMeals.reduce((sum, m) => sum + mealKcal(m), 0)),
+                      pending: copySlot.isPending,
+                      onCopy: () =>
+                        copySlot.mutate({ meals: prevMeals, message: t("slotCopied", { meal: label.toLocaleLowerCase(locale) }) }),
+                    }
+                  : null
+              }
+              onAdd={() => setAddingTo(type)}
+            />
           );
         })}
-      </div>
+      </GridItem>
 
-      {/* Daily summary sticky panel */}
-      <div className="w-full lg:w-[300px] lg:shrink-0 order-first lg:order-none">
-        <div className="lg:sticky lg:top-6 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-4">{t("dailySummary")}</p>
+      {/* Daily summary — sticky beside the list from 1280 */}
+      <GridItem span={{ base: 4, md: 8, xl: 4 }} order={{ base: 0, xl: 1 }}>
+        <div className="xl:sticky xl:top-6">{summary}</div>
+      </GridItem>
 
-          {/* Prominent "what's left today" line — hidden metric-by-metric
-              when its goal isn't set, whole block hidden without any goal. */}
-          {(remainingKcal != null || remainingProtein != null) && (
-            <div className="flex flex-col gap-0.5 mb-3">
-              {remainingKcal != null && (
-                <p
-                  className="text-base font-extrabold tabular"
-                  style={{ color: isOver(budget.calories) ? "var(--goal-negative)" : "var(--goal-positive)" }}
-                >
-                  {isOver(budget.calories)
-                    ? d("over", { diff: Math.abs(Math.round(remainingKcal)), unit: "kcal" })
-                    : d("remaining", { diff: Math.round(remainingKcal), unit: "kcal" })}
-                </p>
-              )}
-              {remainingProtein != null && (
-                <p
-                  className="text-sm font-semibold tabular"
-                  style={{ color: isOver(budget.protein) ? "var(--goal-negative)" : "var(--on-surface-variant)" }}
-                >
-                  {isOver(budget.protein)
-                    ? d("over", { diff: Math.abs(Math.round(remainingProtein)), unit: "g protein" })
-                    : d("remaining", { diff: Math.round(remainingProtein), unit: "g protein" })}
-                </p>
-              )}
-            </div>
-          )}
+      {addingTo && <AddFoodFlow date={date} mealType={addingTo} onClose={() => setAddingTo(null)} />}
 
-          <div className="flex items-end gap-2 mb-1">
-            <span className="text-3xl font-extrabold tabular">
-              {fmt.number(Math.round(totalKcal))}
-            </span>
-            {budget.calories.goal != null ? (
-              <span className="text-sm font-semibold mb-1" style={{ color: "var(--on-surface-variant)" }}>
-                / {fmt.number(budget.calories.goal)} kcal
-              </span>
-            ) : (
-              <span className="text-sm mb-1" style={{ color: "var(--on-surface-variant)" }}>kcal</span>
-            )}
-          </div>
-          {budget.calories.goal != null && (
-            <div className="h-2 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
-              <div
-                className="h-full rounded-[var(--r-pill)] transition-all"
-                style={{
-                  width: `${Math.min(totalKcal / budget.calories.goal, 1) * 100}%`,
-                  background: isOver(budget.calories) ? "var(--goal-negative)" : "var(--metric-kcal)",
-                }}
-              />
-            </div>
-          )}
+      {editingMeal && <EditMealDrawer meal={editingMeal} onClose={() => setEditingMeal(null)} />}
 
-          <div className="flex justify-between text-xs mb-1">
-            <span style={{ color: "var(--metric-protein)" }}>{d("protein")}</span>
-            <span className="tabular" style={{ color: "var(--on-surface-variant)" }}>
-              {budget.protein.goal != null
-                ? `${Math.round(totalProtein)} / ${budget.protein.goal}g`
-                : `${Math.round(totalProtein)}g`}
-            </span>
-          </div>
-          {budget.protein.goal != null && (
-            <div className="h-1.5 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
-              <div
-                className="h-full rounded-[var(--r-pill)]"
-                style={{
-                  width: `${Math.min(totalProtein / budget.protein.goal, 1) * 100}%`,
-                  background: isOver(budget.protein) ? "var(--goal-negative)" : "var(--metric-protein)",
-                }}
-              />
-            </div>
-          )}
-
-          <div className="flex justify-between pt-3 text-sm" style={{ borderTop: "1px solid var(--outline)" }}>
-            <span style={{ color: "var(--on-surface-variant)" }}>{t("mealsCount")}</span>
-            <span className="font-semibold tabular">{todayMeals.length}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span style={{ color: "var(--on-surface-variant)" }}>{t("items")}</span>
-            <span className="font-semibold tabular">{totalItems}</span>
-          </div>
-
-          {previousDayMeals.length > 0 && (
-            <button
-              onClick={() => setCopyingPreviousDay(true)}
-              className="w-full mt-4 py-2 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container"
-              style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
-            >
-              <span className="material-symbols-rounded text-lg">content_copy</span>
-              {t("copyPreviousDay")}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {addingTo && (
-        <AddMealEntryDialog mealType={addingTo} date={date} onClose={() => setAddingTo(null)} />
-      )}
-
-      {editingMeal && (
-        <AddMealEntryDialog
-          mealType={editingMeal.mealType}
-          date={new Date(editingMeal.dateTime)}
-          meal={editingMeal}
-          onClose={() => setEditingMeal(null)}
-        />
-      )}
-
-      <ConfirmDialog
-        open={copyingPreviousDay}
-        title={t("copyPreviousDayConfirmTitle")}
-        body={t("copyPreviousDayConfirmBody", {
-          count: previousDayMeals.length,
-          kcal: Math.round(previousDayKcal),
-          date: fmt.date(subDays(date, 1), "day"),
-        })}
-        confirmLabel={t("copyPreviousDay")}
-        confirming={copyMealsMutation.isPending}
-        onConfirm={() => copyMealsMutation.mutate(previousDayMeals)}
-        onCancel={() => setCopyingPreviousDay(false)}
-      />
-
-      <ConfirmDialog
+      <ConfirmModal
         open={removingMeal != null}
-        title={t("removeMealConfirmTitle")}
-        body={removingMeal ? t("removeMealConfirmBody", {
-          kcal: Math.round(removingMeal.entries.reduce((sum, e) => sum + e.calories, 0)),
-          count: removingMeal.entries.length,
-        }) : ""}
-        confirmLabel={t("removeMealAria")}
-        confirming={deleteMutation.isPending}
-        onConfirm={() => removingMeal && deleteMutation.mutate(removingMeal.id)}
-        onCancel={() => setRemovingMeal(null)}
+        onClose={() => setRemovingMeal(null)}
+        onConfirm={() => {
+          if (removingMeal) deleteMeal(removingMeal);
+          setRemovingMeal(null);
+        }}
+        icon="delete"
+        title={removingMeal ? t("deleteMealTitle", { meal: removingMeal.mealType }) : ""}
+        body={
+          removingMeal
+            ? t("deleteMealBody", {
+                count: removingMeal.entries.length,
+                kcal: Math.round(mealKcal(removingMeal)),
+                seconds: undoSeconds,
+              })
+            : ""
+        }
+        cancelLabel={common("cancel")}
+        confirmLabel={common("delete")}
       />
-    </div>
+
+      <ConfirmModal
+        open={removingItem != null}
+        onClose={() => setRemovingItem(null)}
+        onConfirm={() => {
+          if (removingItem) deleteItem(removingItem.meal, removingItem.index);
+          setRemovingItem(null);
+        }}
+        icon="delete"
+        title={removingItem ? t("deleteItemTitle", { food: removingItem.meal.entries[removingItem.index].foodName }) : ""}
+        body={
+          removingItem
+            ? removingItem.meal.entries.length <= 1
+              ? t("deleteItemLastBody", { seconds: undoSeconds })
+              : t("deleteItemBody", {
+                  grams: fmt.number(removingItem.meal.entries[removingItem.index].quantityInGrams, 1),
+                  kcal: Math.round(removingItem.meal.entries[removingItem.index].calories),
+                  seconds: undoSeconds,
+                })
+            : ""
+        }
+        cancelLabel={common("cancel")}
+        confirmLabel={common("delete")}
+      />
+    </PageGrid>
   );
 }

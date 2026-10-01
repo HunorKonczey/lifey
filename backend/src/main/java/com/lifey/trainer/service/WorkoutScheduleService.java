@@ -1,5 +1,6 @@
 package com.lifey.trainer.service;
 
+import com.lifey.trainer.dto.MoveOccurrenceRequest;
 import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
 import com.lifey.trainer.dto.ScheduleSummaryResponse;
@@ -29,6 +30,13 @@ public interface WorkoutScheduleService {
 
     /** Cancels a single future, not-yet-started occurrence. */
     void cancelOccurrence(Long sessionId);
+
+    /**
+     * Moves a single future, not-yet-started occurrence to a new day (and time). Only the trainer who owns the
+     * schedule / program assignment may; a started, past or cancelled occurrence, or a target day in the past or beyond
+     * the three-month horizon, is refused. The push reminder is re-armed for the new slot.
+     */
+    ScheduledSessionResponse moveOccurrence(Long sessionId, MoveOccurrenceRequest request);
 
     /**
      * Cancels every still-active schedule between this trainer and client — the

@@ -1,5 +1,7 @@
 # Lifey Web
 
+> **Aktuális design:** a web a mobil Design System v2-re épül — lásd [`../redesign-web/`](../redesign-web/README.md) és [78-web-redesign-plan.md](../redesign-web/78-web-redesign-plan.md). Az alábbi `06-design-system-web.md` felváltott (történeti) dokumentum.
+
 Ez a mappa a Lifey **webes felületének** tervezési dokumentációját tartalmazza.
 
 A webes kliens a meglévő **Spring Boot REST API-t** fogyasztja (ugyanazt, amit a Flutter mobil app). A backend nem íródik újra — a web egy új kliens a már létező `/api/v1/...` végpontokhoz.

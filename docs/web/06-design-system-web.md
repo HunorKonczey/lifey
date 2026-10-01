@@ -1,5 +1,7 @@
 # Lifey Web — Design system (implementációs)
 
+> **Felváltva:** a tokenértékeket és a komponenseket a [web redesign (78)](../redesign-web/78-web-redesign-plan.md) váltotta le (Design System v2, a mobil `AppPalette` nevei: `--bg --card --nested --text …`). Ez a fájl csak a történeti háttér; a régi változónevek (`--surface`, `--on-surface`, `--tertiary` …) az app részéből törölve vannak, a marketing oldalak őrzik a saját másolatukat.
+
 > A [`03-design-brief.md`](03-design-brief.md) a *design ágensnek* szóló brief; ez a fájl a
 > **fejlesztőnek**: a `Lifey Web.dc.html` mockup tokenjeit konkrét **CSS változókká / Tailwind
 > témává** és **komponens-prop-szerződésekké** fordítja. A hex-értékek a mobil app tényleges

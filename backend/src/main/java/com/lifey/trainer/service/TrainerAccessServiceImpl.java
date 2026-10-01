@@ -5,6 +5,8 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ContentAssignmentRepository;
 import com.lifey.trainer.PersonalRecordCounter;
 import com.lifey.trainer.TrainerClientMapper;
+import com.lifey.settings.UserSettings;
+import com.lifey.settings.UserSettingsRepository;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientRevokedEvent;
 import com.lifey.trainer.TrainerClientStatus;
@@ -58,6 +60,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
     private final WorkoutSessionRepository workoutSessionRepository;
     private final MealRepository mealRepository;
     private final WaterEntryRepository waterEntryRepository;
+    private final UserSettingsRepository userSettingsRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -126,10 +129,12 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
 
         Integer avgCalories7d = averageDailyCalories(tc, clientId, today);
         Integer prCount7d = countRecordsThisWeek(clientId);
+        // A client who never opened settings has no row yet: that is "no goal", not an error, and reading must not create one.
+        Integer dailyCalorieGoal = userSettingsRepository.findByUserId(clientId).map(UserSettings::getDailyCalorieGoal).orElse(null);
 
         return TrainerClientMapper.toClientResponse(
                 tc, weightTrend, assignedPlanCount, workoutsPerWeek, lastActivityAt, lastWeightAt, missedWorkoutCount,
-                avgCalories7d, prCount7d);
+                avgCalories7d, prCount7d, dailyCalorieGoal);
     }
 
     /**
