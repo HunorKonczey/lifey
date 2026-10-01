@@ -217,7 +217,7 @@ export function TrainerTemplatesView({ onAssign, onSchedule }: Props) {
         </Button>
       </div>
 
-      <div className={sidePanel ? "grid items-start gap-6" : undefined} style={sidePanel ? { gridTemplateColumns: "minmax(0, 1fr) 520px" } : undefined}>
+      <div className={sidePanel && editor ? "grid items-start gap-6" : undefined} style={sidePanel && editor ? { gridTemplateColumns: "minmax(0, 1fr) 520px" } : undefined}>
         <div className="min-w-0">{list}</div>
 
         {sidePanel && editor && (

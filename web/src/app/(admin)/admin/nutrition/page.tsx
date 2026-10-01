@@ -28,7 +28,7 @@ export default function AdminNutritionPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <SegmentedControl options={TABS} value={tab} onChange={setTab} />
+      <div className="self-start"><SegmentedControl options={TABS} value={tab} onChange={setTab} /></div>
 
       {tab === "recipes" && <RecipesView onAssign={setAssignTarget} />}
       {tab === "foods" && <FoodsView />}

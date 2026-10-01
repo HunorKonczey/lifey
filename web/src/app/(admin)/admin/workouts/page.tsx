@@ -35,7 +35,7 @@ export default function AdminWorkoutsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <SegmentedControl options={TABS} value={tab} onChange={setTab} />
+      <div className="self-start"><SegmentedControl options={TABS} value={tab} onChange={setTab} /></div>
 
       {tab === "templates" && <TrainerTemplatesView onAssign={setAssignTarget} onSchedule={setScheduleTarget} />}
       {tab === "exercises" && <ExercisesView />}

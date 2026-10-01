@@ -63,13 +63,10 @@ export default function SuperAdminTrainerRequestsPage() {
   const ago = (iso: string) => formatDistanceToNowStrict(new Date(iso), { addSuffix: true, locale: DATE_LOCALES[locale] });
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
-      <div>
-        <h2 className="type-title">{t("trainerRequestsTitle")}</h2>
-        {data && data.totalElements > 0 && (
-          <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("pendingRequestsBadge", { count: data.totalElements })}</p>
-        )}
-      </div>
+    <div className="flex max-w-3xl flex-col gap-4">
+      {data && data.totalElements > 0 && (
+        <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("pendingRequestsBadge", { count: data.totalElements })}</p>
+      )}
 
       {isLoading ? (
         <Skeleton variant="table" />

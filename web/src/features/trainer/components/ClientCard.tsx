@@ -222,7 +222,7 @@ export function sessionDay(fmt: ReturnType<typeof useFormat>, iso: string): stri
 function Kpi({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1 p-2.5 min-w-0" style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}>
-      <dt className="type-body-s truncate" style={{ color: "var(--text-2)", fontSize: 12 }}>{label}</dt>
+      <dt className="type-body-s" style={{ color: "var(--text-2)", fontSize: 12, lineHeight: "15px" }}>{label}</dt>
       <dd style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.15 }}>{children}</dd>
     </div>
   );

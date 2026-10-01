@@ -104,9 +104,7 @@ export default function AdminBillingPage() {
   const trialDaysLeft = trainer?.status === "TRIALING" && trainer.trialEndsAt ? daysUntil(entitlement.checkedAt, trainer.trialEndsAt) : null;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
-      <h2 className="type-title">{t("title")}</h2>
-
+    <div className="flex max-w-3xl flex-col gap-4">
       {showCancelNotice && (
         <Card variant="nested" data-testid="checkout-cancel-notice">
           <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("checkoutCanceledNotice")}</p>

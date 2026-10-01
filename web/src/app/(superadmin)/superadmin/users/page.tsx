@@ -156,7 +156,6 @@ export default function SuperAdminUsersPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="type-title">{t("usersTitle")}</h2>
         <p className="type-body-s" style={{ color: "var(--text-2)" }} data-testid="users-summary">
           {truncated ? t("usersCount", { count: data?.totalElements ?? 0 }) : t("usersSummary", { count: users.length, trainers })}
         </p>
@@ -201,11 +200,14 @@ export default function SuperAdminUsersPage() {
                     { value: "ADMIN", label: t("role.ADMIN") },
                   ]}
                 />
-                <Checkbox
-                  checked={allVisibleSelected}
-                  onChange={(on) => setSelected(on ? new Set(rows.map((u) => u.id)) : new Set())}
-                  label={t("selectAllShown")}
-                />
+                {/* Row ticks exist only in the table layout (md and up), so the select-all does too. */}
+                <span className="hidden md:inline-flex">
+                  <Checkbox
+                    checked={allVisibleSelected}
+                    onChange={(on) => setSelected(on ? new Set(rows.map((u) => u.id)) : new Set())}
+                    label={t("selectAllShown")}
+                  />
+                </span>
               </div>
             }
             totalLabel={(n) => t("usersCount", { count: n })}

@@ -26,11 +26,8 @@ export default function SuperAdminRoleHistoryPage() {
   });
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <div>
-        <h2 className="type-title">{t("roleHistoryTitle")}</h2>
-        <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("roleHistorySubtitle")}</p>
-      </div>
+    <div className="flex max-w-2xl flex-col gap-4">
+      <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("roleHistorySubtitle")}</p>
 
       {isLoading ? (
         <Skeleton variant="table" />

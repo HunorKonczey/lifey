@@ -96,10 +96,7 @@ export default function AdminInvitesPage() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
-      <div>
-        <h2 className="type-title">{t("title")}</h2>
-        <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("subtitle")}</p>
-      </div>
+      <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("subtitle")}</p>
 
       <Card className="flex flex-col gap-3">
         <h3 className="type-body" style={{ fontWeight: 800 }}>{t("cardTitle")}</h3>

@@ -60,11 +60,11 @@ export function AssignedPlanGroup({ clientId, name, email, items }: Props) {
       </header>
       <ul>
         {items.map((item) => (
-          <li key={`${item.kind}-${item.id}`} data-testid="assigned-plan-row" className="flex items-center gap-3.5 px-3.5 py-2.5" style={{ borderTop: "1px solid var(--hairline)" }}>
+          <li key={`${item.kind}-${item.id}`} data-testid="assigned-plan-row" className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-3.5 py-2.5" style={{ borderTop: "1px solid var(--hairline)" }}>
             <span className="flex h-9 w-9 shrink-0 items-center justify-center" style={{ borderRadius: "var(--r-tag)", background: "var(--nested)" }}>
               <Icon name={KIND_ICON[item.kind]} size={20} fill={1} color="var(--role)" />
             </span>
-            <span className="min-w-0 flex-1">
+            <span className="min-w-0 flex-1 basis-[150px]">
               <span className="type-body block truncate" style={{ fontWeight: 700 }}>{item.name}</span>
               <span className="type-body-s block tabular" style={{ color: "var(--text-3)" }}>{dateText(item)}</span>
             </span>

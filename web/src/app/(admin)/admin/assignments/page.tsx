@@ -86,9 +86,9 @@ export default function AdminAssignmentsPage() {
           onChange={setTypeFilter}
           options={[
             { value: "all", label: t("allTypes") },
-            { value: "PROGRAM", label: t("typeProgram") },
-            { value: "TEMPLATE", label: t("typeTemplate") },
-            { value: "RECIPE", label: t("typeRecipe") },
+            { value: "PROGRAM", label: t("filterProgram") },
+            { value: "TEMPLATE", label: t("filterTemplate") },
+            { value: "RECIPE", label: t("filterRecipe") },
           ]}
         />
       </div>

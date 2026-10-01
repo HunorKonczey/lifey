@@ -224,7 +224,7 @@ function EventCard({ session: s, name, statusLabel, unnamed, draggable, onSelect
     >
       <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5" style={{ width: 3, borderRadius: 2, background: BAR[s.status] }} />
       <span className="truncate" style={{ fontSize: 13, fontWeight: 700, textDecoration: cancelled ? "line-through" : "none" }}>{name}</span>
-      <span className="truncate" style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)" }}>
+      <span style={{ fontSize: 12, lineHeight: "15px", fontWeight: 600, color: "var(--text-2)" }}>
         {s.templateName ?? unnamed} · {statusLabel}
       </span>
     </button>

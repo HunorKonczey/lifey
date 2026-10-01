@@ -516,7 +516,10 @@
         "ACTIVE": "Active",
         "DONE": "Done",
         "SCHEDULED": "Scheduled"
-      }
+      },
+      "filterProgram": "Program",
+      "filterTemplate": "Workout",
+      "filterRecipe": "Recipe"
     },
     "programs": {
       "colName": "Program",

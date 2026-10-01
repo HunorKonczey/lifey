@@ -516,7 +516,10 @@
         "ACTIVE": "Aktív",
         "DONE": "Kész",
         "SCHEDULED": "Ütemezve"
-      }
+      },
+      "filterProgram": "Program",
+      "filterTemplate": "Edzésterv",
+      "filterRecipe": "Recept"
     },
     "programs": {
       "colName": "Program",
