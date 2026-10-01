@@ -1705,7 +1705,8 @@
     "logoutAllConfirmTitle": "Kijelentkezel minden eszközről?",
     "logoutAllConfirmBody": "Minden eszközön — a mobilappban is — újra be kell lépned. A naplózott adataid megmaradnak a fiókodban.",
     "logoutBody": "Csak ezen az eszközön. A naplózott adataid megmaradnak.",
-    "logoutButton": "Kijelentkezés…"
+    "logoutButton": "Kijelentkezés…",
+    "notificationsOn": "{n, plural, =0 {Ki} other {# be}}"
   },
   "onboarding": {
     "welcomeTitle": "Személyre szabjuk a terved",

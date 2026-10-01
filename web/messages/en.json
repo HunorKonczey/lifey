@@ -1705,7 +1705,8 @@
     "logoutAllConfirmTitle": "Sign out of all devices?",
     "logoutAllConfirmBody": "Every device — including the mobile app — will ask you to sign in again. Your logged data stays in your account.",
     "logoutBody": "This device only. Your logged data stays in your account.",
-    "logoutButton": "Sign out…"
+    "logoutButton": "Sign out…",
+    "notificationsOn": "{n, plural, =0 {Off} other {# on}}"
   },
   "onboarding": {
     "welcomeTitle": "Let's personalize your plan",

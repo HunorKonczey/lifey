@@ -7,11 +7,33 @@ import { useSessionStore } from "@/features/auth/store";
 import { ChangePasswordDrawer } from "../ChangePasswordDrawer";
 import { SettingsRow, SettingsSection } from "../SettingsSection";
 
-/** Security (W6-G): change password in a drawer, and "sign out of all devices" behind a confirmation. */
-export function SecuritySection() {
+/** "Sign out of all devices" behind its confirmation — the section and the phone list both open it. */
+export function LogoutAllConfirm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations("settings");
   const common = useTranslations("common");
   const { logoutAll } = useSessionStore();
+  return (
+    <ConfirmModal
+      open={open}
+      onClose={onClose}
+      onConfirm={() => {
+        onClose();
+        void logoutAll();
+      }}
+      title={t("logoutAllConfirmTitle")}
+      body={t("logoutAllConfirmBody")}
+      icon="devices"
+      tint="var(--primary)"
+      cancelLabel={common("cancel")}
+      confirmLabel={t("logoutAllButton")}
+      destructive={false}
+    />
+  );
+}
+
+/** Security (W6-G): change password in a drawer, and "sign out of all devices" behind a confirmation. */
+export function SecuritySection() {
+  const t = useTranslations("settings");
   const [changing, setChanging] = useState(false);
   const [confirmingAll, setConfirmingAll] = useState(false);
 
@@ -25,21 +47,7 @@ export function SecuritySection() {
         <Button variant="secondary" onClick={() => setConfirmingAll(true)}>{t("logoutAllButton")}</Button>
       </SettingsRow>
       {changing && <ChangePasswordDrawer onClose={() => setChanging(false)} />}
-      <ConfirmModal
-        open={confirmingAll}
-        onClose={() => setConfirmingAll(false)}
-        onConfirm={() => {
-          setConfirmingAll(false);
-          void logoutAll();
-        }}
-        title={t("logoutAllConfirmTitle")}
-        body={t("logoutAllConfirmBody")}
-        icon="devices"
-        tint="var(--primary)"
-        cancelLabel={common("cancel")}
-        confirmLabel={t("logoutAllButton")}
-        destructive={false}
-      />
+      <LogoutAllConfirm open={confirmingAll} onClose={() => setConfirmingAll(false)} />
     </SettingsSection>
   );
 }

@@ -1,11 +1,26 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { Card } from "@/components/ds";
+
+/** True inside a phone sheet (W6.13): the section drops its card and id — the sheet already is the surface. */
+export const SettingsBareContext = createContext(false);
 
 /**
  * One block of the one-page settings (W6-G): a title row with an optional action on the right, then the body. The
  * `id` is what the anchor list scrolls to and observes; `scroll-mt` keeps the title clear of the sticky top bar.
  */
 export function SettingsSection({ id, title, action, children }: { id: string; title: string; action?: ReactNode; children: ReactNode }) {
+  const bare = useContext(SettingsBareContext);
+  if (bare) {
+    return (
+      <section aria-labelledby={`${id}-title`} className="flex flex-col gap-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id={`${id}-title`} style={{ fontSize: 20, lineHeight: 1.2, fontWeight: 800 }}>{title}</h2>
+          {action}
+        </div>
+        {children}
+      </section>
+    );
+  }
   return (
     <section id={id} data-settings-section aria-labelledby={`${id}-title`} className="scroll-mt-24">
       <Card variant="card" className="flex flex-col gap-5 !p-5 md:!p-6">

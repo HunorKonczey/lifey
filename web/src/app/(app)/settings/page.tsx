@@ -10,6 +10,8 @@ import { AppearanceSection } from "@/features/settings/components/sections/Appea
 import { NotificationsSection } from "@/features/settings/components/sections/NotificationsSection";
 import { SecuritySection } from "@/features/settings/components/sections/SecuritySection";
 import { LogoutSection } from "@/features/settings/components/sections/LogoutSection";
+import { SettingsMobileList } from "@/features/settings/components/SettingsMobileList";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useSettings } from "@/features/settings/useSettings";
 
 /**
@@ -20,9 +22,13 @@ export default function SettingsPage() {
   const t = useTranslations("settings");
   const common = useTranslations("common");
   const { settings, isLoading, isError, refetch } = useSettings();
+  const isPhone = useMediaQuery("(max-width: 767px)");
 
   if (isError) return <ErrorState onRetry={refetch} />;
   if (isLoading || !settings) return <Skeleton variant="card" className="h-96" />;
+
+  // A phone never gets two columns (client-084): a list of rows, each opening its area as a sheet.
+  if (isPhone) return <SettingsMobileList settings={settings} />;
 
   const items: AnchorItem[] = [
     { id: "settings-profile", label: t("profile"), icon: "person" },

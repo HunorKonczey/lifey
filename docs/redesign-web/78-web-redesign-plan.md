@@ -2835,9 +2835,11 @@ OptionCard,ConfirmSaveDetailsDialog}.tsx`; `app/(app)/settings/page.tsx` (461, s
 
 *As built:* **Kijelentkezés** is the last section: "Csak ezen az eszközön. A naplózott adataid megmaradnak." + "Kijelentkezés…" → the shared `LogoutDialog`. Playwright: focus lands on "Mégsem", Esc closes it and the page stays on `/settings`. The actual sign-out → `/login` goes through the same store call the account menu uses (not exercised, to keep the demo session).
 
-### W6.13 — Web UI: settings at 390
+### W6.13 — Web UI: settings at 390 ✅
 - Files: `features/settings/components/SettingsMobileList.tsx`.
 - **Verify:** W6-H side by side; no two-column layout below 768 (`client-084`).
+
+*As built:* below 768 px the page is `SettingsMobileList`, not the two-column frame: a profile row (avatar, name, e-mail), then one row per area — icon, label, current value, chevron: Napi célok "1 900 kcal" · Téma · Nyelv · Mértékegységek "kg · L" · Értesítések "1 be" · Biztonság · Kijelentkezés minden eszközről — and "Kijelentkezés…" at the bottom. Theme, language, units and notifications open as a bottom sheet (the section component rendered bare through `SettingsBareContext`); profile, goals and password open their drawer directly (already the full-height sheet — no sheet in a sheet). Playwright at 390 dark: no horizontal overflow on the list or any sheet, no anchor list, "Kijelentkezés…" focuses "Mégsem", 0 console errors.
 
 **W6 acceptance** (plus §4.1): W6-A … W6-H reproduced; new account → onboarding → dashboard without a
 toast; logout confirmed everywhere.

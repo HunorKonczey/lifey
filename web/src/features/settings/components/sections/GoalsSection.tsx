@@ -8,16 +8,10 @@ import { GoalsDrawer, type GoalDef } from "../GoalsDrawer";
 import { SettingsSection } from "../SettingsSection";
 import { useSettings } from "../../useSettings";
 
-/** Daily goals (W6-G): the targets as tiles in their metric colours, "Szerkesztés" opens the editor drawer. */
-export function GoalsSection() {
-  const t = useTranslations("settings");
+/** The six targets with their labels, units and metric colours — shared by the section and the phone list. */
+export function useGoalDefs(): GoalDef[] {
   const d = useTranslations("dashboard");
-  const fmt = useFormat();
-  const { settings, save, saving } = useSettings();
-  const [editing, setEditing] = useState(false);
-  if (!settings) return null;
-
-  const goals: GoalDef[] = [
+  return [
     { key: "dailyCalorieGoal", label: d("calories"), unit: "kcal", color: "var(--metric-kcal)", decimals: 0 },
     { key: "dailyProteinGoal", label: d("protein"), unit: "g", color: "var(--metric-protein)", decimals: 0 },
     { key: "dailyCarbsGoal", label: d("carbs"), unit: "g", color: "var(--metric-carbs)", decimals: 0 },
@@ -25,6 +19,18 @@ export function GoalsSection() {
     { key: "dailyWaterGoalLiters", label: d("water"), unit: "L", color: "var(--metric-water)", decimals: 1 },
     { key: "dailyStepGoal", label: d("steps"), unit: "", color: "var(--metric-steps)", decimals: 0 },
   ];
+}
+
+/** Daily goals (W6-G): the targets as tiles in their metric colours, "Szerkesztés" opens the editor drawer. */
+export function GoalsSection() {
+  const t = useTranslations("settings");
+  const fmt = useFormat();
+  const goalDefs = useGoalDefs();
+  const { settings, save, saving } = useSettings();
+  const [editing, setEditing] = useState(false);
+  if (!settings) return null;
+
+  const goals = goalDefs;
 
   return (
     <SettingsSection

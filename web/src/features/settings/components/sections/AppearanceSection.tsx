@@ -9,16 +9,17 @@ import { useSettings } from "../../useSettings";
 import type { LanguagePreference, ThemePreference, UnitSystem } from "../../types";
 
 /** Appearance and units (W6-G): theme, language and the one unit-system control; each applies at once and persists. */
-export function AppearanceSection() {
+export function AppearanceSection({ only }: { only?: "theme" | "language" | "units" }) {
   const t = useTranslations("settings");
   const { setTheme } = useTheme();
   const { setLanguage } = useLocale();
   const { settings, save } = useSettings();
   if (!settings) return null;
+  const show = (row: "theme" | "language" | "units") => !only || only === row;
 
   return (
-    <SettingsSection id="settings-appearance" title={t("appearance")}>
-      <SettingsRow label={t("theme")} hint={t("appliedImmediately")}>
+    <SettingsSection id="settings-appearance" title={only ? t(only === "units" ? "units" : only) : t("appearance")}>
+      {show("theme") && <SettingsRow label={t("theme")} hint={t("appliedImmediately")}>
         <SegmentedControl<ThemePreference>
           aria-label={t("theme")}
           options={[
@@ -32,8 +33,8 @@ export function AppearanceSection() {
             save({ theme: v });
           }}
         />
-      </SettingsRow>
-      <SettingsRow label={t("language")}>
+      </SettingsRow>}
+      {show("language") && <SettingsRow label={t("language")}>
         <SegmentedControl<LanguagePreference>
           aria-label={t("language")}
           options={[
@@ -47,8 +48,8 @@ export function AppearanceSection() {
             save({ language: v });
           }}
         />
-      </SettingsRow>
-      <SettingsRow label={t("units")}>
+      </SettingsRow>}
+      {show("units") && <SettingsRow label={t("units")}>
         <SegmentedControl<UnitSystem>
           aria-label={t("units")}
           options={[
@@ -58,7 +59,7 @@ export function AppearanceSection() {
           value={settings.unitSystem}
           onChange={(v) => save({ unitSystem: v })}
         />
-      </SettingsRow>
+      </SettingsRow>}
     </SettingsSection>
   );
 }
