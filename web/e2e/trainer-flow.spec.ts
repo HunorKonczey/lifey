@@ -160,17 +160,16 @@ test.describe("Personal trainer flow", () => {
 
     await test.step("client appears in the trainer's dashboard", async () => {
       await page.goto("/admin");
-      // The "Your clients" modal (ClientListModal) also lists the client on
-      // first load, so this name legitimately appears twice — assert presence.
+      // The clients page lists the client as a card (the old "Your clients" modal is gone since W7).
       await expect(page.getByText(clientDisplayName).first()).toBeVisible();
-      // Dismiss it so it doesn't intercept later clicks on this page.
-      await page.getByRole("button", { name: "Close" }).click();
     });
 
     await test.step("trainer assigns their new template to the new client", async () => {
       await page.goto("/admin/workouts");
-      const templateRow = page.getByTestId("template-row").filter({ hasText: templateName });
-      await templateRow.getByTestId("assign-template").click();
+      // W9.1: the templates are a table; Assign is in the row's "⋯" menu.
+      await page.getByPlaceholder("Search templates…").fill(templateName);
+      await page.getByRole("button", { name: `More actions for ${templateName}` }).click();
+      await page.getByRole("menuitem", { name: "Assign" }).click();
 
       const drawer = page.getByTestId("assign-to-client-drawer");
       await drawer.getByPlaceholder("Search client…").fill(clientEmail);
@@ -183,23 +182,24 @@ test.describe("Personal trainer flow", () => {
       await page.goto("/admin");
       const card = page.locator(`[data-testid="client-card"][data-client-email="${clientEmail}"]`);
       await card.getByLabel("Client options").click();
-      await card.getByRole("link", { name: "Open" }).click();
+      await page.getByRole("menuitem", { name: "Open" }).click();
       await expect(page.getByText(clientEmail)).toBeVisible(); // ClientDetailHeader shows the raw email
       await expect(page.getByText(templateName)).toBeVisible();
     });
 
     await test.step("trainer schedules a one-off workout for the client", async () => {
-      await page.getByRole("button", { name: "Schedule" }).click();
-      await page.getByRole("button", { name: "Schedule workout" }).first().click();
+      // W7: the header's Schedule button opens the drawer directly.
+      await page.getByRole("button", { name: "Schedule", exact: true }).click();
 
       const drawer = page.getByTestId("schedule-workout-drawer");
       await drawer.getByPlaceholder("Search your templates…").fill(templateName);
       await drawer.getByTestId("schedule-drawer-template-row").filter({ hasText: templateName }).click();
-      await drawer.getByTestId("schedule-drawer-submit").click();
+      await page.getByTestId("schedule-drawer-submit").click();
       await expect(page.getByText(`1 workout scheduled for ${clientDisplayName}`)).toBeVisible();
     });
 
     await test.step("the scheduled workout shows up as upcoming in the client's timeline", async () => {
+      await page.getByRole("tab", { name: "Schedule" }).click();
       // The template name legitimately appears twice: once on the active-series
       // card, once on its timeline row.
       await expect(page.getByText(templateName).first()).toBeVisible();
@@ -248,7 +248,7 @@ test.describe("Personal trainer flow", () => {
     });
 
     await test.step("trainer's Nutrition tab shows today empty and is read-only", async () => {
-      await page.getByRole("button", { name: "Nutrition" }).click();
+      await page.getByRole("tab", { name: "Nutrition" }).click();
       await expect(page.getByText("Daily summary")).toBeVisible();
       await expect(page.getByText(mealFoodName)).not.toBeVisible();
       await expect(page.getByLabel("Edit meal")).toHaveCount(0);

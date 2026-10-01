@@ -122,7 +122,7 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 | Sablonhasználat ütemezésből | a „Használja" csak a kiosztottakat számolja; az ütemezésekhez kliensenként külön lekérés kell | `78` W9.1 |
 | Számlázás: két csomagos canvas | a canvas Alap / Pro, a termékben Starter / Pro / Studio; az „utána ingyenes" mondat nincs definiálva | `78` W9.5 |
 | Repository-tesztek az új JPQL-ekre | a `member of`, a csoportosított darabszám és a `min` lekérdezés Docker nélkül nem tesztelhető | `78` W9.b1–b3 |
-| Web e2e-k frissítése | a régi programkártyákra, a kliens-modalra és a rendezésre épülő specek nincsenek frissítve; a banner / blocked-dialog / over-limit specek itt kihagyták magukat | `78` W7/W8/W9 napló |
+| Web e2e futtatási feltételek | a backend-függő specek frissítve és zöldek (16 + 10); a chat-spec a chat-szolgáltatást és a `web-chat` webet kéri, a 10 billing-spec `BILLING_ENABLED=true` backendet — ezek nélkül kihagyják magukat / elhasalnak | `78` W10 follow-up |
 | Billentyűzetes húzás, 200 %-os nagyítás, telefon-billentyűzet | nem lettek végigpróbálva | `78` napló |
 
 ---

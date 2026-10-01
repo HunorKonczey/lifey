@@ -16,6 +16,9 @@ import { Client } from "pg";
  */
 
 const API_BASE = "http://localhost:8080/api/v1";
+// The chat API lives in its own service since the chat extraction (docs/chat/44); the web is started with
+// NEXT_PUBLIC_CHAT_BASE_URL pointing at it (the `web-chat` dev config).
+const CHAT_BASE = "http://localhost:8081/api/v1";
 const DB_CONFIG = {
   host: "localhost",
   port: 5432,
@@ -130,7 +133,7 @@ test.describe("Trainer web chat", () => {
     });
 
     await test.step("the message reaches the client's conversation list", async () => {
-      const conversationsRes = await request.get(`${API_BASE}/chat/conversations`, {
+      const conversationsRes = await request.get(`${CHAT_BASE}/chat/conversations`, {
         headers: { Authorization: `Bearer ${clientToken}` },
       });
       expect(conversationsRes.ok(), await conversationsRes.text()).toBeTruthy();
@@ -143,7 +146,7 @@ test.describe("Trainer web chat", () => {
     });
 
     await test.step("the trainer's own message is never unread for them", async () => {
-      const conversationsRes = await request.get(`${API_BASE}/chat/conversations`, {
+      const conversationsRes = await request.get(`${CHAT_BASE}/chat/conversations`, {
         headers: { Authorization: `Bearer ${trainerToken}` },
       });
       expect(conversationsRes.ok()).toBeTruthy();
