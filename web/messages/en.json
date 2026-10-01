@@ -492,7 +492,21 @@
       "unassignConfirmTitle": "Remove from client's account",
       "unassignConfirmBody": "\"{name}\" will be deleted from the client's account. This can't be undone.",
       "unassignCancel": "Cancel",
-      "unassignConfirm": "Remove"
+      "unassignConfirm": "Remove",
+      "typeProgram": "program",
+      "itemCount": "{count, plural, one {# item} other {# items}}",
+      "revoked": "Revoked",
+      "revoke": "Revoke",
+      "rowMenuAria": "More actions for {name}",
+      "revokeConfirmTitle": "Revoke this assignment?",
+      "revokeConfirm": "Revoke",
+      "revokeProgramBody": "The remaining workouts of \"{name}\" are removed from the client's calendar; the ones already done stay.",
+      "missedChip": "{count} missed",
+      "status": {
+        "ACTIVE": "Active",
+        "DONE": "Done",
+        "SCHEDULED": "Scheduled"
+      }
     },
     "programs": {
       "colName": "Program",

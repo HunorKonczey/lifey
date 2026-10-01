@@ -492,7 +492,21 @@
       "unassignConfirmTitle": "Eltávolítás a kliens fiókjából",
       "unassignConfirmBody": "\"{name}\" törlődik a kliens fiókjából. Ez nem vonható vissza.",
       "unassignCancel": "Mégse",
-      "unassignConfirm": "Eltávolítás"
+      "unassignConfirm": "Eltávolítás",
+      "typeProgram": "program",
+      "itemCount": "{count} tétel",
+      "revoked": "Visszavonva",
+      "revoke": "Visszavonás",
+      "rowMenuAria": "További műveletek: {name}",
+      "revokeConfirmTitle": "Visszavonod a kiosztást?",
+      "revokeConfirm": "Visszavonás",
+      "revokeProgramBody": "A(z) \"{name}\" program hátralévő edzései törlődnek a kliens naptárából; a már elvégzettek megmaradnak.",
+      "missedChip": "{count} kimaradt",
+      "status": {
+        "ACTIVE": "Aktív",
+        "DONE": "Kész",
+        "SCHEDULED": "Ütemezve"
+      }
     },
     "programs": {
       "colName": "Program",
