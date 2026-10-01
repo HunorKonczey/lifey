@@ -3112,9 +3112,11 @@ thread}.ts`.
 
 *As built:* **Empty-cell scheduling:** every empty cell of today-or-later has a hover / focus "＋" button named "Edzés ütemezése okt. 2., 07:00"; it opens `ScheduleWorkoutDrawer` with that day **and the time prefilled** (new `initialTimeOfDay`; verified: the 07:00 slot opened with "07:00" in the time field), and the "no time" row's cells ask for the day only. **`CalendarSessionPeek` is on the DS `Popover`** (anchored to the card, flips near an edge, closes on Esc and an outside click, focus returns to the card — verified): client with the real name, the workout, the day and time without seconds beside the status chip, the series (`RecurrenceLabel`) or the program chip, then "Kliens ütemterve", "Edzés megnyitása" (done sessions) or the cancel button — which opens a `ConfirmModal` with focus on the safe button instead of the old inline confirm. 0 console errors.
 
-### W8.3 — Web UI: day, month and agenda views + client filter
+### W8.3 — Web UI: day, month and agenda views + client filter ✅
 - Files: `CalendarMonthView.tsx`, `CalendarAgendaView.tsx`, `CalendarClientFilter.tsx`.
 - **Verify:** the filter persists across views; month cells show counts, not overflowing text.
+
+*As built:* **Month:** a Monday-first grid where each day is one button — the day number (today a primary pill, other months muted), "3 edzés" and a row of status dots (one per workout, up to six, then "+N"); cells show **counts, not text** (the old chips cut every name in a cell a seventh wide), and each cell's accessible name spells the statuses out ("okt. 2.: 1 kész, 1 kihagyott"), so nothing relies on colour. A click opens that day in the **Nap** view. **Agenda** (week below 1024 px): days stacked, empty days left out, one row per workout — time (no seconds), avatar, real name, workout, status chip in words — on the same tokens. **Client filter:** a DS `Popover` of `Checkbox`es ("Minden kliens" + one row per client with its avatar); the choice lives in the calendar, so it holds across Nap · Hét · Hónap (checked: filtered to one client in the month, the week and day views show only that client). Playwright as the demo trainer: month at 1440, week → day with the filter, agenda at 1024 (12 cards) and at 390 (month too, no overflow), 0 console errors.
 
 ### W8.4 — Web UI: program editor layout + template rail
 - Files: `app/(admin)/admin/programs/[programId]/page.tsx`, `programs/new/page.tsx`,

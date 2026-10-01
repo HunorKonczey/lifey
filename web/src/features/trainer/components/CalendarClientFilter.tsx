@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Checkbox, Icon, Popover } from "@/components/ds";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
 import type { TrainerClientResponse } from "../types";
 
@@ -12,106 +13,60 @@ interface CalendarClientFilterProps {
   onToggleAll: () => void;
 }
 
-/** Multi-select client filter for the trainer calendar toolbar (design: A frame, top-right dropdown). */
+/** "Minden kliens" (W8-A): the multi-select client filter — a DS popover of checkboxes; the choice lives in the calendar, so it holds across Nap · Hét · Hónap. */
 export function CalendarClientFilter({ clients, deselectedClientIds, onToggleClient, onToggleAll }: CalendarClientFilterProps) {
   const t = useTranslations("admin.calendar");
   const tAssignments = useTranslations("admin.assignments");
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const selectedCount = clients.filter((c) => !deselectedClientIds.has(c.clientId)).length;
   const allSelected = deselectedClientIds.size === 0;
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("mousedown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("mousedown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
   return (
-    <div ref={rootRef} className="relative" data-testid="calendar-client-filter">
+    <div data-testid="calendar-client-filter">
       <button
+        ref={triggerRef}
+        type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
         data-testid="calendar-client-filter-trigger"
-        className="flex items-center gap-2 rounded-[11px] pl-2 pr-2.5 py-1.5"
-        style={{ background: "var(--bg)" }}
+        className="lifey-button inline-flex items-center gap-2 pl-2.5 pr-2 h-11 md:h-10"
+        style={{ borderRadius: "var(--r-control)", background: "var(--control)" }}
       >
-        <div className="flex">
+        <span className="flex">
           {clients.slice(0, 3).map((c, i) => (
-            <div key={c.clientId} style={{ marginLeft: i === 0 ? 0 : -7 }}>
+            <span key={c.clientId} style={{ marginLeft: i === 0 ? 0 : -7 }}>
               <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={22} />
-            </div>
+            </span>
           ))}
-        </div>
-        <span className="text-[12.5px] font-bold" style={{ color: "var(--on-surface)" }}>
+        </span>
+        <span className="type-body-s" style={{ fontWeight: 700 }}>
           {allSelected ? tAssignments("allClients") : t("clientsSelected", { selected: selectedCount, total: clients.length })}
         </span>
-        <span className="material-symbols-rounded text-lg" style={{ color: "var(--on-surface-variant)" }}>
-          arrow_drop_down
-        </span>
+        <Icon name="arrow_drop_down" size={20} color="var(--text-2)" />
       </button>
 
-      {open && (
-        <div
-          className="absolute right-0 top-[calc(100%+6px)] w-[252px] rounded-2xl p-[7px] z-30"
-          style={{ background: "var(--surface-highest)", boxShadow: "0 18px 44px rgba(0,0,0,.55)" }}
-        >
-          <button
-            onClick={onToggleAll}
-            data-testid="calendar-client-filter-all"
-            className="w-full flex items-center gap-2.5 rounded-[11px] px-2.5 py-2"
-            style={{ background: allSelected ? "var(--outline)" : "transparent" }}
-          >
-            <Checkbox checked={allSelected} />
-            <span className="flex-1 text-[13px] font-bold text-left" style={{ color: "var(--on-surface)" }}>
-              {tAssignments("allClients")}
-            </span>
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={272}>
+        <div className="flex flex-col gap-0.5 p-2 max-h-[360px] overflow-y-auto" role="group" aria-label={tAssignments("allClients")}>
+          <button type="button" onClick={onToggleAll} data-testid="calendar-client-filter-all" className="lifey-button flex items-center gap-2.5 px-2.5 py-2 text-left" style={{ borderRadius: "var(--r-control)", background: allSelected ? "var(--nested)" : "transparent" }}>
+            <Checkbox checked={allSelected} onChange={() => {}} aria-label={tAssignments("allClients")} />
+            <span className="flex-1" style={{ fontWeight: 700 }}>{tAssignments("allClients")}</span>
           </button>
-          <div className="h-px mx-2 my-1.5" style={{ background: "var(--outline)" }} />
+          <div className="h-px mx-2 my-1" style={{ background: "var(--hairline)" }} />
           {clients.map((c) => {
             const checked = !deselectedClientIds.has(c.clientId);
             return (
-              <button
-                key={c.clientId}
-                onClick={() => onToggleClient(c.clientId)}
-                data-testid="calendar-client-filter-row"
-                className="w-full flex items-center gap-2.5 rounded-[11px] px-2.5 py-1.5"
-              >
-                <Checkbox checked={checked} />
+              <button key={c.clientId} type="button" onClick={() => onToggleClient(c.clientId)} data-testid="calendar-client-filter-row" className="lifey-button flex items-center gap-2.5 px-2.5 py-1.5 text-left" style={{ borderRadius: "var(--r-control)" }}>
+                <Checkbox checked={checked} onChange={() => {}} aria-label={clientDisplayName(c)} />
                 <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={26} />
-                <span className="flex-1 text-[13px] font-semibold text-left truncate" style={{ color: "var(--on-surface)" }}>
-                  {clientDisplayName(c)}
-                </span>
+                <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 600 }}>{clientDisplayName(c)}</span>
               </button>
             );
           })}
         </div>
-      )}
+      </Popover>
     </div>
-  );
-}
-
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
-    <span
-      className="w-[18px] h-[18px] rounded-[6px] flex items-center justify-center shrink-0"
-      style={{ background: checked ? "var(--tertiary)" : "transparent", border: checked ? "none" : "1.5px solid var(--outline)" }}
-    >
-      {checked && (
-        <span className="material-symbols-rounded text-[11px]" style={{ color: "var(--bg)" }}>
-          check
-        </span>
-      )}
-    </span>
   );
 }

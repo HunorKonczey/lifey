@@ -439,6 +439,7 @@
       "showHistory": "Előzmények mutatása"
     },
     "calendar": {
+      "workoutsCount": "{count} edzés",
       "day": "Nap",
       "viewAria": "Naptár nézet",
       "previousDay": "Előző nap",

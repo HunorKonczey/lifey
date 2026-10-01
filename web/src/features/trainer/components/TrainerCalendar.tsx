@@ -166,7 +166,7 @@ export function TrainerCalendar() {
           compact={narrow}
           onSelectDay={(day) => {
             setAnchorDate(day);
-            setView("week");
+            setView("day");
           }}
           onSelectSession={(session, anchor) => setPeek({ session, anchor })}
         />
@@ -174,7 +174,7 @@ export function TrainerCalendar() {
         visibleSessions.length === 0 ? (
           <EmptyState icon="calendar_month" title={t("emptyTitle")} body={t("emptyBody")} />
         ) : (
-          <CalendarAgendaView weekStart={weekStart} sessions={visibleSessions} onSelectSession={(session, anchor) => setPeek({ session, anchor })} />
+          <CalendarAgendaView weekStart={weekStart} sessions={visibleSessions} names={names} onSelectSession={(session, anchor) => setPeek({ session, anchor })} />
         )
       ) : (
         <>

@@ -439,6 +439,7 @@
       "showHistory": "Show history"
     },
     "calendar": {
+      "workoutsCount": "{count, plural, one {# workout} other {# workouts}}",
       "day": "Day",
       "viewAria": "Calendar view",
       "previousDay": "Previous day",
