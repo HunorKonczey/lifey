@@ -487,6 +487,17 @@
       "unassignConfirm": "Remove"
     },
     "programs": {
+      "colName": "Program",
+      "colWeeks": "Weeks",
+      "colSlots": "Workout days / week",
+      "colUsers": "Clients on it",
+      "listSubtitle": "{count, plural, one {# program} other {# programs}}",
+      "copyName": "{name} (copy)",
+      "duplicate": "Duplicate",
+      "duplicated": "Program duplicated",
+      "duplicateFailed": "Could not duplicate the program",
+      "edit": "Edit",
+      "rowMenuAria": "More actions for {name}",
       "whoFor": "For whom",
       "alreadyUsing": "already on it",
       "inactiveDays": "{count, plural, one {# day inactive} other {# days inactive}}",

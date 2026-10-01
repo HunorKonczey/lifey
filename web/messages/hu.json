@@ -487,6 +487,17 @@
       "unassignConfirm": "Eltávolítás"
     },
     "programs": {
+      "colName": "Program",
+      "colWeeks": "Hetek",
+      "colSlots": "Edzésnap / hét",
+      "colUsers": "Használja",
+      "listSubtitle": "{count} program",
+      "copyName": "{name} (másolat)",
+      "duplicate": "Duplikálás",
+      "duplicated": "Program duplikálva",
+      "duplicateFailed": "Nem sikerült duplikálni a programot",
+      "edit": "Szerkesztés",
+      "rowMenuAria": "További műveletek: {name}",
       "whoFor": "Kinek",
       "alreadyUsing": "már használja",
       "inactiveDays": "{count} napja inaktív",
