@@ -216,6 +216,8 @@
       "stepMessage": "Send your first message"
     },
     "clientDetail": {
+      "goalsInvalid": "Enter a whole number, or leave it empty",
+      "goalsDrawerHint": "Leave a goal empty to clear it. The client sees the new goals at once.",
       "overview": {
         "kpiCalories": "Calories · 7-day average",
         "kpiProtein": "Protein · 7-day average",

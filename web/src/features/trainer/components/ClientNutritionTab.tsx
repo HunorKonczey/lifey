@@ -2,37 +2,38 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, addDays, subDays } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
-import { trainerApi } from "../api";
-import { goalToInput, isValidGoalInput, parseGoalInput } from "../nutritionGoalsEditor";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { MealCard, mealKcal, mealProtein, mealCarbs, mealFat } from "@/features/nutrition/components/MealCard";
-import { Skeleton } from "@/components/status/Skeleton";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Button, Card, Icon, MetricBar } from "@/components/ds";
 import { ErrorState } from "@/components/status/ErrorState";
-import { useLocale } from "@/lib/hooks/useLocale";
-import { useToast } from "@/lib/hooks/useToast";
+import { Skeleton } from "@/components/status/Skeleton";
+import { MealCard, mealCarbs, mealFat, mealKcal, mealProtein } from "@/features/nutrition/components/MealCard";
 import type { MealResponse, MealType } from "@/features/nutrition/types";
-import type { ClientNutritionGoalsResponse } from "../types";
-import { useFormat } from "@/lib/i18n/format";
-
-const DATE_LOCALES = { en: enUS, hu } as const;
+import { queryKeys } from "@/lib/api/queryKeys";
+import { useDateStore } from "@/lib/hooks/useDateStore";
+import { useFormat } from "@/lib/format/useFormat";
+import { trainerApi } from "../api";
+import { NutritionGoalsDrawer } from "./NutritionGoalsDrawer";
 
 interface ClientNutritionTabProps {
   clientId: number;
 }
 
+/**
+ * The client's day of meals (W7-C), read-only: the W2 meal cards with no add / edit / delete anywhere, grouped by meal
+ * type, beside the day's summary against the client's goals. The day is the top bar's date stepper. "Célok
+ * szerkesztése" opens the existing goals editor in a drawer — the one thing a trainer may change on this tab.
+ */
 export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
   const t = useTranslations("admin.clientDetail");
   const n = useTranslations("nutrition");
-  const common = useTranslations("common");
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
-  const [date, setDate] = useState(new Date());
+  const d = useTranslations("dashboard");
+  const fmt = useFormat();
+  const { date } = useDateStore();
   const dateStr = format(date, "yyyy-MM-dd");
-  const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+  const [editingGoals, setEditingGoals] = useState(false);
 
-  const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
+  const groups: { type: MealType; label: string; icon: string }[] = [
     { type: "BREAKFAST", label: n("breakfast"), icon: "bakery_dining" },
     { type: "LUNCH", label: n("lunch"), icon: "lunch_dining" },
     { type: "DINNER", label: n("dinner"), icon: "dinner_dining" },
@@ -50,304 +51,87 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
 
   if (mealsQ.isLoading || goalsQ.isLoading) {
     return (
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 flex flex-col gap-3">
-          {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}
-        </div>
-        <Skeleton variant="card" className="w-full lg:w-[300px] h-80" />
+      <div className="flex flex-col xl:flex-row gap-6">
+        <div className="flex-1 flex flex-col gap-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}</div>
+        <Skeleton variant="card" className="w-full xl:w-[320px] h-80" />
       </div>
     );
   }
-
-  if (mealsQ.isError || goalsQ.isError) {
-    return <ErrorState inline onRetry={() => { mealsQ.refetch(); goalsQ.refetch(); }} />;
-  }
+  if (mealsQ.isError || goalsQ.isError) return <ErrorState inline onRetry={() => { mealsQ.refetch(); goalsQ.refetch(); }} />;
 
   const meals: MealResponse[] = mealsQ.data ?? [];
   const goals = goalsQ.data;
-
-  const totalKcal = meals.reduce((s, m) => s + mealKcal(m), 0);
-  const totalProtein = meals.reduce((s, m) => s + mealProtein(m), 0);
-  const totalCarbs = meals.reduce((s, m) => s + mealCarbs(m), 0);
-  const totalFat = meals.reduce((s, m) => s + mealFat(m), 0);
-  const totalItems = meals.reduce((s, m) => s + m.entries.length, 0);
+  const sum = (pick: (m: MealResponse) => number) => meals.reduce((s, m) => s + pick(m), 0);
+  const kcal = sum(mealKcal);
+  const macros = [
+    { label: d("protein"), value: sum(mealProtein), goal: goals?.dailyProteinGoal ?? null, color: "var(--metric-protein)" },
+    { label: d("carbs"), value: sum(mealCarbs), goal: goals?.dailyCarbsGoal ?? null, color: "var(--metric-carbs)" },
+    { label: d("fat"), value: sum(mealFat), goal: goals?.dailyFatGoal ?? null, color: "var(--metric-fat)" },
+  ];
+  const calGoal = goals?.dailyCalorieGoal ?? null;
 
   return (
-    <div className="flex flex-col gap-3.5">
-      {/* Day navigator */}
-      <div className="flex items-center gap-1 rounded-[var(--r-card)] px-2 py-1.5 w-fit" style={{ background: "var(--surface)" }}>
-        <button
-          onClick={() => setDate((prev) => subDays(prev, 1))}
-          className="p-1.5 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container"
-          style={{ color: "var(--on-surface-variant)" }}
-          aria-label={common("previousDay")}
-        >
-          <span className="material-symbols-rounded text-xl">chevron_left</span>
-        </button>
-        <span className="text-sm font-semibold tabular px-2 min-w-[110px] text-center">
-          {isToday ? common("today") : format(date, "yyyy. MMM d.", { locale: dateLocale })}
-        </span>
-        <button
-          onClick={() => setDate((prev) => addDays(prev, 1))}
-          disabled={isToday}
-          className="p-1.5 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container disabled:opacity-30"
-          style={{ color: "var(--on-surface-variant)" }}
-          aria-label={common("nextDay")}
-        >
-          <span className="material-symbols-rounded text-xl">chevron_right</span>
-        </button>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Meal groups */}
-        <div className="flex-1 min-w-0 flex flex-col gap-6">
-          {MEAL_GROUPS.map(({ type, label, icon }) => {
-            const groupMeals = meals.filter((m) => m.mealType === type);
-            const groupKcal = groupMeals.reduce((s, m) => s + mealKcal(m), 0);
-            return (
-              <div key={type} className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 px-1">
-                  <span className="material-symbols-rounded text-xl" style={{ color: "var(--metric-kcal)" }}>{icon}</span>
-                  <span className="font-bold text-sm">{label}</span>
-                  {groupKcal > 0 && (
-                    <span className="ml-auto text-sm font-semibold tabular" style={{ color: "var(--metric-kcal)" }}>
-                      {Math.round(groupKcal)} kcal
-                    </span>
-                  )}
-                </div>
-
-                {groupMeals.length > 0 ? (
-                  groupMeals.map((meal) => <MealCard key={meal.id} meal={meal} />)
-                ) : (
-                  <div
-                    className="w-full py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center"
-                    style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
-                  >
-                    {t("noLoggedMeal")}
-                  </div>
+    <div className="flex flex-col xl:flex-row gap-6 items-start">
+      <div className="flex-1 min-w-0 w-full flex flex-col gap-6 order-2 xl:order-1">
+        {groups.map(({ type, label, icon }) => {
+          const groupMeals = meals.filter((m) => m.mealType === type);
+          const groupKcal = groupMeals.reduce((s, m) => s + mealKcal(m), 0);
+          return (
+            <section key={type} className="flex flex-col gap-2" aria-label={label}>
+              <div className="flex items-center gap-2 px-1">
+                <Icon name={icon} size={22} fill={1} color="var(--metric-kcal)" />
+                <h3 style={{ fontSize: 15, fontWeight: 800 }}>{label}</h3>
+                {groupKcal > 0 && (
+                  <span className="ml-auto num type-body-s" style={{ color: "var(--metric-kcal)", fontWeight: 700 }}>
+                    {fmt.number(groupKcal, 0)} kcal
+                  </span>
                 )}
               </div>
-            );
-          })}
-        </div>
-
-        {/* Daily summary sticky panel */}
-        <div className="w-full lg:w-[300px] lg:shrink-0 order-first lg:order-none">
-          <NutritionGoalsPanel
-            clientId={clientId}
-            goals={goals}
-            totalKcal={totalKcal}
-            totalProtein={totalProtein}
-            totalCarbs={totalCarbs}
-            totalFat={totalFat}
-            mealsCount={meals.length}
-            itemsCount={totalItems}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface NutritionGoalsPanelProps {
-  clientId: number;
-  goals: ClientNutritionGoalsResponse | undefined;
-  totalKcal: number;
-  totalProtein: number;
-  totalCarbs: number;
-  totalFat: number;
-  mealsCount: number;
-  itemsCount: number;
-}
-
-/**
- * Daily summary panel; doubles as the trainer's goal editor
- * (docs/32-trainer-nutrition-goals-plan.md, W2) — the same four fields it
- * already reads, now writable in place.
- */
-function NutritionGoalsPanel({
-  clientId, goals, totalKcal, totalProtein, totalCarbs, totalFat, mealsCount, itemsCount,
-}: NutritionGoalsPanelProps) {
-  const t = useTranslations("admin.clientDetail");
-  const n = useTranslations("nutrition");
-  const d = useTranslations("dashboard");
-  const common = useTranslations("common");
-  const fmt = useFormat();
-  const queryClient = useQueryClient();
-  const { show } = useToast();
-  const [editing, setEditing] = useState(false);
-  const [drafts, setDrafts] = useState({ calorie: "", protein: "", carbs: "", fat: "" });
-
-  const saveMutation = useMutation({
-    mutationFn: (request: ClientNutritionGoalsResponse) => trainerApi.updateClientNutritionGoals(clientId, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.trainerClientData.nutritionGoals(clientId) });
-      setEditing(false);
-      show(t("goalsUpdated"));
-    },
-    onError: () => show(t("goalsSaveFailed"), "error"),
-  });
-
-  const startEditing = () => {
-    setDrafts({
-      calorie: goalToInput(goals?.dailyCalorieGoal),
-      protein: goalToInput(goals?.dailyProteinGoal),
-      carbs: goalToInput(goals?.dailyCarbsGoal),
-      fat: goalToInput(goals?.dailyFatGoal),
-    });
-    setEditing(true);
-  };
-
-  const canSave = isValidGoalInput(drafts.calorie) && isValidGoalInput(drafts.protein)
-    && isValidGoalInput(drafts.carbs) && isValidGoalInput(drafts.fat);
-
-  const handleSave = () => {
-    if (!canSave) return;
-    saveMutation.mutate({
-      dailyCalorieGoal: parseGoalInput(drafts.calorie),
-      dailyProteinGoal: parseGoalInput(drafts.protein),
-      dailyCarbsGoal: parseGoalInput(drafts.carbs),
-      dailyFatGoal: parseGoalInput(drafts.fat),
-    });
-  };
-
-  return (
-    <div className="sticky top-6 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-bold">{n("dailySummary")}</p>
-        {!editing && (
-          <button onClick={startEditing} aria-label={t("goalsEdit")} style={{ color: "var(--on-surface-variant)" }}>
-            <span className="material-symbols-rounded text-lg">edit</span>
-          </button>
-        )}
+              {groupMeals.length > 0 ? (
+                groupMeals.map((meal) => <MealCard key={meal.id} meal={meal} />)
+              ) : (
+                <div className="py-3 text-center type-body-s" style={{ borderRadius: "var(--r-card)", boxShadow: "inset 0 0 0 1px var(--hairline)", color: "var(--text-3)" }}>
+                  {t("noLoggedMeal")}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
 
-      {editing ? (
-        <div className="flex flex-col gap-3">
-          <GoalField label={t("goalsCalorieLabel")} suffix="kcal" value={drafts.calorie}
-            onChange={(v) => setDrafts((prev) => ({ ...prev, calorie: v }))} />
-          <GoalField label={t("goalsProteinLabel")} suffix="g" value={drafts.protein}
-            onChange={(v) => setDrafts((prev) => ({ ...prev, protein: v }))} />
-          <GoalField label={t("goalsCarbsLabel")} suffix="g" value={drafts.carbs}
-            onChange={(v) => setDrafts((prev) => ({ ...prev, carbs: v }))} />
-          <GoalField label={t("goalsFatLabel")} suffix="g" value={drafts.fat}
-            onChange={(v) => setDrafts((prev) => ({ ...prev, fat: v }))} />
-          <div className="flex justify-end gap-2.5 pt-1">
-            <button
-              onClick={() => setEditing(false)}
-              className="text-sm font-bold px-3 py-1.5"
-              style={{ color: "var(--on-surface-variant)" }}
-            >
-              {common("cancel")}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!canSave || saveMutation.isPending}
-              className="rounded-xl px-4 py-1.5 text-sm font-extrabold disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "var(--on-primary)" }}
-            >
-              {saveMutation.isPending ? common("saving") : t("goalsSave")}
-            </button>
-          </div>
+      <Card variant="card" className="w-full xl:w-[320px] xl:shrink-0 order-1 xl:order-2 xl:sticky xl:top-24 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 style={{ fontSize: 18, fontWeight: 800 }}>{n("dailySummary")}</h3>
+          <Button variant="secondary" className="whitespace-nowrap" onClick={() => setEditingGoals(true)}>
+            <Icon name="edit" size={18} />
+            {t("goalsEdit")}
+          </Button>
         </div>
-      ) : (
-        <>
-          <div className="flex items-end gap-2 mb-1">
-            <span className="text-3xl font-extrabold tabular">
-              {fmt.number(Math.round(totalKcal))}
+        <div>
+          <div className="flex items-baseline gap-2">
+            <span className="num" style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.02em" }}>{fmt.number(kcal, 0)}</span>
+            <span className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 600 }}>
+              {calGoal != null ? `/ ${fmt.number(calGoal, 0)} kcal` : "kcal"}
             </span>
-            {goals?.dailyCalorieGoal != null && (
-              <span className="text-sm font-semibold mb-1" style={{ color: "var(--on-surface-variant)" }}>
-                / {fmt.number(goals.dailyCalorieGoal)} kcal
-              </span>
-            )}
           </div>
-          {goals?.dailyCalorieGoal != null && (
-            <div className="h-2 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
-              <div
-                className="h-full rounded-[var(--r-pill)] transition-all"
-                style={{
-                  width: `${Math.min(totalKcal / goals.dailyCalorieGoal, 1) * 100}%`,
-                  background: totalKcal > goals.dailyCalorieGoal ? "var(--goal-negative)" : "var(--metric-kcal)",
-                }}
-              />
+          {calGoal != null && <div className="mt-2"><MetricBar progress={kcal / calGoal} color={kcal > calGoal ? "var(--heart)" : "var(--metric-kcal)"} /></div>}
+        </div>
+        {macros.map((m) => (
+          <div key={m.label}>
+            <div className="flex justify-between type-body-s mb-1.5">
+              <span style={{ color: m.color, fontWeight: 700 }}>{m.label}</span>
+              <span className="num" style={{ color: "var(--text-2)" }}>{fmt.number(m.value, 0)}{m.goal != null ? ` / ${fmt.number(m.goal, 0)}` : ""} g</span>
             </div>
-          )}
-
-          <MacroRow label={d("protein")} value={totalProtein} goal={goals?.dailyProteinGoal ?? null} color="var(--metric-protein)" />
-          <MacroRow label={d("carbs")} value={totalCarbs} goal={goals?.dailyCarbsGoal ?? null} color="var(--metric-carbs)" />
-          <MacroRow label={d("fat")} value={totalFat} goal={goals?.dailyFatGoal ?? null} color="var(--metric-fat)" last />
-
-          <div className="flex justify-between pt-3 text-sm" style={{ borderTop: "1px solid var(--outline)" }}>
-            <span style={{ color: "var(--on-surface-variant)" }}>{n("mealsCount")}</span>
-            <span className="font-semibold tabular">{mealsCount}</span>
+            {m.goal != null && <MetricBar progress={m.value / m.goal} color={m.color} />}
           </div>
-          <div className="flex justify-between text-sm">
-            <span style={{ color: "var(--on-surface-variant)" }}>{n("items")}</span>
-            <span className="font-semibold tabular">{itemsCount}</span>
-          </div>
-        </>
-      )}
+        ))}
+        <dl className="flex flex-col gap-1.5 pt-3 type-body-s" style={{ borderTop: "1px solid var(--hairline)" }}>
+          <div className="flex justify-between"><dt style={{ color: "var(--text-2)" }}>{n("mealsCount")}</dt><dd className="num" style={{ fontWeight: 700 }}>{meals.length}</dd></div>
+          <div className="flex justify-between"><dt style={{ color: "var(--text-2)" }}>{n("items")}</dt><dd className="num" style={{ fontWeight: 700 }}>{meals.reduce((s, m) => s + m.entries.length, 0)}</dd></div>
+        </dl>
+      </Card>
+
+      {editingGoals && <NutritionGoalsDrawer clientId={clientId} goals={goals} onClose={() => setEditingGoals(false)} />}
     </div>
-  );
-}
-
-function GoalField({
-  label, value, onChange, suffix,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  suffix: string;
-}) {
-  const invalid = !isValidGoalInput(value);
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{label}</span>
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          inputMode="numeric"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 min-w-0 text-sm rounded-[var(--r-input)] px-2.5 py-1.5"
-          style={{
-            background: "var(--surface-container)",
-            color: "var(--on-surface)",
-            border: `1px solid ${invalid ? "var(--error)" : "var(--outline)"}`,
-          }}
-        />
-        <span className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{suffix}</span>
-      </div>
-    </label>
-  );
-}
-
-function MacroRow({
-  label, value, goal, color, last = false,
-}: {
-  label: string;
-  value: number;
-  goal: number | null;
-  color: string;
-  last?: boolean;
-}) {
-  return (
-    <>
-      <div className="flex justify-between text-xs mb-1">
-        <span style={{ color }}>{label}</span>
-        <span className="tabular" style={{ color: "var(--on-surface-variant)" }}>
-          {Math.round(value)}{goal != null ? ` / ${goal}g` : "g"}
-        </span>
-      </div>
-      <div className={`h-1.5 rounded-[var(--r-pill)] overflow-hidden ${last ? "mb-3" : "mb-4"}`} style={{ background: "var(--surface-highest)" }}>
-        {goal != null && (
-          <div
-            className="h-full rounded-[var(--r-pill)]"
-            style={{ width: `${Math.min(value / goal, 1) * 100}%`, background: color }}
-          />
-        )}
-      </div>
-    </>
   );
 }
