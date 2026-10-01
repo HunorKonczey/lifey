@@ -36,7 +36,7 @@ export function WaterTrendCard({ window: w, goal }: { window: WaterWindow; goal:
         <LifeyBarChart
           aria-label={t("trendAria")}
           data={data}
-          color="var(--metric-water)"
+          color="var(--m-water)"
           goal={goal}
           goalLabel={t("trendGoalLabel", { litres: fmt.litres(goal) })}
           // Whole litres on top: 0 / 2,5 / 5 beats the default "0,0 / 2,05 / 4,1".

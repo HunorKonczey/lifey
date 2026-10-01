@@ -7,9 +7,9 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { heroState, macroRowState } from "@/features/dashboard/calorieHero";
 
 const MACROS = [
-  { key: "protein", color: "var(--metric-protein)" },
-  { key: "carbs", color: "var(--metric-carbs)" },
-  { key: "fat", color: "var(--metric-fat)" },
+  { key: "protein", color: "var(--m-protein)" },
+  { key: "carbs", color: "var(--m-carbs)" },
+  { key: "fat", color: "var(--m-fat)" },
 ] as const;
 
 export type SummaryMacroKey = (typeof MACROS)[number]["key"];
@@ -51,7 +51,7 @@ export function DaySummaryView({ kcal, goalKcal, macros }: DaySummaryViewProps) 
       <div className="flex items-center gap-5">
         <ProgressRing
           progress={state.ringProgress}
-          color="var(--metric-kcal)"
+          color="var(--m-kcal)"
           size={compact ? 92 : 112}
           aria-label={t("heroRingLabel", { eaten: fmt.integer(kcal), goal: goalKcal != null ? fmt.integer(goalKcal) : "—" })}
         >

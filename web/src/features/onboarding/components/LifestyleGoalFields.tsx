@@ -65,7 +65,7 @@ export function LifestyleGoalFields({ register, watch, setValue, errors, unitSys
           }))}
         />
         {errors.activityLevel && (
-          <p className="text-xs" style={{ color: "var(--error)" }}>{t("required")}</p>
+          <p className="text-xs" style={{ color: "var(--heart)" }}>{t("required")}</p>
         )}
       </div>
 
@@ -84,15 +84,15 @@ export function LifestyleGoalFields({ register, watch, setValue, errors, unitSys
           }))}
         />
         {errors.primaryGoal && (
-          <p className="text-xs" style={{ color: "var(--error)" }}>{t("required")}</p>
+          <p className="text-xs" style={{ color: "var(--heart)" }}>{t("required")}</p>
         )}
       </div>
 
       {primaryGoal && primaryGoal !== "MAINTAIN" && (
         <div className="flex flex-col gap-1 max-w-xs">
           <label className="text-sm font-semibold">{t("targetWeightOptional")}</label>
-          <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-input)] w-40"
-            style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+          <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-control)] w-40"
+            style={{ background: "var(--nested)", border: "1px solid var(--outline)" }}
             data-ring-frame>
             {isImperial ? (
               <input
@@ -107,10 +107,10 @@ export function LifestyleGoalFields({ register, watch, setValue, errors, unitSys
                 className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
               />
             )}
-            <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>{isImperial ? "lb" : "kg"}</span>
+            <span className="text-sm" style={{ color: "var(--text-2)" }}>{isImperial ? "lb" : "kg"}</span>
           </div>
           {errors.targetWeightKg && (
-            <p className="text-xs" style={{ color: "var(--error)" }}>{t(errors.targetWeightKg.message ?? "weightRange")}</p>
+            <p className="text-xs" style={{ color: "var(--heart)" }}>{t(errors.targetWeightKg.message ?? "weightRange")}</p>
           )}
         </div>
       )}

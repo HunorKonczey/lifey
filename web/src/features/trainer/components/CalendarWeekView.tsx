@@ -12,7 +12,7 @@ import type { OccurrenceStatus, TrainerCalendarSessionResponse } from "../types"
 
 /** The 3 px bar of an event card: done green, scheduled primary, missed heart — and the status word beside it. */
 const BAR: Record<OccurrenceStatus, string> = {
-  DONE: "var(--metric-protein)",
+  DONE: "var(--m-protein)",
   UPCOMING: "var(--primary)",
   MISSED: "var(--heart)",
   CANCELLED: "var(--text-3)",

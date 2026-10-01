@@ -10,7 +10,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { GOAL_REACHED_TOLERANCE_KG, parseLocalDate } from "@/features/weight/trend";
 import type { DashboardData } from "../useDashboardData";
 
-const WEIGHT_COLOR = "var(--metric-weight)";
+const WEIGHT_COLOR = "var(--m-weight)";
 
 export interface WeightTileViewProps {
   /** The newest weigh-in, or null for a fresh account. */

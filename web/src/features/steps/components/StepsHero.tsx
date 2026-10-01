@@ -5,7 +5,7 @@ import { Button, Card, Icon } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
 import { walkingMinutes } from "../walking";
 
-const STEPS = "var(--metric-steps)";
+const STEPS = "var(--m-steps)";
 
 /**
  * The steps page's hero (W4.6, W4-C, client-023): "Ma eddig", **6 412** large, "Még 2 588 a 9 000-es célig · kb. 25

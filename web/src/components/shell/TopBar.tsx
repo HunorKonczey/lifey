@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { routeChrome } from "./routeChrome";
 import { DateStepper } from "./DateStepper";
 import { useTopBarSlotStore } from "@/lib/hooks/useTopBarSlot";

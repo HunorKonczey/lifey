@@ -31,7 +31,7 @@ test("steps at the goal: a check and 'Goal reached' in the same purple as the ba
   const colours = await t.evaluate((el, testId) => {
     const text = el.querySelector(`[data-testid="${testId}"]`) as HTMLElement;
     // the bar's fill is the only element whose background is painted with the metric colour
-    const fill = [...el.querySelectorAll<HTMLElement>("div")].find((d) => d.style.background.includes("--metric-steps"));
+    const fill = [...el.querySelectorAll<HTMLElement>("div")].find((d) => d.style.background.includes("--m-steps"));
     return { text: getComputedStyle(text).color, bar: fill ? getComputedStyle(fill).backgroundColor : null };
   }, "steps-reached");
   expect(colours.bar).not.toBeNull();

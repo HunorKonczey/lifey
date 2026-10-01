@@ -126,7 +126,7 @@ export function TemplateEditorPanel({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <h2 className="type-title min-w-0 flex-1 truncate">{name.trim() || template?.name || t("newTemplate")}</h2>
-            {dirty && <TintedChip label={t("unsavedChip")} color="var(--tertiary)" />}
+            {dirty && <TintedChip label={t("unsavedChip")} color="var(--primary)" />}
             {!bare && <IconButton icon="close" label={common("close")} size={32} onClick={trainer.onClose} />}
           </div>
           <p className="type-body-s tabular" style={{ color: "var(--text-2)" }} data-testid="template-totals">

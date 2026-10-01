@@ -107,7 +107,7 @@ export function ClientCard({ client, week, onRevoke, revoking, overLimit }: Clie
             <>
               <span className="num">{compliance} %</span>
               <div className="mt-1.5" style={{ height: 5, borderRadius: 3, background: "var(--control)", overflow: "hidden" }} aria-hidden>
-                <div style={{ width: `${Math.min(100, compliance)}%`, height: "100%", background: "var(--metric-kcal)" }} />
+                <div style={{ width: `${Math.min(100, compliance)}%`, height: "100%", background: "var(--m-kcal)" }} />
               </div>
             </>
           ) : client.avgCalories7d != null ? (

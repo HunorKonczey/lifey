@@ -43,7 +43,7 @@ export function WaterEntriesList({
               <li key={e.id} className="flex items-center gap-3 py-2" data-testid="water-entry" style={{ borderTop: "1px solid var(--hairline)" }}>
                 <span
                   className="flex flex-none items-center justify-center"
-                  style={{ width: 36, height: 36, borderRadius: 12, background: "color-mix(in srgb, var(--metric-water) var(--chip-tint), transparent)", color: "var(--metric-water)" }}
+                  style={{ width: 36, height: 36, borderRadius: 12, background: "color-mix(in srgb, var(--m-water) var(--chip-tint), transparent)", color: "var(--m-water)" }}
                 >
                   <Icon name={drinkIcon(e.sourceName)} size={20} />
                 </span>

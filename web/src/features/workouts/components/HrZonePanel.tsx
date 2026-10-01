@@ -7,7 +7,7 @@ import { wholePercents, type HrZoneBreakdown, type HrZoneIntensity } from "../hr
  * Cool-to-warm ramp, one step per zone — the web port of mobile's
  * `HrZonePanel._zoneColors`. Local to this component rather than a design
  * token: these five are only ever used together, as a scale, unlike the
- * `--metric-*` tokens which are each an identity for one metric.
+ * `--m-*` tokens which are each an identity for one metric.
  */
 const ZONE_COLORS = ["#6E8FA8", "#5FA88C", "#D8B35A", "#D98A4E", "#C4564E"];
 
@@ -44,12 +44,12 @@ export function HrZonePanel({ breakdown }: HrZonePanelProps) {
   return (
     <Card data-testid="hr-zones">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] font-bold tracking-wide" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-[11px] font-bold tracking-wide" style={{ color: "var(--text-2)" }}>
           {t("hrZonesSectionLabel").toUpperCase()}
         </p>
         <span
           className="flex items-center gap-1 px-2.5 py-1 rounded-[var(--r-pill)] text-xs font-extrabold"
-          style={{ background: `color-mix(in srgb, ${verdictColor} 16%, transparent)`, color: "var(--on-surface)" }}
+          style={{ background: `color-mix(in srgb, ${verdictColor} 16%, transparent)`, color: "var(--text)" }}
         >
           <span className="material-symbols-rounded text-xs" style={{ color: verdictColor }}>
             local_fire_department
@@ -105,21 +105,21 @@ export function HrZonePanel({ breakdown }: HrZonePanelProps) {
                   className="w-6 flex-none text-center text-[10px] font-extrabold py-0.5 rounded-[5px]"
                   style={{
                     background: `color-mix(in srgb, ${color} ${empty ? 10 : 22}%, transparent)`,
-                    color: empty ? "var(--text-3)" : "var(--on-surface)",
+                    color: empty ? "var(--text-3)" : "var(--text)",
                   }}
                 >
                   Z{slice.zone}
                 </span>
-                <span className="text-[11.5px] truncate" style={{ color: empty ? "var(--text-3)" : "var(--on-surface-variant)" }}>
+                <span className="text-[11.5px] truncate" style={{ color: empty ? "var(--text-3)" : "var(--text-2)" }}>
                   {t(ZONE_NAME_KEYS[i])}
                 </span>
               </span>
-              <span className="h-2 rounded-[4px] overflow-hidden" style={{ background: "var(--surface-container)" }}>
+              <span className="h-2 rounded-[4px] overflow-hidden" style={{ background: "var(--nested)" }}>
                 <span className="block h-full rounded-[4px]" style={{ width: `${Math.min(1, slice.fraction) * 100}%`, background: color }} />
               </span>
-              <span className="text-right leading-tight tabular" style={{ color: empty ? "var(--text-3)" : "var(--on-surface)" }}>
+              <span className="text-right leading-tight tabular" style={{ color: empty ? "var(--text-3)" : "var(--text)" }}>
                 <span className="block text-xs font-extrabold" data-testid="hr-zone-percent">{percents[i]}%</span>
-                <span className="block text-[10.5px]" style={{ color: empty ? "var(--text-3)" : "var(--on-surface-variant)" }}>{formatDuration(slice.seconds)}</span>
+                <span className="block text-[10.5px]" style={{ color: empty ? "var(--text-3)" : "var(--text-2)" }}>{formatDuration(slice.seconds)}</span>
               </span>
             </div>
           );

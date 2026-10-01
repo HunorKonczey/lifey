@@ -8,7 +8,7 @@ import type { OccurrenceStatus, TrainerCalendarSessionResponse } from "../types"
 const MAX_DOTS = 6;
 const DOT: Record<OccurrenceStatus, string> = {
   UPCOMING: "var(--primary)",
-  DONE: "var(--metric-protein)",
+  DONE: "var(--m-protein)",
   MISSED: "var(--heart)",
   CANCELLED: "var(--text-3)",
 };

@@ -36,29 +36,29 @@ export function BestEffortsCard({ cardio, records }: BestEffortsCardProps) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-      <p className="text-sm font-semibold mb-3" style={{ color: "var(--on-surface-variant)" }}>
+    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
+      <p className="text-sm font-semibold mb-3" style={{ color: "var(--text-2)" }}>
         {t("cardioBestEffortsHeading")}
       </p>
       <div className="flex flex-col gap-3">
         {rows.map((row) => (
           <div
             key={row.labelKey}
-            className="flex items-center gap-3 rounded-[var(--r-sm)] px-3 py-2 -mx-3"
+            className="flex items-center gap-3 rounded-[var(--r-tag)] px-3 py-2 -mx-3"
             style={row.isRecord ? {
               background: "color-mix(in srgb, " + AMBER + " 12%, transparent)",
               border: "1px solid color-mix(in srgb, " + AMBER + " 34%, transparent)",
             } : undefined}
           >
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>
                 {t(row.labelKey)}
               </p>
-              <p className="text-lg font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
+              <p className="text-lg font-extrabold tabular" style={{ color: "var(--text)" }}>
                 {formatDuration(row.seconds)}
               </p>
               <div className="flex items-center gap-2">
-                <p className="text-xs" style={{ color: "var(--muted)" }}>{t("cardioBestEffortSubtitle")}</p>
+                <p className="text-xs" style={{ color: "var(--text-3)" }}>{t("cardioBestEffortSubtitle")}</p>
                 {row.isRecord && (
                   <span
                     className="px-1.5 py-0.5 rounded-[var(--r-pill)] text-[10px] font-extrabold"
@@ -72,7 +72,7 @@ export function BestEffortsCard({ cardio, records }: BestEffortsCardProps) {
             {row.pace && (
               <span
                 className="text-sm font-bold tabular flex-none"
-                style={{ color: row.isRecord ? AMBER : "var(--on-surface-variant)" }}
+                style={{ color: row.isRecord ? AMBER : "var(--text-2)" }}
               >
                 {row.pace}
               </span>

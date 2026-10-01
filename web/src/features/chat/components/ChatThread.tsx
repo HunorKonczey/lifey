@@ -413,7 +413,7 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onIn
           ) : (
             <>
               {loadingOlder && (
-                <p className="text-center text-[11px] font-semibold pb-3" style={{ color: "var(--muted)" }}>
+                <p className="text-center text-[11px] font-semibold pb-3" style={{ color: "var(--text-3)" }}>
                   {t("loadingOlder")}
                 </p>
               )}

@@ -22,9 +22,9 @@ describe("dominantMacro", () => {
 
 describe("recipeTint", () => {
   it("maps the dominant macro to its metric colour", () => {
-    expect(recipeTint({ protein: 50, carbs: 5, fat: 2 }).color).toBe("var(--metric-protein)");
-    expect(recipeTint({ protein: 5, carbs: 50, fat: 2 }).color).toBe("var(--metric-carbs)");
-    expect(recipeTint({ protein: 5, carbs: 5, fat: 30 }).color).toBe("var(--metric-fat)");
+    expect(recipeTint({ protein: 50, carbs: 5, fat: 2 }).color).toBe("var(--m-protein)");
+    expect(recipeTint({ protein: 5, carbs: 50, fat: 2 }).color).toBe("var(--m-carbs)");
+    expect(recipeTint({ protein: 5, carbs: 5, fat: 30 }).color).toBe("var(--m-fat)");
   });
 
   it("falls back to a neutral book icon", () => {

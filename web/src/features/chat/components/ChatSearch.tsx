@@ -99,21 +99,21 @@ function ResultRow({
       style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}
     >
       <div className="flex items-baseline gap-2 mb-1">
-        <span className="text-[12px] font-extrabold" style={{ color: "var(--on-surface)" }}>
+        <span className="text-[12px] font-extrabold" style={{ color: "var(--text)" }}>
           {own ? t("you") : peerName}
         </span>
-        <span className="text-[10.5px] font-semibold" style={{ color: "var(--muted)" }}>
+        <span className="text-[10.5px] font-semibold" style={{ color: "var(--text-3)" }}>
           {when}
         </span>
         {message.attachment && (
-          <span className="text-[10.5px] font-semibold" style={{ color: "var(--muted)" }}>
+          <span className="text-[10.5px] font-semibold" style={{ color: "var(--text-3)" }}>
             {t("imagePreview")}
           </span>
         )}
       </div>
       <p
         className="text-[13.5px] leading-relaxed whitespace-pre-wrap break-words"
-        style={{ color: "var(--on-surface-variant)", fontWeight: 500 }}
+        style={{ color: "var(--text-2)", fontWeight: 500 }}
       >
         {highlightSegments(message.body ?? "", term).map((segment, index) =>
           segment.match ? (
@@ -140,7 +140,7 @@ function ResultsSkeleton() {
   return (
     <div className="flex flex-col gap-2">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="skeleton-pulse h-[62px] rounded-[var(--r-md)]" />
+        <div key={i} className="skeleton-pulse h-[62px] rounded-[var(--r-control)]" />
       ))}
     </div>
   );

@@ -38,7 +38,7 @@ export function RouteSvg({ polyline, waypoints = [] }: RouteSvgProps) {
       role="img"
       aria-hidden="true"
     >
-      <rect width={WIDTH} height={HEIGHT} fill="var(--surface-container)" rx={12} />
+      <rect width={WIDTH} height={HEIGHT} fill="var(--nested)" rx={12} />
 
       {segments.length > 1 &&
         segments.slice(1).map((segment, i) => {
@@ -78,15 +78,15 @@ export function RouteSvg({ polyline, waypoints = [] }: RouteSvgProps) {
 
       {projectedWaypoints.map((point, i) => (
         <g key={`waypoint-${i}`}>
-          <circle cx={point.x} cy={point.y} r={3.5} fill="var(--tertiary)" stroke="var(--surface-container)" strokeWidth={1.5} />
-          <text x={point.x + 5} y={point.y - 5} fontSize={9} fontWeight={800} fill="var(--on-surface)">
+          <circle cx={point.x} cy={point.y} r={3.5} fill="var(--primary)" stroke="var(--nested)" strokeWidth={1.5} />
+          <text x={point.x + 5} y={point.y - 5} fontSize={9} fontWeight={800} fill="var(--text)">
             {waypoints[i]?.waypointIndex != null ? waypoints[i].waypointIndex + 1 : i + 1}
           </text>
         </g>
       ))}
 
-      <circle cx={start.x} cy={start.y} r={5} fill="var(--surface-container)" stroke="var(--primary)" strokeWidth={2} />
-      <circle cx={end.x} cy={end.y} r={5} fill="var(--secondary)" />
+      <circle cx={start.x} cy={start.y} r={5} fill="var(--nested)" stroke="var(--primary)" strokeWidth={2} />
+      <circle cx={end.x} cy={end.y} r={5} fill="var(--role)" />
     </svg>
   );
 }

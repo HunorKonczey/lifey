@@ -1,6 +1,5 @@
 import { useTranslations, useLocale } from "next-intl";
-import { StatCard } from "@/components/data/StatCard";
-import { Card } from "@/components/ds";
+import { Card, MetricTile } from "@/components/ds";
 import { ActivityChip } from "./ActivityChip";
 import { RouteSvg } from "./RouteSvg";
 import { CardioSplitsTable } from "./CardioSplitsTable";
@@ -134,7 +133,7 @@ export function CardioSessionDetail({
         </div>
         {session.rpe != null && (
           <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold flex-none"
-            style={{ background: "color-mix(in srgb, var(--secondary) 18%, transparent)", color: "var(--text)" }}>
+            style={{ background: "color-mix(in srgb, var(--role) 18%, transparent)", color: "var(--text)" }}>
             {t("sessionRpe", { rpe: session.rpe })}
           </span>
         )}
@@ -165,14 +164,14 @@ export function CardioSessionDetail({
       )}
 
       {session.feedbackNote && (
-        <p className="text-sm rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)", color: "var(--on-surface-variant)" }}>
+        <p className="text-sm rounded-[var(--r-card)] p-4" style={{ background: "var(--card)", color: "var(--text-2)" }}>
           {session.feedbackNote}
         </p>
       )}
 
       {tiles.length > 0 && <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {tiles.map((tile) => (
-          <StatCard key={tile.label} label={tile.label} value={tile.value} icon={tile.icon} color={color} />
+          <MetricTile key={tile.label} label={tile.label} value={tile.value} icon={tile.icon} color={color} />
         ))}
       </div>}
 
@@ -217,8 +216,8 @@ export function CardioSessionDetail({
       )}
 
       {family === "DISTANCE" && polyline && (
-        <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-semibold mb-3" style={{ color: "var(--on-surface-variant)" }}>
+        <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
+          <p className="text-sm font-semibold mb-3" style={{ color: "var(--text-2)" }}>
             {t("cardioRouteHeading")}
           </p>
           <RouteSvg polyline={polyline} waypoints={session.waypoints} />

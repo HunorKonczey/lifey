@@ -8,7 +8,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { effectiveDailyStepGoal, walkingMinutes } from "@/features/steps/walking";
 import type { DashboardData } from "../useDashboardData";
 
-const STEPS_COLOR = "var(--metric-steps)";
+const STEPS_COLOR = "var(--m-steps)";
 
 export interface StepsTileViewProps {
   steps: number;

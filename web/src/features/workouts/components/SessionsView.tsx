@@ -139,7 +139,7 @@ export function SessionsView({
     return (
       <div>
         <button onClick={() => setActiveId(null)}
-          className="flex items-center gap-1 mb-4 text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+          className="flex items-center gap-1 mb-4 text-sm font-semibold" style={{ color: "var(--text-2)" }}>
           <span className="material-symbols-rounded text-lg">arrow_back</span> {t("backToHistory")}
         </button>
         {/* Cardio never opens the set-logger — the web reads/filters/statisticizes

@@ -108,10 +108,10 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     : t("previewSourceFood", { kcal: fmt.integer(active.food.caloriesPer100g) });
 
   const tiles: { key: string; label: string; value: string; color: string; hero?: boolean }[] = [
-    { key: "kcal", label: t("previewCalories"), value: fmt.integer(macros.calories), color: "var(--metric-kcal)", hero: true },
-    { key: "protein", label: d("protein"), value: fmt.grams(macros.protein), color: "var(--metric-protein)" },
-    { key: "carbs", label: d("carbs"), value: fmt.grams(macros.carbs), color: "var(--metric-carbs)" },
-    { key: "fat", label: d("fat"), value: fmt.grams(macros.fat), color: "var(--metric-fat)" },
+    { key: "kcal", label: t("previewCalories"), value: fmt.integer(macros.calories), color: "var(--m-kcal)", hero: true },
+    { key: "protein", label: d("protein"), value: fmt.grams(macros.protein), color: "var(--m-protein)" },
+    { key: "carbs", label: d("carbs"), value: fmt.grams(macros.carbs), color: "var(--m-carbs)" },
+    { key: "fat", label: d("fat"), value: fmt.grams(macros.fat), color: "var(--m-fat)" },
   ];
 
   const goalKcal = goals.dailyCalorieGoal;
@@ -217,8 +217,8 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
           </p>
           {goalKcal != null && (
             <div className="flex overflow-hidden" style={{ height: 8, borderRadius: 4, background: "var(--control)" }} aria-hidden>
-              <div style={{ width: `${eatenFrac * 100}%`, background: "color-mix(in srgb, var(--metric-kcal) 55%, transparent)" }} />
-              <div style={{ width: `${addFrac * 100}%`, background: "var(--metric-kcal)" }} />
+              <div style={{ width: `${eatenFrac * 100}%`, background: "color-mix(in srgb, var(--m-kcal) 55%, transparent)" }} />
+              <div style={{ width: `${addFrac * 100}%`, background: "var(--m-kcal)" }} />
             </div>
           )}
         </div>

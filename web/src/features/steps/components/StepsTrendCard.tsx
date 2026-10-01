@@ -31,7 +31,7 @@ export function StepsTrendCard({ window: w, goal }: { window: StepsWindow; goal:
         <LifeyBarChart
           aria-label={t("trendAria")}
           data={data}
-          color="var(--metric-steps)"
+          color="var(--m-steps)"
           goal={goal ?? undefined}
           goalLabel={goal != null ? fmt.integer(goal) : undefined}
           height={240}

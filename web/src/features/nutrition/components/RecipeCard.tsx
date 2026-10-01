@@ -60,7 +60,7 @@ export function RecipeCard({ recipe, perServing, photo, onOpen, onLog, menu }: R
                 {recipe.name}
               </span>
               {recipe.favorite && (
-                <Icon name="star" size={20} fill={1} color="var(--metric-carbs)" label={t("favoriteAria")} className="shrink-0" />
+                <Icon name="star" size={20} fill={1} color="var(--m-carbs)" label={t("favoriteAria")} className="shrink-0" />
               )}
             </span>
             <span className="type-body-s block" style={{ color: "var(--text-3)" }}>
@@ -81,9 +81,9 @@ export function RecipeCard({ recipe, perServing, photo, onOpen, onLog, menu }: R
         <span className="block">
           <RatioBar
             segments={[
-              { value: perServing.protein * 4, color: "var(--metric-protein)" },
-              { value: perServing.carbs * 4, color: "var(--metric-carbs)" },
-              { value: perServing.fat * 9, color: "var(--metric-fat)" },
+              { value: perServing.protein * 4, color: "var(--m-protein)" },
+              { value: perServing.carbs * 4, color: "var(--m-carbs)" },
+              { value: perServing.fat * 9, color: "var(--m-fat)" },
             ]}
             height={8}
           />
@@ -113,7 +113,7 @@ export function RecipeCard({ recipe, perServing, photo, onOpen, onLog, menu }: R
 
 /** "F 38 g · Sz 58 g · Zs 14 g" with each part in its metric colour — the parts are the text between the dots. */
 function MacroLine({ text }: { text: string }) {
-  const colors = ["var(--metric-protein)", "var(--metric-carbs)", "var(--metric-fat)"];
+  const colors = ["var(--m-protein)", "var(--m-carbs)", "var(--m-fat)"];
   return (
     <>
       {text.split(" · ").map((part, i) => (

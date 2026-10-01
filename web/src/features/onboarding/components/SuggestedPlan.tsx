@@ -15,15 +15,15 @@ export function SuggestedPlan({ plan }: { plan: SuggestGoalsResponse }) {
   const fmt = useFormat();
   const sentence = planSentence(plan);
   const macros = [
-    { label: d("protein"), value: fmt.number(plan.proteinGrams), unit: "g", color: "var(--metric-protein)" },
-    { label: d("carbs"), value: fmt.number(plan.carbsGrams), unit: "g", color: "var(--metric-carbs)" },
-    { label: d("fat"), value: fmt.number(plan.fatGrams), unit: "g", color: "var(--metric-fat)" },
-    { label: d("water"), value: fmt.number(plan.waterLiters, 1), unit: "L", color: "var(--metric-water)" },
+    { label: d("protein"), value: fmt.number(plan.proteinGrams), unit: "g", color: "var(--m-protein)" },
+    { label: d("carbs"), value: fmt.number(plan.carbsGrams), unit: "g", color: "var(--m-carbs)" },
+    { label: d("fat"), value: fmt.number(plan.fatGrams), unit: "g", color: "var(--m-fat)" },
+    { label: d("water"), value: fmt.number(plan.waterLiters, 1), unit: "L", color: "var(--m-water)" },
   ];
   return (
     <div className="flex flex-col gap-5" data-testid="suggested-plan">
       <div className="flex flex-col gap-3 p-6" style={{ borderRadius: "var(--r-card)", background: "var(--card)" }}>
-        <span className="type-body-s" style={{ color: "var(--metric-kcal)", fontWeight: 700 }}>{t("planHeroKicker")}</span>
+        <span className="type-body-s" style={{ color: "var(--m-kcal)", fontWeight: 700 }}>{t("planHeroKicker")}</span>
         <span className="num" style={{ fontSize: 56, lineHeight: 1, fontWeight: 800, letterSpacing: "-0.03em" }}>
           {fmt.number(plan.calories)} <span style={{ fontSize: 22, fontWeight: 700, color: "var(--text-2)", letterSpacing: 0 }}>kcal</span>
         </span>

@@ -192,7 +192,7 @@ it("protein is no longer the brand primary (D-W0.3 — the second green disappea
 });
 
 // ─── Token-map tests: parse globals.css directly, no browser needed ───────
-// Confirms the legacy re-point (D-W0.3) actually landed in the stylesheet,
+// Confirms the v2 tokens landed in the stylesheet and the legacy names are gone from the app scope (W10.3),
 // independent of the literal tables above.
 
 const cssPath = join(dirname(fileURLToPath(import.meta.url)), "../../app/globals.css");
@@ -237,31 +237,23 @@ describe("globals.css token map (D-W0.3)", () => {
   const rootRaw = parseDeclarations(extractBlock(":root {"));
   const lightRaw = new Map([...rootRaw, ...parseDeclarations(extractBlock('[data-theme="light"] {'))]);
 
-  it("legacy --tertiary resolves to --primary, in both themes", () => {
-    expect(resolve("tertiary", rootRaw)).toBe(resolve("primary", rootRaw));
-    expect(resolve("tertiary", lightRaw)).toBe(resolve("primary", lightRaw));
-  });
-
-  it("legacy --secondary resolves to --role, in both themes", () => {
-    expect(resolve("secondary", rootRaw)).toBe(resolve("role", rootRaw));
-    expect(resolve("secondary", lightRaw)).toBe(resolve("role", lightRaw));
-  });
-
-  it("legacy --surface resolves to --card, in both themes", () => {
-    expect(resolve("surface", rootRaw)).toBe(resolve("card", rootRaw));
-    expect(resolve("surface", lightRaw)).toBe(resolve("card", lightRaw));
+  it("the legacy variable names are no longer defined in the app scope", () => {
+    for (const name of ["tertiary", "secondary", "surface", "surface-container", "on-surface", "muted", "metric-kcal", "r-lg", "shadow-float"]) {
+      expect(rootRaw.has(name), name).toBe(false);
+      expect(lightRaw.has(name), name).toBe(false);
+    }
   });
 
   it("the app scope's resolved dark tokens match the D-W0.4 table", () => {
     expect(resolve("bg", rootRaw)?.toUpperCase()).toBe(dark.bg);
     expect(resolve("primary", rootRaw)?.toUpperCase()).toBe(dark.primary);
-    expect(resolve("metric-protein", rootRaw)?.toUpperCase()).toBe(dark.metrics.protein);
+    expect(resolve("m-protein", rootRaw)?.toUpperCase()).toBe(dark.metrics.protein);
   });
 
   it("the app scope's resolved light tokens match the D-W0.4 table", () => {
     expect(resolve("bg", lightRaw)?.toUpperCase()).toBe(light.bg);
     expect(resolve("primary", lightRaw)?.toUpperCase()).toBe(light.primary);
-    expect(resolve("metric-protein", lightRaw)?.toUpperCase()).toBe(light.metrics.protein);
+    expect(resolve("m-protein", lightRaw)?.toUpperCase()).toBe(light.metrics.protein);
   });
 
   it("the marketing pin restores the pre-v2 hexes untouched", () => {

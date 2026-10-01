@@ -8,7 +8,7 @@ import { useFormat } from "@/lib/format/useFormat";
 import type { QuickSource } from "../quickSources";
 import { containersLeft } from "../waterStats";
 
-const WATER = "var(--metric-water)";
+const WATER = "var(--m-water)";
 
 export interface WaterTile {
   source: QuickSource;
@@ -76,7 +76,7 @@ export function WaterHero({
               onClick={() => onAdd(s)}
               disabled={pending}
               className="lifey-button flex flex-col items-start gap-0.5 p-3 text-left disabled:opacity-50"
-              style={{ borderRadius: "var(--r-card)", background: "color-mix(in srgb, var(--metric-water) var(--chip-tint), transparent)" }}
+              style={{ borderRadius: "var(--r-card)", background: "color-mix(in srgb, var(--m-water) var(--chip-tint), transparent)" }}
             >
               <span className="type-title-s tabular" style={{ color: WATER }}>
                 +{fmt.litres(s.volumeLiters)}

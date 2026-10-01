@@ -166,7 +166,7 @@ export function ChatComposer({
           </span>
         )}
         {overLimit && (
-          <span className="text-[10.5px] font-extrabold ml-auto mr-1" style={{ color: "var(--error)" }}>
+          <span className="text-[10.5px] font-extrabold ml-auto mr-1" style={{ color: "var(--heart)" }}>
             {t("tooLong", { max: MAX_MESSAGE_LENGTH })}
           </span>
         )}
@@ -197,12 +197,12 @@ function TypingBand({ active, name }: { active: boolean; name: string }) {
           key={delay}
           className="w-[5px] h-[5px] rounded-full"
           style={{
-            background: "var(--on-surface-variant)",
+            background: "var(--text-2)",
             animation: active ? `chat-typing-dot 1.2s ${delay}s infinite` : undefined,
           }}
         />
       ))}
-      <span className="text-[11px] font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+      <span className="text-[11px] font-semibold" style={{ color: "var(--text-2)" }}>
         {active ? t("isTyping", { name }) : ""}
       </span>
     </div>
@@ -214,7 +214,7 @@ export function ArchivedComposerNotice() {
   const t = useTranslations("chat");
   return (
     <div
-      className="flex items-center gap-2.5 mx-5 mb-4 px-4 py-3.5 rounded-[var(--r-input)] shrink-0"
+      className="flex items-center gap-2.5 mx-5 mb-4 px-4 py-3.5 rounded-[var(--r-control)] shrink-0"
       style={{ background: "var(--nested)", color: "var(--text-2)" }}
     >
       <span className="material-symbols-rounded text-[20px]">lock</span>

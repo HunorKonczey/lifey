@@ -41,7 +41,7 @@ export function GenderBirthDateFields({ watch, setValue, errors }: Props) {
           onChange={(v) => setValue("gender", v, { shouldValidate: true })}
         />
         {errors.gender && (
-          <p className="text-xs" style={{ color: "var(--error)" }}>{t("required")}</p>
+          <p className="text-xs" style={{ color: "var(--heart)" }}>{t("required")}</p>
         )}
       </div>
 

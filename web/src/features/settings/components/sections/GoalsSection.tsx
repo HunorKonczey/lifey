@@ -12,12 +12,12 @@ import { useSettings } from "../../useSettings";
 export function useGoalDefs(): GoalDef[] {
   const d = useTranslations("dashboard");
   return [
-    { key: "dailyCalorieGoal", label: d("calories"), unit: "kcal", color: "var(--metric-kcal)", decimals: 0 },
-    { key: "dailyProteinGoal", label: d("protein"), unit: "g", color: "var(--metric-protein)", decimals: 0 },
-    { key: "dailyCarbsGoal", label: d("carbs"), unit: "g", color: "var(--metric-carbs)", decimals: 0 },
-    { key: "dailyFatGoal", label: d("fat"), unit: "g", color: "var(--metric-fat)", decimals: 0 },
-    { key: "dailyWaterGoalLiters", label: d("water"), unit: "L", color: "var(--metric-water)", decimals: 1 },
-    { key: "dailyStepGoal", label: d("steps"), unit: "", color: "var(--metric-steps)", decimals: 0 },
+    { key: "dailyCalorieGoal", label: d("calories"), unit: "kcal", color: "var(--m-kcal)", decimals: 0 },
+    { key: "dailyProteinGoal", label: d("protein"), unit: "g", color: "var(--m-protein)", decimals: 0 },
+    { key: "dailyCarbsGoal", label: d("carbs"), unit: "g", color: "var(--m-carbs)", decimals: 0 },
+    { key: "dailyFatGoal", label: d("fat"), unit: "g", color: "var(--m-fat)", decimals: 0 },
+    { key: "dailyWaterGoalLiters", label: d("water"), unit: "L", color: "var(--m-water)", decimals: 1 },
+    { key: "dailyStepGoal", label: d("steps"), unit: "", color: "var(--m-steps)", decimals: 0 },
   ];
 }
 

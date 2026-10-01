@@ -5,23 +5,23 @@ export function muscleGroupColor(category: string | null): string {
   switch (category) {
     case "CHEST":
     case "QUADS":
-      return "var(--metric-kcal)";
+      return "var(--m-kcal)";
     case "SHOULDERS":
     case "GLUTES":
-      return "var(--metric-carbs)";
+      return "var(--m-carbs)";
     case "TRICEPS":
     case "FOREARMS":
     case "ABS":
-      return "var(--metric-fat)";
+      return "var(--m-fat)";
     case "BACK":
-      return "var(--metric-water)";
+      return "var(--m-water)";
     case "BICEPS":
-      return "var(--metric-protein)";
+      return "var(--m-protein)";
     case "HAMSTRINGS":
     case "CALVES":
-      return "var(--metric-steps)";
+      return "var(--m-steps)";
     default:
-      return "var(--metric-weight)";
+      return "var(--m-weight)";
   }
 }
 

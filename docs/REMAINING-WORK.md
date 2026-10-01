@@ -102,6 +102,29 @@ is ott oldódott meg: a metrikaszínek AA-k a saját 12 / 16 %-os tintájukon, a
 | Design-audit a CI-ban | `dart run tool/design_audit.dart --strict` — most 0, érdemes kapuzni | `77` R7.1 |
 | Emulátoros végpróbák | a chat-szolgáltatást igénylő edzői folyamatok (üzenet / ütemezés lapok, kommentelés), a naptár hónapnézete, a tablet világos / magyar módja eszközön még nem látott | `77` §12 R6 |
 
+
+### 2.2 A web-redesign (`78`) után
+
+A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesign-plan.md) §12-ben); a szándékosan kimaradt (§6) és a közben kiderült tételek:
+
+| Tétel | Mi | Hol |
+|---|---|---|
+| Cél-hozzárendelés | „Célok: Szabó Bence" / „beállította az edződ" — tárolni kell, ki és mikor állította a célt | `78` §6, §10 Q1 |
+| Súly napszak / jegyzet, étel-adagok, rost / cukor, kedvenc ételek | a `WeightResponse` csak dátumos; az étel-modell nem ismeri az adagot | `78` §6 |
+| „Az edződtől" jelölés a kiosztott recepten | a másolat nem őrzi a származást | `78` §6 |
+| Edzői étkezés-komment, edzői lépéscél | új végpont / adat | `78` §6 |
+| Chat jelenlét, megosztott edzés / étkezés kártya | chat-szolgáltatás munka | `78` §6 |
+| Meghívó-előzmény (elfogadott), megosztható link, emlékeztető | a meghívó-modell nem tárolja; a `GET /trainer/invites` csak élő függőket ad | `78` §6, W9.4 |
+| Valódi utolsó belépés / aktivitás | a „30 napos aktív fiók" a munkamenet-frissítésekből számol; kell egy rögzített utolsó-aktivitás | `78` W9.b2 |
+| Edzői kérelem „végzettség" | nem gyűjtjük | `78` §6 |
+| Szerepkör-szűrő a felhasználólistán | az API-nak nincs; a lista egyben (max. 500) töltődik, a szűrés a kliensen fut | `78` W9.7 |
+| Sablon időtartam, ismétlésszám | a sablon csak szettszámot tárol; az idő becslés | `78` W9.1 |
+| Sablonhasználat ütemezésből | a „Használja" csak a kiosztottakat számolja; az ütemezésekhez kliensenként külön lekérés kell | `78` W9.1 |
+| Számlázás: két csomagos canvas | a canvas Alap / Pro, a termékben Starter / Pro / Studio; az „utána ingyenes" mondat nincs definiálva | `78` W9.5 |
+| Repository-tesztek az új JPQL-ekre | a `member of`, a csoportosított darabszám és a `min` lekérdezés Docker nélkül nem tesztelhető | `78` W9.b1–b3 |
+| Web e2e-k frissítése | a régi programkártyákra, a kliens-modalra és a rendezésre épülő specek nincsenek frissítve; a banner / blocked-dialog / over-limit specek itt kihagyták magukat | `78` W7/W8/W9 napló |
+| Billentyűzetes húzás, 200 %-os nagyítás, telefon-billentyűzet | nem lettek végigpróbálva | `78` napló |
+
 ---
 
 ## 3. Félbemaradt ellenőrzések / ismert hibák

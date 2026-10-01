@@ -218,7 +218,7 @@ export function TrainerCalendar() {
             onDropSession={dropSession}
           />
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-1 type-body-s" style={{ color: "var(--text-2)" }} aria-label={t("legendAria")}>
-            {([["var(--primary)", "UPCOMING"], ["var(--metric-protein)", "DONE"], ["var(--heart)", "MISSED"]] as const).map(([color, status]) => (
+            {([["var(--primary)", "UPCOMING"], ["var(--m-protein)", "DONE"], ["var(--heart)", "MISSED"]] as const).map(([color, status]) => (
               <li key={status} className="inline-flex items-center gap-1.5">
                 <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
                 {tSchedule(`status.${status}`)}

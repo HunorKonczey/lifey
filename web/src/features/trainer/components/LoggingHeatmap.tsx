@@ -6,9 +6,9 @@ import { useFormat } from "@/lib/format/useFormat";
 import type { ActivityKind, HeatCell, HeatWeek } from "../clientActivity";
 
 const COLOR: Record<ActivityKind, string> = {
-  meal: "var(--metric-kcal)",
+  meal: "var(--m-kcal)",
   workout: "var(--primary)",
-  weight: "var(--metric-weight)",
+  weight: "var(--m-weight)",
 };
 
 const KINDS: ActivityKind[] = ["meal", "workout", "weight"];

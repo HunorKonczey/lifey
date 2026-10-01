@@ -22,9 +22,9 @@ export function dominantMacro({ protein, carbs, fat }: Pick<Macros, DominantMacr
 
 /** The recipe card's icon holder (shown when the recipe has no photo): the dominant macro's metric colour and an icon for it. */
 export const RECIPE_TINT: Record<DominantMacro | "none", { macro: DominantMacro | "none"; color: string; icon: string }> = {
-  protein: { macro: "protein", color: "var(--metric-protein)", icon: "egg_alt" },
-  carbs: { macro: "carbs", color: "var(--metric-carbs)", icon: "bakery_dining" },
-  fat: { macro: "fat", color: "var(--metric-fat)", icon: "water_drop" },
+  protein: { macro: "protein", color: "var(--m-protein)", icon: "egg_alt" },
+  carbs: { macro: "carbs", color: "var(--m-carbs)", icon: "bakery_dining" },
+  fat: { macro: "fat", color: "var(--m-fat)", icon: "water_drop" },
   none: { macro: "none", color: "var(--primary)", icon: "menu_book" },
 };
 

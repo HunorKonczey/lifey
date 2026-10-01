@@ -96,7 +96,7 @@ iterations.
 | 75 | [Log a food from the Foods tab](75-log-food-from-foods-tab-plan.md) | mobile done, web in review |
 | 76 | [Smarter weight trend (roadmap #11)](76-smarter-weight-trend-plan.md) | built |
 | 77 | [Mobile redesign v2](redesign/77-mobile-redesign-plan.md) (in `redesign/`) | done |
-| 78 | [Web redesign](redesign-web/78-web-redesign-plan.md) (in `redesign-web/`) | plan written |
+| 78 | [Web redesign](redesign-web/78-web-redesign-plan.md) (in `redesign-web/`) | done |
 
 Plans 40–74 live in the topic folders above.
 

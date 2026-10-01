@@ -94,7 +94,7 @@ export function WeightHero({ hero, now = new Date() }: { hero: WeightHeroData; n
               className="relative"
               style={{ height: 8, borderRadius: "var(--r-pill)", background: "var(--nested)" }}
             >
-              <div style={{ width: `${hero.progress * 100}%`, height: "100%", borderRadius: "var(--r-pill)", background: "var(--metric-weight)" }} />
+              <div style={{ width: `${hero.progress * 100}%`, height: "100%", borderRadius: "var(--r-pill)", background: "var(--m-weight)" }} />
               <span
                 aria-hidden
                 style={{
@@ -105,7 +105,7 @@ export function WeightHero({ hero, now = new Date() }: { hero: WeightHeroData; n
                   height: 16,
                   transform: "translate(-50%, -50%)",
                   borderRadius: "var(--r-pill)",
-                  background: "var(--metric-weight)",
+                  background: "var(--m-weight)",
                   boxShadow: "0 0 0 4px var(--card)",
                 }}
               />

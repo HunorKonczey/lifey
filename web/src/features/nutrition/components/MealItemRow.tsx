@@ -15,9 +15,9 @@ export interface MealItemRowData {
 }
 
 const MACROS = [
-  { key: "protein", color: "var(--metric-protein)" },
-  { key: "carbs", color: "var(--metric-carbs)" },
-  { key: "fat", color: "var(--metric-fat)" },
+  { key: "protein", color: "var(--m-protein)" },
+  { key: "carbs", color: "var(--m-carbs)" },
+  { key: "fat", color: "var(--m-fat)" },
 ] as const;
 
 /**

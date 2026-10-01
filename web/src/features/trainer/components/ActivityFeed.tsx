@@ -6,10 +6,10 @@ import { useFormat } from "@/lib/format/useFormat";
 import type { FeedEvent } from "../clientActivity";
 
 const ICON: Record<FeedEvent["kind"], { icon: string; color: string }> = {
-  record: { icon: "emoji_events", color: "var(--metric-carbs)" },
+  record: { icon: "emoji_events", color: "var(--m-carbs)" },
   workout: { icon: "fitness_center", color: "var(--primary)" },
-  meal: { icon: "restaurant", color: "var(--metric-kcal)" },
-  weight: { icon: "monitor_weight", color: "var(--metric-weight)" },
+  meal: { icon: "restaurant", color: "var(--m-kcal)" },
+  weight: { icon: "monitor_weight", color: "var(--m-weight)" },
 };
 
 /** "Legutóbb" (W7-B): the latest few things the client did — a record, a workout, a meal, a weigh-in — with relative times. */

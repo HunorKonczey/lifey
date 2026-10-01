@@ -29,7 +29,7 @@ export default async function RootNotFound() {
       <div className="text-center max-w-[360px]">
         <a href={`/${routing.defaultLocale}`} className="flex items-center justify-center gap-2.5 mb-6">
           <span
-            className="w-9 h-9 rounded-md flex items-center justify-center"
+            className="w-9 h-9 rounded-[var(--r-control)] flex items-center justify-center"
             style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -40,7 +40,7 @@ export default async function RootNotFound() {
         </a>
 
         <h1 className="text-[28px] font-bold tracking-[-0.02em]">{t("title")}</h1>
-        <p className="text-base font-medium mt-3" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-base font-medium mt-3" style={{ color: "var(--text-2)" }}>
           {t("body")}
         </p>
 

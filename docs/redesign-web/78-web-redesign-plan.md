@@ -1,6 +1,6 @@
 # 78 – Web Redesign (Design System v2, web extension)
 
-Status: plan written, no code yet
+Status: done — W0 – W10 implemented on `feature/web-redesign` (W0–W9 each reviewed, log in §12; W10 closes the sweep: style-debt audit blocking in CI, legacy aliases and old components deleted)
 Scope: web (client shell, trainer shell, superadmin shell, auth, onboarding — every logged-in page) ·
 design system · a handful of optional, read-only backend steps (marked `W<n>.b<k>`) · docs
 Depends on: the Claude Design output in this folder — `Lifey Web Design System.dc.html` + nine screen
@@ -3355,24 +3355,30 @@ every page.
 
 *As built:* `web/scripts/style-debt-audit.mjs` (`npm run audit:styles`, `-- --summary` for totals). Scope: `src/` without `components/marketing`, `app/(marketing)`, `app/(marketing-bare)`, the dev gallery and `app/globals.css` (the token definitions, until W10.3 deletes the aliases); tests are skipped. **Hard rules** (exit 1): legacy variables from the D-W0.3 table (`var(--surface)`, `--tertiary`, `--on-surface-variant`, `--r-card` …), imports from `components/ui|data|layout`, native `type="date"|"time"`, `rounded-[var(--r-sm|md|input|lg|nav)]`. **Soft counts**: hex literals, inline `style={{` with colour / radius / font-size, `date-fns` `format(` and `.toFixed(` in components, `humanizeEnum(`. **Baseline on 2026-10-01 (before W10.2 / W10.3):** legacy-var 473 in ~60 files, legacy-import 6, native-date 4, legacy-radius 34; soft: hex 136, inline-style 1001, date-fns-format 42, toFixed 3, humanizeEnum 1. The CI step is added after W10.3, when the hard rules reach zero.
 
-### W10.2 — Web UI: remaining undesigned screens
+### W10.2 — Web UI: remaining undesigned screens ✅
 - `app/not-found.tsx` is marketing (untouched); in scope: the app error boundary page, chat search results,
   chat attachment viewer, `programs/new` empty state, onboarding Welcome step, any page the audit still
   lists — by analogy with the nearest canvas, each listed in the commit.
 - **Verify:** audit shows only intentional exceptions.
 
-### W10.3 — Web UI: delete the legacy aliases and old components
+*As built:* by the time the audit ran, most of the listed screens had been designed by analogy inside their own iterations (chat search results and the attachment viewer in W8.9, `programs/new` in W8.4 as the program editor, the onboarding Welcome in W6.5), so the sweep found three real gaps: **(1) the app had no error boundary** — a render error showed Next's bare page; `app/error.tsx` now shows the DS `ErrorState` (Retry = `reset`, the error digest behind "Details") inside the root layout; **(2)** the two remaining **old dialogs** (`BillingBlockedDialog`, `ConfirmSaveDetailsDialog`) moved onto the DS `Modal` (focus trap and return, Esc, bottom sheet on a phone; the buttons are DS `Button`s, the focus starts on the safe one); **(3)** the trainer / superadmin avatars (`ClientAvatar`, `UserAvatar`) still painted their own hex palette — they are the DS `Avatar` with the per-person metric hue now (the photo loading is unchanged). The admin templates / nutrition tab switches use the DS `SegmentedControl`, the cardio summary tiles the DS `MetricTile`, and `ThemeToggle` lives in `components/shell`. **Intentional exceptions left in the soft counts:** the heart-rate zone colours (`HrZonePanel`), the best-efforts medal tints (`BestEffortsCard`), the chat attachment placeholder, and the OG-image renderer (`lib/ogImage.tsx`, rendered outside the app theme) — 13 hex literals in four files; inline `style={{` (≈940) is how the DS components apply token values and is not counted as debt on its own.
+
+### W10.3 — Web UI: delete the legacy aliases and old components ✅
 - Delete legacy variables and Tailwind keys from the app scope (the marketing pin keeps its own copy under
   `:root:has([data-surface="marketing"])`), `components/ui/{Dialog,ConfirmDialog,SegmentedControl,Switch,
   DatePicker,TimePicker,Toaster}.tsx`, `components/data/*`, `components/layout/{Sidebar,AdminSidebar,
   TopBar}.tsx`, `lib/hooks/useUiStore.ts` fields no longer used, `humanizeEnum` if unused.
 - **Verify:** `npm run audit:styles` exit 0; build, unit, `ds` e2e green; marketing unchanged.
 
-### W10.4 — Docs: close the loop
+*As built:* **Codemod first, then deletion.** Because the legacy variables were exact re-points of the v2 tokens (D-W0.3), a script replaced every `var(--surface…)`, `--on-surface…`, `--muted`, `--tertiary…`, `--secondary`, `--border`, `--error…`, `--metric-*`, `--goal-*`, `--r-sm|md|input|lg|nav` and `--shadow-float` in the app scope with its v2 name — **384 replacements in 85 files**, no visual change by construction (the three uses of `--surface-high` / `--surface-highest`, which differed by theme, were set to `--control` by hand). Then: the alias block, the legacy radius names, `--shadow-float` and the light-theme overrides left `globals.css`'s `:root`; `components/ui/*` (Dialog, ConfirmDialog, SegmentedControl, Switch, DatePicker, TimePicker) and `components/data/*` (DataTable, HeroMetricCard, KpiCard, MacroRing, Sparkline, StatCard) were `git rm`'d — nothing imported them any more; `useUiStore` and `humanizeEnum` (with its test) were deleted as unused; the base styles in `globals.css` and `layout.tsx` use the v2 names. **What stays, on purpose:** the marketing pin (`:root:has([data-surface="marketing"])`) keeps its own copy of the old values, and the **Tailwind `@theme` legacy colour / radius keys stay** because Tailwind keys are global and the marketing pages still use them (`bg-surface`, `text-on-surface`…) — the audit's new `legacy-class` rule keeps them out of the app scope. `contrast.test.ts` now asserts that the legacy names are no longer defined in the app scope and still checks the marketing pin. **Audit result:** all five hard rules at **0** (legacy-var 473 → 0, legacy-import 6 → 0, native-date 4 → 0 — the hits were comments, which the audit now ignores —, legacy-radius 34 → 0, legacy-class 0); `npm run audit:styles` is a **blocking step in `web-ci.yml`** (after typecheck, before unit tests). Unit tests 1061, `tsc`, `eslint` clean.
+
+### W10.4 — Docs: close the loop ✅
 - This doc's `Status:` and ✅s; `docs/web/06-design-system-web.md` gets a "superseded by
   docs/redesign-web/78-web-redesign-plan.md" line at the top; `docs/web/README.md` pointer;
   `docs/REMAINING-WORK.md` gets the §6 deferred items; `docs/README.md` status row.
 - **Verify:** links resolve.
+
+*As built:* this doc's `Status:` line; `docs/web/06-design-system-web.md` and `docs/web/README.md` point to it as superseded; `docs/REMAINING-WORK.md` §2.2 lists the §6 deferrals as the open web items; `docs/README.md` and `docs/redesign-web/README.md` show the status as done.
 
 **W10 acceptance** (plus §4.1): audit clean; one shell, one card, one chip, one table, one toast.
 
@@ -3797,3 +3803,18 @@ frames were compared by eye, strip by strip).
 *Bugs* (closed in the commit that carries this entry):
 - **W9.fix-1** — on the billing page the current plan’s tile was tinted with the primary colour, which put its overline, "/ év" and monthly-equivalent text (`--text-3`) at 4.0 : 1 and the "Jelenlegi csomag" chip at 4.17 : 1 (axe `color-contrast`, 3–4 nodes in every capture of the page); the tile keeps the neutral `--nested` fill and is marked by its primary ring and chip only.
 - Environmental, not product: the console errors in every capture are the Google sign-in button refusing `localhost`, the chat service not running (404 / 401 on `/chat/…`) and the avatar 404 of an account without a picture.
+
+### W10 — 2026-10-01 — audit, build and the `ds` + `marketing` Playwright projects
+
+*Scope:* W10 changes no screen on purpose, so its review is **regression evidence rather than a visual walk**: `npm run audit:styles` (exit 0), `tsc`, `eslint` (0 errors), the unit suite (1061 tests), a production `npm run build` (all routes, including the new `/superadmin/role-history`), and the **`marketing` (accessibility, CTAs, no-JS first touch …) and `ds` (component gallery) Playwright projects — 288 tests**, the same two projects the CI runs. The pages themselves were reviewed per iteration (W0–W9 above); the W9 pass of 32 captures ran *before* the token codemod, so the codemod's "no visual change" claim rests on the aliases having been exact re-points, not on a new capture run.
+
+*Result:* 285 of 288 passed on the first run. Of the three failures, two were flaky and **passed on a rerun** (`marketing/home-ctas` secondary CTA, `ds/templateEditor` mouse reorder); one was **real** and is fixed below.
+
+*Not done:* the full three-role × HU / EN × dark / light × 1440 / 390 regression walk the plan describes for W10 — it was **not repeated** after W10 (see "Review gap" below); no visual comparison of the light theme after the `--surface-high` / `--surface-highest` hand edits (three uses); the on-device checks listed in the W8 and W9 entries.
+
+*Review gap, stated plainly:* the deletion of ~85 files' worth of legacy variable names is covered by the exact-alias argument, the build, the unit tests and the two Playwright projects, but **no page was opened in a browser after the codemod**. A walk of the trainer and superadmin pages (the ones with most inline styles) is the first thing to do in the next session that touches the web.
+
+*Bugs* (closed in the commit that carries this entry):
+- **W10.fix-1** — `e2e/ds/dashboardTiles.spec.ts` looked for the steps bar by its old `--metric-steps` variable name in the inline style; the codemod renamed it to `--m-steps`, so the spec failed with a null bar. The spec follows the new name (a spec bound to a token name is exactly the coupling the rename exposes).
+- **W10.fix-2** — the audit script's own header comment contained a class-like string (`rounded-[var(--r-sm|md|…)]`) that Tailwind, which scans every non-ignored file in the project, turned into a CSS rule with an invalid value — the dev server refused to compile `globals.css`. The comment is plain words now. (Worth remembering: anything under `web/` is a Tailwind content source.)
+- Environmental: the `Parsing CSS source code failed` lines of one later run came from a `git stash` taken in the middle of the work (it briefly mixed the deleted and the new files); the run after `stash pop` is clean.

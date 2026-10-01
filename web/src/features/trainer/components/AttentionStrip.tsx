@@ -13,7 +13,7 @@ const TONE: Record<AttentionKind, { color: string; icon: string }> = {
   inactive: { color: "var(--heart)", icon: "notifications_active" },
   unread: { color: "var(--primary)", icon: "chat" },
   missed: { color: "var(--heart)", icon: "event_busy" },
-  record: { color: "var(--metric-carbs)", icon: "emoji_events" },
+  record: { color: "var(--m-carbs)", icon: "emoji_events" },
 };
 
 const MAX_CARDS = 3;

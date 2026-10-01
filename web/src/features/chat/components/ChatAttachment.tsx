@@ -92,7 +92,7 @@ export function ChatAttachment({ message, uploading }: ChatAttachmentProps) {
         {uploading && (
           <span
             className="absolute inset-0 flex items-center justify-center"
-            style={{ color: "var(--on-surface)" }}
+            style={{ color: "var(--text)" }}
           >
             <span className="material-symbols-rounded text-[26px] animate-spin">progress_activity</span>
           </span>
@@ -159,7 +159,7 @@ function ImageLightbox({ messageId, onClose }: { messageId: number; onClose: () 
           src={url}
           alt={t("imageAlt")}
           onClick={(e) => e.stopPropagation()}
-          className="max-w-full max-h-full object-contain rounded-[var(--r-md)]"
+          className="max-w-full max-h-full object-contain rounded-[var(--r-control)]"
         />
       )}
     </div>

@@ -13,8 +13,8 @@ import type { DashboardData } from "../useDashboardData";
 
 const STEP_ICON: Record<FirstStepId, { icon: string; color: string }> = {
   goals: { icon: "flag", color: "var(--primary)" },
-  meal: { icon: "restaurant", color: "var(--metric-kcal)" },
-  weight: { icon: "monitor_weight", color: "var(--metric-weight)" },
+  meal: { icon: "restaurant", color: "var(--m-kcal)" },
+  weight: { icon: "monitor_weight", color: "var(--m-weight)" },
 };
 
 export interface FirstStepsViewProps {

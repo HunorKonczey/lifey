@@ -247,10 +247,10 @@ export function RecipeEditor({ recipe, onClose, onDelete }: RecipeEditorProps) {
                   {ing.foodName}
                 </span>
                 <span className="type-label tabular flex gap-2">
-                  <span style={{ color: "var(--metric-kcal)" }}>
+                  <span style={{ color: "var(--m-kcal)" }}>
                     {fmt.integer((ing.caloriesPer100g * ing.quantityInGrams) / 100)} kcal
                   </span>
-                  <span style={{ color: "var(--metric-protein)" }}>
+                  <span style={{ color: "var(--m-protein)" }}>
                     {fmt.integer((ing.proteinPer100g * ing.quantityInGrams) / 100)} g P
                   </span>
                 </span>
@@ -299,8 +299,8 @@ export function RecipeEditor({ recipe, onClose, onDelete }: RecipeEditorProps) {
                 >
                   <span className="truncate">{f.name}</span>
                   <span className="type-label tabular flex shrink-0 gap-2">
-                    <span style={{ color: "var(--metric-kcal)" }}>{fmt.integer(f.caloriesPer100g)} kcal</span>
-                    <span style={{ color: "var(--metric-protein)" }}>{fmt.integer(f.proteinPer100g)} g P</span>
+                    <span style={{ color: "var(--m-kcal)" }}>{fmt.integer(f.caloriesPer100g)} kcal</span>
+                    <span style={{ color: "var(--m-protein)" }}>{fmt.integer(f.proteinPer100g)} g P</span>
                   </span>
                 </button>
               ))}
@@ -310,10 +310,10 @@ export function RecipeEditor({ recipe, onClose, onDelete }: RecipeEditorProps) {
 
         <div className="type-body-s tabular flex flex-wrap justify-between gap-x-4 gap-y-1 pt-3" style={{ borderTop: "1px solid var(--hairline)" }}>
           <span style={{ color: "var(--text-2)" }}>{t("total")}</span>
-          <span style={{ color: "var(--metric-kcal)", fontWeight: 700 }}>
+          <span style={{ color: "var(--m-kcal)", fontWeight: 700 }}>
             {t("totalPerServingKcal", { total: Math.round(totalKcal), perServing: Math.round(totalKcal / servings) })}
           </span>
-          <span style={{ color: "var(--metric-protein)", fontWeight: 700 }}>
+          <span style={{ color: "var(--m-protein)", fontWeight: 700 }}>
             {t("totalPerServingProtein", { total: Math.round(totalProtein), perServing: Math.round(totalProtein / servings) })}
           </span>
         </div>

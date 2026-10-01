@@ -4,8 +4,8 @@ The redesign of the Lifey **web app** (Next.js, `web/`) onto the mobile Design S
 produced by Claude Design from the brief in [web-redesign-prompt.md](web-redesign-prompt.md) (with the
 309-page screenshot PDF of the current web as input); the canvases in this folder are the **source of
 truth for values and layout**, and [78-web-redesign-plan.md](78-web-redesign-plan.md) turns them into
-small, mergeable steps. Status: **plan written, no code yet** (branch `feature/web-redesign`, one
-long-lived PR collecting every step).
+small, mergeable steps. Status: **done** (W0 – W10 on branch `feature/web-redesign`, one
+long-lived PR collecting every step; the review log is §12 of the plan).
 
 The canvases are `.dc.html` files that load `support.js` from this folder (a copy of
 `../redesign/support.js`). Serve the folder and open them in a browser:

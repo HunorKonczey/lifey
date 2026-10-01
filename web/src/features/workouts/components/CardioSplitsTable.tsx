@@ -52,9 +52,9 @@ export function CardioSplitsTable({ splits, chart, accent = "var(--primary)" }: 
   if (hasInterval) {
     const hasWatts = sorted.some((s) => s.avgWatts != null);
     return (
-      <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+      <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="text-sm font-semibold" style={{ color: "var(--text-2)" }}>
             {t("cardioIntervalSectionsHeading")}
           </p>
           <span
@@ -67,7 +67,7 @@ export function CardioSplitsTable({ splits, chart, accent = "var(--primary)" }: 
         {chart && <div className="mb-3">{chart}</div>}
         <table className="w-full text-sm tabular">
           <thead>
-            <tr style={{ color: "var(--muted)" }}>
+            <tr style={{ color: "var(--text-3)" }}>
               <th className="text-left font-semibold pb-2">{t("cardioSplitIndexHeader")}</th>
               <th className="text-left font-semibold pb-2">{t("cardioIntervalIntensityHeader")}</th>
               <th className="text-right font-semibold pb-2">{t("cardioIntervalDurationHeader")}</th>
@@ -80,8 +80,8 @@ export function CardioSplitsTable({ splits, chart, accent = "var(--primary)" }: 
               const fraction = intensity ? INTENSITY_FRACTION[intensity] : null;
               const hard = intensity === "HARD";
               return (
-                <tr key={split.splitIndex} style={{ borderTop: "1px solid var(--surface-container)" }}>
-                  <td className="py-1.5" style={{ color: "var(--on-surface-variant)" }}>
+                <tr key={split.splitIndex} style={{ borderTop: "1px solid var(--nested)" }}>
+                  <td className="py-1.5" style={{ color: "var(--text-2)" }}>
                     {split.splitIndex + 1}
                   </td>
                   <td className="py-1.5">
@@ -89,11 +89,11 @@ export function CardioSplitsTable({ splits, chart, accent = "var(--primary)" }: 
                       <div className="flex items-center gap-2">
                         <span
                           className="w-16 flex-none truncate text-xs font-bold"
-                          style={{ color: hard ? accent : "var(--on-surface-variant)" }}
+                          style={{ color: hard ? accent : "var(--text-2)" }}
                         >
                           {t(INTENSITY_LABEL_KEY[intensity])}
                         </span>
-                        <span className="flex-1 h-2.5 rounded-[5px] overflow-hidden" style={{ background: "var(--surface-highest)" }}>
+                        <span className="flex-1 h-2.5 rounded-[5px] overflow-hidden" style={{ background: "var(--control)" }}>
                           <span
                             className="block h-full rounded-[5px]"
                             style={{ width: `${(fraction ?? 0) * 100}%`, background: accent, opacity: hard ? 1 : fraction ?? 1 }}
@@ -101,16 +101,16 @@ export function CardioSplitsTable({ splits, chart, accent = "var(--primary)" }: 
                         </span>
                       </div>
                     ) : (
-                      <span style={{ color: "var(--on-surface)" }}>
+                      <span style={{ color: "var(--text)" }}>
                         {split.distanceMeters != null ? formatDistanceKm(split.distanceMeters, locale) : "—"}
                       </span>
                     )}
                   </td>
-                  <td className="py-1.5 text-right font-bold tabular" style={{ color: "var(--on-surface)" }}>
+                  <td className="py-1.5 text-right font-bold tabular" style={{ color: "var(--text)" }}>
                     {formatDuration(split.durationSeconds)}
                   </td>
                   {hasWatts && (
-                    <td className="py-1.5 text-right" style={{ color: "var(--on-surface-variant)" }}>
+                    <td className="py-1.5 text-right" style={{ color: "var(--text-2)" }}>
                       {split.avgWatts != null ? `${Math.round(split.avgWatts)} W` : "—"}
                     </td>
                   )}
@@ -126,14 +126,14 @@ export function CardioSplitsTable({ splits, chart, accent = "var(--primary)" }: 
   const hasElevation = sorted.some((s) => s.elevationDeltaM != null);
 
   return (
-    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-      <p className="text-sm font-semibold mb-3" style={{ color: "var(--on-surface-variant)" }}>
+    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
+      <p className="text-sm font-semibold mb-3" style={{ color: "var(--text-2)" }}>
         {t("cardioSplitsHeading")}
       </p>
       {chart && <div className="mb-3">{chart}</div>}
       <table className="w-full text-sm tabular">
         <thead>
-          <tr style={{ color: "var(--muted)" }}>
+          <tr style={{ color: "var(--text-3)" }}>
             <th className="text-left font-semibold pb-2">{t("cardioSplitIndexHeader")}</th>
             <th className="text-left font-semibold pb-2">{t("cardioSplitDistanceHeader")}</th>
             <th className="text-right font-semibold pb-2">{t("cardioSplitPaceHeader")}</th>
@@ -145,18 +145,18 @@ export function CardioSplitsTable({ splits, chart, accent = "var(--primary)" }: 
             const pace =
               split.distanceMeters != null ? formatPace(split.distanceMeters, split.durationSeconds) : null;
             return (
-              <tr key={split.splitIndex} style={{ borderTop: "1px solid var(--surface-container)" }}>
-                <td className="py-1.5" style={{ color: "var(--on-surface-variant)" }}>
+              <tr key={split.splitIndex} style={{ borderTop: "1px solid var(--nested)" }}>
+                <td className="py-1.5" style={{ color: "var(--text-2)" }}>
                   {split.splitIndex + 1}
                 </td>
-                <td className="py-1.5" style={{ color: "var(--on-surface)" }}>
+                <td className="py-1.5" style={{ color: "var(--text)" }}>
                   {split.distanceMeters != null ? formatDistanceKm(split.distanceMeters, locale) : "—"}
                 </td>
-                <td className="py-1.5 text-right" style={{ color: "var(--on-surface)" }}>
+                <td className="py-1.5 text-right" style={{ color: "var(--text)" }}>
                   {pace ?? "—"}
                 </td>
                 {hasElevation && (
-                  <td className="py-1.5 text-right" style={{ color: "var(--on-surface-variant)" }}>
+                  <td className="py-1.5 text-right" style={{ color: "var(--text-2)" }}>
                     {split.elevationDeltaM != null ? formatElevationDelta(split.elevationDeltaM) : "—"}
                   </td>
                 )}

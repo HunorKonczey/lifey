@@ -38,7 +38,7 @@ export function KpiRow({ stats }: { stats: PeriodStats }) {
     {
       id: "calories",
       icon: "local_fire_department",
-      color: "var(--metric-kcal)",
+      color: "var(--m-kcal)",
       label: t("avgCalories"),
       value: calories.value == null ? dash : fmt.integer(calories.value),
       unit: calories.value == null ? undefined : "kcal",
@@ -53,7 +53,7 @@ export function KpiRow({ stats }: { stats: PeriodStats }) {
     {
       id: "weight",
       icon: "monitor_weight",
-      color: "var(--metric-weight)",
+      color: "var(--m-weight)",
       label: t("weight"),
       value: weight.value == null ? dash : fmt.signedDelta(weight.value, { digits: 1 }),
       unit: weight.value == null ? undefined : "kg",
@@ -92,7 +92,7 @@ export function KpiRow({ stats }: { stats: PeriodStats }) {
     {
       id: "steps",
       icon: "directions_walk",
-      color: "var(--metric-steps)",
+      color: "var(--m-steps)",
       label: t("avgSteps"),
       value: kpis.steps.value == null ? dash : fmt.integer(kpis.steps.value),
       delta: kpis.steps.delta && percent(kpis.steps.delta) && <ToneChip label={percent(kpis.steps.delta)!} tone={kpis.steps.delta.tone} />,

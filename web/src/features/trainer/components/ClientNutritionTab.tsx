@@ -64,9 +64,9 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
   const sum = (pick: (m: MealResponse) => number) => meals.reduce((s, m) => s + pick(m), 0);
   const kcal = sum(mealKcal);
   const macros = [
-    { label: d("protein"), value: sum(mealProtein), goal: goals?.dailyProteinGoal ?? null, color: "var(--metric-protein)" },
-    { label: d("carbs"), value: sum(mealCarbs), goal: goals?.dailyCarbsGoal ?? null, color: "var(--metric-carbs)" },
-    { label: d("fat"), value: sum(mealFat), goal: goals?.dailyFatGoal ?? null, color: "var(--metric-fat)" },
+    { label: d("protein"), value: sum(mealProtein), goal: goals?.dailyProteinGoal ?? null, color: "var(--m-protein)" },
+    { label: d("carbs"), value: sum(mealCarbs), goal: goals?.dailyCarbsGoal ?? null, color: "var(--m-carbs)" },
+    { label: d("fat"), value: sum(mealFat), goal: goals?.dailyFatGoal ?? null, color: "var(--m-fat)" },
   ];
   const calGoal = goals?.dailyCalorieGoal ?? null;
 
@@ -79,10 +79,10 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
           return (
             <section key={type} className="flex flex-col gap-2" aria-label={label}>
               <div className="flex items-center gap-2 px-1">
-                <Icon name={icon} size={22} fill={1} color="var(--metric-kcal)" />
+                <Icon name={icon} size={22} fill={1} color="var(--m-kcal)" />
                 <h3 style={{ fontSize: 15, fontWeight: 800 }}>{label}</h3>
                 {groupKcal > 0 && (
-                  <span className="ml-auto num type-body-s" style={{ color: "var(--metric-kcal)", fontWeight: 700 }}>
+                  <span className="ml-auto num type-body-s" style={{ color: "var(--m-kcal)", fontWeight: 700 }}>
                     {fmt.number(groupKcal, 0)} kcal
                   </span>
                 )}
@@ -114,7 +114,7 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
               {calGoal != null ? `/ ${fmt.number(calGoal, 0)} kcal` : "kcal"}
             </span>
           </div>
-          {calGoal != null && <div className="mt-2"><MetricBar progress={kcal / calGoal} color={kcal > calGoal ? "var(--heart)" : "var(--metric-kcal)"} /></div>}
+          {calGoal != null && <div className="mt-2"><MetricBar progress={kcal / calGoal} color={kcal > calGoal ? "var(--heart)" : "var(--m-kcal)"} /></div>}
         </div>
         {macros.map((m) => (
           <div key={m.label}>

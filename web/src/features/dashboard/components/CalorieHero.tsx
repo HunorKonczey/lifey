@@ -14,9 +14,9 @@ import { CopyYesterdayButton } from "./CopyYesterdayButton";
 import type { DashboardData } from "../useDashboardData";
 
 const MACROS = [
-  { key: "protein", color: "var(--metric-protein)" },
-  { key: "carbs", color: "var(--metric-carbs)" },
-  { key: "fat", color: "var(--metric-fat)" },
+  { key: "protein", color: "var(--m-protein)" },
+  { key: "carbs", color: "var(--m-carbs)" },
+  { key: "fat", color: "var(--m-fat)" },
 ] as const;
 
 export type MacroKey = (typeof MACROS)[number]["key"];
@@ -68,7 +68,7 @@ export function CalorieHeroView({ kcal, goalKcal, macros, onAdd, secondaryAction
   return (
     <Card variant="hero" className="flex flex-col gap-6 xl:flex-row xl:items-center xl:gap-8" style={{ padding: 28 }} data-testid="calorie-hero">
       <div className="flex items-center justify-center gap-5 sm:justify-start sm:gap-8 xl:shrink-0">
-        <ProgressRing progress={state.ringProgress} color="var(--metric-kcal)" size={ringSize} aria-label={ringLabel}>
+        <ProgressRing progress={state.ringProgress} color="var(--m-kcal)" size={ringSize} aria-label={ringLabel}>
           <div className="flex flex-col items-center leading-none">
             <span data-testid="hero-number" style={{ fontSize: numberSize, fontWeight: 800, letterSpacing: "-0.03em" }}>
               <AnimatedNumber value={state.number} format={(n) => fmt.integer(n)} />

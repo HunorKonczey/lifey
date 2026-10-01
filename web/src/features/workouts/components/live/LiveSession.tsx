@@ -195,7 +195,7 @@ export function LiveSession({
             <button
               onClick={() => setFeedbackContext("edit")}
               className="flex items-center gap-3 rounded-[var(--r-card)] p-4 text-left"
-              style={{ background: "var(--surface)" }}
+              style={{ background: "var(--card)" }}
             >
               {rpe != null ? (
                 <div
@@ -205,26 +205,26 @@ export function LiveSession({
                   {rpe}
                 </div>
               ) : (
-                <span className="material-symbols-rounded text-xl flex-none" style={{ color: "var(--on-surface-variant)" }}>
+                <span className="material-symbols-rounded text-xl flex-none" style={{ color: "var(--text-2)" }}>
                   mood
                 </span>
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold">{rpe != null ? t("postWorkoutFeedbackSectionTitle") : t("postWorkoutFeedbackEmptyState")}</p>
                 {feedbackNote && (
-                  <p className="text-xs truncate" style={{ color: "var(--on-surface-variant)" }}>
+                  <p className="text-xs truncate" style={{ color: "var(--text-2)" }}>
                     {feedbackNote}
                   </p>
                 )}
               </div>
-              <span className="material-symbols-rounded text-lg flex-none" style={{ color: "var(--on-surface-variant)" }}>
+              <span className="material-symbols-rounded text-lg flex-none" style={{ color: "var(--text-2)" }}>
                 chevron_right
               </span>
             </button>
           )}
 
           {current == null ? (
-            <div className="p-6 text-center text-sm rounded-[var(--r-card)]" style={{ background: "var(--surface)", color: "var(--muted)" }}>
+            <div className="p-6 text-center text-sm rounded-[var(--r-card)]" style={{ background: "var(--card)", color: "var(--text-3)" }}>
               {t("noPlannedExercises")}
             </div>
           ) : (

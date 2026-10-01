@@ -14,8 +14,8 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(next)}
-      className="p-1.5 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container"
-      style={{ color: "var(--on-surface-variant)" }}
+      className="p-1.5 rounded-[var(--r-tag)] transition-colors hover:bg-nested"
+      style={{ color: "var(--text-2)" }}
       aria-label={label}
       title={label}
     >

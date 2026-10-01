@@ -105,7 +105,7 @@ export default function WeightPage() {
       ) : weights.length === 0 ? (
         <EmptyState
           icon="monitor_weight"
-          color="var(--metric-weight)"
+          color="var(--m-weight)"
           title={t("noEntries")}
           body={t("noEntriesBody")}
           action={

@@ -35,7 +35,7 @@ export function WeightChart({ weights, range, goalKg, now = new Date() }: { weig
         <LifeyLineChart
           aria-label={t("chartAria")}
           data={points}
-          color="var(--metric-weight)"
+          color="var(--m-weight)"
           goal={goalKg ?? undefined}
           goalLabel={goalKg != null ? t("chartGoalLabel", { weight: Number.isInteger(goalKg) ? fmt.integer(goalKg, "kg") : fmt.weight(goalKg) }) : undefined}
           unit=" kg"

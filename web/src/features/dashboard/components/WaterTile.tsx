@@ -105,7 +105,7 @@ export function WaterTile({ data }: { data: DashboardData }) {
       value={fmt.litreNumber(totals.waterL)}
       unit={`/ ${fmt.litres(goal)}`}
       unitRatio={0.6}
-      color="var(--metric-water)"
+      color="var(--m-water)"
       segments={{ count: 10, progress, height: 8 }}
       aria-label={fmt.litresOfGoal(totals.waterL, goal)}
       actions={<WaterMenu className="@[200px]:hidden" size={32} />}
@@ -121,8 +121,8 @@ export function WaterTile({ data }: { data: DashboardData }) {
               style={{
                 height: 40,
                 borderRadius: "var(--r-control)",
-                background: "color-mix(in srgb, var(--metric-water) 16%, transparent)",
-                color: "var(--metric-water)",
+                background: "color-mix(in srgb, var(--m-water) 16%, transparent)",
+                color: "var(--m-water)",
                 fontWeight: 700,
                 fontSize: 14,
               }}

@@ -18,8 +18,8 @@ describe("formatRest", () => {
 describe("muscleGroupColor / exerciseIcon", () => {
   it("groups share a metric colour; unknown and missing fall back to the neutral one", () => {
     expect(muscleGroupColor("CHEST")).toBe(muscleGroupColor("QUADS"));
-    expect(muscleGroupColor(null)).toBe("var(--metric-weight)");
-    expect(muscleGroupColor("NOPE")).toBe("var(--metric-weight)");
+    expect(muscleGroupColor(null)).toBe("var(--m-weight)");
+    expect(muscleGroupColor("NOPE")).toBe("var(--m-weight)");
   });
 
   it("cardio runs, bodyweight is gymnastics, the rest lifts", () => {

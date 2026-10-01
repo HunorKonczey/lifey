@@ -8,9 +8,9 @@ import { useEntitlements } from "../hooks";
 import { bannerStateFor, dismissTrialInfo, isTrialInfoDismissed, type BannerState, type BannerTone } from "../bannerState";
 
 const TONE_STYLES: Record<BannerTone, { background: string; color: string; icon: string }> = {
-  error: { background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)", icon: "error" },
-  warning: { background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)", icon: "warning" },
-  info: { background: "var(--tertiary-container)", color: "var(--on-tertiary-container)", icon: "info" },
+  error: { background: "color-mix(in srgb, var(--heart) 15%, transparent)", color: "var(--heart)", icon: "error" },
+  warning: { background: "color-mix(in srgb, var(--heart) 15%, transparent)", color: "var(--heart)", icon: "warning" },
+  info: { background: "var(--primary-tint)", color: "var(--on-primary-tint)", icon: "info" },
 };
 
 const COPY_KEYS: Record<BannerState["kind"], { title: string; body: string }> = {
@@ -55,7 +55,7 @@ export function AdminBillingBanner() {
     <div
       data-testid="admin-billing-banner"
       data-banner-kind={state.kind}
-      className="rounded-[var(--r-lg)] p-4.5 mb-3.5 flex items-start gap-3"
+      className="rounded-[var(--r-card)] p-4.5 mb-3.5 flex items-start gap-3"
       style={{ background: tone.background, color: tone.color }}
     >
       <span className="material-symbols-rounded text-2xl shrink-0">{tone.icon}</span>

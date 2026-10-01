@@ -68,48 +68,12 @@
   --decrease:    var(--m-weight);
   --increase:    var(--m-kcal);
 
-  /* ─── Legacy tokens, re-pointed at the nearest v2 token (D-W0.3) ─── */
-  /* Names stay until W10.3 deletes them; each iteration moves its own
-     files off these and onto the v2 names directly. */
-  --surface:            var(--card);
-  --surface-container:  var(--nested);
-  --surface-high:       var(--control);
-  --surface-highest:    var(--raised);
-  --secondary:          var(--role);
-  --tertiary:              var(--primary);
-  --tertiary-container:    var(--primary-tint);
-  --on-tertiary-container: var(--on-primary-tint);
-  --on-surface:         var(--text);
-  --on-surface-variant: var(--text-2);
-  --muted:              var(--text-3);
-  --border:             var(--hairline);
-  --error:              var(--heart);
-  --error-container:    color-mix(in srgb, var(--heart) 16%, transparent);
-
-  --metric-kcal:    var(--m-kcal);
-  --metric-protein: var(--m-protein);
-  --metric-carbs:   var(--m-carbs);
-  --metric-fat:     var(--m-fat);
-  --metric-steps:   var(--m-steps);
-  --metric-weight:  var(--m-weight);
-  --metric-water:   var(--m-water);
-  --metric-hr:      var(--m-heart);
-
-  --goal-positive: var(--m-protein);
-  --goal-negative: var(--m-kcal);
-
   /* ─── Radius scale — 4 steps + pill (D-W0.5) ─── */
   --r-tag:     8px;
   --r-control: 14px;
   --r-card:    22px;
   --r-hero:    30px;
   --r-pill:    999px;
-  /* Legacy names re-pointed at the nearest step (D-W0.3) */
-  --r-sm:    var(--r-tag);
-  --r-md:    var(--r-control);
-  --r-input: var(--r-control);
-  --r-lg:    var(--r-card);
-  --r-nav:   var(--r-hero);
 
   /* ─── Elevation (D-W0.2/D-W0.4) — dark: tone carries depth, drop shadows only
      on floating layers; a 1 px top light edge on cards/hero/float instead of
@@ -124,9 +88,6 @@
   --edge-hero:  inset 0 1px 0 rgba(255, 255, 255, .05);
   --edge-float: inset 0 1px 0 rgba(255, 255, 255, .07);
   --blur-float: 24px;
-  /* Legacy name re-pointed (D-W0.3) — becomes `none` in dark, matching the
-     v2 rule that dark cards get no drop shadow. */
-  --shadow-float: var(--e1);
 
   /* ─── Motion (D-W0.13) ─── */
   --dur-fast: 150ms;
@@ -236,11 +197,6 @@
   --segment-shadow: var(--e1);
   --modal-bg: var(--card);
 
-  /* Legacy tokens whose mapping differs by theme (D-W0.3) */
-  --surface-high:    var(--card);    /* white today */
-  --surface-highest: var(--control);
-  --error-container: color-mix(in srgb, var(--heart) 12%, transparent);
-
   /* ─── Elevation (D-W0.2/D-W0.4) — light: white cards on a warm bg, a soft
      warm shadow instead of a border; no top-light edges ─── */
   --e1: 0 1px 2px rgba(40, 38, 20, .05), 0 10px 24px -16px rgba(40, 38, 20, .22);
@@ -334,6 +290,8 @@
   --breakpoint-2xl: 90rem;
   --breakpoint-3xl: 100rem;
 
+  /* Legacy colour keys: only the marketing surface still uses them (its pinned copy of the old values is
+     defined above, scoped to `:root:has([data-surface="marketing"])`); app code uses the v2 keys below. */
   --color-bg:                 var(--bg);
   --color-surface:            var(--surface);
   --color-surface-container:  var(--surface-container);
@@ -402,7 +360,7 @@
 html {
   height: 100%;
   background: var(--bg);
-  color: var(--on-surface);
+  color: var(--text);
 }
 
 body {
@@ -411,7 +369,7 @@ body {
   font-size: 15px;
   line-height: 1.5;
   background: var(--bg);
-  color: var(--on-surface);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -497,8 +455,8 @@ body {
      setting and the gallery's forced toggle), same mechanism as every other
      motion token — a 0ms-duration infinite animation just renders statically. */
   animation: lifeyPulse var(--dur-skeleton) ease-in-out infinite;
-  background: var(--surface-highest);
-  border-radius: var(--r-sm);
+  background: var(--control);
+  border-radius: var(--r-tag);
 }
 
 /* ─── Chat typing indicator: three dots rising in turn (design D3) ─── */
@@ -656,9 +614,9 @@ button:disabled { cursor: default; }
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px var(--surface-container) inset !important;
-  -webkit-text-fill-color: var(--on-surface) !important;
-  caret-color: var(--on-surface);
+  -webkit-box-shadow: 0 0 0 1000px var(--nested) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text);
   transition: background-color 99999s ease-in-out 0s;
 }
 

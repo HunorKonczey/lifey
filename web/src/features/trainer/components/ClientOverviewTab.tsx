@@ -103,7 +103,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
         <MetricTile
           icon="local_fire_department"
           label={o("kpiCalories")}
-          color="var(--metric-kcal)"
+          color="var(--m-kcal)"
           value={averages ? fmt.number(averages.kcal, 0) : "—"}
           unit={averages ? (calGoal ? `/ ${fmt.number(calGoal, 0)} kcal` : "kcal") : undefined}
           progress={averages && calGoal ? Math.min(1, averages.kcal / calGoal) : undefined}
@@ -112,7 +112,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
         <MetricTile
           icon="egg_alt"
           label={o("kpiProtein")}
-          color="var(--metric-protein)"
+          color="var(--m-protein)"
           value={averages ? fmt.number(averages.protein, 0) : "—"}
           unit={averages ? (proteinGoal ? `/ ${fmt.number(proteinGoal, 0)} g` : "g") : undefined}
           progress={averages && proteinGoal ? Math.min(1, averages.protein / proteinGoal) : undefined}
@@ -129,7 +129,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
         <MetricTile
           icon="monitor_weight"
           label={o("kpiWeight")}
-          color="var(--metric-weight)"
+          color="var(--m-weight)"
           value={weight ? fmt.number(weight.latestKg, 1) : "—"}
           unit={weight ? "kg" : undefined}
           delta={weight?.deltaKg != null ? <WeightDelta kg={weight.deltaKg} /> : undefined}
