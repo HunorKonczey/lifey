@@ -18,6 +18,7 @@ import com.lifey.trainer.exception.InviteNotFoundException;
 import com.lifey.trainer.exception.InviteRateLimitedException;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.trainer.exception.OccurrenceNotCancellableException;
+import com.lifey.trainer.exception.OccurrenceNotMovableException;
 import com.lifey.trainer.exception.ProgramAssignmentNotFoundException;
 import com.lifey.trainer.exception.ProgramNotFoundException;
 import com.lifey.trainer.exception.ProgramStartDateInvalidException;
@@ -205,6 +206,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(OccurrenceNotCancellableException.class)
     public ResponseEntity<ApiError> handleOccurrenceNotCancellable(OccurrenceNotCancellableException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(OccurrenceNotMovableException.class)
+    public ResponseEntity<ApiError> handleOccurrenceNotMovable(OccurrenceNotMovableException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
     }
 

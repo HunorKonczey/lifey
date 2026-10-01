@@ -3169,13 +3169,15 @@ thread}.ts`.
 
 *As built:* on a phone an open thread is the **whole screen** (W8-E): a fixed layer above the bottom nav (`ChatThread` got a `flush` prop — no card radius or shadow) with the back arrow, avatar, name, search, mute and the ⓘ client-details button; the list is the page until a conversation is picked. The ⓘ opens `ClientContextPanel` in the DS `Drawer` (the full-height sheet on a phone). **The keyboard no longer covers the composer:** the layer is sized to the *visual* viewport (new `useVisualViewport` hook: its height and offset, updated on `resize` / `scroll`, `100dvh` until measured) and the composer keeps the safe-area inset below it. Checked with Playwright at 390 dark: the thread fills the screen (composer bottom at 807 of 844, above nothing — the bottom nav is covered), no horizontal overflow, the info sheet opens, 0 console errors. **Not verified:** the keyboard behaviour itself — a desktop browser has no on-screen keyboard, so the visualViewport path was reasoned and type-checked, not exercised.
 
-### W8.b1 — Backend (optional): move a scheduled occurrence
+### W8.b1 — Backend (optional): move a scheduled occurrence ✅
 - Files: `backend/.../trainer/controller/WorkoutScheduleController.java` (`PATCH /api/v1/trainer/scheduled-
   sessions/{id}` with `{ scheduledFor, scheduledTime }`, only for `SCHEDULED` status, ownership-scoped),
   service + test; then a web step `W8.5b — Web UI: drag to move, Shift+drag to copy` (copy = create a
   one-off schedule).
 - A new write endpoint on existing data (no migration). **Only with the user's go-ahead (§10 Q2)** —
   without it the calendar ships without drag and the legend omits the hint.
+
+*As built:* **Done with the go-ahead.** `PATCH /api/v1/trainer/scheduled-sessions/{id}` with `{ scheduledFor, scheduledTime }` (the whole new slot; a null time means "no time of day") moves one occurrence. `WorkoutScheduleService.moveOccurrence` shares the ownership lookup with `cancelOccurrence` (a schedule *or* program-assignment occurrence of this trainer; anyone else's is "not found", never "forbidden") and allows it only for an **upcoming** occurrence — not started, not cancelled, not in the past — onto **today or a later day within three months**: otherwise `OccurrenceNotMovableException` → **409**, `ScheduleHorizonExceededException` → **422**, not the trainer's → **404**, no date → **400**. It re-arms the push reminder (`reminderSentAt` back to null — the old one was for the old slot) and, since `WorkoutSession` is a `SyncableEntity`, `updatedAt` bumps on its own so the client's phone picks the move up through the normal delta sync. No migration, no new table. Tests: 8 service cases (moves slot and re-arms the reminder, clears the time, onto today, started / cancelled / past occurrence, past target, beyond the horizon, another trainer's) and 5 controller cases (200 body, 400, 409, 422, 404): `WorkoutScheduleServiceImplTest` 28 and `WorkoutScheduleControllerTest` 18 green, no trainer test failing (the integration tests that need Docker/Testcontainers cannot run here). The web side — drag to move, Shift + drag to copy — is W8.5b.
 
 **W8 acceptance** (plus §4.1): W8-A … W8-E reproduced; build a 4-week program by drag and by keyboard;
 assign with a conflict shown; answer a chat with the context panel open.

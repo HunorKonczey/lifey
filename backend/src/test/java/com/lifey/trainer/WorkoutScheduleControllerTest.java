@@ -9,6 +9,7 @@ import com.lifey.trainer.dto.TrainerCalendarSessionResponse;
 import com.lifey.trainer.exception.CalendarRangeExceededException;
 import com.lifey.trainer.exception.EmptyRecurrenceException;
 import com.lifey.trainer.exception.OccurrenceNotCancellableException;
+import com.lifey.trainer.exception.OccurrenceNotMovableException;
 import com.lifey.trainer.exception.ScheduleHorizonExceededException;
 import com.lifey.trainer.exception.ScheduleInPastException;
 import com.lifey.trainer.exception.ScheduleNotFoundException;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -171,5 +173,57 @@ class WorkoutScheduleControllerTest {
 
         mockMvc.perform(delete("/api/v1/trainer/scheduled-sessions/30"))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void moveOccurrence_returnsTheMovedOccurrence() throws Exception {
+        when(workoutScheduleService.moveOccurrence(any(), any())).thenReturn(new ScheduledSessionResponse(
+                30L, LocalDate.of(2026, Month.OCTOBER, 9), java.time.LocalTime.of(18, 0), "Láb", OccurrenceStatus.UPCOMING, 5L, null));
+
+        mockMvc.perform(patch("/api/v1/trainer/scheduled-sessions/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledFor\":\"2026-10-09\",\"scheduledTime\":\"18:00\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value(30))
+                .andExpect(jsonPath("$.scheduledFor").value("2026-10-09"))
+                .andExpect(jsonPath("$.scheduledTime").value("18:00:00"));
+    }
+
+    @Test
+    void moveOccurrence_withoutADateReturns400() throws Exception {
+        mockMvc.perform(patch("/api/v1/trainer/scheduled-sessions/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledTime\":\"18:00\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void moveOccurrence_notMovableReturns409() throws Exception {
+        when(workoutScheduleService.moveOccurrence(any(), any())).thenThrow(new OccurrenceNotMovableException("nope"));
+
+        mockMvc.perform(patch("/api/v1/trainer/scheduled-sessions/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledFor\":\"2026-10-09\"}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void moveOccurrence_beyondTheHorizonReturns422() throws Exception {
+        when(workoutScheduleService.moveOccurrence(any(), any())).thenThrow(new ScheduleHorizonExceededException("far"));
+
+        mockMvc.perform(patch("/api/v1/trainer/scheduled-sessions/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledFor\":\"2027-10-09\"}"))
+                .andExpect(status().isUnprocessableContent());
+    }
+
+    @Test
+    void moveOccurrence_notYoursReturns404() throws Exception {
+        when(workoutScheduleService.moveOccurrence(any(), any())).thenThrow(new ScheduleNotFoundException("not yours"));
+
+        mockMvc.perform(patch("/api/v1/trainer/scheduled-sessions/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledFor\":\"2026-10-09\"}"))
+                .andExpect(status().isNotFound());
     }
 }

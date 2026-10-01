@@ -17,6 +17,9 @@ import com.lifey.trainer.entity.WorkoutSchedule;
 import com.lifey.trainer.exception.CalendarRangeExceededException;
 import com.lifey.trainer.exception.EmptyRecurrenceException;
 import com.lifey.trainer.exception.OccurrenceNotCancellableException;
+import com.lifey.trainer.exception.OccurrenceNotMovableException;
+import com.lifey.trainer.dto.MoveOccurrenceRequest;
+import com.lifey.trainer.dto.ScheduledSessionResponse;
 import com.lifey.trainer.exception.ScheduleHorizonExceededException;
 import com.lifey.trainer.exception.ScheduleInPastException;
 import com.lifey.trainer.exception.ScheduleNotFoundException;
@@ -362,5 +365,109 @@ class WorkoutScheduleServiceImplTest {
 
         assertThat(schedule1.getCancelledAt()).isNotNull();
         assertThat(schedule2.getCancelledAt()).isNotNull();
+    }
+
+    private WorkoutSession ownedOccurrence(LocalDate date) {
+        WorkoutSession occurrence = new WorkoutSession();
+        occurrence.setId(20L);
+        occurrence.setScheduleId(SCHEDULE_ID);
+        occurrence.setScheduledFor(date);
+        when(workoutSessionRepository.findById(20L)).thenReturn(Optional.of(occurrence));
+        when(workoutScheduleRepository.findByIdAndTrainerId(SCHEDULE_ID, TRAINER_ID))
+                .thenReturn(Optional.of(new WorkoutSchedule()));
+        return occurrence;
+    }
+
+    @Test
+    void moveOccurrence_futureNotStarted_movesTheSlotAndRearmsTheReminder() {
+        WorkoutSession occurrence = ownedOccurrence(LocalDate.now().plusDays(1));
+        occurrence.setScheduledTime(java.time.LocalTime.of(18, 0));
+        occurrence.setReminderSentAt(Instant.now());
+        LocalDate target = LocalDate.now().plusDays(5);
+
+        ScheduledSessionResponse response = service.moveOccurrence(20L, new MoveOccurrenceRequest(target, java.time.LocalTime.of(7, 30)));
+
+        assertThat(occurrence.getScheduledFor()).isEqualTo(target);
+        assertThat(occurrence.getScheduledTime()).isEqualTo(java.time.LocalTime.of(7, 30));
+        assertThat(occurrence.getReminderSentAt()).isNull();
+        assertThat(occurrence.getDeletedAt()).isNull();
+        assertThat(response.scheduledFor()).isEqualTo(target);
+        assertThat(response.status()).isEqualTo(OccurrenceStatus.UPCOMING);
+    }
+
+    @Test
+    void moveOccurrence_withoutATime_clearsTheTimeOfDay() {
+        WorkoutSession occurrence = ownedOccurrence(LocalDate.now().plusDays(1));
+        occurrence.setScheduledTime(java.time.LocalTime.of(18, 0));
+
+        service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null));
+
+        assertThat(occurrence.getScheduledTime()).isNull();
+    }
+
+    @Test
+    void moveOccurrence_ontoToday_isAllowed() {
+        WorkoutSession occurrence = ownedOccurrence(LocalDate.now().plusDays(3));
+
+        service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now(), null));
+
+        assertThat(occurrence.getScheduledFor()).isEqualTo(LocalDate.now());
+    }
+
+    @Test
+    void moveOccurrence_alreadyStarted_throwsConflictAndChangesNothing() {
+        WorkoutSession occurrence = ownedOccurrence(LocalDate.now().plusDays(1));
+        occurrence.setStartedAt(Instant.now());
+
+        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null)))
+                .isInstanceOf(OccurrenceNotMovableException.class);
+        assertThat(occurrence.getScheduledFor()).isEqualTo(LocalDate.now().plusDays(1));
+    }
+
+    @Test
+    void moveOccurrence_cancelled_throwsConflict() {
+        WorkoutSession occurrence = ownedOccurrence(LocalDate.now().plusDays(1));
+        occurrence.setDeletedAt(Instant.now());
+
+        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null)))
+                .isInstanceOf(OccurrenceNotMovableException.class);
+    }
+
+    @Test
+    void moveOccurrence_pastOccurrence_throwsConflict() {
+        ownedOccurrence(LocalDate.now().minusDays(1));
+
+        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null)))
+                .isInstanceOf(OccurrenceNotMovableException.class);
+    }
+
+    @Test
+    void moveOccurrence_targetInThePast_throwsConflict() {
+        ownedOccurrence(LocalDate.now().plusDays(1));
+
+        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().minusDays(1), null)))
+                .isInstanceOf(OccurrenceNotMovableException.class);
+    }
+
+    @Test
+    void moveOccurrence_beyondTheThreeMonthHorizon_throwsHorizonExceeded() {
+        ownedOccurrence(LocalDate.now().plusDays(1));
+
+        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusMonths(3).plusDays(1), null)))
+                .isInstanceOf(com.lifey.trainer.exception.ScheduleHorizonExceededException.class);
+    }
+
+    @Test
+    void moveOccurrence_belongsToAnotherTrainer_throwsNotFound() {
+        WorkoutSession occurrence = new WorkoutSession();
+        occurrence.setId(20L);
+        occurrence.setScheduleId(SCHEDULE_ID);
+        occurrence.setScheduledFor(LocalDate.now().plusDays(1));
+        when(workoutSessionRepository.findById(20L)).thenReturn(Optional.of(occurrence));
+        when(workoutScheduleRepository.findByIdAndTrainerId(SCHEDULE_ID, TRAINER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null)))
+                .isInstanceOf(ScheduleNotFoundException.class);
+        assertThat(occurrence.getScheduledFor()).isEqualTo(LocalDate.now().plusDays(1));
     }
 }
