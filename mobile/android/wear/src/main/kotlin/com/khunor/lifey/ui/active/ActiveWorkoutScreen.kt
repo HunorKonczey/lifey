@@ -89,6 +89,9 @@ import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
+import androidx.wear.compose.material3.TimeText
+import com.khunor.lifey.ui.components.LifeyAppScaffold
+import com.khunor.lifey.ui.components.LifeyPager
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Chip
@@ -373,184 +376,177 @@ internal fun StrengthActiveWorkoutScreen() {
     var showEffortSelector by remember { mutableStateOf(false) }
     var effortRpe by remember { mutableIntStateOf(5) }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val isCompact = isCompactScreen(maxWidth)
+    LifeyAppScaffold {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isCompact = isCompactScreen(maxWidth)
 
-        if (showEffortSelector) {
-            val sessionClientId = metadata.sessionClientId
-            EffortSelectorScreen(
-                rpe = effortRpe,
-                onRpeChange = { effortRpe = it },
-                onConfirm = {
-                    // Standalone owns its own close (D-F6.2) — no phone-
-                    // mastered session to ask, unlike the `sendEndRequested`
-                    // branch below (docs/watch/44-watch-f6-standalone-plan.md
-                    // §3.1, mirrors iOS's `beginEffortSelection` routing
-                    // inside `WorkoutManager` itself).
-                    if (isStandalone) {
-                        ContextCompat.startForegroundService(
-                            context,
-                            ExerciseService.endStandaloneIntent(context, effortRpe),
-                        )
-                    } else if (sessionClientId != null) {
-                        scope.launch { SummarySender.sendEndRequested(context, sessionClientId, effortRpe) }
-                    }
-                    showEffortSelector = false
-                },
-                onSkip = {
-                    if (isStandalone) {
-                        ContextCompat.startForegroundService(
-                            context,
-                            ExerciseService.endStandaloneIntent(context, rpe = null),
-                        )
-                    } else if (sessionClientId != null) {
-                        scope.launch { SummarySender.sendEndRequested(context, sessionClientId, rpe = null) }
-                    }
-                    showEffortSelector = false
-                },
-                onBack = { showEffortSelector = false },
-            )
-        } else if (logAdjustState != null) {
-            // The adjust stepper *replaces* the pager rather than layering
-            // over it (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1): both
-            // want the rotary, and swapping means only one rotary binding
-            // exists at a time — no focus fight. `pagerState` survives, so
-            // the pager comes back exactly where it was.
-            AdjustOverlay(
-                state = logAdjustState!!,
-                isCompact = isCompact,
-                maxWidth = maxWidth,
-                onConfirm = {
-                    val adjust = logAdjustState!!
-                    val currentSessionClientId = metadata.sessionClientId
-                    SessionStateHolder.onLogAdjustCancelled()
-                    if (isStandalone) {
-                        // No phone to round-trip against — logs straight to
-                        // the local set list, same as the plain tap.
-                        SessionStateHolder.onStandaloneSetLogged(
-                            reps = adjust.reps,
-                            weight = adjust.weight,
-                        )
-                    } else if (currentSessionClientId != null) {
-                        // Same send path as the plain tap — the pending/ack
-                        // lifecycle, timeout and haptics are all F5a's code.
-                        val eventId = UUID.randomUUID().toString()
-                        SessionStateHolder.onLogSetRequested(eventId)
-                        scope.launch {
-                            SummarySender.sendLogSet(
-                                context = context,
-                                sessionClientId = currentSessionClientId,
-                                eventId = eventId,
-                                loggedAtEpochMs = System.currentTimeMillis(),
+            if (showEffortSelector) {
+                val sessionClientId = metadata.sessionClientId
+                EffortSelectorScreen(
+                    rpe = effortRpe,
+                    onRpeChange = { effortRpe = it },
+                    onConfirm = {
+                        // Standalone owns its own close (D-F6.2) — no phone-
+                        // mastered session to ask, unlike the `sendEndRequested`
+                        // branch below (docs/watch/44-watch-f6-standalone-plan.md
+                        // §3.1, mirrors iOS's `beginEffortSelection` routing
+                        // inside `WorkoutManager` itself).
+                        if (isStandalone) {
+                            ContextCompat.startForegroundService(
+                                context,
+                                ExerciseService.endStandaloneIntent(context, effortRpe),
+                            )
+                        } else if (sessionClientId != null) {
+                            scope.launch { SummarySender.sendEndRequested(context, sessionClientId, effortRpe) }
+                        }
+                        showEffortSelector = false
+                    },
+                    onSkip = {
+                        if (isStandalone) {
+                            ContextCompat.startForegroundService(
+                                context,
+                                ExerciseService.endStandaloneIntent(context, rpe = null),
+                            )
+                        } else if (sessionClientId != null) {
+                            scope.launch { SummarySender.sendEndRequested(context, sessionClientId, rpe = null) }
+                        }
+                        showEffortSelector = false
+                    },
+                    onBack = { showEffortSelector = false },
+                )
+            } else if (logAdjustState != null) {
+                // The adjust stepper *replaces* the pager rather than layering
+                // over it (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1): both
+                // want the rotary, and swapping means only one rotary binding
+                // exists at a time — no focus fight. `pagerState` survives, so
+                // the pager comes back exactly where it was.
+                AdjustOverlay(
+                    state = logAdjustState!!,
+                    isCompact = isCompact,
+                    maxWidth = maxWidth,
+                    onConfirm = {
+                        val adjust = logAdjustState!!
+                        val currentSessionClientId = metadata.sessionClientId
+                        SessionStateHolder.onLogAdjustCancelled()
+                        if (isStandalone) {
+                            // No phone to round-trip against — logs straight to
+                            // the local set list, same as the plain tap.
+                            SessionStateHolder.onStandaloneSetLogged(
                                 reps = adjust.reps,
                                 weight = adjust.weight,
-                                exerciseId = metadata.currentExerciseId,
                             )
-                        }
-                    }
-                },
-            )
-        } else if (showExerciseList && metadata.canChooseExercise) {
-            ExerciseListScreen(
-                // The phone's live session plan when it has pushed one, the
-                // cached template otherwise (F6c) — the same list every other
-                // "which exercise" decision reads, so what's on screen and
-                // what a tap logs into can't drift apart.
-                exercises = metadata.activePlanExercises,
-                currentExerciseId = metadata.currentExerciseId,
-                setsDonePerExercise = List(metadata.activePlanExercises.size) {
-                    metadata.standaloneSetsDoneAt(it)
-                },
-                removedExerciseIndexes = metadata.removedExerciseIndexes,
-                isCompact = isCompact,
-                maxWidth = maxWidth,
-                onSelect = { index ->
-                    if (metadata.isStandalone) {
-                        SessionStateHolder.onStandaloneExerciseSelected(index)
-                    } else {
-                        // Phone-mastered: the phone owns the decision, this
-                        // only reports the pick (F6c §7).
-                        val sessionId = metadata.sessionClientId
-                        val exerciseId = SessionStateHolder.onPhoneExerciseSelected(index)
-                        if (sessionId != null && exerciseId != null) {
+                        } else if (currentSessionClientId != null) {
+                            // Same send path as the plain tap — the pending/ack
+                            // lifecycle, timeout and haptics are all F5a's code.
+                            val eventId = UUID.randomUUID().toString()
+                            SessionStateHolder.onLogSetRequested(eventId)
                             scope.launch {
-                                SummarySender.sendExerciseSelected(context, sessionId, exerciseId)
+                                SummarySender.sendLogSet(
+                                    context = context,
+                                    sessionClientId = currentSessionClientId,
+                                    eventId = eventId,
+                                    loggedAtEpochMs = System.currentTimeMillis(),
+                                    reps = adjust.reps,
+                                    weight = adjust.weight,
+                                    exerciseId = metadata.currentExerciseId,
+                                )
                             }
                         }
-                    }
-                    showExerciseList = false
-                },
-                onBack = { showExerciseList = false },
-            )
-        } else {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                // Lets the rotating bezel/crown page between metrics and
-                // controls too, not just a swipe (mirrors the watchOS side's
-                // `.digitalCrownRotation`).
-                rotaryScrollableBehavior = RotaryScrollableDefaults.snapBehavior(pagerState),
-            ) { page ->
-                when (page) {
-                    LOG_PAGE -> LogPage(
-                        elapsedMs = elapsedMs,
-                        exerciseName = display.name,
-                        setsDone = display.setsDone,
-                        setsTotal = display.setsTotal,
-                        sessionClientId = metadata.sessionClientId,
-                        currentExerciseId = metadata.currentExerciseId,
-                        logSetState = logSetState,
-                        isStandalone = isStandalone,
-                        showsStandaloneBadge = showsStandaloneBadge,
-                        freeFormatSets = display.freeFormatSets,
-                        hasStandaloneTemplate = metadata.canChooseExercise,
-                        onOpenExerciseList = { showExerciseList = true },
-                        isCompact = isCompact,
-                        maxWidth = maxWidth,
-                    )
-                    METRICS_PAGE -> MetricsOrRestPage(
-                        resting = resting,
-                        elapsedMs = elapsedMs,
-                        restRemainingMs = restRemainingMs,
-                        restTotalSeconds = metadata.restTotalSeconds,
-                        exerciseName = display.name,
-                        setsDone = display.setsDone,
-                        setsTotal = display.setsTotal,
-                        liveMetrics = liveMetrics,
-                        isStandalone = showsStandaloneBadge,
-                        headerLabel = activeHeaderLabel,
-                        freeFormatSets = display.freeFormatSets,
-                        canChooseExercise = metadata.canChooseExercise,
-                        onOpenExerciseList = { showExerciseList = true },
-                        isCompact = isCompact,
-                        maxWidth = maxWidth,
-                    )
-                    CONTROLS_PAGE -> ControlsPage(
-                        exerciseName = display.name,
-                        setsDone = display.setsDone,
-                        setsTotal = display.setsTotal,
-                        isPaused = liveMetrics.isPaused,
-                        freeFormatSets = display.freeFormatSets,
-                        hasStandaloneTemplate = metadata.canChooseExercise,
-                        isCompact = isCompact,
-                        onEnd = { showEffortSelector = true },
-                        onTogglePause = {
-                            val paused = liveMetrics.isPaused
-                            scope.launch {
-                                if (paused) ExerciseService.resume(context) else ExerciseService.pause(context)
+                    },
+                )
+            } else if (showExerciseList && metadata.canChooseExercise) {
+                ExerciseListScreen(
+                    // The phone's live session plan when it has pushed one, the
+                    // cached template otherwise (F6c) — the same list every other
+                    // "which exercise" decision reads, so what's on screen and
+                    // what a tap logs into can't drift apart.
+                    exercises = metadata.activePlanExercises,
+                    currentExerciseId = metadata.currentExerciseId,
+                    setsDonePerExercise = List(metadata.activePlanExercises.size) {
+                        metadata.standaloneSetsDoneAt(it)
+                    },
+                    removedExerciseIndexes = metadata.removedExerciseIndexes,
+                    isCompact = isCompact,
+                    maxWidth = maxWidth,
+                    onSelect = { index ->
+                        if (metadata.isStandalone) {
+                            SessionStateHolder.onStandaloneExerciseSelected(index)
+                        } else {
+                            // Phone-mastered: the phone owns the decision, this
+                            // only reports the pick (F6c §7).
+                            val sessionId = metadata.sessionClientId
+                            val exerciseId = SessionStateHolder.onPhoneExerciseSelected(index)
+                            if (sessionId != null && exerciseId != null) {
+                                scope.launch {
+                                    SummarySender.sendExerciseSelected(context, sessionId, exerciseId)
+                                }
                             }
-                        },
-                        onOpenExerciseList = { showExerciseList = true },
-                    )
+                        }
+                        showExerciseList = false
+                    },
+                    onBack = { showExerciseList = false },
+                )
+            } else {
+                // D-X0.9: the crown no longer pages (it steps values and scrolls
+                // lists); swipe is the only way between the three pages.
+                LifeyPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                    when (page) {
+                        LOG_PAGE -> LogPage(
+                            elapsedMs = elapsedMs,
+                            exerciseName = display.name,
+                            setsDone = display.setsDone,
+                            setsTotal = display.setsTotal,
+                            sessionClientId = metadata.sessionClientId,
+                            currentExerciseId = metadata.currentExerciseId,
+                            logSetState = logSetState,
+                            isStandalone = isStandalone,
+                            showsStandaloneBadge = showsStandaloneBadge,
+                            freeFormatSets = display.freeFormatSets,
+                            hasStandaloneTemplate = metadata.canChooseExercise,
+                            onOpenExerciseList = { showExerciseList = true },
+                            isCompact = isCompact,
+                            maxWidth = maxWidth,
+                        )
+                        METRICS_PAGE -> MetricsOrRestPage(
+                            resting = resting,
+                            elapsedMs = elapsedMs,
+                            restRemainingMs = restRemainingMs,
+                            restTotalSeconds = metadata.restTotalSeconds,
+                            exerciseName = display.name,
+                            setsDone = display.setsDone,
+                            setsTotal = display.setsTotal,
+                            liveMetrics = liveMetrics,
+                            isStandalone = showsStandaloneBadge,
+                            headerLabel = activeHeaderLabel,
+                            freeFormatSets = display.freeFormatSets,
+                            canChooseExercise = metadata.canChooseExercise,
+                            onOpenExerciseList = { showExerciseList = true },
+                            isCompact = isCompact,
+                            maxWidth = maxWidth,
+                        )
+                        CONTROLS_PAGE -> ControlsPage(
+                            exerciseName = display.name,
+                            setsDone = display.setsDone,
+                            setsTotal = display.setsTotal,
+                            isPaused = liveMetrics.isPaused,
+                            freeFormatSets = display.freeFormatSets,
+                            hasStandaloneTemplate = metadata.canChooseExercise,
+                            isCompact = isCompact,
+                            onEnd = { showEffortSelector = true },
+                            onTogglePause = {
+                                val paused = liveMetrics.isPaused
+                                scope.launch {
+                                    if (paused) ExerciseService.resume(context) else ExerciseService.pause(context)
+                                }
+                            },
+                            onOpenExerciseList = { showExerciseList = true },
+                        )
+                    }
                 }
-            }
-            PageDots(
-                pageCount = PAGE_COUNT,
-                selectedPage = pagerState.currentPage,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
-            )
-            if (showGoFlash) {
-                GoFlash(modifier = Modifier.fillMaxSize())
+                TimeText()
+                if (showGoFlash) {
+                    GoFlash(modifier = Modifier.fillMaxSize())
+                }
             }
         }
     }

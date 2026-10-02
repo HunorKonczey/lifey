@@ -1191,10 +1191,11 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** build + tests; a phone-driven session on the emulator pair behaves exactly as before.
 - *As built:* Mechanical split by line range, no behavioural change: ActiveWorkoutScreen (dispatcher + strength state, constants, formatters), MetricsPage (metrics/rest page, ExerciseCard), LogPage (log + adjust), RestHero, ControlsPage, ExerciseList, Cardio (cardio screens + the legacy HeaderChip/MetricReading helpers until X4). Everything file-private became internal; cardioActivityIcon/Tint are imported by StandalonePickerScreen from the new package. Deviation: the stateless …Model/…Content split and the W1.x gallery fixtures are not done here — each page gets its Content when its own step (X3.3–X3.13) rewrites it, and registers its fixtures in galleryFrames then. Not compiled locally; CI is the compiler.
 
-### X3.2 — Watch Wear: active scaffold — TimeText, pager, page indicator, rotary off
+### X3.2 — Watch Wear: active scaffold — TimeText, pager, page indicator, rotary off ✅
 - `StrengthActiveWorkoutScreen` inside `LifeyAppScaffold`/`LifeyScreen`; `LifeyPager` (3 pages, metrics
   default, **rotary does not page**); M3 `HorizontalPageIndicator` replaces `PageDots`; `TimeText` on top.
 - **Verify:** crown on the metric page does nothing; swipe pages; the indicator hides under an EdgeButton.
+- *As built:* StrengthActiveWorkoutScreen is wrapped in LifeyAppScaffold; the three pages sit in LifeyPager (wear-foundation HorizontalPager with rotaryScrollableBehavior = null, M3 HorizontalPageIndicator replaces PageDots, which stays only for the cardio screen until X4); TimeText is drawn directly on the pager branch (ScreenScaffold is only used by scrolling overlays, where the AppScaffold shows it). Unverified until the CI compile; the crown-does-nothing and indicator-hides checks are for the emulator pass.
 
 ### X3.3 — Watch Wear: metric page (W1.1, W1.4)
 - Header chip "ERŐEDZÉS"; hero 48 white; HR 16 → **28 sp** heart colour **with "bpm"** — level two, not the
