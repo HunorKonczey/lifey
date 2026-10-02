@@ -1204,10 +1204,11 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** fixtures at both sizes; live session.
 - *As built:* MetricsPage.kt: MetricsModel + MetricsContent (stateless) and MetricsOrRestPage (the stateful wrapper; the old M2 rest hero is still used while resting until X3.9). Header = ActiveHeader (HeaderChip + the unchanged adoption-request tap on the standalone mark), HeartRateSlot, kcal at value level, ExerciseBlock = SetSegmentBar at half the dial width in the bottom chord (free-form sessions: name + the existing 'set n · reps total' line; no plan: the name only); the block still opens the exercise list. JUST_LOGGED segment (1.2 s success) comes from LogSetState.Confirmed. The old ExerciseCard stays until X3.11. Gallery: DesignGalleryActivity takes --ei width 192 and renders a frame at the chosen dial size; FramesW1.kt registers W1.1/W1.4 (more per step). Unverified until the CI compile.
 
-### X3.4 — Watch Wear: paused (W1.2)
+### X3.4 — Watch Wear: paused (W1.2) ✅
 - Header chip turns clay "SZÜNETELTETVE"; content does not shift toward the top arc; the pause still drives
   the local Health Services session (unchanged).
 - **Verify:** fixture; pause from controls.
+- *As built:* MetricsModel.isPaused = LiveMetrics.isPaused turns the HeaderChip clay 'SZÜNETELTETVE'; the hero/HR/kcal block is the same Column, so the content does not move toward the top arc (the old red 'Szüneteltetve' line under the hero is gone). The pause itself still drives the local Health Services session through ControlsPage (unchanged). Fixture W1.2.
 
 ### X3.5 — Watch Wear: HR permission slot + missing HR (W1.3, W2.16)
 - The broken heart + separate ellipsized chip are replaced by `HeartRateSlot` permission state (M3 Button

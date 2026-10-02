@@ -533,6 +533,7 @@ internal fun StrengthActiveWorkoutScreen() {
                                 setsDone = display.setsDone,
                                 setsTotal = display.setsTotal,
                                 freeFormatSets = display.freeFormatSets,
+                                isPaused = liveMetrics.isPaused,
                                 showsStandaloneMark = showsStandaloneBadge,
                                 justLoggedIndex = display.setsDone?.takeIf { justLogged && it > 0 }?.minus(1),
                             ),

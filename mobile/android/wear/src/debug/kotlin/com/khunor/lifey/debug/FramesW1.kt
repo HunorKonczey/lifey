@@ -19,6 +19,7 @@ import com.khunor.lifey.ui.components.HeartRateState
  */
 val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
     "W1.1" to { Frame { MetricsContent(strengthModel(), {}, {}) } },
+    "W1.2" to { Frame { MetricsContent(strengthModel(isPaused = true), {}, {}) } },
     "W1.4" to { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
 )
 
