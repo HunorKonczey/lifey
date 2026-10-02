@@ -94,7 +94,7 @@ is ott oldódott meg: a metrikaszínek AA-k a saját 12 / 16 %-os tintájukon, a
 | Chat-eredménykártya | edzés / PR megosztása chat-kártyaként — a csatolmány jelenleg csak kép, a chat-szolgáltatáson is változtatni kell | `77` §6 |
 | Darabos adagok | „½ db", „1 db" chipek az étel hozzáadása lapon — étel-modellbe darabsúly + sync kell | `77` §6 |
 | Health Connect / HealthKit írás | a súly visszaírása; amíg nincs írási út, a „Health Connect-ben is mentve" sor rejtve marad | `77` §6 |
-| Natív felületek | Watch, iOS widget / Live Activity, Android widget színillesztése | `77` §6 |
+| Natív felületek | iOS widget / Live Activity, Android widget színillesztése (a Watch kész: [`watch/79`](watch/79-watch-redesign-verification.md); watch-komplikáció nincs, külön terv kell) | `77` §6 |
 | Material Symbols ikonfont, golden-tesztek, max-HR beállítás | tudatosan kimaradt | `77` §6 |
 | Edzői kliensnézet: lépéscél, tervezett alkalmak | a trainer API-ban nincs kliens-lépéscél és „tervezett / teljesített" darabszám, ezért a KPI-csempék sorai szerényebbek a canvasnál („7 nap átlaga", kihagyott alkalom) | `77` R6.5 |
 | Edzői kliensnézet: cél a fejlécben | a canvas „Goal: build muscle" sora mögött nincs tárolt cél | `77` R6.7 |
