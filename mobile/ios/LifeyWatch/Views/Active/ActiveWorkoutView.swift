@@ -51,8 +51,8 @@ struct ActiveWorkoutView: View {
 
   private var strengthContent: some View {
     GeometryReader { geometry in
-      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
-      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
+      let isCompact = WatchMetrics(width: geometry.size.width).isCompact
+      let padding = WatchMetrics(width: geometry.size.width).sideMargin
 
       ZStack {
         // The adjust stepper *replaces* the pager rather than layering over
@@ -89,7 +89,7 @@ struct ActiveWorkoutView: View {
         }
       }
     }
-    .background(LifeyColors.trueBlack)
+    .background(LifeyColors.bg)
     .task(id: workoutManager.restDeadlineUptime) {
       await runGoFlashCycle()
     }

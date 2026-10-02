@@ -13,9 +13,4 @@ enum LifeyShapes {
   static func nested(parent: CGFloat, padding: CGFloat) -> CGFloat {
     max(parent - padding, 0)
   }
-
-  // MARK: Legacy aliases (D-X0.1) — remove in X2.15
-  @available(*, deprecated, renamed: "tag") static let chip: CGFloat = tag
-  @available(*, deprecated, renamed: "control") static let button: CGFloat = control
-  @available(*, deprecated, renamed: "hero") static let cardLarge: CGFloat = hero
 }

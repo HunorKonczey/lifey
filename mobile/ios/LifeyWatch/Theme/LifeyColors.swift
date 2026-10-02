@@ -17,9 +17,6 @@ extension Color {
 /// Dark-only; mirrors Android's `LifeyColors.kt` name-for-name and hex-for-hex (a Wear JVM test
 /// compares the two files). `bg` is true `#000` (D4) — the only deliberate deviation from the
 /// mobile `#12130E`.
-///
-/// The v1 names stay below as deprecated aliases re-pointed at the nearest v2 token (D-X0.1) and are
-/// deleted with the last Apple iteration (X2.15).
 enum LifeyColors {
   // Surfaces — the tone ladder above true black
   static let bg = Color(hex: 0x00_00_00)
@@ -62,23 +59,4 @@ enum LifeyColors {
 
   /// The tinted chip/pill background for a role colour (16 %).
   static func tint(_ role: Color) -> Color { role.lifeyTint }
-
-  // MARK: Legacy aliases (D-X0.1) — remove in X2.15
-  @available(*, deprecated, renamed: "bg") static let trueBlack = bg
-  @available(*, deprecated, renamed: "card") static let surface = card
-  @available(*, deprecated, renamed: "nested") static let container = nested
-  @available(*, deprecated, renamed: "control") static let containerHigh = control
-  @available(*, deprecated, renamed: "raised") static let containerHighest = raised
-  @available(*, deprecated, renamed: "clay") static let secondary = clay
-  @available(*, deprecated, renamed: "success") static let tertiary = success
-  @available(*, deprecated, renamed: "text") static let onSurface = text
-  @available(*, deprecated, renamed: "text2") static let onSurfaceVariant = text2
-  @available(*, deprecated, renamed: "primary") static let positive = primary
-  @available(*, deprecated, renamed: "calories") static let negative = calories
-  @available(*, deprecated, renamed: "error") static let onErrorContainer = error
-  @available(*, deprecated, message: "use LifeyColors.tint(LifeyColors.error)")
-  static let errorContainer = error.lifeyTint
-  @available(*, deprecated, renamed: "bg") static let onError = bg
-  @available(*, deprecated, renamed: "ghost") static let ghostedOnSurface = ghost
-  @available(*, deprecated, renamed: "text2") static let standaloneIndicator = text2
 }

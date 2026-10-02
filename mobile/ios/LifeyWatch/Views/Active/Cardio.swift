@@ -61,8 +61,8 @@ struct CardioActiveContent: View {
 
   var body: some View {
     GeometryReader { geometry in
-      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
-      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
+      let isCompact = WatchMetrics(width: geometry.size.width).isCompact
+      let padding = WatchMetrics(width: geometry.size.width).sideMargin
       TabView(selection: $selectedPage) {
         CardioMetricsPage(isCompact: isCompact, padding: padding).tag(0)
         ControlsPage(isCompact: isCompact, padding: padding, onOpenExerciseList: {}).tag(1)
