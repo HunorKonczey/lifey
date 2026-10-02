@@ -1308,10 +1308,11 @@ permission revoke/grant; failure paths.
 - **Verify:** fixture; trigger with another exercise app running (as in docs/watch/40 §11).
 - *As built:* ErrorScreen.kt is now ErrorContent over StatusScreen: PriorityHigh in a calories-tint circle (the warning role replaces the v1 orange negative), the title broken on two deliberate lines (balancedBreak: 'Már fut egy másik' / 'edzés az órán'), the explanation, and 'Rendben' as a control-tone EdgeButton that only acknowledges (SessionStateHolder.reset()). StatusScreen gained the tint circle behind its icon, the TimeText and routes its action through LifeyEdgeButton(secondary). Fixture W2.4. Triggering it with another exercise app running is for the emulator.
 
-### X4.5 — Watch Wear: standalone active — mark and quick strength (W2.5)
+### X4.5 — Watch Wear: standalone active — mark and quick strength (W2.5) ✅
 - 24 dp mark (48 target, today ≈ 16); free-format summary on two centred lines (no "összesen 2…" clipped by
   the circle).
 - **Verify:** start quick strength standalone; fixture.
+- *As built:* The 24 dp mark inside a 48 dp target is HeaderChip's standalone mark, wired in X3.3 (ActiveHeader); this step widens the free-form exercise block to 68 % of the dial (the segment-bar block stays 50 %) so 'Gyors erőedzés' / '3. szett · összesen 24 ismétlés' reads on two centred lines instead of clipping. Fixture W2.5. Starting quick strength standalone is for the emulator pass.
 
 ### X4.6 — Watch Wear: sync tap feedback + template header (W2.6)
 - The existing 1.5 s sync icon now sits on a `raised` mark background (visible); the template name in the

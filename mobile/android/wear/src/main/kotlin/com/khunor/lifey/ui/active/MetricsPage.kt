@@ -117,7 +117,9 @@ private fun KcalReading(kcal: Int?) {
 @Composable
 private fun ExerciseBlock(model: MetricsModel, onOpenExerciseList: (() -> Unit)?, modifier: Modifier = Modifier) {
     val width = LocalWatchMetrics.current.widthDp
-    val blockWidth = (width * 0.5f).dp
+    // A free-form summary ("3. szett · összesen 24 ismétlés") needs two readable centred lines, so its block is
+    // wider than the segment bar's (W2.5).
+    val blockWidth = (width * (if (model.freeFormatSets != null) 0.68f else 0.5f)).dp
     val target = if (onOpenExerciseList != null) modifier.clickable(onClick = onOpenExerciseList) else modifier
     val done = model.setsDone
     val total = model.setsTotal

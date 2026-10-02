@@ -6,6 +6,13 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.DirectionsRun
 import com.khunor.lifey.ui.ErrorContent
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.active.MetricsContent
+import com.khunor.lifey.ui.active.MetricsModel
+import com.khunor.lifey.ui.components.HeartRateState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.wear.compose.material3.TimeText
 import com.khunor.lifey.ui.PickerContent
 import com.khunor.lifey.ui.PickerRow
 import com.khunor.lifey.ui.components.LifeyAppScaffold
@@ -49,6 +56,19 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
         }
     },
     "W2.4" to frame2 { ErrorContent(onOk = {}) },
+    "W2.5" to frame2 { // standalone quick strength: the mark, and the free-form line on two centred lines
+        Box(Modifier.fillMaxSize()) {
+            MetricsContent(
+                MetricsModel(
+                    headerLabel = "Erőedzés", elapsedMs = 12 * 60_000L + 34_000L, heartRate = HeartRateState.Live(128), kcal = 87,
+                    exerciseName = "Gyors erőedzés", setsDone = null, setsTotal = null, freeFormatSets = 3 to 24,
+                    showsStandaloneMark = true,
+                ),
+                onRequestHeartRatePermission = {}, onOpenExerciseList = null,
+            )
+            TimeText()
+        }
+    },
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
         LifeyAppScaffold {
             PickerContent(
