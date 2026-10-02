@@ -912,7 +912,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** tests green; gallery "ambient" toggle.
 - *As built:* not built / tests not run. Formatting is pure (templates passed in) so the JVM test needs no Android resources. Two assertions in restEndTimeUsesTheLocalZoneAcrossMidnight depend on the JDK's locale data for the short time style (HU 0:01 vs 00:01, NNBSP before PM in newer JDKs) and are normalised in the test — if they still disagree on the CI JDK, loosen to the zone arithmetic only. androidx.wear:wear:1.3.0 added; the observer itself is registered in MainActivity by X4.13 (so the app still shows the watch face on wrist-down until then). Strings aod_* added HU+EN.
 
-**X0w review (§4.2):** gallery vs DS frames at 227 / 192 dp (create the 192 dp AVD first); every existing
+**X0w review (§4.2) — done as far as the cloud allows (§4.3); the emulator pass is still owed; log in §12:** gallery vs DS frames at 227 / 192 dp (create the 192 dp AVD first); every existing
 screen walked once (colours change, layouts don't); CI job green on the PR.
 
 ---
@@ -1535,3 +1535,25 @@ full-width bar → fixed. Open for a Mac pass (could not be checked here): real 
 registration of the two subsets, crown stepper feel, DS 04/04 shows the label *inside* the 66 pt circle
 while AW1.5 puts it under it (decide at X1.5), DS 04/15 sample stacks value over label while the note says
 one row (decide at X2.7).
+
+
+### X0w review — 2026-10-02 (cloud session, §4.3 method — no Android SDK, no Google Maven, no emulator)
+Environment: Linux sandbox; Gradle 8.14 + Kotlin 2.0 JVM scratch project for the pure logic; fontTools; Python
+Frames checked: DS 01 tokens, 02 type, 03 metrics, 04 components (same canvas file as X0a), 08 ambient strings
+Executed (real runs): `AmbientFormatTest` 4/4 and `WatchMetricsTest` 5/5 compiled and run on the JVM from the
+repo's own sources (Dp replaced by a shim); token parity Kotlin ↔ Swift: 22 tokens, 0 mismatches (script);
+contrast pairs computed independently in Python — all ≥ 4.5 (lowest: text3 on nested 4.75); font coverage by
+fontTools — all numeral glyphs present in both subsets.
+Not executed (could not be): `ContrastTest`, `TokenParityTest`, `FontCoverageTest` as JUnit (they need the
+Android/Compose classpath); every Compose file (M3 `Button`, `EdgeButton`, `AlertDialog`,
+`CircularProgressIndicator`, `AppScaffold`, `ScreenScaffold`, `HorizontalPageIndicator`,
+`SwipeToDismissBox`, `TransformingLazyColumn` signatures and the `compose-material3:1.6.2` artifact were
+written from memory); the 227 / 192 dp gallery screenshots; the CI step.
+Matches: hex values and size tables as above; component structure mirrors the Apple components that were
+compared with canvas frame 04 in the X0a review.
+Deviations (intended): edge-row transformation recorded as constants, library default used (X0w.9); NNBSP
+dropped from the glyph set (source font lacks it); Light 300 not bundled (Q4); CI added as a step of the
+existing job instead of a new job (X0w.4).
+Bugs: none found by the runs above. Open for the Windows pass: first `./gradlew :wear:assembleDebug
+:wear:testDebugUnitTest` — expect compile errors in the M3 call sites, fix as `X0w.fix-k`; then create the
+192 dp AVD, walk the gallery, check the release manifest has no gallery activity.
