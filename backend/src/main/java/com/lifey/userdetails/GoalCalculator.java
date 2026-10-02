@@ -5,6 +5,7 @@ import com.lifey.userdetails.dto.SuggestGoalsResponse;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZoneId;
 
 /**
  * Suggested daily calorie/macro/water goals from onboarding biometrics.
@@ -78,7 +79,7 @@ public final class GoalCalculator {
     }
 
     private static int age(LocalDate birthDate) {
-        return Period.between(birthDate, LocalDate.now()).getYears();
+        return Period.between(birthDate, LocalDate.now(ZoneId.systemDefault())).getYears();
     }
 
     private static double bmr(Gender gender, double weightKg, double heightCm, int age) {

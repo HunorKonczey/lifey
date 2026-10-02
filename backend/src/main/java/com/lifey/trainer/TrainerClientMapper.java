@@ -30,25 +30,29 @@ public final class TrainerClientMapper {
         return new PendingInviteResponse(tc.getId(), tc.getTrainer().getEmail(), tc.getCreatedAt(), tc.getExpiresAt());
     }
 
-    public static TrainerClientResponse toClientResponse(
-            TrainerClient tc, List<WeightTrendPoint> weightTrend, int assignedPlanCount, int workoutsPerWeek,
+    /** The computed half of a client card — everything that is not read straight off the relationship. */
+    public record ClientCardStats(
+            List<WeightTrendPoint> weightTrend, int assignedPlanCount, int workoutsPerWeek,
             Instant lastActivityAt, LocalDate lastWeightAt, int missedWorkoutCount,
             Integer avgCalories7d, Integer prCount7d, Integer dailyCalorieGoal) {
+    }
+
+    public static TrainerClientResponse toClientResponse(TrainerClient tc, ClientCardStats stats) {
         return new TrainerClientResponse(
                 tc.getClient().getId(),
                 tc.getClient().getEmail(),
                 tc.getClient().getFirstName(),
                 tc.getClient().getLastName(),
                 tc.getRespondedAt(),
-                weightTrend,
-                assignedPlanCount,
-                workoutsPerWeek,
-                lastActivityAt,
-                lastWeightAt,
-                missedWorkoutCount,
-                avgCalories7d,
-                prCount7d,
-                dailyCalorieGoal);
+                stats.weightTrend(),
+                stats.assignedPlanCount(),
+                stats.workoutsPerWeek(),
+                stats.lastActivityAt(),
+                stats.lastWeightAt(),
+                stats.missedWorkoutCount(),
+                stats.avgCalories7d(),
+                stats.prCount7d(),
+                stats.dailyCalorieGoal());
     }
 
     public static MyTrainerResponse toMyTrainerResponse(TrainerClient tc) {

@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -123,7 +124,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
                 workoutSessionRepository.findMaxStartedAtByUserId(clientId).orElse(null),
                 newestFirstWeights.isEmpty() ? null : newestFirstWeights.getFirst().getRecordedAt());
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
         int missedWorkoutCount = (int) workoutSessionRepository.countMissedOccurrences(
                 trainerId, clientId, today.minusDays(MISSED_WORKOUT_WINDOW_DAYS), today);
 
@@ -132,9 +133,9 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
         // A client who never opened settings has no row yet: that is "no goal", not an error, and reading must not create one.
         Integer dailyCalorieGoal = userSettingsRepository.findByUserId(clientId).map(UserSettings::getDailyCalorieGoal).orElse(null);
 
-        return TrainerClientMapper.toClientResponse(
-                tc, weightTrend, assignedPlanCount, workoutsPerWeek, lastActivityAt, lastWeightAt, missedWorkoutCount,
-                avgCalories7d, prCount7d, dailyCalorieGoal);
+        return TrainerClientMapper.toClientResponse(tc, new TrainerClientMapper.ClientCardStats(
+                weightTrend, assignedPlanCount, workoutsPerWeek, lastActivityAt, lastWeightAt, missedWorkoutCount,
+                avgCalories7d, prCount7d, dailyCalorieGoal));
     }
 
     /**

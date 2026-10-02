@@ -38,6 +38,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -74,7 +75,7 @@ public class TrainerClientDataController {
             @Parameter(description = "Anchor date; defaults to the server's current date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         requireActiveClient(clientId);
-        return statisticsService.dailyForUser(clientId, date != null ? date : LocalDate.now());
+        return statisticsService.dailyForUser(clientId, date != null ? date : LocalDate.now(ZoneId.systemDefault()));
     }
 
     @Operation(summary = "Client's stats for the last 7 days")
@@ -84,7 +85,7 @@ public class TrainerClientDataController {
             @Parameter(description = "Anchor date; defaults to the server's current date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         requireActiveClient(clientId);
-        return statisticsService.weeklyForUser(clientId, date != null ? date : LocalDate.now());
+        return statisticsService.weeklyForUser(clientId, date != null ? date : LocalDate.now(ZoneId.systemDefault()));
     }
 
     @Operation(summary = "Client's stats for the last 30 days")
@@ -94,7 +95,7 @@ public class TrainerClientDataController {
             @Parameter(description = "Anchor date; defaults to the server's current date")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         requireActiveClient(clientId);
-        return statisticsService.monthlyForUser(clientId, date != null ? date : LocalDate.now());
+        return statisticsService.monthlyForUser(clientId, date != null ? date : LocalDate.now(ZoneId.systemDefault()));
     }
 
     @Operation(summary = "Client's daily step count history",

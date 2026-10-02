@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,7 +65,7 @@ public class TrainingProgramServiceImpl implements TrainingProgramService {
     @Transactional(readOnly = true)
     public List<ProgramSummaryResponse> findAll() {
         Long trainerId = currentUserProvider.getUserId();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
 
         return trainingProgramRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(trainerId).stream()
                 .map(program -> toSummary(program, today))
