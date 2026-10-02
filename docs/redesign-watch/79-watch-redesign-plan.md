@@ -704,7 +704,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   fit one line at 45 mm, AW1.8).
 - *As built:* the double-tap guard is a small `DoubleTapGuard` struct in Theme/Ghosted.swift (LogPage keeps its own copy until X1.5 switches over); the pill uses the card radius (22) for both one and two lines; pill copy is supplied by the caller from the existing log_set_* keys (the gallery uses sample text).
 
-### X0a.9 — Watch iOS: rest bar, "Mehet!" rim, stepper, effort scale
+### X0a.9 — Watch iOS: rest bar, "Mehet!" rim, stepper, effort scale ✅
 - Files: new `Views/Components/RestCountdown.swift`, `GoFlash.swift`, `ValueStepper.swift`, `EffortScale.swift`.
 - `RestCountdown` (04/06, Apple variant): hero number above an 8 pt white linear bar (radius 4), "/ 1:30"
   total in `text2`; last 5 s: number + fill `calories`, number pulses 100 → 92 % at 1 Hz (off with reduced
@@ -717,6 +717,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - `EffortScale` (04/11): `ValueStepper` 1–10 + a 10-segment bar; number white.
 - **Verify:** gallery: rest at 0:47 and 0:04, flash (with a "replay" button), stepper at bounds 1 and 99,
   weight "102,5" at 41 mm without truncation.
+- *As built:* the stepper's crown uses `sensitivity: .high` (not `.low` as the plan wrote): the existing AdjustPage comment records that `.low` made detents-per-step inconsistent. Reduce Motion: pulse and drain animation off, flash static for 1.1 s.
 
 ### X0a.10 — Watch iOS: list row, compact chip, summary tile + sync row, bench frame, cardio field, status screen
 - Files: new `Views/Components/ListRow.swift`, `CompactChip.swift`, `SummaryTile.swift` (+ `SyncRow`),

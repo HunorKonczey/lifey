@@ -81,6 +81,9 @@
         GallerySection("04/02 Heart-rate slot") { HeartRateSlotGallery() },
         GallerySection("04/04 Circle button") { CircleButtonGallery() },
         GallerySection("04/05 Status pill") { StatusPillGallery() },
+        GallerySection("04/06 Rest countdown") { RestCountdownGallery() },
+        GallerySection("04/07 Mehet! flash") { GoFlashGallery() },
+        GallerySection("04/08 Stepper · 04/11 Effort") { StepperGallery() },
       ]
     }
   }
