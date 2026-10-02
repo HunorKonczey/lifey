@@ -54,12 +54,11 @@ struct RestContent: View {
           .padding(.top, LifeySpacing.sm)
       }
       Rectangle().fill(LifeyColors.outline).frame(height: 2).padding(.top, LifeySpacing.md)
+      Spacer(minLength: LifeySpacing.xs)
       Text(verbatim: model.nextLine)
         .lifeyBody(metrics)
         .foregroundColor(LifeyAOD.numberColor)
-        .lineLimit(2)
-        .padding(.top, LifeySpacing.md)
-      Spacer(minLength: 0)
+        .lineLimit(3)
     }
     .padding(.horizontal, metrics.sideMargin)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

@@ -1164,7 +1164,7 @@ from X1.1's `Views/Active/Cardio.swift`.
 - `accessoryCircular`: during rest the remaining time with a white ring, otherwise elapsed; a leaf launcher.
   Tinted faces colour it via the system.
 
-**X2 review (§4.1):** all AW2 frames incl. AOD; demo flows "standalone quick strength → summary → sync",
+**X2 review (§4.1) — done in the cloud (§4.3), Mac pass still owed; log in §12:** all AW2 frames incl. AOD; demo flows "standalone quick strength → summary → sync",
 "run", "basketball field ↔ bench", "Health denied", wrist-down during metrics / rest / run / bench.
 
 ---
@@ -1581,3 +1581,12 @@ Frames checked: AW1.1, 1.5, 1.7, 1.10, 1.13, 1.17 (canvas screenshot vs reconstr
 Matches: structure and order of every compared frame (hero › HR › kcal › card with segment bar; log page: next-set line, primary "+1" with the label under it, raised "Módosítás", one bottom slot; success circle + "Naplózva" pill; stepper: clay header, segmented switch, ± around the value, caption, primary pill; rest: number over a white bar, "Következő" two lines, HR + kcal row; controls: error-tint + control circle). Metric numbers carry the metric colour as in the canvas (found and fixed during the step: the first component draft used white numbers).
 Deviations (intended): crown no longer pages the TabView (D-X0.9); `AW1.5` label under the "+1" is derived from `log_set_button` by dropping "+1" (no new key); summary check-pop and 60 ms tile stagger not implemented; the nav back button is a `cancellationAction` toolbar item.
 Bugs: none found by the comparison. Open for the Mac pass (could not be exercised): compile of everything in Views/Active, Views/Components and the three rewritten screens; the file-split `private` → internal change (name clashes would show up as redeclaration errors); the `CircleButton` inside `TabView(.page)` (taps vs page swipes); the `cancellationAction` back button size; "102,5" on 41 mm; the three failure paths (phone unreachable, logging failed, backend down); reduced-motion end states; haptic moments.
+
+
+### X2 review — 2026-10-02 (cloud session, §4.3 method — no Xcode, no simulator)
+Environment: Chromium/Playwright; canvas `Lifey Watch 2 Apple Watch Start Standalone Cardio.dc.html` rendered headless (fonts blocked, icons show as names)
+Frames checked: AW2.13, AW2.21, AW2.9 (canvas screenshots against the Swift layout); the rest read from the canvas markup against the code
+Matches: team-sport field (header chip, label + hero, HR row with the gross time on the right, toggle at the bottom), AOD rest ("~1 p", "Mehet 9:42-kor", 2 pt line, "Következő" text), standalone summary (check beside the title, sync row under it, 2 × 2 tiles).
+Fixes from the comparison (X2.fix-1): the on-court play-time label gets the small primary dot (AW2.13); in the AOD rest the "Következő …" line moved to the bottom (AW2.21).
+Deviations (intended): no deliberate title line break on the Health-denied screen (needs a text-catalogue change that is not in the ⚑ list); gross-time minutes in the bench AOD are parsed from the phone's "mm:ss" string; the optional Smart Stack widget / complications (X2.o1, X2.o2) were not started — they need your go-ahead (§10 Q1).
+Bugs: none open from the comparison. Open for the Mac pass (could not be exercised here): compile of the whole target; picker large-title collapse and nav back button; `MinuteTimeline` really refreshing once a minute under Always On and returning within 300 ms on wrist-raise; `isLuminanceReduced` in the live pages (only fixtures were exercised); the three demo flows (standalone quick strength → summary → sync, a run, basketball field ↔ bench) and Health denied; sync pill/mark timing (adoptionRetryFeedbackSeconds is the existing value, the plan said 1.5 s).

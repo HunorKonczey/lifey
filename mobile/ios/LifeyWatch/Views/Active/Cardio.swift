@@ -171,11 +171,17 @@ struct CardioContent: View {
         icon: icon, label: model.headerLabel, accent: accent,
         standaloneMark: model.showsStandaloneMark ? (model.markTapped ? .tapped : .idle) : nil,
         onMarkTap: onMarkTap)
-      Text(verbatim: model.primaryLabel)
-        .lifeyLabel(metrics, caps: true)
-        .foregroundColor(model.isGame && !model.onCourt ? LifeyColors.text3 : LifeyColors.text2)
-        .lineLimit(1)
-        .padding(.top, LifeySpacing.xs)
+      HStack(spacing: LifeySpacing.sm) {
+        // A small primary dot marks the ticking clock on court (canvas AW2.13); benched it is stopped.
+        if model.isGame && model.onCourt {
+          Circle().fill(LifeyColors.primary).frame(width: 8, height: 8)
+        }
+        Text(verbatim: model.primaryLabel)
+          .lifeyLabel(metrics, caps: true)
+          .foregroundColor(model.isGame && !model.onCourt ? LifeyColors.text3 : LifeyColors.text2)
+          .lineLimit(1)
+      }
+      .padding(.top, LifeySpacing.xs)
       Text(verbatim: model.primaryValue)
         .lifeyHero(metrics, dense: model.isGame)
         .foregroundColor(model.isGame && !model.onCourt ? LifeyColors.text3 : LifeyColors.text)
