@@ -74,8 +74,8 @@ with a date caption each. A synchronised pinch-zoom is nice-to-have and a non-go
 
 ```
 body_measurements              (V78)
-  id, client_id, user_id, entry_date, site, value_cm,
-  created_at, updated_at, deleted_at            -- SyncableEntity columns
+  id, user_id, entry_date, site, value_cm,
+  created_at, updated_at, deleted_at            -- SyncableEntity columns (no client_id: weight has none)
 progress_photos                (V79)
   id, user_id, taken_on (date), pose (FRONT|SIDE|BACK|OTHER), note?, created_at
 progress_photo_images          (V79)
@@ -88,7 +88,7 @@ Migration numbers are the next free pair after `V77__trainer_request.sql`; confi
 
 | Endpoint | Purpose |
 |---|---|
-| `POST/PUT/DELETE /api/v1/measurements`, `GET /api/v1/measurements` (+ `?updatedSince=` delta) | CRUD + delta feed, same shape as weight |
+| `POST/DELETE /api/v1/measurements`, `GET /api/v1/measurements` (+ `?updatedSince=` delta) | create/delete (no edit — delete and re-log, same as weight) + delta feed |
 | `POST /api/v1/progress-photos` (multipart: `file`, `takenOn`, `pose`) | create, returns metadata |
 | `GET /api/v1/progress-photos` | metadata list, newest first |
 | `GET /api/v1/progress-photos/{id}/image` and `/thumbnail` | bytes, ETag + `If-None-Match` |
@@ -115,8 +115,6 @@ Migration numbers are the next free pair after `V77__trainer_request.sql`; confi
 - A future `takenOn` is rejected; a very old one is fine (people add photos retroactively).
 - Non-image / oversized upload → `InvalidImageException` (existing 400 handling); >10 MB is cut by
   the multipart limit.
-- Re-sync of a measurement created offline with a `client_id` already on the server is the
-  existing idempotent upsert — nothing new, but the test plan covers it.
 
 ## 7. Order of work
 
@@ -177,3 +175,9 @@ branch carries one commit per step so a reviewer can read it step by step.
 
 Update: `05-improvement-roadmap.md` #10 → DONE, `REMAINING-WORK.md` §1.3 removed, `docs/README.md`
 plan table, Postman collection. Record deviations from this plan in a §12 "As built" section.
+
+## 12. As built / step log
+
+- **P1 (backend measurements) — done.** `com.lifey.bodymeasurement`, `V78__body_measurements.sql`,
+  `/api/v1/measurements`. Controller + service tests pass (`BodyMeasurement*Test`). Docker was not
+  available in the session, so the Flyway-vs-entity `validate` run (`mvnw verify`) is still owed.
