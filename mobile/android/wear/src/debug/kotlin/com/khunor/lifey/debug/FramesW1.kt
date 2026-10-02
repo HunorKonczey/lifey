@@ -32,23 +32,23 @@ import com.khunor.lifey.ui.components.HeartRateState
  * Each X3 step registers the frames of the page it builds.
  */
 val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
-    "W1.1" to { Frame { MetricsContent(strengthModel(), {}, {}) } },
-    "W1.2" to { Frame { MetricsContent(strengthModel(isPaused = true), {}, {}) } },
-    "W1.3" to { Frame { MetricsContent(strengthModel(HeartRateState.PermissionDenied), {}, {}) } },
-    "W2.16" to { Frame { MetricsContent(strengthModel(HeartRateState.Missing), {}, {}) } },
-    "W1.5" to { Frame { LogContent(logModel(LogSetState.Ready), {}, {}, {}) } },
-    "W1.6" to { Frame { LogContent(logModel(LogSetState.Confirmed, setsDone = 3), {}, {}, {}) } },
-    "W1.7" to { Frame { LogContent(logModel(LogSetState.Pending("fixture")), {}, {}, {}) } },
-    "W1.7b" to { Frame { LogContent(logModel(LogSetState.Failed), {}, {}, {}) } }, // failed: two centred lines
-    "W1.7c" to { Frame { LogContent(logModel(LogSetState.Ready, phoneUnreachable = true), {}, {}, {}) } },
-    "W1.8" to { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.REPS), {}, {}, {}) },
-    "W1.9" to { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.WEIGHT), {}, {}, {}) },
-    "W1.10" to { Frame { RestContent(restModel(47_000L)) } },
-    "W1.11" to { Frame { RestContent(restModel(4_000L)) } }, // the last five seconds: calories colour + pulse
-    "W1.12" to { Frame { GoFlash() } },
-    "W1.13" to { Frame { ControlsContent(ControlsModel(elapsedMs = 12 * 60_000L + 34_000L, isPaused = false), {}, {}, {}) } },
-    "W1.14" to { Frame { ControlsContent(ControlsModel(12 * 60_000L + 34_000L, isPaused = true, offersExerciseList = true), {}, {}, {}) } },
-    "W1.15" to {
+    "W1.1" to frame { Frame { MetricsContent(strengthModel(), {}, {}) } },
+    "W1.2" to frame { Frame { MetricsContent(strengthModel(isPaused = true), {}, {}) } },
+    "W1.3" to frame { Frame { MetricsContent(strengthModel(HeartRateState.PermissionDenied), {}, {}) } },
+    "W2.16" to frame { Frame { MetricsContent(strengthModel(HeartRateState.Missing), {}, {}) } },
+    "W1.5" to frame { Frame { LogContent(logModel(LogSetState.Ready), {}, {}, {}) } },
+    "W1.6" to frame { Frame { LogContent(logModel(LogSetState.Confirmed, setsDone = 3), {}, {}, {}) } },
+    "W1.7" to frame { Frame { LogContent(logModel(LogSetState.Pending("fixture")), {}, {}, {}) } },
+    "W1.7b" to frame { Frame { LogContent(logModel(LogSetState.Failed), {}, {}, {}) } }, // failed: two centred lines
+    "W1.7c" to frame { Frame { LogContent(logModel(LogSetState.Ready, phoneUnreachable = true), {}, {}, {}) } },
+    "W1.8" to frame { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.REPS), {}, {}, {}) },
+    "W1.9" to frame { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.WEIGHT), {}, {}, {}) },
+    "W1.10" to frame { Frame { RestContent(restModel(47_000L)) } },
+    "W1.11" to frame { Frame { RestContent(restModel(4_000L)) } }, // the last five seconds: calories colour + pulse
+    "W1.12" to frame { Frame { GoFlash() } },
+    "W1.13" to frame { Frame { ControlsContent(ControlsModel(elapsedMs = 12 * 60_000L + 34_000L, isPaused = false), {}, {}, {}) } },
+    "W1.14" to frame { Frame { ControlsContent(ControlsModel(12 * 60_000L + 34_000L, isPaused = true, offersExerciseList = true), {}, {}, {}) } },
+    "W1.15" to frame {
         ExerciseListContent(
             rows = listOf(
                 ExerciseRow(0, "Fekvenyomás", "2/4 szett", isCurrent = true),
@@ -59,9 +59,12 @@ val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
             onSelect = {},
         )
     },
-    "W1.16" to { EffortContent(rpe = 7, onRpeChange = {}, onConfirm = {}, onSkip = {}) },
-    "W1.4" to { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
+    "W1.16" to frame { EffortContent(rpe = 7, onRpeChange = {}, onConfirm = {}, onSkip = {}) },
+    "W1.4" to frame { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
 )
+
+/** Gives the lambda a @Composable function type up front (a bare `"id" to { … }` would be inferred as a plain lambda). */
+private fun frame(content: @Composable () -> Unit): @Composable () -> Unit = content
 
 /** The frame chrome: the TimeText every pager page carries. */
 @Composable
