@@ -17,7 +17,7 @@ class FontCoverageTest {
         "PlusJakartaSans-Bold-numerals.ttf" to "pjs_numerals_bold.ttf",
     )
 
-    private val numeralGlyphs = "0123456789:.,+-−–—/~%×   "
+    private val numeralGlyphs = "0123456789:.,+-−–—/~%×  "
 
     private fun wear(name: String) = File(root, "android/wear/src/main/res/font/$name")
     private fun apple(name: String) = File(root, "ios/LifeyWatch/Fonts/$name")
