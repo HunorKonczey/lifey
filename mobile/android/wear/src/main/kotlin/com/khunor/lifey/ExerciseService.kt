@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -13,6 +14,8 @@ import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.wear.ongoing.OngoingActivity
+import androidx.wear.ongoing.Status
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.health.services.client.ExerciseUpdateCallback
@@ -387,11 +390,30 @@ class ExerciseService : Service() {
             CHANNEL_ID, getString(R.string.exercise_notification_channel), NotificationManager.IMPORTANCE_LOW,
         )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.exercise_notification_title))
             .setSmallIcon(R.drawable.ic_stat_lifey)
+            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .setOngoing(true)
+        // Ongoing Activity (redesign X4.o2, W2.21): the same notification also shows on the watch face as a
+        // running stopwatch; tapping it brings the workout back. The status is the workout's own clock.
+        val touchIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        OngoingActivity.Builder(applicationContext, NOTIFICATION_ID, builder)
+            .setStaticIcon(R.drawable.ic_stat_lifey)
+            .setTouchIntent(touchIntent)
+            .setStatus(
+                Status.Builder()
+                    .addTemplate("#time#")
+                    .addPart("time", Status.StopwatchPart(System.currentTimeMillis()))
+                    .build(),
+            )
             .build()
+            .apply(applicationContext)
+        val notification: Notification = builder.build()
         ServiceCompat.startForeground(
             this, NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH,
         )

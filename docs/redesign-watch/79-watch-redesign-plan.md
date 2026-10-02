@@ -1395,9 +1395,10 @@ permission revoke/grant; failure paths.
 - `TileService` with ProtoLayout Material 3: "Gyors erőedzés" + the first ranked template, from the
   already-synced local cache.
 
-### X4.o2 — Watch Wear (optional, needs go-ahead §10 Q2): Ongoing Activity (W2.21)
+### X4.o2 — Watch Wear (optional, needs go-ahead §10 Q2): Ongoing Activity (W2.21) ✅
 - `OngoingActivity` bound to the existing foreground notification: icon on the watch face (ring during
   rest), tap = back to the workout.
+- *As built:* ExerciseService.promoteToForeground builds the foreground notification as a workout-category NotificationCompat.Builder and wraps it in an androidx.wear.ongoing OngoingActivity (static icon = the existing ic_stat_lifey, touch intent = MainActivity single-top, status template '#time#' with a StopwatchPart from the promote time) before startForeground; new dependency androidx.wear:wear-ongoing:1.0.0 (the library that exists for exactly this — justified under the project rule). Deviation: the canvas's 'ring during rest' status is NOT built — the status stays the workout stopwatch (a rest-aware status needs the rest deadline mapped to a wall-clock TimerPart; left for the emulator pass); the stopwatch starts at the promote time, so a recovered standalone session restarts it from the recovery. Compile is the CI's job (the Status/StopwatchPart/OngoingActivity.Builder signatures are from memory).
 
 **X4 review (§4.2) — done in the cloud (§4.3), emulator pass still owed; log in §12:** all W2 frames incl. ambient at 227 / 192 dp; demo flows as X2's on Wear; M2 gone.
 
