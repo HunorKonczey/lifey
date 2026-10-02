@@ -211,3 +211,8 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
   `/progress-photos/:photoId` (pinch-zoom, thumbnail shown while the full image loads, edit, confirm-delete).
   Camera/library permission strings already exist (chat attachments). Tests: widget tests for tab, tile,
   viewer delete flow, details sheet add/edit/failure, Body tab switching. **Emulator walk still owed.**
+- **P7 (mobile UI, compare) — done.** `PhotoCompareScreen` at `/progress-photos/compare` (declared before
+  `/progress-photos/:photoId` so `compare` is not parsed as an id): oldest vs newest by default, tap a pane
+  to re-pick that side from a thumbnail grid, "N days apart" between them; a Compare button appears above
+  the timeline from two photos on. HU/EN strings; iOS camera/photo-library usage strings now also name
+  progress photos and chat attachments (they only mentioned barcodes and the profile picture).

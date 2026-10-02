@@ -42,6 +42,20 @@ class ProgressPhotosTab extends ConsumerWidget {
             : CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
+                  if (photos.length >= 2)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.s8),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FilledButton.tonalIcon(
+                            onPressed: () => context.push('/progress-photos/compare'),
+                            icon: const Icon(Icons.compare_rounded, size: 20),
+                            label: Text(l10n.photosCompareButton),
+                          ),
+                        ),
+                      ),
+                    ),
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, bottomPad),
                     sliver: SliverGrid.builder(

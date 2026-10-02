@@ -6866,5 +6866,30 @@
   "photoImageUnavailableMessage": "The photo couldn't be loaded.",
   "@photoImageUnavailableMessage": {
     "description": "Shown in the full-screen viewer when the image bytes are unavailable (offline and not cached)"
+  },
+  "photosCompareButton": "Compare",
+  "@photosCompareButton": {
+    "description": "Caption of the button above the photo timeline that opens the side-by-side compare screen (docs/80)"
+  },
+  "photosCompareTitle": "Compare",
+  "@photosCompareTitle": {
+    "description": "Title of the side-by-side photo compare screen"
+  },
+  "photosCompareBefore": "Before",
+  "@photosCompareBefore": {
+    "description": "Caption above the left photo on the compare screen"
+  },
+  "photosCompareAfter": "After",
+  "@photosCompareAfter": {
+    "description": "Caption above the right photo on the compare screen"
+  },
+  "photosComparePickTitle": "Choose a photo",
+  "@photosComparePickTitle": {
+    "description": "Title of the sheet that picks which photo goes on one side of the compare screen"
+  },
+  "photosCompareDaysApart": "{count, plural, one{1 day apart} other{{count} days apart}}",
+  "@photosCompareDaysApart": {
+    "description": "Caption between the two compared photos: how many calendar days separate them",
+    "placeholders": {"count": {"type": "int"}}
   }
 }

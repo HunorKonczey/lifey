@@ -1514,5 +1514,11 @@
   "photoDeletedMessage": "Fotó törölve",
   "photoEditAction": "Adatok szerkesztése",
   "photoDeleteAction": "Fotó törlése",
-  "photoImageUnavailableMessage": "A fotót nem sikerült betölteni."
+  "photoImageUnavailableMessage": "A fotót nem sikerült betölteni.",
+  "photosCompareButton": "Összehasonlítás",
+  "photosCompareTitle": "Összehasonlítás",
+  "photosCompareBefore": "Előtte",
+  "photosCompareAfter": "Utána",
+  "photosComparePickTitle": "Válassz fotót",
+  "photosCompareDaysApart": "{count, plural, one{{count} nap telt el} other{{count} nap telt el}}"
 }

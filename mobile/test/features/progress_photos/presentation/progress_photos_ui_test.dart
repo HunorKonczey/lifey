@@ -11,6 +11,7 @@ import 'package:lifey/features/measurements/application/body_measurement_control
 import 'package:lifey/features/measurements/domain/body_measurement.dart';
 import 'package:lifey/features/progress_photos/application/progress_photo_controller.dart';
 import 'package:lifey/features/progress_photos/domain/progress_photo.dart';
+import 'package:lifey/features/progress_photos/presentation/photo_compare_screen.dart';
 import 'package:lifey/features/progress_photos/presentation/progress_photo_viewer_screen.dart';
 import 'package:lifey/features/progress_photos/presentation/progress_photos_tab.dart';
 import 'package:lifey/features/progress_photos/presentation/widgets/photo_details_sheet.dart';
@@ -269,5 +270,57 @@ void main() {
     expect(find.text('Add photo'), findsOneWidget);
     expect(find.text('Log'), findsNothing);
     expect(find.text('No progress photos yet'), findsOneWidget);
+  });
+
+  testWidgets('Compare is not offered with a single photo', (tester) async {
+    await _pump(tester, [_photo(1, DateTime(2026, 6, 1))], const Scaffold(body: ProgressPhotosTab()));
+
+    expect(find.text('Compare'), findsNothing);
+  });
+
+  testWidgets('Compare opens the compare screen once there are two photos', (tester) async {
+    final router = GoRouter(routes: [
+      GoRoute(path: '/', builder: (_, __) => const Scaffold(body: ProgressPhotosTab())),
+      GoRoute(path: '/progress-photos/compare', builder: (_, __) => const PhotoCompareScreen()),
+    ]);
+    await _pump(
+      tester,
+      [_photo(1, DateTime(2026, 6, 1)), _photo(2, DateTime(2026, 6, 15), pose: PhotoPose.side)],
+      const SizedBox(),
+      router: router,
+    );
+
+    await tester.tap(find.text('Compare'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Before'), findsOneWidget);
+    expect(find.text('After'), findsOneWidget);
+  });
+
+  testWidgets('compare starts on the oldest and newest, shows the days between, and a pane can be re-picked',
+      (tester) async {
+    await _pump(
+      tester,
+      [
+        _photo(1, DateTime(2026, 6, 1), pose: PhotoPose.front),
+        _photo(2, DateTime(2026, 6, 10), pose: PhotoPose.side),
+        _photo(3, DateTime(2026, 6, 15), pose: PhotoPose.back),
+      ],
+      const PhotoCompareScreen(),
+    );
+
+    expect(find.text('Jun 1 · Front'), findsOneWidget);
+    expect(find.text('Jun 15 · Back'), findsOneWidget);
+    expect(find.text('14 days apart'), findsOneWidget);
+
+    // Re-pick the "before" side: the middle photo.
+    await tester.tap(find.text('Jun 1 · Front'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a photo'), findsOneWidget);
+    await tester.tap(find.text('Jun 10 · Side').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jun 10 · Side'), findsOneWidget);
+    expect(find.text('5 days apart'), findsOneWidget);
   });
 }
