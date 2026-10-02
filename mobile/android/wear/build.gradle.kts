@@ -74,6 +74,9 @@ dependencies {
     // fine here even though the rest of the UI uses `compose-material` (Wear).
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // JVM unit tests for the pure design-system rules (redesign plan 79, D-X0.11).
+    testImplementation("junit:junit:4.13.2")
     // @WearPreviewDevices / @WearPreviewFontScales for the component previews (D-X0.11).
     debugImplementation("androidx.wear.compose:compose-ui-tooling:1.6.2")
 

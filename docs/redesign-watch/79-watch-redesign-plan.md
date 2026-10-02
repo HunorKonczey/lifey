@@ -789,7 +789,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   colours.
 - *As built:* UNVERIFIED: Google Maven (dl.google.com) is blocked in the cloud session, so the compose-material3 1.6.2 artifact name/version and the ColorScheme parameter names could not be checked — confirm on the first Windows build. The M3 theme wraps the M2 theme; the M3-vs-M2 side-by-side preview comes with the gallery (X0w.8).
 
-### X0w.3 — Watch Wear: JVM tests — contrast, token parity
+### X0w.3 — Watch Wear: JVM tests — contrast, token parity ✅
 - Files: `build.gradle.kts` (`testImplementation("junit:junit:4.13.2")`), new
   `src/test/kotlin/com/khunor/lifey/ui/theme/ContrastTest.kt` (port of `mobile/lib/core/theme/contrast.dart`;
   asserts `text` / `text2` / `text3` ≥ 4.5 on `bg`, `card`, `nested`; every metric/role on its own 16 % tint
@@ -798,6 +798,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   extracts `static let <name> = Color(hex: 0x…)`, compares with `LifeyColors.kt` by reflection).
 - Depends on X0a.1 (the Swift values) — the only cross-track dependency; land X0a.1 first (§0 order).
 - **Verify:** `./gradlew :wear:testDebugUnitTest` green; changing one hex on either side makes it red.
+- *As built:* tests not run (no Android SDK / Google Maven in the cloud). The contrast assertions were pre-computed independently in Python — every pair passes (text3 on nested 4.75, the lowest). Note: #F2F1E6 on black computes to 18.5 : 1, the canvas says 19.4 : 1 (different sRGB threshold constant; no action). The parity test walks up from the module dir to find ios/LifeyWatch/Theme/LifeyColors.swift.
 
 ### X0w.4 — CI: build and unit-test the Wear module
 - Files: `.github/workflows/mobile-ci.yml` — a job (or step after the Flutter setup, which the wear module
