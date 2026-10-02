@@ -1,5 +1,7 @@
 # Lifey Watch – Design Prompt (F4 state + F5/F6 concepts)
 
+> **Superseded (visual values) by [79-watch-redesign-plan.md](../redesign-watch/79-watch-redesign-plan.md):** colours, type, shapes, sizes and motion in §2 now follow the Design System v2 watch tokens (D-X0.2, D-X0.5). Behaviour specs here still stand.
+
 > **Purpose of this file:** a single, self-contained prompt you can hand to Claude
 > (or any capable design agent) to design the **Lifey watch app UI** — Apple Watch
 > (SwiftUI) and Wear OS (Compose). The design agent will NOT see the mobile app,

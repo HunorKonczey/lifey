@@ -42,5 +42,8 @@ They are written in Hungarian; the plan is in English. The design-system canvas 
 | X2 | Apple | 2 | Start, standalone, cardio, errors, Always-On |
 | X3 | Wear | 3 | Phone-driven strength workout |
 | X4 | Wear | 4 | Start, error, standalone, cardio, ambient; Material 2 removed |
+| X2.o / X4.o | both | 2 / 4 | Optional surfaces: Wear Tile + Ongoing Activity built; Apple Smart Stack widget + complication sources written, not wired |
+
+**Status (2026-10-02): done in the cloud; open are the Mac pass (Apple build + wiring the widget extension, `mobile/ios/LifeyWatchWidgets/README.md`), the Wear emulator pass and the physical-device pass (plan §10 Q5) before merging to `main`.**
 
 Each iteration ends with a review against its canvas frames (plan §4), logged in plan §12.

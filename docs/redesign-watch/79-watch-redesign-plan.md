@@ -1554,6 +1554,7 @@ each line, ticked when its review is logged in §12. If review load demands it, 
 - `docs/watch/40-watch-app-plan.md` §12.1 B4 / B6 (dynamic sizing, tokens): pointer to D-X0.5 / D-X0.2.
 - `docs/cardio/55-cardio-watch-plan.md` §2 (accent colours): pointer to D-X0.2.
 - Code comments that cite `41-watch-design-prompt.md` §2 for colour values updated to cite this plan.
+- **Done in X5 (2026-10-02):** README status, the superseded notes in 41 / 42, the pointer in 40 §12.1; `55-cardio-watch-plan.md` §2 holds no colour values (nothing to point from); the remaining code comment citing 41 (`ActiveWorkoutView.swift`, §3.4) cites behaviour, not colour, and stays.
 - Follow-ups: optional surfaces if not done; a physical-device pass if Q5 deferred it.
 
 ---
