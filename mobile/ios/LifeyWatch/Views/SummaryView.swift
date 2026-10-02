@@ -32,25 +32,24 @@ struct SummaryContent: View {
             .foregroundColor(LifeyColors.success)
           Text("summary_title").lifeyTitle(metrics).foregroundColor(LifeyColors.text).lineLimit(2)
         }
-        SummaryTile(
-          number: model.totalSeconds, format: { SummaryContent.duration($0) },
-          label: String(localized: "summary_time_label"))
-        HStack(spacing: LifeySpacing.sm) {
-          if let setsCount = model.setsCount {
-            SummaryTile(
-              number: Double(setsCount), format: { "\(Int($0.rounded()))" },
-              label: String(localized: "summary_sets_label"))
+        // Standalone: the sync state comes first, directly under the title and above the fold (AW2.9).
+        if let sync = model.sync {
+          SyncRow(
+            isSynced: sync.isSynced,
+            title: String(localized: sync.isSynced ? "sync_done" : "sync_pending"),
+            subtitle: sync.pendingCount > 1
+              ? String(format: String(localized: "sync_queue_count"), sync.pendingCount) : nil)
+        }
+        if model.setsCount != nil {
+          // Four compact tiles (idő, szett, átlag bpm, kcal) in a 2 × 2 grid.
+          LazyVGrid(columns: [GridItem(.flexible(), spacing: LifeySpacing.sm), GridItem(.flexible())], spacing: LifeySpacing.sm) {
+            allTiles
           }
-          if let bpm = model.averageHeartRate {
-            SummaryTile(
-              number: bpm, format: { "\(Int($0.rounded()))" },
-              label: String(localized: "summary_avg_hr_label"), tint: LifeyColors.heart)
-          }
-          if let kcal = model.calories {
-            SummaryTile(
-              number: kcal, format: { "\(Int($0.rounded()))" },
-              label: String(localized: "active_calories_unit"), tint: LifeyColors.calories)
-          }
+        } else {
+          SummaryTile(
+            number: model.totalSeconds, format: { SummaryContent.duration($0) },
+            label: String(localized: "summary_time_label"))
+          HStack(spacing: LifeySpacing.sm) { tiles(includeTime: false) }
         }
         if model.savedToHealth {
           HStack(alignment: .top, spacing: LifeySpacing.sm) {
@@ -63,18 +62,35 @@ struct SummaryContent: View {
           .frame(maxWidth: .infinity, alignment: .leading)
           .background(LifeyColors.tint(LifeyColors.success), in: RoundedRectangle(cornerRadius: LifeyShapes.card))
         }
-        if let sync = model.sync {
-          SyncRow(
-            isSynced: sync.isSynced,
-            title: String(localized: sync.isSynced ? "sync_done" : "sync_pending"),
-            subtitle: sync.pendingCount > 1
-              ? String(format: String(localized: "sync_queue_count"), sync.pendingCount) : nil)
-        }
       }
       .padding(.horizontal, metrics.sideMargin)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .background(LifeyColors.bg)
+  }
+
+  @ViewBuilder private var allTiles: some View { tiles(includeTime: true) }
+
+  @ViewBuilder private func tiles(includeTime: Bool) -> some View {
+    if includeTime {
+      SummaryTile(
+        number: model.totalSeconds, format: { SummaryContent.duration($0) },
+        label: String(localized: "summary_time_label"))
+    }
+    if let setsCount = model.setsCount {
+      SummaryTile(
+        number: Double(setsCount), format: { "\(Int($0.rounded()))" }, label: String(localized: "summary_sets_label"))
+    }
+    if let bpm = model.averageHeartRate {
+      SummaryTile(
+        number: bpm, format: { "\(Int($0.rounded()))" }, label: String(localized: "summary_avg_hr_label"),
+        tint: LifeyColors.heart)
+    }
+    if let kcal = model.calories {
+      SummaryTile(
+        number: kcal, format: { "\(Int($0.rounded()))" }, label: String(localized: "active_calories_unit"),
+        tint: LifeyColors.calories)
+    }
   }
 
   static func duration(_ seconds: Double) -> String {

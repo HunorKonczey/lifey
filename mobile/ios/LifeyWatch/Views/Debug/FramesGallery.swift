@@ -200,6 +200,16 @@
               elapsedSeconds: 12 * 60 + 36, contextName: "Push nap", contextSuffix: " · 3/4 szett",
               showsStandaloneMark: true, markTapped: true))
         },
+        GalleryFrame("AW2.9", "Standalone summary · waiting for sync") {
+          SummaryContent(model: SummaryModel(
+            totalSeconds: 2292, averageHeartRate: 126, calories: 214, setsCount: 9, savedToHealth: true,
+            sync: (isSynced: false, pendingCount: 2)))
+        },
+        GalleryFrame("AW2.10", "Standalone summary · synced") {
+          SummaryContent(model: SummaryModel(
+            totalSeconds: 2292, averageHeartRate: 126, calories: 214, setsCount: 9, savedToHealth: true,
+            sync: (isSynced: true, pendingCount: 1)))
+        },
         GalleryFrame("AW2.8", "Standalone log page · chip") {
           LogContent(
             model: LogModel(

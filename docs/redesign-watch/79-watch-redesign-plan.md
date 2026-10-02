@@ -1081,12 +1081,13 @@ from X1.1's `Views/Active/Cardio.swift`.
   status slot. No behaviour change beyond the feedback.
 - **Verify:** fixture; tap on a template-based standalone session with the phone reachable.
 
-### X2.6 — Watch iOS: standalone summary + sync (AW2.9, AW2.10)
+### X2.6 — Watch iOS: standalone summary + sync (AW2.9, AW2.10) ✅
 - Check beside "Edzés mentve"; `SyncRow` directly under the title, **above the fold** ("Szinkronizálás a
   telefonra" + "2 edzés vár szinkronizálásra"); four compact tiles (idő, szett, átlag bpm, kcal) with
   one-line labels; Health row at the fold, complete when scrolled. Switches live to "Telefonra
   szinkronizálva" (success tint, 250 ms) when the phone acknowledges (unchanged trigger).
 - **Verify:** fixtures; finish standalone with the phone off, then on.
+- *As built:* SummaryContent: for a standalone summary the SyncRow sits directly under the title and the four tiles (idő, szett, átlag bpm, kcal) form a 2 × 2 grid; the Health row follows. The live pending→synced switch is the existing .standaloneSessionAcked handling in SummaryView; SyncRow animates the tint in 250 ms. Frames AW2.9 / 2.10. Not compiled.
 
 ### X2.7 — Watch iOS: cardio — distance and machine (AW2.11, AW2.12)
 - Distance: header chip "FUTÁS" in the accent (`figure.run`); "TÁVOLSÁG" label + hero **48 white** "3.42 km";
