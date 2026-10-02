@@ -227,7 +227,8 @@ class ChatServiceImplTest {
         // write (docs/chat/44-chat-service-extraction-plan.md §5.4).
         when(relationshipGuard.findActive(RELATIONSHIP_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Hi", "uuid-1")))
+        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1");
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(ConversationArchivedException.class);
         verify(messageRepository, never()).save(any());
     }
@@ -236,7 +237,8 @@ class ChatServiceImplTest {
     void sendMessage_toArchivedConversation_isRejected() {
         conversation.setArchivedAt(Instant.now());
 
-        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Hi", "uuid-1")))
+        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1");
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(ConversationArchivedException.class);
         verify(messageRepository, never()).save(any());
     }
@@ -248,7 +250,8 @@ class ChatServiceImplTest {
                 Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false,
                 Duration.ofHours(24), 8L * 1024 * 1024, 1600, 400, Duration.ofSeconds(2), Duration.ofSeconds(5), 2));
 
-        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Hi", "uuid-1")))
+        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1");
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(ChatDisabledException.class);
     }
 
@@ -256,7 +259,8 @@ class ChatServiceImplTest {
     void sendMessage_overTheConfiguredBodyLength_isRejected() {
         String tooLong = "x".repeat(2001);
 
-        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest(tooLong, "uuid-1")))
+        var sendMessageRequest = new SendMessageRequest(tooLong, "uuid-1");
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(InvalidMessageBodyException.class);
         verify(messageRepository, never()).save(any());
     }
@@ -266,7 +270,8 @@ class ChatServiceImplTest {
         when(caller.currentUserId()).thenReturn(999L);
         when(conversationRepository.findByIdForParticipant(CONVERSATION_ID, 999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Hi", "uuid-1")))
+        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1");
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -344,9 +349,9 @@ class ChatServiceImplTest {
 
         chatService.listMessages(CONVERSATION_ID, null, null, 5000);
 
-        verify(messageRepository).findLatestPage(eq(CONVERSATION_ID),
+        verify(messageRepository).findLatestPage(CONVERSATION_ID,
                 // page size + 1 probe row
-                eq(Pageable.ofSize(101)));
+                Pageable.ofSize(101));
     }
 
     // --- search (I6) --------------------------------------------------------
@@ -360,9 +365,9 @@ class ChatServiceImplTest {
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.hasMore()).isFalse();
-        verify(messageRepository).searchInConversation(eq(CONVERSATION_ID), eq("%lábnap%"), eq(null),
+        verify(messageRepository).searchInConversation(CONVERSATION_ID, "%lábnap%", null,
                 // Page size + 1 probe row, the same "is there more?" trick the thread uses.
-                eq(PageRequest.of(0, 31)));
+                PageRequest.of(0, 31));
     }
 
     @Test

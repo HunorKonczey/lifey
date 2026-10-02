@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 /**
@@ -36,7 +37,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse daily() {
-        return daily(LocalDate.now());
+        return daily(LocalDate.now(ZoneId.systemDefault()));
     }
 
     @Override
@@ -46,7 +47,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse weekly() {
-        return weekly(LocalDate.now());
+        return weekly(LocalDate.now(ZoneId.systemDefault()));
     }
 
     @Override
@@ -56,7 +57,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse monthly() {
-        return monthly(LocalDate.now());
+        return monthly(LocalDate.now(ZoneId.systemDefault()));
     }
 
     @Override

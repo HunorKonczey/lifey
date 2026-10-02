@@ -85,11 +85,11 @@ export function TrainerOnboardingChecklist() {
   return (
     <div
       data-testid="trainer-onboarding-checklist"
-      className="rounded-[var(--r-lg)] p-4.5 mb-3.5"
-      style={{ background: "var(--surface-container)" }}
+      className="rounded-[var(--r-card)] p-4.5 mb-3.5"
+      style={{ background: "var(--nested)" }}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-extrabold" style={{ color: "var(--on-surface)" }}>
+        <p className="text-sm font-extrabold" style={{ color: "var(--text)" }}>
           {complete ? t("completeTitle") : t("title")}
         </p>
         {complete && (
@@ -100,7 +100,7 @@ export function TrainerOnboardingChecklist() {
             }}
             aria-label={t("dismiss")}
             className="shrink-0 p-1 rounded-full hover:bg-black/10"
-            style={{ color: "var(--on-surface-variant)" }}
+            style={{ color: "var(--text-2)" }}
           >
             <span className="material-symbols-rounded text-lg">close</span>
           </button>
@@ -128,7 +128,7 @@ export function TrainerOnboardingChecklist() {
                   aria-label={t("markDone")}
                   className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center"
                   style={{
-                    background: step.done ? "var(--tertiary)" : "transparent",
+                    background: step.done ? "var(--primary)" : "transparent",
                     border: step.done ? "none" : "1.5px solid var(--outline)",
                   }}
                 >
@@ -142,7 +142,7 @@ export function TrainerOnboardingChecklist() {
                 <span
                   className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center"
                   style={{
-                    background: step.done ? "var(--tertiary)" : "transparent",
+                    background: step.done ? "var(--primary)" : "transparent",
                     border: step.done ? "none" : "1.5px solid var(--outline)",
                   }}
                 >
@@ -157,7 +157,7 @@ export function TrainerOnboardingChecklist() {
                 href={meta.href}
                 className="flex-1 text-[13px] font-semibold"
                 style={{
-                  color: step.done ? "var(--on-surface-variant)" : "var(--on-surface)",
+                  color: step.done ? "var(--text-2)" : "var(--text)",
                   textDecoration: step.done ? "line-through" : "none",
                 }}
               >

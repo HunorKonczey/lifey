@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ds";
 import { recipeImageApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
@@ -79,15 +80,15 @@ export function RecipeImageUploader({ recipeId }: RecipeImageUploaderProps) {
   return (
     <div className="flex items-center gap-4">
       <div
-        className="relative w-32 h-32 rounded-[var(--r-md)] flex items-center justify-center shrink-0 overflow-hidden"
-        style={{ background: "var(--surface-container)" }}
+        className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden"
+        style={{ background: "var(--nested)", borderRadius: "var(--r-card)" }}
       >
         {objectUrl ? (
           // Blob object URLs aren't compatible with next/image's optimizer.
           // eslint-disable-next-line @next/next/no-img-element
           <img src={objectUrl} alt="" className="w-full h-full object-cover" />
         ) : (
-          <span className="material-symbols-rounded text-4xl" style={{ color: "var(--secondary)" }}>
+          <span className="material-symbols-rounded text-4xl" style={{ color: "var(--text-3)" }} aria-hidden>
             menu_book
           </span>
         )}
@@ -103,26 +104,14 @@ export function RecipeImageUploader({ recipeId }: RecipeImageUploaderProps) {
         )}
       </div>
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={busy || isLoading}
-          onClick={() => fileInputRef.current?.click()}
-          className="h-9 px-4 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-60"
-          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
-        >
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" disabled={busy || isLoading} onClick={() => fileInputRef.current?.click()}>
           {t("changePhoto")}
-        </button>
+        </Button>
         {blob && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => removeMutation.mutate()}
-            className="h-9 px-4 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-60"
-            style={{ color: "var(--error)" }}
-          >
+          <Button variant="ghost" disabled={busy} onClick={() => removeMutation.mutate()} style={{ color: "var(--heart)" }}>
             {t("removePhoto")}
-          </button>
+          </Button>
         )}
       </div>
 

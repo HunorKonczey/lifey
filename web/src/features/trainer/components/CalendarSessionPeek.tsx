@@ -1,76 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
+import { Button, ConfirmModal, Icon, IconButton, Popover } from "@/components/ds";
+import { useFormat } from "@/lib/format/useFormat";
+import { useToast } from "@/lib/hooks/useToast";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { useToast } from "@/lib/hooks/useToast";
-import { useLocale } from "@/lib/hooks/useLocale";
+import { STATUS_STYLE } from "../scheduleStatus";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import { RecurrenceLabel } from "./RecurrenceLabel";
-import { STATUS_STYLE } from "../scheduleStatus";
 import type { TrainerCalendarSessionResponse } from "../types";
-
-const DATE_LOCALES = { en: enUS, hu } as const;
-const POPOVER_WIDTH = 340;
-
-function computePosition(anchorEl: HTMLElement) {
-  const rect = anchorEl.getBoundingClientRect();
-  const gap = 12;
-  let left = rect.right + gap;
-  if (left + POPOVER_WIDTH > window.innerWidth - 12) {
-    left = rect.left - POPOVER_WIDTH - gap;
-  }
-  left = Math.min(Math.max(12, left), window.innerWidth - POPOVER_WIDTH - 12);
-  const top = Math.min(Math.max(12, rect.top), Math.max(12, window.innerHeight - 12 - 420));
-  return { top, left };
-}
 
 interface CalendarSessionPeekProps {
   session: TrainerCalendarSessionResponse;
   anchorEl: HTMLElement;
+  /** The client's real name when the caller has it; otherwise one derived from the e-mail. */
+  clientName?: string;
   onClose: () => void;
 }
 
 /**
- * Anchored popover for a calendar session (design: C frame) — not a modal.
- * Render with `key={session.sessionId}` from the parent so switching to a
- * different session's anchor always remounts (and re-measures) fresh.
+ * The popover of a calendar event (W8.2), on the DS `Popover`: anchored to the card, closes on Esc and an outside click
+ * and returns focus to it. Client, workout, when (time without seconds) with the status in words, the series it belongs
+ * to or the program chip, then the actions — the client's schedule, the finished session, or cancelling an upcoming
+ * occurrence behind a confirmation. Render with `key={session.sessionId}` so another event remounts it fresh.
  */
-export function CalendarSessionPeek({ session, anchorEl, onClose }: CalendarSessionPeekProps) {
+export function CalendarSessionPeek({ session, anchorEl, clientName, onClose }: CalendarSessionPeekProps) {
   const t = useTranslations("admin.calendar");
   const tSchedule = useTranslations("admin.schedule");
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
+  const fmt = useFormat();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { show } = useToast();
-
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const [pos] = useState(() => computePosition(anchorEl));
+  const anchorRef = useRef<HTMLElement | null>(anchorEl);
   const [confirming, setConfirming] = useState(false);
-
-  useEffect(() => {
-    popoverRef.current?.focus();
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    const onPointerDown = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node) && e.target !== anchorEl) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("mousedown", onPointerDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("mousedown", onPointerDown);
-    };
-  }, [onClose, anchorEl]);
 
   const schedulesQ = useQuery({
     queryKey: queryKeys.trainerSchedules.forClient(session.clientId),
@@ -90,177 +56,95 @@ export function CalendarSessionPeek({ session, anchorEl, onClose }: CalendarSess
   });
 
   const style = STATUS_STYLE[session.status];
-  const clientName = nameFor(session.clientEmail);
+  const name = clientName ?? nameFor(session.clientEmail);
+  const day = new Date(`${session.scheduledFor}T00:00:00`);
   const scheduleHref = `/admin/clients/${session.clientId}?tab=schedule`;
   const sessionHref = `/admin/clients/${session.clientId}?tab=workouts&focusSessionId=${session.sessionId}`;
 
-  return createPortal(
-    <div
-      ref={popoverRef}
-      role="dialog"
-      aria-label={t("peekTitle")}
-      tabIndex={-1}
-      className="fixed z-50 rounded-[20px] p-[18px] outline-none"
-      style={{
-        top: pos.top,
-        left: pos.left,
-        width: POPOVER_WIDTH,
-        background: "var(--surface-highest)",
-        boxShadow: "0 24px 60px rgba(0,0,0,.55)",
-      }}
-    >
-      {confirming ? (
-        <>
-          <div className="flex flex-col items-center text-center gap-3 py-1">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ background: "var(--error-container)", color: "var(--error)" }}
-            >
-              <span className="material-symbols-rounded text-3xl">event_busy</span>
-            </div>
-            <p className="text-base font-extrabold" style={{ color: "var(--on-surface)" }}>
-              {tSchedule("cancelOccurrenceConfirmTitle")}
-            </p>
-            <p className="text-[12.5px] leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
-              {session.templateName ?? tSchedule("unnamedTemplate")} ·{" "}
-              {format(new Date(`${session.scheduledFor}T00:00:00`), "EEEE, MMM d.", { locale: dateLocale })}
-              {session.scheduledTime && ` · ${session.scheduledTime.slice(0, 5)}`}
-              <br />
-              {tSchedule("cancelOccurrenceConfirmBody")}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 mt-4">
-            <button
-              onClick={() => cancelMutation.mutate()}
-              disabled={cancelMutation.isPending}
-              className="rounded-2xl py-3 text-sm font-extrabold disabled:opacity-60"
-              style={{ background: "var(--error)", color: "#161611" }}
-            >
-              {tSchedule("cancelOccurrenceConfirm")}
-            </button>
-            <button
-              onClick={() => setConfirming(false)}
-              className="rounded-2xl py-3 text-sm font-bold"
-              style={{ color: "var(--on-surface)" }}
-            >
-              {tSchedule("keepOccurrence")}
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
+  return (
+    <>
+      <Popover open={!confirming} onClose={onClose} anchorRef={anchorRef} width={340}>
+        <div role="dialog" aria-label={t("peekTitle")} className="flex flex-col gap-4 p-4">
           <div className="flex items-center gap-3">
             <ClientAvatar clientId={session.clientId} email={session.clientEmail} size={42} />
             <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-extrabold truncate" style={{ color: "var(--on-surface)" }}>
-                {clientName}
-              </p>
-              <p className="text-[11.5px] truncate mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-                {session.clientEmail}
-              </p>
+              <p className="truncate" style={{ fontSize: 15, fontWeight: 800 }}>{name}</p>
+              <p className="type-body-s truncate" style={{ color: "var(--text-2)" }}>{session.clientEmail}</p>
             </div>
-            <button onClick={onClose} aria-label={t("close")} style={{ color: "var(--on-surface-variant)" }}>
-              <span className="material-symbols-rounded text-xl">close</span>
-            </button>
+            <IconButton icon="close" label={t("close")} onClick={onClose} />
           </div>
 
-          <div className="h-px my-3.5" style={{ background: "var(--outline)" }} />
-
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2.5 pt-3" style={{ borderTop: "1px solid var(--hairline)" }}>
             <div className="flex items-center gap-2.5">
-              <span className="material-symbols-rounded text-[17px]" style={{ color: "var(--tertiary)" }}>
-                fitness_center
-              </span>
-              <span className="text-[13.5px] font-bold" style={{ color: "var(--on-surface)" }}>
-                {session.templateName ?? tSchedule("unnamedTemplate")}
-              </span>
+              <Icon name="fitness_center" size={18} fill={1} color="var(--role)" />
+              <span style={{ fontWeight: 700 }}>{session.templateName ?? tSchedule("unnamedTemplate")}</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-rounded text-[17px]" style={{ color: "var(--on-surface-variant)" }}>
-                event
-              </span>
-              <span className="text-[13px] font-semibold" style={{ color: "var(--on-surface)" }}>
-                {format(new Date(`${session.scheduledFor}T00:00:00`), "EEEE, MMM d.", { locale: dateLocale })}
-                {session.scheduledTime && (
-                  <> · <span className="font-extrabold tabular">{session.scheduledTime.slice(0, 5)}</span></>
-                )}
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+              <Icon name="event" size={18} color="var(--text-2)" />
+              <span className="type-body-s" style={{ fontWeight: 600 }}>
+                {fmt.weekdayShort(day)}, {fmt.shortDate(day)}
+                {session.scheduledTime && <> · <span className="num" style={{ fontWeight: 800 }}>{fmt.time(new Date(`${session.scheduledFor}T${session.scheduledTime}`))}</span></>}
               </span>
               <span
-                className="flex items-center gap-1 rounded-full text-[10.5px] font-extrabold px-2.5 py-1 shrink-0"
-                style={{ background: style.bg, color: style.color, border: style.bg === "transparent" ? "1px solid var(--outline)" : "none" }}
+                className="inline-flex items-center gap-1.5 px-2.5 type-body-s"
+                style={{ height: 26, borderRadius: 999, background: style.bg, color: style.color, fontWeight: 700, boxShadow: style.bg === "transparent" ? "inset 0 0 0 1px var(--hairline)" : undefined }}
               >
-                <span className="material-symbols-rounded text-sm" style={{ fontVariationSettings: style.fill ? "'FILL' 1" : "'FILL' 0" }}>
-                  {style.icon}
-                </span>
+                <Icon name={style.icon} size={14} fill={style.fill ? 1 : 0} />
                 {tSchedule(`status.${session.status}`)}
               </span>
             </div>
             {schedule && (
               <div className="flex items-start gap-2.5">
-                <span className="material-symbols-rounded text-[17px]" style={{ color: "var(--on-surface-variant)" }}>
-                  event_repeat
-                </span>
-                <span className="text-[12.5px] leading-relaxed" style={{ color: "var(--on-surface-variant)" }}>
-                  <RecurrenceLabel
-                    recurrence={schedule.recurrence}
-                    daysOfWeek={schedule.daysOfWeek}
-                    timeOfDay={schedule.timeOfDay}
-                    startDate={schedule.startDate}
-                    endDate={schedule.endDate}
-                  />
+                <Icon name="event_repeat" size={18} color="var(--text-2)" />
+                <span className="type-body-s" style={{ color: "var(--text-2)" }}>
+                  <RecurrenceLabel recurrence={schedule.recurrence} daysOfWeek={schedule.daysOfWeek} timeOfDay={schedule.timeOfDay} startDate={schedule.startDate} endDate={schedule.endDate} />
                 </span>
               </div>
             )}
             {session.programAssignmentId != null && session.programName && (
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-rounded text-[17px]" style={{ color: "var(--on-surface-variant)" }}>
-                  event_repeat
-                </span>
-                <span
-                  className="flex items-center gap-1 rounded-full text-[11px] font-extrabold px-2.5 py-1"
-                  style={{ background: "rgba(110,154,106,.14)", color: "var(--tertiary)" }}
-                >
+                <Icon name="event_repeat" size={18} color="var(--text-2)" />
+                <span className="inline-flex items-center px-2.5 type-body-s" style={{ height: 26, borderRadius: 999, background: "color-mix(in srgb, var(--role) 16%, transparent)", fontWeight: 700 }}>
                   {session.programName}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="h-px my-3.5" style={{ background: "var(--outline)" }} />
-
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => router.push(scheduleHref)}
-              className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-bold"
-              style={{ color: "var(--on-tertiary-container)", border: "1px solid var(--outline)" }}
-            >
-              <span className="material-symbols-rounded text-lg">open_in_new</span>
+          <div className="flex flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--hairline)" }}>
+            <Button variant="secondary" fullWidth onClick={() => router.push(scheduleHref)}>
+              <Icon name="open_in_new" size={18} />
               {t("clientSchedule")}
-            </button>
+            </Button>
             {session.status === "DONE" && (
-              <button
-                onClick={() => router.push(sessionHref)}
-                className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-extrabold"
-                style={{ background: "var(--tertiary-container)", color: "var(--on-tertiary-container)" }}
-              >
-                <span className="material-symbols-rounded text-lg">open_in_new</span>
+              <Button variant="tonal" fullWidth onClick={() => router.push(sessionHref)}>
+                <Icon name="open_in_new" size={18} />
                 {t("openSession")}
-              </button>
+              </Button>
             )}
             {session.status === "UPCOMING" && (
-              <button
-                onClick={() => setConfirming(true)}
-                className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-extrabold"
-                style={{ background: "var(--error-container)", color: "var(--error)" }}
-              >
-                <span className="material-symbols-rounded text-lg">event_busy</span>
+              <Button variant="secondary" fullWidth onClick={() => setConfirming(true)}>
+                <Icon name="event_busy" size={18} color="var(--heart)" />
                 {tSchedule("cancelOccurrence")}
-              </button>
+              </Button>
             )}
           </div>
-        </>
-      )}
-    </div>,
-    document.body,
+        </div>
+      </Popover>
+
+      <ConfirmModal
+        open={confirming}
+        onClose={() => {
+          setConfirming(false);
+          onClose();
+        }}
+        onConfirm={() => cancelMutation.mutate()}
+        icon="event_busy"
+        title={tSchedule("cancelOccurrenceConfirmTitle")}
+        body={`${session.templateName ?? tSchedule("unnamedTemplate")} · ${fmt.weekdayShort(day)}, ${fmt.shortDate(day)}${session.scheduledTime ? ` · ${fmt.time(new Date(`${session.scheduledFor}T${session.scheduledTime}`))}` : ""}. ${tSchedule("cancelOccurrenceConfirmBody")}`}
+        cancelLabel={tSchedule("keepOccurrence")}
+        confirmLabel={tSchedule("cancelOccurrenceConfirm")}
+      />
+    </>
   );
 }

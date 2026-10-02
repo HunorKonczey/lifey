@@ -11,6 +11,8 @@ import com.lifey.trainer.dto.TrainerClientResponse;
 import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.nutrition.meal.MealRepository;
+import com.lifey.settings.UserSettings;
+import com.lifey.settings.UserSettingsRepository;
 import com.lifey.user.User;
 import com.lifey.water.WaterEntryRepository;
 import com.lifey.weight.WeightEntry;
@@ -32,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,6 +61,9 @@ class TrainerAccessServiceImplTest {
 
     @Mock
     WaterEntryRepository waterEntryRepository;
+
+    @Mock
+    UserSettingsRepository userSettingsRepository;
 
     @Mock
     CurrentUserProvider currentUserProvider;
@@ -152,6 +158,41 @@ class TrainerAccessServiceImplTest {
             assertThat(r.lastWeightAt()).isNull();
             assertThat(r.missedWorkoutCount()).isZero();
         });
+    }
+
+    @Test
+    void findActiveClientsForTrainer_reportsTheClientsOwnCalorieGoalOrNullWhenThereIsNone() {
+        when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
+        TrainerClient withGoal = relationshipFor(CLIENT_ID);
+        TrainerClient withoutRow = relationshipFor(3L);
+        when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
+                .thenReturn(List.of(withGoal, withoutRow));
+        when(weightEntryRepository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(any(), any()))
+                .thenReturn(List.of());
+        when(mealRepository.findMaxDateTimeByUserId(any())).thenReturn(Optional.empty());
+        when(waterEntryRepository.findMaxConsumedAtByUserId(any())).thenReturn(Optional.empty());
+        when(workoutSessionRepository.findMaxStartedAtByUserId(any())).thenReturn(Optional.empty());
+        UserSettings settings = new UserSettings();
+        settings.setDailyCalorieGoal(1900);
+        when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.of(settings));
+        // Client 3 never opened settings: no row, which means "no goal" — and reading must not create one.
+        when(userSettingsRepository.findByUserId(3L)).thenReturn(Optional.empty());
+
+        List<TrainerClientResponse> result = service.findActiveClientsForTrainer();
+
+        assertThat(result).extracting(TrainerClientResponse::clientId, TrainerClientResponse::dailyCalorieGoal)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(CLIENT_ID, 1900), org.assertj.core.groups.Tuple.tuple(3L, null));
+        verify(userSettingsRepository, never()).save(any());
+    }
+
+    private static TrainerClient relationshipFor(Long clientId) {
+        TrainerClient tc = new TrainerClient();
+        User client = new User();
+        client.setId(clientId);
+        client.setEmail("client" + clientId + "@example.com");
+        tc.setClient(client);
+        tc.setRespondedAt(Instant.parse("2026-06-01T00:00:00Z"));
+        return tc;
     }
 
     @Test

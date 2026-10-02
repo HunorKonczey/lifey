@@ -27,7 +27,7 @@ export function CalorieCard({ activeCalories, machineCalories, machineEdited, ac
   const t = useTranslations("workouts");
 
   return (
-    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
       <div className="flex items-start">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
@@ -41,7 +41,7 @@ export function CalorieCard({ activeCalories, machineCalories, machineEdited, ac
           <p className="text-[26px] font-extrabold tabular leading-tight mt-1" style={{ color: accent }}>
             {activeCalories != null ? Math.round(activeCalories) : "—"}
           </p>
-          <p className="text-[10.5px]" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="text-[10.5px]" style={{ color: "var(--text-2)" }}>
             {t("cardioActiveCaloriesHint")}
           </p>
         </div>
@@ -50,38 +50,38 @@ export function CalorieCard({ activeCalories, machineCalories, machineEdited, ac
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-rounded text-sm" style={{ color: "var(--on-surface-variant)" }}>
+            <span className="material-symbols-rounded text-sm" style={{ color: "var(--text-2)" }}>
               monitor
             </span>
             <span
               className="text-[10px] font-extrabold tracking-wide uppercase"
-              style={{ color: "var(--on-surface-variant)" }}
+              style={{ color: "var(--text-2)" }}
             >
               {t("cardioMachineCaloriesLabel")}
             </span>
             {machineEdited && (
-              <span className="text-[9px] font-bold" style={{ color: "var(--on-surface-variant)" }}>
+              <span className="text-[9px] font-bold" style={{ color: "var(--text-2)" }}>
                 {t("cardioManuallyEditedBadge")}
               </span>
             )}
           </div>
           <p
             className="text-[26px] font-extrabold tabular leading-tight mt-1"
-            style={{ color: "var(--on-surface-variant)" }}
+            style={{ color: "var(--text-2)" }}
           >
             {machineCalories != null ? Math.round(machineCalories) : "—"}
           </p>
-          <p className="text-[10.5px]" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="text-[10.5px]" style={{ color: "var(--text-2)" }}>
             {t("cardioMachineCaloriesHint")}
           </p>
         </div>
       </div>
 
       <div className="flex items-start gap-2 mt-3.5">
-        <span className="material-symbols-rounded text-sm" style={{ color: "var(--on-surface-variant)" }}>
+        <span className="material-symbols-rounded text-sm" style={{ color: "var(--text-2)" }}>
           info
         </span>
-        <p className="text-[11px] leading-snug" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-[11px] leading-snug" style={{ color: "var(--text-2)" }}>
           {t("cardioMachineCaloriesFootnote")}
         </p>
       </div>

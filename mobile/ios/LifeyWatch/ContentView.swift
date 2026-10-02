@@ -14,6 +14,11 @@ struct ContentView: View {
   @State private var showStandalonePicker = false
 
   var body: some View {
+    content.watchMetricsFromWidth()
+  }
+
+  @ViewBuilder
+  private var content: some View {
     switch workoutManager.phase {
     case .idle:
       if showStandalonePicker {

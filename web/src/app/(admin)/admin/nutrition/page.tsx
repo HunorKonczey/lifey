@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { SegmentedControl } from "@/components/ds";
 import { FoodsView } from "@/features/nutrition/components/FoodsView";
 import { RecipesView } from "@/features/nutrition/components/RecipesView";
 import { AssignToClientDrawer, type AssignSummaryRow } from "@/features/trainer/components/AssignToClientDrawer";
@@ -28,7 +28,7 @@ export default function AdminNutritionPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <SegmentedControl options={TABS} value={tab} onChange={setTab} activeBackground="var(--tertiary)" activeColor="var(--bg)" />
+      <div className="self-start"><SegmentedControl options={TABS} value={tab} onChange={setTab} /></div>
 
       {tab === "recipes" && <RecipesView onAssign={setAssignTarget} />}
       {tab === "foods" && <FoodsView />}

@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
-/** SSR-safe media query hook — `false` (desktop-first default) until the client
- *  can evaluate the query; the lazy initializer covers the first client render
- *  so there's no extra effect-driven re-render on mount. */
+/**
+ * SSR-safe media query hook. `useSyncExternalStore`'s server snapshot is
+ * always `false`, so the hydration render always matches the server's —
+ * unlike a `useState(() => window.matchMedia(...).matches)` lazy initializer,
+ * which reads the real (possibly-mobile) value on the client's first render
+ * and silently mismatches server-rendered markup that assumed desktop. React
+ * resyncs to the true value right after hydration, with no warning.
+ */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() => (typeof window !== "undefined" ? window.matchMedia(query).matches : false));
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const mql = window.matchMedia(query);
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+  const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query]);
+  const getServerSnapshot = () => false;
 
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const onChange = () => setMatches(mql.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, [query]);
-
-  return matches;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

@@ -138,7 +138,9 @@ test.describe("BillingBlockedDialog (D-T5)", () => {
 
     await test.step("assign content (a workout template)", async () => {
       await page.goto("/admin/workouts");
-      await page.getByTestId("assign-template").first().click();
+      // W9.1: the row's "⋯" menu carries Assign.
+      await page.getByRole("button", { name: /^More actions for / }).first().click();
+      await page.getByRole("menuitem", { name: /Assign/ }).click();
       await expect(blockedDialog(page)).toBeVisible();
       await expect(blockedDialog(page)).toHaveAttribute("data-blocked-reason", "restricted");
       // The normal drawer never mounted — no client roster, no "Assign" submit button from it.
@@ -147,7 +149,9 @@ test.describe("BillingBlockedDialog (D-T5)", () => {
 
     await test.step("assign a program", async () => {
       await page.goto("/admin/programs");
-      await page.getByTestId("program-assign-button").first().click();
+      // W8.7: the programs table's "⋯" menu carries the assignment.
+      await page.getByRole("button", { name: /^More actions for / }).first().click();
+      await page.getByRole("menuitem", { name: /Assign/ }).click();
       await expect(blockedDialog(page)).toBeVisible();
       await expect(blockedDialog(page)).toHaveAttribute("data-blocked-reason", "restricted");
       await expect(page.getByTestId("assign-program-drawer")).toHaveCount(0);

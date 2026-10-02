@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -90,7 +91,7 @@ class ClaudeMealPhotoAnalyzerTest {
 
         analyzer.analyze(JPEG);
 
-        org.mockito.Mockito.verify(client.messages()).create(captor.capture());
+        verify(client.messages()).create(captor.capture());
         assertThat(captor.getValue().rawParams().model().asString()).isEqualTo("claude-haiku-4-5");
     }
 

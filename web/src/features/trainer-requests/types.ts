@@ -29,4 +29,6 @@ export interface SuperAdminTrainerRequestResponse {
   signupSource: string | null;
   createdAt: string;
   decidedAt: string | null;
+  /** When the requester registered — the review card's account age. */
+  userCreatedAt: string;
 }

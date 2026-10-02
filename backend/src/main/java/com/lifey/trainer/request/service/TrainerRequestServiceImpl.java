@@ -118,6 +118,6 @@ public class TrainerRequestServiceImpl implements TrainerRequestService {
     private static SuperAdminTrainerRequestResponse toSuperAdminResponse(TrainerRequest r) {
         return new SuperAdminTrainerRequestResponse(r.getId(), r.getUser().getId(), r.getUser().getEmail(),
                 r.getStatus(), r.getMotivation(), r.getClientCount(), r.getSignupSource(),
-                r.getCreatedAt(), r.getDecidedAt());
+                r.getCreatedAt(), r.getDecidedAt(), r.getUser().getCreatedAt());
     }
 }

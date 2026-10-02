@@ -27,11 +27,11 @@ public record ChatEvent(String name, Long id, Object data) {
     /** "I cannot replay what you missed — reload from REST." */
     public static final String RESYNC = "resync";
 
-    public static ChatEvent message(MessageEventPayload payload) {
+    public static ChatEvent ofMessage(MessageEventPayload payload) {
         return new ChatEvent(MESSAGE, payload.message().id(), payload);
     }
 
-    public static ChatEvent read(ReadEventPayload payload) {
+    public static ChatEvent ofRead(ReadEventPayload payload) {
         return new ChatEvent(READ, null, payload);
     }
 
@@ -40,7 +40,7 @@ public record ChatEvent(String name, Long id, Object data) {
      * definition older than the client's cursor, and setting {@code Last-Event-ID}
      * back to it would make the next reconnect replay the whole thread tail.
      */
-    public static ChatEvent deleted(MessageDeletedEventPayload payload) {
+    public static ChatEvent ofDeleted(MessageDeletedEventPayload payload) {
         return new ChatEvent(DELETED, null, payload);
     }
 
@@ -49,11 +49,11 @@ public record ChatEvent(String name, Long id, Object data) {
      * hint is not a message at all, so it must never be able to move a cursor
      * that means "the newest message I have".
      */
-    public static ChatEvent typing(TypingEventPayload payload) {
+    public static ChatEvent ofTyping(TypingEventPayload payload) {
         return new ChatEvent(TYPING, null, payload);
     }
 
-    public static ChatEvent resync() {
+    public static ChatEvent ofResync() {
         return new ChatEvent(RESYNC, null, new ResyncEventPayload("catch-up window exceeded"));
     }
 }

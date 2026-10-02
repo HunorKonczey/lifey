@@ -12,9 +12,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "audit:styles": "node scripts/style-debt-audit.mjs",
     "check:js-budget": "node scripts/check-js-budget.mjs",
     "lhci": "lhci autorun",
-    "test:e2e:marketing": "playwright test --project=marketing"
+    "test:e2e:marketing": "playwright test --project=marketing",
+    "test:e2e:ds": "playwright test --project=ds"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -37,6 +39,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@formatjs/icu-messageformat-parser": "^3.5.12",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",

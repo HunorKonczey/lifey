@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -11,10 +12,10 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.SystemClock
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.wear.ongoing.OngoingActivity
+import androidx.wear.ongoing.Status
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.health.services.client.ExerciseUpdateCallback
@@ -274,10 +275,7 @@ class ExerciseService : Service() {
         }
     }
 
-    private fun vibrateRestEnd() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
+    private fun vibrateRestEnd() = LifeyHaptics.restOver(this)
 
     /**
      * Reacts to every [LogSetState] change (docs/watch/
@@ -311,11 +309,8 @@ class ExerciseService : Service() {
         }
     }
 
-    private fun vibrateLogSetConfirmed() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        // Short double pulse — success (docs/watch/43-watch-f5-set-logging-plan.md §3.2).
-        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 80, 60), -1))
-    }
+    // Short double pulse — success (docs/watch/43-watch-f5-set-logging-plan.md §3.2).
+    private fun vibrateLogSetConfirmed() = LifeyHaptics.setLogged(this)
 
     /**
      * Restarted by every stepper interaction, so it measures *idle* time
@@ -339,16 +334,10 @@ class ExerciseService : Service() {
      * deliberately lighter than [vibrateLogSetConfirmed]/[vibrateLogSetFailed]:
      * the stepper "clicks", the log "confirms".
      */
-    private fun vibrateLogAdjustTick() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
-    }
+    private fun vibrateLogAdjustTick() = LifeyHaptics.stepperTick(this)
 
-    private fun vibrateLogSetFailed() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        // One longer pulse — failure, same shape as vibrateRestEnd's.
-        vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
+    // One longer pulse — failure, same shape as vibrateRestEnd's.
+    private fun vibrateLogSetFailed() = LifeyHaptics.logFailed(this)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val sessionClientId = intent?.getStringExtra(EXTRA_SESSION_CLIENT_ID)
@@ -401,11 +390,30 @@ class ExerciseService : Service() {
             CHANNEL_ID, getString(R.string.exercise_notification_channel), NotificationManager.IMPORTANCE_LOW,
         )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.exercise_notification_title))
             .setSmallIcon(R.drawable.ic_stat_lifey)
+            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .setOngoing(true)
+        // Ongoing Activity (redesign X4.o2, W2.21): the same notification also shows on the watch face as a
+        // running stopwatch; tapping it brings the workout back. The status is the workout's own clock.
+        val touchIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        OngoingActivity.Builder(applicationContext, NOTIFICATION_ID, builder)
+            .setStaticIcon(R.drawable.ic_stat_lifey)
+            .setTouchIntent(touchIntent)
+            .setStatus(
+                Status.Builder()
+                    .addTemplate("#time#")
+                    .addPart("time", Status.StopwatchPart(System.currentTimeMillis()))
+                    .build(),
+            )
             .build()
+            .apply(applicationContext)
+        val notification: Notification = builder.build()
         ServiceCompat.startForeground(
             this, NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH,
         )

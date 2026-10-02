@@ -198,15 +198,17 @@ class StoreBillingServiceImplTest {
                 NOW.plusSeconds(86400).toEpochMilli(), null);
         String tampered = tamperSignature(jws);
 
-        assertThatThrownBy(() -> service().verifyPurchase(USER_ID,
-                new StorePurchaseRequest(StorePurchasePlatform.IOS, "pro.monthly", tampered)))
+        var subject = service();
+        var storePurchaseRequest = new StorePurchaseRequest(StorePurchasePlatform.IOS, "pro.monthly", tampered);
+        assertThatThrownBy(() -> subject.verifyPurchase(USER_ID, storePurchaseRequest))
                 .isInstanceOf(InvalidReceiptException.class);
     }
 
     @Test
     void malformedToken_isRejectedAsInvalidReceipt() {
-        assertThatThrownBy(() -> service().verifyPurchase(USER_ID,
-                new StorePurchaseRequest(StorePurchasePlatform.IOS, "pro.monthly", "not-a-real-jws")))
+        var subject = service();
+        var storePurchaseRequest = new StorePurchaseRequest(StorePurchasePlatform.IOS, "pro.monthly", "not-a-real-jws");
+        assertThatThrownBy(() -> subject.verifyPurchase(USER_ID, storePurchaseRequest))
                 .isInstanceOf(InvalidReceiptException.class);
     }
 
@@ -220,8 +222,9 @@ class StoreBillingServiceImplTest {
         String jws = JWT.create().withHeader(Map.of("x5c", chain.x5c())).withPayload(payload)
                 .sign(Algorithm.ECDSA256((ECPrivateKey) chain.leafPrivateKey()));
 
-        assertThatThrownBy(() -> service().verifyPurchase(USER_ID,
-                new StorePurchaseRequest(StorePurchasePlatform.IOS, "pro.monthly", jws)))
+        var subject = service();
+        var storePurchaseRequest = new StorePurchaseRequest(StorePurchasePlatform.IOS, "pro.monthly", jws);
+        assertThatThrownBy(() -> subject.verifyPurchase(USER_ID, storePurchaseRequest))
                 .isInstanceOf(InvalidReceiptException.class);
     }
 
@@ -246,8 +249,9 @@ class StoreBillingServiceImplTest {
         String jws = signedTransaction("2000000123456789", "2000000123456790", "pro.monthly",
                 NOW.plusSeconds(86400).toEpochMilli(), null);
 
-        assertThatThrownBy(() -> service().verifyPurchase(USER_ID,
-                new StorePurchaseRequest(StorePurchasePlatform.IOS, "pro.monthly", jws)))
+        var subject = service();
+        var storePurchaseRequest = new StorePurchaseRequest(StorePurchasePlatform.IOS, "pro.monthly", jws);
+        assertThatThrownBy(() -> subject.verifyPurchase(USER_ID, storePurchaseRequest))
                 .isInstanceOf(SubscriptionAlreadyLinkedException.class);
     }
 
@@ -335,8 +339,9 @@ class StoreBillingServiceImplTest {
         doThrow(new IOException("Play API down"))
                 .when(playPurchaseClient).acknowledge(any(), any(), any());
 
-        assertThatThrownBy(() -> service().verifyPurchase(USER_ID,
-                new StorePurchaseRequest(StorePurchasePlatform.ANDROID, "pro.monthly", PURCHASE_TOKEN)))
+        var subject = service();
+        var storePurchaseRequest = new StorePurchaseRequest(StorePurchasePlatform.ANDROID, "pro.monthly", PURCHASE_TOKEN);
+        assertThatThrownBy(() -> subject.verifyPurchase(USER_ID, storePurchaseRequest))
                 .isInstanceOf(InvalidReceiptException.class);
         verify(subscriptionWriter, never()).linkStorePurchase(any(), any(), any(), any(), any());
     }
@@ -346,8 +351,9 @@ class StoreBillingServiceImplTest {
         when(playPurchaseClient.getSubscription(PACKAGE_NAME, PURCHASE_TOKEN))
                 .thenThrow(new IOException("not found"));
 
-        assertThatThrownBy(() -> service().verifyPurchase(USER_ID,
-                new StorePurchaseRequest(StorePurchasePlatform.ANDROID, "pro.monthly", PURCHASE_TOKEN)))
+        var subject = service();
+        var storePurchaseRequest = new StorePurchaseRequest(StorePurchasePlatform.ANDROID, "pro.monthly", PURCHASE_TOKEN);
+        assertThatThrownBy(() -> subject.verifyPurchase(USER_ID, storePurchaseRequest))
                 .isInstanceOf(InvalidReceiptException.class);
     }
 
@@ -377,8 +383,9 @@ class StoreBillingServiceImplTest {
         when(subscriptionRepository.findByProviderAndProviderSubscriptionId(SubscriptionProvider.PLAY_STORE, PURCHASE_TOKEN))
                 .thenReturn(Optional.of(linkedToOtherUser));
 
-        assertThatThrownBy(() -> service().verifyPurchase(USER_ID,
-                new StorePurchaseRequest(StorePurchasePlatform.ANDROID, "pro.monthly", PURCHASE_TOKEN)))
+        var subject = service();
+        var storePurchaseRequest = new StorePurchaseRequest(StorePurchasePlatform.ANDROID, "pro.monthly", PURCHASE_TOKEN);
+        assertThatThrownBy(() -> subject.verifyPurchase(USER_ID, storePurchaseRequest))
                 .isInstanceOf(SubscriptionAlreadyLinkedException.class);
     }
 }

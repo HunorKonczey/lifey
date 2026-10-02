@@ -9,7 +9,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -69,7 +68,8 @@ class TrainerRequestRepositoryTest {
         Long userId = saveUser("trainer-request-dup-" + System.nanoTime() + "@example.com").getId();
         repository.save(newRequest(userId, TrainerRequestStatus.PENDING));
 
-        assertThatThrownBy(() -> repository.save(newRequest(userId, TrainerRequestStatus.PENDING)))
+        var request2 = newRequest(userId, TrainerRequestStatus.PENDING);
+        assertThatThrownBy(() -> repository.save(request2))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 

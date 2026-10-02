@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysUntil, statusPillFor } from "./status";
+import { daysUntil, statusPillFor, trialElapsedFraction } from "./status";
 
 describe("daysUntil", () => {
   it("rounds up so a partial day still reads as at least 1", () => {
@@ -25,5 +25,14 @@ describe("statusPillFor", () => {
   it("PAST_DUE and CANCELED read as warning/error, matching 63 §7.5's dunning-window UX", () => {
     expect(statusPillFor("PAST_DUE").tone).toBe("warning");
     expect(statusPillFor("CANCELED").tone).toBe("error");
+  });
+});
+
+describe("trialElapsedFraction", () => {
+  it("is the used share of the 14-day trial, clamped to 0–1", () => {
+    expect(trialElapsedFraction(14)).toBe(0);
+    expect(trialElapsedFraction(7)).toBe(0.5);
+    expect(trialElapsedFraction(0)).toBe(1);
+    expect(trialElapsedFraction(30)).toBe(0);
   });
 });

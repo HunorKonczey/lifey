@@ -160,8 +160,9 @@ class CardioIntervalPlanServiceImplTest {
     void update_rejectedRequestNeverTouchesTheStoredPlan() {
         // Validation runs before the load, so a bad request can't leave a plan
         // half-rewritten — nothing is fetched, nothing is flushed.
-        assertThatThrownBy(() -> service.update(5L, request(List.of(
-                step("Kemény", null, 240)))))
+        var request2 = request(List.of(
+                step("Kemény", null, 240)));
+        assertThatThrownBy(() -> service.update(5L, request2))
                 .isInstanceOf(InvalidCardioRequestException.class);
 
         verify(planRepository, never()).findByIdAndUserIdAndDeletedAtIsNull(any(), any());
@@ -209,29 +210,33 @@ class CardioIntervalPlanServiceImplTest {
 
     @Test
     void create_stepWithoutAnIntensityIsRejected() {
-        assertThatThrownBy(() -> service.create(request(List.of(step("Kemény", null, 240)))))
+        var request2 = request(List.of(step("Kemény", null, 240)));
+        assertThatThrownBy(() -> service.create(request2))
                 .isInstanceOf(InvalidCardioRequestException.class)
                 .hasMessageContaining("intensity");
     }
 
     @Test
     void create_stepWithoutADurationIsRejected() {
-        assertThatThrownBy(() -> service.create(request(List.of(step("Kemény", IntervalIntensity.HARD, null)))))
+        var request2 = request(List.of(step("Kemény", IntervalIntensity.HARD, null)));
+        assertThatThrownBy(() -> service.create(request2))
                 .isInstanceOf(InvalidCardioRequestException.class)
                 .hasMessageContaining("durationSeconds");
     }
 
     @Test
     void create_emptyRepeatBlockIsRejected() {
-        assertThatThrownBy(() -> service.create(request(List.of(repeat(4, List.of())))))
+        var request2 = request(List.of(repeat(4, List.of())));
+        assertThatThrownBy(() -> service.create(request2))
                 .isInstanceOf(InvalidCardioRequestException.class)
                 .hasMessageContaining("at least one step");
     }
 
     @Test
     void create_repeatBlockWithoutACountIsRejected() {
-        assertThatThrownBy(() -> service.create(request(List.of(
-                repeat(null, List.of(step("Kemény", IntervalIntensity.HARD, 240)))))))
+        var request2 = request(List.of(
+                repeat(null, List.of(step("Kemény", IntervalIntensity.HARD, 240)))));
+        assertThatThrownBy(() -> service.create(request2))
                 .isInstanceOf(InvalidCardioRequestException.class)
                 .hasMessageContaining("repeatCount");
     }
@@ -242,24 +247,27 @@ class CardioIntervalPlanServiceImplTest {
         // with depth, and a second level has nowhere to go (docs/cardio/61 M37).
         IntervalStepEntry inner = repeat(2, List.of(step("Kemény", IntervalIntensity.HARD, 240)));
 
-        assertThatThrownBy(() -> service.create(request(List.of(repeat(4, List.of(inner))))))
+        var request2 = request(List.of(repeat(4, List.of(inner))));
+        assertThatThrownBy(() -> service.create(request2))
                 .isInstanceOf(InvalidCardioRequestException.class)
                 .hasMessageContaining("cannot contain another REPEAT");
     }
 
     @Test
     void create_stepCarryingARepeatCountIsRejected() {
-        assertThatThrownBy(() -> service.create(request(List.of(
-                new IntervalStepEntry(IntervalStepType.STEP, "Kemény", IntervalIntensity.HARD, 240, 3, null)))))
+        var request2 = request(List.of(
+                new IntervalStepEntry(IntervalStepType.STEP, "Kemény", IntervalIntensity.HARD, 240, 3, null)));
+        assertThatThrownBy(() -> service.create(request2))
                 .isInstanceOf(InvalidCardioRequestException.class)
                 .hasMessageContaining("repeatCount");
     }
 
     @Test
     void create_repeatBlockCarryingADurationIsRejected() {
-        assertThatThrownBy(() -> service.create(request(List.of(
+        var request2 = request(List.of(
                 new IntervalStepEntry(IntervalStepType.REPEAT, null, null, 300, 4,
-                        List.of(step("Kemény", IntervalIntensity.HARD, 240)))))))
+                        List.of(step("Kemény", IntervalIntensity.HARD, 240)))));
+        assertThatThrownBy(() -> service.create(request2))
                 .isInstanceOf(InvalidCardioRequestException.class)
                 .hasMessageContaining("durationSeconds");
     }

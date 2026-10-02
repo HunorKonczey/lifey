@@ -1,102 +1,140 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { foodApi } from "../api";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { useToast } from "@/lib/hooks/useToast";
-import { useDateStore } from "@/lib/hooks/useDateStore";
-import { DataTable, type Column } from "@/components/data/DataTable";
-import { Skeleton } from "@/components/status/Skeleton";
+import { Button, ConfirmModal, Icon } from "@/components/ds";
+import { Drawer } from "@/components/ds/overlay/Drawer";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
+import { Skeleton } from "@/components/status/Skeleton";
+import { ApiError } from "@/lib/api/client";
+import { queryKeys } from "@/lib/api/queryKeys";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useToast, TOAST_DURATION_MS } from "@/lib/hooks/useToast";
+import { useUndoableDelete } from "@/lib/hooks/useUndoableDelete";
+import { foodApi, mealApi } from "../api";
+import { duplicateName, fieldsFromFood, foodRequest } from "../foodEdit";
+import { computeFoodUsage } from "../usage";
+import type { FoodRequest, FoodResponse } from "../types";
 import { FoodEditor } from "./FoodEditor";
-import { AddMealEntryDialog } from "./AddMealEntryDialog";
-import { defaultMealType } from "../mealTypeDefault";
-import type { FoodResponse, MealType } from "../types";
-import type { FoodFormValues } from "../schemas";
-import { useFormat } from "@/lib/i18n/format";
+import { FoodsTable } from "./FoodsTable";
+import { AddFoodFlow } from "./addFood/AddFoodFlow";
 
-const PAGE_SIZE = 25;
-const SEARCH_DEBOUNCE_MS = 300;
-
-// Maps DataTable column keys to the backend's sortable JPA property names —
-// they diverge for the metric columns (short UI labels vs. entity fields).
-const SORT_FIELDS: Record<string, string> = {
-  name: "name",
-  kcal: "caloriesPer100g",
-  protein: "proteinPer100g",
-  carbs: "carbsPer100g",
-  fat: "fatPer100g",
-};
-
+/**
+ * The foods tab (W2.10): the table and, to its right from 1280 (above it below that), the editor panel for
+ * the selected food or a new one. The table works on the whole food list — the same query the tab's count
+ * and the add-food dialog use — so every column, "Utoljára" included, sorts across all foods.
+ */
 export function FoodsView() {
   const t = useTranslations("nutrition.foodsView");
-  const fmt = useFormat();
-  const n = useTranslations("nutrition");
+  const te = useTranslations("nutrition.foodEditor");
+  const common = useTranslations("common");
+  const queryClient = useQueryClient();
   const { show } = useToast();
-  const { date } = useDateStore();
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [page, setPage] = useState(0);
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [barcode, setBarcode] = useState("");
+  const undoableDelete = useUndoableDelete();
+  const router = useRouter();
+
+  const [editing, setEditing] = useState<{ food: FoodResponse | null; prefill?: Partial<FoodResponse>; key: string } | null>(null);
+  const [nameError, setNameError] = useState<string | undefined>();
   const [barcodeLoading, setBarcodeLoading] = useState(false);
-  const [selected, setSelected] = useState<FoodResponse | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [prefill, setPrefill] = useState<(Partial<FoodFormValues> & { barcode?: string }) | undefined>();
-  // Food being logged via "Add to meal" (docs/75 §2.9).
-  const [loggingFood, setLoggingFood] = useState<FoodResponse | null>(null);
+  const [deleting, setDeleting] = useState<FoodResponse | null>(null);
+  const [logging, setLogging] = useState<FoodResponse | null>(null);
+  const [now] = useState(() => new Date());
+  const [editorDirty, setEditorDirty] = useState(false);
+  const sidePanel = useMediaQuery("(min-width: 1280px)");
 
-  const mealTypeLabels: Record<MealType, string> = {
-    BREAKFAST: n("breakfast"), LUNCH: n("lunch"), DINNER: n("dinner"), SNACK: n("snack"),
+  const { data: foods, isLoading, isError, refetch } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
+  const { data: meals } = useQuery({ queryKey: queryKeys.meals.all(), queryFn: mealApi.list });
+  const usage = computeFoodUsage(meals ?? []);
+
+  const openNew = (prefill?: Partial<FoodResponse>) => {
+    setNameError(undefined);
+    setEditing({ food: null, prefill, key: `new:${prefill?.barcode ?? prefill?.name ?? ""}:${Date.now()}` });
+  };
+  const openFood = (food: FoodResponse) => {
+    setNameError(undefined);
+    setEditing({ food, key: `food:${food.id}` });
+  };
+  const closeEditor = () => {
+    setEditing(null);
+    setEditorDirty(false);
   };
 
-  const closeLogging = (savedAs?: MealType) => {
-    setLoggingFood(null);
-    if (savedAs) show(t("addedToMeal", { meal: mealTypeLabels[savedAs] }), "success");
-  };
-
-  // Debounce the search box so typing doesn't refetch on every keystroke.
-  // Reset to page 0 alongside it, since a new search term invalidates the
-  // current page position.
+  // "?new=<name>" arrives from the add-food dialog's empty result ("Create a new food “yoghurt”"):
+  // open the editor with that name and clear the param so a reload doesn't reopen it.
+  const newName = useSearchParams().get("new");
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearch(search.trim());
-      setPage(0);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timeout);
-  }, [search]);
+    if (newName == null) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- one-shot deep link, cleared from the URL right after */
+    setNameError(undefined);
+    setEditing({ food: null, prefill: { name: newName }, key: `new:${newName}` });
+    /* eslint-enable react-hooks/set-state-in-effect */
+    router.replace("/nutrition?tab=foods", { scroll: false });
+  }, [newName, router]);
 
-  const sort = sortKey ? `${SORT_FIELDS[sortKey] ?? sortKey},${sortDir}` : undefined;
-  const pageParams = { page, size: PAGE_SIZE, search: debouncedSearch || undefined, sort };
-
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.foods.page(pageParams),
-    queryFn: () => foodApi.page(pageParams),
-    placeholderData: keepPreviousData,
+  const saveMutation = useMutation({
+    mutationFn: ({ food, request }: { food: FoodResponse | null; request: FoodRequest }) =>
+      food ? foodApi.update(food.id, request) : foodApi.create(request),
+    onSuccess: (_saved, { food }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() });
+      show(food ? te("updated") : te("created"), "success");
+      closeEditor();
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 409) setNameError(te("duplicateName"));
+      else show(te("saveFailed"), "error");
+    },
   });
 
-  const foods = data?.content ?? [];
+  const duplicateMutation = useMutation({
+    mutationFn: (food: FoodResponse) => {
+      const original = fieldsFromFood(food);
+      const request = foodRequest(
+        { ...original, name: duplicateName(food.name, (foods ?? []).map((f) => f.name), t("copyWord")), barcode: "" },
+        original,
+        false,
+      );
+      return foodApi.create(request);
+    },
+    onSuccess: (copy) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() });
+      show(t("foodDuplicated"), "success");
+      openFood(copy); // open the copy straight away — renaming it is the usual next step
+    },
+    onError: () => show(t("duplicateFailed"), "error"),
+  });
 
-  const handleBarcode = async () => {
-    if (!barcode.trim()) return;
+  const setCachedFoods = (update: (list: FoodResponse[]) => FoodResponse[]) =>
+    queryClient.setQueryData<FoodResponse[]>(queryKeys.foods.all(), (old) => update(old ?? []));
+
+  // Delete = confirm → the food leaves the list and a toast offers Undo; the DELETE (a soft delete on the
+  // backend — meals that used the food keep it) goes out when the window closes.
+  const deleteFood = (food: FoodResponse) => {
+    if (editing?.food?.id === food.id) closeEditor();
+    undoableDelete({
+      message: t("foodDeleted", { food: food.name }),
+      path: `/foods/${food.id}`,
+      remove: () => setCachedFoods((list) => list.filter((f) => f.id !== food.id)),
+      restore: () =>
+        setCachedFoods((list) =>
+          list.some((f) => f.id === food.id) ? list : [...list, food].sort((a, b) => a.name.localeCompare(b.name)),
+        ),
+      errorMessage: t("deleteFailed"),
+    });
+  };
+
+  const lookupBarcode = async (barcode: string) => {
+    if (!barcode) return;
     setBarcodeLoading(true);
     try {
-      const res = await foodApi.barcode(barcode.trim());
+      const res = await foodApi.barcode(barcode);
       if (res.source === "LOCAL" && res.id != null) {
-        // Fetch directly rather than searching the current (server-paged)
-        // `foods` page — the matching food may live on a different page.
-        const existing = foods.find((f) => f.id === res.id) ?? (await foodApi.get(res.id));
-        setSelected(existing);
-        setCreating(false);
+        openFood(await foodApi.get(res.id));
         show(t("foundInCatalog"), "success");
       } else {
-        // OPENFOODFACTS — prefill new-food editor
-        setSelected(null);
-        setPrefill({
+        openNew({
           name: res.name,
           caloriesPer100g: res.caloriesPer100g,
           proteinPer100g: res.proteinPer100g,
@@ -104,10 +142,8 @@ export function FoodsView() {
           fatPer100g: res.fatPer100g ?? 0,
           barcode: res.barcode,
         });
-        setCreating(true);
         show(t("loadedFromOff"), "success");
       }
-      setBarcode("");
     } catch {
       show(t("barcodeNotFound"), "warning");
     } finally {
@@ -115,163 +151,95 @@ export function FoodsView() {
     }
   };
 
-  const columns: Column<FoodResponse>[] = [
-    {
-      key: "name", header: t("colName"), sortable: true,
-      sortValue: (f) => f.name.toLowerCase(),
-      render: (f) => (
-        <span className="font-semibold" style={{ color: "var(--on-surface)" }}>
-          {f.name}
-          {f.hidden && (
-            <span className="material-symbols-rounded text-sm ml-1 align-middle" style={{ color: "var(--muted)" }}>
-              visibility_off
-            </span>
-          )}
-        </span>
-      ),
-    },
-    {
-      key: "kcal", header: t("colKcal"), sortable: true, align: "right", color: "var(--metric-kcal)",
-      sortValue: (f) => f.caloriesPer100g,
-      render: (f) => Math.round(f.caloriesPer100g),
-    },
-    {
-      key: "protein", header: t("colProtein"), sortable: true, align: "right", color: "var(--metric-protein)",
-      sortValue: (f) => f.proteinPer100g,
-      render: (f) => `${fmt.number(f.proteinPer100g)}g`,
-    },
-    {
-      key: "carbs", header: t("colCarbs"), sortable: true, align: "right", color: "var(--metric-carbs)",
-      sortValue: (f) => f.carbsPer100g ?? 0,
-      render: (f) => (f.carbsPer100g != null ? `${fmt.number(f.carbsPer100g)}g` : "—"),
-    },
-    {
-      key: "fat", header: t("colFat"), sortable: true, align: "right", color: "var(--metric-fat)",
-      sortValue: (f) => f.fatPer100g ?? 0,
-      render: (f) => (f.fatPer100g != null ? `${fmt.number(f.fatPer100g)}g` : "—"),
-    },
-    {
-      key: "actions", header: "", align: "right",
-      render: (f) => (
-        <button
-          // Don't let the click also select the row (opening the editor
-          // behind the dialog) — docs/75 risk checkpoints.
-          onClick={(e) => { e.stopPropagation(); setLoggingFood(f); }}
-          aria-label={t("addToMeal")}
-          title={t("addToMeal")}
-          className="inline-flex p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container"
-          style={{ color: "var(--primary)" }}
-        >
-          <span className="material-symbols-rounded text-xl">add_circle</span>
-        </button>
-      ),
-    },
-  ];
+  if (isLoading) return <Skeleton variant="table" />;
+  if (isError) return <ErrorState onRetry={refetch} />;
 
-  const showEditor = creating || selected !== null;
+  const list = foods ?? [];
+
+  // Beside the table from 1280; below that a drawer (a bottom sheet on a phone) that asks before discarding edits.
+  const editor = editing && (
+    <FoodEditor
+      key={editing.key}
+      food={editing.food}
+      prefill={editing.prefill}
+      pending={saveMutation.isPending}
+      nameError={nameError}
+      onNameEdit={() => setNameError(undefined)}
+      onSave={(request) => saveMutation.mutate({ food: editing.food, request })}
+      onCancel={closeEditor}
+      onLookupBarcode={lookupBarcode}
+      lookupPending={barcodeLoading}
+      bare={!sidePanel}
+      onDirtyChange={setEditorDirty}
+    />
+  );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      <div className="flex-1 min-w-0 flex flex-col gap-4">
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 px-3 h-10 rounded-[var(--r-input)] flex-1 min-w-[180px]"
-            style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}
-            data-ring-frame>
-            <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>search</span>
-            <input
-              value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("searchPlaceholder")}
-              className="flex-1 min-w-0 bg-transparent outline-none text-sm"
-            />
-          </div>
+    <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
+      {editing && sidePanel && (
+        <div className="order-last w-[380px] shrink-0 sticky top-6">{editor}</div>
+      )}
 
-          <div className="flex items-center gap-2 px-3 h-10 rounded-[var(--r-input)] min-w-[200px]"
-            style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}
-            data-ring-frame>
-            <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>barcode_scanner</span>
-            <input
-              value={barcode} onChange={(e) => setBarcode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleBarcode()}
-              placeholder={t("barcodePlaceholder")}
-              className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
-            />
-            <button onClick={handleBarcode} disabled={barcodeLoading}
-              className="text-xs font-semibold disabled:opacity-50" style={{ color: "var(--primary)" }}>
-              {barcodeLoading ? "…" : t("lookUp")}
-            </button>
-          </div>
-
-          <button
-            onClick={() => { setCreating(true); setSelected(null); setPrefill(undefined); }}
-            className="flex items-center gap-1 px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
-            style={{ background: "var(--primary)", color: "var(--bg)" }}
-          >
-            <span className="material-symbols-rounded text-lg">add</span> {t("newFood")}
-          </button>
-        </div>
-
-        {/* Table */}
-        {isLoading ? (
-          <Skeleton variant="table" />
-        ) : isError ? (
-          <ErrorState onRetry={refetch} />
-        ) : foods.length === 0 ? (
+      <div className="min-w-0 flex-1">
+        {list.length === 0 ? (
           <EmptyState
             icon="nutrition"
-            title={debouncedSearch ? t("noMatch") : t("noFoods")}
-            body={debouncedSearch
-              ? t("tryDifferentSearch")
-              : t("addManually")}
+            title={t("noFoods")}
+            body={t("addManually")}
+            action={
+              <Button onClick={() => openNew()}>
+                <Icon name="add" size={20} />
+                {t("newFood")}
+              </Button>
+            }
           />
         ) : (
-          <DataTable
-            columns={columns}
-            rows={foods}
-            rowKey={(f) => f.id}
-            selectedKey={selected?.id ?? null}
-            onRowClick={(f) => { setSelected(f); setCreating(false); }}
-            pageSize={PAGE_SIZE}
-            serverPagination={{
-              page,
-              totalPages: data?.totalPages ?? 1,
-              totalElements: data?.totalElements,
-              onPageChange: setPage,
-              sortKey,
-              sortDir,
-              onSortChange: (key) => {
-                if (sortKey === key) {
-                  setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-                } else {
-                  setSortKey(key);
-                  setSortDir("asc");
-                }
-                setPage(0);
-              },
-            }}
+          <FoodsTable
+            foods={list}
+            usage={usage}
+            now={now}
+            selectedId={editing?.food?.id ?? null}
+            onOpen={openFood}
+            onNew={() => openNew()}
+            onDuplicate={(f) => duplicateMutation.mutate(f)}
+            onLogToday={setLogging}
+            onDelete={setDeleting}
           />
         )}
       </div>
 
-      {/* Editor panel */}
-      {showEditor && (
-        <div className="w-full lg:w-[340px] lg:shrink-0">
-          <FoodEditor
-            food={selected}
-            prefill={creating ? prefill : undefined}
-            onSaved={() => { setSelected(null); setCreating(false); setPrefill(undefined); }}
-            onCancel={() => { setSelected(null); setCreating(false); setPrefill(undefined); }}
-            onAddToMeal={setLoggingFood}
-          />
-        </div>
+      {editing && !sidePanel && (
+        <Drawer
+          open
+          onClose={closeEditor}
+          width={480}
+          title={editing.food ? te("editFood") : te("newFood")}
+          isDirty={editorDirty}
+        >
+          {editor}
+        </Drawer>
       )}
 
-      {loggingFood && (
-        <AddMealEntryDialog
-          initialFood={loggingFood}
-          mealType={defaultMealType()}
-          date={date}
-          onClose={closeLogging}
+      <ConfirmModal
+        open={deleting != null}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) deleteFood(deleting);
+          setDeleting(null);
+        }}
+        icon="delete"
+        title={deleting ? t("deleteTitle", { food: deleting.name }) : ""}
+        body={deleting ? t("deleteBody", { seconds: TOAST_DURATION_MS / 1000 }) : ""}
+        cancelLabel={common("cancel")}
+        confirmLabel={common("delete")}
+      />
+
+      {logging && (
+        <AddFoodFlow
+          date={now}
+          initialQuery={logging.name}
+          initialKey={`food:${logging.id}`}
+          onClose={() => setLogging(null)}
         />
       )}
     </div>

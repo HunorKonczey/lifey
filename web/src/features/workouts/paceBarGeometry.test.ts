@@ -65,6 +65,57 @@ describe("PaceBarGeometry — the partial tail stays out of the evaluation", () 
   });
 });
 
+describe("PaceBarGeometry — a known-length partial tail is proportional (W3.10)", () => {
+  const plot = 150 - 16;
+  const full = (d: number): PaceBar => ({ durationSeconds: d, label: `${d}s`, partial: false, distanceMeters: 1000 });
+  const tail = (m: number): PaceBar => ({ durationSeconds: 60, label: "1:00", partial: true, distanceMeters: m });
+
+  it("a 200 m tail is a fifth of an average kilometre's bar, a 500 m one two and a half times that", () => {
+    const g200 = new PaceBarGeometry([full(330), full(360), tail(200)], 300, 150);
+    const g500 = new PaceBarGeometry([full(330), full(360), tail(500)], 300, 150);
+    const avgBar = 0.35 + 0.65 * 0.5; // the mean sits halfway between fastest and slowest
+    expect(g200.barRect(2).height).toBeCloseTo(plot * avgBar * 0.2, 4);
+    expect(g500.barRect(2).height).toBeCloseTo(plot * avgBar * 0.5, 4);
+  });
+
+  it("never vanishes: a 10 m tail keeps a visible sliver", () => {
+    const g = new PaceBarGeometry([full(330), full(360), tail(10)], 300, 150);
+    expect(g.barRect(2).height).toBeCloseTo(plot * 0.06, 4);
+  });
+
+  it("the tail's own (tiny) duration still does not enter the scale", () => {
+    const g = new PaceBarGeometry([full(330), full(360), tail(200)], 300, 150);
+    expect(g.fastestSeconds).toBe(330);
+    expect(g.slowestSeconds).toBe(360);
+  });
+});
+
+describe("PaceBarGeometry — axisTicks (W3.10)", () => {
+  const b = (s: number): PaceBar => ({ durationSeconds: s, label: "", partial: false });
+
+  it("labels the 30 s marks inside the range: 5:30 / 6:00 / 6:30", () => {
+    const g = new PaceBarGeometry([b(332), b(348), b(372), b(395)], 400, 150);
+    expect(g.axisTicks().map((t) => t.seconds)).toEqual([360, 390]);
+    const wide = new PaceBarGeometry([b(330), b(400)], 400, 150);
+    expect(wide.axisTicks().map((t) => t.seconds)).toEqual([330, 360, 390]);
+  });
+
+  it("thins to at most three ticks on a wide range", () => {
+    const g = new PaceBarGeometry([b(240), b(480)], 400, 150);
+    expect(g.axisTicks().length).toBeLessThanOrEqual(3);
+  });
+
+  it("faster paces sit higher (smaller y)", () => {
+    const ticks = new PaceBarGeometry([b(330), b(400)], 400, 150).axisTicks();
+    expect(ticks[0].y).toBeLessThan(ticks[ticks.length - 1].y);
+  });
+
+  it("has nothing to label for identical splits or a single scored bar", () => {
+    expect(new PaceBarGeometry([b(300), b(300)], 400, 150).axisTicks()).toEqual([]);
+    expect(new PaceBarGeometry([b(300)], 400, 150).axisTicks()).toEqual([]);
+  });
+});
+
 describe("PaceBarGeometry — fastestIndex ties", () => {
   it("keeps the first index on a tie for fastest", () => {
     const bars = [bar(200), bar(300), bar(200)];

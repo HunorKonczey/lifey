@@ -1,0 +1,25 @@
+# Plus Jakarta Sans — numeral subsets
+
+Numbers only (D-X0.6); every word stays in the system font. Licence: SIL OFL 1.1 (`OFL.txt`).
+The same files are committed for Wear OS (`mobile/android/wear/src/main/res/font/`) and a JVM test
+asserts they are byte-identical.
+
+Subset glyphs: `0-9 : . , + - − – — / ~ % ×`, space and NBSP (U+00A0) — the source font has no NNBSP U+202F, so that one falls back to the system font; the ExtraBold
+subset also has `L i f e y` for the idle wordmark. Features kept: `tnum`, `kern`, `liga`.
+
+```bash
+U='U+0030-0039,U+003A,U+002E,U+002C,U+002B,U+002D,U+2212,U+2013,U+2014,U+002F,U+007E,U+0025,U+00D7,U+0020,U+00A0,U+202F'
+pyftsubset mobile/assets/fonts/PlusJakartaSans-ExtraBold.ttf --unicodes="$U,U+004C,U+0069,U+0066,U+0065,U+0079" \
+  --layout-features='tnum,kern,liga' --output-file=PlusJakartaSans-ExtraBold-numerals.ttf
+pyftsubset mobile/assets/fonts/PlusJakartaSans-Bold.ttf --unicodes="$U" \
+  --layout-features='tnum,kern,liga' --output-file=PlusJakartaSans-Bold-numerals.ttf
+```
+
+`PlusJakartaSans-Light-numerals.ttf` (weight 300, Always-On numbers) is subset from the upstream OFL release —
+`https://github.com/tokotype/PlusJakartaSans`, `fonts/ttf/PlusJakartaSans-Light.ttf`, version 2.071, the same
+version as the Bold / ExtraBold files in `mobile/assets/fonts/` — with the Bold command above (same glyphs):
+
+```bash
+pyftsubset PlusJakartaSans-Light.ttf --unicodes="$U" --layout-features='tnum,kern,liga' \
+  --output-file=PlusJakartaSans-Light-numerals.ttf
+```

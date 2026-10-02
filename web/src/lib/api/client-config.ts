@@ -31,11 +31,15 @@ const CACHE_KEY = "lifey.clientConfig.chatBaseUrl";
  * chat can render, and so a cold start with the API briefly unreachable still
  * knows where to go. It is neither a secret nor user data.
  */
-export async function loadClientConfig(): Promise<void> {
+export async function loadClientConfig(options: { signedIn?: boolean } = {}): Promise<void> {
   // Seed synchronously from the last known answer, so the first chat request in
   // this tab does not race the fetch below.
   const cached = readCache();
   if (cached !== null) setChatBaseUrl(cached);
+
+  // Nobody signed in: the endpoint can only answer 401, which the browser
+  // prints to the console as an error. The cached value above is all we need.
+  if (options.signedIn === false) return;
 
   try {
     const config = await api.get<ClientConfigResponse>("/client-config");

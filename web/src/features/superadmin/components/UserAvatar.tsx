@@ -2,9 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { superAdminApi } from "../api";
+import { Avatar, colorForSeed } from "@/components/ds";
 import { queryKeys } from "@/lib/api/queryKeys";
-
-const PALETTE = ["#C49A6C", "#8AA0B4", "#B08AC8", "#D8B35A", "#6FA8C4", "#9DAE6B", "#E0915A"];
 
 /**
  * Object URLs cached by user id for the life of the tab (same rationale as
@@ -20,10 +19,6 @@ function objectUrlFor(userId: number, blob: Blob | null | undefined): string | n
   const url = URL.createObjectURL(blob);
   avatarUrlCache.set(userId, { blob, url });
   return url;
-}
-
-function colorFor(seed: number) {
-  return PALETTE[seed % PALETTE.length];
 }
 
 interface UserAvatarProps {
@@ -43,18 +38,5 @@ export function UserAvatar({ userId, email, hasAvatar, size = 34 }: UserAvatarPr
 
   const objectUrl = objectUrlFor(userId, blob);
 
-  return (
-    <div
-      className="rounded-full flex items-center justify-center font-extrabold shrink-0 overflow-hidden"
-      style={{ width: size, height: size, background: colorFor(userId), color: "#161611", fontSize: size * 0.36 }}
-    >
-      {objectUrl ? (
-        // Blob object URLs aren't compatible with next/image's optimizer.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={objectUrl} alt="" className="w-full h-full object-cover" />
-      ) : (
-        email.charAt(0).toUpperCase()
-      )}
-    </div>
-  );
+  return <Avatar email={email} size={size} color={colorForSeed(String(userId))} src={objectUrl ?? undefined} />;
 }

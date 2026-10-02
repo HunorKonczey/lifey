@@ -1,38 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/lib/hooks/useToast";
-import { DatePicker } from "@/components/ui/DatePicker";
+import { Button, Checkbox, DateFields, Drawer, Icon, TextField } from "@/components/ds";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useFormat } from "@/lib/format/useFormat";
 import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
+import { complianceFor } from "../compliance";
+import { consequenceSummary, findConflicts, programOccurrences } from "../programConflicts";
+import { isValidProgramStartDate, nextOrSameMonday } from "../program";
 import { ClientAvatar, clientDisplayName } from "./ClientAvatar";
-import { nextOrSameMonday, isValidProgramStartDate, programEndDate } from "../program";
-import { format } from "date-fns";
-import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 
 interface AssignProgramDrawerProps {
   /* Client-detail entry point: the client is fixed, the trainer picks a program. */
   clientId?: number;
   clientName?: string;
-  /* Program list/builder entry point: the program is fixed, the trainer picks a client. */
+  /* Program list/builder entry point: the program is fixed, the trainer picks the clients. */
   programId?: number;
   programName?: string;
   onClose: () => void;
 }
 
-export function AssignProgramDrawer({
-  clientId: fixedClientId, clientName: fixedClientName,
-  programId: fixedProgramId, programName: fixedProgramName,
-  onClose,
-}: AssignProgramDrawerProps) {
-  useEscapeKey(onClose);
+const iso = (d: Date) => format(d, "yyyy-MM-dd");
+
+/**
+ * "Program kiosztása" (W8-C), on the Drawer primitive: pick the program (or it is fixed), tick the clients it goes to —
+ * each marked "már használja" (disabled), "aktív" or a heart "6 napja inaktív" — a Monday to start on, and read what it
+ * will do before pressing the button: how many workouts land in the calendar between which days, and which of the
+ * client's existing workouts clash (within 60 minutes). Conflicts are listed, never auto-shifted. One request per client.
+ */
+export function AssignProgramDrawer({ clientId: fixedClientId, clientName: fixedClientName, programId: fixedProgramId, programName: fixedProgramName, onClose }: AssignProgramDrawerProps) {
   const t = useTranslations("admin.programs");
+  const fmt = useFormat();
   const queryClient = useQueryClient();
   const { show } = useToast();
   const gate = useTrainerBillingGate();
@@ -40,155 +46,126 @@ export function AssignProgramDrawer({
   const [programSearch, setProgramSearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
   const [selectedProgramId, setSelectedProgramId] = useState<number | null>(fixedProgramId ?? null);
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(fixedClientId ?? null);
-  const [startDate, setStartDate] = useState(() => format(nextOrSameMonday(new Date()), "yyyy-MM-dd"));
+  const [selectedClients, setSelectedClients] = useState<Set<number>>(new Set(fixedClientId != null ? [fixedClientId] : []));
+  const [startDate, setStartDate] = useState(() => iso(nextOrSameMonday(new Date())));
 
-  const programsQ = useQuery({
-    queryKey: queryKeys.trainerPrograms.all(),
-    queryFn: trainerApi.programs,
-    enabled: fixedProgramId == null,
-  });
-  const clientsQ = useQuery({
-    queryKey: queryKeys.trainerClients.all(),
-    queryFn: trainerApi.clients,
-    enabled: fixedClientId == null,
-  });
+  const programsQ = useQuery({ queryKey: queryKeys.trainerPrograms.all(), queryFn: trainerApi.programs, enabled: fixedProgramId == null });
+  const clientsQ = useQuery({ queryKey: queryKeys.trainerClients.all(), queryFn: trainerApi.clients });
   const programDetailQ = useQuery({
     queryKey: queryKeys.trainerPrograms.detail(selectedProgramId ?? -1),
     queryFn: () => trainerApi.program(selectedProgramId as number),
     enabled: selectedProgramId != null,
   });
 
-  const filteredPrograms = (programsQ.data ?? []).filter((p) =>
-    p.name.toLowerCase().includes(programSearch.toLowerCase()),
-  );
-  const filteredClients = (clientsQ.data ?? []).filter((c) =>
-    c.clientEmail.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    clientDisplayName(c).toLowerCase().includes(clientSearch.toLowerCase()),
-  );
+  const clients = useMemo(() => clientsQ.data ?? [], [clientsQ.data]);
+  const candidates = fixedClientId != null ? clients.filter((c) => c.clientId === fixedClientId) : clients;
 
-  const clientName = fixedClientName ?? (() => { const sel = clientsQ.data?.find((c) => c.clientId === selectedClientId); return sel ? clientDisplayName(sel) : ""; })();
+  // Who already runs this program (an active assignment of it) — those rows are disabled.
+  const assignmentQs = useQueries({
+    queries: candidates.map((c) => ({ queryKey: queryKeys.trainerProgramAssignments.forClient(c.clientId), queryFn: () => trainerApi.programAssignmentsForClient(c.clientId), enabled: selectedProgramId != null })),
+  });
+  const alreadyUsing = new Set(
+    candidates.filter((c, i) => (assignmentQs[i]?.data ?? []).some((a) => a.programId === selectedProgramId && a.cancelledAt == null)).map((c) => c.clientId),
+  );
 
   const startValid = isValidProgramStartDate(startDate);
-  const minStartDate = new Date(`${format(nextOrSameMonday(new Date()), "yyyy-MM-dd")}T00:00:00`);
-  const isValid = selectedProgramId != null && selectedClientId != null && startValid;
+  const occurrences = useMemo(() => (programDetailQ.data && startValid ? programOccurrences(programDetailQ.data.workouts, startDate) : []), [programDetailQ.data, startDate, startValid]);
+  const summary = consequenceSummary(occurrences);
 
-  const weeksCount = programDetailQ.data?.weeksCount ?? 0;
-  const occurrenceCount = programDetailQ.data?.workouts.length ?? 0;
-  const endDate = weeksCount > 0 && startValid ? programEndDate(startDate, weeksCount) : null;
+  // Existing workouts over the span the program would cover — the conflicts are computed per selected client from this.
+  const calendarQ = useQuery({
+    queryKey: queryKeys.trainerCalendar.range(summary?.firstDate ?? "", summary?.lastDate ?? ""),
+    queryFn: () => trainerApi.calendarSessions(summary!.firstDate, summary!.lastDate),
+    enabled: summary != null,
+  });
+  const chosen = [...selectedClients].filter((id) => !alreadyUsing.has(id));
+  const conflictsByClient = chosen
+    .map((id) => ({ id, conflicts: findConflicts(occurrences, (calendarQ.data ?? []).filter((s) => s.clientId === id)) }))
+    .filter((x) => x.conflicts.length > 0);
+  const nameOf = (id: number) => { const c = clients.find((x) => x.clientId === id); return c ? clientDisplayName(c) : fixedClientName ?? ""; };
 
-  const assignMutation = useMutation({
-    mutationFn: () =>
-      trainerApi.assignProgram(selectedProgramId as number, { clientId: selectedClientId as number, startDate }),
-    onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.trainerProgramAssignments.forClient(selectedClientId as number) });
+  const filteredPrograms = (programsQ.data ?? []).filter((p) => p.name.toLowerCase().includes(programSearch.toLowerCase()));
+  const filteredClients = candidates.filter((c) => c.clientEmail.toLowerCase().includes(clientSearch.toLowerCase()) || clientDisplayName(c).toLowerCase().includes(clientSearch.toLowerCase()));
+
+  const isValid = selectedProgramId != null && chosen.length > 0 && startValid && summary != null;
+  const dirty = (selectedProgramId !== (fixedProgramId ?? null)) || selectedClients.size > (fixedClientId != null ? 1 : 0) || startDate !== iso(nextOrSameMonday(new Date()));
+
+  const toggleClient = (id: number) => setSelectedClients((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+
+  const assign = useMutation({
+    mutationFn: async () => {
+      const results = await Promise.allSettled(chosen.map((clientId) => trainerApi.assignProgram(selectedProgramId as number, { clientId, startDate })));
+      return results.map((r, i) => ({ clientId: chosen[i], result: r }));
+    },
+    onSuccess: (rows) => {
+      const ok = rows.filter((r) => r.result.status === "fulfilled");
+      const failed = rows.filter((r) => r.result.status === "rejected");
+      for (const r of ok) queryClient.invalidateQueries({ queryKey: queryKeys.trainerProgramAssignments.forClient(r.clientId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerPrograms.all() });
       queryClient.invalidateQueries({ queryKey: ["trainer-calendar"] });
-      show(t("assigned", { count: res.occurrenceCount, name: clientName }), "success");
-      onClose();
-    },
-    onError: (e) => {
-      if (e instanceof ApiError && e.status === 409) {
-        show(t("assignConflict"), "error");
-      } else {
-        show(t("assignFailed"), "error");
+      if (ok.length > 0) {
+        const first = ok[0].result as PromiseFulfilledResult<{ occurrenceCount: number }>;
+        show(ok.length === 1 ? t("assigned", { count: first.value.occurrenceCount, name: nameOf(ok[0].clientId) }) : t("assignedMany", { clients: ok.length }), "success");
       }
+      if (failed.length > 0) {
+        const conflict = failed.some((f) => f.result.status === "rejected" && f.result.reason instanceof ApiError && f.result.reason.status === 409);
+        show(conflict ? t("assignConflict") : t("assignFailed"), "error");
+      }
+      if (failed.length === 0) onClose();
     },
   });
 
-  // D-T5: the trigger button that opens this drawer stays visible and
-  // enabled-looking; a blocked trainer sees this dialog the moment it would
-  // have opened, instead of filling out a form that can only fail.
+  // D-T5: the trigger stays visible and enabled-looking; a blocked trainer sees this dialog the moment it would have opened.
   if (gate.state !== "OK") {
-    return (
-      <BillingBlockedDialog
-        open
-        onClose={onClose}
-        reason={gate.state === "RESTRICTED" ? "restricted" : "overLimit"}
-        currentPlan={gate.currentPlan}
-        activeClients={gate.activeClients}
-        maxClients={gate.maxClients}
-      />
-    );
+    return <BillingBlockedDialog open onClose={onClose} reason={gate.state === "RESTRICTED" ? "restricted" : "overLimit"} currentPlan={gate.currentPlan} activeClients={gate.activeClients} maxClients={gate.maxClients} />;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-program-drawer" role="dialog" aria-modal="true">
-      <div className="absolute inset-0" style={{ background: "rgba(8,9,6,.45)" }} onClick={onClose} />
-      <div
-        className="relative w-full max-w-[420px] h-full flex flex-col gap-4 p-5.5 overflow-y-auto"
-        style={{ background: "var(--surface-container)", boxShadow: "-20px 0 50px rgba(0,0,0,.45)" }}
-      >
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-extrabold tracking-tight" style={{ color: "var(--on-surface)" }}>
-            {fixedClientId != null ? t("assignDrawerTitle", { name: clientName }) : t("assignDrawerTitleGeneric")}
-          </p>
-          <button onClick={onClose} style={{ color: "var(--on-surface-variant)" }} aria-label={t("cancel")}>
-            <span className="material-symbols-rounded text-xl">close</span>
-          </button>
-        </div>
+  const sectionLabel = (text: string) => (
+    <p className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{text}</p>
+  );
+  const rowStyle = (selected: boolean) => ({ borderRadius: "var(--r-control)", background: selected ? "var(--primary-tint)" : "var(--nested)", boxShadow: selected ? "inset 0 0 0 2px var(--primary)" : undefined });
+  const name = programDetailQ.data?.name ?? fixedProgramName ?? "";
 
+  return (
+    <Drawer
+      open
+      onClose={onClose}
+      width={520}
+      title={fixedClientId != null ? t("assignDrawerTitle", { name: fixedClientName ?? "" }) : name ? `${t("assignDrawerTitleGeneric")} · ${name}` : t("assignDrawerTitleGeneric")}
+      isDirty={dirty}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>{t("cancel")}</Button>
+          <Button onClick={() => assign.mutate()} disabled={!isValid || assign.isPending} data-testid="assign-drawer-submit">
+            {assign.isPending ? t("assigning") : chosen.length > 1 ? t("assignToN", { count: chosen.length }) : t("assignAction")}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-6" data-testid="assign-program-drawer">
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-            {t("title")}
-          </p>
+          {sectionLabel(t("title"))}
           {fixedProgramId != null ? (
-            <div className="flex items-center gap-3 rounded-2xl px-3 py-2.5" style={{ background: "var(--surface)" }}>
-              <span
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "var(--surface-high)", color: "var(--tertiary)" }}
-              >
-                <span className="material-symbols-rounded text-lg">event_repeat</span>
-              </span>
-              <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                {fixedProgramName}
-              </span>
+            <div className="flex items-center gap-3 px-3 py-2.5" style={rowStyle(false)}>
+              <Icon name="event_repeat" size={20} fill={1} color="var(--role)" />
+              <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 700 }}>{fixedProgramName}</span>
             </div>
           ) : (
             <>
-              <div className="rounded-2xl h-11 flex items-center gap-2.5 px-4" style={{ background: "var(--surface)" }} data-ring-frame>
-                <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>search</span>
-                <input
-                  value={programSearch}
-                  onChange={(e) => setProgramSearch(e.target.value)}
-                  placeholder={t("searchProgramPlaceholder")}
-                  className="flex-1 bg-transparent outline-none text-sm"
-                  style={{ color: "var(--on-surface)" }}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto">
+              <TextField size="dense" leadingIcon="search" aria-label={t("title")} placeholder={t("searchProgramPlaceholder")} value={programSearch} onChange={(e) => setProgramSearch(e.target.value)} />
+              <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto">
                 {programsQ.isError ? (
                   <ErrorState inline onRetry={() => programsQ.refetch()} />
                 ) : filteredPrograms.length === 0 ? (
-                  <p className="text-xs text-center py-3" style={{ color: "var(--muted)" }}>{t("noProgramsFound")}</p>
+                  <p className="type-body-s text-center py-3" style={{ color: "var(--text-3)" }}>{t("noProgramsFound")}</p>
                 ) : (
-                  filteredPrograms.map((program) => {
-                    const selected = program.id === selectedProgramId;
+                  filteredPrograms.map((p) => {
+                    const selected = p.id === selectedProgramId;
                     return (
-                      <button
-                        key={program.id}
-                        data-testid="assign-drawer-program-row"
-                        onClick={() => setSelectedProgramId(program.id)}
-                        className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors text-left"
-                        style={{
-                          background: selected ? "rgba(110,154,106,.14)" : "transparent",
-                          border: selected ? "1.5px solid var(--tertiary)" : "1.5px solid transparent",
-                        }}
-                      >
-                        <span
-                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: "var(--surface-high)", color: "var(--tertiary)" }}
-                        >
-                          <span className="material-symbols-rounded text-lg">event_repeat</span>
-                        </span>
-                        <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                          {program.name}
-                        </span>
-                        {selected && (
-                          <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>
-                            check_circle
-                          </span>
-                        )}
+                      <button key={p.id} type="button" data-testid="assign-drawer-program-row" aria-pressed={selected} onClick={() => setSelectedProgramId(p.id)} className="lifey-button flex items-center gap-3 px-3 py-2.5 text-left" style={rowStyle(selected)}>
+                        <Icon name="event_repeat" size={20} fill={1} color="var(--role)" />
+                        <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 700 }}>{p.name}</span>
+                        {selected && <Icon name="check_circle" size={20} fill={1} color="var(--primary)" />}
                       </button>
                     );
                   })
@@ -200,47 +177,26 @@ export function AssignProgramDrawer({
 
         {fixedClientId == null && (
           <div className="flex flex-col gap-2">
-            <p className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-              {t("client")}
-            </p>
-            <div className="rounded-2xl h-11 flex items-center gap-2.5 px-4" style={{ background: "var(--surface)" }} data-ring-frame>
-              <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>search</span>
-              <input
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-                placeholder={t("searchClientPlaceholder")}
-                className="flex-1 bg-transparent outline-none text-sm"
-                style={{ color: "var(--on-surface)" }}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto">
+            {sectionLabel(t("whoFor"))}
+            <TextField size="dense" leadingIcon="search" aria-label={t("client")} placeholder={t("searchClientPlaceholder")} value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} />
+            <div className="flex flex-col gap-1.5 max-h-[240px] overflow-y-auto">
               {clientsQ.isError ? (
                 <ErrorState inline onRetry={() => clientsQ.refetch()} />
               ) : filteredClients.length === 0 ? (
-                <p className="text-xs text-center py-3" style={{ color: "var(--muted)" }}>{t("noClientsFound")}</p>
+                <p className="type-body-s text-center py-3" style={{ color: "var(--text-3)" }}>{t("noClientsFound")}</p>
               ) : (
                 filteredClients.map((c) => {
-                  const selected = c.clientId === selectedClientId;
+                  const using = alreadyUsing.has(c.clientId);
+                  const flags = complianceFor(c);
+                  const checked = selectedClients.has(c.clientId) && !using;
                   return (
-                    <button
-                      key={c.clientId}
-                      data-testid="assign-drawer-client-row"
-                      onClick={() => setSelectedClientId(c.clientId)}
-                      className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors text-left"
-                      style={{
-                        background: selected ? "rgba(110,154,106,.14)" : "transparent",
-                        border: selected ? "1.5px solid var(--tertiary)" : "1.5px solid transparent",
-                      }}
-                    >
+                    <button key={c.clientId} type="button" data-testid="assign-drawer-client-row" disabled={using} aria-pressed={checked} onClick={() => toggleClient(c.clientId)} className="lifey-button flex items-center gap-3 px-3 py-2.5 text-left disabled:opacity-60" style={rowStyle(checked)}>
+                      <Checkbox checked={checked} onChange={() => {}} aria-label={clientDisplayName(c)} />
                       <ClientAvatar clientId={c.clientId} email={c.clientEmail} size={32} />
-                      <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                        {clientDisplayName(c)}
+                      <span className="flex-1 min-w-0 truncate" style={{ fontWeight: 700 }}>{clientDisplayName(c)}</span>
+                      <span className="type-body-s shrink-0" style={{ color: using ? "var(--text-2)" : flags.inactive ? "var(--heart)" : "var(--text-2)", fontWeight: flags.inactive && !using ? 700 : 400 }}>
+                        {using ? t("alreadyUsing") : flags.inactive ? t("inactiveDays", { count: flags.daysSinceLastLog }) : t("stateActive")}
                       </span>
-                      {selected && (
-                        <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>
-                          check_circle
-                        </span>
-                      )}
                     </button>
                   );
                 })
@@ -250,38 +206,31 @@ export function AssignProgramDrawer({
         )}
 
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] font-bold tracking-wider uppercase" style={{ color: "var(--muted)" }}>
-            {t("startDateLabel")}
-          </p>
-          <DatePicker value={startDate} onChange={setStartDate} min={minStartDate} hasError={!startValid} />
-          <p className="text-[11px]" style={{ color: startValid ? "var(--on-surface-variant)" : "var(--error)" }}>
-            {t("startDateHint")}
-          </p>
+          {sectionLabel(t("startDateLabel"))}
+          <DateFields value={new Date(`${startDate}T00:00:00`)} onChange={(d) => d && setStartDate(iso(d))} error={startValid ? undefined : t("startDateHint")} hint={startValid ? t("startDateHint") : undefined} />
         </div>
 
-        {isValid && occurrenceCount > 0 && endDate && (
-          <div className="rounded-2xl p-4" style={{ background: "var(--surface)" }}>
-            <p className="text-[13px] font-bold" style={{ color: "var(--on-surface)" }}>
-              {t("previewLine", { count: occurrenceCount, weeks: weeksCount, endDate })}
+        {summary && (
+          <div className="flex flex-col gap-2 p-4" style={{ borderRadius: "var(--r-card)", background: "var(--nested)" }} data-testid="assign-consequences" aria-live="polite">
+            <p>
+              {t("consequence", { count: summary.count, from: fmt.shortDate(new Date(`${summary.firstDate}T00:00:00`)), to: fmt.shortDate(new Date(`${summary.lastDate}T00:00:00`)) })}
             </p>
+            {conflictsByClient.map(({ id, conflicts }) => (
+              <p key={id} className="inline-flex items-start gap-2" style={{ color: "var(--heart)", fontWeight: 600 }}>
+                <Icon name="warning" size={18} />
+                <span>
+                  {t("conflicts", { name: nameOf(id), count: conflicts.length })}
+                  <span className="block type-body-s" style={{ color: "var(--text-2)", fontWeight: 400 }}>
+                    {conflicts.slice(0, 4).map((c) => `${fmt.shortDate(new Date(`${c.occurrence.date}T00:00:00`))}${c.occurrence.time ? ` ${c.occurrence.time}` : ""}`).join(" · ")}
+                    {conflicts.length > 4 ? ` · +${conflicts.length - 4}` : ""}
+                  </span>
+                </span>
+              </p>
+            ))}
+            {conflictsByClient.length > 0 && <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("conflictsNote")}</p>}
           </div>
         )}
-
-        <div className="mt-auto flex gap-2.5 pt-2">
-          <button onClick={onClose} className="flex-1 text-center text-[13.5px] font-bold py-3 rounded-2xl" style={{ color: "var(--on-surface-variant)" }}>
-            {t("cancel")}
-          </button>
-          <button
-            onClick={() => assignMutation.mutate()}
-            disabled={!isValid || assignMutation.isPending}
-            data-testid="assign-drawer-submit"
-            className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
-            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-          >
-            {assignMutation.isPending ? t("assigning") : t("assignAction")}
-          </button>
-        </div>
       </div>
-    </div>
+    </Drawer>
   );
 }

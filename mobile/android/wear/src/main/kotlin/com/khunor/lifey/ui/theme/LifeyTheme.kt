@@ -1,63 +1,46 @@
 package com.khunor.lifey.ui.theme
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.wear.compose.material.Colors
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Typography
+import androidx.wear.compose.material3.ColorScheme
+import androidx.wear.compose.material3.MaterialTheme as Material3Theme
 
 /**
- * Maps [LifeyColors] onto Wear Compose Material's [Colors] slots
- * (docs/40-watch-app-plan.md §12.1 B6 / 41-watch-design-prompt.md §2) —
- * `primaryContainer`/`container` share one hex in the prompt's own token
- * table, so `primaryVariant` reuses [LifeyColors.container] rather than
- * inventing a darker primary shade. `background` is true black, not
- * [LifeyColors.bg]: every canvas frame renders the dial content directly on
- * `#000`, using `bg`/`surface`/`container` only for specific chips and cards
- * (§2.1's own note: "on watch: may sit on #000000").
+ * The Material 3 colour scheme from the same tokens (D-X0.8): surface containers = card / nested /
+ * control / raised, background = bg, outline = outline, onSurface = text, onSurfaceVariant = text2.
  */
-private val LifeyWearColors = Colors(
+internal val LifeyM3ColorScheme = ColorScheme(
     primary = LifeyColors.primary,
-    primaryVariant = LifeyColors.container,
-    secondary = LifeyColors.secondary,
-    secondaryVariant = LifeyColors.secondaryContainer,
-    background = LifeyColors.trueBlack,
-    surface = LifeyColors.surface,
-    error = LifeyColors.error,
     onPrimary = LifeyColors.onPrimary,
+    primaryContainer = LifeyColors.nested,
+    onPrimaryContainer = LifeyColors.text,
+    secondary = LifeyColors.clay,
     onSecondary = LifeyColors.onPrimary,
-    onBackground = LifeyColors.onSurface,
-    onSurface = LifeyColors.onSurface,
-    onSurfaceVariant = LifeyColors.onSurfaceVariant,
-    onError = LifeyColors.onError,
+    secondaryContainer = LifeyColors.tint(LifeyColors.clay),
+    onSecondaryContainer = LifeyColors.clay,
+    tertiary = LifeyColors.success,
+    onTertiary = LifeyColors.onPrimary,
+    tertiaryContainer = LifeyColors.tint(LifeyColors.success),
+    onTertiaryContainer = LifeyColors.success,
+    surfaceContainerLow = LifeyColors.card,
+    surfaceContainer = LifeyColors.nested,
+    surfaceContainerHigh = LifeyColors.control,
+    onSurface = LifeyColors.text,
+    onSurfaceVariant = LifeyColors.text2,
+    outline = LifeyColors.outline,
+    outlineVariant = LifeyColors.raised,
+    background = LifeyColors.bg,
+    onBackground = LifeyColors.text,
+    error = LifeyColors.error,
+    onError = LifeyColors.bg,
+    errorContainer = LifeyColors.tint(LifeyColors.error),
+    onErrorContainer = LifeyColors.error,
 )
-
-/**
- * Tabular figures on the numeric-hero styles only (elapsed time, the rest
- * ring's countdown) — 41-watch-design-prompt.md §1 "Big tabular numbers...
- * so digits don't jump as they tick." Everything else (body/caption/button)
- * keeps the platform default; those styles are never used for a ticking
- * number in this app.
- */
-private val LifeyWearTypography = Typography().let { base ->
-    Typography(
-        display1 = base.display1.copy(fontFeatureSettings = "tnum"),
-        display2 = base.display2.copy(fontFeatureSettings = "tnum"),
-        display3 = base.display3.copy(fontFeatureSettings = "tnum"),
-        title1 = base.title1.copy(fontFeatureSettings = "tnum"),
-        title2 = base.title2.copy(fontFeatureSettings = "tnum"),
-        title3 = base.title3.copy(fontFeatureSettings = "tnum"),
-        body1 = base.body1,
-        body2 = base.body2,
-        button = base.button,
-        caption1 = base.caption1,
-        caption2 = base.caption2,
-        caption3 = base.caption3,
-    )
-}
 
 /** Wraps the app's Compose content in the Lifey brand theme
  * (docs/40-watch-app-plan.md §12.1 B6) — applied once in `MainActivity`. No
@@ -66,12 +49,14 @@ private val LifeyWearTypography = Typography().let { base ->
  * background instead of the AMOLED true-black every canvas frame assumes. */
 @Composable
 fun LifeyTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colors = LifeyWearColors,
-        typography = LifeyWearTypography,
-    ) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
-            content()
+    // Material 3 only (D-X0.8): the Material 2 layer is gone with X4.16.
+    Material3Theme(colorScheme = LifeyM3ColorScheme, typography = LifeyType.m3Typography) {
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize().background(LifeyColors.bg),
+        ) {
+            // The dial's diameter, once, for every screen below (D-X0.5).
+            val metrics = remember(maxWidth.value) { WatchMetrics(maxWidth.value) }
+            CompositionLocalProvider(LocalWatchMetrics provides metrics) { content() }
         }
     }
 }

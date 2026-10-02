@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
+import { Button, Card, SegmentedControl, TintedChip } from "@/components/ds";
 import { formatHuf, monthlyEquivalent } from "@/lib/pricing";
 import { billingApi } from "../api";
 import { isCurrentPlan, planOptionsFor } from "../planPricing";
@@ -16,6 +17,8 @@ import type { TrainerPlan } from "../types";
  * the marketing `/pricing` page's `PricingCards` — that one never triggers a
  * real checkout for a logged-in visitor, it only links here (see its own
  * comment); this is the first place that actually calls the endpoint.
+ * W9-D look: DS card, monthly / yearly segmented control, tiles with the
+ * current plan on the primary ring.
  */
 export function PlanChooser({ currentPlan }: { currentPlan: TrainerPlan | null }) {
   const t = useTranslations("admin.billing");
@@ -41,32 +44,22 @@ export function PlanChooser({ currentPlan }: { currentPlan: TrainerPlan | null }
   };
 
   return (
-    <div className="rounded-[var(--r-lg)] p-4.5" style={{ background: "var(--surface-container)" }}>
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <p className="text-sm font-extrabold" style={{ color: "var(--on-surface)" }}>
-          {t("chooserTitle")}
-        </p>
-        <div className="inline-flex items-center gap-1 rounded-pill p-1" style={{ background: "var(--surface-highest)" }}>
-          <button
-            type="button"
-            onClick={() => setYearly(false)}
-            className="h-8 px-3.5 rounded-pill text-xs font-bold"
-            style={!yearly ? { background: "var(--primary)", color: "var(--bg)" } : { color: "var(--on-surface-variant)" }}
-          >
-            {t("toggleMonthly")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setYearly(true)}
-            className="h-8 px-3.5 rounded-pill text-xs font-bold"
-            style={yearly ? { background: "var(--primary)", color: "var(--bg)" } : { color: "var(--on-surface-variant)" }}
-          >
-            {t("toggleYearly")}
-          </button>
-        </div>
+    <Card className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="type-body" style={{ fontWeight: 800 }}>{t("chooserTitle")}</h2>
+        <SegmentedControl
+          size="sm"
+          aria-label={t("chooserTitle")}
+          value={yearly ? "yearly" : "monthly"}
+          onChange={(v) => setYearly(v === "yearly")}
+          options={[
+            { value: "monthly", label: t("toggleMonthly") },
+            { value: "yearly", label: t("toggleYearly") },
+          ]}
+        />
       </div>
 
-      <div className="grid md:grid-cols-3 gap-3">
+      <div className="grid gap-3 md:grid-cols-3">
         {options.map((option) => {
           const current = isCurrentPlan(option, currentPlan);
           return (
@@ -75,64 +68,52 @@ export function PlanChooser({ currentPlan }: { currentPlan: TrainerPlan | null }
               data-testid="plan-chooser-card"
               data-plan={option.id}
               data-current={current}
-              className="rounded-2xl p-4 flex flex-col"
+              className="flex flex-col gap-1 p-4"
               style={{
-                background: "var(--surface)",
-                border: current ? "2px solid var(--primary)" : "1px solid var(--outline)",
+                borderRadius: "var(--r-control)",
+                background: "var(--nested)",
+                boxShadow: current ? "inset 0 0 0 2px var(--primary)" : "none",
               }}
             >
-              <p className="text-xs font-extrabold tracking-wide" style={{ color: "var(--muted)" }}>
-                {names[option.id].toUpperCase()}
-              </p>
-              <p className="text-2xl font-extrabold tabular-nums mt-1.5">
-                {option.seats ?? t("unlimitedSeats")}
-              </p>
-              <p className="text-xs font-bold" style={{ color: "var(--on-surface-variant)" }}>
-                {t("activeClientsLabel")}
-              </p>
-              <div className="h-px my-3" style={{ background: "var(--outline)" }} />
-              <p className="text-lg font-extrabold tabular-nums">
+              <p className="type-overline" style={{ color: "var(--text-3)" }}>{names[option.id]}</p>
+              <p className="tabular" style={{ fontSize: 24, fontWeight: 800 }}>{option.seats ?? t("unlimitedSeats")}</p>
+              <p className="type-body-s" style={{ color: "var(--text-2)", fontWeight: 600 }}>{t("activeClientsLabel")}</p>
+              <div className="my-2 h-px" style={{ background: "var(--hairline)" }} />
+              <p className="tabular" style={{ fontSize: 18, fontWeight: 800 }}>
                 {formatHuf(option.priceHuf)}
-                <span className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
-                  {" "}
-                  {yearly ? t("perYear") : t("perMonth")}
-                </span>
+                <span className="type-body-s" style={{ color: "var(--text-3)", fontWeight: 600 }}> {yearly ? t("perYear") : t("perMonth")}</span>
               </p>
               {yearly && (
-                <p className="text-[11px] tabular-nums mt-0.5" style={{ color: "var(--muted)" }}>
+                <p className="type-body-s tabular" style={{ color: "var(--text-3)" }}>
                   {formatHuf(monthlyEquivalent(option.priceHuf))} {t("perMonth")}
                 </p>
               )}
 
-              {current ? (
-                <div
-                  className="h-10 flex items-center justify-center rounded-pill text-xs font-extrabold mt-3.5"
-                  style={{ background: "var(--tertiary-container)", color: "var(--on-tertiary-container)" }}
-                >
-                  {t("currentPlanBadge")}
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setError(null);
-                    checkoutMutation.mutate(option.trainerPlan);
-                  }}
-                  disabled={checkoutMutation.isPending}
-                  className="h-10 flex items-center justify-center rounded-pill text-xs font-extrabold mt-3.5 disabled:opacity-50"
-                  style={{ background: "var(--primary)", color: "var(--bg)" }}
-                >
-                  {t("selectPlan")}
-                </button>
-              )}
+              <div className="mt-3">
+                {current ? (
+                  <TintedChip label={t("currentPlanBadge")} color="var(--primary)" size="medium" />
+                ) : (
+                  <Button
+                    fullWidth
+                    onClick={() => {
+                      setError(null);
+                      checkoutMutation.mutate(option.trainerPlan);
+                    }}
+                    disabled={checkoutMutation.isPending}
+                  >
+                    {t("selectPlan")}
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
       {error && (
-        <p className="text-xs mt-3" style={{ color: "var(--error)" }}>
+        <p className="type-body-s" style={{ color: "var(--heart)" }}>
           {error}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

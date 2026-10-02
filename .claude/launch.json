@@ -9,6 +9,13 @@
       "cwd": "C:\\Users\\hunor\\Documents\\Project\\lifey\\web"
     },
     {
+      "name": "web-chat",
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/c", "set NEXT_PUBLIC_CHAT_BASE_URL=http://localhost:8081/api/v1&&npm run dev"],
+      "port": 3000,
+      "cwd": "C:\\Users\\hunor\\Documents\\Project\\lifey\\web"
+    },
+    {
       "name": "web-preview",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],

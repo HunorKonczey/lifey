@@ -3,17 +3,13 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
 import { queryKeys } from "@/lib/api/queryKeys";
-import { useLocale } from "@/lib/hooks/useLocale";
+import { useFormat } from "@/lib/format/useFormat";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { chatApi } from "../api";
 import { SEARCH_DEBOUNCE_MS, SEARCH_MIN_LENGTH, highlightSegments } from "../thread";
 import type { MessageResponse } from "../types";
-
-const DATE_LOCALES = { en: enUS, hu } as const;
 
 interface ChatSearchProps {
   conversationId: number;
@@ -29,7 +25,6 @@ interface ChatSearchProps {
  */
 export function ChatSearch({ conversationId, ownUserId, peerName, query }: ChatSearchProps) {
   const t = useTranslations("chat");
-  const locale = useLocale((s) => s.locale);
   const [debounced, setDebounced] = useState(query.trim());
 
   // Typing a word should be one request, not one per letter.
@@ -65,7 +60,7 @@ export function ChatSearch({ conversationId, ownUserId, peerName, query }: ChatS
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[11px] font-bold px-1 pb-1" style={{ color: "var(--muted)" }}>
+      <p className="type-body-s px-1 pb-1" style={{ color: "var(--text-3)", fontWeight: 700 }}>
         {t("searchResultCount", { count: results.length })}
         {data?.hasMore ? ` · ${t("searchMoreResults")}` : ""}
       </p>
@@ -76,7 +71,6 @@ export function ChatSearch({ conversationId, ownUserId, peerName, query }: ChatS
           own={message.senderId === ownUserId}
           peerName={peerName}
           term={debounced}
-          locale={locale}
         />
       ))}
     </div>
@@ -88,40 +82,38 @@ function ResultRow({
   own,
   peerName,
   term,
-  locale,
 }: {
   message: MessageResponse;
   own: boolean;
   peerName: string;
   term: string;
-  locale: keyof typeof DATE_LOCALES;
 }) {
   const t = useTranslations("chat");
-  const when = format(new Date(message.createdAt), "yyyy. MMM d. H:mm", {
-    locale: DATE_LOCALES[locale],
-  });
+  const fmt = useFormat();
+  const created = new Date(message.createdAt);
+  const when = `${fmt.shortDate(created)} ${fmt.time(created)}`;
 
   return (
     <div
-      className="rounded-[var(--r-md)] px-4 py-3"
-      style={{ background: "var(--surface-container)" }}
+      className="px-4 py-3"
+      style={{ borderRadius: "var(--r-control)", background: "var(--nested)" }}
     >
       <div className="flex items-baseline gap-2 mb-1">
-        <span className="text-[12px] font-extrabold" style={{ color: "var(--on-surface)" }}>
+        <span className="text-[12px] font-extrabold" style={{ color: "var(--text)" }}>
           {own ? t("you") : peerName}
         </span>
-        <span className="text-[10.5px] font-semibold" style={{ color: "var(--muted)" }}>
+        <span className="text-[10.5px] font-semibold" style={{ color: "var(--text-3)" }}>
           {when}
         </span>
         {message.attachment && (
-          <span className="text-[10.5px] font-semibold" style={{ color: "var(--muted)" }}>
+          <span className="text-[10.5px] font-semibold" style={{ color: "var(--text-3)" }}>
             {t("imagePreview")}
           </span>
         )}
       </div>
       <p
         className="text-[13.5px] leading-relaxed whitespace-pre-wrap break-words"
-        style={{ color: "var(--on-surface-variant)", fontWeight: 500 }}
+        style={{ color: "var(--text-2)", fontWeight: 500 }}
       >
         {highlightSegments(message.body ?? "", term).map((segment, index) =>
           segment.match ? (
@@ -129,7 +121,7 @@ function ResultRow({
               key={index}
               style={{
                 background: "color-mix(in srgb, var(--primary) 30%, transparent)",
-                color: "var(--on-surface)",
+                color: "var(--text)",
                 borderRadius: 3,
               }}
             >
@@ -148,7 +140,7 @@ function ResultsSkeleton() {
   return (
     <div className="flex flex-col gap-2">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="skeleton-pulse h-[62px] rounded-[var(--r-md)]" />
+        <div key={i} className="skeleton-pulse h-[62px] rounded-[var(--r-control)]" />
       ))}
     </div>
   );

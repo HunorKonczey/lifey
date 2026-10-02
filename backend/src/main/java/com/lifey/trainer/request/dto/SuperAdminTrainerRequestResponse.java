@@ -14,6 +14,8 @@ public record SuperAdminTrainerRequestResponse(
         Integer clientCount,
         String signupSource,
         Instant createdAt,
-        Instant decidedAt
+        Instant decidedAt,
+        /** When the requester registered - the review card's "account age". */
+        Instant userCreatedAt
 ) {
 }

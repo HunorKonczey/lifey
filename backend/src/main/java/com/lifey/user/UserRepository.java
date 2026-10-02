@@ -14,6 +14,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    /** Super-admin stats: accounts holding a role. */
+    @Query("select count(u) from User u where :role member of u.roles")
+    long countByRole(@Param("role") Role role);
+
     /**
      * Backs the super-admin user list search (docs/personal_trainer/03-backend-terv.md).
      * Accent-insensitive on top of case-insensitive — see FoodRepository's equivalent method for the rationale.

@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -80,11 +81,11 @@ public class ProgramAssignmentServiceImpl implements ProgramAssignmentService {
         if (!DayOfWeek.MONDAY.equals(request.startDate().getDayOfWeek())) {
             throw new ProgramStartDateInvalidException("Program start date must be a Monday");
         }
-        if (request.startDate().isBefore(LocalDate.now())) {
+        if (request.startDate().isBefore(LocalDate.now(ZoneId.systemDefault()))) {
             throw new ProgramStartDateInvalidException("Program start date cannot be in the past");
         }
         if (programAssignmentRepository.existsByProgramIdAndClientIdAndCancelledAtIsNullAndEndDateGreaterThanEqual(
-                programId, request.clientId(), LocalDate.now())) {
+                programId, request.clientId(), LocalDate.now(ZoneId.systemDefault()))) {
             throw new DuplicateResourceException("This client already has an active run of this program");
         }
 
@@ -200,7 +201,7 @@ public class ProgramAssignmentServiceImpl implements ProgramAssignmentService {
     }
 
     private ProgramAssignmentSummaryResponse toSummary(ProgramAssignment assignment) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
         long done = workoutSessionRepository.countByProgramAssignmentIdAndStartedAtIsNotNull(assignment.getId());
         long missed = workoutSessionRepository.countByProgramAssignmentIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForBefore(
                 assignment.getId(), today);
@@ -226,7 +227,7 @@ public class ProgramAssignmentServiceImpl implements ProgramAssignmentService {
         Instant now = Instant.now();
         for (WorkoutSession occurrence : workoutSessionRepository
                 .findByProgramAssignmentIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForGreaterThanEqual(
-                        assignment.getId(), LocalDate.now())) {
+                        assignment.getId(), LocalDate.now(ZoneId.systemDefault()))) {
             occurrence.setDeletedAt(now);
         }
     }

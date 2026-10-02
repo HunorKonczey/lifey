@@ -1,4 +1,5 @@
-import type { MealEntryRequest, RecipeIngredientResponse } from "./types";
+import type { Macros } from "./recipeMacros";
+import type { FoodResponse, MealEntryRequest, RecipeIngredientResponse } from "./types";
 
 /**
  * Pure logic behind LogRecipeDialog's adjustable ingredient amounts: each
@@ -49,6 +50,30 @@ export function scaledTotals(
     protein += ingredient.protein * ratio;
   });
   return { calories, protein };
+}
+
+/**
+ * The logged portion's kcal, protein, carbs and fat. The recipe API carries only kcal and protein per
+ * ingredient, so carbs and fat come from the food the ingredient points at (per 100 g × the grams logged);
+ * an ingredient whose food isn't in `foodsById` contributes kcal and protein only.
+ */
+export function scaledMacros(
+  ingredients: RecipeIngredientResponse[],
+  divisor: number,
+  overrides: GramsOverrides,
+  foodsById: ReadonlyMap<number, FoodResponse>,
+): Macros {
+  const { calories, protein } = scaledTotals(ingredients, divisor, overrides);
+  let carbs = 0;
+  let fat = 0;
+  ingredients.forEach((ingredient, i) => {
+    const food = foodsById.get(ingredient.foodId);
+    if (!food) return;
+    const grams = gramsFor(ingredient, i, divisor, overrides);
+    carbs += ((food.carbsPer100g ?? 0) * grams) / 100;
+    fat += ((food.fatPer100g ?? 0) * grams) / 100;
+  });
+  return { calories, protein, carbs, fat };
 }
 
 /** Meal entries for the logged portion; zero-gram ingredients are left out. */

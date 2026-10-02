@@ -9,12 +9,20 @@ import type { CardioSplitResponse } from "./types";
  * `splitIndex`, same as `CardioSplitsTable`, so both views of the same
  * `session.splits` agree on order.
  */
-export function buildPaceBars(splits: CardioSplitResponse[]): PaceBar[] {
+export function buildPaceBars(splits: CardioSplitResponse[], locale = "en"): PaceBar[] {
   return [...splits]
     .sort((a, b) => a.splitIndex - b.splitIndex)
-    .map((split) => ({
-      durationSeconds: split.durationSeconds,
-      label: formatDuration(split.durationSeconds),
-      partial: (split.distanceMeters ?? 0) < 999,
-    }));
+    .map((split) => {
+      const partial = (split.distanceMeters ?? 0) < 999;
+      return {
+        durationSeconds: split.durationSeconds,
+        label: formatDuration(split.durationSeconds),
+        partial,
+        distanceMeters: split.distanceMeters ?? undefined,
+        // "0,2" — the tail's kilometres, one decimal, in the UI language
+        partialLabel: partial && split.distanceMeters != null
+          ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(split.distanceMeters / 1000)
+          : undefined,
+      };
+    });
 }

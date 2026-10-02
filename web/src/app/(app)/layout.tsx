@@ -9,24 +9,26 @@ import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useLocale } from "@/lib/hooks/useLocale";
 import { useDateStore } from "@/lib/hooks/useDateStore";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { TopBar } from "@/components/layout/TopBar";
+import { AppShell } from "@/components/shell/AppShell";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 
-// `<Providers>` has to wrap this shell rather than the other way round —
-// AppShell calls hooks (useQuery, useLocale, ...) that need to be a
+// `<Providers>` has to wrap this gate rather than the other way round —
+// AppGate calls hooks (useQuery, useLocale, ...) that need to be a
 // *descendant* of QueryClientProvider/I18nProvider, not their own ancestor.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <Providers>
-      <AppShell>{children}</AppShell>
+      <AppGate>{children}</AppGate>
     </Providers>
   );
 }
 
-function AppShell({ children }: { children: React.ReactNode }) {
+// Auth guard + locale/date sync — renamed from `AppShell` (D-W0.20) so that
+// name is free for the new `src/components/shell/AppShell.tsx`, which now
+// owns the actual chrome (sidebar/top bar) this used to render inline.
+function AppGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, isLoading, initialize } = useSessionStore();
+  const { user, isLoading, initialize, logout } = useSessionStore();
   const { setLanguage } = useLocale();
 
   const { data: settings } = useQuery({
@@ -82,14 +84,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-bg">
-      <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0">
-        <TopBar />
-        <main className="flex-1 p-6 overflow-auto">
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </main>
-      </div>
-    </div>
+    <AppShell user={user} onLogout={logout}>
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </AppShell>
   );
 }

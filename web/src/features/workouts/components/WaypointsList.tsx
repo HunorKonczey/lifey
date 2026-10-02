@@ -28,9 +28,9 @@ export function WaypointsList({ waypoints, accent }: WaypointsListProps) {
   const sorted = [...waypoints].sort((a, b) => a.waypointIndex - b.waypointIndex);
 
   return (
-    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-sm font-semibold" style={{ color: "var(--text-2)" }}>
           {t("cardioWaypointsHeading")}
         </p>
         <span
@@ -43,14 +43,14 @@ export function WaypointsList({ waypoints, accent }: WaypointsListProps) {
       <div className="flex flex-col gap-2">
         {sorted.map((waypoint) => (
           <div key={waypoint.waypointIndex} className="flex items-center gap-3 text-sm">
-            <span className="w-6 flex-none text-right font-extrabold tabular" style={{ color: "var(--on-surface-variant)" }}>
+            <span className="w-6 flex-none text-right font-extrabold tabular" style={{ color: "var(--text-2)" }}>
               {waypoint.waypointIndex + 1}
             </span>
-            <span className="font-bold tabular" style={{ color: "var(--on-surface)" }}>
+            <span className="font-bold tabular" style={{ color: "var(--text)" }}>
               {waypoint.altitudeMeters != null ? formatElevation(waypoint.altitudeMeters) : "—"}
             </span>
             {waypoint.label && (
-              <span className="truncate" style={{ color: "var(--on-surface-variant)" }}>
+              <span className="truncate" style={{ color: "var(--text-2)" }}>
                 {waypoint.label}
               </span>
             )}

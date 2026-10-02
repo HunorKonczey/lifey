@@ -50,22 +50,25 @@ public class WeeklyReportServiceImpl implements WeeklyReportService {
         LocalDate weekEndExclusive = weekStart.plusDays(7);
 
         for (Long trainerId : trainerClientRepository.findTrainerIdsWithActiveClients()) {
-            if (!isReportEnabled(trainerId)) {
-                continue;
+            if (isReportEnabled(trainerId)) {
+                sendReportFor(trainerId, weekStart, weekEnd, weekEndExclusive);
             }
-            List<TrainerClient> clients = trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(
-                    trainerId, TrainerClientStatus.ACTIVE);
-            if (clients.isEmpty()) {
-                continue;
-            }
-
-            List<WeeklyTrainerReport.ClientWeekSummary> summaries = clients.stream()
-                    .map(tc -> summarize(trainerId, tc.getClient(), weekStart, weekEnd, weekEndExclusive))
-                    .toList();
-
-            userRepository.findById(trainerId).ifPresent(trainer ->
-                    mailService.sendWeeklyTrainerReport(trainer, new WeeklyTrainerReport(weekStart, weekEnd, summaries)));
         }
+    }
+
+    private void sendReportFor(Long trainerId, LocalDate weekStart, LocalDate weekEnd, LocalDate weekEndExclusive) {
+        List<TrainerClient> clients = trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(
+                trainerId, TrainerClientStatus.ACTIVE);
+        if (clients.isEmpty()) {
+            return;
+        }
+
+        List<WeeklyTrainerReport.ClientWeekSummary> summaries = clients.stream()
+                .map(tc -> summarize(trainerId, tc.getClient(), weekStart, weekEnd, weekEndExclusive))
+                .toList();
+
+        userRepository.findById(trainerId).ifPresent(trainer ->
+                mailService.sendWeeklyTrainerReport(trainer, new WeeklyTrainerReport(weekStart, weekEnd, summaries)));
     }
 
     private boolean isReportEnabled(Long trainerId) {

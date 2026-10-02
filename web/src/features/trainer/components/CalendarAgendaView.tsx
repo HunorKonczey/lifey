@@ -2,110 +2,84 @@
 
 import { useTranslations } from "next-intl";
 import { addDays, format, isSameDay, startOfDay } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
-import { useLocale } from "@/lib/hooks/useLocale";
+import { Icon } from "@/components/ds";
+import { useFormat } from "@/lib/format/useFormat";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import { STATUS_STYLE } from "../scheduleStatus";
 import type { TrainerCalendarSessionResponse } from "../types";
 
-const DATE_LOCALES = { en: enUS, hu } as const;
-
 interface CalendarAgendaViewProps {
   weekStart: Date;
   sessions: TrainerCalendarSessionResponse[];
+  names?: Map<number, string>;
   onSelectSession: (session: TrainerCalendarSessionResponse, anchorEl: HTMLElement) => void;
 }
 
-/** Narrow-viewport stand-in for the week grid (design: D frame, "tablet alatt")
- *  — days stacked, empty days omitted, same card content as the grid but a
- *  single-row layout. */
-export function CalendarAgendaView({ weekStart, sessions, onSelectSession }: CalendarAgendaViewProps) {
+/**
+ * The week on a narrow screen (W8-A, below the desktop width): days stacked, empty days left out, one row per workout —
+ * time without seconds, the client, the workout and the status in words. Same tokens and status language as the grid.
+ */
+export function CalendarAgendaView({ weekStart, sessions, names, onSelectSession }: CalendarAgendaViewProps) {
   const t = useTranslations("admin.calendar");
   const tSchedule = useTranslations("admin.schedule");
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
+  const fmt = useFormat();
   const today = startOfDay(new Date());
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const sessionsByDay = new Map<string, TrainerCalendarSessionResponse[]>();
-  for (const session of sessions) {
-    const key = session.scheduledFor;
-    if (!sessionsByDay.has(key)) sessionsByDay.set(key, []);
-    sessionsByDay.get(key)!.push(session);
+  const byDay = new Map<string, TrainerCalendarSessionResponse[]>();
+  for (const s of sessions) {
+    if (!byDay.has(s.scheduledFor)) byDay.set(s.scheduledFor, []);
+    byDay.get(s.scheduledFor)!.push(s);
   }
-  const activeDays = days.filter((d) => (sessionsByDay.get(format(d, "yyyy-MM-dd")) ?? []).length > 0);
+  const activeDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).filter((d) => (byDay.get(format(d, "yyyy-MM-dd")) ?? []).length > 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5" data-testid="calendar-agenda">
       {activeDays.map((day) => {
-        const dayIso = format(day, "yyyy-MM-dd");
-        const dayIsToday = isSameDay(day, today);
-        const daySessions = sessionsByDay.get(dayIso) ?? [];
-
+        const iso = format(day, "yyyy-MM-dd");
+        const isToday = isSameDay(day, today);
+        const list = (byDay.get(iso) ?? []).slice().sort((a, b) => (a.scheduledTime ?? "99").localeCompare(b.scheduledTime ?? "99"));
         return (
-          <div key={dayIso} className="flex flex-col gap-1.5">
+          <section key={iso} className="flex flex-col gap-2" aria-label={`${fmt.weekdayShort(day)}, ${fmt.shortDate(day)}`}>
             <div className="flex items-center gap-2">
-              {dayIsToday && (
-                <span
-                  className="rounded-full px-2.5 py-0.5 text-[9.5px] font-extrabold tracking-wide"
-                  style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-                >
-                  {t("today").toUpperCase()}
+              {isToday && (
+                <span className="inline-flex items-center px-2.5 type-body-s" style={{ height: 24, borderRadius: 999, background: "var(--primary)", color: "var(--on-primary)", fontWeight: 800 }}>
+                  {t("today")}
                 </span>
               )}
-              <span className="text-[12.5px] font-extrabold" style={{ color: "var(--on-surface)" }}>
-                {format(day, "EEEE, MMM d.", { locale: dateLocale })}
-              </span>
+              <h3 style={{ fontSize: 15, fontWeight: 800 }}>{fmt.weekdayShort(day)}, {fmt.shortDate(day)}</h3>
             </div>
-            <div className="flex flex-col gap-1.5">
-              {daySessions.map((session) => {
-                const style = STATUS_STYLE[session.status];
-                const cancelled = session.status === "CANCELLED";
+            <ul className="flex flex-col gap-2">
+              {list.map((s) => {
+                const style = STATUS_STYLE[s.status];
+                const cancelled = s.status === "CANCELLED";
                 return (
-                  <button
-                    key={session.sessionId}
-                    onClick={(e) => onSelectSession(session, e.currentTarget)}
-                    className="rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left w-full"
-                    style={{ background: "var(--surface-container)", opacity: cancelled ? 0.5 : 1 }}
-                  >
-                    <span
-                      className="w-11 shrink-0 text-[12.5px] font-extrabold tabular"
-                      style={{ color: session.scheduledTime ? "var(--on-surface)" : "var(--muted)" }}
+                  <li key={s.sessionId}>
+                    <button
+                      type="button"
+                      onClick={(e) => onSelectSession(s, e.currentTarget)}
+                      data-testid="calendar-session-card"
+                      data-client-email={s.clientEmail}
+                      className="lifey-button flex w-full items-center gap-3 px-3.5 py-3 text-left"
+                      style={{ borderRadius: "var(--r-control)", background: "var(--card)", boxShadow: "var(--edge-card)", opacity: cancelled ? 0.6 : 1 }}
                     >
-                      {session.scheduledTime ? session.scheduledTime.slice(0, 5) : t("restOfDayShort")}
-                    </span>
-                    <ClientAvatar clientId={session.clientId} email={session.clientEmail} size={24} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                        {nameFor(session.clientEmail)}
-                      </div>
-                      <div
-                        className="text-[10.5px] mt-0.5 truncate"
-                        style={{ color: "var(--on-surface-variant)", textDecoration: cancelled ? "line-through" : "none" }}
-                      >
-                        {session.templateName ?? tSchedule("unnamedTemplate")}
-                      </div>
-                    </div>
-                    <span
-                      className="flex items-center gap-1 rounded-full text-[10px] font-extrabold px-2 py-0.5 shrink-0"
-                      style={{
-                        background: style.bg,
-                        color: style.color,
-                        border: style.bg === "transparent" ? "1px solid var(--outline)" : "none",
-                      }}
-                    >
-                      <span
-                        className="material-symbols-rounded text-xs"
-                        style={{ fontVariationSettings: style.fill ? "'FILL' 1" : "'FILL' 0" }}
-                      >
-                        {style.icon}
+                      <span className="num shrink-0" style={{ width: 48, fontWeight: 800, color: s.scheduledTime ? "var(--text)" : "var(--text-3)" }}>
+                        {s.scheduledTime ? fmt.time(new Date(`${s.scheduledFor}T${s.scheduledTime}`)) : t("restOfDayShort")}
                       </span>
-                      {tSchedule(`status.${session.status}`)}
-                    </span>
-                  </button>
+                      <ClientAvatar clientId={s.clientId} email={s.clientEmail} size={28} />
+                      <span className="flex flex-col flex-1 min-w-0">
+                        <span className="truncate" style={{ fontWeight: 700, textDecoration: cancelled ? "line-through" : "none" }}>{names?.get(s.clientId) ?? nameFor(s.clientEmail)}</span>
+                        <span className="type-body-s truncate" style={{ color: "var(--text-2)" }}>{s.templateName ?? tSchedule("unnamedTemplate")}</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 type-body-s shrink-0" style={{ height: 26, borderRadius: 999, background: style.bg, color: style.color, fontWeight: 700, boxShadow: style.bg === "transparent" ? "inset 0 0 0 1px var(--hairline)" : undefined }}>
+                        <Icon name={style.icon} size={14} fill={style.fill ? 1 : 0} />
+                        {tSchedule(`status.${s.status}`)}
+                      </span>
+                    </button>
+                  </li>
                 );
               })}
-            </div>
-          </div>
+            </ul>
+          </section>
         );
       })}
     </div>

@@ -1,53 +1,32 @@
 import SwiftUI
 
-/// Shown between `EffortSelectorView`'s Confirm/Skip and the phone's real
-/// `end` command coming back (docs/40-watch-app-plan.md §12.1 B8, §8.2
-/// decision (b)): the sensors keep recording underneath (`WorkoutManager`
-/// stays in `.ending`, the `HKWorkoutSession` is untouched) — the effort
-/// rating was already collected on the watch by this point, this screen
-/// just tells the user the phone is finishing saving, not stuck.
-/// Styling (§12.1 B6) matches canvas frame AW 05: `primary`-tinted phone
-/// glyph, bold title, muted subtitle, and the 3-dot progress row (first dot
-/// `primary`, the other two `outline`) the canvas shows under the copy.
-/// Padding and type scale are dial-size-relative (§12.1 B4 — see
-/// `DynamicSizing.swift`).
-struct EndingView: View {
+// MARK: - Finish on the iPhone (redesign X1.13 — AW1.21)
+
+/// Shown between the effort screen's Confirm/Skip and the phone's real `end` command coming back
+/// (docs/40-watch-app-plan.md §12.1 B8, §8.2 decision (b)): the sensors keep recording underneath, this
+/// screen just says the phone is finishing, not stuck. A left-aligned `StatusScreen` — `iphone` in `text`
+/// (not green), a two-line title, the subtitle, and an indeterminate `ProgressView` that keeps moving
+/// (also under Reduce Motion — it is the only sign of life) instead of three static dots.
+struct EndingContent: View {
+  @Environment(\.watchMetrics) private var metrics
+
   var body: some View {
-    GeometryReader { geometry in
-      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
-      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
-      // Scrollable for the same reason as the other status screens: the
-      // subtitle wraps to several lines in a longer locale.
-      ScrollView {
-      VStack(spacing: 8) {
-        Image(systemName: "iphone")
-          .font(.system(size: isCompact ? 40 : 48))
-          .foregroundColor(LifeyColors.primary)
-        Text("ending_title")
-          .font(isCompact ? .caption : .body)
-          .fontWeight(.bold)
-          .foregroundColor(LifeyColors.onSurface)
-          .multilineTextAlignment(.center)
-        Text("ending_subtitle")
-          .font(isCompact ? .caption2 : .caption)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-          .multilineTextAlignment(.center)
-        HStack(spacing: 8) {
-          Circle().fill(LifeyColors.primary).frame(width: 6, height: 6)
-          Circle().fill(LifeyColors.outline).frame(width: 6, height: 6)
-          Circle().fill(LifeyColors.outline).frame(width: 6, height: 6)
-        }
-        .padding(.top, 4)
+    ScrollView {
+      StatusScreen(
+        icon: "iphone", iconTint: LifeyColors.text, title: String(localized: "ending_title"),
+        subtitle: String(localized: "ending_subtitle")
+      ) {
+        ProgressView()
+          .progressViewStyle(.linear)
+          .tint(LifeyColors.text)
       }
-      .padding(.horizontal, padding)
-      .frame(maxWidth: .infinity)
-      // Keeps the content vertically centred when it fits (see HealthDeniedView).
-      .frame(minHeight: geometry.size.height)
-      }
-      .frame(width: geometry.size.width, height: geometry.size.height)
-      .background(LifeyColors.trueBlack)
     }
+    .background(LifeyColors.bg)
   }
+}
+
+struct EndingView: View {
+  var body: some View { EndingContent() }
 }
 
 #Preview {

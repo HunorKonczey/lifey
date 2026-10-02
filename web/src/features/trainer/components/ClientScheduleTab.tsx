@@ -14,6 +14,7 @@ import { ScheduleTimeline } from "./ScheduleTimeline";
 import { ProgramList } from "./ProgramList";
 import { AssignProgramDrawer } from "./AssignProgramDrawer";
 import { nameFor } from "./ClientAvatar";
+import { Button, Icon } from "@/components/ds";
 
 interface ClientScheduleTabProps {
   clientId: number;
@@ -74,29 +75,21 @@ export function ClientScheduleTab({ clientId, clientEmail, clientName, onOpenDra
   const isEmpty = schedules.length === 0 && occurrences.length === 0 && programAssignments.length === 0;
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-5">
       {isEmpty ? (
         <EmptyState
           icon="calendar_month"
           title={t("emptyTitle")}
           action={
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={onOpenDrawer}
-                className="flex items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[13px] font-extrabold"
-                style={{ background: "var(--tertiary)", color: "var(--bg)" }}
-              >
-                <span className="material-symbols-rounded text-lg">add</span>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <Button onClick={onOpenDrawer}>
+                <Icon name="add" size={18} />
                 {t("scheduleWorkout")}
-              </button>
-              <button
-                onClick={() => setAssignDrawerOpen(true)}
-                className="flex items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[13px] font-extrabold"
-                style={{ background: "var(--surface-high)", color: "var(--on-surface)" }}
-              >
-                <span className="material-symbols-rounded text-lg">event_repeat</span>
+              </Button>
+              <Button variant="secondary" onClick={() => setAssignDrawerOpen(true)}>
+                <Icon name="event_repeat" size={18} />
                 {tPrograms("assignAction")}
-              </button>
+              </Button>
             </div>
           }
         />
@@ -115,13 +108,9 @@ export function ClientScheduleTab({ clientId, clientEmail, clientName, onOpenDra
             programNamesById={programNamesById}
           />
           {!historyOpen && (
-            <button
-              onClick={() => setHistoryOpen(true)}
-              className="self-center text-xs font-bold py-2"
-              style={{ color: "var(--on-surface-variant)" }}
-            >
+            <Button variant="ghost" className="self-center" onClick={() => setHistoryOpen(true)}>
               {t("showHistory")}
-            </button>
+            </Button>
           )}
         </>
       )}

@@ -5,6 +5,8 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ContentAssignmentRepository;
 import com.lifey.trainer.PersonalRecordCounter;
 import com.lifey.trainer.TrainerClientMapper;
+import com.lifey.settings.UserSettings;
+import com.lifey.settings.UserSettingsRepository;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientRevokedEvent;
 import com.lifey.trainer.TrainerClientStatus;
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -58,6 +61,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
     private final WorkoutSessionRepository workoutSessionRepository;
     private final MealRepository mealRepository;
     private final WaterEntryRepository waterEntryRepository;
+    private final UserSettingsRepository userSettingsRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -120,16 +124,18 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
                 workoutSessionRepository.findMaxStartedAtByUserId(clientId).orElse(null),
                 newestFirstWeights.isEmpty() ? null : newestFirstWeights.getFirst().getRecordedAt());
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
         int missedWorkoutCount = (int) workoutSessionRepository.countMissedOccurrences(
                 trainerId, clientId, today.minusDays(MISSED_WORKOUT_WINDOW_DAYS), today);
 
-        Integer avgCalories7d = averageDailyCalories(tc, clientId, today);
+        Integer avgCalories7d = averageDailyCalories(tc, clientId);
         Integer prCount7d = countRecordsThisWeek(clientId);
+        // A client who never opened settings has no row yet: that is "no goal", not an error, and reading must not create one.
+        Integer dailyCalorieGoal = userSettingsRepository.findByUserId(clientId).map(UserSettings::getDailyCalorieGoal).orElse(null);
 
-        return TrainerClientMapper.toClientResponse(
-                tc, weightTrend, assignedPlanCount, workoutsPerWeek, lastActivityAt, lastWeightAt, missedWorkoutCount,
-                avgCalories7d, prCount7d);
+        return TrainerClientMapper.toClientResponse(tc, new TrainerClientMapper.ClientCardStats(
+                weightTrend, assignedPlanCount, workoutsPerWeek, lastActivityAt, lastWeightAt, missedWorkoutCount,
+                avgCalories7d, prCount7d, dailyCalorieGoal));
     }
 
     /**
@@ -137,7 +143,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
      * with something logged — one quiet day must not drag a compliant client's figure down — in the client's
      * own time zone, like the weekly report. Null when nothing was logged.
      */
-    private Integer averageDailyCalories(TrainerClient tc, Long clientId, LocalDate today) {
+    private Integer averageDailyCalories(TrainerClient tc, Long clientId) {
         ZoneOffset zone = ZoneOffset.ofTotalSeconds(tc.getClient().getUtcOffsetMinutes() * 60);
         LocalDate localToday = LocalDate.now(zone);
         int daysLogged = 0;

@@ -15,6 +15,9 @@ import {
   programEndDate,
   currentWeekNumber,
   weeksBetween,
+  placeTemplate,
+  moveSlot,
+  copyWeek,
 } from "./program";
 import type { ProgramWorkoutRequest } from "./types";
 
@@ -251,5 +254,50 @@ describe("weeksBetween", () => {
 
   it("four weeks matches the M5 assignment regression case", () => {
     expect(weeksBetween("2026-07-13", "2026-08-09")).toBe(4);
+  });
+});
+
+describe("placeTemplate", () => {
+  it("places on an empty cell", () => {
+    expect(placeTemplate([], 1, "MONDAY", 9)).toEqual([slot({ templateId: 9 })]);
+  });
+  it("keeps the time and note of a cell that already held a workout", () => {
+    const out = placeTemplate([slot({ timeOfDay: "18:00", note: "könnyű" })], 1, "MONDAY", 9);
+    expect(out).toEqual([slot({ templateId: 9, timeOfDay: "18:00", note: "könnyű" })]);
+  });
+});
+
+describe("moveSlot", () => {
+  it("moves the workout with its time and note and empties the source", () => {
+    const out = moveSlot([slot({ timeOfDay: "07:00", note: "x" })], { weekNumber: 1, dayOfWeek: "MONDAY" }, { weekNumber: 2, dayOfWeek: "FRIDAY" });
+    expect(out).toEqual([slot({ weekNumber: 2, dayOfWeek: "FRIDAY", timeOfDay: "07:00", note: "x" })]);
+  });
+  it("replaces whatever was in the target cell", () => {
+    const out = moveSlot([slot({ templateId: 1 }), slot({ dayOfWeek: "TUESDAY", templateId: 2 })], { weekNumber: 1, dayOfWeek: "MONDAY" }, { weekNumber: 1, dayOfWeek: "TUESDAY" });
+    expect(out).toEqual([slot({ dayOfWeek: "TUESDAY", templateId: 1 })]);
+  });
+  it("is a no-op onto itself or from an empty cell", () => {
+    const w = [slot()];
+    expect(moveSlot(w, { weekNumber: 1, dayOfWeek: "MONDAY" }, { weekNumber: 1, dayOfWeek: "MONDAY" })).toBe(w);
+    expect(moveSlot(w, { weekNumber: 3, dayOfWeek: "FRIDAY" }, { weekNumber: 1, dayOfWeek: "SUNDAY" })).toBe(w);
+  });
+});
+
+describe("copyWeek", () => {
+  const base = [slot({ templateId: 1 }), slot({ dayOfWeek: "WEDNESDAY", templateId: 2 }), slot({ weekNumber: 2, templateId: 9 })];
+  it("copies the source week onto the chosen target weeks, overwriting them", () => {
+    const out = copyWeek(base, 1, [2, 3]);
+    expect(out.filter((w) => w.weekNumber === 2).map((w) => w.templateId).sort()).toEqual([1, 2]);
+    expect(out.filter((w) => w.weekNumber === 3)).toHaveLength(2);
+  });
+  it("never copies a week onto itself and ignores duplicate targets", () => {
+    expect(copyWeek(base, 1, [1])).toEqual(base);
+    expect(copyWeek(base, 1, [3, 3]).filter((w) => w.weekNumber === 3)).toHaveLength(2);
+  });
+  it("gives the same result as copying to all when every other week is chosen", () => {
+    const a = copyWeek(base, 1, [2, 3, 4]);
+    const b = copyWeekToAll(base, 1, 4);
+    const key = (w: ProgramWorkoutRequest) => `${w.weekNumber}-${w.dayOfWeek}-${w.templateId}`;
+    expect(a.map(key).sort()).toEqual(b.map(key).sort());
   });
 });

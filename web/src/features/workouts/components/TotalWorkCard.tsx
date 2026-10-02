@@ -25,34 +25,34 @@ export function TotalWorkCard({ totalWorkKj, avgWatts, maxWatts, accent }: Total
   const t = useTranslations("workouts");
 
   return (
-    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
       <div className="flex items-start gap-4">
         <div className="flex-1 min-w-0">
           <span className="material-symbols-rounded text-lg" style={{ color: accent }}>
             bolt
           </span>
-          <p className="text-[32px] font-extrabold tabular leading-tight" style={{ color: "var(--on-surface)" }}>
+          <p className="text-[32px] font-extrabold tabular leading-tight" style={{ color: "var(--text)" }}>
             {totalWorkKj}
           </p>
-          <p className="text-xs font-bold" style={{ color: "var(--on-surface)" }}>
+          <p className="text-xs font-bold" style={{ color: "var(--text)" }}>
             kJ {t("cardioTotalWorkLabel")}
           </p>
-          <p className="text-[11px]" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="text-[11px]" style={{ color: "var(--text-2)" }}>
             {t("cardioTotalWorkSourceHint")}
           </p>
         </div>
         <div className="flex-1 min-w-0">
-          <span className="material-symbols-rounded text-lg" style={{ color: "var(--on-surface-variant)" }}>
+          <span className="material-symbols-rounded text-lg" style={{ color: "var(--text-2)" }}>
             speed
           </span>
-          <p className="text-[32px] font-extrabold tabular leading-tight" style={{ color: "var(--on-surface)" }}>
+          <p className="text-[32px] font-extrabold tabular leading-tight" style={{ color: "var(--text)" }}>
             {Math.round(avgWatts)}
           </p>
-          <p className="text-xs font-bold" style={{ color: "var(--on-surface)" }}>
+          <p className="text-xs font-bold" style={{ color: "var(--text)" }}>
             {t("cardioAvgWattsLabel")}
           </p>
           {maxWatts != null && (
-            <p className="text-[11px]" style={{ color: "var(--on-surface-variant)" }}>
+            <p className="text-[11px]" style={{ color: "var(--text-2)" }}>
               {t("cardioMaxWattsShortLabel", { watts: Math.round(maxWatts) })}
             </p>
           )}

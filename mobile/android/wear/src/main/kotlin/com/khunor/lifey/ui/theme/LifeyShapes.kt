@@ -2,18 +2,25 @@ package com.khunor.lifey.ui.theme
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Corner-radius scale (41-watch-design-prompt.md §1 "Shape & motion"):
- * 8 for chips/tags, 16 for buttons, 20 for cards, 24 for large cards, plus
- * a stadium/pill shape for progress chips and small buttons
- * (docs/40-watch-app-plan.md §12.1 B6).
+ * Corner-radius scale of Design System v2 (frame 03): tag 8 · control 14 · card 22 · hero 30, plus
+ * pill/circle. A nested element's radius is its parent's minus the padding between them
+ * ([nested]: 22 − 8 = 14).
  */
 object LifeyShapes {
-    val chip = RoundedCornerShape(8.dp)
-    val button = RoundedCornerShape(16.dp)
-    val card = RoundedCornerShape(20.dp)
-    val cardLarge = RoundedCornerShape(24.dp)
+    val tag = RoundedCornerShape(8.dp)
+    val control = RoundedCornerShape(14.dp)
+    val card = RoundedCornerShape(22.dp)
+    val hero = RoundedCornerShape(30.dp)
     val pill = CircleShape
+    val circle = CircleShape
+
+    /** The radius of an element inset by [padding] inside a parent of radius [parent]. */
+    fun nested(parent: Dp, padding: Dp): RoundedCornerShape =
+        RoundedCornerShape(max(parent.value - padding.value, 0f).dp)
+
+    private fun max(a: Float, b: Float) = if (a > b) a else b
 }

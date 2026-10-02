@@ -176,6 +176,54 @@
         }
       }
     },
+    "aod_hours_minutes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d h %2$02d min"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d ó %2$02d p"
+          }
+        }
+      }
+    },
+    "aod_minutes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d min"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d p"
+          }
+        }
+      }
+    },
+    "aod_rest_until" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go at %@"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehet %@-kor"
+          }
+        }
+      }
+    },
     "cardio_back_to_court_button" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -970,6 +1018,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%d szett"
+          }
+        }
+      }
+    },
+    "standalone_handoff_pending" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuing on the phone…"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folytatás a telefonon…"
           }
         }
       }

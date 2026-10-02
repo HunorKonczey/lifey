@@ -1,4 +1,4 @@
-import type { FoodResponse, MealResponse } from "./types";
+import type { FoodResponse, MealResponse, RecipeResponse } from "./types";
 
 /** Aggregated usage of one food across recent meal history. */
 export interface FoodUsage {
@@ -67,4 +67,25 @@ export function rankFoodsByUsage(
   frequents.forEach((f) => promoted.add(f.id));
 
   return [...recents, ...frequents, ...foods.filter((f) => !promoted.has(f.id))];
+}
+
+/** When and how often each recipe was logged. A logged recipe is a meal carrying the recipe's
+ *  name (`LogRecipeDialog`), so usage is found by that name — a renamed recipe starts over. */
+export function computeRecipeUsage(
+  meals: MealResponse[],
+  recipes: RecipeResponse[],
+): Map<number, { lastUsedAt: number; useCount: number }> {
+  const byName = new Map(recipes.map((r) => [r.name.trim().toLowerCase(), r.id]));
+  const cutoff = Date.now() - USAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const usage = new Map<number, { lastUsedAt: number; useCount: number }>();
+  for (const meal of meals) {
+    if (!meal.name) continue;
+    const id = byName.get(meal.name.trim().toLowerCase());
+    if (id == null) continue;
+    const at = new Date(meal.dateTime).getTime();
+    if (at < cutoff) continue;
+    const prev = usage.get(id);
+    usage.set(id, { lastUsedAt: Math.max(prev?.lastUsedAt ?? 0, at), useCount: (prev?.useCount ?? 0) + 1 });
+  }
+  return usage;
 }

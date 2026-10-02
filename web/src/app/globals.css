@@ -3,8 +3,220 @@
 /* ─── FOUC prevention: apply theme class before paint ─── */
 /* Inline script in layout.tsx sets data-theme on <html> */
 
-/* ─── Design tokens — dark (default) ─── */
+/* ─── v2 design tokens — dark (default) (D-W0.4) ─── */
 :root {
+  /* Where a toast sits above the viewport bottom: 24px on desktop, above the floating bottom nav (top edge 80px) and the FAB on a phone. */
+  --toast-bottom: 24px;
+  --bg:       #12130E;
+  --card:     #1A1C15;
+  --nested:   #22251C;
+  --control:  #2C2F24;
+  --raised:   #36392D;
+  --float:    rgba(40, 44, 32, .82);
+  --scrim:    color-mix(in srgb, var(--bg) 82%, transparent);
+  --text:     #F2F1E6;
+  --text-2:   #B6B5A5;
+  --text-3:   #8F8F80;
+  --hairline: rgba(242, 241, 230, .07);
+  --grid:     var(--hairline);
+  --outline:  #45483B;
+
+  --primary:          #B5C47C;
+  --on-primary:       #1A1F0A;
+  --primary-tint:     color-mix(in srgb, var(--primary) 16%, transparent);
+  --on-primary-tint:  #D6E2A6;
+  --role:             #C49A6C;
+  --role-tint:        color-mix(in srgb, var(--role) 16%, transparent);
+  --heart:            #E07F76;
+
+  --m-kcal:    #EC9A66;
+  --m-protein: #93C98C;
+  --m-carbs:   #E2BE62;
+  --m-fat:     #A3A1DB;
+  --m-water:   #74B6D6;
+  --m-steps:   #C593CC;
+  --m-weight:  #98ADC0;
+  --m-heart:   var(--heart);
+  /* TintedChip's background tint alpha (D-W0.4) — 16% dark, 12% light. */
+  --chip-tint: 16%;
+  /* SegmentedControl's/Tabs' selected-pill fill (DS-03): --raised in dark
+     (lighter than the --control track, so it reads as lifted with no
+     shadow needed); --card + e1 in light (the surface ladder darkens with
+     nesting there, so a plain fill wouldn't stand out — see --segment-shadow). */
+  --segment-selected-bg: var(--raised);
+  /* Not the `none` keyword — this gets combined into a multi-layer
+     box-shadow list with --shadow-focus at the call site, and `none` isn't
+     valid as one layer of a list (it invalidates the whole declaration). */
+  --segment-shadow: 0 0 0 0 transparent;
+  /* Modal/Sheet fill (D-W0.12/DS-03): --nested in dark, white in light —
+     not --card in dark (too close to the page bg to read as "lifted"). */
+  --modal-bg: var(--nested);
+  /* A dark, near-neutral scrim regardless of theme — same reasoning as the
+     old celebration scrim did, which also stayed dark in light mode. */
+  --modal-scrim: rgba(8, 9, 6, .4);
+  /* Toast (D-W0.14): the v2 **dark** palette's --nested/--text, fixed —
+     not re-pointed in [data-theme="light"] below — so it reads as an
+     "inverse surface" (Tooltip gets the same effect the other way, by
+     swapping --text/--bg; a toast needs one fixed look in both themes
+     instead of a per-theme swap). */
+  --toast-bg: #22251C;
+  --toast-fg: #F2F1E6;
+
+  /* Semantic roles (D-W0.3) — the same metric colour read by intent */
+  --improvement: var(--m-protein);
+  --record:      var(--m-carbs);
+  --decrease:    var(--m-weight);
+  --increase:    var(--m-kcal);
+
+  /* ─── Radius scale — 4 steps + pill (D-W0.5) ─── */
+  --r-tag:     8px;
+  --r-control: 14px;
+  --r-card:    22px;
+  --r-hero:    30px;
+  --r-pill:    999px;
+
+  /* ─── Elevation (D-W0.2/D-W0.4) — dark: tone carries depth, drop shadows only
+     on floating layers; a 1 px top light edge on cards/hero/float instead of
+     a border (mobile AppElevation.dark) ─── */
+  /* Not the `none` keyword (see --segment-shadow above) — --e1 is combined
+     into Card's box-shadow list alongside --edge-card and --shadow-focus. */
+  --e1: 0 0 0 0 transparent;
+  --e2: 0 10px 24px -12px rgba(0, 0, 0, .8);
+  --e3: 0 20px 40px -12px rgba(0, 0, 0, .9);
+  --e-sheet: 0 -20px 40px -12px rgba(0, 0, 0, .6);
+  --edge-card:  inset 0 1px 0 rgba(255, 255, 255, .035);
+  --edge-hero:  inset 0 1px 0 rgba(255, 255, 255, .05);
+  --edge-float: inset 0 1px 0 rgba(255, 255, 255, .07);
+  --blur-float: 24px;
+
+  /* ─── Motion (D-W0.13) ─── */
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 350ms;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur-hover:    120ms;
+  --dur-menu:     160ms;
+  --dur-menu-out: 100ms;
+  --dur-modal:    200ms;
+  --dur-toast:    200ms;
+  --dur-drawer:   300ms;
+  --dur-sheet:    350ms;
+  --dur-count:    600ms;
+  --dur-fill:     900ms;
+  --dur-celebrate: 1200ms;
+  --dur-skeleton: 1400ms;
+  --stagger: 60ms;
+  --ease-standard: cubic-bezier(.2, 0, 0, 1);
+  --ease-enter:    cubic-bezier(.05, .7, .1, 1);
+  --ease-exit:     cubic-bezier(.3, 0, .8, .15);
+
+  /* ─── Grid / breakpoints (D-W0.6) — theme-independent ─── */
+  --content-max: 1320px;
+  --reading-max: 720px;
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 76px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-hover: 0ms;
+    --dur-menu: 0ms;
+    --dur-menu-out: 0ms;
+    --dur-modal: 0ms;
+    --dur-toast: 0ms;
+    --dur-drawer: 0ms;
+    --dur-sheet: 0ms;
+    --dur-count: 0ms;
+    --dur-fill: 0ms;
+    --dur-celebrate: 0ms;
+    --dur-skeleton: 0ms;
+    --stagger: 0ms;
+  }
+}
+
+/* Same overrides, forced by a class rather than the OS setting — lets the
+   dev design gallery (W0.5) preview reduced motion without changing the
+   host machine's accessibility settings. A plain rule, not a media query, so
+   it can be toggled at runtime. */
+:root[data-force-reduced-motion="true"] {
+  --dur-fast: 0ms;
+  --dur-base: 0ms;
+  --dur-slow: 0ms;
+  --dur-hover: 0ms;
+  --dur-menu: 0ms;
+  --dur-menu-out: 0ms;
+  --dur-modal: 0ms;
+  --dur-toast: 0ms;
+  --dur-drawer: 0ms;
+  --dur-sheet: 0ms;
+  --dur-count: 0ms;
+  --dur-fill: 0ms;
+  --dur-celebrate: 0ms;
+  --dur-skeleton: 0ms;
+  --stagger: 0ms;
+}
+
+/* ─── v2 design tokens — light (D-W0.4) ─── */
+[data-theme="light"] {
+  --bg:       #F4F2E9;
+  --card:     #FFFFFF;
+  --nested:   #F0EEE3;
+  --control:  #E6E4D6;
+  --raised:   #DCDAC9;
+  --float:    color-mix(in srgb, var(--bg) 86%, transparent);
+  --text:     #1C1D16;
+  --text-2:   #56574B;
+  --text-3:   #6B6C5F;
+  --hairline: #E6E4D6;
+  --outline:  #CDCBBC;
+
+  --primary:          #4E6530;
+  --on-primary:       #FFFFFF;
+  --primary-tint:     color-mix(in srgb, var(--primary) 12%, transparent);
+  --on-primary-tint:  var(--primary);
+  --role:             #7E613C;
+  --role-tint:        color-mix(in srgb, var(--role) 12%, transparent);
+  --heart:            #A73831;
+
+  --m-kcal:    #9D4602;
+  --m-protein: #34742F;
+  /* The improvement chip (a loss toward the goal) on --nested or the page background was 4.19–4.34:1 with --m-protein's green;
+     this step darker clears 4.7:1 on card, nested and bg (W4 review). Protein bars keep --m-protein. */
+  --improvement: #2F6B2A;
+  --m-carbs:   #7F5D00;
+  --m-fat:     #5A57A8;
+  --m-water:   #1A6C8F;
+  --m-steps:   #83488D;
+  --m-weight:  #50667A;
+  --m-heart:   var(--heart);
+  --chip-tint: 12%;
+  --segment-selected-bg: var(--card);
+  --segment-shadow: var(--e1);
+  --modal-bg: var(--card);
+
+  /* ─── Elevation (D-W0.2/D-W0.4) — light: white cards on a warm bg, a soft
+     warm shadow instead of a border; no top-light edges ─── */
+  --e1: 0 1px 2px rgba(40, 38, 20, .05), 0 10px 24px -16px rgba(40, 38, 20, .22);
+  --e2: 0 1px 2px rgba(40, 38, 20, .05), 0 10px 24px -16px rgba(40, 38, 20, .22);
+  --e3: 0 16px 32px -12px rgba(40, 38, 20, .3);
+  --e-sheet: 0 -16px 32px -12px rgba(40, 38, 20, .3);
+  /* Not the `none` keyword (see --segment-shadow above) — these are
+     combined into a multi-layer box-shadow list at their call sites. */
+  --edge-card:  0 0 0 0 transparent;
+  --edge-hero:  0 0 0 0 transparent;
+  --edge-float: 0 0 0 0 transparent;
+
+}
+
+/* ─── Marketing pin (D-W0.2): the marketing tree keeps its pre-v2 palette ───
+   The marketing layouts and the root not-found page render a
+   `data-surface="marketing"` marker; `:has()` on `:root` (== `<html>`, where
+   `data-theme` also lives) restores every legacy value the marketing tree
+   reads directly, so retheming the app doesn't silently recolour it. */
+:root:has([data-surface="marketing"]) {
   --bg:                 #161611;
   --surface:            #1C1E16;
   --surface-container:  #22241B;
@@ -15,21 +227,13 @@
   --tertiary:           #6E9A6A;
   --on-surface:         #F1F0E4;
   --on-surface-variant: #A8A899;
-  /* Was #777264 — below WCAG AA 4.5:1 against every surface tone it's
-     paired with (3.27–3.78:1, verified). Lightened to the same hue,
-     preserving the "quieter than on-surface-variant" character. */
   --muted:              #918B7A;
   --outline:            #3C3E32;
   --border:             transparent;
   --error:              #CF6679;
-
-  /* Admin (trainer) container tones — tertiary/error at low opacity, per
-     docs/personal_trainer/06-design.md and the design/ mockup */
   --tertiary-container:    rgba(110, 154, 106, .18);
   --on-tertiary-container: #A9CBA5;
   --error-container:       rgba(207, 102, 121, .16);
-
-  /* Metric accent colours */
   --metric-kcal:    #E0915A;
   --metric-protein: #9DAE6B;
   --metric-carbs:   #D8B35A;
@@ -38,70 +242,36 @@
   --metric-weight:  #8AA0B4;
   --metric-water:   #6FA8C4;
   --metric-hr:      #C46A6A;
-
-  /* Goal tone */
   --goal-positive: #9DAE6B;
   --goal-negative: #E08A52;
-
-  /* Workout-success celebration dialog */
-  --success-icon-tint: 16%;
-  --success-chip-bg: rgba(76, 175, 80, .15);
-  /* Was #4CAF50 / #388E3C (light, below) — measured against their own tint
-     these gave 4.77:1 here and 3.54:1 in the light theme, the latter under
-     AA. One step out from Material's green in each direction clears both
-     (5.61:1 / 4.95:1); the mobile app's copy of this dialog carries the
-     same two values. */
-  --success-chip-text: #66BB6A;
-  --scrim-celebration: rgba(8, 9, 6, .66);
-
-  /* Radius scale */
+  /* Radius/shadow (D-W0.5/W0.2 pin, same reasoning as the colour pin above) */
   --r-sm:    8px;
   --r-md:    16px;
   --r-input: 18px;
   --r-card:  20px;
   --r-lg:    24px;
   --r-nav:   28px;
-  --r-pill:  999px;
-
-  /* Motion */
-  --dur-fast: 150ms;
-  --dur-base: 250ms;
-  --dur-slow: 350ms;
-  --ease: cubic-bezier(.2, .8, .2, 1);
-
-  /* Shadow */
   --shadow-float: 0 1px 3px rgba(0, 0, 0, .18);
 }
 
-/* ─── Light theme ─── */
-[data-theme="light"] {
+[data-theme="light"]:has([data-surface="marketing"]) {
   --bg:                 #F3F2E8;
   --surface:            #FFFFFF;
   --surface-container:  #ECEBDE;
   --surface-high:       #FFFFFF;
   --surface-highest:    #ECEBDE;
   --primary:            #586E38;
-  /* Secondary was #8A6A42 and tertiary #4A7A52 — both below WCAG AA 4.5:1
-     as text on the light surfaces they sit on (4.42/4.15 and 4.45/4.17
-     against --bg/--surface-container, verified), which Lighthouse only
-     catches on a runner whose prefers-color-scheme is light. Darkened ~3%
-     lightness at the same hue and saturation, landing both in the same
-     contrast band as --primary (4.7-4.8 against --surface-container). */
   --secondary:          #7E613C;
   --tertiary:           #44704C;
   --on-surface:         #1E1F18;
   --on-surface-variant: #5C5C50;
-  /* Was #9A9A8C — below WCAG AA 4.5:1 against every surface tone it's
-     paired with (2.37–2.85:1, verified). Darkened to the same hue. */
   --muted:              #696960;
   --outline:            #CDCBBC;
   --border:             #E2E0D2;
   --error:              #CF6679;
-
   --tertiary-container:    rgba(74, 122, 82, .14);
   --on-tertiary-container: #2F5B39;
   --error-container:       rgba(207, 102, 121, .14);
-
   --metric-kcal:    #D27A3E;
   --metric-protein: #586E38;
   --metric-carbs:   #B8902F;
@@ -110,20 +280,18 @@
   --metric-weight:  #5E7A92;
   --metric-water:   #4E8AA8;
   --metric-hr:      #C46A6A;
-
-  /* Same darkening as --tertiary above — this is used as text (weight
-     delta, KPI cards), so it needs the same 4.5:1 on light surfaces. */
   --goal-positive: #44704C;
   --goal-negative: #E08A52;
-
-  --success-icon-tint: 12%;
-  --success-chip-bg: rgba(76, 175, 80, .16);
-  --success-chip-text: #2C7430;
-  --scrim-celebration: rgba(28, 29, 24, .45);
 }
 
 /* ─── Tailwind theme extension ─── */
 @theme inline {
+  /* D-W0.6: 2xl = the 1440 "desktop · base" frame, 3xl = where the grid stops growing. */
+  --breakpoint-2xl: 90rem;
+  --breakpoint-3xl: 100rem;
+
+  /* Legacy colour keys: only the marketing surface still uses them (its pinned copy of the old values is
+     defined above, scoped to `:root:has([data-surface="marketing"])`); app code uses the v2 keys below. */
   --color-bg:                 var(--bg);
   --color-surface:            var(--surface);
   --color-surface-container:  var(--surface-container);
@@ -149,6 +317,30 @@
   --color-metric-weight:  var(--metric-weight);
   --color-metric-water:   var(--metric-water);
 
+  /* v2 colour keys (D-W0.3) — "fg" not "text" so `text-fg-2` stays readable */
+  --color-card:              var(--card);
+  --color-nested:            var(--nested);
+  --color-control:           var(--control);
+  --color-raised:            var(--raised);
+  --color-fg:                var(--text);
+  --color-fg-2:              var(--text-2);
+  --color-fg-3:              var(--text-3);
+  --color-hairline:          var(--hairline);
+  --color-on-primary:        var(--on-primary);
+  --color-primary-tint:      var(--primary-tint);
+  --color-on-primary-tint:   var(--on-primary-tint);
+  --color-role:              var(--role);
+  --color-role-tint:         var(--role-tint);
+  --color-heart:             var(--heart);
+  --color-m-kcal:            var(--m-kcal);
+  --color-m-protein:         var(--m-protein);
+  --color-m-carbs:           var(--m-carbs);
+  --color-m-fat:             var(--m-fat);
+  --color-m-water:           var(--m-water);
+  --color-m-steps:           var(--m-steps);
+  --color-m-weight:          var(--m-weight);
+  --color-m-heart:           var(--m-heart);
+
   --radius-sm:    var(--r-sm);
   --radius-md:    var(--r-md);
   --radius-input: var(--r-input);
@@ -168,7 +360,7 @@
 html {
   height: 100%;
   background: var(--bg);
-  color: var(--on-surface);
+  color: var(--text);
 }
 
 body {
@@ -177,20 +369,59 @@ body {
   font-size: 15px;
   line-height: 1.5;
   background: var(--bg);
-  color: var(--on-surface);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
 /* ─── Tabular numbers for all metrics ─── */
 .tabular { font-variant-numeric: tabular-nums; }
 
-/* ─── A11y: visible focus ring for keyboard navigation ─── */
-/* Inset (negative offset) so the ring never pokes past an element's own
-   rounded corners; a positive offset + forced border-radius mismatched
-   with elements that set their own (larger) radius, e.g. --r-input. */
+/* ─── Type scale (D-W0.7) ─── */
+@utility type-display-xl { font-size: 72px; line-height: 68px; font-weight: 800; letter-spacing: -0.03em; }
+@utility type-display     { font-size: 48px; line-height: 48px; font-weight: 800; letter-spacing: -0.025em; }
+@utility type-headline    { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.02em; }
+@utility type-page        { font-size: 26px; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; }
+@utility type-title       { font-size: 20px; line-height: 26px; font-weight: 700; letter-spacing: -0.01em; }
+/* Drawers use the 22 px variant of the title style (DS-03). */
+@utility type-title-l     { font-size: 22px; line-height: 1.2; font-weight: 800; }
+@utility type-title-s     { font-size: 16px; line-height: 22px; font-weight: 700; }
+@utility type-body        { font-size: 15px; line-height: 22px; font-weight: 500; }
+@utility type-body-s      { font-size: 13px; line-height: 18px; font-weight: 500; }
+/* The drawer header's overline, above the 22/800 title (DS-03). */
+@utility type-overline    { font-size: 13px; line-height: 18px; font-weight: 600; }
+@utility type-label       { font-size: 12px; line-height: 16px; font-weight: 700; }
+/* CAPS + tracking only belongs on 12 px section labels — never on body text. */
+@utility type-section     { font-size: 12px; line-height: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+@utility type-button      { font-size: 15px; line-height: 1; font-weight: 700; }
+@utility type-button-dense { font-size: 14px; line-height: 1; font-weight: 700; }
+/* Table headers are sentence case, never CAPS (DS-03). */
+@utility type-table-head  { font-size: 13px; line-height: 1; font-weight: 600; }
+
+/* Off-scale hero numbers (dashboard ring, KPI, tile values) — font-size is
+   set per instance (56, 26–34, 28…) by the component, not by a fixed
+   utility; this carries the shared weight/tracking/tabular rule (D-W0.7). */
+.num { font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+
+/* ─── A11y: visible focus ring for keyboard navigation (D-W0.18) ─── */
+/* Keyboard-only (:focus-visible), brand-colour-independent, AA on every
+   surface: a 2px --bg gap then a 2px --text ring, as two box-shadow layers
+   (an outline alone can't draw two concentric rings). Replaces the old
+   inset primary outline.
+
+   `--shadow-focus` (not a bare `box-shadow` on `:focus-visible`) because an
+   inline `style.boxShadow` — Card's e1/e2, a selected segment's lifted pill,
+   a checked ChoiceTile's ring — always wins over a stylesheet rule
+   regardless of specificity, silently swallowing the ring underneath it.
+   Any component that sets its own inline box-shadow appends
+   `, var(--shadow-focus)` to it instead of letting this rule apply alone;
+   `0 0 0 0 transparent` (not the keyword `none`) is the neutral "no ring"
+   value because `none` isn't valid as one layer inside a multi-layer
+   box-shadow list. */
+:root { --shadow-focus: 0 0 0 0 transparent; }
 :focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: -2px;
+  outline: none;
+  --shadow-focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
+  box-shadow: var(--shadow-focus);
 }
 /* Don't show the ring for mouse clicks, only keyboard */
 :focus:not(:focus-visible) {
@@ -202,15 +433,16 @@ body {
    wrapper itself, so ringing the input directly hugs just the text with
    almost no breathing room. Ring the marked wrapper instead — it already
    owns the right border-radius and padding — and suppress the child's own
-   ring so there's no double ring. */
+   ring so there's no double ring. Form fields keep their own focus style
+   (DS-03): a 2px primary border, plus a 4px primary halo. */
 [data-ring-frame]:focus-within {
-  outline: 2px solid var(--primary);
-  outline-offset: -2px;
+  box-shadow: 0 0 0 2px var(--primary), 0 0 0 6px color-mix(in srgb, var(--primary) 24%, transparent);
 }
 [data-ring-frame] input:focus-visible,
 [data-ring-frame] select:focus-visible,
 [data-ring-frame] textarea:focus-visible {
   outline: none;
+  box-shadow: none;
 }
 
 /* ─── Skeleton pulse animation ─── */
@@ -219,9 +451,12 @@ body {
   50%       { opacity: 0.28; }
 }
 .skeleton-pulse {
-  animation: lifeyPulse 1.4s ease-in-out infinite;
-  background: var(--surface-highest);
-  border-radius: var(--r-sm);
+  /* D-W0.17: --dur-skeleton goes to 0ms under reduced motion (both the OS
+     setting and the gallery's forced toggle), same mechanism as every other
+     motion token — a 0ms-duration infinite animation just renders statically. */
+  animation: lifeyPulse var(--dur-skeleton) ease-in-out infinite;
+  background: var(--control);
+  border-radius: var(--r-tag);
 }
 
 /* ─── Chat typing indicator: three dots rising in turn (design D3) ─── */
@@ -230,43 +465,158 @@ body {
   30%           { opacity: 1;    transform: translateY(-2px); }
 }
 
-/* ─── Workout-success celebration dialog entrance ─── */
-@keyframes dialogEnter {
-  from { opacity: 0; transform: scale(.9); }
-  to   { opacity: 1; transform: scale(1); }
+/* ─── Workout celebration (W3.9): the trophy pops once, the rest fades up in turn over --dur-celebrate; every
+   duration is 0ms under reduced motion (OS setting and the gallery's forced toggle), so it renders static ─── */
+@keyframes lifeyTrophyPop {
+  0%   { opacity: 0; transform: scale(0.4); }
+  60%  { opacity: 1; transform: scale(1.18); }
+  100% { opacity: 1; transform: scale(1); }
 }
-.workout-success-card {
-  animation: dialogEnter var(--dur-base) var(--ease) both;
+@keyframes lifeyCelebrateIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .workout-success-card { animation: none; }
+.celebrate-trophy {
+  animation: lifeyTrophyPop calc(var(--dur-celebrate) / 2) var(--ease-enter) both;
 }
-
-/* ─── Workout-success confetti burst (entrance-only, one-shot) ─── */
-@keyframes cfBurst {
-  0%   { transform: translate(0, 0) rotate(0deg) scale(.4); opacity: 0; }
-  11%  { opacity: 1; }
-  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); opacity: 0; }
-}
-.confetti-piece {
-  opacity: 0;
-  animation: cfBurst 650ms cubic-bezier(.15, .65, .3, 1) both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .confetti-piece { animation: none; opacity: 0; }
+/* --k is the item's place in the stagger, 0 … 0.75 of the celebration's length. */
+.celebrate-in {
+  animation: lifeyCelebrateIn calc(var(--dur-celebrate) / 3) var(--ease-enter) both;
+  animation-delay: calc(var(--dur-celebrate) * var(--k, 0));
 }
 
 /* ─── Buttons ─── */
 button { cursor: pointer; }
 button:disabled { cursor: default; }
 
+/* ─── Interactive card (D-W0.7) ─── */
+/* A simplified stand-in for D-W0.18's full hover ladder (one surface step
+   lighter in dark, --nested in light) — W0.18 replaces this with the real
+   per-surface tone step once it lands. */
+.lifey-card-interactive {
+  cursor: pointer;
+  transition: background var(--dur-hover) var(--ease-standard), transform 120ms var(--ease-standard);
+}
+.lifey-card-interactive:hover { background: var(--nested); }
+.lifey-card-interactive:active { transform: scale(0.98); }
+
+/* ─── Button (D-W0.7) ─── */
+/* "Pressed = one tone lighter" as a universal brightness bump rather than a
+   hand-picked colour per variant × theme (5 variants × 2 themes = 10 pairs
+   to keep in sync otherwise). No ripple. */
+.lifey-button {
+  transition: filter var(--dur-hover) var(--ease-standard);
+}
+.lifey-button:hover:not(:disabled) { filter: brightness(1.08); }
+.lifey-button:active:not(:disabled) { filter: brightness(1.16); }
+
+/* ─── Tooltip (D-W0.17) — 400ms delay, hover and keyboard focus alike ─── */
+.lifey-tooltip { transition: opacity var(--dur-menu) var(--ease-standard); }
+.lifey-tooltip-anchor:hover .lifey-tooltip,
+.lifey-tooltip-anchor:focus-within .lifey-tooltip {
+  opacity: 1;
+  transition-delay: 400ms;
+}
+
+/* ─── DataTable row hover (D-W0.15) ─── */
+/* Only when the row hasn't set its own inline `background` (a selected
+   row keeps its own tint even on hover) — see DataTable.tsx. */
+.lifey-table-row:hover { background: var(--nested); }
+
+/* ─── Form field shape (D-W0.9/DS-03) ─── */
+/* Default --control fill, no border; hover --raised (one step up the
+   ladder in both themes — the light theme's own "surface-3" fill is the
+   same --control the field already starts at, so a plain tone-lighten
+   needs the next step up, not a same-value "hover"); focus is
+   [data-ring-frame]:focus-within (globals.css, above); error keeps its
+   heart ring even while focused (the D-W0.9 rule takes priority). */
+.lifey-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--control);
+  transition: background var(--dur-hover) var(--ease-standard);
+}
+.lifey-field:hover:not(:focus-within) { background: var(--raised); }
+/* Top-aligned content for a growing `<textarea>` instead of the default
+   vertical centering — a custom class, not Tailwind's `items-start`
+   utility: globals.css has no `@layer`, so every rule here is unlayered and
+   always outranks a (layered) Tailwind utility on the same property,
+   regardless of source order or specificity. */
+.lifey-field-autoheight { align-items: flex-start; padding-top: 10px; padding-bottom: 10px; }
+.lifey-field-error,
+.lifey-field-error:hover,
+.lifey-field-error:focus-within {
+  box-shadow: 0 0 0 1.5px var(--heart) !important;
+}
+.lifey-field input,
+.lifey-field textarea,
+.lifey-field select {
+  background: transparent;
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font: inherit;
+}
+.lifey-field input::placeholder,
+.lifey-field textarea::placeholder {
+  color: var(--text-3);
+}
+
+/* ─── Popover / menu entrance (D-W0.11/D-W0.15) — 160ms, opacity + 4px
+   from the trigger side; closing is instant (no exit animation) per the
+   100ms-close note, since a removed-on-close portal has nothing left to
+   animate out. ─── */
+@keyframes lifey-popover-enter-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes lifey-popover-enter-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Modal / sheet entrance (D-W0.12/D-W0.13) ─── */
+@keyframes lifey-modal-enter {
+  from { opacity: 0; transform: scale(.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes lifey-scrim-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes lifey-sheet-enter {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes lifey-drawer-enter {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ─── Toast (D-W0.14) ─── */
+@keyframes lifey-toast-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* The 6s undo/dismiss bar — scaleX from a left `transform-origin` rather
+   than animating `width`, so pausing it (`animation-play-state`) freezes
+   exactly in place instead of jumping on the next paint. */
+@keyframes lifey-toast-bar {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
 /* ─── Kill browser autofill background ─── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px var(--surface-container) inset !important;
-  -webkit-text-fill-color: var(--on-surface) !important;
-  caret-color: var(--on-surface);
+  -webkit-box-shadow: 0 0 0 1000px var(--nested) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text);
   transition: background-color 99999s ease-in-out 0s;
 }
 
@@ -279,3 +629,85 @@ input[type="number"] { -moz-appearance: textfield; }
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--outline); border-radius: var(--r-pill); }
+
+/* ─── PageGrid (D-W0.6) — 4 cols / 12 gap at mobile, 8 / 20 from md, 12 / 20
+   from xl, gap 24 from 2xl. `GridItem` hands its per-breakpoint span and order
+   in as custom properties; each breakpoint falls back to the one below it, and
+   an item with no span is full width. ─── */
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--grid-gap, 12px);
+  --grid-gap: 12px;
+}
+.grid-item {
+  grid-column: span var(--span-base, 4);
+  order: var(--order-base, 0);
+  min-width: 0;
+}
+@media (max-width: 767px) {
+  :root { --toast-bottom: calc(92px + var(--fab-clearance, 0px)); }
+}
+@media (min-width: 768px) {
+  .page-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); --grid-gap: 20px; }
+  .grid-item {
+    grid-column: span var(--span-md, 8);
+    order: var(--order-md, var(--order-base, 0));
+  }
+}
+@media (min-width: 1024px) {
+  .grid-item {
+    grid-column: span var(--span-lg, var(--span-md, 8));
+    order: var(--order-lg, var(--order-md, var(--order-base, 0)));
+  }
+}
+@media (min-width: 1280px) {
+  .page-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .grid-item {
+    grid-column: span var(--span-xl, 12);
+    order: var(--order-xl, var(--order-lg, var(--order-md, var(--order-base, 0))));
+  }
+}
+@media (min-width: 1440px) {
+  .page-grid { --grid-gap: 24px; }
+  .grid-item {
+    grid-column: span var(--span-2xl, var(--span-xl, 12));
+    order: var(--order-2xl, var(--order-xl, var(--order-lg, var(--order-md, var(--order-base, 0)))));
+  }
+}
+
+/* ─── Rest timer: the last seconds (W3.8) — the colour is the signal, the pulse is garnish and stays off under reduced motion ─── */
+@keyframes lifeyRestUrgent {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+.rest-urgent {
+  color: var(--m-kcal);
+  animation: lifeyRestUrgent 1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rest-urgent { animation: none; }
+}
+:root[data-force-reduced-motion="true"] .rest-urgent { animation: none; }
+
+/* A surface that stays dark in both themes (W6-A's auth brand panel): re-declares the dark values of the tokens such a
+   surface reads, so components placed inside it keep their dark look under [data-theme="light"]. */
+.dark-island {
+  --bg:       #12130E;
+  --card:     #1A1C15;
+  --nested:   #22251C;
+  --control:  #2C2F24;
+  --raised:   #36392D;
+  --text:     #F2F1E6;
+  --text-2:   #B6B5A5;
+  --text-3:   #8F8F80;
+  --hairline: rgba(242, 241, 230, .07);
+  --primary:  #B5C47C;
+  --on-primary: #1A1F0A;
+  --m-kcal:   #EC9A66;
+  --m-carbs:  #E2BE62;
+  --record:   var(--m-carbs);
+  --chip-tint: 16%;
+  background: var(--bg);
+  color: var(--text);
+}

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&display=block" rel="stylesheet">
+<style>
+html{background:#E7E5DA}body{margin:0;background:#E7E5DA;color:#1C1D16;font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#4E6530;text-decoration:none;font-weight:600}a:hover{color:#2F3F1B;text-decoration:underline}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr}
+</style>
+</helmet>
+
+<section style="padding:64px 80px 24px;display:flex;flex-direction:column;gap:14px;width:2080px;box-sizing:border-box">
+  <div style="font:600 14px/1.2 'JetBrains Mono';color:#56574B;letter-spacing:0.04em">LIFEY WEB · W9 · EDZŐI TARTALOM, MEGHÍVÓK, SZÁMLÁZÁS · SUPERADMIN</div>
+  <h1 style="margin:0;font:800 48px/1.08 'Plus Jakarta Sans';letter-spacing:-0.03em;max-width:1240px;text-wrap:balance">A többi edzői oldal és a rendszer-adminisztráció: ugyanaz a héj, táblázat + panel minta</h1>
+  <div style="display:flex;gap:16px;font-size:15px"><a href="Lifey%20Web%20Design%20System.dc.html">← Web design system</a><a href="Lifey%20Web%208%20Calendar%20Programs%20Chat.dc.html">← W8</a></div>
+</section>
+
+<section data-screen-label="W9 Edzésterveim + Kiosztott" style="padding:24px 80px;display:flex;gap:40px;align-items:flex-start;width:2080px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1440 · világos · Edzésterveim · lista + szerkesztő panel</div>
+    <div style="width:1440px;height:880px;background:#F4F2E9;border-radius:18px;overflow:hidden;position:relative;color:#1C1D16;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5)">
+      <div style="position:absolute;left:12px;top:12px;bottom:12px;width:76px;box-sizing:border-box;background:#FFFFFF;border-radius:22px;padding:16px 0;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 1px 2px rgba(40,38,20,0.06)">
+        <div style="width:36px;height:36px;border-radius:12px;background:#4E6530;color:#FFFFFF;font:800 18px/36px 'Plus Jakarta Sans';text-align:center;margin:4px 0 18px">L</div>
+        <sc-for list="{{ navTpl }}" as="n" hint-placeholder-count="9">
+          <sc-if value="{{ n.on }}" hint-placeholder-val="{{ false }}"><div style="width:48px;height:40px;border-radius:14px;background:#4E6530;color:#FFFFFF;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:21px;font-variation-settings:'FILL' 1">{{ n.i }}</span></div></sc-if>
+          <sc-if value="{{ n.off }}" hint-placeholder-val="{{ true }}"><div style="width:48px;height:40px;border-radius:14px;color:#56574B;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:21px">{{ n.i }}</span></div></sc-if>
+        </sc-for>
+      </div>
+      <div style="position:absolute;left:112px;right:32px;top:12px;bottom:24px;display:flex;flex-direction:column;gap:18px">
+        <div style="height:64px;display:flex;align-items:center;gap:14px"><div style="flex:1;display:flex;flex-direction:column;gap:4px"><div style="font:800 28px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Edzésterveim</div><div style="font:600 13px/1 'Plus Jakarta Sans';color:#56574B">7 sablon · 3 használatban</div></div><div style="width:260px;height:44px;border-radius:14px;background:#FFFFFF;display:flex;align-items:center;gap:8px;padding:0 12px;color:#6B6C5F;font:500 14px/1 'Plus Jakarta Sans';box-shadow:0 1px 2px rgba(40,38,20,0.08)"><span class="ms" style="font-size:20px">search</span>Keresés</div><div style="height:44px;padding:0 18px 0 14px;border-radius:14px;background:#4E6530;color:#FFFFFF;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:20px">add</span>Új sablon</div></div>
+        <div style="flex:1;display:grid;grid-template-columns:minmax(0,1fr) 520px;gap:20px;min-height:0">
+          <div style="background:#FFFFFF;border-radius:22px;overflow:hidden;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+            <div style="display:grid;grid-template-columns:minmax(0,1.6fr) 100px 90px minmax(0,1fr) 44px;gap:10px;padding:0 20px;height:40px;align-items:center;background:#F0EEE3;font:600 13px/1 'Plus Jakarta Sans';color:#56574B"><span style="color:#1C1D16">Név ↑</span><span style="text-align:right">Gyakorlat</span><span style="text-align:right">Idő</span><span>Használja</span><span></span></div>
+            <sc-for list="{{ tplRows }}" as="t" hint-placeholder-count="7">
+              <div style="display:grid;grid-template-columns:minmax(0,1.6fr) 100px 90px minmax(0,1fr) 44px;gap:10px;padding:0 20px;min-height:56px;align-items:center;background:{{ t.bg }};box-shadow:{{ t.ring }};font:500 15px/1.3 'Plus Jakarta Sans'">
+                <div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:700">{{ t.n }}</span><span style="font-size:12px;color:#56574B">{{ t.tags }}</span></div>
+                <span style="text-align:right;font-weight:700">{{ t.ex }}</span><span style="text-align:right">{{ t.min }} perc</span>
+                <div style="display:flex;align-items:center;gap:4px"><sc-for list="{{ t.users }}" as="u" hint-placeholder-count="2"><span style="width:26px;height:26px;border-radius:999px;background:{{ u.c }};font:800 10px/26px 'Plus Jakarta Sans';text-align:center;color:#12130E;box-shadow:0 0 0 2px #FFFFFF">{{ u.i }}</span></sc-for><span style="font-size:13px;color:#56574B;padding-left:4px">{{ t.uTxt }}</span></div>
+                <span class="ms" style="font-size:20px;color:#56574B;text-align:right">more_horiz</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#FFFFFF;border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 16px 36px -16px rgba(40,38,20,0.28);min-height:0;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;font:800 20px/1.2 'Plus Jakarta Sans'">Láb + core</div><span style="height:24px;padding:0 9px;border-radius:999px;background:rgba(140,106,12,0.12);color:#765808;font:700 12px/24px 'Plus Jakarta Sans'">Nem mentett</span><span class="ms" style="font-size:22px;color:#56574B">close</span></div>
+            <div style="display:flex;gap:8px;font:600 13px/1 'Plus Jakarta Sans';color:#56574B"><span>6 gyakorlat</span><span>·</span><span>18 szett</span><span>·</span><span>kb. 50 perc</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <sc-for list="{{ exRows }}" as="e" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:24px minmax(0,1fr) 128px 32px;gap:10px;align-items:center;padding:8px 10px;border-radius:14px;background:#F0EEE3">
+                  <span class="ms" style="font-size:18px;color:#8C8C7D">drag_indicator</span>
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:700 14px/1.3 'Plus Jakarta Sans'">{{ e.n }}</span><span style="font:500 12px/1.2 'Plus Jakarta Sans';color:#56574B">{{ e.m }}</span></div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;height:36px;border-radius:12px;background:#FFFFFF;padding:0 4px"><span class="ms" style="font-size:18px;width:28px;text-align:center">remove</span><span style="font:800 14px/1 'Plus Jakarta Sans'">{{ e.s }}</span><span class="ms" style="font-size:18px;width:28px;text-align:center">add</span></div>
+                  <span class="ms" style="font-size:18px;color:#56574B">more_horiz</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font:700 14px/1 'Plus Jakarta Sans';color:#4E6530">+ Gyakorlat</div>
+            <div style="flex:1"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font:500 12px/1.4 'Plus Jakarta Sans';color:#56574B">A változás a 3 kliens jövőbeli edzéseire vonatkozik.</span><div style="display:flex;gap:8px"><div style="height:44px;padding:0 14px;border-radius:14px;background:#F0EEE3;font:700 14px/44px 'Plus Jakarta Sans'">Elvetés</div><div style="height:44px;padding:0 16px;border-radius:14px;background:#4E6530;color:#FFFFFF;font:700 14px/44px 'Plus Jakarta Sans'">Mentés</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="width:520px;flex:none;display:flex;flex-direction:column;gap:18px;padding-top:26px">
+    <div style="font:800 26px/1.2 'Plus Jakarta Sans';letter-spacing:-0.01em">Előtte → utána</div>
+    <sc-for list="{{ notes }}" as="n" hint-placeholder-count="9">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ n.ids }}" as="id" hint-placeholder-count="1"><span style="height:22px;padding:0 8px;border-radius:8px;background:#FFFFFF;font:600 12px/22px 'JetBrains Mono';color:#3A3B31">{{ id }}</span></sc-for></div>
+        <div style="font:700 16px/1.35 'Plus Jakarta Sans'">{{ n.t }}</div>
+        <div style="font:500 14px/1.55 'Plus Jakarta Sans';color:#3A3B31;text-wrap:pretty">{{ n.b }}</div>
+        <div style="font:600 13px/1.45 'Plus Jakarta Sans';color:#4E6530">{{ n.v2 }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section data-screen-label="W9 Meghívók, Kiosztott, Számlázás" style="padding:40px 80px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;width:2080px;box-sizing:border-box;align-items:start">
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">MEGHÍVÓK · sötét</div>
+    <div style="background:#12130E;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:16px;color:#F2F1E6;font-variant-numeric:tabular-nums">
+      <div style="background:#22251C;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px">
+        <div style="font:800 18px/1.2 'Plus Jakarta Sans'">Kliens meghívása</div>
+        <div style="display:flex;gap:8px"><div style="flex:1;height:48px;border-radius:14px;background:#2C2F24;padding:0 14px;display:flex;align-items:center;font:500 15px/1 'Plus Jakarta Sans';color:#8F8F80">e-mail cím</div><div style="height:48px;padding:0 16px;border-radius:14px;background:#B5C47C;color:#1A1F0A;font:700 14px/48px 'Plus Jakarta Sans'">Küldés</div></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#1A1C15"><span class="ms" style="font-size:18px;color:#B6B5A5">link</span><span style="flex:1;font:600 13px/1 'JetBrains Mono';color:#B6B5A5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">lifey.app/join/szabo-b-7K2Q</span><span style="font:700 13px/1 'Plus Jakarta Sans';color:#B5C47C">Másolás</span></div>
+      </div>
+      <div style="background:#1A1C15;border-radius:22px;padding:4px 0">
+        <sc-for list="{{ invites }}" as="v" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font:700 14px/1.3 'Plus Jakarta Sans'">{{ v.e }}</span><span style="font:500 12px/1.2 'Plus Jakarta Sans';color:#8F8F80">{{ v.d }}</span></div><span style="height:24px;padding:0 9px;border-radius:999px;background:{{ v.bg }};color:{{ v.fg }};font:700 12px/24px 'Plus Jakarta Sans'">{{ v.s }}</span><sc-if value="{{ v.act }}" hint-placeholder-val="{{ false }}"><span style="font:700 13px/1 'Plus Jakarta Sans';color:#B5C47C">{{ v.act }}</span></sc-if></div>
+        </sc-for>
+      </div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#B6B5A5">Állapot szöveggel (Függő · Elfogadva · Lejárt), lejártnál újraküldés. ISO dátum helyett „3 napja” (trainer-050, 051).</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">KIOSZTOTT TERVEK · világos · kliensenként csoportosítva</div>
+    <div style="background:#FFFFFF;border-radius:30px;padding:8px 0;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 8px 20px -12px rgba(40,38,20,0.18)">
+      <sc-for list="{{ assigned }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;padding:10px 0">
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 20px"><span style="width:28px;height:28px;border-radius:999px;background:{{ g.av }};font:800 11px/28px 'Plus Jakarta Sans';text-align:center">{{ g.ini }}</span><span style="flex:1;font:800 15px/1.2 'Plus Jakarta Sans'">{{ g.n }}</span><span style="font:600 12px/1 'Plus Jakarta Sans';color:#56574B">{{ g.cnt }}</span></div>
+          <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:12px;padding:9px 20px 9px 58px"><span class="ms" style="font-size:18px;color:{{ i.c }}">{{ i.ic }}</span><span style="flex:1;font:600 14px/1.3 'Plus Jakarta Sans'">{{ i.n }}</span><span style="font:500 12px/1 'Plus Jakarta Sans';color:#56574B;white-space:nowrap">{{ i.d }}</span><span style="height:22px;padding:0 8px;border-radius:999px;background:{{ i.bg }};color:{{ i.fg }};font:700 11px/22px 'Plus Jakarta Sans'">{{ i.s }}</span></div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#3A3B31">Egy lista minden tartalomtípusra (edzés, program, recept), típusikonnal és állapottal. „Visszavonás” a ⋯ menüből, megerősítéssel (trainer-045).</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">SZÁMLÁZÁS · világos · próbaidő (trainer-055)</div>
+    <div style="background:#FFFFFF;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 2px rgba(40,38,20,0.06),0 12px 28px -14px rgba(40,38,20,0.22);font-variant-numeric:tabular-nums">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="display:flex;flex-direction:column;gap:6px"><span style="font:600 13px/1 'Plus Jakarta Sans';color:#56574B">Jelenlegi csomag</span><span style="font:800 28px/1.1 'Plus Jakarta Sans'">Pro · próbaidő</span></div><span style="height:26px;padding:0 10px;border-radius:999px;background:rgba(126,97,60,0.12);color:#6A5031;font:700 12px/26px 'Plus Jakarta Sans'">Még 9 nap</span></div>
+      <div style="height:8px;border-radius:4px;background:#F0EEE3"><div style="width:36%;height:8px;border-radius:4px;background:#7E613C"></div></div>
+      <div style="font:500 14px/1.5 'Plus Jakarta Sans';color:#56574B">A próbaidő <b style="color:#1C1D16">okt. 6-án</b> jár le. Utána 5 kliensig ingyenes marad, felette <b style="color:#1C1D16">4 990 Ft / hó</b>.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="border-radius:18px;padding:14px;background:#F0EEE3;display:flex;flex-direction:column;gap:4px"><span style="font:700 15px/1.2 'Plus Jakarta Sans'">Alap</span><span style="font:800 20px/1 'Plus Jakarta Sans'">0 Ft</span><span style="font:500 12px/1.3 'Plus Jakarta Sans';color:#56574B">5 kliensig</span></div>
+        <div style="border-radius:18px;padding:14px;background:rgba(78,101,48,0.08);box-shadow:inset 0 0 0 2px #4E6530;display:flex;flex-direction:column;gap:4px"><span style="font:700 15px/1.2 'Plus Jakarta Sans'">Pro</span><span style="font:800 20px/1 'Plus Jakarta Sans'">4 990 Ft<span style="font:600 12px 'Plus Jakarta Sans';color:#56574B"> / hó</span></span><span style="font:500 12px/1.3 'Plus Jakarta Sans';color:#56574B">korlátlan · programok · export</span></div>
+      </div>
+      <div style="height:48px;border-radius:16px;background:#4E6530;color:#FFFFFF;font:700 15px/48px 'Plus Jakarta Sans';text-align:center">Fizetési mód megadása</div>
+      <div style="font:500 12px/1.4 'Plus Jakarta Sans';color:#56574B">Árak tájékoztató jellegűek, a jelenlegi csomagadatokból.</div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="W9 Superadmin" style="padding:40px 80px 96px;display:flex;gap:40px;align-items:flex-start;width:2080px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:12px;flex:none">
+    <div style="font:500 13px/1 'JetBrains Mono';color:#56574B">1440 · sötét · Superadmin · Felhasználók · ugyanaz a héj, semleges jelvény</div>
+    <div style="width:1440px;height:900px;background:#12130E;border-radius:18px;overflow:hidden;position:relative;color:#F2F1E6;font-variant-numeric:tabular-nums;box-shadow:0 30px 60px -30px rgba(40,38,20,0.5)">
+      <div style="position:absolute;left:12px;top:12px;bottom:12px;width:248px;box-sizing:border-box;background:#1A1C15;border-radius:22px;padding:16px 12px;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 18px"><div style="width:36px;height:36px;border-radius:12px;background:#B5C47C;color:#1A1F0A;font:800 18px/36px 'Plus Jakarta Sans';text-align:center">L</div><div style="font:800 20px/1 'Plus Jakarta Sans'">Lifey</div><div style="height:22px;padding:0 8px;border-radius:8px;background:#2C2F24;color:#B6B5A5;font:700 11px/22px 'Plus Jakarta Sans';letter-spacing:0.06em">RENDSZER</div></div>
+        <div style="height:44px;border-radius:14px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;gap:12px;padding:0 12px;font:700 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">manage_accounts</span>Felhasználók</div>
+        <div style="height:44px;border-radius:14px;color:#B6B5A5;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">how_to_reg</span><span style="flex:1">Edzői kérelmek</span><span style="min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#B5C47C;color:#1A1F0A;font:800 11px/20px 'Plus Jakarta Sans';text-align:center">2</span></div>
+        <div style="height:44px;border-radius:14px;color:#B6B5A5;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">history</span>Szerepkör-történet</div>
+        <div style="flex:1"></div>
+        <div style="height:44px;border-radius:14px;background:#22251C;display:flex;align-items:center;gap:12px;padding:0 12px;font:600 15px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:22px">swap_horiz</span>Saját nézet</div>
+        <div style="height:1px;background:rgba(242,241,230,0.06);margin:8px 4px"></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:14px;background:#22251C"><div style="width:36px;height:36px;border-radius:999px;background:#2C2F24;font:800 13px/36px 'Plus Jakarta Sans';text-align:center;box-shadow:0 0 0 2px #1A1C15,0 0 0 4px #8F8F80">AD</div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:700 14px/1.2 'Plus Jakarta Sans'">Admin</span><span style="font:500 12px/1.2 'Plus Jakarta Sans';color:#8F8F80">Superadmin</span></div></div>
+      </div>
+      <div style="position:absolute;left:292px;right:32px;top:12px;bottom:24px;display:flex;flex-direction:column;gap:18px">
+        <div style="height:64px;display:flex;align-items:center;gap:14px"><div style="flex:1;display:flex;flex-direction:column;gap:4px"><div style="font:800 28px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Felhasználók</div><div style="font:600 13px/1 'Plus Jakarta Sans';color:#B6B5A5">1 284 fiók · 38 edző · 2 függő kérelem</div></div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+          <sc-for list="{{ adminKpis }}" as="k" hint-placeholder-count="4"><div style="background:#1A1C15;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:8px"><span style="font:600 13px/1 'Plus Jakarta Sans';color:#B6B5A5">{{ k.l }}</span><span style="font:800 28px/1 'Plus Jakarta Sans'">{{ k.v }}</span><span style="font:600 12px/1 'Plus Jakarta Sans';color:{{ k.c }}">{{ k.d }}</span></div></sc-for>
+        </div>
+        <div style="flex:1;background:#1A1C15;border-radius:22px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 20px">
+            <div style="width:320px;height:40px;border-radius:14px;background:#22251C;display:flex;align-items:center;gap:8px;padding:0 12px;color:#8F8F80;font:500 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:20px">search</span>Név vagy e-mail</div>
+            <div style="display:flex;padding:3px;border-radius:999px;background:#22251C"><sc-for list="{{ roleSeg }}" as="r" hint-placeholder-count="4"><div style="height:34px;padding:0 14px;border-radius:999px;background:{{ r.bg }};color:{{ r.fg }};font:{{ r.w }} 13px/34px 'Plus Jakarta Sans'">{{ r.l }}</div></sc-for></div>
+            <div style="flex:1"></div>
+            <span style="font:600 13px/1 'Plus Jakarta Sans';color:#B6B5A5">1 kijelölve</span>
+            <div style="height:40px;padding:0 14px;border-radius:14px;background:#2C2F24;display:flex;align-items:center;gap:6px;font:700 14px/1 'Plus Jakarta Sans'"><span class="ms" style="font-size:18px">badge</span>Szerepkör…</div>
+          </div>
+          <div style="display:grid;grid-template-columns:32px minmax(0,1.6fr) 120px minmax(0,1fr) 140px 44px;gap:12px;padding:0 20px;height:40px;align-items:center;background:#22251C;font:600 13px/1 'Plus Jakarta Sans';color:#B6B5A5"><span></span><span style="color:#F2F1E6">Név ↑</span><span>Szerepkör</span><span>Edző</span><span>Utolsó belépés</span><span></span></div>
+          <sc-for list="{{ users }}" as="u" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:32px minmax(0,1.6fr) 120px minmax(0,1fr) 140px 44px;gap:12px;padding:0 20px;min-height:54px;align-items:center;background:{{ u.bg }};box-shadow:inset 0 -1px 0 rgba(242,241,230,0.05)">
+              <div style="width:20px;height:20px;border-radius:6px;background:{{ u.box }};box-shadow:{{ u.ring }};display:flex;align-items:center;justify-content:center;color:#1A1F0A"><span class="ms" style="font-size:14px">{{ u.ic }}</span></div>
+              <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:32px;height:32px;border-radius:999px;background:#2C2F24;font:800 11px/32px 'Plus Jakarta Sans';text-align:center;flex:none">{{ u.ini }}</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:700 14px/1.3 'Plus Jakarta Sans'">{{ u.n }}</span><span style="font:500 12px/1.2 'Plus Jakarta Sans';color:#8F8F80;overflow:hidden;text-overflow:ellipsis">{{ u.e }}</span></div></div>
+              <span><span style="height:24px;padding:0 9px;border-radius:999px;background:{{ u.rbg }};color:{{ u.rfg }};font:700 12px/24px 'Plus Jakarta Sans';display:inline-block">{{ u.r }}</span></span>
+              <span style="font:500 14px/1.3 'Plus Jakarta Sans';color:#B6B5A5">{{ u.t }}</span>
+              <span style="font:500 13px/1.3 'Plus Jakarta Sans';color:#B6B5A5">{{ u.l }}</span>
+              <span class="ms" style="font-size:20px;color:#8F8F80">more_horiz</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="width:520px;flex:none;display:flex;flex-direction:column;gap:16px;padding-top:26px">
+    <div style="font:500 12px/1 'JetBrains Mono';color:#56574B">EDZŐI KÉRELEM · jóváhagyás kontextussal</div>
+    <div style="background:#22251C;border-radius:30px;padding:24px;display:flex;flex-direction:column;gap:14px;color:#F2F1E6">
+      <div style="display:flex;align-items:center;gap:14px"><span style="width:48px;height:48px;border-radius:999px;background:#3B3024;color:#E8CDA9;font:800 16px/48px 'Plus Jakarta Sans';text-align:center">FE</span><div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font:800 18px/1.2 'Plus Jakarta Sans'">Farkas Eszter</span><span style="font:500 13px/1.2 'Plus Jakarta Sans';color:#B6B5A5">eszter@fit-studio.hu · 2 napja</span></div></div>
+      <div style="background:#1A1C15;border-radius:16px;padding:14px;font:500 14px/1.5 'Plus Jakarta Sans';color:#B6B5A5">„Személyi edző vagyok 6 éve, a klienseim étrendjét eddig táblázatban követtem.”</div>
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font:500 13px/1.4 'Plus Jakarta Sans';color:#B6B5A5"><span>Végzettség</span><span style="color:#F2F1E6;font-weight:600">OKJ személyi edző · 2019</span><span>Várható kliens</span><span style="color:#F2F1E6;font-weight:600">10–15</span><span>Fiók</span><span style="color:#F2F1E6;font-weight:600">Kliensként aug. 30. óta</span></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><div style="height:44px;padding:0 16px;border-radius:14px;background:rgba(224,127,118,0.12);color:#E07F76;font:700 14px/44px 'Plus Jakarta Sans'">Elutasítás…</div><div style="height:44px;padding:0 16px;border-radius:14px;background:#B5C47C;color:#1A1F0A;font:700 14px/44px 'Plus Jakarta Sans'">Jóváhagyás</div></div>
+    </div>
+    <div style="font:500 12px/1 'JetBrains Mono';color:#56574B;margin-top:6px">SZEREPKÖR-TÖRTÉNET · idővonal</div>
+    <div style="background:#FFFFFF;border-radius:22px;padding:8px 0;box-shadow:0 1px 2px rgba(40,38,20,0.06)">
+      <sc-for list="{{ roleLog }}" as="r" hint-placeholder-count="4">
+        <div style="display:flex;gap:14px;padding:12px 20px"><span class="ms" style="font-size:20px;color:{{ r.c }}">{{ r.i }}</span><div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font:600 14px/1.4 'Plus Jakarta Sans'">{{ r.t }}</span><span style="font:500 12px/1.2 'Plus Jakarta Sans';color:#56574B">{{ r.d }}</span></div></div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const nav = [['group', 'Klienseim'], ['calendar_month', 'Naptár'], ['chat_bubble', 'Chat'], ['person_add', 'Meghívók'], ['fitness_center', 'Edzésterveim'], ['view_week', 'Programok'], ['menu_book', 'Ételeim'], ['assignment', 'Kiosztott'], ['credit_card', 'Számlázás']];
+    const av = { KN: '#C8D69A', HM: '#A9C7D8', TR: '#E6C29A', VL: '#B8C9A8', KD: '#C9B8D8' };
+    const us = arr => arr.map(i => ({ i, c: av[i] }));
+    const chip = { Kész: ['rgba(52,116,47,0.12)', '#2E6329'], Aktív: ['rgba(78,101,48,0.12)', '#3E5226'], Ütemezve: ['#E6E4D6', '#3A3B31'], Kimaradt: ['rgba(167,56,49,0.1)', '#8C2A24'] };
+    const ai = (ic, c, n, d, s) => ({ ic, c, n, d, s, bg: chip[s][0], fg: chip[s][1] });
+    const roleC = { Kliens: ['#2C2F24', '#B6B5A5'], Edző: ['rgba(196,154,108,0.16)', '#C49A6C'], Superadmin: ['rgba(242,241,230,0.1)', '#F2F1E6'], Függő: ['rgba(226,190,98,0.16)', '#E2BE62'] };
+    return {
+      navTpl: nav.map(([i, l]) => ({ i, on: l === 'Edzésterveim', off: l !== 'Edzésterveim' })),
+      tplRows: [
+        ['Láb + core', 'Erősítő · alsótest', 6, 50, ['KN', 'VL'], '2 kliens', true], ['Mobilitás', 'Bemelegítés', 8, 20, [], 'senki'], ['Pull nap', 'Erősítő · hát, bicepsz', 5, 48, ['KN', 'HM', 'TR'], '3 kliens'], ['Push nap', 'Erősítő · mell, váll', 5, 52, ['KN', 'TR'], '2 kliens'], ['Teljes test kezdőknek', 'Erősítő', 7, 45, [], 'senki'], ['Könnyű futás', 'Cardio · Z2', 1, 30, ['TR'], '1 kliens'], ['HIIT 20', 'Cardio', 6, 20, [], 'senki']
+      ].map(([n, tags, ex, min, u, uTxt, sel]) => ({ n, tags, ex, min, users: us(u), uTxt, bg: sel ? 'rgba(78,101,48,0.08)' : '#FFFFFF', ring: sel ? 'inset 3px 0 0 #4E6530' : 'inset 0 -1px 0 rgba(28,29,22,0.06)' })),
+      exRows: [['Guggolás', '8 ismétlés · 2:00 pihenő', '4'], ['Román felhúzás', '10 ismétlés · 1:30', '3'], ['Kitörés', '12 / láb · 1:00', '3'], ['Lábtolás', '12 ismétlés · 1:30', '3'], ['Plank', '45 mp · 0:45', '3'], ['Dead bug', '10 / oldal · 0:45', '2']].map(([n, m, s]) => ({ n, m, s })),
+      invites: [['anna.k@gmail.com', '3 napja küldve', 'Függő', 'Emlékeztető'], ['peter.b@freemail.hu', '6 napja küldve', 'Függő', 'Emlékeztető'], ['kata.nagy@demo.hu', 'aug. 17. · elfogadva', 'Elfogadva', false], ['zoli.t@gmail.com', 'lejárt szept. 10-én', 'Lejárt', 'Újraküldés']].map(([e, d, s, act]) => ({ e, d, s, act, bg: s === 'Függő' ? 'rgba(226,190,98,0.16)' : s === 'Elfogadva' ? 'rgba(147,201,140,0.16)' : '#2C2F24', fg: s === 'Függő' ? '#E2BE62' : s === 'Elfogadva' ? '#93C98C' : '#B6B5A5' })),
+      assigned: [
+        { n: 'Nagy Kata', ini: 'KN', av: av.KN, cnt: '3 tétel', items: [ai('view_week', '#4E6530', '4 hetes alapozó', 'szept. 8. –', 'Aktív'), ai('menu_book', '#9D4602', 'Csirkés rizstál', 'szept. 12.', 'Kész')] },
+        { n: 'Horváth Máté', ini: 'HM', av: av.HM, cnt: '2 tétel', items: [ai('fitness_center', '#4E6530', 'Pull nap', 'V, szept. 28.', 'Ütemezve'), ai('view_week', '#4E6530', '2 hetes indító', 'szept. 22. –', 'Aktív')] },
+        { n: 'Kiss Dóra', ini: 'KD', av: av.KD, cnt: '2 tétel', items: [ai('fitness_center', '#4E6530', 'Push nap', 'H, szept. 22.', 'Kimaradt'), ai('fitness_center', '#4E6530', 'Láb', 'Sze, szept. 24.', 'Kimaradt')] }
+      ],
+      adminKpis: [{ l: 'Aktív fiók · 30 nap', v: '1 012', d: '+48 az előző 30 naphoz', c: '#93C98C' }, { l: 'Edzők', v: '38', d: '+3 ebben a hónapban', c: '#93C98C' }, { l: 'Edzővel rendelkező kliens', v: '412', d: '32 %', c: '#B6B5A5' }, { l: 'Függő kérelem', v: '2', d: 'legrégebbi 2 napja', c: '#E2BE62' }],
+      roleSeg: ['Mind', 'Kliens', 'Edző', 'Superadmin'].map((l, i) => ({ l, bg: i === 0 ? '#2C2F24' : 'transparent', fg: i === 0 ? '#F2F1E6' : '#B6B5A5', w: i === 0 ? 700 : 600 })),
+      users: [
+        ['Admin', 'admin@lifey.app', 'Superadmin', '—', 'ma'], ['Farkas Eszter', 'eszter@fit-studio.hu', 'Függő', '—', 'ma 08:12'], ['Horváth Máté', 'mate.h@gmail.com', 'Kliens', 'Szabó Bence', 'ma 09:40'], ['Kiss Dóra', 'dora.kiss@freemail.hu', 'Kliens', 'Szabó Bence', 'szept. 21.'], ['Molnár Gábor', 'gabor@coachgm.hu', 'Edző', '14 kliens', 'tegnap', true], ['Nagy Kata', 'kata.nagy@demo.hu', 'Kliens', 'Szabó Bence', 'ma 14:10'], ['Szabó Bence', 'bence@szabo-coaching.hu', 'Edző', '5 kliens', 'ma 09:20'], ['Tóth Réka', 'reka.toth@gmail.com', 'Kliens', 'Szabó Bence', 'tegnap']
+      ].map(([n, e, r, t, l, sel]) => ({ n, e, r, t, l, ini: n.split(' ').map(x => x[0]).join('').slice(0, 2), rbg: roleC[r][0], rfg: roleC[r][1], bg: sel ? 'rgba(181,196,124,0.08)' : 'transparent', box: sel ? '#B5C47C' : 'transparent', ring: sel ? 'none' : 'inset 0 0 0 2px #4A4E3E', ic: sel ? 'check' : '' })),
+      roleLog: [['how_to_reg', '#4E6530', 'Szabó Bence: Kliens → Edző', 'jóváhagyta: Admin · aug. 12.'], ['person_remove', '#A73831', 'Lakatos Ádám: Edző → Kliens', 'Admin · aug. 3. · „inaktív 90 napja”'], ['how_to_reg', '#4E6530', 'Molnár Gábor: Kliens → Edző', 'jóváhagyta: Admin · júl. 20.'], ['shield_person', '#56574B', 'Admin: Superadmin jogosultság', 'rendszer · jún. 1.']].map(([i, c, t, d]) => ({ i, c, t, d })),
+      notes: [
+        { ids: ['trainer-035', 'trainer-036'], t: 'Sablonok táblázatban, szerkesztés panelen', b: 'A kártyarács helyett rendezhető táblázat: gyakorlatszám, idő, és hogy mely kliensek használják (avatarokkal). A szerkesztő a jobb panelben nyílik, húzható sorrenddel és szett-léptetővel.', v2: 'Kiterjesztés: adattáblázat + panel minta.' },
+        { ids: ['trainer-037'], t: 'Mentés hatása kiírva', b: 'A panel alján megmondjuk, hogy a változás hány kliens jövőbeli edzését érinti. Nem mentett állapot chippel.', v2: 'v2: őszinte megerősítés.' },
+        { ids: ['trainer-046', 'trainer-047'], t: 'Ételeim & receptjeim = W2 táblázat', b: 'Ugyanaz a táblázat + szerkesztő panel, mint a kliens Ételek fülén (W2), plusz „Kiosztás” művelet a ⋯ menüben. Nincs külön vizuális nyelv.', v2: 'Egy komponenskészlet mindkét szerepre.' },
+        { ids: ['trainer-045'], t: 'Kiosztott tervek kliensenként', b: 'A lapos lista helyett kliens szerinti csoportok, típusikonnal és állapot-chippel. A kimaradt tételek látszanak, nem vesznek el a lista végén.', v2: 'v2: lista-csoport, szemantikus chip.' },
+        { ids: ['trainer-050', 'trainer-051'], t: 'Meghívók állapottal', b: 'E-mail és megosztható link egy kártyán. A lista állapota szöveggel, relatív dátummal, soronként a következő lépéssel (Emlékeztető, Újraküldés).', v2: 'v2: tinted chip, relatív idő.' },
+        { ids: ['trainer-055'], t: 'Számlázás: mi történik és mikor', b: 'A próbaidő hátralévő napjai sávon, a lejárat dátuma és a következmény egy mondatban. A két csomag választó-csempe.', v2: 'v2: választó-csempe, clay.' },
+        { ids: ['admin-001', 'admin-002'], t: 'Superadmin a közös héjban', b: 'A külön felső sávos fejléc megszűnt: ugyanaz az oldalsáv semleges „RENDSZER” jelvénnyel. Felhasználók táblázat szerepkör-szűrővel, tömeges szerepkör-művelettel, a ROLE_ kulcsok helyett magyar szerepnevekkel.', v2: 'Kiterjesztés: egy héj három szerepre.' },
+        { ids: ['admin-003'], t: 'Kérelem döntéshez elég adattal', b: 'A kérelem kártya megmutatja az üzenetet, a végzettséget, a várható kliensszámot és a fiók korát. Az elutasítás megerősítést és indoklást kér.', v2: 'v2: modal, veszélyes művelet „…”-tal.' },
+        { ids: ['admin-004'], t: 'Szerepkör-történet idővonalként', b: 'Ki, mikor, kinek a szerepét változtatta, indoklással. Nyers táblázat helyett ikonos idővonal.', v2: 'v2: lista-sor ikonnal.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

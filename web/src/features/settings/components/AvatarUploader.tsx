@@ -100,8 +100,8 @@ export function AvatarUploader() {
             type="button"
             disabled={busy || isLoading}
             onClick={() => fileInputRef.current?.click()}
-            className="h-9 px-4 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-60"
-            style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+            className="h-9 px-4 rounded-[var(--r-control)] text-sm font-semibold transition-opacity disabled:opacity-60"
+            style={{ background: "var(--nested)", border: "1px solid var(--outline)" }}
           >
             {t("changePhoto")}
           </button>
@@ -110,14 +110,14 @@ export function AvatarUploader() {
               type="button"
               disabled={busy}
               onClick={() => removeMutation.mutate()}
-              className="h-9 px-4 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-60"
-              style={{ color: "var(--error)" }}
+              className="h-9 px-4 rounded-[var(--r-control)] text-sm font-semibold transition-opacity disabled:opacity-60"
+              style={{ color: "var(--heart)" }}
             >
               {t("removePhoto")}
             </button>
           )}
         </div>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
+        <p className="text-xs" style={{ color: "var(--text-3)" }}>
           {t("avatarHint")}
         </p>
       </div>

@@ -139,6 +139,8 @@ export const queryKeys = {
     page: (params: { page: number; size?: number; search?: string }) =>
       ["superadmin-users", "page", params] as const,
     roleAudit: (userId: number) => ["superadmin-users", userId, "role-audit"] as const,
+    stats: () => ["superadmin-users", "stats"] as const,
+    globalAudit: (params: { page: number; size?: number }) => ["superadmin-users", "global-audit", params] as const,
     avatar: (userId: number) => ["superadmin-users", userId, "avatar"] as const,
   },
 } as const;

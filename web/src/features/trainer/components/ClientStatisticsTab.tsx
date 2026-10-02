@@ -1,109 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
-import { format, subMonths, subYears } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
-import { trainerApi } from "../api";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { KpiCard } from "@/components/data/KpiCard";
-import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
-import { Skeleton } from "@/components/status/Skeleton";
+import { SectionLabel } from "@/components/ds";
 import { ErrorState } from "@/components/status/ErrorState";
-import { useLocale } from "@/lib/hooks/useLocale";
-import { useFormat } from "@/lib/i18n/format";
-
-const DATE_LOCALES = { en: enUS, hu } as const;
-
-type Period = "daily" | "weekly" | "monthly";
+import { Skeleton } from "@/components/status/Skeleton";
+import { CaloriesChartCard } from "@/features/statistics/components/CaloriesChartCard";
+import { KpiRow } from "@/features/statistics/components/KpiRow";
+import { MovementSection } from "@/features/statistics/components/MovementSection";
+import { PeriodControl } from "@/features/statistics/components/PeriodControl";
+import { WeightChartCard } from "@/features/statistics/components/WeightChartCard";
+import { parsePeriodState, type PeriodState } from "@/features/statistics/period";
+import { buildPeriodStats } from "@/features/statistics/periodStats";
+import type { RawData, StatKindFilter } from "@/features/statistics/types";
+import { queryKeys } from "@/lib/api/queryKeys";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { trainerApi } from "../api";
 
 interface ClientStatisticsTabProps {
   clientId: number;
 }
 
+/**
+ * The client's statistics (W7-C): the same W5 cards the client sees — KPI row, calories, weight, movement — fed by the
+ * trainer endpoints, scoped to this client and to a period of the trainer's choosing (kept in the tab, not the URL:
+ * the top bar belongs to the date stepper here). What the trainer cannot read is simply absent: there is no water
+ * history, no step goal and no goal weight, so those lines and bars are not drawn rather than guessed.
+ */
 export function ClientStatisticsTab({ clientId }: ClientStatisticsTabProps) {
-  const t = useTranslations("admin.clientDetail");
-  const fmt = useFormat();
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
-  const [period, setPeriod] = useState<Period>("weekly");
+  const t = useTranslations("statistics");
+  const phone = useMediaQuery("(max-width: 767px)");
+  const [state, setState] = useState<PeriodState>(() => parsePeriodState(new URLSearchParams(), new Date()));
+  const [kindFilter, setKindFilter] = useState<StatKindFilter>("ALL");
 
-  const PERIOD_OPTIONS: { value: Period; label: string }[] = [
-    { value: "daily", label: t("period.daily") },
-    { value: "weekly", label: t("period.weekly") },
-    { value: "monthly", label: t("period.monthly") },
-  ];
-
-  const statsQ = useQuery({
-    queryKey: queryKeys.trainerClientData.statistics(clientId, period),
-    queryFn: () => trainerApi.clientStatistics(clientId, period),
+  const results = useQueries({
+    queries: [
+      { queryKey: queryKeys.trainerClientData.meals(clientId, "all"), queryFn: () => trainerApi.clientMeals(clientId) },
+      { queryKey: queryKeys.trainerClientData.weights(clientId), queryFn: () => trainerApi.clientWeights(clientId) },
+      { queryKey: queryKeys.trainerClientData.steps(clientId), queryFn: () => trainerApi.clientSteps(clientId) },
+      { queryKey: queryKeys.trainerClientData.sessions(clientId, 0, 200), queryFn: () => trainerApi.clientWorkoutSessions(clientId, 0, 200) },
+    ],
   });
+  const [mealsQ, weightsQ, stepsQ, sessionsQ] = results;
+  const goalsQ = useQuery({ queryKey: queryKeys.trainerClientData.nutritionGoals(clientId), queryFn: () => trainerApi.clientNutritionGoals(clientId) });
 
-  const weightsFrom = period === "monthly" ? subYears(new Date(), 1) : subMonths(new Date(), 3);
-  const weightsQ = useQuery({
-    queryKey: [...queryKeys.trainerClientData.weights(clientId), period],
-    queryFn: () => trainerApi.clientWeights(clientId, format(weightsFrom, "yyyy-MM-dd")),
-  });
+  const raw: RawData = useMemo(
+    () => ({ meals: mealsQ.data ?? [], weights: weightsQ.data ?? [], water: [], steps: stepsQ.data ?? [], sessions: sessionsQ.data?.content ?? [] }),
+    [mealsQ.data, weightsQ.data, stepsQ.data, sessionsQ.data],
+  );
+  const calorieGoal = goalsQ.data?.dailyCalorieGoal ?? null;
+  const stats = useMemo(
+    () => buildPeriodStats({ raw, period: state.period, start: state.start, now: new Date(), goals: { calories: calorieGoal, steps: null, weightKg: null } }),
+    [raw, state.period, state.start, calorieGoal],
+  );
 
-  if (statsQ.isLoading || weightsQ.isLoading) {
+  if (results.some((r) => r.isLoading)) {
     return (
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-5">
         <Skeleton variant="card" className="h-10 w-64" />
-        <div className="grid grid-cols-3 gap-3.5">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} variant="card" className="h-24" />)}
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+          {[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} variant="card" className="h-28" />)}
         </div>
         <Skeleton variant="chart" />
       </div>
     );
   }
-
-  if (statsQ.isError || weightsQ.isError) {
-    return <ErrorState inline onRetry={() => { statsQ.refetch(); weightsQ.refetch(); }} />;
-  }
-
-  const sortedWeights = (weightsQ.data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
-  const chartData = sortedWeights.map((w) => ({ date: format(new Date(w.date), "MMM d", { locale: dateLocale }), value: w.weight }));
+  if (results.some((r) => r.isError)) return <ErrorState inline onRetry={() => results.forEach((r) => r.refetch())} />;
 
   return (
-    <div className="flex flex-col gap-3.5">
-      <SegmentedControl
-        options={PERIOD_OPTIONS}
-        value={period}
-        onChange={setPeriod}
-        activeBackground="var(--tertiary)"
-        activeColor="var(--bg)"
-      />
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <KpiCard
-          label={t("kpi.calories")}
-          value={`${fmt.number(Math.round(statsQ.data?.totalCalories ?? 0))} kcal`}
-          icon="local_fire_department"
-          color="var(--metric-kcal)"
-        />
-        <KpiCard
-          label={t("kpi.workouts")}
-          value={String(statsQ.data?.workoutCount ?? 0)}
-          icon="fitness_center"
-          color="var(--tertiary)"
-        />
-        <KpiCard
-          label={t("kpi.weight")}
-          value={statsQ.data?.latestWeight != null ? `${fmt.number(statsQ.data.latestWeight, 1, 1)} kg` : "—"}
-          icon="monitor_weight"
-          color="var(--metric-weight)"
-        />
+    <div className="flex flex-col gap-5">
+      <div>
+        <PeriodControl state={state} onChange={setState} stacked={phone} />
       </div>
-
-      <div className="rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-        <p className="text-sm font-bold mb-4" style={{ color: "var(--on-surface)" }}>{t("weightTrend")}</p>
-        {chartData.length > 0 ? (
-          <TimeSeriesChart data={chartData} color="var(--metric-weight)" unit=" kg" />
-        ) : (
-          <p className="text-sm text-center py-16" style={{ color: "var(--muted)" }}>{t("noWeightEntries")}</p>
-        )}
+      <KpiRow stats={stats} />
+      <SectionLabel>{t("sectionNutrition")}</SectionLabel>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+        <CaloriesChartCard stats={stats} compact={phone} />
+        <WeightChartCard stats={stats} compact={phone} />
       </div>
+      <MovementSection stats={stats} filter={kindFilter} onFilterChange={setKindFilter} compact={phone} />
     </div>
   );
 }

@@ -66,7 +66,8 @@ class AiUsageCounterRepositoryTest {
         Long userId = saveUser("ai-usage-dup-" + System.nanoTime() + "@example.com").getId();
         repository.save(newCounter(userId, "2026-08", 1));
 
-        assertThatThrownBy(() -> repository.save(newCounter(userId, "2026-08", 1)))
+        var counter = newCounter(userId, "2026-08", 1);
+        assertThatThrownBy(() -> repository.save(counter))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 

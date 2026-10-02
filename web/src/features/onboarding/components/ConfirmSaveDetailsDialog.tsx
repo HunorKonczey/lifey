@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ds";
+import { Modal } from "@/components/ds/overlay/Modal";
 import { userDetailsApi } from "@/features/onboarding/api";
 import type {
   ActivityLevel, Gender, PrimaryGoal, UserDetailsField, UserDetailsResponse,
@@ -108,23 +109,24 @@ export function ConfirmSaveDetailsDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title={t("confirmSaveTitle")}>
-      <div className="flex flex-col gap-4">
+    <Modal open={open} onClose={onClose} aria-label={t("confirmSaveTitle")}>
+      <div className="flex max-h-[80vh] flex-col gap-4 overflow-y-auto p-6">
+        <h2 className="type-title">{t("confirmSaveTitle")}</h2>
         {diffs.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>{t("confirmSaveNoChanges")}</p>
+          <p className="text-sm" style={{ color: "var(--text-2)" }}>{t("confirmSaveNoChanges")}</p>
         ) : (
           <>
-            <p className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{t("confirmSaveIntro")}</p>
+            <p className="text-xs" style={{ color: "var(--text-2)" }}>{t("confirmSaveIntro")}</p>
             <div className="flex flex-col gap-2">
               {diffs.map((diff) => (
                 <label key={diff.field}
                   className="flex items-start gap-3 p-3 rounded-[var(--r-card)] cursor-pointer"
-                  style={{ background: "var(--surface-container)" }}>
+                  style={{ background: "var(--nested)" }}>
                   <input type="checkbox" className="mt-1"
                     checked={selected.has(diff.field)}
                     onChange={() => toggle(diff.field)} />
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{diff.label}</span>
+                    <span className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>{diff.label}</span>
                     <span className="text-sm">{diff.from} → {diff.to}</span>
                   </div>
                 </label>
@@ -132,24 +134,24 @@ export function ConfirmSaveDetailsDialog({
             </div>
 
             <div>
-              <p className="text-xs font-semibold mb-2" style={{ color: "var(--on-surface-variant)" }}>
+              <p className="text-xs font-semibold mb-2" style={{ color: "var(--text-2)" }}>
                 {t("recalculatedGoals")}
               </p>
               {previewMutation.isPending || !preview ? (
-                <p className="text-sm py-4 text-center" style={{ color: "var(--on-surface-variant)" }}>
+                <p className="text-sm py-4 text-center" style={{ color: "var(--text-2)" }}>
                   {o("calculating")}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    { label: d("calories"), value: preview.calories, unit: "kcal", color: "var(--metric-kcal)" },
-                    { label: d("protein"), value: preview.proteinGrams, unit: "g", color: "var(--metric-protein)" },
-                    { label: d("carbs"), value: preview.carbsGrams, unit: "g", color: "var(--metric-carbs)" },
-                    { label: d("fat"), value: preview.fatGrams, unit: "g", color: "var(--metric-fat)" },
-                    { label: d("water"), value: preview.waterLiters, unit: "L", color: "var(--metric-water)" },
+                    { label: d("calories"), value: preview.calories, unit: "kcal", color: "var(--m-kcal)" },
+                    { label: d("protein"), value: preview.proteinGrams, unit: "g", color: "var(--m-protein)" },
+                    { label: d("carbs"), value: preview.carbsGrams, unit: "g", color: "var(--m-carbs)" },
+                    { label: d("fat"), value: preview.fatGrams, unit: "g", color: "var(--m-fat)" },
+                    { label: d("water"), value: preview.waterLiters, unit: "L", color: "var(--m-water)" },
                   ].map((m) => (
                     <div key={m.label} className="flex flex-col gap-0.5 p-2.5 rounded-[var(--r-card)]"
-                      style={{ background: "var(--surface-container)" }}>
+                      style={{ background: "var(--nested)" }}>
                       <span className="text-[10px] font-semibold" style={{ color: m.color }}>{m.label}</span>
                       <span className="text-sm font-bold tabular">{m.value} {m.unit}</span>
                     </div>
@@ -160,23 +162,17 @@ export function ConfirmSaveDetailsDialog({
           </>
         )}
 
-        <div className="flex gap-3 mt-2">
-          <button onClick={onClose}
-            className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm"
-            style={{ background: "var(--surface-container)", color: "var(--on-surface)" }}>
+        <div className="mt-2 flex flex-wrap gap-3">
+          <Button variant="secondary" onClick={onClose} data-autofocus="true">
             {t("confirmSaveCancel")}
-          </button>
+          </Button>
           {diffs.length > 0 && (
-            <button
-              onClick={() => onConfirm([...selected])}
-              disabled={saving || selected.size === 0}
-              className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "var(--bg)" }}>
+            <Button onClick={() => onConfirm([...selected])} disabled={saving || selected.size === 0}>
               {saving ? t("saving") : t("confirmSaveConfirm")}
-            </button>
+            </Button>
           )}
         </div>
       </div>
-    </Dialog>
+    </Modal>
   );
 }

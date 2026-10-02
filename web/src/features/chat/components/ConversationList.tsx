@@ -3,25 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { differenceInCalendarDays, format, isToday } from "date-fns";
-import { enUS, hu } from "date-fns/locale";
-import { useLocale } from "@/lib/hooks/useLocale";
+import { differenceInCalendarDays, isToday } from "date-fns";
+import { CountPill, Icon, TextField } from "@/components/ds";
+import { useFormat } from "@/lib/format/useFormat";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { ChatAvatar } from "./ChatAvatar";
-import { filterConversations, hasMixedPeerRoles, isMuted, unreadBadgeLabel } from "../thread";
+import { filterConversations, hasMixedPeerRoles, isMuted } from "../thread";
 import type { ConversationResponse } from "../types";
-
-const DATE_LOCALES = { en: enUS, hu } as const;
-
-/** Today → clock, this week → weekday, older → date. Same ladder as the design's list column. */
-function formatActivity(iso: string, locale: keyof typeof DATE_LOCALES): string {
-  const date = new Date(iso);
-  const dateLocale = DATE_LOCALES[locale];
-  if (isToday(date)) return format(date, "H:mm", { locale: dateLocale });
-  if (differenceInCalendarDays(new Date(), date) < 7) return format(date, "EEEE", { locale: dateLocale });
-  return format(date, "yyyy. MMM d.", { locale: dateLocale });
-}
 
 interface ConversationListProps {
   conversations: ConversationResponse[] | undefined;
@@ -33,55 +22,26 @@ interface ConversationListProps {
   onRetry: () => void;
 }
 
-export function ConversationList({
-  conversations,
-  selectedId,
-  ownUserId,
-  onSelect,
-  isLoading,
-  isError,
-  onRetry,
-}: ConversationListProps) {
+/**
+ * The left column of the chat (W8-D): a search and one row per conversation — avatar, name, the time, the preview
+ * (bold when unread, "Te: …" for your own last message) and an unread `CountPill`; the selected row is `--nested` with
+ * a 3 px primary bar. Archived threads fade, muted ones carry a bell-off, and a client row has an "open client" link.
+ */
+export function ConversationList({ conversations, selectedId, ownUserId, onSelect, isLoading, isError, onRetry }: ConversationListProps) {
   const t = useTranslations("chat");
   const common = useTranslations("common");
-  const locale = useLocale((s) => s.locale);
   const [search, setSearch] = useState("");
 
   const visible = conversations ? filterConversations(conversations, search) : [];
   const showRoleLabels = conversations ? hasMixedPeerRoles(conversations) : false;
 
   return (
-    <div
-      className="flex flex-col gap-1.5 rounded-[var(--r-card)] p-3.5 min-h-0"
-      style={{ background: "var(--surface)" }}
-    >
-      {/* Ringed on the wrapper, not the bare input: the input is exactly as tall
-          as its text, so its own focus ring would hug the letters (see the
-          [data-ring-frame] rule in globals.css). */}
-      <label
-        data-ring-frame
-        className="flex items-center gap-2.5 rounded-[var(--r-md)] px-3.5 py-2.5 mb-1 shrink-0"
-        style={{ background: "var(--surface-container)" }}
-      >
-        <span className="material-symbols-rounded text-[19px]" style={{ color: "var(--on-surface-variant)" }}>
-          search
-        </span>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={common("search")}
-          aria-label={t("searchConversations")}
-          className="flex-1 min-w-0 bg-transparent text-[13px] font-medium outline-none"
-          style={{ color: "var(--on-surface)" }}
-        />
-      </label>
+    <div className="flex flex-col gap-2 p-3 min-h-0" style={{ borderRadius: "var(--r-card)", background: "var(--card)", boxShadow: "var(--e1), var(--edge-card)" }}>
+      <TextField size="dense" type="search" leadingIcon="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={common("search")} aria-label={t("searchConversations")} />
 
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1.5">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1">
         {isLoading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="skeleton-pulse h-[66px] rounded-[var(--r-md)] shrink-0" />
-          ))
+          Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton-pulse h-[64px] rounded-[var(--r-control)] shrink-0" />)
         ) : isError ? (
           <ErrorState inline onRetry={onRetry} />
         ) : visible.length === 0 ? (
@@ -92,15 +52,7 @@ export function ConversationList({
           />
         ) : (
           visible.map((conversation) => (
-            <ConversationRow
-              key={conversation.id}
-              conversation={conversation}
-              selected={conversation.id === selectedId}
-              showRoleLabel={showRoleLabels}
-              locale={locale}
-              ownUserId={ownUserId}
-              onSelect={() => onSelect(conversation.id)}
-            />
+            <ConversationRow key={conversation.id} conversation={conversation} selected={conversation.id === selectedId} showRoleLabel={showRoleLabels} ownUserId={ownUserId} onSelect={() => onSelect(conversation.id)} />
           ))
         )}
       </div>
@@ -108,32 +60,16 @@ export function ConversationList({
   );
 }
 
-interface ConversationRowProps {
-  conversation: ConversationResponse;
-  selected: boolean;
-  showRoleLabel: boolean;
-  locale: keyof typeof DATE_LOCALES;
-  ownUserId: number | undefined;
-  onSelect: () => void;
-}
-
-function ConversationRow({
-  conversation,
-  selected,
-  showRoleLabel,
-  locale,
-  ownUserId,
-  onSelect,
-}: ConversationRowProps) {
+function ConversationRow({ conversation, selected, showRoleLabel, ownUserId, onSelect }: { conversation: ConversationResponse; selected: boolean; showRoleLabel: boolean; ownUserId: number | undefined; onSelect: () => void }) {
   const t = useTranslations("chat");
+  const fmt = useFormat();
   const { peer, lastMessage, unreadCount, archivedAt } = conversation;
   const archived = archivedAt !== null;
   const unread = unreadCount > 0;
   const muted = isMuted(conversation.mutedUntil);
 
   const ownPrefix = lastMessage && lastMessage.senderId === ownUserId ? t("ownMessagePrefix") : "";
-  // A picture with no caption still needs words in the list, and the marker
-  // stays in front of a caption so the row says what kind of message it was.
+  // A picture with no caption still needs words in the list, and the marker stays in front of a caption so the row says what kind of message it was.
   const imageMarker = lastMessage?.attachment ? `${t("imagePreview")} ` : "";
   const preview = lastMessage
     ? lastMessage.deletedAt
@@ -141,102 +77,56 @@ function ConversationRow({
       : `${ownPrefix}${imageMarker}${lastMessage.body ?? ""}`.trimEnd()
     : t("noMessagesYet");
 
+  // Today → the clock, this week → the weekday, older → the date.
+  const when = (iso: string) => {
+    const date = new Date(iso);
+    const now = new Date();
+    if (isToday(date)) return fmt.time(date);
+    if (differenceInCalendarDays(now, date) < 7) return fmt.weekdayShort(date);
+    return fmt.shortDate(date);
+  };
+
   return (
-    <div
-      className="group relative flex items-center gap-2.5 rounded-[var(--r-md)] transition-colors shrink-0"
-      style={{
-        background: selected
-          ? "color-mix(in srgb, var(--primary) 12%, transparent)"
-          : "transparent",
-        border: selected
-          ? "1px solid color-mix(in srgb, var(--primary) 35%, transparent)"
-          : "1px solid transparent",
-        opacity: archived ? 0.55 : 1,
-      }}
-    >
-      <button
-        onClick={onSelect}
-        aria-current={selected ? "true" : undefined}
-        className="flex flex-1 min-w-0 items-center gap-2.5 px-3 py-2.5 text-left rounded-[var(--r-md)] transition-colors hover:bg-surface-container"
-      >
+    <div className="group relative flex items-center shrink-0" style={{ borderRadius: "var(--r-control)", background: selected ? "var(--nested)" : "transparent", opacity: archived ? 0.55 : 1 }}>
+      {selected && <span aria-hidden className="absolute left-0 top-2 bottom-2" style={{ width: 3, borderRadius: 2, background: "var(--primary)" }} />}
+      <button type="button" onClick={onSelect} aria-current={selected ? "true" : undefined} className="lifey-button flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 text-left">
         <ChatAvatar userId={peer.userId} displayName={peer.displayName} muted={archived} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p className="text-[13.5px] font-extrabold truncate" style={{ color: "var(--on-surface)" }}>
-              {peer.displayName}
-            </p>
+        <span className="flex-1 min-w-0">
+          <span className="flex items-center gap-1.5">
+            <span className="truncate" style={{ fontSize: 14, fontWeight: unread ? 800 : 700 }}>{peer.displayName}</span>
             {showRoleLabel && (
-              <span
-                className="text-[10px] font-bold whitespace-nowrap shrink-0"
-                style={{ color: "var(--muted)" }}
-              >
+              <span className="whitespace-nowrap shrink-0" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)" }}>
                 {peer.role === "TRAINER" ? t("peerRoleTrainer") : t("peerRoleClient")}
               </span>
             )}
-          </div>
-          <p
-            className="text-xs truncate mt-0.5"
-            style={{
-              color: unread ? "var(--on-surface)" : "var(--on-surface-variant)",
-              fontWeight: unread ? 600 : 500,
-              fontStyle: lastMessage?.deletedAt ? "italic" : undefined,
-            }}
-          >
+          </span>
+          <span className="block truncate type-body-s" style={{ color: unread ? "var(--text)" : "var(--text-2)", fontWeight: unread ? 700 : 400, fontStyle: lastMessage?.deletedAt ? "italic" : undefined }}>
             {preview}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
-          {muted && !archived && (
-            <span
-              className="material-symbols-rounded text-[16px]"
-              title={t("mutedRow")}
-              aria-label={t("mutedRow")}
-              style={{ color: "var(--muted)" }}
-            >
-              notifications_off
-            </span>
-          )}
+          </span>
+        </span>
+        <span className="flex flex-col items-end gap-1.5 shrink-0">
+          {muted && !archived && <Icon name="notifications_off" size={16} color="var(--text-3)" label={t("mutedRow")} />}
           {archived ? (
-            <span
-              className="rounded-[var(--r-sm)] px-2 py-0.5 text-[10px] font-extrabold"
-              style={{ background: "var(--surface-high)", color: "var(--on-surface-variant)" }}
-            >
-              {t("archivedBadge")}
-            </span>
+            <span className="px-2 type-body-s" style={{ borderRadius: 6, background: "var(--control)", fontWeight: 700 }}>{t("archivedBadge")}</span>
           ) : (
-            lastMessage && (
-              <span
-                className="text-[10.5px] font-bold"
-                style={{ color: unread ? "var(--primary)" : "var(--muted)" }}
-              >
-                {formatActivity(lastMessage.createdAt, locale)}
-              </span>
-            )
+            lastMessage && <span className="type-body-s" style={{ color: unread ? "var(--primary)" : "var(--text-3)", fontWeight: 600 }}>{when(lastMessage.createdAt)}</span>
           )}
           {unread && (
-            <span
-              className="min-w-[18px] h-[18px] rounded-[9px] px-1.5 flex items-center justify-center text-[10px] font-extrabold"
-              style={{ background: "var(--primary)", color: "var(--bg)" }}
-              aria-label={t("unreadCount", { count: unreadCount })}
-            >
-              {unreadBadgeLabel(unreadCount)}
+            <span aria-label={t("unreadCount", { count: unreadCount })}>
+              <CountPill count={unreadCount} />
             </span>
           )}
-        </div>
+        </span>
       </button>
-
-      {/* The design's row overflow menu holds "mute" too, but muting is I5 work
-          (chat_participants.muted_until is still unwritten) — a menu whose only
-          live item is this link is worse than the link itself. */}
       {peer.role === "CLIENT" && (
         <Link
           href={`/admin/clients/${peer.userId}`}
           title={t("openClient")}
           aria-label={t("openClient")}
-          className="mr-2 w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
-          style={{ background: "var(--surface-high)", color: "var(--on-surface-variant)" }}
+          className="mr-2 inline-flex h-8 w-8 items-center justify-center shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+          style={{ borderRadius: 10, background: "var(--control)", color: "var(--text-2)" }}
         >
-          <span className="material-symbols-rounded text-[18px]">person</span>
+          <Icon name="person" size={18} />
         </Link>
       )}
     </div>

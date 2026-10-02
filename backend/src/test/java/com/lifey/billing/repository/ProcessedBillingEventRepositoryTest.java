@@ -46,7 +46,8 @@ class ProcessedBillingEventRepositoryTest {
         String eventId = "evt_dup_" + System.nanoTime();
         repository.save(newEvent(SubscriptionProvider.STRIPE, eventId));
 
-        assertThatThrownBy(() -> repository.save(newEvent(SubscriptionProvider.STRIPE, eventId)))
+        var event = newEvent(SubscriptionProvider.STRIPE, eventId);
+        assertThatThrownBy(() -> repository.save(event))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 

@@ -188,9 +188,6 @@ test.describe("Trainer calendar", () => {
 
       await page.getByRole("link", { name: "Trainer view" }).click();
       await page.waitForURL("**/admin");
-      // First visit shows the "Your clients" modal (ClientListModal) — dismiss
-      // it so it doesn't intercept the sidebar click.
-      await page.getByRole("button", { name: "Close" }).click();
 
       await page.getByRole("link", { name: "Calendar" }).click();
       await page.waitForURL("**/admin/calendar");
@@ -202,24 +199,24 @@ test.describe("Trainer calendar", () => {
     });
 
     await test.step("toggling to Month view and back doesn't lose the data", async () => {
-      await page.getByRole("tab", { name: "Month" }).click();
-      await expect(page.getByRole("tab", { name: "Month", selected: true })).toBeVisible();
-      await page.getByRole("tab", { name: "Week" }).click();
-      await expect(page.getByRole("tab", { name: "Week", selected: true })).toBeVisible();
+      await page.getByRole("radio", { name: "Month" }).click();
+      await expect(page.getByRole("radio", { name: "Month", checked: true })).toBeVisible();
+      await page.getByRole("radio", { name: "Week" }).click();
+      await expect(page.getByRole("radio", { name: "Week", checked: true })).toBeVisible();
       await expect(page.getByTestId("calendar-session-card").filter({ hasText: clientAName })).toBeVisible();
     });
 
     await test.step("client filter narrows the view to a single client", async () => {
       const filter = page.getByTestId("calendar-client-filter");
       await filter.getByTestId("calendar-client-filter-trigger").click();
-      await filter.getByTestId("calendar-client-filter-row").filter({ hasText: clientBName }).click();
+      await page.getByTestId("calendar-client-filter-row").filter({ hasText: clientBName }).click();
       await page.keyboard.press("Escape");
 
       await expect(page.getByTestId("calendar-session-card").filter({ hasText: clientAName })).toBeVisible();
       await expect(page.getByTestId("calendar-session-card").filter({ hasText: clientBName })).not.toBeVisible();
 
       await filter.getByTestId("calendar-client-filter-trigger").click();
-      await filter.getByTestId("calendar-client-filter-all").click();
+      await page.getByTestId("calendar-client-filter-all").click();
       await page.keyboard.press("Escape");
       await expect(page.getByTestId("calendar-session-card").filter({ hasText: clientBName })).toBeVisible();
     });
@@ -230,7 +227,7 @@ test.describe("Trainer calendar", () => {
       await expect(peek.getByText(clientAName)).toBeVisible();
 
       await peek.getByRole("button", { name: "Cancel this workout" }).click();
-      await peek.getByRole("button", { name: "Cancel workout" }).click();
+      await page.getByRole("button", { name: "Cancel workout", exact: true }).click();
       await expect(page.getByText("Workout cancelled")).toBeVisible();
 
       // Hidden by default once cancelled (the "Cancelled" toggle defaults off).
@@ -246,17 +243,22 @@ test.describe("Trainer calendar", () => {
       await page.goto("/admin/calendar");
       await page.getByRole("button", { name: "Next week" }).click();
 
-      const dayLabel = format(nextMonday, "MMM d.", { locale: enUS });
-      await page.getByLabel(`Schedule a workout for ${dayLabel}`).click();
+      // W8: an empty hour cell of the day column carries the + (the first visible one of that Monday).
+      const dayLabel = format(nextMonday, "MMM d", { locale: enUS });
+      // A week with nothing timed in it folds its empty hours; unfold them to reach a cell.
+      await page.getByRole("button", { name: /nothing scheduled/ }).click();
+      await page.getByRole("button", { name: new RegExp(`Schedule a workout on ${dayLabel}`) }).first().click({ force: true });
 
       const drawer = page.getByTestId("schedule-workout-drawer");
-      await expect(drawer.getByText(format(nextMonday, "PP", { locale: enUS }))).toBeVisible();
+      // The drawer's date field is prefilled from the cell (month / day / year segments).
+      await expect(drawer.getByRole("textbox", { name: "Date – month" })).toHaveValue(format(nextMonday, "MM"));
+      await expect(drawer.getByRole("textbox", { name: "Date – day" })).toHaveValue(format(nextMonday, "dd"));
 
       await drawer.getByPlaceholder("Search client…").fill(clientBEmail);
       await drawer.getByTestId("schedule-drawer-client-row").filter({ hasText: clientBName }).click();
       await drawer.getByPlaceholder("Search your templates…").fill(templateName);
       await drawer.getByTestId("schedule-drawer-template-row").filter({ hasText: templateName }).click();
-      await drawer.getByTestId("schedule-drawer-submit").click();
+      await page.getByTestId("schedule-drawer-submit").click();
 
       await expect(page.getByText(`1 workout scheduled for ${clientBName}`)).toBeVisible();
       await expect(page.getByTestId("calendar-session-card").filter({ hasText: clientBName })).toBeVisible();

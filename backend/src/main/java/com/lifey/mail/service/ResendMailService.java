@@ -27,6 +27,7 @@ class ResendMailService implements MailService {
 
     private static final Logger log = LoggerFactory.getLogger(ResendMailService.class);
     private static final String RESEND_API_URL = "https://api.resend.com/emails";
+    private static final String EMAIL_KEY = "email";
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM", Locale.ENGLISH);
 
     private final RestClient restClient;
@@ -107,10 +108,10 @@ class ResendMailService implements MailService {
         String subject = messages.get("mail.contact.subject", language, name);
         Map<String, String> htmlPlaceholders = Map.of(
                 "name", WeeklyReportFormatting.escapeHtml(name),
-                "email", WeeklyReportFormatting.escapeHtml(email),
+                EMAIL_KEY, WeeklyReportFormatting.escapeHtml(email),
                 "message", WeeklyReportFormatting.escapeHtml(message)
         );
-        Map<String, String> textPlaceholders = Map.of("name", name, "email", email, "message", message);
+        Map<String, String> textPlaceholders = Map.of("name", name, EMAIL_KEY, email, "message", message);
         sendToInbox("contact", "contact", language, subject, htmlPlaceholders, textPlaceholders, email);
     }
 
@@ -121,12 +122,12 @@ class ResendMailService implements MailService {
         String motivationText = motivation == null || motivation.isBlank() ? "—" : motivation;
         String clientCountText = clientCount == null ? "—" : clientCount.toString();
         Map<String, String> htmlPlaceholders = Map.of(
-                "email", WeeklyReportFormatting.escapeHtml(requester.getEmail()),
+                EMAIL_KEY, WeeklyReportFormatting.escapeHtml(requester.getEmail()),
                 "motivation", WeeklyReportFormatting.escapeHtml(motivationText),
                 "clientCount", clientCountText
         );
         Map<String, String> textPlaceholders = Map.of(
-                "email", requester.getEmail(), "motivation", motivationText, "clientCount", clientCountText);
+                EMAIL_KEY, requester.getEmail(), "motivation", motivationText, "clientCount", clientCountText);
         sendToInbox("trainer_request_notification", "trainer_request_notification", MailLanguage.EN, subject,
                 htmlPlaceholders, textPlaceholders, requester.getEmail());
     }

@@ -1,62 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { recipeApi } from "../api";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { useDateStore } from "@/lib/hooks/useDateStore";
-import { useToast } from "@/lib/hooks/useToast";
-import { Skeleton } from "@/components/status/Skeleton";
+import { Button, ConfirmModal, Icon, TextField } from "@/components/ds";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { RecipeEditor } from "./RecipeEditor";
+import { Skeleton } from "@/components/status/Skeleton";
+import { queryKeys } from "@/lib/api/queryKeys";
+import { useDateStore } from "@/lib/hooks/useDateStore";
+import { TOAST_DURATION_MS, useToast } from "@/lib/hooks/useToast";
+import { useUndoableDelete } from "@/lib/hooks/useUndoableDelete";
+import { foodApi, recipeApi } from "../api";
+import { matchesFoodSearch } from "../foodsTable";
+import { recipeTotals, type Macros } from "../recipeMacros";
+import type { FoodResponse, RecipeResponse } from "../types";
 import { LogRecipeDialog } from "./LogRecipeDialog";
+import { RecipeCard } from "./RecipeCard";
+import { RecipeEditor } from "./RecipeEditor";
 import { RecipeThumbnail } from "./RecipeThumbnail";
-import type { RecipeResponse } from "../types";
-
-const PAGE_SIZE = 200;
-const SEARCH_DEBOUNCE_MS = 300;
-
-const totalCalories = (r: RecipeResponse) => r.ingredients.reduce((sum, i) => sum + i.calories, 0);
-const totalProtein = (r: RecipeResponse) => r.ingredients.reduce((sum, i) => sum + i.protein, 0);
 
 interface RecipesViewProps {
-  /** When provided, a "Kiosztás" button appears on every card — admin nav only. */
+  /** When provided, "Kiosztás" is the first item of every card's "⋯" — admin nav only. */
   onAssign?: (recipe: RecipeResponse) => void;
+  /** Controlled "new recipe" state, for a page that owns the button (the nutrition tab row). Without
+   *  it the view draws its own "＋ Új recept" beside the search. */
+  creating?: boolean;
+  onCreatingChange?: (creating: boolean) => void;
 }
 
-export function RecipesView({ onAssign }: RecipesViewProps = {}) {
+/** One serving's macros: the recipe's total over its servings. */
+function perServing(recipe: RecipeResponse, foodsById: ReadonlyMap<number, FoodResponse>): Macros {
+  const total = recipeTotals(recipe, foodsById);
+  const k = 1 / Math.max(recipe.servings, 1);
+  return { calories: total.calories * k, protein: total.protein * k, carbs: total.carbs * k, fat: total.fat * k };
+}
+
+/**
+ * The recipes tab (W2.11, W2-E): a search box, a Favorites chip and a grid of `RecipeCard`s — one column on a
+ * narrow pane, two, then three as it widens (container queries, so the page's sidebar is accounted for).
+ * Works on the whole recipe list (the query the tab's count already uses) and the food list for carbs and fat,
+ * which the recipe API doesn't carry per ingredient.
+ */
+export function RecipesView({ onAssign, creating: creatingProp, onCreatingChange }: RecipesViewProps = {}) {
   const t = useTranslations("nutrition.recipesView");
   const admin = useTranslations("admin.assignDrawer");
+  const common = useTranslations("common");
   const { date } = useDateStore();
   const queryClient = useQueryClient();
   const { show } = useToast();
+  const undoableDelete = useUndoableDelete();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [editing, setEditing] = useState<RecipeResponse | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [creatingLocal, setCreatingLocal] = useState(false);
   const [logging, setLogging] = useState<RecipeResponse | null>(null);
-  const [duplicating, setDuplicating] = useState<RecipeResponse | null>(null);
+  const [deleting, setDeleting] = useState<RecipeResponse | null>(null);
 
-  // Debounce the search box so typing doesn't refetch on every keystroke —
-  // mirrors FoodsView's search (see FoodsView.tsx).
-  useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedSearch(search.trim()), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timeout);
-  }, [search]);
+  const controlled = creatingProp !== undefined;
+  const creating = controlled ? creatingProp : creatingLocal;
+  const setCreating = (next: boolean) => (controlled ? onCreatingChange?.(next) : setCreatingLocal(next));
 
-  const pageParams = { page: 0, size: PAGE_SIZE, search: debouncedSearch || undefined };
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: queryKeys.recipes.all(), queryFn: recipeApi.list });
+  const { data: foods, isLoading: foodsLoading } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
+  const foodsById = new Map((foods ?? []).map((f) => [f.id, f]));
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.recipes.page(pageParams),
-    queryFn: () => recipeApi.page(pageParams),
-  });
-
-  const recipes = (data?.content ?? [])
-    .filter((r) => !favoritesOnly || r.favorite)
+  const recipes = (data ?? [])
+    .filter((r) => (!favoritesOnly || r.favorite) && matchesFoodSearch(r.name, search))
     .sort((a, b) => (a.favorite === b.favorite ? a.name.localeCompare(b.name) : a.favorite ? -1 : 1));
 
   const duplicateMutation = useMutation({
@@ -71,113 +81,107 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() });
       show(t("recipeDuplicated"), "success");
-      setDuplicating(null);
     },
     onError: () => show(t("duplicateRecipeFailed"), "error"),
   });
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-3 h-9 rounded-[var(--r-input)] flex-1 min-w-[180px]"
-          style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}
-          data-ring-frame>
-          <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>search</span>
-          <input
-            value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="flex-1 min-w-0 bg-transparent outline-none text-sm"
-          />
-        </div>
+  const setCachedRecipes = (update: (list: RecipeResponse[]) => RecipeResponse[]) =>
+    queryClient.setQueryData<RecipeResponse[]>(queryKeys.recipes.all(), (old) => update(old ?? []));
 
-        <button onClick={() => setFavoritesOnly((f) => !f)}
-          className="flex items-center gap-1 px-3 h-9 rounded-[var(--r-pill)] text-sm font-semibold transition-colors"
+  // Delete = confirm → the card leaves the grid and a toast offers Undo; the DELETE goes out when the window closes.
+  const deleteRecipe = (recipe: RecipeResponse) => {
+    // Deleting from the editor (also a just-created recipe) closes it; the toast then offers Undo.
+    setEditing(null);
+    setCreating(false);
+    undoableDelete({
+      message: t("recipeDeleted", { name: recipe.name }),
+      path: `/recipes/${recipe.id}`,
+      remove: () => setCachedRecipes((list) => list.filter((r) => r.id !== recipe.id)),
+      restore: () => setCachedRecipes((list) => (list.some((r) => r.id === recipe.id) ? list : [...list, recipe])),
+      errorMessage: t("deleteFailed"),
+    });
+  };
+
+  const menuFor = (r: RecipeResponse) => [
+    ...(onAssign ? [{ label: admin("assignAction"), icon: "person_add", onSelect: () => onAssign(r) }] : []),
+    { label: t("menuEdit"), icon: "edit", onSelect: () => setEditing(r) },
+    { label: t("menuDuplicate"), icon: "content_copy", onSelect: () => duplicateMutation.mutate(r) },
+    { label: t("menuDelete"), icon: "delete", destructive: true, onSelect: () => setDeleting(r) },
+  ];
+
+  const newButton = (
+    <Button onClick={() => setCreating(true)} className="ml-auto">
+      <Icon name="add" size={20} />
+      {t("newRecipe")}
+    </Button>
+  );
+
+  return (
+    <div className="flex flex-col gap-4 @container">
+      <div className="flex flex-wrap items-center gap-3">
+        <TextField
+          size="dense"
+          leadingIcon="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          aria-label={t("searchPlaceholder")}
+          className="min-w-[200px] flex-1 sm:max-w-xs"
+        />
+        <button
+          type="button"
+          aria-pressed={favoritesOnly}
+          onClick={() => setFavoritesOnly((f) => !f)}
+          className="lifey-button type-body-s inline-flex items-center gap-1.5"
           style={{
-            background: favoritesOnly ? "var(--primary)" : "var(--surface)",
-            color: favoritesOnly ? "var(--bg)" : "var(--on-surface-variant)",
-            border: "1px solid var(--outline)",
-          }}>
-          <span className="material-symbols-rounded text-base"
-            style={{ fontVariationSettings: favoritesOnly ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+            height: 30,
+            padding: "0 12px",
+            borderRadius: "var(--r-pill)",
+            fontWeight: 700,
+            background: favoritesOnly ? "var(--primary)" : "var(--nested)",
+            color: favoritesOnly ? "var(--on-primary)" : "var(--text-2)",
+          }}
+        >
+          <Icon name="star" size={16} fill={favoritesOnly ? 1 : 0} />
           {t("favorites")}
         </button>
-
-        <button onClick={() => { setCreating(true); setEditing(null); }}
-          className="ml-auto flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
-          style={{ background: "var(--primary)", color: "var(--bg)" }}>
-          <span className="material-symbols-rounded text-lg">add</span> {t("newRecipe")}
-        </button>
+        {!controlled && newButton}
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {[0, 1, 2].map((i) => <Skeleton key={i} variant="card" className="h-32" />)}
+      {isLoading || foodsLoading ? (
+        <div className="grid grid-cols-1 gap-4 @[560px]:grid-cols-2 @[840px]:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} variant="card" className="h-48" />
+          ))}
         </div>
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : recipes.length === 0 ? (
         <EmptyState
           icon="menu_book"
-          title={debouncedSearch ? t("noMatch") : t("noRecipes")}
-          body={debouncedSearch
-            ? t("tryDifferentSearch")
-            : t("createToLog")}
+          title={search.trim() || favoritesOnly ? t("noMatch") : t("noRecipes")}
+          body={search.trim() || favoritesOnly ? t("tryDifferentSearch") : t("createToLog")}
+          action={
+            !search.trim() && !favoritesOnly ? (
+              <Button onClick={() => setCreating(true)}>
+                <Icon name="add" size={20} />
+                {t("newRecipe")}
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 @[560px]:grid-cols-2 @[840px]:grid-cols-3" data-testid="recipe-grid">
           {recipes.map((r) => (
-            <div key={r.id}
-              className="flex flex-col gap-2 p-4 rounded-[var(--r-card)] text-left"
-              style={{ background: "var(--surface)" }}>
-              <button onClick={() => { setEditing(r); setCreating(false); }}
-                className="flex gap-3 text-left flex-1">
-                <RecipeThumbnail recipeId={r.id} hasImage={r.imageUpdatedAt != null} size={80} />
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-bold text-sm min-w-0 truncate">{r.name}</p>
-                    {r.favorite && (
-                      <span className="material-symbols-rounded text-lg shrink-0"
-                        style={{ color: "var(--metric-carbs)", fontVariationSettings: "'FILL' 1" }}>star</span>
-                    )}
-                  </div>
-                  {r.description && (
-                    <p className="text-xs line-clamp-2" style={{ color: "var(--on-surface-variant)" }}>
-                      {r.description}
-                    </p>
-                  )}
-                  <p className="text-xs" style={{ color: "var(--muted)" }}>
-                    {r.servings > 1
-                      ? t("perServingCaloriesProtein", {
-                          calories: Math.round(totalCalories(r) / r.servings),
-                          protein: Math.round(totalProtein(r) / r.servings),
-                        })
-                      : t("totalCaloriesProtein", {
-                          calories: Math.round(totalCalories(r)),
-                          protein: Math.round(totalProtein(r)),
-                        })}
-                  </p>
-                </div>
-              </button>
-              <div className="flex gap-1.5 mt-1">
-                <button onClick={() => setLogging(r)}
-                  className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-semibold transition-colors"
-                  style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}>
-                  <span className="material-symbols-rounded text-base">restaurant</span> {t("logAsMeal")}
-                </button>
-                <button onClick={() => setDuplicating(r)} disabled={duplicateMutation.isPending}
-                  className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-semibold transition-colors disabled:opacity-50"
-                  style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}>
-                  <span className="material-symbols-rounded text-base">content_copy</span> {t("duplicate")}
-                </button>
-                {onAssign && (
-                  <button onClick={() => onAssign(r)}
-                    className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-extrabold transition-colors"
-                    style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
-                    <span className="material-symbols-rounded text-base">person_add</span> {admin("assignAction")}
-                  </button>
-                )}
-              </div>
-            </div>
+            <RecipeCard
+              key={r.id}
+              recipe={r}
+              perServing={perServing(r, foodsById)}
+              photo={r.imageUpdatedAt != null ? <RecipeThumbnail recipeId={r.id} hasImage size={56} /> : undefined}
+              onOpen={() => setEditing(r)}
+              onLog={() => setLogging(r)}
+              menu={menuFor(r)}
+            />
           ))}
         </div>
       )}
@@ -186,22 +190,31 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
         <RecipeEditor
           key={editing?.id ?? "new"}
           recipe={editing}
-          onClose={() => { setEditing(null); setCreating(false); }}
+          onClose={() => {
+            setEditing(null);
+            setCreating(false);
+          }}
+          onDelete={(id) => {
+            const target = (queryClient.getQueryData<RecipeResponse[]>(queryKeys.recipes.all()) ?? []).find((r) => r.id === id);
+            if (target) setDeleting(target);
+          }}
         />
       )}
 
-      {logging && (
-        <LogRecipeDialog recipe={logging} date={date} onClose={() => setLogging(null)} />
-      )}
+      {logging && <LogRecipeDialog recipe={logging} date={date} onClose={() => setLogging(null)} />}
 
-      <ConfirmDialog
-        open={duplicating !== null}
-        title={t("duplicateRecipeConfirmTitle")}
-        body={t("duplicateRecipeConfirmBody")}
-        confirmLabel={t("duplicate")}
-        confirming={duplicateMutation.isPending}
-        onConfirm={() => duplicating && duplicateMutation.mutate(duplicating)}
-        onCancel={() => setDuplicating(null)}
+      <ConfirmModal
+        open={deleting != null}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) deleteRecipe(deleting);
+          setDeleting(null);
+        }}
+        icon="delete"
+        title={deleting ? t("deleteTitle", { name: deleting.name }) : ""}
+        body={deleting ? t("deleteBody", { seconds: TOAST_DURATION_MS / 1000 }) : ""}
+        cancelLabel={common("cancel")}
+        confirmLabel={common("delete")}
       />
     </div>
   );

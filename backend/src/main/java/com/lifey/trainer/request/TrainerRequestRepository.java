@@ -16,6 +16,12 @@ public interface TrainerRequestRepository extends JpaRepository<TrainerRequest, 
 
     boolean existsByUserIdAndStatus(Long userId, TrainerRequestStatus status);
 
+    long countByStatus(TrainerRequestStatus status);
+
+    /** Super-admin stats: when the longest-waiting request of this status was filed; empty when there is none. */
+    @Query("select min(tr.createdAt) from TrainerRequest tr where tr.status = :status")
+    Optional<java.time.Instant> findOldestCreatedAt(@Param("status") TrainerRequestStatus status);
+
     /** {@code join fetch} avoids an N+1 on {@code user} — the superadmin list always needs the requester's email. */
     @Query(value = "select tr from TrainerRequest tr join fetch tr.user where tr.status = :status",
             countQuery = "select count(tr) from TrainerRequest tr where tr.status = :status")

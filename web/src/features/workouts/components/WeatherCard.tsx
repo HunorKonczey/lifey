@@ -27,53 +27,53 @@ export function WeatherCard({ condition, tempC, windKph, precipMm, startedAt }: 
   const snapshotTime = new Date(startedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+    <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-sm font-semibold" style={{ color: "var(--text-2)" }}>
           {t("cardioWeatherHeading")}
         </p>
-        <p className="text-[10.5px] font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-[10.5px] font-semibold" style={{ color: "var(--text-2)" }}>
           {t("cardioWeatherSnapshotCaption", { time: snapshotTime })}
         </p>
       </div>
       <div className="flex items-center gap-3">
         <div
           className="w-[52px] h-[52px] rounded-[18px] flex items-center justify-center flex-none"
-          style={{ background: "color-mix(in srgb, var(--secondary) 14%, transparent)" }}
+          style={{ background: "color-mix(in srgb, var(--role) 14%, transparent)" }}
         >
-          <span className="material-symbols-rounded text-[28px]" style={{ color: "var(--secondary)" }}>
+          <span className="material-symbols-rounded text-[28px]" style={{ color: "var(--role)" }}>
             {weatherConditionIcon(condition)}
           </span>
         </div>
         <div className="flex-1 grid grid-cols-3 gap-2 min-w-0">
           <div>
-            <p className="text-xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
+            <p className="text-xl font-extrabold tabular" style={{ color: "var(--text)" }}>
               {tempC != null ? formatTemperature(tempC) : "—"}
             </p>
-            <p className="text-[9.5px] font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+            <p className="text-[9.5px] font-semibold" style={{ color: "var(--text-2)" }}>
               {t("cardioWeatherTemperatureLabel")}
             </p>
           </div>
           <div>
-            <p className="text-xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
+            <p className="text-xl font-extrabold tabular" style={{ color: "var(--text)" }}>
               {windKph != null ? formatWindSpeed(windKph) : "—"}
             </p>
-            <p className="text-[9.5px] font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+            <p className="text-[9.5px] font-semibold" style={{ color: "var(--text-2)" }}>
               {t("cardioWeatherWindLabel")}
             </p>
           </div>
           <div>
-            <p className="text-xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
+            <p className="text-xl font-extrabold tabular" style={{ color: "var(--text)" }}>
               {precipMm != null ? formatPrecipitation(precipMm) : "—"}
             </p>
-            <p className="text-[9.5px] font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+            <p className="text-[9.5px] font-semibold" style={{ color: "var(--text-2)" }}>
               {t("cardioWeatherPrecipLabel")}
             </p>
           </div>
         </div>
       </div>
       {condition && (
-        <p className="text-xs font-semibold mt-3" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-xs font-semibold mt-3" style={{ color: "var(--text-2)" }}>
           {labelKey ? t(labelKey) : condition}
         </p>
       )}

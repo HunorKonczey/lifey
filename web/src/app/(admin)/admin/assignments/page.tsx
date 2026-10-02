@@ -3,124 +3,102 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { trainerApi } from "@/features/trainer/api";
-import { templateApi } from "@/features/workouts/api";
-import { recipeApi } from "@/features/nutrition/api";
-import { queryKeys } from "@/lib/api/queryKeys";
-import { ClientAvatar, clientDisplayName } from "@/features/trainer/components/ClientAvatar";
-import { UnassignButton } from "@/features/trainer/components/UnassignButton";
+import { SegmentedControl, SelectField } from "@/components/ds";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
-import type { ContentType } from "@/features/trainer/types";
-import { useFormat } from "@/lib/i18n/format";
+import { ErrorState } from "@/components/status/ErrorState";
+import { trainerApi } from "@/features/trainer/api";
+import { planItems, type PlanKind } from "@/features/trainer/assignedPlans";
+import { AssignedPlanGroup } from "@/features/trainer/components/AssignedPlanGroup";
+import { clientDisplayName } from "@/features/trainer/components/ClientAvatar";
+import { recipeApi } from "@/features/nutrition/api";
+import { templateApi } from "@/features/workouts/api";
+import { queryKeys } from "@/lib/api/queryKeys";
 
-const CONTENT_ICON: Record<ContentType, string> = { TEMPLATE: "fitness_center", RECIPE: "restaurant" };
+type TypeFilter = "all" | PlanKind;
 
+/**
+ * Assigned plans by client (W9-C): one card per client with a row per program, template and recipe — type icon, name,
+ * date, status chip, "⋯" → Visszavonás… with a confirmation. Filter by client and by type; clients with nothing
+ * assigned are left out.
+ */
 export default function AdminAssignmentsPage() {
   const t = useTranslations("admin.assignments");
-  const fmt = useFormat();
   const [clientFilter, setClientFilter] = useState<number | "all">("all");
-  const [typeFilter, setTypeFilter] = useState<ContentType | "all">("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
 
   const clientsQ = useQuery({ queryKey: queryKeys.trainerClients.all(), queryFn: trainerApi.clients });
   const templatesQ = useQuery({ queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list });
   const recipesQ = useQuery({ queryKey: queryKeys.recipes.all(), queryFn: recipeApi.list });
 
   const clients = useMemo(() => clientsQ.data ?? [], [clientsQ.data]);
-  const assignmentQueries = useQueries({
+  const singleQueries = useQueries({
     queries: clients.map((c) => ({
       queryKey: queryKeys.trainerAssignments.forClient(c.clientId),
       queryFn: () => trainerApi.assignmentsForClient(c.clientId),
-      enabled: clients.length > 0,
+    })),
+  });
+  const programQueries = useQueries({
+    queries: clients.map((c) => ({
+      queryKey: queryKeys.trainerProgramAssignments.forClient(c.clientId),
+      queryFn: () => trainerApi.programAssignmentsForClient(c.clientId),
     })),
   });
 
-  const isLoading = clientsQ.isLoading || templatesQ.isLoading || recipesQ.isLoading || assignmentQueries.some((q) => q.isLoading);
+  const isLoading = clientsQ.isLoading || templatesQ.isLoading || recipesQ.isLoading || singleQueries.some((q) => q.isLoading) || programQueries.some((q) => q.isLoading);
+  const isError = clientsQ.isError || singleQueries.some((q) => q.isError) || programQueries.some((q) => q.isError);
 
-  const sourceName = useMemo(() => {
-    const map = new Map<string, string>();
-    (templatesQ.data ?? []).forEach((tpl) => map.set(`TEMPLATE:${tpl.id}`, tpl.name));
-    (recipesQ.data ?? []).forEach((r) => map.set(`RECIPE:${r.id}`, r.name));
-    return (type: ContentType, sourceId: number) => map.get(`${type}:${sourceId}`) ?? t("unknownContent");
-  }, [templatesQ.data, recipesQ.data, t]);
-
-  const rows = useMemo(() => {
-    const all = clients.flatMap((client, i) =>
-      (assignmentQueries[i]?.data ?? []).map((a) => ({ ...a, client })),
-    );
-    return all
-      .filter((r) => clientFilter === "all" || r.client.clientId === clientFilter)
-      .filter((r) => typeFilter === "all" || r.contentType === typeFilter)
-      .sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
-  }, [clients, assignmentQueries, clientFilter, typeFilter]);
+  const groups = useMemo(() => {
+    const names = new Map<string, string>();
+    (templatesQ.data ?? []).forEach((tpl) => names.set(`TEMPLATE:${tpl.id}`, tpl.name));
+    (recipesQ.data ?? []).forEach((r) => names.set(`RECIPE:${r.id}`, r.name));
+    const sourceName = (kind: "TEMPLATE" | "RECIPE", id: number) => names.get(`${kind}:${id}`) ?? t("unknownContent");
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return clients
+      .map((client, i) => ({
+        client,
+        items: planItems(singleQueries[i]?.data ?? [], programQueries[i]?.data ?? [], sourceName, today).filter((it) => typeFilter === "all" || it.kind === typeFilter),
+      }))
+      .filter((g) => g.items.length > 0 && (clientFilter === "all" || g.client.clientId === clientFilter));
+  }, [clients, singleQueries, programQueries, templatesQ.data, recipesQ.data, clientFilter, typeFilter, t]);
 
   if (isLoading) return <Skeleton variant="table" />;
+  if (isError) return <ErrorState onRetry={() => clientsQ.refetch()} />;
 
   return (
-    <div className="flex flex-col gap-3.5">
-      <div className="flex items-center gap-2.5">
-        <select
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SelectField
+          size="dense"
+          aria-label={t("allClients")}
           value={clientFilter}
           onChange={(e) => setClientFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
-          className="h-10 rounded-xl px-3 text-sm font-semibold outline-none"
-          style={{ background: "var(--surface)", color: "var(--on-surface)", border: "1px solid var(--outline)" }}
         >
           <option value="all">{t("allClients")}</option>
           {clients.map((c) => (
             <option key={c.clientId} value={c.clientId}>{clientDisplayName(c)}</option>
           ))}
-        </select>
-        <select
+        </SelectField>
+        <SegmentedControl
+          aria-label={t("allTypes")}
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as ContentType | "all")}
-          className="h-10 rounded-xl px-3 text-sm font-semibold outline-none"
-          style={{ background: "var(--surface)", color: "var(--on-surface)", border: "1px solid var(--outline)" }}
-        >
-          <option value="all">{t("allTypes")}</option>
-          <option value="TEMPLATE">{t("typeTemplate")}</option>
-          <option value="RECIPE">{t("typeRecipe")}</option>
-        </select>
+          onChange={setTypeFilter}
+          options={[
+            { value: "all", label: t("allTypes") },
+            { value: "PROGRAM", label: t("filterProgram") },
+            { value: "TEMPLATE", label: t("filterTemplate") },
+            { value: "RECIPE", label: t("filterRecipe") },
+          ]}
+        />
       </div>
 
-      {rows.length === 0 ? (
+      {groups.length === 0 ? (
         <EmptyState icon="assignment" title={t("noAssignments")} body={t("noAssignmentsBody")} />
       ) : (
-        <div className="rounded-[var(--r-lg)] p-2 flex flex-col gap-1" style={{ background: "var(--surface)" }}>
-          {rows.map((r) => (
-            <div key={r.id} className="flex items-center gap-3.5 px-3.5 py-3 rounded-[13px]">
-              <span className="text-xs tabular w-[70px] shrink-0" style={{ color: "var(--muted)" }}>
-                {fmt.date(r.assignedAt, "dayYear")}
-              </span>
-              <ClientAvatar clientId={r.client.clientId} email={r.client.clientEmail} size={30} />
-              <span className="text-[13px] font-bold w-[140px] shrink-0 truncate" style={{ color: "var(--on-surface)" }}>
-                {clientDisplayName(r.client)}
-              </span>
-              <span
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "var(--surface-container)", color: "var(--tertiary)" }}
-              >
-                <span className="material-symbols-rounded text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  {CONTENT_ICON[r.contentType]}
-                </span>
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                  {sourceName(r.contentType, r.sourceId)}
-                </p>
-                <p className="text-[11px]" style={{ color: "var(--on-surface-variant)" }}>
-                  {t(r.contentType === "TEMPLATE" ? "typeTemplate" : "typeRecipe")}
-                </p>
-              </div>
-              <UnassignButton
-                assignmentId={r.id}
-                clientId={r.client.clientId}
-                contentType={r.contentType}
-                sourceId={r.sourceId}
-                contentName={sourceName(r.contentType, r.sourceId)}
-              />
-            </div>
-          ))}
-        </div>
+        groups.map((g) => (
+          <AssignedPlanGroup key={g.client.clientId} clientId={g.client.clientId} name={clientDisplayName(g.client)} email={g.client.clientEmail} items={g.items} />
+        ))
       )}
     </div>
   );

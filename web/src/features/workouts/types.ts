@@ -28,6 +28,8 @@ export interface ExerciseResponse {
   category: string | null;
   equipment: string | null;
   description: string | null;
+  /** Rest after a set of this exercise; null = the user's default (`settings.defaultRestSeconds`). */
+  defaultRestSeconds?: number | null;
 }
 
 export interface ExerciseRequest {
@@ -35,6 +37,7 @@ export interface ExerciseRequest {
   category?: MuscleGroup | null;
   equipment?: Equipment | null;
   description?: string | null;
+  defaultRestSeconds?: number | null;
 }
 
 // ─── Templates ───

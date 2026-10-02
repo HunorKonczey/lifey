@@ -1,19 +1,15 @@
 package com.khunor.lifey.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,28 +23,89 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TimeText
 import com.khunor.lifey.R
 import com.khunor.lifey.SessionStateHolder
 import com.khunor.lifey.StandaloneSessionStore
 import com.khunor.lifey.StandaloneSummary
+import com.khunor.lifey.ui.components.SummaryTile
+import com.khunor.lifey.ui.components.SyncRow
 import com.khunor.lifey.ui.theme.LifeyColors
-import com.khunor.lifey.ui.theme.LifeyShapes
+import com.khunor.lifey.ui.theme.LifeySpacing
+import com.khunor.lifey.ui.theme.LifeyType
+import com.khunor.lifey.ui.theme.LocalWatchMetrics
 import kotlin.math.roundToInt
-import kotlinx.coroutines.flow.collect
+
+/** What the standalone summary shows (frames W2.8 / W2.9), as plain data for the DEBUG gallery. */
+data class SummaryModel(
+    val durationSeconds: Int,
+    val sets: Int,
+    val averageHeartRate: Int?,
+    val kcal: Int?,
+    val isSynced: Boolean,
+    /** Sessions still waiting in the local queue (the "n edzés vár" line shows from two on). */
+    val pendingCount: Int,
+)
 
 /**
- * "Workout saved" (docs/watch/44-watch-f6-standalone-plan.md D-F6.7, canvas
- * W 14) — shown once [SessionStateHolder.onStandaloneEnded] moves the phase
- * to [com.khunor.lifey.SessionPhase.SUMMARY], for `ExerciseService`'s ~6 s
- * auto-dismiss before falling back to the launcher on its own (mirrors
- * iOS's `SummaryView`, S11). Unlike iOS, there's no "Saved to Health" pill —
- * Android never writes Health Connect from the watch, only the phone does
- * (D-F6.5) — so this is just the 2×2 stat grid plus the sync-status chip.
+ * "Workout saved" (docs/watch/44 D-F6.7; frames W2.8 / W2.9): the check beside the title, the [SyncRow] right
+ * under it in the widest band (pending `nested` ↔ synced success tint, switching live), then four compact
+ * centred tiles in a 2 × 2 grid at full size — the old ~85 % squeeze is gone. There is no Health row on Wear:
+ * the phone writes Health Connect, as before.
+ */
+@Composable
+fun SummaryContent(model: SummaryModel, modifier: Modifier = Modifier) {
+    val metrics = LocalWatchMetrics.current
+    val width = metrics.widthDp
+    val tiles = buildList {
+        add(Tile(model.durationSeconds.toDouble(), { formatDuration(it.toInt()) }, stringResource(R.string.summary_time_label), LifeyColors.text))
+        add(Tile(model.sets.toDouble(), { it.roundToInt().toString() }, stringResource(R.string.summary_sets_label), LifeyColors.text))
+        model.averageHeartRate?.let {
+            add(Tile(it.toDouble(), { v -> v.roundToInt().toString() }, stringResource(R.string.summary_avg_hr_label), LifeyColors.heart))
+        }
+        model.kcal?.let {
+            add(Tile(it.toDouble(), { v -> v.roundToInt().toString() }, stringResource(R.string.active_calories_unit), LifeyColors.calories))
+        }
+    }
+    Box(modifier.fillMaxSize()) {
+        Column(
+            Modifier.align(Alignment.TopCenter)
+                .padding(top = (width * 0.14f).dp)
+                .widthIn(max = (width * 0.78f).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(if (metrics.isCompact) LifeySpacing.xs else LifeySpacing.sm),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(LifeySpacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = LifeyColors.success, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.summary_title), style = LifeyType.title(), color = LifeyColors.text, maxLines = 1)
+            }
+            SyncRow(
+                isSynced = model.isSynced,
+                title = stringResource(if (model.isSynced) R.string.sync_done else R.string.sync_pending),
+                subtitle = if (model.pendingCount > 1) stringResource(R.string.sync_queue_count, model.pendingCount) else null,
+                dense = true,
+            )
+            tiles.chunked(2).forEach { rowTiles ->
+                Row(horizontalArrangement = Arrangement.spacedBy(LifeySpacing.xs)) {
+                    rowTiles.forEach { tile ->
+                        SummaryTile(tile.number, tile.format, tile.label, modifier = Modifier.weight(1f), tint = tile.tint, dense = true)
+                    }
+                }
+            }
+        }
+        TimeText()
+    }
+}
+
+private class Tile(val number: Double, val format: (Double) -> String, val label: String, val tint: Color)
+
+/**
+ * The stateful summary, shown once [SessionStateHolder.onStandaloneEnded] moves the phase to SUMMARY, for
+ * `ExerciseService`'s ~6 s auto-dismiss (unchanged). The sync state flips live when
+ * [SessionStateHolder.standaloneSessionAcked] fires for *this* session's id, not just when the queue empties.
  */
 @Composable
 fun SummaryScreen() {
@@ -75,126 +132,16 @@ fun SummaryScreen() {
         }
     }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val isCompact = isCompactScreen(maxWidth)
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = maxWidth * SCREEN_PADDING_FRACTION),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = LifeyColors.primary,
-                modifier = Modifier.padding(bottom = 4.dp).size(if (isCompact) 32.dp else 40.dp),
-            )
-            Text(
-                text = stringResource(R.string.summary_title),
-                style = if (isCompact) MaterialTheme.typography.caption1 else MaterialTheme.typography.title3,
-                color = LifeyColors.onSurface,
-            )
-            val tiles = statTiles(data)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                userScrollEnabled = false,
-            ) {
-                items(tiles) { tile -> StatTile(tile = tile, isCompact = isCompact) }
-            }
-            SyncChip(
-                isSynced = isSynced,
-                pendingCount = pendingCount,
-                isCompact = isCompact,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-        }
-    }
+    SummaryContent(data.toModel(isSynced, pendingCount))
 }
 
-private data class SummaryStatTile(val value: String, val label: String, val valueColor: Color)
-
-/** The 4 tiles (canvas W 14: time / sets / avg bpm / kcal) — sets is always
- * present for a standalone summary, unlike iOS's optional `setsCount` tile,
- * since [StandaloneSummary.setsCount] is non-nullable here. */
-@Composable
-private fun statTiles(data: StandaloneSummary): List<SummaryStatTile> {
-    val timeLabel = stringResource(R.string.summary_time_label)
-    val setsLabel = stringResource(R.string.summary_sets_label)
-    val avgHrLabel = stringResource(R.string.summary_avg_hr_label)
-    val kcalLabel = stringResource(R.string.active_calories_unit)
-    return buildList {
-        add(SummaryStatTile(formatDuration(data.totalDurationSeconds), timeLabel, LifeyColors.onSurface))
-        add(SummaryStatTile(data.setsCount.toString(), setsLabel, LifeyColors.onSurface))
-        data.averageHeartRate?.let { add(SummaryStatTile(it.roundToInt().toString(), avgHrLabel, LifeyColors.heart)) }
-        data.activeCalories?.let { add(SummaryStatTile(it.roundToInt().toString(), kcalLabel, LifeyColors.calories)) }
-    }
-}
-
-@Composable
-private fun StatTile(tile: SummaryStatTile, isCompact: Boolean) {
-    Column(
-        modifier = Modifier
-            .background(LifeyColors.container, LifeyShapes.card)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = tile.value,
-            style = if (isCompact) MaterialTheme.typography.caption1 else MaterialTheme.typography.body1,
-            color = tile.valueColor,
-        )
-        Text(
-            text = tile.label,
-            style = MaterialTheme.typography.caption3,
-            color = LifeyColors.onSurfaceVariant,
-        )
-    }
-}
-
-/** `sync_pending`/`sync_done` chip + the optional `sync_queue_count` line
- * (docs/watch/44-watch-f6-standalone-plan.md §3.6) — flips live once
- * [SessionStateHolder.standaloneSessionAcked] fires for *this* session's id,
- * not just "the queue emptied" (mirrors iOS's identical `.onReceive`). */
-@Composable
-private fun SyncChip(isSynced: Boolean, pendingCount: Int, isCompact: Boolean, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(
-            modifier = Modifier
-                .background(
-                    if (isSynced) LifeyColors.tertiaryContainer else LifeyColors.container,
-                    LifeyShapes.pill,
-                )
-                .padding(horizontal = 14.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(
-                imageVector = if (isSynced) Icons.Filled.CheckCircle else Icons.Filled.CloudUpload,
-                contentDescription = null,
-                tint = if (isSynced) LifeyColors.tertiary else LifeyColors.onSurfaceVariant,
-                modifier = Modifier.size(if (isCompact) 14.dp else 16.dp),
-            )
-            Text(
-                text = stringResource(if (isSynced) R.string.sync_done else R.string.sync_pending),
-                style = MaterialTheme.typography.caption3,
-                color = if (isSynced) LifeyColors.tertiary else LifeyColors.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
-        if (pendingCount > 1) {
-            Text(
-                text = stringResource(R.string.sync_queue_count, pendingCount),
-                style = MaterialTheme.typography.caption3,
-                color = LifeyColors.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-    }
-}
+private fun StandaloneSummary.toModel(isSynced: Boolean, pendingCount: Int) = SummaryModel(
+    durationSeconds = totalDurationSeconds,
+    sets = setsCount,
+    averageHeartRate = averageHeartRate?.roundToInt(),
+    kcal = activeCalories?.roundToInt(),
+    isSynced = isSynced,
+    pendingCount = pendingCount,
+)
 
 private fun formatDuration(totalSeconds: Int): String = "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)

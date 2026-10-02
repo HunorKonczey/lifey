@@ -5,20 +5,20 @@ import { useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Providers } from "@/lib/providers";
 import { useSessionStore } from "@/features/auth/store";
-import { AdminSidebar } from "@/components/layout/AdminSidebar";
-import { useUiStore } from "@/lib/hooks/useUiStore";
+import { AppShell } from "@/components/shell/AppShell";
+import { TRAINER_NAV_GROUPS, TRAINER_NAV_ITEMS, TRAINER_MORE_SHEET_ITEMS } from "@/components/shell/navConfig";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 import { useChatStream } from "@/features/chat/hooks";
 import { AdminBillingBanner } from "@/features/billing/components/AdminBillingBanner";
 
-// `<Providers>` has to wrap this shell rather than the other way round —
-// AdminShell calls hooks (useTranslations, useChatStream, ...) that need to
+// `<Providers>` has to wrap this gate rather than the other way round —
+// AdminGate calls hooks (useTranslations, useChatStream, ...) that need to
 // be a *descendant* of I18nProvider/QueryClientProvider, not their own
 // ancestor.
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <Providers>
-      <AdminShell>{children}</AdminShell>
+      <AdminGate>{children}</AdminGate>
     </Providers>
   );
 }
@@ -26,16 +26,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 // /admin/pending is reachable by any ROLE_USER, not just trainers — it's the
 // waiting room a trainer request lands in before the role is granted
 // (docs/landing_page/66-trainer-billing-web-plan.md §2, D-T1). It also skips
-// the trainer chrome below (AdminSidebar assumes a trainer's nav items).
+// the trainer chrome below (AppShell's trainer config assumes a trainer's
+// nav items).
 const PENDING_PATH = "/admin/pending";
 
-function AdminShell({ children }: { children: React.ReactNode }) {
+function AdminGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const isPendingRoute = pathname === PENDING_PATH;
-  const { user, isLoading, initialize } = useSessionStore();
-  const common = useTranslations("common");
-  const toggleDrawer = useUiStore((s) => s.toggleDrawer);
+  const { user, isLoading, initialize, logout } = useSessionStore();
+  const admin = useTranslations("admin");
 
   // Held open for the whole trainer shell rather than only on /admin/chat, so
   // the sidebar's unread badge stays live while the trainer works elsewhere.
@@ -61,7 +61,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex items-center justify-center bg-bg">
         <span
           className="material-symbols-rounded text-4xl animate-pulse"
-          style={{ color: "var(--tertiary)" }}
+          style={{ color: "var(--role)" }}
         >
           eco
         </span>
@@ -78,22 +78,19 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-bg">
-      <AdminSidebar />
-      <div className="flex flex-col flex-1 min-w-0">
-        <button
-          onClick={toggleDrawer}
-          className="m-3 p-2 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container md:hidden self-start"
-          style={{ color: "var(--on-surface)" }}
-          aria-label={common("openMenu")}
-        >
-          <span className="material-symbols-rounded text-xl">menu</span>
-        </button>
-        <main className="flex-1 p-3.5 pt-0 md:pt-3.5 overflow-auto">
-          <AdminBillingBanner />
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </main>
-      </div>
-    </div>
+    <AppShell
+      user={user}
+      onLogout={logout}
+      groups={TRAINER_NAV_GROUPS}
+      bottomNavItems={TRAINER_NAV_ITEMS}
+      moreSheetItems={TRAINER_MORE_SHEET_ITEMS}
+      roleBadge={{ icon: "fitness_center", label: admin("chip") }}
+      roleRing="trainer"
+      showSettingsRow={false}
+      trainerPrefs
+      extraContent={<AdminBillingBanner />}
+    >
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </AppShell>
   );
 }

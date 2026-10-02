@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/components/ds";
+import { Modal } from "@/components/ds/overlay/Modal";
 import type { TrainerPlan } from "../types";
 
 interface BillingBlockedDialogProps {
@@ -40,28 +41,25 @@ export function BillingBlockedDialog({ open, onClose, reason, activeClients, max
       : t("bannerOverLimitBody", { count: activeClients - (maxClients ?? 0) });
 
   return (
-    <Dialog open={open} onClose={onClose} title={title}>
-      <div className="flex flex-col gap-4" data-testid="billing-blocked-dialog" data-blocked-reason={reason}>
-        <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+    <Modal open={open} onClose={onClose} aria-label={title}>
+      <div className="flex flex-col gap-4 p-6" data-testid="billing-blocked-dialog" data-blocked-reason={reason}>
+        <h2 className="type-title">{title}</h2>
+        <p className="type-body" style={{ color: "var(--text-2)" }}>
           {body}
         </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm"
-            style={{ background: "var(--surface-container)", color: "var(--on-surface)" }}
-          >
+        <div className="flex flex-wrap gap-3">
+          <Button variant="secondary" onClick={onClose} data-autofocus="true">
             {common("cancel")}
-          </button>
+          </Button>
           <Link
             href="/admin/billing"
-            className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm flex items-center justify-center"
-            style={{ background: "var(--primary)", color: "var(--bg)" }}
+            className="lifey-button type-button inline-flex h-11 items-center justify-center px-5"
+            style={{ borderRadius: "var(--r-control)", background: "var(--primary)", color: "var(--on-primary)" }}
           >
             {t("bannerCta")}
           </Link>
         </div>
       </div>
-    </Dialog>
+    </Modal>
   );
 }

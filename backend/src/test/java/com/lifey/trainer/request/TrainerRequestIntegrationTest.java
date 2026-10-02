@@ -141,7 +141,7 @@ class TrainerRequestIntegrationTest {
         assertThat(resolved.getStatus()).isEqualTo(TrainerRequestStatus.REJECTED);
         assertThat(resolved.getDecidedBy()).isEqualTo(superAdmin.getId());
         User reloadedApplicant = userRepository.findById(applicant.getId()).orElseThrow();
-        assertThat(reloadedApplicant.getRoles()).doesNotContain(Role.ROLE_TRAINER);
+        assertThat(reloadedApplicant.getRoles()).containsExactly(Role.ROLE_USER);
 
         // A rejected applicant is free to try again — the partial unique index only covers PENDING.
         mockMvc.perform(post("/api/v1/trainer-requests")
