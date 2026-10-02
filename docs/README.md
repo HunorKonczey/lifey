@@ -97,7 +97,7 @@ iterations.
 | 76 | [Smarter weight trend (roadmap #11)](76-smarter-weight-trend-plan.md) | built |
 | 77 | [Mobile redesign v2](redesign/77-mobile-redesign-plan.md) (in `redesign/`) | done |
 | 78 | [Web redesign](redesign-web/78-web-redesign-plan.md) (in `redesign-web/`) | done |
-| 80 | [Progress photos + body measurements (roadmap #10)](80-progress-photos-measurements-plan.md) | in progress |
+| 80 | [Progress photos + body measurements (roadmap #10)](80-progress-photos-measurements-plan.md) | built — emulator walk and Docker verify owed |
 
 Plans 40–74 live in the topic folders above.
 

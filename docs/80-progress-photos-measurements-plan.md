@@ -1,6 +1,6 @@
 # 80 – Progress Photos and Body Measurements
 
-Status: in progress (branch `feature/progress-photos-measurements`; step log in §7)
+Status: built (2026-10-02, branch `feature/progress-photos-measurements`) — P1–P8 done; emulator walk and a Docker `mvnw verify` still owed (step log in §12)
 Scope: roadmap item #10 (`docs/05-improvement-roadmap.md`) — backend + mobile
 Depends on: `docs/22-profile-picture-plan.md` (`ImageReencoder`, multipart limits, the
 online-only thumbnail cache), `docs/16-delta-sync-rollout.md` (synced-entity recipe),
@@ -216,3 +216,15 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
   to re-pick that side from a thumbnail grid, "N days apart" between them; a Compare button appears above
   the timeline from two photos on. HU/EN strings; iOS camera/photo-library usage strings now also name
   progress photos and chat attachments (they only mentioned barcodes and the profile picture).
+- **P8 (docs) — done.** Roadmap #10 → DONE, `REMAINING-WORK.md` §1.3 closed (and the two owed checks listed
+  under §3 there), `docs/README.md` status, Postman collection (Body Measurements + Progress Photos folders,
+  `measurementId` / `progressPhotoId` variables).
+
+### Still owed
+
+1. Emulator walk: Weight → Body → add a measurement (offline, then reconnect), add a photo from the gallery
+   and the camera, viewer edit/delete, compare, light theme and Hungarian.
+2. `cd backend && ./mvnw -B verify` with Docker running: Flyway V78/V79 against the entities (`validate`) and
+   the Testcontainers integration tests. Nothing in this branch has been run against a real Postgres.
+3. Consider before release: the photo list is unpaged (fine for hundreds, revisit with a cap), and the
+   Weight header now has two action buttons — check the title still fits at large text scale.

@@ -73,7 +73,7 @@ clients, assignments, schedules, calendar) on the web admin.
 
 ### Progress Tracking
 
-#### 10. Progress Photos and Body Measurements (plan: 80-progress-photos-measurements-plan.md)
+#### 10. Progress Photos and Body Measurements (DONE, plan: 80-progress-photos-measurements-plan.md)
 
 * Photo timeline with side-by-side compare
 * Measurements: waist, chest, arms, thighs — history + charts

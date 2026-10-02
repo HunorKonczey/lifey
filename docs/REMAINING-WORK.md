@@ -5,7 +5,7 @@ felvett vagy elvetett tételnél változik. A landing page / monetizáció sajá
 [`landing_page/REMAINING-WORK.md`](landing_page/REMAINING-WORK.md) — ez a fájl arra hivatkozik,
 nem ismétli meg.
 
-Utolsó átnézés: **2026-09-26** (a teljes `docs/` státuszsorai + kódellenőrzés alapján).
+Utolsó átnézés: **2026-10-02** (a progress fotók + testméretek lezárása után; korábban 2026-09-26 a teljes `docs/` alapján).
 
 **Használat:** ha egy tételt felveszel, csináld meg, **töröld a sorát**, és a landolt állapotot
 a hozzá tartozó számozott tervbe írd.
@@ -53,13 +53,12 @@ A **telefonos** edzői nézet kész (T1–T7, PR #34, `mobile/lib/features/train
   A [`30`](30-push-notifications-plan.md) infrastruktúrájára épül, külön terv kell hozzá.
 - *Nem hiány:* a programszerkesztés tudatos döntés alapján csak weben van (41 T6).
 
-### 1.3 Progress fotók és testméretek — [`05`](05-improvement-roadmap.md) #10
+### 1.3 Progress fotók és testméretek — [`05`](05-improvement-roadmap.md) #10 — ✅ kész (2026-10-02)
 
-Nincs belőle semmi a kódban.
-
-- Fotó-idővonal, egymás melletti összehasonlítás.
-- Méretek: derék, mellkas, kar, comb — előzmény + grafikon.
-- A meglévő képfeltöltési infrastruktúra (recept / avatar) újrahasznosítható.
+Testméretek (derék, mellkas, csípő, kar, comb; offline szinkron) és fotó-idővonal oldalankénti
+összehasonlítással, a Súly fejléc **Test** gombja mögött ([`80`](80-progress-photos-measurements-plan.md)).
+Eszközön még nem láttuk, és a backend Flyway-/Testcontainers-ellenőrzése (Docker) hátravan — a részletek
+a `80` §12-ben. Szándékosan kimaradt: edzői láthatóság, offline fotó-várólista, Pro-korlát, bal/jobb méret.
 
 ### 1.4 Okosabb súlytrend — [`05`](05-improvement-roadmap.md) #11 — ✅ kész (2026-09-23)
 
@@ -135,6 +134,9 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
   végpróba hátravan.
 - **Edzés üres szettsorai** — ismert bug (2026-07-15-én még javítatlan), az edzői feature után
   újra kellett volna nézni.
+- **[`80`](80-progress-photos-measurements-plan.md)** — testméretek + progress fotók: kód és tesztek kész,
+  hátravan az emulátoros végigpróba (Body képernyő, kamera/galéria, összehasonlítás) és a Docker-es
+  `mvnw verify` (V78/V79 Flyway ↔ entitás `validate`, Testcontainers-tesztek).
 - **Chat-csatolmány tesztek Windowson** — 2–4 teszt fájl-lock miatt elbukik (`72` M10); zaj
   minden teljes futásban.
 
@@ -151,6 +153,6 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 ## Javasolt sorrend
 
 1. AI kalóriabecslés (1.1, 1. fázis) — kész; hátra a lemért ételes ellenőrzés.
-2. Progress fotók + testméretek (1.3), mellé a súlytrend (1.4) mint gyors nyerés.
+2. ~~Progress fotók + testméretek (1.3)~~ — kész; hátra az eszközös próba és a Docker-es verify.
 3. AI receptgenerálás (1.1, 2. fázis).
 4. Tablet-elrendezés (1.2) — ha van rá igény az edzők részéről.

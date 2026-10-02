@@ -15,6 +15,16 @@
     { "key": "accessToken", "value": "", "type": "string" },
     { "key": "refreshToken", "value": "", "type": "string" },
     { "key": "weightId", "value": "", "type": "string" },
+    {
+      "key": "measurementId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "progressPhotoId",
+      "value": "",
+      "type": "string"
+    },
     { "key": "foodId", "value": "", "type": "string" },
     { "key": "barcode", "value": "5449000000996", "type": "string" },
     { "key": "recipeId", "value": "", "type": "string" },
@@ -397,6 +407,301 @@
               "path": ["api", "v1", "weights", "{{weightId}}"]
             },
             "description": "Deletes the weight entry with the captured id. Returns 204, or 404 if not found."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Body Measurements",
+      "description": "Implemented feature (docs/80). Waist, chest, hips, arm and thigh in cm; offline-synced like weight.",
+      "item": [
+        {
+          "name": "List measurements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/measurements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "measurements"
+              ]
+            },
+            "description": "Newest first. Sites: WAIST, CHEST, HIPS, ARM, THIGH."
+          },
+          "response": []
+        },
+        {
+          "name": "Delta sync measurements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/measurements?updatedSince=2026-06-01T00:00:00Z",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "measurements"
+              ],
+              "query": [
+                {
+                  "key": "updatedSince",
+                  "value": "2026-06-01T00:00:00Z",
+                  "description": "ISO-8601 instant \u2014 required, switches to the delta-sync feed"
+                }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending and a non-null `deletedAt` is a tombstone."
+          },
+          "response": []
+        },
+        {
+          "name": "Create measurement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('measurementId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/measurements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "measurements"
+              ]
+            },
+            "description": "Date must not be in the future; `valueCm` is in (0, 300].",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-06-18\",\n  \"site\": \"WAIST\",\n  \"valueCm\": 82.5\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete measurement",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/measurements/{{measurementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "measurements",
+                "{{measurementId}}"
+              ]
+            },
+            "description": "Soft delete (tombstone). 404 for another user's id."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Progress Photos",
+      "description": "Implemented feature (docs/80). Private, dated body-progress photos; online-only, never visible to a trainer.",
+      "item": [
+        {
+          "name": "List progress photos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/progress-photos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "progress-photos"
+              ]
+            },
+            "description": "Metadata only, newest first (takenOn, then id). Bytes come from /{id}/image and /{id}/thumbnail."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload progress photo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('progressPhotoId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/progress-photos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "progress-photos"
+              ]
+            },
+            "description": "multipart/form-data: `file` (JPEG/PNG up to 10MB), `takenOn` (yyyy-MM-dd), `pose` (FRONT|SIDE|BACK|OTHER, default OTHER), `note` (optional, max 500). The server stores a main image bounded to 1600px (never upscaled) and a 256x256 thumbnail, re-encoded to JPEG with EXIF/GPS stripped.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "takenOn",
+                  "value": "2026-06-18",
+                  "type": "text"
+                },
+                {
+                  "key": "pose",
+                  "value": "FRONT",
+                  "type": "text"
+                },
+                {
+                  "key": "note",
+                  "value": "Week 1",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update progress photo metadata",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/progress-photos/{{progressPhotoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "progress-photos",
+                "{{progressPhotoId}}"
+              ]
+            },
+            "description": "Full replacement of date, pose and note (a null note clears it). The image is unchanged.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"takenOn\": \"2026-06-18\",\n  \"pose\": \"SIDE\",\n  \"note\": null\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get progress photo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/progress-photos/{{progressPhotoId}}/image",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "progress-photos",
+                "{{progressPhotoId}}",
+                "image"
+              ]
+            },
+            "description": "Main image (JPEG). Supports If-None-Match / ETag. 404 for a missing or foreign id."
+          },
+          "response": []
+        },
+        {
+          "name": "Get progress photo thumbnail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/progress-photos/{{progressPhotoId}}/thumbnail",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "progress-photos",
+                "{{progressPhotoId}}",
+                "thumbnail"
+              ]
+            },
+            "description": "256x256 center-cropped JPEG for the timeline grid. Supports If-None-Match / ETag."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete progress photo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/progress-photos/{{progressPhotoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "progress-photos",
+                "{{progressPhotoId}}"
+              ]
+            },
+            "description": "Hard delete of the photo and its image."
           },
           "response": []
         }
