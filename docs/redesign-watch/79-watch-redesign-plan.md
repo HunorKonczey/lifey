@@ -870,12 +870,13 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** gallery at 227 / 192 dp, HU + EN; the permission slot's two lines never ellipsize.
 - *As built:* not built (M3 Button/AlertDialog/ButtonDefaults.filledTonalButtonColors signatures unverified offline). New keys active_heart_rate_denied_title / _action (HU+EN); the old _chip key stays until X3.5. HeartRateSlot has three states (Live / Missing / PermissionDenied) in one min-height frame; the 'nincs pulzus' explanation is an M3 AlertDialog with the existing error_ok_button text. Gallery: debug/ComponentGallery.kt.
 
-### X0w.11 — Watch Wear: circle button, status pill, ghosted modifier
+### X0w.11 — Watch Wear: circle button, status pill, ghosted modifier ✅
 - Files: new `ui/components/CircleButton.kt`, `StatusPill.kt`, `ui/theme/Ghosted.kt`.
 - As X0a.8; status pill sits on the bottom chord where the page indicator was, wraps to **two centred
   lines** deliberately on the round screen ("Nem sikerült —" / "próbáld újra", W1.7); circle 78 dp (74
   with a secondary EdgeButton, 66 compact).
 - **Verify:** gallery: every style and pill kind at both sizes, HU.
+- *As built:* not built. CircleButton is a plain clickable circle (no M3 Button) so the 0.96 press scale and double-tap guard work as on Apple; ghosted is a token pair (Modifier.ghosted + ghostedContent); the failed/unreachable pills wrap to two centred lines via explicit line breaks in the caller's text. The icon name Icons.Filled.ErrorOutline etc. needs the extended icon pack already in the module.
 
 ### X0w.12 — Watch Wear: rest ring, "Mehet!" ring, stepper, effort, EdgeButton usage
 - Files: new `ui/components/RestRing.kt`, `GoFlash.kt`, `ValueStepper.kt`, `EffortScale.kt`.
