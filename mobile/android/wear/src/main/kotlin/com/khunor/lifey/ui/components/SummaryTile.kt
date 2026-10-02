@@ -30,6 +30,7 @@ import com.khunor.lifey.ui.theme.LifeyNumber
 import com.khunor.lifey.ui.theme.LifeyShapes
 import com.khunor.lifey.ui.theme.LifeySpacing
 import com.khunor.lifey.ui.theme.LifeyType
+import com.khunor.lifey.ui.theme.LocalWatchMetrics
 import com.khunor.lifey.ui.theme.rememberReducedMotion
 
 /**
@@ -44,15 +45,19 @@ fun SummaryTile(
     label: String,
     modifier: Modifier = Modifier,
     tint: Color = LifeyColors.text,
+    /** The four-tile summary (W2.8): `value`-level numbers and tight padding so two rows fit above the bottom chord. */
+    dense: Boolean = false,
 ) {
+    val compactDial = LocalWatchMetrics.current.isCompact
     val reduced = rememberReducedMotion()
     val shown = remember { Animatable(if (reduced) number.toFloat() else 0f) }
     LaunchedEffect(number) { shown.animateTo(number.toFloat(), tween(LifeyMotion.duration(LifeyMotion.COUNT_UP, reduced), easing = LifeyMotion.Standard)) }
     Column(
-        modifier.fillMaxWidth().background(LifeyColors.nested, LifeyShapes.card).padding(LifeySpacing.md),
+        modifier.fillMaxWidth().background(LifeyColors.nested, LifeyShapes.card)
+            .padding(horizontal = LifeySpacing.md, vertical = if (dense) (if (compactDial) LifeySpacing.xxs else LifeySpacing.xs) else LifeySpacing.md),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        LifeyNumber(format(shown.value.toDouble()), style = LifeyType.metric(), color = tint)
+        LifeyNumber(format(shown.value.toDouble()), style = if (dense) LifeyType.value() else LifeyType.metric(), color = tint)
         Text(label, style = LifeyType.label(), color = LifeyColors.text2, maxLines = 1, textAlign = TextAlign.Center)
     }
 }
@@ -63,7 +68,7 @@ fun SummaryTile(
  * 250 ms.
  */
 @Composable
-fun SyncRow(isSynced: Boolean, title: String, modifier: Modifier = Modifier, subtitle: String? = null) {
+fun SyncRow(isSynced: Boolean, title: String, modifier: Modifier = Modifier, subtitle: String? = null, dense: Boolean = false) {
     val reduced = rememberReducedMotion()
     val bg by animateColorAsState(
         if (isSynced) LifeyColors.tint(LifeyColors.success) else LifeyColors.nested,
@@ -71,7 +76,7 @@ fun SyncRow(isSynced: Boolean, title: String, modifier: Modifier = Modifier, sub
     )
     val content = if (isSynced) LifeyColors.success else LifeyColors.text
     Row(
-        modifier.fillMaxWidth().background(bg, LifeyShapes.card).padding(horizontal = LifeySpacing.lg, vertical = LifeySpacing.md),
+        modifier.fillMaxWidth().background(bg, LifeyShapes.card).padding(horizontal = LifeySpacing.lg, vertical = if (dense) LifeySpacing.xs else LifeySpacing.md),
         horizontalArrangement = Arrangement.spacedBy(LifeySpacing.md, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {

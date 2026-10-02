@@ -9,6 +9,8 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.ui.active.LogContent
 import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.SummaryContent
+import com.khunor.lifey.ui.SummaryModel
 import com.khunor.lifey.ui.active.ExerciseListContent
 import com.khunor.lifey.ui.active.ExerciseRow
 import com.khunor.lifey.ui.components.StandaloneMark
@@ -107,6 +109,8 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
             TimeText()
         }
     },
+    "W2.8" to frame2 { SummaryContent(SummaryModel(38 * 60 + 12, 9, 126, 214, isSynced = false, pendingCount = 2)) },
+    "W2.9" to frame2 { SummaryContent(SummaryModel(38 * 60 + 12, 9, 126, 214, isSynced = true, pendingCount = 0)) },
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
         LifeyAppScaffold {
             PickerContent(

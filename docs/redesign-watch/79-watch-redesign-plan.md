@@ -1326,11 +1326,12 @@ permission revoke/grant; failure paths.
 - **Verify:** fixture; log sets standalone.
 - *As built:* LogModel.offersExerciseList (standalone with a plan): the circles take WatchMetrics.circleButtonWithEdgeButton (74 dp), a control-tone LifeyEdgeButton 'Gyakorlatok' sits on the bottom arc, the status pill is not shown (standalone logs locally — there is no unreachable state, and the circle's own check + n/total says 'logged'), and LifeyPager hides the indicator under the button. Deviation: on the compact dial the labels under the circles are dropped in this variant — header + context line + labelled circles do not fit above a 46 dp arc button (the geometry check showed a 3 dp overlap); they come back if the emulator shows room. Fixture W2.7.
 
-### X4.8 — Watch Wear: standalone summary + sync (W2.8, W2.9)
+### X4.8 — Watch Wear: standalone summary + sync (W2.8, W2.9) ✅
 - Check beside the title; `SyncRow` right under it in the widest band; four compact centred tiles; fits at
   full size (old ~85 % squeeze gone); pending (nested) ↔ synced (success tint) live on screen; ≈ 6 s to idle
   (unchanged). No Health row on Wear (the phone writes Health Connect — unchanged).
 - **Verify:** fixtures; finish standalone with the phone off, then on.
+- *As built:* SummaryScreen.kt: SummaryModel + SummaryContent (stateless) and the unchanged-logic SummaryScreen (isSynced/pendingCount from StandaloneSessionStore + standaloneSessionAcked, ~6 s auto-dismiss stays in ExerciseService). Check (success) beside 'Edzés mentve', SyncRow (nested ↔ success tint, 'n edzés vár' from two queued) right under it, then a 2 × 2 grid of dense SummaryTiles (value-level numbers, heart/calories tints) at full size; no Health row. SummaryTile/SyncRow gained a dense flag; on the compact dial the top margin and gaps tighten so the second tile row stays inside the chord (≈ 150 dp bottom edge). The old LazyVerticalGrid, StatTile and SyncChip are deleted. Fixtures W2.8 (pending) / W2.9 (synced). Finishing a standalone workout with the phone off then on is for the emulator.
 
 ### X4.9 — Watch Wear: cardio — distance and machine (W2.10, W2.11)
 - Distance: hero 30 → **48 sp white**, HR 28 sp (as on strength; today 24 vs 16); pace boxless, centred on
