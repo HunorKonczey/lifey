@@ -103,30 +103,3 @@ fun RestContent(model: RestModel, modifier: Modifier = Modifier) {
         }
     }
 }
-
-/**
- * Rest-end haptic moment's visual half (docs/40-watch-app-plan.md §12.1 B2 /
- * 41-watch-design-prompt.md §3.4): a brief primary-color fill pulse with a
- * "GO" wordmark, covering the whole dial for ~1.3 s before the screen snaps
- * back to the plain metrics view. The haptic itself fires independently in
- * [com.khunor.lifey.ExerciseService] — this is purely decorative.
- */
-@Composable
-internal fun GoFlash(modifier: Modifier = Modifier) {
-    val alpha = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        alpha.animateTo(1f, animationSpec = tween(durationMillis = 150))
-        alpha.animateTo(0f, animationSpec = tween(durationMillis = 700, delayMillis = 250))
-    }
-    Box(
-        modifier = modifier.background(LifeyColors.primary.copy(alpha = alpha.value)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.rest_go_label),
-            style = MaterialTheme.typography.display1,
-            color = LifeyColors.onPrimary.copy(alpha = alpha.value),
-        )
-    }
-}
-

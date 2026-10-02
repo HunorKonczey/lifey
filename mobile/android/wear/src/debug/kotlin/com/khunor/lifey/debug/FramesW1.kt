@@ -10,6 +10,7 @@ import com.khunor.lifey.LogAdjustState
 import com.khunor.lifey.LogSetState
 import com.khunor.lifey.ui.active.AdjustContent
 import com.khunor.lifey.ui.active.LogContent
+import com.khunor.lifey.ui.components.GoFlash
 import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.active.MetricsContent
 import com.khunor.lifey.ui.active.RestContent
@@ -39,6 +40,7 @@ val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
     "W1.9" to { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.WEIGHT), {}, {}, {}) },
     "W1.10" to { Frame { RestContent(restModel(47_000L)) } },
     "W1.11" to { Frame { RestContent(restModel(4_000L)) } }, // the last five seconds: calories colour + pulse
+    "W1.12" to { Frame { GoFlash() } },
     "W1.4" to { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
 )
 

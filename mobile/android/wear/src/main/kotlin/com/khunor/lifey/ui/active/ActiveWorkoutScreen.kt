@@ -90,6 +90,7 @@ import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.material3.TimeText
+import com.khunor.lifey.ui.components.GoFlash
 import com.khunor.lifey.ui.components.LifeyAppScaffold
 import com.khunor.lifey.ui.components.LifeyPager
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
@@ -134,7 +135,7 @@ import com.khunor.lifey.ui.isCompactScreen
 internal const val REST_RING_NEGATIVE_THRESHOLD_MS = 5_000L
 
 /** Total on-screen time for the rest-end "GO" flash (§3.4: "1–2 s flash/transition"). */
-internal const val GO_FLASH_HOLD_MS = 1_300
+internal const val GO_FLASH_HOLD_MS = 1_150
 
 internal const val LOG_PAGE = 0
 internal const val METRICS_PAGE = 1

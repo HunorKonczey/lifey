@@ -1247,9 +1247,10 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** fixtures; live rest; ring tracks `elapsedRealtime` after a pause/resume.
 - *As built:* RestHero.kt: RestModel + RestContent on RestRing (RestRing gained heroOffset and showTotal); 'Következő ·' / 'exercise — n/total. szett' as two deliberate centred lines; HR + kcal at value level on the bottom chord, missing/denied HR = ghost heart + dash (one rule). The countdown still floors remaining ms to whole seconds exactly like the old formatElapsed and is driven by the existing elapsedRealtime LaunchedEffect (restRemainingMs), so it tracks real time after a pause/resume; the last-5-s calories colour + 1 Hz pulse live in RestRing. The old horizontal-bar RestHero is deleted; the page still opens the exercise list on tap. Vertical positions are width fractions (header 14 %, hero centre 41 %, next line 67 %, metrics 13 % from the bottom) and need the emulator check at 227/192 dp. Fixtures W1.10/W1.11.
 
-### X3.10 — Watch Wear: "Mehet!" ring (W1.12)
+### X3.10 — Watch Wear: "Mehet!" ring (W1.12) ✅
 - 9 dp primary ring where the rest ring drained, white "Mehet!", 150 / 250 / 700 ms over the pager.
 - **Verify:** expire a rest on each page; animations off = static 1.1 s.
+- *As built:* The strength screen now shows components.GoFlash (9 dp primary ring where the rest ring drained, white 'Mehet!', 150 in / 250 hold / 700 out, static 1.1 s with animations off) over whatever page is showing; the old full-dial primary fill + display1 'GO' is deleted. GO_FLASH_HOLD_MS 1300 → 1150 so the overlay leaves the composition right after its own 1.1 s. The service's 400 ms vibration is untouched. Fixture W1.12.
 
 ### X3.11 — Watch Wear: controls (W1.13, W1.14)
 - The two stacked M2 chips + decorative exercise card become the same two circles as Apple ("Vége" error
