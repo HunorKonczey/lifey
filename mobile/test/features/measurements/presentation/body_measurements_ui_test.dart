@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/measurements/application/body_measurement_controller.dart';
 import 'package:lifey/features/measurements/domain/body_measurement.dart';
-import 'package:lifey/features/measurements/presentation/body_measurements_screen.dart';
+import 'package:lifey/features/measurements/presentation/body_measurements_tab.dart';
 import 'package:lifey/features/measurements/presentation/widgets/add_measurement_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
@@ -62,7 +62,7 @@ Finder _value(String v) => find.byWidgetPredicate(
 
 void main() {
   testWidgets('empty state invites the first measurement', (tester) async {
-    await _pump(tester, const [], const BodyMeasurementsScreen());
+    await _pump(tester, const [], const Scaffold(body: BodyMeasurementsTab()));
 
     expect(find.text('No measurements yet'), findsOneWidget);
   });
@@ -75,7 +75,7 @@ void main() {
         _m('w2', 7, MeasurementSite.waist, 82.5),
         _m('a1', 2, MeasurementSite.arm, 35.0),
       ],
-      const BodyMeasurementsScreen(),
+      const Scaffold(body: BodyMeasurementsTab()),
     );
 
     expect(_value('81.0'), findsWidgets);
@@ -89,7 +89,7 @@ void main() {
   });
 
   testWidgets('a site with no entries says so while other sites have data', (tester) async {
-    await _pump(tester, [_m('w1', 0, MeasurementSite.waist, 81.0)], const BodyMeasurementsScreen());
+    await _pump(tester, [_m('w1', 0, MeasurementSite.waist, 81.0)], const Scaffold(body: BodyMeasurementsTab()));
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'Hips'));
     await tester.pumpAndSettle();
@@ -101,7 +101,7 @@ void main() {
     final fake = await _pump(
       tester,
       [_m('w1', 0, MeasurementSite.waist, 81.0), _m('w2', 7, MeasurementSite.waist, 82.5)],
-      const BodyMeasurementsScreen(),
+      const Scaffold(body: BodyMeasurementsTab()),
     );
 
     await tester.drag(find.byKey(const ValueKey('measurement-w2')), const Offset(-600, 0));

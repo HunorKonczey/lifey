@@ -130,9 +130,9 @@ class _WeightBody extends ConsumerWidget {
       title: l10n.weightTitle,
       actions: [
         HeaderIconButton(
-          icon: Icons.straighten_rounded,
-          tooltip: l10n.bodyMeasurementsTitle,
-          onPressed: () => context.push('/body-measurements'),
+          icon: Icons.accessibility_new_rounded,
+          tooltip: l10n.bodyTitle,
+          onPressed: () => context.push('/body'),
         ),
         const _WeightMenu(),
       ],

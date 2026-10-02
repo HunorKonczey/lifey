@@ -203,3 +203,11 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
   `ProgressPhotoController` (async list, optimistic-free: inserts the server's response in date order),
   thumbnail/full image providers. Logout now also clears the photo cache and invalidates the controller
   (`AuthController`). 14 tests (fake Dio adapter, temp cache dir).
+- **P6 (mobile UI, photos) — done.** The Weight header's entry now opens a **Body** screen (`/body`,
+  `features/body`) with a Measurements | Photos switch; each tab brings its own floating action. The P3
+  `BodyMeasurementsScreen` became `BodyMeasurementsTab` (no Scaffold). Photos tab: 3-column timeline grid
+  (thumbnail, date, pose), camera/gallery source sheet -> `image_picker` (1600 px, q90) -> details sheet
+  (pose chips, date, note) that uploads on Save and stays open with an error on failure; viewer
+  `/progress-photos/:photoId` (pinch-zoom, thumbnail shown while the full image loads, edit, confirm-delete).
+  Camera/library permission strings already exist (chat attachments). Tests: widget tests for tab, tile,
+  viewer delete flow, details sheet add/edit/failure, Body tab switching. **Emulator walk still owed.**

@@ -9,7 +9,6 @@ import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../../shared/widgets/ds/delta_chip.dart';
 import '../../../shared/widgets/ds/grouped_list_item.dart';
 import '../../../shared/widgets/ds/lifey_card.dart';
-import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/ds/metric_value.dart';
 import '../../../shared/widgets/ds/section_label.dart';
 import '../../../shared/widgets/empty_view.dart';
@@ -20,11 +19,16 @@ import '../domain/body_measurement.dart';
 import 'widgets/add_measurement_sheet.dart';
 import 'widgets/measurement_site_chips.dart';
 
-/// Body measurements (docs/80 §7 P3): a site picker, the selected site's
-/// latest value with its change and a line chart, and its history as
-/// swipe-to-delete rows. Reached from the weight screen's header.
-class BodyMeasurementsScreen extends ConsumerWidget {
-  const BodyMeasurementsScreen({super.key});
+/// The measurements tab of the Body screen (docs/80 §7 P3): a site picker, the
+/// selected site's latest value with its change and a line chart, and its
+/// history as swipe-to-delete rows. No Scaffold of its own — the Body screen
+/// owns the app bar and the floating "Log" button ([logMeasurement]).
+class BodyMeasurementsTab extends ConsumerWidget {
+  const BodyMeasurementsTab({super.key});
+
+  /// Opens the add sheet on the site currently shown.
+  static void logMeasurement(BuildContext context, WidgetRef ref) =>
+      showAddMeasurementSheet(context, initialSite: ref.read(selectedMeasurementSiteProvider));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,35 +37,27 @@ class BodyMeasurementsScreen extends ConsumerWidget {
     final site = ref.watch(selectedMeasurementSiteProvider);
     final bottomPad = MediaQuery.paddingOf(context).bottom + AppSpacing.s56 + AppSpacing.s32;
 
-    return Scaffold(
-      appBar: LifeySubpageHeader(title: l10n.bodyMeasurementsTitle),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showAddMeasurementSheet(context, initialSite: site),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.logFabLabel),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(bodyMeasurementControllerProvider.notifier).refresh(),
-        child: state.when(
-          data: (all) => all.isEmpty
-              ? CustomScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverFillRemaining(
-                      child: EmptyView(
-                        icon: Icons.straighten_rounded,
-                        title: l10n.bodyMeasurementsEmptyTitle,
-                        subtitle: l10n.bodyMeasurementsEmptySubtitle,
-                      ),
+    return RefreshIndicator(
+      onRefresh: () => ref.read(bodyMeasurementControllerProvider.notifier).refresh(),
+      child: state.when(
+        data: (all) => all.isEmpty
+            ? CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    child: EmptyView(
+                      icon: Icons.straighten_rounded,
+                      title: l10n.bodyMeasurementsEmptyTitle,
+                      subtitle: l10n.bodyMeasurementsEmptySubtitle,
                     ),
-                  ],
-                )
-              : _Body(all: all, site: site, bottomPad: bottomPad),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ErrorView(
-            error: error,
-            onRetry: () => ref.read(bodyMeasurementControllerProvider.notifier).refresh(),
-          ),
+                  ),
+                ],
+              )
+            : _Body(all: all, site: site, bottomPad: bottomPad),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => ErrorView(
+          error: error,
+          onRetry: () => ref.read(bodyMeasurementControllerProvider.notifier).refresh(),
         ),
       ),
     );

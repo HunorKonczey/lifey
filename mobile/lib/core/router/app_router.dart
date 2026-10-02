@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/measurements/presentation/body_measurements_screen.dart';
+import '../../features/body/presentation/body_screen.dart';
+import '../../features/progress_photos/presentation/progress_photo_viewer_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -182,9 +183,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: trainerSettingsLocation,
         builder: (context, state) => const TrainerSettingsScreen(),
       ),
+      GoRoute(path: '/body', builder: (context, state) => const BodyScreen()),
       GoRoute(
-        path: '/body-measurements',
-        builder: (context, state) => const BodyMeasurementsScreen(),
+        path: '/progress-photos/:photoId',
+        builder: (context, state) =>
+            ProgressPhotoViewerScreen(photoId: int.parse(state.pathParameters['photoId']!)),
       ),
       GoRoute(path: '/recap', builder: (context, state) => const WeeklyRecapScreen()),
       // Debug builds only — the redesign's design gallery (docs/redesign/
