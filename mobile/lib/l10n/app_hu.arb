@@ -1476,5 +1476,20 @@
   "trainerWeightLatestLabel": "Legutóbbi: {weight} kg · {date}",
   "trainerClientsSearchHint": "Ügyfél keresése",
   "trainerUpcomingCardTitle": "Következő alkalmak",
-  "trainerNavClientsLabel": "Kliensek"
+  "trainerNavClientsLabel": "Kliensek",
+  "bodyMeasurementsTitle": "Testméretek",
+  "measurementSiteWaist": "Derék",
+  "measurementSiteChest": "Mellkas",
+  "measurementSiteHips": "Csípő",
+  "measurementSiteArm": "Kar",
+  "measurementSiteThigh": "Comb",
+  "bodyMeasurementsEmptyTitle": "Még nincs mérés",
+  "bodyMeasurementsEmptySubtitle": "Rögzítsd az elsőt, hogy lásd, hogyan változik a tested.",
+  "bodyMeasurementsNoSiteData": "Ehhez a testrészhez még nincs mérés",
+  "bodyMeasurementsHistoryLabel": "Előzmények",
+  "bodyMeasurementsLogTitle": "Mérés rögzítése",
+  "bodyMeasurementValueLabel": "Érték (cm)",
+  "bodyMeasurementOutOfRangeError": "Adj meg 1 és 300 cm közötti értéket",
+  "bodyMeasurementDeletedMessage": "Mérés törölve",
+  "bodyMeasurementCmValue": "{value} cm"
 }

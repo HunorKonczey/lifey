@@ -6713,5 +6713,66 @@
   "trainerNavClientsLabel": "Clients",
   "@trainerNavClientsLabel": {
     "description": "Label of the Clients destination in the trainer navigation bar and rail (the screen itself is titled My clients)"
+  },
+  "bodyMeasurementsTitle": "Body measurements",
+  "@bodyMeasurementsTitle": {
+    "description": "Title of the body measurements screen, and the tooltip of its entry button in the weight screen header (docs/80)"
+  },
+  "measurementSiteWaist": "Waist",
+  "@measurementSiteWaist": {
+    "description": "Name of the waist measurement site, shown as a chip and in history rows (docs/80)"
+  },
+  "measurementSiteChest": "Chest",
+  "@measurementSiteChest": {
+    "description": "Name of the chest measurement site"
+  },
+  "measurementSiteHips": "Hips",
+  "@measurementSiteHips": {
+    "description": "Name of the hips measurement site"
+  },
+  "measurementSiteArm": "Arm",
+  "@measurementSiteArm": {
+    "description": "Name of the arm measurement site"
+  },
+  "measurementSiteThigh": "Thigh",
+  "@measurementSiteThigh": {
+    "description": "Name of the thigh measurement site"
+  },
+  "bodyMeasurementsEmptyTitle": "No measurements yet",
+  "@bodyMeasurementsEmptyTitle": {
+    "description": "Empty-state title on the body measurements screen"
+  },
+  "bodyMeasurementsEmptySubtitle": "Log your first one to see how your body changes over time.",
+  "@bodyMeasurementsEmptySubtitle": {
+    "description": "Empty-state subtitle on the body measurements screen"
+  },
+  "bodyMeasurementsNoSiteData": "Nothing logged for this part yet",
+  "@bodyMeasurementsNoSiteData": {
+    "description": "Shown in place of the chart when the selected body part has no measurements while others do"
+  },
+  "bodyMeasurementsHistoryLabel": "History",
+  "@bodyMeasurementsHistoryLabel": {
+    "description": "Section heading above the list of past measurements for the selected site"
+  },
+  "bodyMeasurementsLogTitle": "Log a measurement",
+  "@bodyMeasurementsLogTitle": {
+    "description": "Title of the bottom sheet that logs a body measurement"
+  },
+  "bodyMeasurementValueLabel": "Measurement (cm)",
+  "@bodyMeasurementValueLabel": {
+    "description": "Label of the centimetre input in the log-measurement sheet"
+  },
+  "bodyMeasurementOutOfRangeError": "Enter a value between 1 and 300 cm",
+  "@bodyMeasurementOutOfRangeError": {
+    "description": "Validation error when the typed measurement is not a number in range"
+  },
+  "bodyMeasurementDeletedMessage": "Measurement deleted",
+  "@bodyMeasurementDeletedMessage": {
+    "description": "Snackbar after a measurement is swiped away"
+  },
+  "bodyMeasurementCmValue": "{value} cm",
+  "@bodyMeasurementCmValue": {
+    "description": "A measurement value with its unit; the placeholder is the already-formatted number",
+    "placeholders": {"value": {"type": "String"}}
   }
 }

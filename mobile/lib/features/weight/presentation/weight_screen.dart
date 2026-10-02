@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/entitlements/history_cutoff.dart';
@@ -127,7 +128,14 @@ class _WeightBody extends ConsumerWidget {
 
     final header = LifeyHeader(
       title: l10n.weightTitle,
-      actions: const [_WeightMenu()],
+      actions: [
+        HeaderIconButton(
+          icon: Icons.straighten_rounded,
+          tooltip: l10n.bodyMeasurementsTitle,
+          onPressed: () => context.push('/body-measurements'),
+        ),
+        const _WeightMenu(),
+      ],
     );
 
     if (entries.isEmpty || headline == null) {

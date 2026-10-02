@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/measurements/presentation/body_measurements_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -180,6 +181,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: trainerSettingsLocation,
         builder: (context, state) => const TrainerSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/body-measurements',
+        builder: (context, state) => const BodyMeasurementsScreen(),
       ),
       GoRoute(path: '/recap', builder: (context, state) => const WeeklyRecapScreen()),
       // Debug builds only — the redesign's design gallery (docs/redesign/

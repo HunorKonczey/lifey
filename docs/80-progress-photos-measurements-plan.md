@@ -185,3 +185,9 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
   Drift table `body_measurements` (schema v45), `entitySyncConfigs` + `allEntityTableNames`, pull
   (full + delta + tombstones, pending-op guard) in `PullEngine`. Tests: repository + pull engine.
   `flutter analyze` clean; the only failing suite tests are the known Windows chat-attachment ones.
+- **P3 (mobile UI, measurements) — done.** `BodyMeasurementsScreen` at `/body-measurements`, reached from a
+  ruler icon in the Weight screen header: site chips (wrapping — five do not fit one row at 411 dp),
+  latest value + change + line chart, swipe-to-delete history, add sheet (comma decimals, 1–300 cm).
+  HU/EN strings added; `check_arb_sync.sh` reports nothing for the new keys (its only output is the
+  pre-existing `statUnitWorkouts` false positive). Widget + unit tests pass. **Emulator walk still owed.**
+  The header button currently opens measurements directly; P6 decides how photos join it.
