@@ -840,12 +840,13 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   before (temporary log line, removed before commit).
 - *As built:* not built. `LifeyHaptics` (package com.khunor.lifey) holds the four existing waveforms unchanged; the four private vibrate… functions in ExerciseService now one-line delegates called from the same places, so the logcat before/after comparison of the plan reduces to a diff of identical VibrationEffect values. The motion durations/curves mirror LifeyMotion.swift.
 
-### X0w.8 — Watch Wear: debug design gallery
+### X0w.8 — Watch Wear: debug design gallery ✅
 - Files: new `src/debug/AndroidManifest.xml` + `src/debug/kotlin/com/khunor/lifey/debug/DesignGalleryActivity.kt`
   (exported, debug only): a `TransformingLazyColumn` of sections like X0a.5, an intent extra `frame` that
   jumps straight to one fixture (for `adb`-driven screenshots, §4.2).
 - **Verify:** `adb shell am start -n com.khunor.lifey/.debug.DesignGalleryActivity` opens it; the release
   APK's merged manifest does not contain it (`./gradlew :wear:processReleaseMainManifest` + grep).
+- *As built:* not built (TransformingLazyColumn from wear-foundation lazy, API unverified offline). Debug-only manifest + activity in src/debug; `--es frame <id>` jumps to a registered fixture (galleryFrames, empty until X3/X4); width and ambient toggles at the top. The release-manifest check (processReleaseMainManifest + grep) is left for the first Windows run.
 
 ### X0w.9 — Watch Wear: round-screen scaffolding
 - Files: new `ui/components/LifeyScaffold.kt`: `LifeyAppScaffold` (M3 `AppScaffold` + `TimeText`),
