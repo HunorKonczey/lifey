@@ -1159,10 +1159,13 @@ from X1.1's `Views/Active/Cardio.swift`.
 - New WidgetKit watch extension target, App Group shared with LifeyWatch; `accessoryRectangular`:
   workout name, elapsed, HR, current set; outside a workout a "Gyors erőedzés" launcher. Data from the
   watch's own state only.
+- **Sources written, not wired, not compiled (no Mac):** `mobile/ios/LifeyWatchWidgets/` (provider, Smart Stack widget,
+  snapshot store + publisher, plist/entitlements/strings). Xcode steps: its `README.md`.
 
 ### X2.o2 — Watch iOS (optional, needs go-ahead §10 Q1): complications (AW2.25)
 - `accessoryCircular`: during rest the remaining time with a white ring, otherwise elapsed; a leaf launcher.
   Tinted faces colour it via the system.
+- **Sources written, not wired, not compiled (no Mac):** `LifeyCircularComplication.swift` in the same folder; same README steps.
 
 **X2 review (§4.1) — done in the cloud (§4.3), Mac pass still owed; log in §12:** all AW2 frames incl. AOD; demo flows "standalone quick strength → summary → sync",
 "run", "basketball field ↔ bench", "Health denied", wrist-down during metrics / rest / run / bench.
