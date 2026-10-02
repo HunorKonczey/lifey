@@ -1302,10 +1302,11 @@ permission revoke/grant; failure paths.
 - **Verify:** fixture; HU at 192 dp.
 - *As built:* Built with X4.2's rewrite: the 'Összes tevékenység' page is the same PickerContent over the full allCardio list, shown inside its own DismissibleOverlay so a swipe returns to the picker (an inner back handler wins over the picker's own, so it never skips to idle). The title scrolls away under the TimeText; it uses the title style (16/15 sp, one line) rather than the canvas's 14 sp. Fixture W2.3 (the HU 192 dp check is for the emulator).
 
-### X4.4 — Watch Wear: "another workout is running" (W2.4)
+### X4.4 — Watch Wear: "another workout is running" (W2.4) ✅
 - `StatusScreen`: `PriorityHigh` in a calories-tint circle (warning = calories, replaces the v1 `negative`
   orange); title on two deliberate lines; text; "Rendben" as a **control** EdgeButton (acknowledge only).
 - **Verify:** fixture; trigger with another exercise app running (as in docs/watch/40 §11).
+- *As built:* ErrorScreen.kt is now ErrorContent over StatusScreen: PriorityHigh in a calories-tint circle (the warning role replaces the v1 orange negative), the title broken on two deliberate lines (balancedBreak: 'Már fut egy másik' / 'edzés az órán'), the explanation, and 'Rendben' as a control-tone EdgeButton that only acknowledges (SessionStateHolder.reset()). StatusScreen gained the tint circle behind its icon, the TimeText and routes its action through LifeyEdgeButton(secondary). Fixture W2.4. Triggering it with another exercise app running is for the emulator.
 
 ### X4.5 — Watch Wear: standalone active — mark and quick strength (W2.5)
 - 24 dp mark (48 target, today ≈ 16); free-format summary on two centred lines (no "összesen 2…" clipped by

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.DirectionsRun
+import com.khunor.lifey.ui.ErrorContent
 import com.khunor.lifey.ui.IdleScreen
 import com.khunor.lifey.ui.PickerContent
 import com.khunor.lifey.ui.PickerRow
@@ -47,6 +48,7 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
             )
         }
     },
+    "W2.4" to frame2 { ErrorContent(onOk = {}) },
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
         LifeyAppScaffold {
             PickerContent(
