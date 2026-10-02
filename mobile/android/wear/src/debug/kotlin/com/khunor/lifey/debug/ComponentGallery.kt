@@ -145,3 +145,28 @@ private fun StepperGallery() {
         EffortScale(effort, { effort = it }, "Kihagyás", {}, "Edzés lezárása", {})
     }
 }
+
+@Composable
+private fun ListRowGallery() = Column(verticalArrangement = Arrangement.spacedBy(LifeySpacing.sm)) {
+    ListRow("Gyors erőedzés", {}, subtitle = "Terv nélkül is megy", leading = RowLeading.Holder(Icons.Filled.Bolt), isHighlighted = true)
+    ListRow("Push nap — mell, vállak és tricepsz", {}, subtitle = "5 gyakorlat")
+    ListRow("Futás", {}, leading = RowLeading.Tinted(Icons.Filled.DirectionsRun, LifeyColors.calories))
+    ListRow("Fekvenyomás", {}, showsCheck = true, isHighlighted = true)
+}
+
+@Composable
+private fun SummaryGallery() = Column(verticalArrangement = Arrangement.spacedBy(LifeySpacing.sm)) {
+    SummaryTile(148.0, { it.toInt().toString() }, "átlag bpm", tint = LifeyColors.heart)
+    SyncRow(isSynced = false, title = "Szinkronizálás a telefonra", subtitle = "2 edzés vár szinkronizálásra")
+    SyncRow(isSynced = true, title = "Telefonra szinkronizálva")
+}
+
+@Composable
+private fun StructuralGallery() = Column(verticalArrangement = Arrangement.spacedBy(LifeySpacing.md)) {
+    Box(Modifier.size(LocalWatchMetrics.current.widthDp.dp)) { BenchRing(); Text("Padon", color = LifeyColors.clay, modifier = Modifier.align(Alignment.Center)) }
+    CardioField("5:12", "Tempó /km")
+    CardioField("148", "Átlagos teljesítmény")
+    Box(Modifier.size(LocalWatchMetrics.current.widthDp.dp)) {
+        StatusScreen(Icons.Filled.Warning, "Már fut egy edzés", iconTint = LifeyColors.calories, text = "Fejezd be a másikat.", actionLabel = "Rendben")
+    }
+}

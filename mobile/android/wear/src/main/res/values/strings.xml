@@ -94,4 +94,7 @@
     <string name="cardio_back_to_court_button">Vissza a pályára</string>
     <string name="cardio_on_bench_header_label">PADON</string>
     <string name="cardio_game_paused_primary_label">JÁTÉKIDŐ — ÁLL</string>
+    <string name="aod_minutes">%d p</string>
+    <string name="aod_hours_minutes">%1$d ó %2$02d p</string>
+    <string name="aod_rest_until">Mehet %s-kor</string>
 </resources>

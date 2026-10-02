@@ -66,6 +66,8 @@ dependencies {
     // AppScaffold + TimeText, HorizontalPageIndicator, Button, AlertDialog. Same version line as the
     // foundation; coexists with the Material 2 artifact above until X4.16 removes that one.
     implementation("androidx.wear.compose:compose-material3:1.6.2")
+    // AmbientLifecycleObserver for the Always-On layouts (D-X0.15); required for any ambient support.
+    implementation("androidx.wear:wear:1.3.0")
     implementation("androidx.compose.ui:ui-tooling-preview")
     // Material Symbols equivalents for the brand icon set (favorite, flame,
     // fitness_center, timer, pause/stop, heart_broken, priority_high —

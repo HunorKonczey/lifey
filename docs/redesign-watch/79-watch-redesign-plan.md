@@ -898,7 +898,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** gallery entries at both sizes, HU.
 - *As built:* not built (M3 Button/EdgeButton/animateColorAsState imports unverified; animateColorAsState is androidx.compose.animation.animateColorAsState). ListRow is an M3 Button pill for every row; SyncRow centred; BenchRing 4 dp (ambient 2 dp @ 60 %); CardioField boxless. Gallery sections 04/09–04/15 added.
 
-### X0w.14 — Watch Wear: ambient primitives
+### X0w.14 — Watch Wear: ambient primitives ✅
 - Files: `build.gradle.kts` (`androidx.wear:wear` for `AmbientLifecycleObserver`), new
   `ui/theme/LifeyAmbient.kt` (`LocalAmbientState`, a `rememberAmbientState()` fed by the observer
   registered in `MainActivity`, the ±4 dp per-minute burn-in offset modifier, `AmbientStyle` with PJS
@@ -910,6 +910,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - Registering the observer here does **not** yet keep the app visible on wrist-down for screens without an
   ambient layout — the screens opt in during X4.13–15. Until then behaviour = today (watch face).
 - **Verify:** tests green; gallery "ambient" toggle.
+- *As built:* not built / tests not run. Formatting is pure (templates passed in) so the JVM test needs no Android resources. Two assertions in restEndTimeUsesTheLocalZoneAcrossMidnight depend on the JDK's locale data for the short time style (HU 0:01 vs 00:01, NNBSP before PM in newer JDKs) and are normalised in the test — if they still disagree on the CI JDK, loosen to the zone arithmetic only. androidx.wear:wear:1.3.0 added; the observer itself is registered in MainActivity by X4.13 (so the app still shows the watch face on wrist-down until then). Strings aod_* added HU+EN.
 
 **X0w review (§4.2):** gallery vs DS frames at 227 / 192 dp (create the 192 dp AVD first); every existing
 screen walked once (colours change, layouts don't); CI job green on the PR.
