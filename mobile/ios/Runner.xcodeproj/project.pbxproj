@@ -50,6 +50,8 @@
 		F4608790FA1570EE9F3CE57B /* EndingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15894AC08BE110C70266202E /* EndingView.swift */; };
 		F6BF3582FE4D9C352AFA2F05 /* LifeyWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4611017037CF0707C0EB5D /* LifeyWidgetsBundle.swift */; };
 		FD1BEC0458A6625490415513 /* StandaloneSessionPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE875E9CE92E980591E3ADF7 /* StandaloneSessionPayload.swift */; };
+		F0D8E8D90F930650850E7EA3 /* LifeySpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566A6EB587B07E56099D6847 /* LifeySpacing.swift */; };
+		D4F9E359BA78C8E27EF3BBF0 /* WatchMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659982E15119DC33B6B4F134 /* WatchMetrics.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -175,6 +177,8 @@
 		F328E47DE6754604F801D76F /* DynamicSizing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DynamicSizing.swift; sourceTree = "<group>"; };
 		F3DF1BAA0E811718B4315813 /* EffortSelectorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EffortSelectorView.swift; sourceTree = "<group>"; };
 		F3E1B2D6084DD2CF55DBF111 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		566A6EB587B07E56099D6847 /* LifeySpacing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeySpacing.swift; sourceTree = "<group>"; };
+		659982E15119DC33B6B4F134 /* WatchMetrics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchMetrics.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -248,6 +252,8 @@
 			children = (
 				97874626E4BBCC64426D69CE /* LifeyColors.swift */,
 				4FBAC8928C47BE228C8BD2B7 /* LifeyShapes.swift */,
+				566A6EB587B07E56099D6847 /* LifeySpacing.swift */,
+				659982E15119DC33B6B4F134 /* WatchMetrics.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -695,6 +701,8 @@
 				4EEF1AC98123BD8D0100B686 /* HealthDeniedView.swift in Sources */,
 				2DC0C7362BA1403C3BA2FECB /* LifeyColors.swift in Sources */,
 				6FA25C1A3FE6FE2086FBA112 /* LifeyShapes.swift in Sources */,
+				F0D8E8D90F930650850E7EA3 /* LifeySpacing.swift in Sources */,
+				D4F9E359BA78C8E27EF3BBF0 /* WatchMetrics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

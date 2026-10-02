@@ -6,6 +6,9 @@ import CoreGraphics
 /// (`GeometryReader`-fractions) rather than fixed pt values tuned for one
 /// screen, checked against both the ~40/41mm (compact) and ~45/49mm
 /// (regular) round watchOS size classes. Mirrors Android's `DynamicSizing.kt`.
+///
+/// Thin wrapper over `WatchMetrics` (Theme/WatchMetrics.swift, D-X0.5) until the last Apple iteration
+/// deletes it (X2.15, D-X0.1).
 enum DynamicSizing {
   static let screenPaddingFraction: CGFloat = 0.08
 
@@ -25,9 +28,9 @@ enum DynamicSizing {
 
   /// Below this, treat the display as the compact (~40/41mm, ~162–176pt
   /// wide) size class rather than regular (~45/49mm, ~198–205pt wide).
-  static let compactScreenWidth: CGFloat = 190
+  static let compactScreenWidth: CGFloat = WatchMetrics.compactWidthThreshold
 
   static func isCompact(width: CGFloat) -> Bool {
-    width < compactScreenWidth
+    WatchMetrics(width: width).isCompact
   }
 }

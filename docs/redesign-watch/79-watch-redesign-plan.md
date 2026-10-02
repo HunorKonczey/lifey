@@ -628,7 +628,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   `Color.tint` is `lifeyTint` (avoids clashing with SwiftUI's `.tint` style); added `cardioHiking`
   (`#6E9A6A`) because `tertiary` now aliases `success`; hiking in `cardioActivityTint` uses it.
 
-### X0a.2 — Watch iOS: radius, spacing, `WatchMetrics` size classes
+### X0a.2 — Watch iOS: radius, spacing, `WatchMetrics` size classes ✅
 - Files: `Theme/LifeyShapes.swift` (tag 8, control 14, card 22, hero 30; old `chip/button/card/cardLarge`
   aliased to 8/14/22/30), new `Theme/LifeySpacing.swift` (2 / 4 / 6 / 8 / 12), new
   `Theme/WatchMetrics.swift` (D-X0.5 table + ratios + minimums, `isCompact`, `EnvironmentValues.watchMetrics`,
@@ -637,6 +637,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - Nested radius helper: `LifeyShapes.nested(parent:padding:)` (22 − 8 = 14).
 - **Verify:** build; a temporary gallery row (or `#Preview`) prints the metrics at 198 / 176 pt and matches
   the table.
+- *As built:* no Xcode in the cloud session (verified by §4.3 screenshot comparison). Metrics scale the class table by width/reference width, so the reference sizes return the canvas table exactly; DynamicSizing.isCompact now delegates to WatchMetrics; legacy radius names aliased (chip/button/cardLarge); the root injection wraps ContentView's content in a GeometryReader sized to the proposal.
 
 ### X0a.3 — Watch iOS: Plus Jakarta Sans numerals + type styles
 - Files: new `mobile/ios/LifeyWatch/Fonts/PlusJakartaSans-{ExtraBold,Bold,Light}-numerals.ttf` + `OFL.txt`
