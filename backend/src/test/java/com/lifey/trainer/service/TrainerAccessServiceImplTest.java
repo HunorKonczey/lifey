@@ -34,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -181,7 +182,7 @@ class TrainerAccessServiceImplTest {
 
         assertThat(result).extracting(TrainerClientResponse::clientId, TrainerClientResponse::dailyCalorieGoal)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(CLIENT_ID, 1900), org.assertj.core.groups.Tuple.tuple(3L, null));
-        verify(userSettingsRepository, org.mockito.Mockito.never()).save(any());
+        verify(userSettingsRepository, never()).save(any());
     }
 
     private static TrainerClient relationshipFor(Long clientId) {

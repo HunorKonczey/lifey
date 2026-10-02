@@ -45,7 +45,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -184,11 +184,9 @@ public class ChatServiceImpl implements ChatService {
 
         boolean hasMore = rows.size() > size;
         List<ChatMessage> pageRows = new ArrayList<>(hasMore ? rows.subList(0, size) : rows);
-        if (ascending) {
-            // The response contract is always newest-first, whichever way we walked.
-            Collections.reverse(pageRows);
-        }
-        return new MessageListResponse(pageRows.stream().map(ChatMapper::toMessageResponse).toList(), hasMore);
+        // The response contract is always newest-first, whichever way we walked.
+        List<ChatMessage> newestFirst = ascending ? pageRows.reversed() : pageRows;
+        return new MessageListResponse(newestFirst.stream().map(ChatMapper::toMessageResponse).toList(), hasMore);
     }
 
     @Override
@@ -412,6 +410,24 @@ public class ChatServiceImpl implements ChatService {
 
     /** What one upload becomes: a bounded JPEG, a square thumbnail, and the size to reserve. */
     private record ReencodedImage(byte[] image, byte[] thumbnail, int width, int height) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof ReencodedImage other
+                    && width == other.width && height == other.height
+                    && Arrays.equals(image, other.image)
+                    && Arrays.equals(thumbnail, other.thumbnail);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * (31 * Objects.hash(width, height) + Arrays.hashCode(image)) + Arrays.hashCode(thumbnail);
+        }
+
+        @Override
+        public String toString() {
+            return "ReencodedImage[image=" + image.length + "B, thumbnail=" + thumbnail.length
+                    + "B, width=" + width + ", height=" + height + "]";
+        }
     }
 
     /**

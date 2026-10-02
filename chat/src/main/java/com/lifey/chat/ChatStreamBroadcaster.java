@@ -77,7 +77,7 @@ public class ChatStreamBroadcaster {
         Long senderId = message.getSenderId();
         Long recipientId = conversation.peerOf(senderId);
 
-        ChatEvent frame = ChatEvent.message(new MessageEventPayload(
+        ChatEvent frame = ChatEvent.ofMessage(new MessageEventPayload(
                 conversation.getId(), ChatMapper.toMessageResponse(message)));
 
         // The sender's own other clients get it too: a second tab or the phone
@@ -106,7 +106,7 @@ public class ChatStreamBroadcaster {
             return;
         }
         ChatConversation conversation = message.getConversation();
-        ChatEvent frame = ChatEvent.deleted(new MessageDeletedEventPayload(
+        ChatEvent frame = ChatEvent.ofDeleted(new MessageDeletedEventPayload(
                 conversation.getId(), message.getId(), message.getDeletedAt()));
 
         eventBus.publish(conversation.getTrainerId(), frame);

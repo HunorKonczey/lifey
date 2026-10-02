@@ -1,5 +1,6 @@
 package com.lifey.billing.service;
 
+import com.apple.itunes.storekit.client.APIException;
 import com.apple.itunes.storekit.client.AppStoreServerAPIClient;
 import com.apple.itunes.storekit.model.LastTransactionsItem;
 import com.apple.itunes.storekit.model.Status;
@@ -152,7 +153,7 @@ class BillingReconciliationJob {
      * Prompt 8): this is the "ask the provider for the whole truth" call §7
      * actually asks for, not a re-verification of one already-trusted receipt.
      */
-    private SubscriptionStatus fetchAppStoreStatus(String originalTransactionId) throws Exception {
+    private SubscriptionStatus fetchAppStoreStatus(String originalTransactionId) throws APIException, java.io.IOException {
         AppStoreServerAPIClient client = new AppStoreServerAPIClient(appleProperties.privateKey(),
                 appleProperties.keyId(), appleProperties.issuerId(), appleProperties.bundleId(), appleProperties.environment());
         StatusResponse response = client.getAllSubscriptionStatuses(originalTransactionId, null);

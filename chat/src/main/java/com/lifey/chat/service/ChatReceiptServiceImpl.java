@@ -89,7 +89,7 @@ public class ChatReceiptServiceImpl implements ChatReceiptService {
             return;
         }
         Long peerId = loaded.peerOf(userId);
-        eventBus.publish(peerId, ChatEvent.read(new ReadEventPayload(
+        eventBus.publish(peerId, ChatEvent.ofRead(new ReadEventPayload(
                 loaded.getId(),
                 userId,
                 participant.getLastDeliveredMessageId(),
