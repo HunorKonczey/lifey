@@ -1,9 +1,11 @@
 package com.khunor.lifey.ui.theme
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.MaterialTheme
@@ -102,8 +104,12 @@ fun LifeyTheme(content: @Composable () -> Unit) {
             colors = LifeyWearColors,
             typography = LifeyWearTypography,
         ) {
-            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
-                content()
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background),
+            ) {
+                // The dial's diameter, once, for every screen below (D-X0.5).
+                val metrics = remember(maxWidth.value) { WatchMetrics(maxWidth.value) }
+                CompositionLocalProvider(LocalWatchMetrics provides metrics) { content() }
             }
         }
     }

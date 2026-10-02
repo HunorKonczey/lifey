@@ -809,13 +809,14 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   turns it red (then reverted, not pushed).
 - *As built:* added as a step of the existing Mobile CI job instead of a separate job: settings.gradle.kts needs the Flutter plugin loader / local.properties, which `flutter build apk` produces, and the workflow's `mobile/**` filter already includes the module and the Swift token file. Not run here; the first PR run is the check. The deliberate-red parity check from the plan was not possible offline.
 
-### X0w.5 — Watch Wear: radius, spacing, `WatchMetrics`, chord rule
+### X0w.5 — Watch Wear: radius, spacing, `WatchMetrics`, chord rule ✅
 - Files: `ui/theme/LifeyShapes.kt` (8 / 14 / 22 / 30 / pill / circle, legacy aliased), new
   `ui/theme/LifeySpacing.kt`, new `ui/theme/WatchMetrics.kt` (D-X0.5 Wear columns, `LocalWatchMetrics`
   provided from `BoxWithConstraints` in `LifeyTheme`, `chordWidth(y)`), `ui/DynamicSizing.kt` delegating to it.
 - Tests: `WatchMetricsTest.kt` — 227 / 192 dp give exactly the table, 200 dp boundary, minimum targets
   never undercut at 170 dp, `chordWidth` at the top 20 % line.
 - **Verify:** tests green; build.
+- *As built:* not built or run (no Android SDK). The expected test numbers were computed by hand against the formulas (e.g. 12 % of 227 = 27.2 → 27, chord at the 20 % line of 200 dp = 160). WatchMetrics is provided from a BoxWithConstraints in LifeyTheme; DynamicSizing.isCompactScreen now delegates. Legacy shape names aliased (chip/button/cardLarge); card is now 22.
 
 ### X0w.6 — Watch Wear: Plus Jakarta Sans numerals + M3 typography
 - Files: `src/main/res/font/pjs_numerals_extrabold.ttf`, `pjs_numerals_bold.ttf`, `pjs_numerals_light.ttf`

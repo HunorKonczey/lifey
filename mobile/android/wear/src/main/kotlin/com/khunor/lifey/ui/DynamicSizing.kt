@@ -8,7 +8,8 @@ import androidx.compose.ui.unit.dp
  * 41-watch-design-prompt.md canvas "Dynamic sizing" row): paddings and the
  * hero/hero-adjacent type scale are derived from the actual dial size
  * (`BoxWithConstraints`-fractions) rather than fixed dp values tuned for one
- * screen, and checked against both the ~1.2"/41 mm (compact) and ~1.4"/45 mm
+ * screen — now a thin wrapper over `theme/WatchMetrics.kt` (redesign plan 79,
+ * D-X0.5) until X4.16 deletes it, and checked against both the ~1.2"/41 mm (compact) and ~1.4"/45 mm
  * (regular) round Wear OS size classes.
  */
 internal const val SCREEN_PADDING_FRACTION = 0.08f
@@ -30,6 +31,7 @@ internal const val LOG_CIRCLE_DIAMETER_FRACTION = 236f / 452f
 internal const val LOG_BUTTON_PAIR_DIAMETER_FRACTION = 170f / 452f
 
 /** Below this, treat the display as the compact (~1.2"/41 mm) size class. */
-internal val COMPACT_SCREEN_WIDTH: Dp = 200.dp
+internal val COMPACT_SCREEN_WIDTH: Dp = com.khunor.lifey.ui.theme.WatchMetrics.COMPACT_WIDTH_DP.dp
 
-internal fun isCompactScreen(maxWidth: Dp): Boolean = maxWidth < COMPACT_SCREEN_WIDTH
+internal fun isCompactScreen(maxWidth: Dp): Boolean =
+    com.khunor.lifey.ui.theme.WatchMetrics(maxWidth.value).isCompact
