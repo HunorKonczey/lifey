@@ -99,7 +99,7 @@ fun ValueStepper(
             StepButton(Icons.Filled.Add, ghosted = value >= range.endInclusive) { change(step) }
         }
         if (confirmLabel != null) {
-            EdgeButton(onClick = onConfirm) { Text(confirmLabel, style = LifeyType.body(), color = LifeyColors.onPrimary, maxLines = 2) }
+            LifeyEdgeButton(onClick = onConfirm) { Text(confirmLabel, style = LifeyType.body(), color = LifeyColors.onPrimary, maxLines = 2) }
         }
     }
 }

@@ -1,6 +1,9 @@
 package com.khunor.lifey.ui.active
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.ui.unit.dp
 import com.khunor.lifey.ui.components.CircleButton
@@ -198,28 +201,32 @@ fun LogContent(
     } else {
         model.exerciseName
     }
-    Box(modifier.fillMaxSize()) {
-        Column(
-            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.16f).dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
-        ) {
-            ActiveHeader(
-                icon = Icons.Filled.Timer, label = formatElapsed(model.elapsedMs),
-                isPaused = model.isPaused, showsStandaloneMark = model.showsStandaloneMark,
-            )
-            Text(
-                contextLine, style = LifeyType.title(), color = LifeyColors.text, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .widthIn(max = (width * 0.76f).dp)
-                    .let { if (onOpenExerciseList != null) it.clickable(onClick = onOpenExerciseList) else it },
-            )
-        }
-        Row(
-            Modifier.align(Alignment.Center).padding(top = (width * 0.07f).dp),
-            horizontalArrangement = Arrangement.spacedBy(LifeySpacing.md),
-        ) {
+    // Top-down stack (the canvas lays it out the same way): header, context line, circles, then the pill on
+    // the bottom chord — a flexible gap in between, so nothing can overlap on either dial size.
+    Column(
+        modifier.fillMaxSize().padding(top = (width * 0.125f).dp, bottom = (width * 0.085f).dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ActiveHeader(
+            icon = Icons.Filled.Timer, label = formatElapsed(model.elapsedMs),
+            isPaused = model.isPaused, showsStandaloneMark = model.showsStandaloneMark,
+        )
+        Text(
+            // "Fekvenyomás" in `text`, " · 3/4 szett" in `text2`.
+            text = buildAnnotatedString {
+                append(contextLine)
+                if (done != null && total != null) {
+                    addStyle(SpanStyle(color = LifeyColors.text2), model.exerciseName.length.coerceAtMost(contextLine.length), contextLine.length)
+                }
+            },
+            style = LifeyType.body().copy(fontWeight = FontWeight.SemiBold), color = LifeyColors.text, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+            modifier = Modifier
+                .padding(top = LifeySpacing.xs)
+                .widthIn(max = (width * 0.76f).dp)
+                .let { if (onOpenExerciseList != null) it.clickable(onClick = onOpenExerciseList) else it },
+        )
+        Row(Modifier.padding(top = if (LocalWatchMetrics.current.isCompact) LifeySpacing.xs else LifeySpacing.md), horizontalArrangement = Arrangement.spacedBy(LifeySpacing.md)) {
             CircleButton(
                 style = if (confirmed) CircleStyle.SuccessTint else CircleStyle.Primary,
                 icon = Icons.Filled.Check,
@@ -229,6 +236,7 @@ fun LogContent(
                 centerText = if (confirmed) null else "+1",
                 caption = if (confirmed) counter else null,
                 a11y = stringResource(R.string.log_set_button_a11y),
+                showLabel = !ghostPair,
             )
             CircleButton(
                 style = CircleStyle.Raised,
@@ -238,8 +246,10 @@ fun LogContent(
                 iconTint = LifeyColors.clay,
                 isGhosted = ghostPair,
                 a11y = stringResource(R.string.log_adjust_open_a11y),
+                showLabel = !ghostPair,
             )
         }
+        Spacer(Modifier.weight(1f))
         if (pill != null) {
             val pillText = stringResource(
                 when (pill) {
@@ -251,12 +261,25 @@ fun LogContent(
             )
             StatusPill(
                 kind = pill,
-                // The failure breaks deliberately after the dash ("Nem sikerült —" / "próbáld újra", W1.7).
-                text = if (pill == PillKind.Failed) pillText.replace(" — ", " —\n") else pillText,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.08f).dp).widthIn(max = (width * 0.7f).dp),
+                // Failure and "no phone" break deliberately on the round bottom chord (W1.7): after the dash,
+                // or at the space nearest the middle.
+                text = when (pill) {
+                    PillKind.Failed -> pillText.replace(" — ", " —\n")
+                    PillKind.Unreachable -> balancedBreak(pillText)
+                    else -> pillText
+                },
+                modifier = Modifier.widthIn(max = (width * 0.62f).dp),
             )
         }
     }
+}
+
+/** [text] with its space nearest the middle turned into a line break (a one-word text is left alone). */
+internal fun balancedBreak(text: String): String {
+    val spaces = text.indices.filter { text[it] == ' ' }
+    if (spaces.isEmpty()) return text
+    val at = spaces.minByOrNull { kotlin.math.abs(it - text.length / 2) } ?: return text
+    return text.substring(0, at) + "\n" + text.substring(at + 1)
 }
 
 /**

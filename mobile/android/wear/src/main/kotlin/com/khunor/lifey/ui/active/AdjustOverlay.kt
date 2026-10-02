@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Text
-import androidx.wear.compose.material3.EdgeButton
+import com.khunor.lifey.ui.components.LifeyEdgeButton
 import com.khunor.lifey.LogAdjustField
 import com.khunor.lifey.LogAdjustState
 import com.khunor.lifey.R
@@ -80,7 +80,7 @@ fun AdjustContent(
             )
         }
         Box(Modifier.align(Alignment.BottomCenter)) {
-            EdgeButton(onClick = onConfirm) {
+            LifeyEdgeButton(onClick = onConfirm) {
                 Text(stringResource(R.string.log_adjust_confirm, state.reps), style = LifeyType.body(), color = LifeyColors.onPrimary, maxLines = 2)
             }
         }

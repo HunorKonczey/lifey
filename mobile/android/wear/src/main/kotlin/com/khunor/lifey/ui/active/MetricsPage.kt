@@ -98,7 +98,7 @@ fun MetricsContent(
         }
         ExerciseBlock(
             model = model, onOpenExerciseList = onOpenExerciseList,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.14f).dp),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.11f).dp),
         )
     }
 }

@@ -22,8 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.Text
-import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.EdgeButton
+import com.khunor.lifey.ui.components.LifeyEdgeButton
 import com.khunor.lifey.R
 import com.khunor.lifey.ui.components.CircleButton
 import com.khunor.lifey.ui.components.CircleStyle
@@ -81,10 +80,7 @@ fun ControlsContent(
         }
         if (model.offersExerciseList) {
             Box(Modifier.align(Alignment.BottomCenter)) {
-                EdgeButton(
-                    onClick = onOpenExerciseList,
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = LifeyColors.control, contentColor = LifeyColors.text),
-                ) {
+                LifeyEdgeButton(onClick = onOpenExerciseList, secondary = true) {
                     Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, tint = LifeyColors.text, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(LifeySpacing.sm))
                     Text(stringResource(R.string.standalone_exercise_list_title), style = LifeyType.body(), color = LifeyColors.text, maxLines = 1)

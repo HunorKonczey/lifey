@@ -45,7 +45,7 @@ data class RestModel(
 /**
  * Rest page (W1.10 / W1.11): a 6 dp [RestRing] at the display edge instead of the horizontal bar, the hero
  * "0:47" with "/ 1:30" under it, "Következő · …" on two centred lines, and the HR + kcal row at `value` level
- * on the bottom chord. The last five seconds turn the ring remainder and the hero `calories` and pulse once a
+ * on the bottom chord — numbers only, the icons say which is which, so the row fits the chord at 192 dp. The last five seconds turn the ring remainder and the hero `calories` and pulse once a
  * second (inside [RestRing]). The 400 ms expiry vibration stays in the foreground service.
  */
 @Composable
@@ -86,19 +86,13 @@ fun RestContent(model: RestModel, modifier: Modifier = Modifier) {
         ) {
             val heart = model.heartRate
             if (heart is HeartRateState.Live) {
-                MetricReading(
-                    Icons.Filled.Favorite, LifeyColors.heart, heart.bpm.toString(),
-                    unit = stringResource(R.string.active_heart_rate_unit), level = MetricLevel.Value,
-                )
+                MetricReading(Icons.Filled.Favorite, LifeyColors.heart, heart.bpm.toString(), level = MetricLevel.Value)
             } else {
                 // Missing or denied: the one missing-HR rule — a ghost heart and a dash, never a gap.
                 MetricReading(Icons.Filled.Favorite, LifeyColors.ghost, "—", level = MetricLevel.Value)
             }
             model.kcal?.let {
-                MetricReading(
-                    Icons.Filled.LocalFireDepartment, LifeyColors.calories, it.toString(),
-                    unit = stringResource(R.string.active_calories_unit), level = MetricLevel.Value,
-                )
+                MetricReading(Icons.Filled.LocalFireDepartment, LifeyColors.calories, it.toString(), level = MetricLevel.Value)
             }
         }
     }

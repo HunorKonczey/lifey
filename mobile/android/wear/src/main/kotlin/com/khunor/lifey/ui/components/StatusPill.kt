@@ -56,6 +56,6 @@ fun StatusPill(kind: PillKind, text: String, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(kind.icon, contentDescription = null, tint = kind.content, modifier = Modifier.size(14.dp))
-        Text(text, style = LifeyType.body(), color = kind.content, maxLines = 2, textAlign = TextAlign.Center)
+        Text(text, style = LifeyType.label(), color = kind.content, maxLines = 2, textAlign = TextAlign.Center)
     }
 }

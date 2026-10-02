@@ -61,6 +61,8 @@ fun CircleButton(
     caption: String? = null,
     /** Spoken description when the circle shows text instead of an icon ("Egy szett naplózása"). */
     a11y: String? = null,
+    /** False in the ghosted log states (W1.7): the status pill takes the room under the circles. */
+    showLabel: Boolean = true,
 ) {
     val metrics = LocalWatchMetrics.current
     val size = diameter ?: metrics.circleButton
@@ -104,9 +106,11 @@ fun CircleButton(
                 Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(size * 0.36f))
             }
         }
-        Text(
-            label, style = LifeyType.label(), color = ghostedContent(isGhosted, LifeyColors.text2),
-            textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.widthIn(max = size + 12.dp),
-        )
+        if (showLabel) {
+            Text(
+                label, style = LifeyType.label(), color = ghostedContent(isGhosted, LifeyColors.text2),
+                textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.widthIn(max = size + 12.dp),
+            )
+        }
     }
 }

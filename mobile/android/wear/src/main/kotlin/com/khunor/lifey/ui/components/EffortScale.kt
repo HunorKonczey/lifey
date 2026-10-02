@@ -34,7 +34,7 @@ fun EffortScale(
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(LifeySpacing.md)) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs)) {
         ValueStepper(
             value = value.toDouble(), onValueChange = { onValueChange(it.toInt()) },
             range = 1.0..10.0, step = 1.0, format = { it.toInt().toString() },

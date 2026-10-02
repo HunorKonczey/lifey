@@ -4,14 +4,20 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.khunor.lifey.ui.theme.LifeyColors
+import com.khunor.lifey.ui.theme.LocalWatchMetrics
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.PagerState
 import androidx.wear.compose.material.SwipeToDismissBox
 import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
 import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.EdgeButton
+import androidx.wear.compose.material3.EdgeButtonSize
 import androidx.wear.compose.material3.HorizontalPageIndicator
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.TimeText
@@ -95,5 +101,30 @@ fun DismissibleOverlay(
         onDismissed = onDismiss,
     ) { isBackground ->
         if (!isBackground) content()
+    }
+}
+
+/**
+ * The bottom-arc button of every confirm / secondary action (frames 04/08, 04/11, W1.8, W1.14, W1.16): an M3
+ * [EdgeButton] in the Small size (≈ 56 dp, as drawn) — ExtraSmall (≈ 46 dp) on the compact dial, so the stack
+ * above it keeps its room. [secondary] = `control` tone with `text` content instead of `primary`.
+ * The sizes are the library's; the layout budget in the X3 review assumes 56 / 46 dp (unverified offline).
+ */
+@Composable
+fun LifeyEdgeButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    secondary: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val size = if (LocalWatchMetrics.current.isCompact) EdgeButtonSize.ExtraSmall else EdgeButtonSize.Small
+    if (secondary) {
+        EdgeButton(
+            onClick = onClick, modifier = modifier, buttonSize = size,
+            colors = ButtonDefaults.filledTonalButtonColors(containerColor = LifeyColors.control, contentColor = LifeyColors.text),
+            content = content,
+        )
+    } else {
+        EdgeButton(onClick = onClick, modifier = modifier, buttonSize = size, content = content)
     }
 }

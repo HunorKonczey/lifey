@@ -12,7 +12,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Text
-import androidx.wear.compose.material3.EdgeButton
+import com.khunor.lifey.ui.components.LifeyEdgeButton
 import androidx.wear.compose.material3.TimeText
 import com.khunor.lifey.R
 import com.khunor.lifey.ui.components.DismissibleOverlay
@@ -57,9 +57,9 @@ fun EffortContent(
     val width = LocalWatchMetrics.current.widthDp
     Box(modifier.fillMaxSize()) {
         Column(
-            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.14f).dp),
+            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.11f).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LifeySpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
         ) {
             Text(
                 stringResource(R.string.effort_selector_title), style = LifeyType.title(),
@@ -71,7 +71,7 @@ fun EffortContent(
             )
         }
         Box(Modifier.align(Alignment.BottomCenter)) {
-            EdgeButton(onClick = onConfirm) {
+            LifeyEdgeButton(onClick = onConfirm) {
                 Text(
                     stringResource(R.string.effort_selector_confirm), style = LifeyType.body(),
                     color = LifeyColors.onPrimary, maxLines = 2, textAlign = TextAlign.Center,
