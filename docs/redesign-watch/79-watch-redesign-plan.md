@@ -1210,12 +1210,13 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** fixture; pause from controls.
 - *As built:* MetricsModel.isPaused = LiveMetrics.isPaused turns the HeaderChip clay 'SZÜNETELTETVE'; the hero/HR/kcal block is the same Column, so the content does not move toward the top arc (the old red 'Szüneteltetve' line under the hero is gone). The pause itself still drives the local Health Services session through ControlsPage (unchanged). Fixture W1.2.
 
-### X3.5 — Watch Wear: HR permission slot + missing HR (W1.3, W2.16)
+### X3.5 — Watch Wear: HR permission slot + missing HR (W1.3, W2.16) ✅
 - The broken heart + separate ellipsized chip are replaced by `HeartRateSlot` permission state (M3 Button
   44 dp, two deliberate lines, tap = system permission prompt) and the missing state (ghost heart, "—", ⓘ →
   `AlertDialog`). Delete the old `active_heart_rate_denied_chip` key (HU + EN) now that nothing uses it;
   `active_heart_rate_denied_placeholder` "--" goes too if unused.
 - **Verify:** revoke `BODY_SENSORS` via `adb shell pm revoke`; grant through the slot; fixtures.
+- *As built:* The broken-heart + ellipsized chip are gone: HeartRateSlot's permission state (M3 Button, two lines, tap = the existing RequestMultiplePermissions launcher with HEART_RATE_PERMISSIONS) and Missing state (ghost heart, 'nincs pulzus', ⓘ → AlertDialog) were wired in X3.3 via heartRateState(LiveMetrics); this step deletes active_heart_rate_denied_chip (HU+EN) and adds fixtures W1.3 and W2.16. active_heart_rate_denied_placeholder '--' stays: the cardio screen's legacy HeartRateReading still uses it until X4.
 
 ### X3.6 — Watch Wear: log page ready (W1.5)
 - Primary "+1" circle, `raised` "Módosítás" with clay `Tune` icon, labels under the circles (the "+1 szett"

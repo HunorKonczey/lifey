@@ -17,7 +17,6 @@
     <string name="active_paused_indicator">Paused</string>
     <string name="active_heart_rate_denied_placeholder">--</string>
     <string name="active_heart_rate_unit">bpm</string>
-    <string name="active_heart_rate_denied_chip">Heart rate off — allow sensors</string>
     <string name="active_heart_rate_denied_title">Heart rate off</string>
     <string name="active_heart_rate_denied_action">allow sensors</string>
 
