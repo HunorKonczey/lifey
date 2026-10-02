@@ -191,3 +191,10 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
   HU/EN strings added; `check_arb_sync.sh` reports nothing for the new keys (its only output is the
   pre-existing `statUnitWorkouts` false positive). Widget + unit tests pass. **Emulator walk still owed.**
   The header button currently opens measurements directly; P6 decides how photos join it.
+- **P4 (backend photos) — done.** `com.lifey.progressphoto`, `V79__progress_photos.sql` (metadata and bytes in
+  two tables), `/api/v1/progress-photos` (list, multipart create, PATCH metadata, image + thumbnail with
+  ETag/304, hard delete). Main image bounded to 1600 px (never upscaled), thumbnail 256 px square, EXIF
+  stripped (test splices an APP1 "Exif" segment into a JPEG and asserts it is gone). **Deviation:** a bad
+  `pose`/date form parameter returned 500 in `GlobalExceptionHandler`, so P4 adds a global
+  `MethodArgumentTypeMismatchException` → 400 handler. 289 non-Docker backend tests pass; the two
+  Testcontainers integration tests and the Flyway-vs-entity `validate` need Docker and are still owed.

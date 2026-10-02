@@ -5,6 +5,7 @@ import com.lifey.ai.exception.AiNotConfiguredException;
 import com.lifey.ai.exception.AiUnavailableException;
 import com.lifey.auth.exception.*;
 import com.lifey.billing.exception.InvalidReceiptException;
+import com.lifey.progressphoto.exception.InvalidProgressPhotoException;
 import com.lifey.billing.exception.SeatLimitExceededException;
 import com.lifey.billing.exception.SubscriptionAlreadyLinkedException;
 import com.lifey.nutrition.recipe.generation.exception.InvalidGenerationRequestException;
@@ -40,6 +41,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -107,6 +109,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({IncorrectPasswordException.class, SamePasswordException.class})
     public ResponseEntity<ApiError> handlePasswordChangeRejection(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** A query/form parameter that cannot be converted (unknown enum name, malformed date): the client's error, not a 500. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                       HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + ex.getName() + "'",
+                request, List.of(), ex);
+    }
+
+    @ExceptionHandler(InvalidProgressPhotoException.class)
+    public ResponseEntity<ApiError> handleInvalidProgressPhoto(InvalidProgressPhotoException ex,
+                                                               HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 
