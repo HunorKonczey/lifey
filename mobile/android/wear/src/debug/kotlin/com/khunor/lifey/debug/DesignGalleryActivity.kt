@@ -58,7 +58,7 @@ class DesignGalleryActivity : ComponentActivity() {
 class GallerySection(val title: String, val content: @Composable () -> Unit)
 
 /** Frame fixtures by canvas id ("W1.5") — X3 / X4 register theirs here. */
-val galleryFrames: Map<String, @Composable () -> Unit> get() = w1Frames
+val galleryFrames: Map<String, @Composable () -> Unit> get() = w1Frames + w2Frames
 
 /** Registry — later steps append their component sections here. */
 val gallerySections: List<GallerySection> get() = foundationSections + componentSections

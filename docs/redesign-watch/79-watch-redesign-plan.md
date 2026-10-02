@@ -1285,10 +1285,11 @@ permission revoke/grant; failure paths.
 `ui/SummaryScreen.kt` (`StatTile`, `SyncChip`), the cardio composables from X3.1's `ui/active/Cardio.kt`,
 `MainActivity.kt`.
 
-### X4.1 — Watch Wear: idle (W2.1)
+### X4.1 — Watch Wear: idle (W2.1) ✅
 - 32 dp compact chip → **52 dp M3 Button** "Edzés indítása"; Material `Icons.Filled.Eco` replaces the
   hand-drawn `LeafMark` (one source for both platforms); PJS "Lifey"; `TimeText`.
 - **Verify:** fixture; tap → picker.
+- *As built:* IdleScreen.kt rewritten: Material Eco icon in a nested 44 dp holder (the hand-drawn LeafMark and the dial-fraction maths are gone), the 'Lifey' wordmark in the PJS metric style, an M3 Button at WatchMetrics.buttonHeight (52/48 dp) with the existing a11y label, and the quiet 'vagy indítsd a telefonon' line; TimeText drawn directly. New debug FramesW2.kt (w2Frames, merged into galleryFrames) with fixture W2.1.
 
 ### X4.2 — Watch Wear: picker (W2.2)
 - Every row an M3 Button pill (`ListRow`), including quick strength (highlighted: `raised` + icon circle);
