@@ -9,7 +9,10 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.ui.active.LogContent
 import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.active.AmbientBenchContent
+import com.khunor.lifey.ui.active.AmbientCardioContent
 import com.khunor.lifey.ui.active.AmbientMetricsContent
+import com.khunor.lifey.ui.active.cardioActivityIconOutlined
 import com.khunor.lifey.ui.active.AmbientRestContent
 import com.khunor.lifey.ui.theme.AmbientState
 import com.khunor.lifey.ui.active.GameContent
@@ -137,6 +140,10 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
     "W2.13" to frame2 { GameFrame(gameModel(onCourt = false, hr = 118)) },
     "W2.17" to frame2 { AmbientMetricsContent(AmbientState(true, 1), "Erőedzés", 12 * 60 + 34, 128, "Fekvenyomás · 2/4") },
     "W2.18" to frame2 { AmbientRestContent(AmbientState(true, 1), 47, System.currentTimeMillis() + 47_000L, "Következő · Fekvenyomás — 3/4. szett") },
+    "W2.19" to frame2 { AmbientBenchContent(AmbientState(true, 1), "12:05", 118, "Bruttó idő 16 p") },
+    "W2.22" to frame2 { // derived (AW2.22): ambient run
+        AmbientCardioContent(AmbientState(true, 1), "Futás", cardioActivityIconOutlined("RUNNING"), LifeyColors.calories, "3.42 km", 142, "5:23 /km Tempó")
+    },
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
         LifeyAppScaffold {
             PickerContent(

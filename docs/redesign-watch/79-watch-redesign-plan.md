@@ -1376,11 +1376,12 @@ permission revoke/grant; failure paths.
 - **Verify:** ambient during rest; the end time equals the vibration moment.
 - *As built:* AmbientRestContent: static 2 dp text3 ring outline, outlined 'PIHENŐ' header, remaining time rounded up to minutes ('~1 p'), the end clock time in the device zone and 12/24 h convention (AmbientFormat.restUntil) and the 'Következő ·' / 'exercise — n/total. szett' line at the bottom. The strength screen picks it while ambient and a rest deadline is in the future; remaining seconds and end time come from restDeadlineElapsedRealtimeMs (the same value the expiry vibration in ExerciseService is scheduled from), recomputed on each minute update. Fixture W2.18. Checking that the end time equals the vibration moment on a real rest is for the emulator.
 
-### X4.15 — Watch Wear: ambient — bench and cardio (W2.19 + derived)
+### X4.15 — Watch Wear: ambient — bench and cardio (W2.19 + derived) ✅
 - Bench: clay ring 2 dp @ 60 %; stopped play time with seconds; gross time in minutes; no buttons.
 - Cardio: **no Wear canvas frame** — derived from AW2.22 (distance with its decimal, accent @ 60 %, one quiet
   field line), centred; noted as a derived layout in the review log.
 - **Verify:** ambient during bench and during a run.
+- *As built:* AmbientActive.kt: AmbientBenchContent (clay ring 2 dp @ 60 %, outlined 'PADON' header, 'Játékidő — áll' with the stopped play time *with seconds*, heart rate at 60 %, 'Bruttó idő 16 p' from the phone's mm:ss gross string via clockMinutes) and AmbientCardioContent (no Wear canvas frame — DERIVED from AW2.22, to be listed as such in the review log: outlined accent header at 60 %, hero centred in the light style — a distance keeps its decimals and unit, a duration drops to minutes — heart rate at 60 %, one quiet field line = the pace). CardioActiveScreen shows the metric page alone while ambient (no pager, indicator or TimeText); the moving seconds are recomputed from the metrics' elapsedRealtime anchor once a minute. cardioActivityIconOutlined maps the activity icons. Fixtures W2.19, W2.22 (derived). Ambient during bench and during a run is for the emulator.
 
 ### X4.16 — Watch Wear: remove Material 2, legacy aliases and `DynamicSizing`
 - Files: `build.gradle.kts` (drop `androidx.wear.compose:compose-material`), `LifeyTheme.kt` (M3 only),

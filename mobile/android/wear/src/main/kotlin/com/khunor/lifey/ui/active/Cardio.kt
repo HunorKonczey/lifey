@@ -32,6 +32,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.TimeText
 import com.khunor.lifey.ui.components.LifeyPager
+import com.khunor.lifey.ui.theme.AmbientFormat
+import com.khunor.lifey.ui.theme.LocalAmbientState
 import com.khunor.lifey.CardioActiveMetrics
 import com.khunor.lifey.CardioActivityFamily
 import com.khunor.lifey.ExerciseService
@@ -125,6 +127,12 @@ internal fun CardioActiveScreen() {
     // switch and either side can flip it (docs/cardio/55-cardio-watch-plan.md
     // §7, W-9).
     val onCourt = metadata.isOnCourt
+
+    // Always-On: the metric page alone, drawn quietly — no pager, indicator or TimeText (W2.19 and derived).
+    if (LocalAmbientState.current.isAmbient) {
+        CardioMetricsPage(metadata = metadata, liveMetrics = liveMetrics, onCourt = onCourt, onToggleCourt = {})
+        return
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
@@ -332,6 +340,48 @@ internal fun CardioMetricsPage(
             }
             delay(1000)
         }
+    }
+
+    val ambient = LocalAmbientState.current
+    if (ambient.isAmbient) {
+        // Always-On: recompute from the real clocks once a minute instead of trusting the 1 Hz ticker.
+        val ambientMovingSeconds = remember(ambient.minuteOfDay, cardioMetrics) {
+            when {
+                cardioMetrics == null -> 0
+                cardioMetrics.movingAnchorElapsedRealtimeMs == null -> cardioMetrics.movingSecondsBase
+                else -> (cardioMetrics.movingSecondsBase +
+                    (SystemClock.elapsedRealtime() - cardioMetrics.movingAnchorElapsedRealtimeMs) / 1000).toInt()
+            }
+        }
+        val bpm = liveMetrics.heartRateBpm?.roundToInt()?.takeIf { liveMetrics.hasHeartRatePermission }
+        val minutesFormat = stringResource(R.string.aod_minutes)
+        val hoursMinutesFormat = stringResource(R.string.aod_hours_minutes)
+        if (family == CardioActivityFamily.GAME && !onCourt) {
+            AmbientBenchContent(
+                state = ambient,
+                playTime = formatCardioDuration(ambientMovingSeconds),
+                heartRateBpm = bpm,
+                grossLine = clockMinutes(cardioMetrics?.secondaryValue)?.let {
+                    "${cardioMetrics?.secondaryLabel ?: stringResource(R.string.cardio_gross_time_label)} " +
+                        AmbientFormat.elapsed(it * 60, minutesFormat, hoursMinutesFormat)
+                },
+            )
+        } else {
+            AmbientCardioContent(
+                state = ambient,
+                headerLabel = cardioHeaderLabel(metadata),
+                headerIcon = cardioActivityIconOutlined(activityType),
+                accent = cardioActivityTint(activityType),
+                hero = if (family == CardioActivityFamily.DISTANCE && cardioMetrics != null) {
+                    cardioMetrics.primaryValue
+                } else {
+                    AmbientFormat.elapsed(ambientMovingSeconds, minutesFormat, hoursMinutesFormat)
+                },
+                heartRateBpm = bpm,
+                fieldLine = cardioMetrics?.tertiaryValue?.let { "$it ${cardioMetrics.tertiaryLabel ?: ""}".trim() },
+            )
+        }
+        return
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(

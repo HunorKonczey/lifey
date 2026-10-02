@@ -10,7 +10,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.DirectionsBike
+import androidx.compose.material.icons.outlined.AirlineSeatReclineNormal
+import androidx.compose.material.icons.outlined.DirectionsRun
+import androidx.compose.material.icons.outlined.DirectionsWalk
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Hiking
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.PedalBike
+import androidx.compose.material.icons.outlined.SportsBasketball
+import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.Composable
@@ -24,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.Text
 import com.khunor.lifey.R
+import com.khunor.lifey.ui.components.BenchRing
 import com.khunor.lifey.ui.components.truncate
 import com.khunor.lifey.ui.theme.AmbientFormat
 import com.khunor.lifey.ui.theme.AmbientState
@@ -141,5 +151,91 @@ fun AmbientRestContent(
             nextLine.replace(" · ", " ·\n"),
             Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.14f).dp),
         )
+    }
+}
+
+/** Outlined counterpart of [cardioActivityIcon] — ambient mode draws no filled shapes. */
+fun cardioActivityIconOutlined(activityType: String): ImageVector = when (activityType) {
+    "RUNNING" -> Icons.Outlined.DirectionsRun
+    "WALKING" -> Icons.Outlined.DirectionsWalk
+    "HIKING" -> Icons.Outlined.Hiking
+    "CYCLING" -> Icons.AutoMirrored.Outlined.DirectionsBike
+    "INDOOR_BIKE" -> Icons.Outlined.PedalBike
+    "BASKETBALL" -> Icons.Outlined.SportsBasketball
+    "FOOTBALL" -> Icons.Outlined.SportsSoccer
+    else -> Icons.Outlined.MonitorHeart
+}
+
+/**
+ * The ambient cardio page (no Wear canvas frame — derived from AW2.22, noted in the review log): the activity
+ * accent at 60 % on the outlined header, the hero centred in the light style in `text2` (a distance keeps its
+ * decimals and unit; a duration drops to minutes), the heart rate at 60 %, and one quiet field line.
+ */
+@Composable
+fun AmbientCardioContent(
+    state: AmbientState,
+    headerLabel: String,
+    headerIcon: ImageVector,
+    accent: androidx.compose.ui.graphics.Color,
+    hero: String,
+    heartRateBpm: Int?,
+    fieldLine: String?,
+    modifier: Modifier = Modifier,
+) {
+    val width = LocalWatchMetrics.current.widthDp
+    Box(modifier.fillMaxSize().ambientBurnInShift(state)) {
+        Column(
+            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.16f).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
+        ) {
+            AmbientHeader(headerIcon, headerLabel, tint = AmbientStyle.metricTint(accent))
+            Text(hero, style = LifeyType.aodHero(), color = AmbientStyle.number, maxLines = 1)
+            AmbientHeartRate(heartRateBpm)
+        }
+        if (fieldLine != null) AmbientLine(fieldLine, Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.16f).dp))
+    }
+}
+
+/**
+ * The ambient bench page (W2.19): the clay ring at 2 dp / 60 %, "PADON" and "Játékidő — áll" with the stopped
+ * play time *with* seconds (it does not tick, so seconds are honest), the heart rate at 60 % and the gross time
+ * in minutes ("Bruttó idő 16 p"). No buttons.
+ */
+@Composable
+fun AmbientBenchContent(
+    state: AmbientState,
+    playTime: String,
+    heartRateBpm: Int?,
+    grossLine: String?,
+    modifier: Modifier = Modifier,
+) {
+    val width = LocalWatchMetrics.current.widthDp
+    Box(modifier.fillMaxSize().ambientBurnInShift(state)) {
+        BenchRing(isAmbient = true)
+        Column(
+            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.16f).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
+        ) {
+            AmbientHeader(
+                Icons.Outlined.AirlineSeatReclineNormal, stringResource(R.string.cardio_on_bench_header_label),
+                tint = AmbientStyle.metricTint(LifeyColors.clay),
+            )
+            Text(stringResource(R.string.cardio_game_paused_primary_label).uppercase(), style = LifeyType.label(), color = LifeyColors.text2, maxLines = 1)
+            Text(playTime, style = LifeyType.aodHero(), color = AmbientStyle.number, maxLines = 1)
+            AmbientHeartRate(heartRateBpm)
+        }
+        if (grossLine != null) AmbientLine(grossLine, Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.16f).dp))
+    }
+}
+
+/** Whole minutes in a "mm:ss" or "h:mm:ss" clock string (the phone's gross time arrives pre-formatted); null if unparsable. */
+internal fun clockMinutes(clock: String?): Int? {
+    val parts = clock?.split(':')?.mapNotNull { it.trim().toIntOrNull() } ?: return null
+    return when (parts.size) {
+        2 -> parts[0]
+        3 -> parts[0] * 60 + parts[1]
+        else -> null
     }
 }
