@@ -105,91 +105,6 @@ struct MetricReading: View {
   }
 }
 
-/// A full-width, stacked icon + value + unit row for [MetricsPage]'s primary
-/// HR/kcal readings (canvas AW 02) — one reading per row rather than
-/// squeezed side by side, with its unit label back (a row this size has
-/// plenty of width for it, unlike [RestHeroView]'s compact under-ring
-/// variant).
-struct HeroMetricRow: View {
-  let icon: String
-  let iconTint: Color
-  let value: String
-  let unit: String
-  let isCompact: Bool
-
-  var body: some View {
-    HStack(spacing: 8) {
-      Image(systemName: icon)
-        .font(.system(size: isCompact ? 20 : 24))
-        .foregroundColor(iconTint)
-      Text(value)
-        .font(isCompact ? .title3 : .title2)
-        .fontWeight(.bold)
-        .foregroundColor(LifeyColors.onSurface)
-        .monospacedDigit()
-        .lineLimit(1)
-      Text(unit)
-        .font(isCompact ? .caption2 : .caption)
-        .foregroundColor(LifeyColors.onSurfaceVariant)
-        .textCase(.uppercase)
-    }
-  }
-}
-
-/// The exercise-name + set-counter card (canvas AW 02's `surface`-bg pill
-/// under the metrics), including the per-set dot row (filled `primary` for
-/// done sets, `containerHighest` for remaining) that the canvas frame shows
-/// alongside the "Set n of total" text.
-struct ExerciseCard: View {
-  let exerciseName: String
-  let setsDone: Int?
-  let setsTotal: Int?
-  let isCompact: Bool
-  /// Standalone's set-count line (docs/watch/44-watch-f6-standalone-plan.md
-  /// §3.4, D-F6.3) — no plan, so no dot row or "n of total"; just how many
-  /// sets and their combined reps. Nil for phone-mastered sessions, which
-  /// use `setsDone`/`setsTotal` instead.
-  var freeFormatSets: (count: Int, totalReps: Int)? = nil
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Text(exerciseName)
-        .font(isCompact ? .body : .title3)
-        .foregroundColor(LifeyColors.onSurface)
-        .lineLimit(1)
-        .truncationMode(.tail)
-      if let freeFormatSets {
-        Text(
-          String(
-            format: String(localized: "active_sets_free_format"), freeFormatSets.count,
-            freeFormatSets.totalReps)
-        )
-        .font(isCompact ? .caption2 : .caption)
-        .foregroundColor(LifeyColors.onSurfaceVariant)
-      } else if let setsDone, let setsTotal {
-        HStack {
-          Text(String(format: String(localized: "active_sets_format"), setsDone, setsTotal))
-            .font(isCompact ? .caption2 : .caption)
-            .foregroundColor(LifeyColors.onSurfaceVariant)
-          Spacer()
-          HStack(spacing: 6) {
-            ForEach(0..<setsTotal, id: \.self) { index in
-              Circle()
-                .fill(index < setsDone ? LifeyColors.primary : LifeyColors.containerHighest)
-                .frame(width: 6, height: 6)
-            }
-          }
-        }
-      }
-    }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
-    .frame(maxWidth: .infinity)
-    .background(LifeyColors.surface)
-    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.cardLarge))
-  }
-}
-
 /// Makes whatever it wraps open the exercise list — but only while there is
 /// something to switch to (`canChooseExercise`), so a Quick strength session
 /// or a phone that hasn't pushed its list keeps a plain, non-interactive
@@ -210,98 +125,147 @@ struct ExercisePickerTarget<Content: View>: View {
   }
 }
 
+// MARK: - Metrics page (redesign X1.2 — AW1.1 … AW1.4)
+
+/// Plain data behind the strength metrics page, so the debug gallery can render every canvas state without
+/// a `WorkoutManager`. Built from the manager by `MetricsPage` once a second.
+struct MetricsModel {
+  var headerLabel: String
+  var showsStandaloneMark = false
+  var markTapped = false
+  var isPaused = false
+  var elapsedSeconds: Int
+  var heartRateBpm: Int?
+  var calories: Int?
+  var exerciseName: String
+  var setsDone: Int?
+  var setsTotal: Int?
+  /// Quick strength: no plan, so no bar — "3. szett · 24 ism."
+  var freeFormText: String?
+  var justLoggedIndex: Int?
+  var canChooseExercise = false
+}
+
+/// One hero, one level two, one level three (frame D1): elapsed time (white, `hero`) › heart rate (`metric`,
+/// heart colour, fixed slot) › kcal (`value`). The exercise card with its segment bar sits at the bottom.
+struct MetricsContent: View {
+  let model: MetricsModel
+  var onMarkTap: () -> Void = {}
+  var onOpenExerciseList: () -> Void = {}
+
+  @Environment(\.watchMetrics) private var metrics
+
+  /// The card's corner radius follows the display margin (nested rule): 22 − 6 = 16, compact 22 − 8 = 14.
+  private var cardRadius: CGFloat { LifeyShapes.nested(parent: LifeyShapes.card, padding: metrics.isCompact ? 8 : 6) }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      WatchHeaderChip(
+        icon: "dumbbell", label: model.headerLabel, isPaused: model.isPaused,
+        standaloneMark: model.showsStandaloneMark ? (model.markTapped ? .tapped : .idle) : nil,
+        onMarkTap: onMarkTap)
+      Text(verbatim: formatSeconds(model.elapsedSeconds))
+        .lifeyHero(metrics)
+        .foregroundColor(model.isPaused ? LifeyColors.text3 : LifeyColors.text)
+        .lineLimit(1)
+        .padding(.top, LifeySpacing.xs)
+      HeartRateSlot(bpm: model.heartRateBpm)
+        .padding(.top, LifeySpacing.md)
+      if let calories = model.calories {
+        WatchMetricReading(
+          icon: "flame.fill", iconTint: LifeyColors.calories, number: "\(calories)",
+          unit: String(localized: "active_calories_unit"), level: .value)
+          .padding(.top, LifeySpacing.sm)
+      }
+      Spacer(minLength: LifeySpacing.xs)
+      exerciseCard
+    }
+    .padding(.horizontal, metrics.sideMargin)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+  }
+
+  @ViewBuilder private var exerciseCard: some View {
+    let card = SetSegmentBar(
+      title: model.exerciseName, done: model.setsDone ?? 0, total: model.setsTotal ?? 0,
+      justLoggedIndex: model.justLoggedIndex, freeFormText: model.freeFormText)
+      .padding(.horizontal, 11)
+      .padding(.vertical, 9)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(LifeyColors.card, in: RoundedRectangle(cornerRadius: cardRadius))
+    if model.canChooseExercise {
+      Button(action: onOpenExerciseList) { card }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("standalone_exercise_list_title"))
+    } else {
+      card
+    }
+  }
+}
+
+/// The live page: builds a `MetricsModel` from `WorkoutManager` every second and shows the rest hero in
+/// place of the readout while a rest is running.
 struct MetricsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
   let padding: CGFloat
-  /// The exercise name + set counter on this page is where the user notices
-  /// they're on the wrong exercise, so it opens the picker itself — the chip
-  /// on the log/controls pages is two swipes away from here (F6c §7).
+  /// The exercise card on this page is where the user notices they are on the wrong exercise, so it opens
+  /// the picker itself (F6c §7).
   let onOpenExerciseList: () -> Void
-
-  private var heroFont: Font { isCompact ? .system(.title3, design: .rounded) : .system(.title2, design: .rounded) }
-  private var captionFont: Font { isCompact ? .caption2 : .caption }
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
       Group {
         if let remainingSeconds = restRemainingSeconds() {
-          VStack(spacing: 4) {
-            // Same activeExerciseDisplay as the other pages — the "Next"
-            // line now names the current template exercise (not a generic
-            // fallback) and gets a real set count when it has a targetSets
-            // (docs/watch/49-watch-f6b-template-sync-plan.md §3.4).
-            let display = workoutManager.activeExerciseDisplay
-            ExercisePickerTarget(onOpenExerciseList: onOpenExerciseList) {
-              RestHeroView(
-                remainingSeconds: remainingSeconds,
-                totalSeconds: workoutManager.restTotalSeconds,
-                exerciseName: display.name,
-                setsDone: display.setsDone,
-                setsTotal: display.setsTotal,
-                isCompact: isCompact)
-            }
+          let display = workoutManager.activeExerciseDisplay
+          ExercisePickerTarget(onOpenExerciseList: onOpenExerciseList) {
+            RestHeroView(
+              remainingSeconds: remainingSeconds,
+              totalSeconds: workoutManager.restTotalSeconds,
+              exerciseName: display.name,
+              setsDone: display.setsDone,
+              setsTotal: display.setsTotal,
+              isCompact: isCompact)
           }
+          .padding(.horizontal, padding)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         } else {
-          // Left-aligned column (canvas AW 02) rather than centered — a
-          // `Spacer()` between the readings and the exercise card lets the
-          // card settle near the bottom instead of everything bunching in
-          // the middle.
-          VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
-            HeaderChip(
-              icon: "dumbbell", label: workoutManager.activeHeaderLabel, isCompact: isCompact,
-              isStandalone: workoutManager.showsStandaloneBadge)
-            Text(elapsedText(now: context.date))
-              .font(heroFont)
-              .fontWeight(.bold)
-              .foregroundColor(LifeyColors.primary)
-              .monospacedDigit()
-            if workoutManager.isPaused {
-              Text("active_paused_indicator")
-                .font(captionFont)
-                .foregroundColor(LifeyColors.negative)
-            }
-            VStack(alignment: .leading, spacing: isCompact ? 4 : 8) {
-              if let heartRate = workoutManager.heartRateBpm {
-                HeroMetricRow(
-                  icon: "heart", iconTint: LifeyColors.heart, value: "\(Int(heartRate.rounded()))",
-                  unit: String(localized: "active_heart_rate_unit"), isCompact: isCompact)
-              }
-              if let calories = workoutManager.activeCalories {
-                HeroMetricRow(
-                  icon: "flame.fill", iconTint: LifeyColors.calories, value: "\(Int(calories.rounded()))",
-                  unit: String(localized: "active_calories_unit"), isCompact: isCompact)
-              }
-            }
-            .padding(.top, 4)
-            Spacer(minLength: 4)
-            // One call site for all three cases (Quick strength / template /
-            // phone-mastered) — see WorkoutManager.activeExerciseDisplay's
-            // doc comment (docs/watch/49-watch-f6b-template-sync-plan.md §3.4).
-            let display = workoutManager.activeExerciseDisplay
-            ExercisePickerTarget(onOpenExerciseList: onOpenExerciseList) {
-              ExerciseCard(
-                exerciseName: display.name, setsDone: display.setsDone, setsTotal: display.setsTotal,
-                isCompact: isCompact, freeFormatSets: display.freeFormatSets)
-            }
-          }
+          MetricsContent(
+            model: model(now: context.date),
+            onMarkTap: { workoutManager.retryAdoption() },
+            onOpenExerciseList: onOpenExerciseList)
         }
       }
-      .padding(.horizontal, padding)
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
   }
 
-  private func elapsedText(now: Date) -> String {
-    guard let startedAt = workoutManager.startedAt else { return "00:00" }
-    return formatSeconds(Int(max(0, now.timeIntervalSince(startedAt))))
+  private func model(now: Date) -> MetricsModel {
+    let display = workoutManager.activeExerciseDisplay
+    var freeForm: String?
+    if let free = display.freeFormatSets {
+      freeForm = String(format: String(localized: "active_sets_free_format"), free.count, free.totalReps)
+    }
+    return MetricsModel(
+      headerLabel: workoutManager.activeHeaderLabel,
+      showsStandaloneMark: workoutManager.showsStandaloneBadge,
+      markTapped: workoutManager.isRetryingAdoption,
+      isPaused: workoutManager.isPaused,
+      elapsedSeconds: elapsed(now: now),
+      heartRateBpm: workoutManager.heartRateBpm.map { Int($0.rounded()) },
+      calories: workoutManager.activeCalories.map { Int($0.rounded()) },
+      exerciseName: display.name,
+      setsDone: display.setsDone,
+      setsTotal: display.setsTotal,
+      freeFormText: freeForm,
+      canChooseExercise: workoutManager.canChooseExercise)
   }
 
-  /// Seconds left in the current rest, computed against this device's own
-  /// monotonic clock (`workoutManager.restDeadlineUptime` — see its doc
-  /// comment) — nil once it naturally counts down to zero, which is what
-  /// drops this view out of the rest-hero state without waiting for the
-  /// next phone sync (mirrors Android's `resting = restRemainingMs > 0`).
+  private func elapsed(now: Date) -> Int {
+    guard let startedAt = workoutManager.startedAt else { return 0 }
+    return Int(max(0, now.timeIntervalSince(startedAt)))
+  }
+
+  /// Seconds left in the current rest on this device's own monotonic clock (`restDeadlineUptime`) — nil
+  /// once it counts down to zero, which drops the view out of the rest state without waiting for the phone.
   private func restRemainingSeconds() -> Int? {
     guard let restDeadlineUptime = workoutManager.restDeadlineUptime else { return nil }
     let remaining = Int((restDeadlineUptime - ProcessInfo.processInfo.systemUptime).rounded())

@@ -938,13 +938,14 @@ new controls, picker, effort, ending and summary.
   adjust, pause, end).
 - *As built:* mechanical split by a script (top-level declarations moved verbatim; `private` removed from file-scope types/functions so they can be shared across the new files): ActiveWorkoutView, MetricsPage (+HeaderChip, MetricReading, HeroMetricRow, ExerciseCard), LogPage, AdjustPage, ControlsPage (+ExerciseListChip, ControlButton), ExerciseList, RestHero (+GoFlashView), Cardio. Not compiled. Deviation: the plain `…Model`/`…Content` extraction and the AW1.x gallery fixtures are done per page in X1.2–X1.14 while each page is rewritten, instead of as a no-op refactor first (a second pass over unchanged code would only double the uncompiled risk).
 
-### X1.2 — Watch iOS: metric page — the hero rule (AW1.1, AW1.4)
+### X1.2 — Watch iOS: metric page — the hero rule (AW1.1, AW1.4) ✅
 - Requirements: one hero (elapsed time, `hero`, **white**, not primary) › HR (`metric`, heart colour, via
   `HeartRateSlot`) › kcal (`value`); header chip "ERŐEDZÉS" (`dumbbell`); exercise card with
   `SetSegmentBar` "2/4" at the bottom; card radius from the margin (nested rule); 41 mm: hero 42, metric 25,
   value 17, margin 14, card radius 14 — nothing dropped, no scrolling.
 - Replaces `HeroMetricRow`, the old `MetricReading`/`HeaderChip`/`ExerciseCard` usages on this page.
 - **Verify:** AW1.1 and AW1.4 fixtures + live session at both sizes.
+- *As built:* X1.2–X1.4 land together because they are one view: MetricsContent (plain MetricsModel) = hero time (white; text3 when paused) › HeartRateSlot (always present, so a missing HR keeps its place — X1.4) › kcal › exercise card with SetSegmentBar (name wraps to two lines); paused = the header chip turns clay (X1.3), no extra row. The numbers carry the metric colour as in the canvas (121 heart, 87 calories). HeroMetricRow / ExerciseCard removed; HeaderChip and MetricReading (old) stay for Log/Controls/Rest until their steps. Frames AW1.1–1.4 registered in the new Frames gallery (FramesGallery.swift); the 41 mm frame is a fixed 176 pt device frame. Not compiled.
 
 ### X1.3 — Watch iOS: paused metric page (AW1.2)
 - The orange "Szüneteltetve" row is gone; the header chip itself turns clay "SZÜNETELTETVE" (`pause.fill`,

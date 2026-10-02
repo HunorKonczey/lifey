@@ -84,6 +84,7 @@
 		8BF190F15D91E7313C7DB7DF /* ExerciseList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60488860E926F897B6703748 /* ExerciseList.swift */; };
 		ED1031B41008B804014B7C1D /* RestHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4036790DEDF80E7721401BB2 /* RestHero.swift */; };
 		0E4D8A4396E5746FB6B783D5 /* Cardio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91B27738B6B0CDB6EAD38F99 /* Cardio.swift */; };
+		D84D57A4E8BE4B2067F76C38 /* FramesGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14006DF2297F47D86E2851E4 /* FramesGallery.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -243,6 +244,7 @@
 		60488860E926F897B6703748 /* ExerciseList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseList.swift; sourceTree = "<group>"; };
 		4036790DEDF80E7721401BB2 /* RestHero.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestHero.swift; sourceTree = "<group>"; };
 		91B27738B6B0CDB6EAD38F99 /* Cardio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Cardio.swift; sourceTree = "<group>"; };
+		14006DF2297F47D86E2851E4 /* FramesGallery.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FramesGallery.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -478,6 +480,7 @@
 			children = (
 				D12C3189D2758C46056A48D9 /* DesignGalleryView.swift */,
 				B758FAEC8C9228493B5A8C36 /* GalleryComponents.swift */,
+				14006DF2297F47D86E2851E4 /* FramesGallery.swift */,
 			);
 			path = Debug;
 			sourceTree = "<group>";
@@ -863,6 +866,7 @@
 				8BF190F15D91E7313C7DB7DF /* ExerciseList.swift in Sources */,
 				ED1031B41008B804014B7C1D /* RestHero.swift in Sources */,
 				0E4D8A4396E5746FB6B783D5 /* Cardio.swift in Sources */,
+				D84D57A4E8BE4B2067F76C38 /* FramesGallery.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

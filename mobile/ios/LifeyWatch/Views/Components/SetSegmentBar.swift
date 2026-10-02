@@ -3,7 +3,7 @@ import SwiftUI
 /// Set segment bar (frame 04/03): the exercise name left and "2/4" right (PJS 700, "/4" in `text3`) over
 /// full-width segments instead of dots — readable up to 8 sets, the width of the card. Done = `text`, just
 /// logged = `success` (for 1.2 s, driven by the caller), remaining = `raised`. A session without a plan
-/// (quick strength) shows no bar, only the text "3. szett · 24 ism." that the caller supplies.
+/// (quick strength) shows the name and no bar, only the text "3. szett · 24 ism." the caller supplies.
 struct SetSegmentBar: View {
   var title: String? = nil
   let done: Int
@@ -17,10 +17,16 @@ struct SetSegmentBar: View {
 
   var body: some View {
     if let freeFormText {
-      Text(verbatim: freeFormText)
-        .lifeyBody(metrics)
-        .foregroundColor(LifeyColors.text2)
-        .lineLimit(2)
+      VStack(alignment: .leading, spacing: LifeySpacing.xs) {
+        if let title {
+          Text(verbatim: title).lifeyTitle(metrics).foregroundColor(LifeyColors.text).lineLimit(2)
+        }
+        Text(verbatim: freeFormText).lifeyBody(metrics).foregroundColor(LifeyColors.text2).lineLimit(2)
+      }
+    } else if total <= 0 {
+      if let title {
+        Text(verbatim: title).lifeyTitle(metrics).foregroundColor(LifeyColors.text).lineLimit(2)
+      }
     } else {
       VStack(spacing: LifeySpacing.sm) {
         HStack(alignment: .firstTextBaseline, spacing: LifeySpacing.md) {

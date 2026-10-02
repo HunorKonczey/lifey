@@ -88,6 +88,7 @@
         GallerySection("04/12 Summary tile · sync row") { SummaryGallery() },
         GallerySection("04/13-15 Bench · field · status") { StructuralGallery() },
         GallerySection("08 Always-On") { AODGallery() },
+        GallerySection("Frames") { FramesGallery() },
       ]
     }
   }
