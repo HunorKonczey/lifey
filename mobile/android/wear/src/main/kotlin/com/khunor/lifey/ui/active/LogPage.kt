@@ -1,4 +1,15 @@
 package com.khunor.lifey.ui.active
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.ui.unit.dp
+import com.khunor.lifey.ui.components.CircleButton
+import com.khunor.lifey.ui.components.CircleStyle
+import com.khunor.lifey.ui.components.PillKind
+import com.khunor.lifey.ui.components.StatusPill
+import com.khunor.lifey.ui.theme.LifeySpacing
+import com.khunor.lifey.ui.theme.LifeyType
+import com.khunor.lifey.ui.theme.LocalWatchMetrics
 
 import android.Manifest
 import android.os.SystemClock
@@ -130,409 +141,186 @@ import com.khunor.lifey.ui.isCompactScreen
 
 
 /**
- * The leftmost page (docs/watch/43-watch-f5-set-logging-plan.md
- * §3.1 decision (b), canvas W 07/08/10): two same-sized circular controls
- * side by side — "+1" on the left, the adjust stepper's launcher on the
- * right (replaces the original single big circle + long-press-to-adjust
- * design: the long press went undiscovered in practice, so a
- * plain-tap-reachable second button replaces it entirely — no more
- * `combinedClickable`). [logSetState] (docs/watch/43-watch-f5-set-logging-plan.md
- * §3.2) drives the "+1" circle's four visuals: Ready (primary ring +
- * context line), Pending (ghosted + "Logging…"), Confirmed (check + "Set n
- * of total" + "Logged" pill), Failed (ghosted + red toast) — plus a fifth,
- * independent ghosted state when [hasConnectedNode] is false: a tap can't
- * even start a Pending round-trip with no phone node to answer it. The
- * adjust button shares the same Ready-only enabled gate, since it starts
- * the same round trip once confirmed. Mirrors iOS's `LogPage`.
+ * What the log page shows (frames W1.5–W1.7), as plain data for the DEBUG gallery. [phoneUnreachable] is the
+ * best-effort "no connected node" hint — never set for a standalone session, where logging is local.
+ */
+data class LogModel(
+    val elapsedMs: Long,
+    val exerciseName: String,
+    val setsDone: Int?,
+    val setsTotal: Int?,
+    val freeFormatSets: Pair<Int, Int>?,
+    val logState: LogSetState,
+    val phoneUnreachable: Boolean = false,
+    val isPaused: Boolean = false,
+    val showsStandaloneMark: Boolean = false,
+)
+
+/** The one status pill of the log page (priority failed › unreachable › pending › logged), or none. */
+fun logPillKind(state: LogSetState, phoneUnreachable: Boolean): PillKind? = when {
+    state is LogSetState.Failed -> PillKind.Failed
+    state is LogSetState.Ready && phoneUnreachable -> PillKind.Unreachable
+    state is LogSetState.Pending -> PillKind.Pending
+    state is LogSetState.Confirmed -> PillKind.Logged
+    else -> null
+}
+
+/**
+ * Log page (W1.5): `timer` header with the elapsed time, the "exercise · n/total szett" line, then the
+ * primary "+1" circle and the `raised` "Módosítás" circle (clay icon) with their labels *under* them, and the
+ * status pill on the bottom chord where the page indicator was. Pending and failed ghost the pair; a logged
+ * set turns the +1 circle `success` with a check and "n/total" (W1.6).
+ */
+@Composable
+fun LogContent(
+    model: LogModel,
+    onLogSet: () -> Unit,
+    onAdjust: () -> Unit,
+    onOpenExerciseList: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val width = LocalWatchMetrics.current.widthDp
+    val state = model.logState
+    val pill = logPillKind(state, model.phoneUnreachable)
+    val ghostPair = state is LogSetState.Pending || state is LogSetState.Failed || pill == PillKind.Unreachable
+    val confirmed = state is LogSetState.Confirmed
+    val done = model.setsDone
+    val total = model.setsTotal
+    val counter = when {
+        done != null && total != null -> "$done/$total"
+        model.freeFormatSets != null -> model.freeFormatSets.first.toString()
+        else -> null
+    }
+    // "Fekvenyomás · 3/4 szett": the set about to be logged, or — right after a tap — the one just logged.
+    val contextLine = if (done != null && total != null) {
+        val shown = if (confirmed) done else (done + 1).coerceAtMost(total)
+        stringResource(R.string.log_set_context_format, model.exerciseName, shown, total)
+    } else {
+        model.exerciseName
+    }
+    Box(modifier.fillMaxSize()) {
+        Column(
+            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.16f).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
+        ) {
+            ActiveHeader(
+                icon = Icons.Filled.Timer, label = formatElapsed(model.elapsedMs),
+                isPaused = model.isPaused, showsStandaloneMark = model.showsStandaloneMark,
+            )
+            Text(
+                contextLine, style = LifeyType.title(), color = LifeyColors.text, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .widthIn(max = (width * 0.76f).dp)
+                    .let { if (onOpenExerciseList != null) it.clickable(onClick = onOpenExerciseList) else it },
+            )
+        }
+        Row(
+            Modifier.align(Alignment.Center).padding(top = (width * 0.07f).dp),
+            horizontalArrangement = Arrangement.spacedBy(LifeySpacing.md),
+        ) {
+            CircleButton(
+                style = if (confirmed) CircleStyle.SuccessTint else CircleStyle.Primary,
+                icon = Icons.Filled.Check,
+                label = stringResource(R.string.log_set_circle_label),
+                onClick = onLogSet,
+                isGhosted = ghostPair,
+                centerText = if (confirmed) null else "+1",
+                caption = if (confirmed) counter else null,
+                a11y = stringResource(R.string.log_set_button_a11y),
+            )
+            CircleButton(
+                style = CircleStyle.Raised,
+                icon = Icons.Filled.Tune,
+                label = stringResource(R.string.log_adjust_title),
+                onClick = onAdjust,
+                iconTint = LifeyColors.clay,
+                isGhosted = ghostPair,
+                a11y = stringResource(R.string.log_adjust_open_a11y),
+            )
+        }
+        if (pill != null) {
+            StatusPill(
+                kind = pill,
+                text = stringResource(
+                    when (pill) {
+                        PillKind.Failed -> R.string.log_set_failed
+                        PillKind.Unreachable -> R.string.phone_unreachable
+                        PillKind.Pending -> R.string.log_set_pending
+                        else -> R.string.log_set_logged
+                    },
+                ),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.08f).dp).widthIn(max = (width * 0.7f).dp),
+            )
+        }
+    }
+}
+
+/**
+ * The stateful log page: the best-effort reachability hint is owned by the caller ([hasConnectedNode],
+ * checked once when the page appears — Android has no continuous reachability push), the tap logic is the
+ * unchanged F5a/F6a one (docs/watch/43, 44): a set with nothing to prefill opens the stepper, standalone logs
+ * locally, otherwise a pending round trip to the phone.
  */
 @Composable
 internal fun LogPage(
     elapsedMs: Long,
-    exerciseName: String,
-    setsDone: Int?,
-    setsTotal: Int?,
+    display: ActiveExerciseDisplay,
     sessionClientId: String?,
-    /** Which exercise a tap here should count against, when this watch has a
-     * say in it (F6c §7) — null leaves the choice entirely to the phone, the
-     * pre-F6c behaviour. */
+    /** Which exercise a tap here should count against, when this watch has a say in it (F6c §7). */
     currentExerciseId: String?,
     logSetState: LogSetState,
     isStandalone: Boolean,
-    /** Whether HeaderChip's "not connected" badge should show — distinct
-     * from [isStandalone] itself, which this page also uses for real logic
-     * ([requiresPhone]) that must stay true regardless of live-bridging
-     * adoption. See the top-level `showsStandaloneBadge` computation. */
     showsStandaloneBadge: Boolean,
-    freeFormatSets: Pair<Int, Int>?,
-    /** Whether to offer the exercise-list chip under the status line — true
-     * only during a template-backed standalone session, same gate
-     * [ControlsPage] uses for its own copy of it. */
-    hasStandaloneTemplate: Boolean,
-    /** Opens the exercise list in place of the pager — the same callback
-     * [ControlsPage] gets, so both entry points land on one screen and one
-     * piece of state. */
+    isPaused: Boolean,
+    hasConnectedNode: Boolean,
+    canChooseExercise: Boolean,
     onOpenExerciseList: () -> Unit,
-    isCompact: Boolean,
-    maxWidth: Dp,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Standalone logging is local — gating on node connectivity would disable the control in exactly the
+    // situation F6a exists for. Only the phone-mastered path is a round trip.
+    val phoneUnreachable = !isStandalone && !hasConnectedNode
+    val canTap = logSetState is LogSetState.Ready && !phoneUnreachable
 
-    // Best-effort pre-tap hint, not a continuously-updated signal — Android
-    // has no reliable continuous reachability push, unlike iOS's
-    // `WCSession.isReachable`/`reachabilityChanged` (docs/watch/
-    // 43-watch-f5-set-logging-plan.md §4.4's Android branch). Checked once
-    // when this page appears; a tap that turns out to be wrong anyway just
-    // surfaces via the normal ack-timeout → Failed path, same as any other
-    // send that doesn't land.
-    var hasConnectedNode by remember { mutableStateOf(true) }
-    LaunchedEffect(Unit) {
-        hasConnectedNode = try {
-            Wearable.getNodeClient(context).connectedNodes.await().isNotEmpty()
-        } catch (_: Exception) {
-            true
-        }
-    }
-
-    var lastTapAtMs by remember { mutableLongStateOf(0L) }
-    // Standalone logging is local — there is no phone to reach, and gating on
-    // node connectivity would disable the control in exactly the situation
-    // F6a exists for (docs/watch/44-watch-f6-standalone-plan.md §11/8). Only
-    // the phone-mastered path needs a connected node, since that one's tap is
-    // a round-trip.
-    val requiresPhone = !isStandalone
-    val canTap = logSetState is LogSetState.Ready && (hasConnectedNode || !requiresPhone)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = maxWidth * SCREEN_PADDING_FRACTION),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        LegacyHeaderChip(
-            icon = Icons.Filled.FitnessCenter,
-            label = formatElapsed(elapsedMs),
-            isStandalone = showsStandaloneBadge,
-            isCompact = isCompact,
-        )
-        val ghosted = logSetState is LogSetState.Pending ||
-            logSetState is LogSetState.Failed ||
-            (logSetState is LogSetState.Ready && requiresPhone && !hasConnectedNode)
-        val buttonDiameter = maxWidth * LOG_BUTTON_PAIR_DIAMETER_FRACTION
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(if (isCompact) 10.dp else 14.dp),
-        ) {
-            LogCircle(
-                logSetState = logSetState,
-                ghosted = ghosted,
-                diameter = buttonDiameter,
-                setsDone = setsDone,
-                setsTotal = setsTotal,
-                freeFormatSets = freeFormatSets,
-                isCompact = isCompact,
-                enabled = canTap,
-                onTap = {
-                    val now = SystemClock.elapsedRealtime()
-                    if (now - lastTapAtMs < LOG_SET_TAP_DEBOUNCE_MS) return@LogCircle
-                    lastTapAtMs = now
-                    // Nothing known to log for this exercise — no planned
-                    // values, no history, no earlier set this session (see
-                    // [SessionStateHolder.hasLogSetPrefill]). A plain tap would
-                    // record a set with nothing in it, so open the stepper on
-                    // the defaults and let the user dial in the first values;
-                    // every later tap for this exercise then has that set to
-                    // carry forward.
-                    if (!SessionStateHolder.hasLogSetPrefill) {
-                        SessionStateHolder.onLogAdjustOpened()
-                        return@LogCircle
-                    }
-                    if (isStandalone) {
-                        // No phone to round-trip against — logs straight to
-                        // the local set list (docs/watch/
-                        // 44-watch-f6-standalone-plan.md §2.1, §3.2).
-                        SessionStateHolder.onStandaloneSetLogged()
-                        return@LogCircle
-                    }
-                    val currentSessionClientId = sessionClientId ?: return@LogCircle
-                    val eventId = UUID.randomUUID().toString()
-                    SessionStateHolder.onLogSetRequested(eventId)
-                    scope.launch {
-                        SummarySender.sendLogSet(
-                            context = context,
-                            sessionClientId = currentSessionClientId,
-                            eventId = eventId,
-                            loggedAtEpochMs = System.currentTimeMillis(),
-                            exerciseId = currentExerciseId,
-                        )
-                    }
-                },
-            )
-            AdjustCircle(
-                diameter = buttonDiameter,
-                isCompact = isCompact,
-                // The adjust stepper works the same way in standalone as
-                // phone-mastered now — both log through LogCircle's own
-                // isStandalone branch above.
-                enabled = canTap,
-                onTap = { SessionStateHolder.onLogAdjustOpened() },
-            )
-        }
-        LogStatusLine(
-            logSetState = logSetState,
-            hasConnectedNode = hasConnectedNode,
-            exerciseName = exerciseName,
-            setsDone = setsDone,
-            setsTotal = setsTotal,
-            isStandalone = isStandalone,
-            isCompact = isCompact,
-        )
-        // Directly under the "<exercise> · Set 2 of 2" line — that line is
-        // where the user notices they've finished an exercise, so the way to
-        // switch belongs next to it, not two swipes away on [ControlsPage].
-        // The Column is centre-arranged, so the two circles above simply ride
-        // up to make room; nothing here is pinned to the dial.
-        if (hasStandaloneTemplate) {
-            Box(modifier = Modifier.padding(top = if (isCompact) 6.dp else 8.dp)) {
-                ExerciseListChip(onClick = onOpenExerciseList)
+    LogContent(
+        model = LogModel(
+            elapsedMs = elapsedMs, exerciseName = display.name,
+            setsDone = display.setsDone, setsTotal = display.setsTotal, freeFormatSets = display.freeFormatSets,
+            logState = logSetState, phoneUnreachable = phoneUnreachable,
+            isPaused = isPaused, showsStandaloneMark = showsStandaloneBadge,
+        ),
+        onLogSet = {
+            if (!canTap) return@LogContent
+            // Nothing known to log for this exercise — no planned values, no history, no earlier set this
+            // session (SessionStateHolder.hasLogSetPrefill): open the stepper on the defaults instead of
+            // recording an empty set.
+            if (!SessionStateHolder.hasLogSetPrefill) {
+                SessionStateHolder.onLogAdjustOpened()
+                return@LogContent
             }
-        }
-    }
-}
-
-/** The circular control itself — ready/confirmed get the primary tint,
- * everything else (pending/failed/unreachable) shares one ghosted look
- * ([ghosted]), matching iOS's identical `ghostedCircle` collapsing of those
- * three states into one visual. */
-@Composable
-internal fun LogCircle(
-    logSetState: LogSetState,
-    ghosted: Boolean,
-    diameter: Dp,
-    setsDone: Int?,
-    setsTotal: Int?,
-    freeFormatSets: Pair<Int, Int>?,
-    isCompact: Boolean,
-    enabled: Boolean,
-    onTap: () -> Unit,
-) {
-    val backgroundColor = if (logSetState is LogSetState.Confirmed) {
-        LifeyColors.primary.copy(alpha = 0.18f)
-    } else if (ghosted) {
-        LifeyColors.surface
-    } else {
-        LifeyColors.container
-    }
-    val borderColor = if (logSetState is LogSetState.Confirmed) {
-        LifeyColors.primary
-    } else if (ghosted) {
-        LifeyColors.outline
-    } else {
-        LifeyColors.primary.copy(alpha = 0.55f)
-    }
-    val contentColor = if (ghosted) LifeyColors.ghostedOnSurface else LifeyColors.primary
-    val a11yLabel = stringResource(R.string.log_set_button_a11y)
-
-    Box(
-        modifier = Modifier
-            .padding(top = if (isCompact) 8.dp else 12.dp)
-            .size(diameter)
-            .background(backgroundColor, CircleShape)
-            .border(3.dp, borderColor, CircleShape)
-            .clickable(enabled = enabled, onClick = onTap)
-            .semantics { contentDescription = a11yLabel },
-        contentAlignment = Alignment.Center,
-    ) {
-        if (logSetState is LogSetState.Confirmed) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = LifeyColors.primary,
-                    modifier = Modifier.size(if (isCompact) 24.dp else 28.dp),
+            if (isStandalone) {
+                SessionStateHolder.onStandaloneSetLogged()
+                return@LogContent
+            }
+            val currentSessionClientId = sessionClientId ?: return@LogContent
+            val eventId = UUID.randomUUID().toString()
+            SessionStateHolder.onLogSetRequested(eventId)
+            scope.launch {
+                SummarySender.sendLogSet(
+                    context = context,
+                    sessionClientId = currentSessionClientId,
+                    eventId = eventId,
+                    loggedAtEpochMs = System.currentTimeMillis(),
+                    exerciseId = currentExerciseId,
                 )
-                if (freeFormatSets != null) {
-                    Text(
-                        text = stringResource(
-                            R.string.active_sets_free_format, freeFormatSets.first, freeFormatSets.second,
-                        ),
-                        style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
-                        color = LifeyColors.onSurface,
-                        maxLines = 1,
-                    )
-                } else if (setsDone != null && setsTotal != null) {
-                    Text(
-                        text = stringResource(R.string.active_sets_format, setsDone, setsTotal),
-                        style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
-                        color = LifeyColors.onSurface,
-                        maxLines = 1,
-                    )
-                }
             }
-        } else {
-            Text(
-                text = stringResource(R.string.log_set_button),
-                style = if (isCompact) MaterialTheme.typography.title3 else MaterialTheme.typography.title2,
-                color = contentColor,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
-        }
-    }
-}
-
-/** The right-hand button that opens the adjust stepper — same enabled/
- * ghosted split as [LogCircle]'s Ready/ghosted states, tinted `secondary`
- * (brown) to read as the side path, matching the adjust screen's own header
- * tint. Mirrors iOS's `adjustButtonContent`. */
-@Composable
-internal fun AdjustCircle(
-    diameter: Dp,
-    isCompact: Boolean,
-    enabled: Boolean,
-    onTap: () -> Unit,
-) {
-    val contentColor = if (enabled) LifeyColors.secondary else LifeyColors.ghostedOnSurface
-    val borderColor = if (enabled) LifeyColors.secondary.copy(alpha = 0.55f) else LifeyColors.outline
-    val a11yLabel = stringResource(R.string.log_adjust_open_a11y)
-
-    Box(
-        modifier = Modifier
-            .padding(top = if (isCompact) 8.dp else 12.dp)
-            .size(diameter)
-            .background(LifeyColors.container, CircleShape)
-            .border(3.dp, borderColor, CircleShape)
-            .clickable(enabled = enabled, onClick = onTap)
-            .semantics { contentDescription = a11yLabel }
-            .alpha(if (enabled) 1f else 0.75f),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Filled.Tune,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(if (isCompact) 20.dp else 24.dp),
-            )
-            Text(
-                text = stringResource(R.string.log_adjust_title),
-                style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
-                fontWeight = FontWeight.Bold,
-                color = contentColor,
-                maxLines = 1,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-    }
-}
-
-/** The line below the circle — context/status copy that changes with
- * [logSetState] (and, while Ready, with [hasConnectedNode]). Mirrors iOS's
- * `belowCircleContent`. */
-@Composable
-internal fun LogStatusLine(
-    logSetState: LogSetState,
-    hasConnectedNode: Boolean,
-    exerciseName: String,
-    setsDone: Int?,
-    setsTotal: Int?,
-    isStandalone: Boolean,
-    isCompact: Boolean,
-) {
-    val captionStyle = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1
-    when {
-        // Not shown in standalone: the header already carries the standalone
-        // badge, and repeating "phone not reachable" there would read as an
-        // error during a deliberately phone-less workout (§11/8).
-        logSetState is LogSetState.Ready && !isStandalone && !hasConnectedNode -> LogStatusPill(
-            icon = Icons.Filled.SignalWifiOff,
-            text = stringResource(R.string.phone_unreachable),
-            tint = LifeyColors.onSurfaceVariant,
-            background = LifeyColors.container,
-            isCompact = isCompact,
-        )
-        logSetState is LogSetState.Ready -> {
-            // exerciseName/setsDone/setsTotal already come from
-            // activeExerciseDisplay (docs/watch/49-watch-f6b-template-sync-plan.md
-            // §3.4) — no separate isStandalone branch needed here any more:
-            // Quick strength arrives with setsTotal == null (falls to the
-            // plain-name case below, mirrors iOS's simplified `contextLine`),
-            // a template exercise with a targetSets gets the same "next set
-            // of total" preview a phone-mastered exercise would.
-            val nextSet = if (setsDone != null && setsTotal != null) {
-                (setsDone + 1).coerceAtMost(setsTotal)
-            } else {
-                null
-            }
-            val text = if (nextSet != null && setsTotal != null) {
-                stringResource(R.string.log_set_context_format, exerciseName, nextSet, setsTotal)
-            } else {
-                exerciseName
-            }
-            Text(
-                text = text,
-                style = captionStyle,
-                color = LifeyColors.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        logSetState is LogSetState.Pending -> Text(
-            text = stringResource(R.string.log_set_pending),
-            style = captionStyle,
-            color = LifeyColors.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        logSetState is LogSetState.Confirmed -> LogStatusPill(
-            icon = null,
-            text = stringResource(R.string.log_set_logged),
-            tint = LifeyColors.primary,
-            background = LifeyColors.primary.copy(alpha = 0.14f),
-            isCompact = isCompact,
-        )
-        logSetState is LogSetState.Failed -> LogStatusPill(
-            icon = null,
-            text = stringResource(R.string.log_set_failed),
-            tint = LifeyColors.onErrorContainer,
-            background = LifeyColors.errorContainer,
-            isCompact = isCompact,
-        )
-    }
-}
-
-@Composable
-internal fun LogStatusPill(
-    icon: ImageVector?,
-    text: String,
-    tint: Color,
-    background: Color,
-    isCompact: Boolean,
-) {
-    Row(
-        modifier = Modifier
-            .padding(top = 8.dp)
-            .background(background, CircleShape)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(if (isCompact) 13.dp else 15.dp),
-            )
-        }
-        Text(
-            text = text,
-            style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
-            color = tint,
-            maxLines = 1,
-        )
-    }
+        },
+        onAdjust = { if (canTap || logSetState is LogSetState.Confirmed) SessionStateHolder.onLogAdjustOpened() },
+        onOpenExerciseList = if (canChooseExercise) onOpenExerciseList else null,
+    )
 }
 
 /**

@@ -37,6 +37,7 @@
 
     <!-- F5 set logging (docs/watch/43-watch-f5-set-logging-plan.md §3.4) -->
     <string name="log_set_button">+1 szett</string>
+    <string name="log_set_circle_label">szett</string>
     <string name="log_set_button_a11y">Egy szett naplózása</string>
     <string name="log_set_context_format">%1$s · %2$d/%3$d szett</string>
     <string name="log_set_pending">Naplózás…</string>

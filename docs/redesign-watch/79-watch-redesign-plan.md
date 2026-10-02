@@ -1218,11 +1218,12 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** revoke `BODY_SENSORS` via `adb shell pm revoke`; grant through the slot; fixtures.
 - *As built:* The broken-heart + ellipsized chip are gone: HeartRateSlot's permission state (M3 Button, two lines, tap = the existing RequestMultiplePermissions launcher with HEART_RATE_PERMISSIONS) and Missing state (ghost heart, 'nincs pulzus', ⓘ → AlertDialog) were wired in X3.3 via heartRateState(LiveMetrics); this step deletes active_heart_rate_denied_chip (HU+EN) and adds fixtures W1.3 and W2.16. active_heart_rate_denied_placeholder '--' stays: the cardio screen's legacy HeartRateReading still uses it until X4.
 
-### X3.6 — Watch Wear: log page ready (W1.5)
+### X3.6 — Watch Wear: log page ready (W1.5) ✅
 - Primary "+1" circle, `raised` "Módosítás" with clay `Tune` icon, labels under the circles (the "+1 szett"
   no longer breaks inside the circle); circles 85 → 78 dp so the pair stays inside the margin on the widest
   band; header `timer` + elapsed; next-set line.
 - **Verify:** fixture; tap targets.
+- *As built:* LogPage.kt: LogModel + LogContent (stateless) and the stateful LogPage. CircleButton gained centerText ('+1' in PJS), caption (inner 'n/total') and a11y; circles take WatchMetrics.circleButton (78/66 dp), labels under, 'Módosítás' = Raised with the clay Tune icon, header = timer + elapsed, line = 'exercise · next/total szett' (tap opens the exercise list when there is one — the old list chip is gone from this page). New string log_set_circle_label ('szett'/'set'). The reachability hint (hasConnectedNode) moved up to the strength screen because the pager must know whether a pill occupies the bottom arc; the 300 ms debounce is now CircleButton's DoubleTapGuard. The old LogCircle/AdjustCircle/LogStatusLine/LogStatusPill are deleted; the adjust overlay (old M2) stays in this file until X3.8. Fixtures W1.5–W1.7c.
 
 ### X3.7 — Watch Wear: logging states (W1.6, W1.7)
 - Ghosted pair while pending; success-tint circle with check + "Naplózva" pill on the bottom chord (where

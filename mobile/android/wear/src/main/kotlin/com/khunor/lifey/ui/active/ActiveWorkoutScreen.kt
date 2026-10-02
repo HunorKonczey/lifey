@@ -336,6 +336,19 @@ internal fun StrengthActiveWorkoutScreen() {
         showGoFlash = false
     }
 
+    // Best-effort pre-tap hint, not a continuously-updated signal — Android has no reliable continuous
+    // reachability push, unlike iOS's `WCSession.isReachable` (docs/watch/43-watch-f5-set-logging-plan.md
+    // §4.4's Android branch). Checked once when the screen appears; a tap that turns out to be wrong anyway
+    // surfaces via the normal ack-timeout → Failed path.
+    var hasConnectedNode by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        hasConnectedNode = try {
+            Wearable.getNodeClient(context).connectedNodes.await().isNotEmpty()
+        } catch (_: Exception) {
+            true
+        }
+    }
+
     // The segment of the set that was just logged turns `success` for 1.2 s (frame 04/03).
     var justLogged by remember { mutableStateOf(false) }
     LaunchedEffect(logSetState) {
@@ -502,23 +515,25 @@ internal fun StrengthActiveWorkoutScreen() {
             } else {
                 // D-X0.9: the crown no longer pages (it steps values and scrolls
                 // lists); swipe is the only way between the three pages.
-                LifeyPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                LifeyPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    bottomSlotOccupied = pagerState.currentPage == LOG_PAGE &&
+                        logPillKind(logSetState, !isStandalone && !hasConnectedNode) != null,
+                ) { page ->
                     when (page) {
                         LOG_PAGE -> LogPage(
                             elapsedMs = elapsedMs,
-                            exerciseName = display.name,
-                            setsDone = display.setsDone,
-                            setsTotal = display.setsTotal,
+                            display = display,
                             sessionClientId = metadata.sessionClientId,
                             currentExerciseId = metadata.currentExerciseId,
                             logSetState = logSetState,
                             isStandalone = isStandalone,
                             showsStandaloneBadge = showsStandaloneBadge,
-                            freeFormatSets = display.freeFormatSets,
-                            hasStandaloneTemplate = metadata.canChooseExercise,
+                            isPaused = liveMetrics.isPaused,
+                            hasConnectedNode = hasConnectedNode,
+                            canChooseExercise = metadata.canChooseExercise,
                             onOpenExerciseList = { showExerciseList = true },
-                            isCompact = isCompact,
-                            maxWidth = maxWidth,
                         )
                         METRICS_PAGE -> MetricsOrRestPage(
                             resting = resting,

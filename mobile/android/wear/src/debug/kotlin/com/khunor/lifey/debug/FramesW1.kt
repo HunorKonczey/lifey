@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.wear.compose.material3.TimeText
+import com.khunor.lifey.LogSetState
+import com.khunor.lifey.ui.active.LogContent
+import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.active.MetricsContent
 import com.khunor.lifey.ui.active.MetricsModel
 import com.khunor.lifey.ui.components.HeartRateState
@@ -22,6 +25,11 @@ val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
     "W1.2" to { Frame { MetricsContent(strengthModel(isPaused = true), {}, {}) } },
     "W1.3" to { Frame { MetricsContent(strengthModel(HeartRateState.PermissionDenied), {}, {}) } },
     "W2.16" to { Frame { MetricsContent(strengthModel(HeartRateState.Missing), {}, {}) } },
+    "W1.5" to { Frame { LogContent(logModel(LogSetState.Ready), {}, {}, {}) } },
+    "W1.6" to { Frame { LogContent(logModel(LogSetState.Confirmed, setsDone = 3), {}, {}, {}) } },
+    "W1.7" to { Frame { LogContent(logModel(LogSetState.Pending("fixture")), {}, {}, {}) } },
+    "W1.7b" to { Frame { LogContent(logModel(LogSetState.Failed), {}, {}, {}) } }, // failed: two centred lines
+    "W1.7c" to { Frame { LogContent(logModel(LogSetState.Ready, phoneUnreachable = true), {}, {}, {}) } },
     "W1.4" to { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
 )
 
@@ -37,4 +45,9 @@ private fun Frame(content: @Composable () -> Unit) {
 private fun strengthModel(heartRate: HeartRateState = HeartRateState.Live(128), isPaused: Boolean = false) = MetricsModel(
     headerLabel = "Erőedzés", elapsedMs = 12 * 60_000L + 34_000L, heartRate = heartRate, kcal = 87,
     exerciseName = "Fekvenyomás", setsDone = 2, setsTotal = 4, freeFormatSets = null, isPaused = isPaused,
+)
+
+private fun logModel(state: LogSetState, setsDone: Int = 2, phoneUnreachable: Boolean = false) = LogModel(
+    elapsedMs = 12 * 60_000L + 36_000L, exerciseName = "Fekvenyomás", setsDone = setsDone, setsTotal = 4,
+    freeFormatSets = null, logState = state, phoneUnreachable = phoneUnreachable,
 )

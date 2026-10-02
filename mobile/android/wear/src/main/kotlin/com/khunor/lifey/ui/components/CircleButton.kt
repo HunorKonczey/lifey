@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,12 @@ fun CircleButton(
     iconTint: Color? = null,
     isGhosted: Boolean = false,
     diameter: Dp? = null,
+    /** Big PJS text in the circle instead of the icon ("+1"). */
+    centerText: String? = null,
+    /** Small line under the icon inside the circle ("3/4" on the confirmed +1). */
+    caption: String? = null,
+    /** Spoken description when the circle shows text instead of an icon ("Egy szett naplózása"). */
+    a11y: String? = null,
 ) {
     val metrics = LocalWatchMetrics.current
     val size = diameter ?: metrics.circleButton
@@ -77,13 +85,24 @@ fun CircleButton(
             Modifier
                 .size(size)
                 .scale(scale)
+                .semantics { if (a11y != null) contentDescription = a11y }
                 .let { if (isGhosted) it.ghosted(true, CircleShape) else it.background(fill, CircleShape) }
                 .clickable(interactionSource = interaction, indication = null, enabled = !isGhosted) {
                     if (guard.accept()) onClick()
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = label, tint = ghostedContent(isGhosted, iconTint ?: content), modifier = Modifier.size(size * 0.36f))
+            val tint = ghostedContent(isGhosted, iconTint ?: content)
+            if (centerText != null) {
+                Text(centerText, style = LifeyType.metric(), color = tint, maxLines = 1)
+            } else if (caption != null) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(size * 0.30f))
+                    Text(caption, style = LifeyType.label(), color = tint, maxLines = 1)
+                }
+            } else {
+                Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(size * 0.36f))
+            }
         }
         Text(
             label, style = LifeyType.label(), color = ghostedContent(isGhosted, LifeyColors.text2),
