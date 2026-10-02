@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.TimeText
 import com.khunor.lifey.ui.components.GoFlash
+import com.khunor.lifey.ui.theme.LocalAmbientState
 import com.khunor.lifey.ui.components.LifeyAppScaffold
 import com.khunor.lifey.ui.components.LifeyPager
 import com.google.android.gms.wearable.Wearable
@@ -294,7 +295,24 @@ internal fun StrengthActiveWorkoutScreen() {
     var showEffortSelector by remember { mutableStateOf(false) }
     var effortRpe by remember { mutableIntStateOf(5) }
 
+    val ambient = LocalAmbientState.current
     LifeyAppScaffold {
+        if (ambient.isAmbient) {
+            // Always-On (W2.17 / W2.18): a quiet minute-resolution layout whatever page was showing; the
+            // values are recomputed from elapsedRealtime on every ambient update, not from the 1 Hz tickers.
+            val startedAt = liveMetrics.startedAtElapsedRealtimeMs
+            val ambientElapsedSeconds = remember(ambient.minuteOfDay, startedAt) {
+                if (startedAt == null) 0 else ((SystemClock.elapsedRealtime() - startedAt) / 1000L).toInt()
+            }
+            AmbientMetricsContent(
+                state = ambient,
+                headerLabel = activeHeaderLabel,
+                elapsedSeconds = ambientElapsedSeconds,
+                heartRateBpm = liveMetrics.heartRateBpm?.roundToInt()?.takeIf { liveMetrics.hasHeartRatePermission },
+                exerciseLine = ambientExerciseLine(display),
+            )
+            return@LifeyAppScaffold
+        }
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isCompact = isCompactScreen(maxWidth)
 
@@ -490,3 +508,8 @@ internal fun formatElapsed(totalMs: Long): String {
     val seconds = totalSeconds % 60
     return "%02d:%02d".format(minutes, seconds)
 }
+
+/** "Fekvenyomás · 2/4" — the quiet exercise line of the ambient pages (no segments, no counts of reps). */
+@Composable
+internal fun ambientExerciseLine(display: ActiveExerciseDisplay): String =
+    if (display.setsDone != null && display.setsTotal != null) "${display.name} · ${display.setsDone}/${display.setsTotal}" else display.name

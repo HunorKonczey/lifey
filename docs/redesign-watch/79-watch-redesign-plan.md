@@ -1363,11 +1363,12 @@ permission revoke/grant; failure paths.
 - **Verify:** grep in `ui/` finds no `Color(0x`, no `.sp` literal on a number, no legacy token name.
 - *As built:* What the canvases did not draw is on components and tokens already: the adoption/retry states (HeaderChip's mark Tapped state), the transient loading of the standalone summary (SyncRow pending), the empty exercise list (just the heading) and the empty picker (empty hint). This step removes 278 unused imports from ui/active and ui/*.kt (the Chip/CompactChip/MaterialTheme/ScalingLazyColumn leftovers of the split), four dead constants (REST_RING_NEGATIVE_THRESHOLD_MS, LOG_SET_TAP_DEBOUNCE_MS, LOG_ADJUST_ROTARY_STEP_DP, ADJUST_ROW_WIDTH_FRACTION) and the last legacy colour names in the cardio icon tints (secondary → clay, onSurfaceVariant → text2). Verified by grep: no Color(0x outside LifeyColors, no numeric .sp literal in ui/ outside theme. The legacy aliases themselves, DynamicSizing and Material 2 go in X4.16.
 
-### X4.13 — Watch Wear: ambient — metric page (W2.17)
+### X4.13 — Watch Wear: ambient — metric page (W2.17) ✅
 - The active screen opts in to ambient (`LocalAmbientState`): hero "12 p" PJS Light `text2`, HR @ 60 %
   with `Icons.Outlined.FavoriteBorder`, quiet exercise line; no buttons, pills, indicator, TimeText in
   ambient style; ±4 dp shift per minute; on exit the live seconds are recomputed (no stale frame).
 - **Verify:** emulator ambient; exit restores the live view.
+- *As built:* MainActivity registers androidx.wear.ambient.AmbientLifecycleObserver (enter/update/exit → AmbientState with the minute of day, provided as LocalAmbientState above LifeyTheme) and the manifest gains WAKE_LOCK. The strength screen opts in: while ambient it draws AmbientMetricsContent whatever page was open — outlined header, the elapsed time as '12 p' (AmbientFormat.elapsed, light PJS style in text2; the Light cut is still not bundled so it falls back to Bold, plan §10 Q4), the heart rate at 60 % with the outlined heart (nothing when there is no reading), a quiet 'exercise · n/total' line, no buttons / pills / indicator / TimeText, ±4 dp shift per minute. The elapsed seconds are recomputed from SystemClock.elapsedRealtime() on each ambient update and not from the 1 Hz ticker, so exiting ambient shows no stale frame. Fixture W2.17. Emulator ambient (and the exact trigger to record in §4.2) is still owed.
 
 ### X4.14 — Watch Wear: ambient — rest (W2.18)
 - Edge ring as a 2 dp `text3` outline; "~1 p" + "Mehet 9:42-kor"; per-minute refresh; the expiry vibration

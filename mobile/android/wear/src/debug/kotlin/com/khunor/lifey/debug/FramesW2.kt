@@ -9,6 +9,8 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.ui.active.LogContent
 import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.active.AmbientMetricsContent
+import com.khunor.lifey.ui.theme.AmbientState
 import com.khunor.lifey.ui.active.GameContent
 import com.khunor.lifey.ui.active.GameModel
 import androidx.compose.material.icons.filled.SportsBasketball
@@ -132,6 +134,7 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
     "W2.14b" to frame2 { CardioFrame(runModel(HeartRateState.PermissionDenied)) }, // the slot is the permission button
     "W2.12" to frame2 { GameFrame(gameModel(onCourt = true, hr = 138)) },
     "W2.13" to frame2 { GameFrame(gameModel(onCourt = false, hr = 118)) },
+    "W2.17" to frame2 { AmbientMetricsContent(AmbientState(true, 1), "Erőedzés", 12 * 60 + 34, 128, "Fekvenyomás · 2/4") },
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
         LifeyAppScaffold {
             PickerContent(

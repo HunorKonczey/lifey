@@ -16,6 +16,8 @@
     <!-- Rest-timer-vége haptika (docs/40-watch-app-plan.md §5.4/F4) — normal
          permission, nem kell runtime kérés. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Ambient (Always-On) mode: the active workout screens keep drawing a quiet minute-resolution layout. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:label="Lifey"
