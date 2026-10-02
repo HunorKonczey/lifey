@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { strength + logging + stepper + rest + controls + picker + finishing + summary }
+    static var all: [GalleryFrame] { start + strength + logging + stepper + rest + controls + picker + finishing + summary }
 
     static var strength: [GalleryFrame] {
       [
@@ -147,6 +147,15 @@
         GalleryFrame("AW1.22", "Summary") {
           SummaryContent(model: SummaryModel(totalSeconds: 2734, averageHeartRate: 128, calories: 312, savedToHealth: true))
         },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var start: [GalleryFrame] {
+      [
+        GalleryFrame("AW2.1", "Idle") { IdleContent() },
+        GalleryFrame("AW2.1b", "Idle · 41 mm", compact: true) { IdleContent() },
       ]
     }
   }

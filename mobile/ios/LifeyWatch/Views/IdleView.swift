@@ -1,25 +1,66 @@
 import SwiftUI
 
-/// The badge behind the leaf mark, and the leaf itself within it, as
-/// fractions of the shorter screen dimension — slightly smaller than the
-/// original idle screen's (canvas AW 01: 0.22/0.13) to make room for the
-/// launcher's "Start workout" pill below (canvas AW 12: "brand moment
-/// kept... slightly compacted").
-private let leafBadgeSizeFraction: CGFloat = 0.19
-private let leafMarkSizeFraction: CGFloat = 0.11
+// MARK: - Idle (redesign X2.1 — AW2.1)
 
-/// No active session — now a **launcher**, not just a status screen
-/// (docs/watch/44-watch-f6-standalone-plan.md §3.1, design canvas AW 12).
-/// The calm brand-moment the design canvas asks for (§12.1 B5 /
-/// 41-watch-design-prompt.md §3.1) is kept — leaf badge + "Lifey" wordmark
-/// — but compacted, since the `primary`-fill "Start workout" pill is now
-/// the screen's only saturated element, opening `StandalonePickerView`. The
-/// old `idle_subtitle` demotes to a quiet second line under the pill
-/// (`standalone_start_caption`) — the key itself stays in the string
-/// catalogs (harmless, unreferenced) rather than being deleted, since
-/// nothing else in this pass touches it. Padding and type scale are
-/// dial-size-relative, not fixed pt values (§12.1 B4 — see
-/// `DynamicSizing.swift`).
+/// No active session — the launcher. The leaf in a `card` holder (primary glyph), "Lifey" in PJS 800 (the
+/// one place PJS carries letters — the ExtraBold subset covers L i f e y), a full-width 48 pt primary
+/// start button on one line, and the quiet "or start it on the phone" caption in `text2`. Opens
+/// `StandalonePickerView` (docs/watch/44-watch-f6-standalone-plan.md §3.1).
+struct IdleContent: View {
+  var onStart: () -> Void = {}
+  #if DEBUG
+    var onLeafLongPress: () -> Void = {}
+  #endif
+
+  @Environment(\.watchMetrics) private var metrics
+
+  var body: some View {
+    VStack(spacing: LifeySpacing.md) {
+      Spacer(minLength: 0)
+      leaf
+      Text(verbatim: "Lifey")
+        .font(.custom(LifeyFont.extraBold, fixedSize: metrics.isCompact ? 22 : 26))
+        .foregroundColor(LifeyColors.text)
+      Button(action: onStart) {
+        Text("standalone_start_button")
+          .lifeyBodyBold(metrics)
+          .foregroundColor(LifeyColors.onPrimary)
+          .lineLimit(1)
+          .minimumScaleFactor(0.85)
+          .frame(maxWidth: .infinity, minHeight: metrics.buttonHeight)
+          .background(LifeyColors.primary, in: Capsule())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text("standalone_start_button_a11y"))
+      Text("standalone_start_caption")
+        .lifeyLabel(metrics)
+        .foregroundColor(LifeyColors.text2)
+        .multilineTextAlignment(.center)
+        .lineLimit(2)
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, metrics.sideMargin)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  private var leaf: some View {
+    let holder: CGFloat = metrics.isCompact ? 40 : 46
+    let view = ZStack {
+      RoundedRectangle(cornerRadius: LifeyShapes.control)
+        .fill(LifeyColors.card)
+        .frame(width: holder, height: holder)
+      Image(systemName: "leaf.fill")
+        .font(.system(size: holder * 0.5))
+        .foregroundColor(LifeyColors.primary)
+    }
+    #if DEBUG
+      return view.onLongPressGesture(perform: onLeafLongPress)  // design gallery, Debug builds only
+    #else
+      return view
+    #endif
+  }
+}
+
 struct IdleView: View {
   let onStartTapped: () -> Void
   #if DEBUG
@@ -27,51 +68,13 @@ struct IdleView: View {
   #endif
 
   var body: some View {
-    GeometryReader { geometry in
-      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
-      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
-      let shortSide = min(geometry.size.width, geometry.size.height)
-      let badgeSize = shortSide * leafBadgeSizeFraction
-      let leafSize = shortSide * leafMarkSizeFraction
-
-      VStack(spacing: badgeSize * 0.3) {
-        ZStack {
-          RoundedRectangle(cornerRadius: badgeSize * 0.3)
-            .fill(LifeyColors.surface)
-            .frame(width: badgeSize, height: badgeSize)
-          Image(systemName: "leaf.fill")
-            .font(.system(size: leafSize))
-            .foregroundColor(LifeyColors.primary)
-        }
-        #if DEBUG
-          .onLongPressGesture { showGallery = true }  // design gallery, Debug builds only (D-X0.11)
-          .sheet(isPresented: $showGallery) { NavigationStack { DesignGalleryView() } }
-        #endif
-        Text("idle_title")
-          .font(isCompact ? .title3 : .title2)
-          .foregroundColor(LifeyColors.onSurface)
-        Button(action: onStartTapped) {
-          Text("standalone_start_button")
-            .font(isCompact ? .caption : .body)
-            .fontWeight(.bold)
-            .foregroundColor(LifeyColors.onPrimary)
-            .padding(.horizontal, isCompact ? 18 : 24)
-            .padding(.vertical, isCompact ? 8 : 10)
-        }
-        .buttonStyle(.plain)
-        .background(LifeyColors.primary)
-        .clipShape(Capsule())
-        .accessibilityLabel(Text("standalone_start_button_a11y"))
-        .padding(.top, 2)
-        Text("standalone_start_caption")
-          .font(isCompact ? .caption2 : .caption)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-          .multilineTextAlignment(.center)
-      }
-      .padding(.horizontal, padding)
-      .frame(width: geometry.size.width, height: geometry.size.height)
-      .background(LifeyColors.trueBlack)
-    }
+    #if DEBUG
+      IdleContent(onStart: onStartTapped, onLeafLongPress: { showGallery = true })
+        .background(LifeyColors.bg)
+        .sheet(isPresented: $showGallery) { NavigationStack { DesignGalleryView() } }
+    #else
+      IdleContent(onStart: onStartTapped).background(LifeyColors.bg)
+    #endif
   }
 }
 

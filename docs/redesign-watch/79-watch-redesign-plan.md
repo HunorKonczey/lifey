@@ -1044,11 +1044,12 @@ new controls, picker, effort, ending and summary.
 `AllTypesRow`, `AllActivityTypesView`), `SummaryView.swift`, `HealthDeniedView.swift`, the cardio views
 from X1.1's `Views/Active/Cardio.swift`.
 
-### X2.1 — Watch iOS: idle (AW2.1)
+### X2.1 — Watch iOS: idle (AW2.1) ✅
 - Leaf (`leaf.fill`) in a `card` holder in primary; "Lifey" in PJS 800 (wordmark — the one place PJS
   carries letters, covered by the ExtraBold subset, D-X0.6); full-width 48 pt primary
   "Edzés indítása", one line; "vagy indítsd a telefonon" in `text2`.
 - **Verify:** fixture at both sizes; tap → picker.
+- *As built:* IdleContent: leaf in a card holder, 'Lifey' in PJS 800, full-width primary start button (one line, ≥ 44), caption in text2; the DEBUG long-press on the leaf opens the gallery as before. Frames AW2.1 / 2.1b. Not compiled.
 
 ### X2.2 — Watch iOS: picker list (AW2.2 – AW2.4)
 - `ListRow` everywhere (22 radius): quick strength highlighted (`nested`, 36 pt `bolt.fill` holder — fits
