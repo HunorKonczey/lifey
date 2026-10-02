@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { start + picker2 + strength + logging + stepper + rest + controls + picker + finishing + summary }
+    static var all: [GalleryFrame] { start + picker2 + errors + strength + logging + stepper + rest + controls + picker + finishing + summary }
 
     static var strength: [GalleryFrame] {
       [
@@ -172,6 +172,15 @@
         GalleryFrame("AW2.5", "All activity types") {
           AllTypesContent(entries: [("RUNNING", "Futás"), ("WALKING", "Séta"), ("INDOOR_BIKE", "Szobakerékpár"), ("OTHER_CARDIO", "Egyéb kardió")])
         },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var errors: [GalleryFrame] {
+      [
+        GalleryFrame("AW2.17", "Health access denied") { HealthDeniedContent() },
+        GalleryFrame("AW2.18", "Health denied · 41 mm", compact: true) { HealthDeniedContent() },
       ]
     }
   }

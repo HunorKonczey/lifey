@@ -1,61 +1,31 @@
 import SwiftUI
 
-/// "Allow Health access" (docs/40-watch-app-plan.md §12.1 B10): shown when
-/// `WorkoutManager.start(configuration:)` finds HealthKit sharing denied for
-/// the workout type, instead of silently falling back to `IdleView` (the
-/// earlier behavior the doc's §9 test matrix documented). The "Review
-/// access" button doesn't deep-link to Settings — watchOS has no public API
-/// for that — it just dismisses back to `IdleView`
-/// (`WorkoutManager.dismissError()`), the "minimum: instruction + dismiss →
-/// IDLE" the 42-doc's D1.2/W5 settled on. Styling (§12.1 B6) matches canvas
-/// frame AW 07: the ECG glyph is `onSurfaceVariant` (muted, informational),
-/// not `negative` — this is a permission prompt, not an alarm.
+// MARK: - Health access denied (redesign X2.10 — AW2.17, AW2.18)
+
+/// "Allow Health access" (docs/40-watch-app-plan.md §12.1 B10): shown when the workout session could not
+/// start because Health access is missing. The left-aligned `StatusScreen`: a bare 26 pt `waveform.path.ecg`,
+/// a title of at most two lines, the subtitle, and the "Engedélyek áttekintése" **control** button above the
+/// fold — it only steps back (there is no Settings API on watchOS). In a longer locale or at a larger text
+/// size the page scrolls and the button is at the end.
+struct HealthDeniedContent: View {
+  var onDismiss: () -> Void = {}
+
+  var body: some View {
+    ScrollView {
+      StatusScreen(
+        icon: "waveform.path.ecg", title: String(localized: "health_denied_title"),
+        subtitle: String(localized: "health_denied_subtitle"),
+        buttonTitle: String(localized: "health_denied_button"), onButton: onDismiss)
+    }
+    .background(LifeyColors.bg)
+  }
+}
+
 struct HealthDeniedView: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
 
   var body: some View {
-    GeometryReader { geometry in
-      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
-      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
-      // Scrollable: the title/subtitle wrap to several lines in a longer
-      // locale, which pushes the dismiss button off a 41 mm face — and
-      // without a ScrollView it can't be reached at all.
-      ScrollView {
-      VStack(spacing: 10) {
-        Image(systemName: "waveform.path.ecg")
-          .font(.system(size: isCompact ? 38 : 44))
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-        Text("health_denied_title")
-          .font(isCompact ? .caption : .body)
-          .fontWeight(.bold)
-          .foregroundColor(LifeyColors.onSurface)
-          .multilineTextAlignment(.center)
-        Text("health_denied_subtitle")
-          .font(isCompact ? .caption2 : .caption)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-          .multilineTextAlignment(.center)
-        Button("health_denied_button") {
-          workoutManager.dismissError()
-        }
-        .font(isCompact ? .caption : .body)
-        .fontWeight(.bold)
-        .foregroundColor(LifeyColors.onSurface)
-        .buttonStyle(.plain)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(LifeyColors.containerHighest)
-        .clipShape(Capsule())
-      }
-      .padding(.horizontal, padding)
-      .frame(maxWidth: .infinity)
-      // Keeps the content vertically centred when it fits, exactly as the
-      // pre-scroll fixed-height frame did — the ScrollView only takes over
-      // once the text is genuinely taller than the face.
-      .frame(minHeight: geometry.size.height)
-      }
-      .frame(width: geometry.size.width, height: geometry.size.height)
-      .background(LifeyColors.trueBlack)
-    }
+    HealthDeniedContent(onDismiss: { workoutManager.dismissError() })
   }
 }
 

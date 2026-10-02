@@ -131,7 +131,7 @@
   struct ListRowGallery: View {
     var body: some View {
       VStack(spacing: LifeySpacing.sm) {
-        ListRow(title: "Gyors erőedzés", leading: .holder(icon: "bolt.fill"), isHighlighted: true) {}
+        ListRow(title: "Gyors erőedzés", onClick: {}, leading: .holder(icon: "bolt.fill"), isHighlighted: true)
         ListRow(title: "Push nap — mell, vállak és tricepsz", onClick: {}, subtitle: "5 gyakorlat", showsChevron: true)
         ListRow(title: "Futás", onClick: {}, leading: .tintedCircle(icon: "figure.run", accent: LifeyColors.calories))
         ListRow(title: "Minden edzéstípus", onClick: {}, leading: .controlCircle(icon: "square.grid.2x2.fill"), showsChevron: true)

@@ -1110,12 +1110,13 @@ from X1.1's `Views/Active/Cardio.swift`.
   display (old ~86 % squeeze gone).
 - **Verify:** fixture; run without HR samples.
 
-### X2.10 — Watch iOS: Health access denied (AW2.17, AW2.18)
+### X2.10 — Watch iOS: Health access denied (AW2.17, AW2.18) ✅
 - `StatusScreen`: 26 pt `waveform.path.ecg` without a box, title broken deliberately into two lines
   ("Engedélyezd az / Egészség-hozzáférést"), subtitle, "Engedélyek áttekintése" as a **control** button
   above the fold (it only steps back — no Settings API on watchOS). 41 mm: 2-line title, 4-line subtitle,
   button still visible; larger text → scrolls, button at the end.
 - **Verify:** fixtures; deny Health access in the simulator.
+- *As built:* HealthDeniedContent = StatusScreen (bare icon, ≤ 2-line title, subtitle, control button, scrolls on overflow). Deviation: the canvas breaks the title deliberately ('Engedélyezd az / Egészség-hozzáférést'); that needs a line break inside the existing string, i.e. a text-catalogue change that is not in the ⚑ list, so the title wraps naturally for now. Frames AW2.17 / 2.18. Not compiled.
 
 ### X2.11 — Watch iOS: AOD — metric page (AW2.20)
 - Under `isLuminanceReduced`: header chip outlined, hero "12 p" PJS 300 `text2`, HR @ 60 % with
