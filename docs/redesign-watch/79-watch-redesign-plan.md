@@ -848,7 +848,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   APK's merged manifest does not contain it (`./gradlew :wear:processReleaseMainManifest` + grep).
 - *As built:* not built (TransformingLazyColumn from wear-foundation lazy, API unverified offline). Debug-only manifest + activity in src/debug; `--es frame <id>` jumps to a registered fixture (galleryFrames, empty until X3/X4); width and ambient toggles at the top. The release-manifest check (processReleaseMainManifest + grep) is left for the first Windows run.
 
-### X0w.9 — Watch Wear: round-screen scaffolding
+### X0w.9 — Watch Wear: round-screen scaffolding ✅
 - Files: new `ui/components/LifeyScaffold.kt`: `LifeyAppScaffold` (M3 `AppScaffold` + `TimeText`),
   `LifeyScreen` (M3 `ScreenScaffold` with `ScrollIndicator`, optional `edgeButton` slot),
   `lifeyTransformationSpec()` (≤ 12 % shrink, ≥ 80 % opacity, D-X0.12), `LifeyPager` (wear-foundation
@@ -856,6 +856,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   is occupied), `DismissibleOverlay` (`SwipeToDismissBox` + `BackHandler` → `onDismiss`).
 - **Verify:** gallery: a 12-row list shows the edge rows at the spec; a dismissible overlay closes by swipe
   and by the back key without closing the activity.
+- *As built:* UNVERIFIED offline — the M3/foundation signatures (AppScaffold(timeText), ScreenScaffold(scrollState, edgeButton), HorizontalPageIndicator(pagerState), SwipeToDismissBox, HorizontalPager(rotaryScrollableBehavior = null)) are from memory of the 1.5/1.6 API and must be compiled on the first Windows run. Deviation: the ≤ 12 % / ≥ 80 % edge-row spec is recorded as constants (LifeyTransformation) but the library default transformation is used until it can be built against a compiler. The gallery's 12-row list / overlay demo is added with the first screen that uses them (X3.2).
 
 ### X0w.10 — Watch Wear: header chip, metric reading, set segment bar, heart-rate slot
 - Files: new `ui/components/HeaderChip.kt`, `MetricReading.kt`, `SetSegmentBar.kt`, `HeartRateSlot.kt`.
