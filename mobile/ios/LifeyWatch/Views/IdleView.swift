@@ -22,6 +22,9 @@ private let leafMarkSizeFraction: CGFloat = 0.11
 /// `DynamicSizing.swift`).
 struct IdleView: View {
   let onStartTapped: () -> Void
+  #if DEBUG
+    @State private var showGallery = false
+  #endif
 
   var body: some View {
     GeometryReader { geometry in
@@ -40,6 +43,10 @@ struct IdleView: View {
             .font(.system(size: leafSize))
             .foregroundColor(LifeyColors.primary)
         }
+        #if DEBUG
+          .onLongPressGesture { showGallery = true }  // design gallery, Debug builds only (D-X0.11)
+          .sheet(isPresented: $showGallery) { NavigationStack { DesignGalleryView() } }
+        #endif
         Text("idle_title")
           .font(isCompact ? .title3 : .title2)
           .foregroundColor(LifeyColors.onSurface)

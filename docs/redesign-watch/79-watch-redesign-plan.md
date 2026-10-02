@@ -661,12 +661,13 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   logged set still plays `.success` once.
 - *As built:* all 6 `WKInterfaceDevice.play` call sites now go through `LifeyHaptics` from the same place (grep: none left outside it). Events: setLogged ×2, logFailed, restOver, stepperTick (±), syncTap (adoption retry).
 
-### X0a.5 — Watch iOS: DEBUG design gallery skeleton
+### X0a.5 — Watch iOS: DEBUG design gallery skeleton ✅
 - Files: new `Views/Debug/DesignGalleryView.swift` (`#if DEBUG`): sections per DS frame (tokens swatches,
   type ramp, metrics readout, then one section per component as later steps add them, then "Frames"
   with AW fixtures added by X1/X2); size override to render a 176 pt column inside a 198 pt screen; entry =
   long-press on the idle leaf in DEBUG builds only (`IdleView.swift`).
 - **Verify:** build Debug + Release; the gallery opens in Debug, the long-press does nothing in Release.
+- *As built:* gallery = sheet opened by a long-press on the idle leaf, wrapped in `#if DEBUG`; width button toggles the 198 / 176 pt column; AOD toggle is exposed as `EnvironmentValues.galleryAOD` for X0a.11. Sections register in `GallerySection.all`.
 
 ### X0a.6 — Watch iOS: header chip, metric reading, set segment bar
 - Files: new `Views/Components/HeaderChip.swift`, `MetricReading.swift`, `SetSegmentBar.swift` (pbxproj).

@@ -57,6 +57,7 @@
 		56424A87AB286A2F1E8CCEE5 /* LifeyType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E5E06FD56F3A0215EEB87C /* LifeyType.swift */; };
 		1F72299BBA64AB60D45701A3 /* LifeyHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */; };
 		926BD15225FDAB05FBF15D74 /* LifeyMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A183B7B64746BD684E846422 /* LifeyMotion.swift */; };
+		82174576416CD132DE7B7CE4 /* DesignGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12C3189D2758C46056A48D9 /* DesignGalleryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -189,6 +190,7 @@
 		54E5E06FD56F3A0215EEB87C /* LifeyType.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyType.swift; sourceTree = "<group>"; };
 		F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyHaptics.swift; sourceTree = "<group>"; };
 		A183B7B64746BD684E846422 /* LifeyMotion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyMotion.swift; sourceTree = "<group>"; };
+		D12C3189D2758C46056A48D9 /* DesignGalleryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DesignGalleryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -245,6 +247,7 @@
 				F3DF1BAA0E811718B4315813 /* EffortSelectorView.swift */,
 				9579E90AC7DE881411D162D8 /* SummaryView.swift */,
 				30F1283363772E14034D7802 /* HealthDeniedView.swift */,
+				0D558080C822F4686E03747F /* Debug */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -413,6 +416,14 @@
 				D04C120B07CBCD587111BC8F /* PlusJakartaSans-Bold-numerals.ttf */,
 			);
 			path = Fonts;
+			sourceTree = "<group>";
+		};
+		0D558080C822F4686E03747F /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				D12C3189D2758C46056A48D9 /* DesignGalleryView.swift */,
+			);
+			path = Debug;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -731,6 +742,7 @@
 				56424A87AB286A2F1E8CCEE5 /* LifeyType.swift in Sources */,
 				1F72299BBA64AB60D45701A3 /* LifeyHaptics.swift in Sources */,
 				926BD15225FDAB05FBF15D74 /* LifeyMotion.swift in Sources */,
+				82174576416CD132DE7B7CE4 /* DesignGalleryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
