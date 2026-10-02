@@ -14,7 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.khunor.lifey.ui.ActiveWorkoutScreen
+import com.khunor.lifey.ui.active.ActiveWorkoutScreen
 import com.khunor.lifey.ui.ErrorScreen
 import com.khunor.lifey.ui.IdleScreen
 import com.khunor.lifey.ui.StandalonePickerScreen

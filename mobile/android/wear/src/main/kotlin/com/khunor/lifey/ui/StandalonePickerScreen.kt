@@ -38,6 +38,8 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.khunor.lifey.R
 import com.khunor.lifey.StandaloneSessionStore
+import com.khunor.lifey.ui.active.cardioActivityIcon
+import com.khunor.lifey.ui.active.cardioActivityTint
 import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeyShapes
 import org.json.JSONObject

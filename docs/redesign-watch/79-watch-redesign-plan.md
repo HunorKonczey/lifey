@@ -1183,12 +1183,13 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 **Wear specifics (canvas 3 header):** no ending or summary screen for a phone-driven workout — after
 "Edzés lezárása" the watch returns to idle (unchanged).
 
-### X3.1 — Watch Wear: split ActiveWorkoutScreen into files with stateless content
+### X3.1 — Watch Wear: split ActiveWorkoutScreen into files with stateless content ✅
 - Files: `ui/ActiveWorkoutScreen.kt` → `ui/active/{ActiveWorkoutScreen,MetricsPage,LogPage,AdjustOverlay,
   RestHero,ControlsPage,ExerciseList,Cardio}.kt`; each page gets a stateless `…Content(model, callbacks)`
   composable fed by the existing `SessionStateHolder` collection in the outer composable.
 - No visual or behavioural change. Gallery "Frames" section with fixtures W1.1–W1.16.
 - **Verify:** build + tests; a phone-driven session on the emulator pair behaves exactly as before.
+- *As built:* Mechanical split by line range, no behavioural change: ActiveWorkoutScreen (dispatcher + strength state, constants, formatters), MetricsPage (metrics/rest page, ExerciseCard), LogPage (log + adjust), RestHero, ControlsPage, ExerciseList, Cardio (cardio screens + the legacy HeaderChip/MetricReading helpers until X4). Everything file-private became internal; cardioActivityIcon/Tint are imported by StandalonePickerScreen from the new package. Deviation: the stateless …Model/…Content split and the W1.x gallery fixtures are not done here — each page gets its Content when its own step (X3.3–X3.13) rewrites it, and registers its fixtures in galleryFrames then. Not compiled locally; CI is the compiler.
 
 ### X3.2 — Watch Wear: active scaffold — TimeText, pager, page indicator, rotary off
 - `StrengthActiveWorkoutScreen` inside `LifeyAppScaffold`/`LifeyScreen`; `LifeyPager` (3 pages, metrics
