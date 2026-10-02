@@ -830,7 +830,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** tests green; preview of hero/metric/value at font scale 1.0 and 1.3 (`@WearPreviewFontScales`).
 - *As built:* not built. Font files are byte-copies of the Apple subsets (res/font, lowercase names; OFL.txt stays next to the Apple copies — a .txt in res/font would break aapt). Glyph coverage was checked with fontTools instead of the JVM test: all numeral glyphs present except U+202F (NNBSP), which the source font itself lacks — dropped from the test and the Fonts README; it falls back to the system font. active_heart_rate_unit (bpm) added in both languages. LifeyType exposes hero/metric/value/aodHero/title/body/label as @Composable TextStyles with the 115 %/135 % font-scale clamp; M3 typography slots numeralLarge/numeralSmall/titleMedium are set from LifeyTheme.
 
-### X0w.7 — Watch Wear: motion tokens, reduced motion, haptic map
+### X0w.7 — Watch Wear: motion tokens, reduced motion, haptic map ✅
 - Files: new `ui/theme/LifeyMotion.kt` (durations, `CubicBezierEasing` curves, `rememberReducedMotion()`
   from `Settings.Global.ANIMATOR_DURATION_SCALE == 0f`), new `LifeyHaptics.kt` in the service package
   (functions per event wrapping the **existing** waveforms: 60·80·60, failure, 400 ms, `EFFECT_TICK`);
@@ -838,6 +838,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   `vibrateLogSetFailed`, `vibrateLogAdjustTick`).
 - **Verify:** build; on the emulator with a logged set, logcat shows the same vibrate call sequence as
   before (temporary log line, removed before commit).
+- *As built:* not built. `LifeyHaptics` (package com.khunor.lifey) holds the four existing waveforms unchanged; the four private vibrate… functions in ExerciseService now one-line delegates called from the same places, so the logcat before/after comparison of the plan reduces to a diff of identical VibrationEffect values. The motion durations/curves mirror LifeyMotion.swift.
 
 ### X0w.8 — Watch Wear: debug design gallery
 - Files: new `src/debug/AndroidManifest.xml` + `src/debug/kotlin/com/khunor/lifey/debug/DesignGalleryActivity.kt`

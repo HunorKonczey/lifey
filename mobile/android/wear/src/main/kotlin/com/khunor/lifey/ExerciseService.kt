@@ -11,8 +11,6 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.SystemClock
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -274,10 +272,7 @@ class ExerciseService : Service() {
         }
     }
 
-    private fun vibrateRestEnd() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
+    private fun vibrateRestEnd() = LifeyHaptics.restOver(this)
 
     /**
      * Reacts to every [LogSetState] change (docs/watch/
@@ -311,11 +306,8 @@ class ExerciseService : Service() {
         }
     }
 
-    private fun vibrateLogSetConfirmed() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        // Short double pulse — success (docs/watch/43-watch-f5-set-logging-plan.md §3.2).
-        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 80, 60), -1))
-    }
+    // Short double pulse — success (docs/watch/43-watch-f5-set-logging-plan.md §3.2).
+    private fun vibrateLogSetConfirmed() = LifeyHaptics.setLogged(this)
 
     /**
      * Restarted by every stepper interaction, so it measures *idle* time
@@ -339,16 +331,10 @@ class ExerciseService : Service() {
      * deliberately lighter than [vibrateLogSetConfirmed]/[vibrateLogSetFailed]:
      * the stepper "clicks", the log "confirms".
      */
-    private fun vibrateLogAdjustTick() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
-    }
+    private fun vibrateLogAdjustTick() = LifeyHaptics.stepperTick(this)
 
-    private fun vibrateLogSetFailed() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        // One longer pulse — failure, same shape as vibrateRestEnd's.
-        vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
+    // One longer pulse — failure, same shape as vibrateRestEnd's.
+    private fun vibrateLogSetFailed() = LifeyHaptics.logFailed(this)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val sessionClientId = intent?.getStringExtra(EXTRA_SESSION_CLIENT_ID)
