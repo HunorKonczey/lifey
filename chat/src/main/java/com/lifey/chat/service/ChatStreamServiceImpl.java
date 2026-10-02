@@ -84,7 +84,7 @@ public class ChatStreamServiceImpl implements ChatStreamService {
         // The peer only. Echoing "you are typing" to the sender's own second
         // device would be noise about something they are doing themselves.
         eventBus.publish(conversation.peerOf(userId),
-                ChatEvent.typing(new TypingEventPayload(conversationId, userId)));
+                ChatEvent.ofTyping(new TypingEventPayload(conversationId, userId)));
     }
 
     /**
@@ -103,11 +103,11 @@ public class ChatStreamServiceImpl implements ChatStreamService {
         if (missed.size() > limit) {
             // Too far behind to replay honestly — say so and let the client
             // reload. The stream is a fast path over REST, never the truth.
-            registry.sendTo(userId, emitter, ChatEvent.resync());
+            registry.sendTo(userId, emitter, ChatEvent.ofResync());
             return;
         }
         for (ChatMessage message : missed) {
-            registry.sendTo(userId, emitter, ChatEvent.message(new MessageEventPayload(
+            registry.sendTo(userId, emitter, ChatEvent.ofMessage(new MessageEventPayload(
                     message.getConversation().getId(), ChatMapper.toMessageResponse(message))));
         }
         replayTombstones(userId, lastEventId, emitter);
@@ -131,7 +131,7 @@ public class ChatStreamServiceImpl implements ChatStreamService {
                 userId, lastEventId, since, PageRequest.of(0, properties.streamCatchUpLimit()));
 
         for (ChatMessage message : deleted) {
-            registry.sendTo(userId, emitter, ChatEvent.deleted(new MessageDeletedEventPayload(
+            registry.sendTo(userId, emitter, ChatEvent.ofDeleted(new MessageDeletedEventPayload(
                     message.getConversation().getId(), message.getId(), message.getDeletedAt())));
         }
     }

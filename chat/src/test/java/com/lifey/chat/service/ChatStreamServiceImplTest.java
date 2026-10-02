@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -124,7 +125,7 @@ class ChatStreamServiceImplTest {
         SseEmitter emitter = streamService.open(100L);
 
         ArgumentCaptor<ChatEvent> frames = ArgumentCaptor.captor();
-        verify(registry, org.mockito.Mockito.times(2)).sendTo(eq(USER_ID), eq(emitter), frames.capture());
+        verify(registry, times(2)).sendTo(eq(USER_ID), eq(emitter), frames.capture());
         assertThat(frames.getAllValues()).extracting(ChatEvent::name).containsOnly(ChatEvent.MESSAGE);
         assertThat(frames.getAllValues()).extracting(ChatEvent::id).containsExactly(101L, 102L);
     }

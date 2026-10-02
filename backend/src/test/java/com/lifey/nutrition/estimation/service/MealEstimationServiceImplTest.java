@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -89,7 +90,7 @@ class MealEstimationServiceImplTest {
     }
 
     @Test
-    void estimate_gateRejects_neitherCallsModelNorCounts() throws IOException {
+    void estimate_gateRejects_neitherCallsModelNorCounts() {
         doThrow(new AiCreditsExhaustedException()).when(aiFeatureGate).checkMealEstimation(USER_ID);
 
         assertThatThrownBy(() -> service.estimate(png(64, 64))).isInstanceOf(AiCreditsExhaustedException.class);
@@ -98,7 +99,7 @@ class MealEstimationServiceImplTest {
     }
 
     @Test
-    void estimate_modelFails_doesNotBurnACredit() throws IOException {
+    void estimate_modelFails_doesNotBurnACredit() {
         when(analyzer.analyze(any())).thenThrow(new AiUnavailableException("down"));
 
         assertThatThrownBy(() -> service.estimate(png(64, 64))).isInstanceOf(AiUnavailableException.class);
@@ -131,7 +132,7 @@ class MealEstimationServiceImplTest {
         service.estimate(png(4000, 3000));
         service.estimate(png(300, 200));
 
-        verify(analyzer, org.mockito.Mockito.times(2)).analyze(sent.capture());
+        verify(analyzer, times(2)).analyze(sent.capture());
         assertThat(dimensions(sent.getAllValues().get(0))).containsExactly(1024, 768);
         assertThat(dimensions(sent.getAllValues().get(1))).containsExactly(300, 200);
     }

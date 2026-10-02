@@ -29,7 +29,7 @@ public class SuperAdminRoleAuditController {
     public Page<GlobalRoleAuditResponse> findAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size) {
-        Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(1, size), MAX_PAGE_SIZE));
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, MAX_PAGE_SIZE));
         return roleManagementService.findGlobalAuditLog(pageable);
     }
 }

@@ -127,7 +127,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
         int missedWorkoutCount = (int) workoutSessionRepository.countMissedOccurrences(
                 trainerId, clientId, today.minusDays(MISSED_WORKOUT_WINDOW_DAYS), today);
 
-        Integer avgCalories7d = averageDailyCalories(tc, clientId, today);
+        Integer avgCalories7d = averageDailyCalories(tc, clientId);
         Integer prCount7d = countRecordsThisWeek(clientId);
         // A client who never opened settings has no row yet: that is "no goal", not an error, and reading must not create one.
         Integer dailyCalorieGoal = userSettingsRepository.findByUserId(clientId).map(UserSettings::getDailyCalorieGoal).orElse(null);
@@ -142,7 +142,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
      * with something logged — one quiet day must not drag a compliant client's figure down — in the client's
      * own time zone, like the weekly report. Null when nothing was logged.
      */
-    private Integer averageDailyCalories(TrainerClient tc, Long clientId, LocalDate today) {
+    private Integer averageDailyCalories(TrainerClient tc, Long clientId) {
         ZoneOffset zone = ZoneOffset.ofTotalSeconds(tc.getClient().getUtcOffsetMinutes() * 60);
         LocalDate localToday = LocalDate.now(zone);
         int daysLogged = 0;

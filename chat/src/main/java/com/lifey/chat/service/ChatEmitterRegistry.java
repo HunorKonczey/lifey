@@ -136,7 +136,7 @@ public class ChatEmitterRegistry {
             for (SseEmitter emitter : emitters) {
                 try {
                     emitter.send(SseEmitter.event().comment("ping"));
-                } catch (IOException | IllegalStateException ex) {
+                } catch (IOException | IllegalStateException _) {
                     remove(userId, emitter);
                 }
             }

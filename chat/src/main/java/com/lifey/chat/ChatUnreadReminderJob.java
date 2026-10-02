@@ -81,15 +81,7 @@ public class ChatUnreadReminderJob {
     private void remindIfDue(List<ChatParticipant> threads, Instant now) {
         Long userId = threads.getFirst().getUserId();
         ChatPushPrefs prefs = preferences.load(userId);
-        if (!prefs.pushEnabled()) {
-            return;
-        }
-        // Quiet hours push the reminder out rather than cancelling it: the next
-        // tick after the window ends finds the same unread messages and sends.
-        if (ChatQuietHours.isQuiet(prefs, now)) {
-            return;
-        }
-        if (isOverDailyCap(userId, now)) {
+        if (isSuppressed(prefs, userId, now)) {
             return;
         }
 
@@ -104,17 +96,13 @@ public class ChatUnreadReminderJob {
         }
 
         long unread = 0;
-        Instant oldestUnnotified = null;
         for (ChatParticipant participant : audible) {
             unread += messageRepository.countUnread(participant.getConversation().getId(), userId);
-            Instant notified = participant.getLastNotifiedAt();
-            if (oldestUnnotified == null || notified == null || notified.isBefore(oldestUnnotified)) {
-                oldestUnnotified = notified;
-            }
         }
         if (unread == 0) {
             return;
         }
+        Instant oldestUnnotified = oldestUnnotified(audible);
 
         boolean hungarian = prefs.hungarian();
         String peerName = peerNameOf(audible.getFirst(), userId);
@@ -135,6 +123,29 @@ public class ChatUnreadReminderJob {
         }
 
         markReminded(userId, now);
+    }
+
+    private boolean isSuppressed(ChatPushPrefs prefs, Long userId, Instant now) {
+        // Quiet hours push the reminder out rather than cancelling it: the next
+        // tick after the window ends finds the same unread messages and sends.
+        return !prefs.pushEnabled()
+                || ChatQuietHours.isQuiet(prefs, now)
+                || isOverDailyCap(userId, now);
+    }
+
+    /** Null when any thread was never notified — that one is the oldest by definition. */
+    private static Instant oldestUnnotified(List<ChatParticipant> threads) {
+        Instant oldest = null;
+        for (ChatParticipant participant : threads) {
+            Instant notified = participant.getLastNotifiedAt();
+            if (notified == null) {
+                return null;
+            }
+            if (oldest == null || notified.isBefore(oldest)) {
+                oldest = notified;
+            }
+        }
+        return oldest;
     }
 
     /**
