@@ -1128,13 +1128,13 @@ from X1.1's `Views/Active/Cardio.swift`.
 - **Verify:** simulator Always On + lock; the full view returns with the correct live seconds.
 - *As built:* Each Content view got an isAOD branch (frame 08): outlined chip/icons (LifeyAOD.symbol), hero in minutes (PJS Light → Bold fallback until the Light subset lands), HR and accents at 60 %, no fill, no kcal/card/buttons; rest shows '~1 p' + 'Mehet 9:42-kor' (end time = now + remaining, local zone) with a 2 pt outline line; cardio keeps the phone's distance decimal, collapses the field into one quiet line; the bench keeps a 2 pt rim, the stopped play time with seconds, gross time in minutes (parsed from the phone's 'mm:ss' string — falls back to the string if it cannot be parsed). Live pages switch from the 1 s TimelineView to MinuteTimeline (once a minute under reduced luminance). Also fixed a double side padding on the rest state introduced in X1.8. Frames AW2.20–2.23 (the gallery AOD toggle is not wired into the fixtures; they are rendered with isAOD = true). Not compiled; the wrist-raise ≤ 300 ms return needs a device.
 
-### X2.12 — Watch iOS: AOD — rest (AW2.21)
+### X2.12 — Watch iOS: AOD — rest (AW2.21) ✅
 - "~1 p" hero (minutes, rounded up) + "Mehet 9:42-kor" (`aod_rest_until`, from `restEndsAtEpochMs` in the
   local zone) + "Következő …" line; the bar becomes a 2 pt `outline` line; per-minute refresh; the expiry
   haptic is independent (unchanged).
 - **Verify:** lock during a rest; the end time matches the moment the haptic fires.
 
-### X2.13 — Watch iOS: AOD — cardio and bench (AW2.22, AW2.23)
+### X2.13 — Watch iOS: AOD — cardio and bench (AW2.22, AW2.23) ✅
 - Cardio: distance keeps its decimal (it comes from the phone, not per second); accent @ 60 %; the field
   row collapses to one quiet line "5:23 /km · tempó".
 - Bench: rim stays (2 pt, 60 %); stopped play time keeps seconds; gross time "Bruttó idő 16 p" (minutes).
