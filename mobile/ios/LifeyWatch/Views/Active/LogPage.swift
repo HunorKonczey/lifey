@@ -98,7 +98,10 @@ struct LogContent: View {
     case .pending: StatusPill(kind: .pending, text: String(localized: "log_set_pending"))
     case .confirmed: StatusPill(kind: .logged, text: String(localized: "log_set_logged"))
     case .ready:
-      if model.canChooseExercise {
+      if model.markTapped {
+        // "Sync now" feedback (AW2.7): the mark is raised and the pill says where the workout is going.
+        StatusPill(kind: .handoff, text: String(localized: "standalone_handoff_pending"))
+      } else if model.canChooseExercise {
         CompactChip(title: String(localized: "standalone_exercise_list_title"), icon: "list.bullet", action: onOpenExerciseList)
       }
     }

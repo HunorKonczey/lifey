@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { start + picker2 + errors + strength + logging + stepper + rest + controls + picker + finishing + summary }
+    static var all: [GalleryFrame] { start + picker2 + errors + standalone + strength + logging + stepper + rest + controls + picker + finishing + summary }
 
     static var strength: [GalleryFrame] {
       [
@@ -181,6 +181,31 @@
       [
         GalleryFrame("AW2.17", "Health access denied") { HealthDeniedContent() },
         GalleryFrame("AW2.18", "Health denied · 41 mm", compact: true) { HealthDeniedContent() },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var standalone: [GalleryFrame] {
+      [
+        GalleryFrame("AW2.6", "Standalone quick strength") {
+          MetricsContent(
+            model: MetricsModel(
+              headerLabel: "Erőedzés", showsStandaloneMark: true, elapsedSeconds: 12 * 60 + 34, heartRateBpm: 121,
+              calories: 87, exerciseName: "Gyors erőedzés", freeFormText: "3. szett · összesen 24 ismétlés"))
+        },
+        GalleryFrame("AW2.7", "Mark tapped") {
+          LogContent(
+            model: LogModel(
+              elapsedSeconds: 12 * 60 + 36, contextName: "Push nap", contextSuffix: " · 3/4 szett",
+              showsStandaloneMark: true, markTapped: true))
+        },
+        GalleryFrame("AW2.8", "Standalone log page · chip") {
+          LogContent(
+            model: LogModel(
+              elapsedSeconds: 12 * 60 + 34, contextName: "Fekvenyomás", contextSuffix: " · 3/4 szett",
+              canChooseExercise: true, showsStandaloneMark: true))
+        },
       ]
     }
   }

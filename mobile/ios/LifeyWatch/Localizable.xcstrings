@@ -1022,6 +1022,22 @@
         }
       }
     },
+    "standalone_handoff_pending" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuing on the phone…"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folytatás a telefonon…"
+          }
+        }
+      }
+    },
     "standalone_picker_title" : {
       "localizations" : {
         "en" : {
