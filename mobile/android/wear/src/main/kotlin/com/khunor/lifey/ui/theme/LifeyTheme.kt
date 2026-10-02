@@ -99,7 +99,7 @@ private val LifeyWearTypography = Typography().let { base ->
 fun LifeyTheme(content: @Composable () -> Unit) {
     // Material 3 outside, Material 2 inside: both read the same tokens while screens migrate
     // (D-X0.8); the M2 layer is deleted in X4.16.
-    Material3Theme(colorScheme = LifeyM3ColorScheme) {
+    Material3Theme(colorScheme = LifeyM3ColorScheme, typography = LifeyType.m3Typography) {
         MaterialTheme(
             colors = LifeyWearColors,
             typography = LifeyWearTypography,

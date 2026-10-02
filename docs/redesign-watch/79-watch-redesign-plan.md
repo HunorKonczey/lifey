@@ -818,7 +818,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** tests green; build.
 - *As built:* not built or run (no Android SDK). The expected test numbers were computed by hand against the formulas (e.g. 12 % of 227 = 27.2 → 27, chord at the 20 % line of 200 dp = 160). WatchMetrics is provided from a BoxWithConstraints in LifeyTheme; DynamicSizing.isCompactScreen now delegates. Legacy shape names aliased (chip/button/cardLarge); card is now 22.
 
-### X0w.6 — Watch Wear: Plus Jakarta Sans numerals + M3 typography
+### X0w.6 — Watch Wear: Plus Jakarta Sans numerals + M3 typography ✅
 - Files: `src/main/res/font/pjs_numerals_extrabold.ttf`, `pjs_numerals_bold.ttf`, `pjs_numerals_light.ttf`
   (byte-identical to the Apple subsets) + `OFL.txt` noted in the README; new `ui/theme/LifeyType.kt`:
   `FontFamily`, M3 `Typography` with `numeralLarge/numeralSmall/titleMedium` in PJS and system text for the
@@ -828,6 +828,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - Tests: `FontCoverageTest.kt` — loads each TTF with `java.awt.Font.createFont` and asserts `canDisplay`
   for every D-X0.6 glyph; asserts the Wear and Apple copies are byte-identical.
 - **Verify:** tests green; preview of hero/metric/value at font scale 1.0 and 1.3 (`@WearPreviewFontScales`).
+- *As built:* not built. Font files are byte-copies of the Apple subsets (res/font, lowercase names; OFL.txt stays next to the Apple copies — a .txt in res/font would break aapt). Glyph coverage was checked with fontTools instead of the JVM test: all numeral glyphs present except U+202F (NNBSP), which the source font itself lacks — dropped from the test and the Fonts README; it falls back to the system font. active_heart_rate_unit (bpm) added in both languages. LifeyType exposes hero/metric/value/aodHero/title/body/label as @Composable TextStyles with the 115 %/135 % font-scale clamp; M3 typography slots numeralLarge/numeralSmall/titleMedium are set from LifeyTheme.
 
 ### X0w.7 — Watch Wear: motion tokens, reduced motion, haptic map
 - Files: new `ui/theme/LifeyMotion.kt` (durations, `CubicBezierEasing` curves, `rememberReducedMotion()`

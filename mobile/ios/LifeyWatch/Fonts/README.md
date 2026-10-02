@@ -4,7 +4,7 @@ Numbers only (D-X0.6); every word stays in the system font. Licence: SIL OFL 1.1
 The same files are committed for Wear OS (`mobile/android/wear/src/main/res/font/`) and a JVM test
 asserts they are byte-identical.
 
-Subset glyphs: `0-9 : . , + - − – — / ~ % ×`, space, NBSP, NNBSP (U+00A0, U+202F); the ExtraBold
+Subset glyphs: `0-9 : . , + - − – — / ~ % ×`, space and NBSP (U+00A0) — the source font has no NNBSP U+202F, so that one falls back to the system font; the ExtraBold
 subset also has `L i f e y` for the idle wordmark. Features kept: `tnum`, `kern`, `liga`.
 
 ```bash
