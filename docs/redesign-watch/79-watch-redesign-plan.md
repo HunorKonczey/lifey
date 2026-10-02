@@ -779,7 +779,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** `:wear:assembleDebug`; idle, picker, active page on the emulator show the v2 palette.
 - *As built:* no Android SDK in the cloud session, so nothing was built; values are identical to LifeyColors.swift (checked by script, formal TokenParityTest follows in X0w.3). Added cardioHiking (hiking was tertiary, which now aliases success); the M2 theme maps from the new names.
 
-### X0w.2 — Watch Wear: Compose Material 3 alongside Material 2
+### X0w.2 — Watch Wear: Compose Material 3 alongside Material 2 ✅
 - Files: `mobile/android/wear/build.gradle.kts` (`compose-material3` on the foundation's version line,
   `debugImplementation("androidx.wear.compose:compose-ui-tooling")`), `ui/theme/LifeyTheme.kt`: an M3
   `ColorScheme` from the tokens (primary/onPrimary, surfaceContainer* = card/nested/control/raised,
@@ -787,6 +787,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   theme kept inside it until X4.16.
 - **Verify:** builds; an M3 `Button` and an M2 `Chip` render side by side in a preview with the right
   colours.
+- *As built:* UNVERIFIED: Google Maven (dl.google.com) is blocked in the cloud session, so the compose-material3 1.6.2 artifact name/version and the ColorScheme parameter names could not be checked — confirm on the first Windows build. The M3 theme wraps the M2 theme; the M3-vs-M2 side-by-side preview comes with the gallery (X0w.8).
 
 ### X0w.3 — Watch Wear: JVM tests — contrast, token parity
 - Files: `build.gradle.kts` (`testImplementation("junit:junit:4.13.2")`), new

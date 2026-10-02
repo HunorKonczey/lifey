@@ -62,6 +62,10 @@ dependencies {
     // for its `rotaryScrollableBehavior` param (1.4.1 only has the plain
     // androidx.compose.foundation.pager one, with no rotary/crown support).
     implementation("androidx.wear.compose:compose-foundation:1.6.2")
+    // Material 3 for Wear (redesign plan 79, D-X0.8): EdgeButton, TransformingLazyColumn, ScreenScaffold/
+    // AppScaffold + TimeText, HorizontalPageIndicator, Button, AlertDialog. Same version line as the
+    // foundation; coexists with the Material 2 artifact above until X4.16 removes that one.
+    implementation("androidx.wear.compose:compose-material3:1.6.2")
     implementation("androidx.compose.ui:ui-tooling-preview")
     // Material Symbols equivalents for the brand icon set (favorite, flame,
     // fitness_center, timer, pause/stop, heart_broken, priority_high —
@@ -70,6 +74,8 @@ dependencies {
     // fine here even though the rest of the UI uses `compose-material` (Wear).
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    // @WearPreviewDevices / @WearPreviewFontScales for the component previews (D-X0.11).
+    debugImplementation("androidx.wear.compose:compose-ui-tooling:1.6.2")
 
     // Health Services — live HR/kcal during the strength-training exercise
     // (docs/40-watch-app-plan.md §5.3). Pinned to the stable release; the

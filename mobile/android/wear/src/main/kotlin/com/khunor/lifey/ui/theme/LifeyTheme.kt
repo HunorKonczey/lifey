@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Typography
+import androidx.wear.compose.material3.ColorScheme
+import androidx.wear.compose.material3.MaterialTheme as Material3Theme
 
 /**
  * Maps the v2 [LifeyColors] tokens onto Wear Compose Material's [Colors]
@@ -28,6 +30,38 @@ private val LifeyWearColors = Colors(
     onSurface = LifeyColors.text,
     onSurfaceVariant = LifeyColors.text2,
     onError = LifeyColors.bg,
+)
+
+/**
+ * The Material 3 colour scheme from the same tokens (D-X0.8): surface containers = card / nested /
+ * control / raised, background = bg, outline = outline, onSurface = text, onSurfaceVariant = text2.
+ */
+internal val LifeyM3ColorScheme = ColorScheme(
+    primary = LifeyColors.primary,
+    onPrimary = LifeyColors.onPrimary,
+    primaryContainer = LifeyColors.nested,
+    onPrimaryContainer = LifeyColors.text,
+    secondary = LifeyColors.clay,
+    onSecondary = LifeyColors.onPrimary,
+    secondaryContainer = LifeyColors.tint(LifeyColors.clay),
+    onSecondaryContainer = LifeyColors.clay,
+    tertiary = LifeyColors.success,
+    onTertiary = LifeyColors.onPrimary,
+    tertiaryContainer = LifeyColors.tint(LifeyColors.success),
+    onTertiaryContainer = LifeyColors.success,
+    surfaceContainerLow = LifeyColors.card,
+    surfaceContainer = LifeyColors.nested,
+    surfaceContainerHigh = LifeyColors.control,
+    onSurface = LifeyColors.text,
+    onSurfaceVariant = LifeyColors.text2,
+    outline = LifeyColors.outline,
+    outlineVariant = LifeyColors.raised,
+    background = LifeyColors.bg,
+    onBackground = LifeyColors.text,
+    error = LifeyColors.error,
+    onError = LifeyColors.bg,
+    errorContainer = LifeyColors.tint(LifeyColors.error),
+    onErrorContainer = LifeyColors.error,
 )
 
 /**
@@ -61,12 +95,16 @@ private val LifeyWearTypography = Typography().let { base ->
  * background instead of the AMOLED true-black every canvas frame assumes. */
 @Composable
 fun LifeyTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colors = LifeyWearColors,
-        typography = LifeyWearTypography,
-    ) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
-            content()
+    // Material 3 outside, Material 2 inside: both read the same tokens while screens migrate
+    // (D-X0.8); the M2 layer is deleted in X4.16.
+    Material3Theme(colorScheme = LifeyM3ColorScheme) {
+        MaterialTheme(
+            colors = LifeyWearColors,
+            typography = LifeyWearTypography,
+        ) {
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
+                content()
+            }
         }
     }
 }
