@@ -9,6 +9,7 @@ import com.khunor.lifey.LogAdjustField
 import com.khunor.lifey.LogAdjustState
 import com.khunor.lifey.LogSetState
 import com.khunor.lifey.ui.active.AdjustContent
+import com.khunor.lifey.ui.EffortContent
 import com.khunor.lifey.ui.active.ControlsContent
 import com.khunor.lifey.ui.active.ControlsModel
 import com.khunor.lifey.ui.active.ExerciseListContent
@@ -58,6 +59,7 @@ val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
             onSelect = {},
         )
     },
+    "W1.16" to { EffortContent(rpe = 7, onRpeChange = {}, onConfirm = {}, onSkip = {}) },
     "W1.4" to { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
 )
 

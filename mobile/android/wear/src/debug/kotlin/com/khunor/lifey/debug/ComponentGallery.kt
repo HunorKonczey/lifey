@@ -142,7 +142,7 @@ private fun StepperGallery() {
         ValueStepper(reps, { reps = it }, 1.0..99.0, 1.0, { it.toInt().toString() }, unit = "ismétlés", confirmLabel = "${reps.toInt()} ismétlés naplózása")
         ValueStepper(1.0, {}, 1.0..99.0, 1.0, { it.toInt().toString() }, unit = "alsó határ")
         ValueStepper(weight, { weight = it }, 0.0..500.0, 2.5, { "%g".format(it).replace('.', ',') }, unit = "kg")
-        EffortScale(effort, { effort = it }, "Kihagyás", {}, "Edzés lezárása", {})
+        EffortScale(effort, { effort = it }, "Kihagyás", {})
     }
 }
 

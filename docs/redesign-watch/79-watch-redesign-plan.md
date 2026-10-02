@@ -1266,10 +1266,11 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** fixture; swipe-back does not close the activity.
 - *As built:* ExerciseList.kt: ExerciseRow + ExerciseListContent (LifeyScreen scaffold → ScrollIndicator, TransformingLazyColumn with the default rotary scrolling, title + ListRow pills 'name / n/total szett', current = raised + check) and ExerciseListScreen wrapped in DismissibleOverlay (swipe or hardware back = back to the pager, never finishes the activity). Data flow unchanged (activePlanExercises, standaloneSetsDoneAt, removedExerciseIndexes skipped not renumbered, tap jumps immediately). Deviation: the custom edge transformation spec (lifeyTransformationSpec, scale ≥ 88 % / alpha ≥ 80 %) is not built — LifeyTransformation stays constants and the library default applies, as in X0w.10 — to be checked on the emulator. Fixture W1.15.
 
-### X3.13 — Watch Wear: effort (W1.16)
+### X3.13 — Watch Wear: effort (W1.16) ✅
 - `EffortScale` (white number, 10 segments), "Kihagyás" 40 dp real button, "Edzés lezárása" EdgeButton;
   back = swipe-to-dismiss → back to the workout (replaces the invisible corner arrow). Rotary 1–10.
 - **Verify:** fixture; end with and without effort; swipe back returns to the controls page.
+- *As built:* EffortSelectorScreen.kt rewritten (same signature, so the cardio screen keeps working): DismissibleOverlay (swipe/back = onBack → back to the workout, replaces the invisible corner arrow), EffortContent = title, white effort number with ± and the 10-segment bar (ValueStepper 1–10, rotary steps and ticks), a real 40 dp 'Kihagyás' Button, and 'Edzés lezárása' as the primary EdgeButton placed on the bottom arc by the screen. EffortScale lost its inline finish EdgeButton (the caller owns the bottom arc); the gallery call was adapted. The end routing (standalone → endStandaloneIntent, phone-mastered → sendEndRequested) is untouched. Fixture W1.16.
 
 **X3 review (§4.2):** all W1 frames at 227 / 192 dp; demo flow "full phone-driven strength session";
 permission revoke/grant; failure paths.

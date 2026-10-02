@@ -23,8 +23,8 @@ import com.khunor.lifey.ui.theme.LifeyType
 
 /**
  * Effort scale (frame 04/11): a [ValueStepper] 1–10 plus a 10-segment bar; the number is white (effort has
- * no metric colour). "Kihagyás" is a real 40 dp secondary [Button] ([skipLabel]) and "Edzés lezárása" the
- * bottom EdgeButton ([finishLabel]) — W1.16.
+ * no metric colour). "Kihagyás" is a real 40 dp secondary [Button] ([skipLabel]); "Edzés lezárása" is the screen's own bottom
+ * EdgeButton (placed by the caller on the bottom arc, W1.16).
  */
 @Composable
 fun EffortScale(
@@ -32,8 +32,6 @@ fun EffortScale(
     onValueChange: (Int) -> Unit,
     skipLabel: String,
     onSkip: () -> Unit,
-    finishLabel: String,
-    onFinish: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(LifeySpacing.md)) {
@@ -50,6 +48,5 @@ fun EffortScale(
             onClick = onSkip, modifier = Modifier.height(40.dp),
             colors = ButtonDefaults.filledTonalButtonColors(containerColor = LifeyColors.control, contentColor = LifeyColors.text),
         ) { Text(skipLabel, style = LifeyType.body(), color = LifeyColors.text, maxLines = 1) }
-        EdgeButton(onClick = onFinish) { Text(finishLabel, style = LifeyType.body(), color = LifeyColors.onPrimary, maxLines = 2) }
     }
 }
