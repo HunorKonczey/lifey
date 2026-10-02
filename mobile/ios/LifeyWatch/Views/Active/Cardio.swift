@@ -95,6 +95,9 @@ struct CardioModel {
   /// Gross time, shown in the HR row on the right while on court and in clay on the bench.
   var gross: (value: String, label: String)? = nil
   var toggleTitle = ""
+  /// Seconds behind the ticking primary / gross values, for the minute-resolution Always-On text.
+  var primarySeconds: Int? = nil
+  var grossSeconds: Int? = nil
 }
 
 /// One layout for the three cardio families (D1): the workout's unit is the hero in **white** (the accent moves
@@ -103,6 +106,10 @@ struct CardioModel {
 /// stopped (`text3`), the gross time clay, and the rim (`BenchFrame`) is drawn by the page.
 struct CardioContent: View {
   let model: CardioModel
+  /// Always-On: the distance keeps its decimal (it comes from the phone, not per second), accent @ 60 %, the
+  /// fields collapse into one quiet line, the bench keeps a 2 pt rim and the stopped play time its seconds,
+  /// the gross time is in minutes.
+  var isAOD = false
   var onMarkTap: () -> Void = {}
   var onToggle: () -> Void = {}
 
@@ -114,6 +121,51 @@ struct CardioContent: View {
   }
 
   var body: some View {
+    if isAOD { aodBody } else { fullBody }
+  }
+
+  private var aodBody: some View {
+    let benched = model.isGame && !model.onCourt
+    // On court the ticking time is minutes only; benched, the stopped play time keeps its seconds.
+    let hero: String = (model.primarySeconds != nil && !benched)
+      ? LifeyAOD.elapsed(model.primarySeconds ?? 0) : model.primaryValue
+    return ZStack {
+      VStack(alignment: .leading, spacing: 0) {
+        HStack(spacing: LifeySpacing.xs) {
+          Image(systemName: LifeyAOD.symbol(icon)).font(.system(size: 13))
+          Text(verbatim: model.headerLabel).lifeyLabel(metrics, caps: true).lineLimit(1)
+        }
+        .foregroundColor(LifeyAOD.metricTint(accent))
+        Text(verbatim: model.primaryLabel).lifeyLabel(metrics, caps: true)
+          .foregroundColor(LifeyAOD.numberColor).lineLimit(1).padding(.top, LifeySpacing.xs)
+        Text(verbatim: hero).lifeyAodNumber(metrics).lineLimit(1).minimumScaleFactor(0.6)
+        if let bpm = model.heartRateBpm {
+          HStack(spacing: LifeySpacing.xs) {
+            Image(systemName: LifeyAOD.symbol("heart.fill")).font(.system(size: metrics.metric * 0.6))
+            Text(verbatim: "\(bpm)").lifeyMetric(metrics)
+          }
+          .foregroundColor(LifeyAOD.metricTint(LifeyColors.heart))
+          .padding(.top, LifeySpacing.md)
+        }
+        Spacer(minLength: LifeySpacing.xs)
+        if let gross = model.gross {
+          Text(verbatim: "\(gross.label) \(model.grossSeconds.map { LifeyAOD.elapsed($0) } ?? gross.value)")
+            .lifeyBody(metrics)
+            .foregroundColor(benched ? LifeyAOD.metricTint(LifeyColors.clay) : LifeyAOD.numberColor)
+            .lineLimit(1)
+        } else if let field = model.fields.first {
+          Text(verbatim: "\(field.value) · \(field.label.lowercased())")
+            .lifeyBody(metrics).foregroundColor(LifeyAOD.numberColor).lineLimit(1)
+        }
+      }
+      .padding(.horizontal, metrics.sideMargin)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+      if benched { BenchFrame(isAmbient: true) }
+    }
+    .background(LifeyColors.bg)
+  }
+
+  private var fullBody: some View {
     VStack(alignment: .leading, spacing: 0) {
       WatchHeaderChip(
         icon: icon, label: model.headerLabel, accent: accent,
@@ -185,9 +237,9 @@ struct CardioMetricsPage: View {
   private var family: CardioActivityFamily { workoutManager.cardioFamily ?? .distance }
 
   var body: some View {
-    TimelineView(.periodic(from: .now, by: 1)) { _ in
+    MinuteTimeline { _, isAOD in
       CardioContent(
-        model: model(),
+        model: model(), isAOD: isAOD,
         onMarkTap: { workoutManager.retryAdoption() },
         onToggle: { workoutManager.setOnCourt(!workoutManager.isOnCourt) })
     }
@@ -211,6 +263,7 @@ struct CardioMetricsPage: View {
       if let label = metrics.tertiaryLabel { model.fields = [(metrics.tertiaryValue ?? "—", label)] }
     case .machine:
       model.primaryValue = formatCardioDuration(workoutManager.currentCardioMovingSeconds())
+      model.primarySeconds = workoutManager.currentCardioMovingSeconds()
       if let label = metrics.secondaryLabel { model.fields.append((metrics.secondaryValue ?? "—", label)) }
       if let label = metrics.tertiaryLabel { model.fields.append((metrics.tertiaryValue ?? "—", label)) }
     case .game:
@@ -219,9 +272,18 @@ struct CardioMetricsPage: View {
       model.headerLabel = onCourt ? workoutManager.activeHeaderLabel : String(localized: "cardio_on_bench_header_label")
       model.primaryLabel = onCourt ? metrics.primaryLabel : String(localized: "cardio_game_paused_primary_label")
       model.primaryValue = formatCardioDuration(workoutManager.currentCardioMovingSeconds())
+      model.primarySeconds = workoutManager.currentCardioMovingSeconds()
       if let label = metrics.secondaryLabel { model.gross = (metrics.secondaryValue ?? "—", label) }
+      model.grossSeconds = metrics.secondaryValue.flatMap(parseClock)
       model.toggleTitle = String(localized: onCourt ? "cardio_go_to_bench_button" : "cardio_back_to_court_button")
     }
     return model
   }
+}
+
+/// "15:40" or "1:05:12" → seconds; `nil` for anything else (the phone's pre-formatted gross time).
+func parseClock(_ text: String) -> Int? {
+  let parts = text.split(separator: ":").map { Int($0) }
+  guard !parts.isEmpty, !parts.contains(where: { $0 == nil }) else { return nil }
+  return parts.compactMap { $0 }.reduce(0) { $0 * 60 + $1 }
 }

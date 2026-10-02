@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { start + picker2 + errors + standalone + cardio + strength + logging + stepper + rest + controls + picker + finishing + summary }
+    static var all: [GalleryFrame] { start + picker2 + errors + standalone + cardio + aod + strength + logging + stepper + rest + controls + picker + finishing + summary }
 
     static var strength: [GalleryFrame] {
       [
@@ -243,6 +243,32 @@
         GalleryFrame("AW2.14", "Team sport · bench") { ZStack { CardioContent(model: bench); BenchFrame() } },
         GalleryFrame("AW2.15", "Cardio without HR") { CardioContent(model: noHr) },
         GalleryFrame("AW2.16", "Team sport · 41 mm", compact: true) { CardioContent(model: field) },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var aod: [GalleryFrame] {
+      var run = CardioModel(
+        activityType: "RUNNING", headerLabel: "Futás", primaryLabel: "Távolság", primaryValue: "3.42 km",
+        heartRateBpm: 148, fields: [("5:23 /km", "Tempó")])
+      run.primarySeconds = nil
+      var bench = CardioModel(
+        activityType: "BASKETBALL", headerLabel: "Padon", primaryLabel: "Játékidő — áll", primaryValue: "12:05",
+        heartRateBpm: 96, isGame: true, onCourt: false, gross: ("16:00", "Bruttó idő"), toggleTitle: "Vissza a pályára")
+      bench.primarySeconds = 12 * 60 + 5
+      bench.grossSeconds = 16 * 60
+      return [
+        GalleryFrame("AW2.20", "AOD metric page") { MetricsContent(model: .fixture(), isAOD: true) },
+        GalleryFrame("AW2.21", "AOD rest") {
+          RestContent(
+            model: RestModel(
+              remainingSeconds: 59, totalSeconds: 90, nextLine: "Következő · Fekvenyomás — 3/4. szett",
+              endsAt: Date().addingTimeInterval(59)),
+            isAOD: true)
+        },
+        GalleryFrame("AW2.22", "AOD cardio") { CardioContent(model: run, isAOD: true) },
+        GalleryFrame("AW2.23", "AOD bench") { CardioContent(model: bench, isAOD: true) },
       ]
     }
   }

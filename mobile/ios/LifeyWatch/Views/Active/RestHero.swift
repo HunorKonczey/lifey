@@ -17,6 +17,8 @@ struct RestModel {
   var calories: Int?
   var showsStandaloneMark = false
   var markTapped = false
+  /// When the rest ends (now + remaining), for the Always-On "Mehet 9:42-kor" line.
+  var endsAt: Date? = nil
 }
 
 /// The rest countdown takes the metric page's hero slot (D1): header chip "PIHENŐ", the countdown number over
@@ -24,11 +26,47 @@ struct RestModel {
 /// HR + kcal row. Last 5 s: number and fill in the calories colour, 1 Hz pulse (inside `RestCountdown`).
 struct RestContent: View {
   let model: RestModel
+  /// Always-On: "~1 p" (minutes, rounded up) + "Mehet 9:42-kor", the bar becomes a 2 pt outline line, per-minute
+  /// refresh. The expiry haptic is independent of all this.
+  var isAOD = false
   var onMarkTap: () -> Void = {}
 
   @Environment(\.watchMetrics) private var metrics
 
   var body: some View {
+    if isAOD { aodBody } else { fullBody }
+  }
+
+  private var aodBody: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: LifeySpacing.xs) {
+        Image(systemName: LifeyAOD.symbol("timer")).font(.system(size: 13))
+        Text("rest_hero_label").lifeyLabel(metrics, caps: true)
+      }
+      .foregroundColor(LifeyAOD.numberColor)
+      Text(verbatim: LifeyAOD.remaining(model.remainingSeconds))
+        .lifeyAodNumber(metrics)
+        .padding(.top, LifeySpacing.xs)
+      if let endsAt = model.endsAt {
+        Text(verbatim: LifeyAOD.restUntil(endsAt: endsAt))
+          .lifeyBodyBold(metrics)
+          .foregroundColor(LifeyAOD.numberColor)
+          .padding(.top, LifeySpacing.sm)
+      }
+      Rectangle().fill(LifeyColors.outline).frame(height: 2).padding(.top, LifeySpacing.md)
+      Text(verbatim: model.nextLine)
+        .lifeyBody(metrics)
+        .foregroundColor(LifeyAOD.numberColor)
+        .lineLimit(2)
+        .padding(.top, LifeySpacing.md)
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, metrics.sideMargin)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    .background(LifeyColors.bg)
+  }
+
+  private var fullBody: some View {
     VStack(alignment: .leading, spacing: 0) {
       WatchHeaderChip(
         icon: "timer", label: String(localized: "rest_hero_label"),
@@ -66,6 +104,7 @@ struct RestHeroView: View {
   let setsDone: Int?
   let setsTotal: Int?
   let isCompact: Bool
+  var isAOD = false
 
   var body: some View {
     RestContent(
@@ -74,7 +113,9 @@ struct RestHeroView: View {
         heartRateBpm: workoutManager.heartRateBpm.map { Int($0.rounded()) },
         calories: workoutManager.activeCalories.map { Int($0.rounded()) },
         showsStandaloneMark: workoutManager.showsStandaloneBadge,
-        markTapped: workoutManager.isRetryingAdoption),
+        markTapped: workoutManager.isRetryingAdoption,
+        endsAt: Date().addingTimeInterval(TimeInterval(remainingSeconds))),
+      isAOD: isAOD,
       onMarkTap: { workoutManager.retryAdoption() })
   }
 

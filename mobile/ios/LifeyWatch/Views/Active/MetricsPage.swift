@@ -124,6 +124,9 @@ struct MetricsModel {
 /// heart colour, fixed slot) › kcal (`value`). The exercise card with its segment bar sits at the bottom.
 struct MetricsContent: View {
   let model: MetricsModel
+  /// Always-On (reduced luminance): outlined chip, minutes instead of seconds, HR at 60 %, one quiet exercise
+  /// line; kcal, card and buttons are gone and nothing is filled (frame 08, D-X0.15).
+  var isAOD = false
   var onMarkTap: () -> Void = {}
   var onOpenExerciseList: () -> Void = {}
 
@@ -133,6 +136,42 @@ struct MetricsContent: View {
   private var cardRadius: CGFloat { LifeyShapes.nested(parent: LifeyShapes.card, padding: metrics.isCompact ? 8 : 6) }
 
   var body: some View {
+    if isAOD { aodBody } else { fullBody }
+  }
+
+  private var aodBody: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: LifeySpacing.xs) {
+        Image(systemName: LifeyAOD.symbol(model.isPaused ? "pause.fill" : "dumbbell"))
+          .font(.system(size: 13))
+        Text(verbatim: model.isPaused ? String(localized: "active_paused_indicator") : model.headerLabel)
+          .lifeyLabel(metrics, caps: true).lineLimit(1)
+      }
+      .foregroundColor(model.isPaused ? LifeyAOD.metricTint(LifeyColors.clay) : LifeyAOD.numberColor)
+      Text(verbatim: LifeyAOD.elapsed(model.elapsedSeconds))
+        .lifeyAodNumber(metrics)
+        .lineLimit(1)
+        .padding(.top, LifeySpacing.xs)
+      if let bpm = model.heartRateBpm {
+        HStack(spacing: LifeySpacing.xs) {
+          Image(systemName: LifeyAOD.symbol("heart.fill")).font(.system(size: metrics.metric * 0.6))
+          Text(verbatim: "\(bpm)").lifeyMetric(metrics)
+        }
+        .foregroundColor(LifeyAOD.metricTint(LifeyColors.heart))
+        .padding(.top, LifeySpacing.md)
+      }
+      Spacer(minLength: LifeySpacing.xs)
+      Text(verbatim: model.setsTotal.map { "\(model.exerciseName) · \(model.setsDone ?? 0)/\($0)" } ?? model.exerciseName)
+        .lifeyBody(metrics)
+        .foregroundColor(LifeyAOD.numberColor)
+        .lineLimit(1)
+    }
+    .padding(.horizontal, metrics.sideMargin)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    .background(LifeyColors.bg)
+  }
+
+  private var fullBody: some View {
     VStack(alignment: .leading, spacing: 0) {
       WatchHeaderChip(
         icon: "dumbbell", label: model.headerLabel, isPaused: model.isPaused,
@@ -187,7 +226,7 @@ struct MetricsPage: View {
   let onOpenExerciseList: () -> Void
 
   var body: some View {
-    TimelineView(.periodic(from: .now, by: 1)) { context in
+    MinuteTimeline { date, isAOD in
       Group {
         if let remainingSeconds = restRemainingSeconds() {
           let display = workoutManager.activeExerciseDisplay
@@ -198,13 +237,11 @@ struct MetricsPage: View {
               exerciseName: display.name,
               setsDone: display.setsDone,
               setsTotal: display.setsTotal,
-              isCompact: isCompact)
+              isCompact: isCompact, isAOD: isAOD)
           }
-          .padding(.horizontal, padding)
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         } else {
           MetricsContent(
-            model: model(now: context.date),
+            model: model(now: date), isAOD: isAOD,
             onMarkTap: { workoutManager.retryAdoption() },
             onOpenExerciseList: onOpenExerciseList)
         }

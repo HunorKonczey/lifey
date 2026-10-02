@@ -1121,11 +1121,12 @@ from X1.1's `Views/Active/Cardio.swift`.
 - **Verify:** fixtures; deny Health access in the simulator.
 - *As built:* HealthDeniedContent = StatusScreen (bare icon, ≤ 2-line title, subtitle, control button, scrolls on overflow). Deviation: the canvas breaks the title deliberately ('Engedélyezd az / Egészség-hozzáférést'); that needs a line break inside the existing string, i.e. a text-catalogue change that is not in the ⚑ list, so the title wraps naturally for now. Frames AW2.17 / 2.18. Not compiled.
 
-### X2.11 — Watch iOS: AOD — metric page (AW2.20)
+### X2.11 — Watch iOS: AOD — metric page (AW2.20) ✅
 - Under `isLuminanceReduced`: header chip outlined, hero "12 p" PJS 300 `text2`, HR @ 60 % with
   outlined heart, exercise as one quiet line "Fekvenyomás · 2/4"; kcal, card and buttons gone; no filled
   surface; `TimelineView(.everyMinute)`; back to full in ≤ 300 ms on wrist-raise.
 - **Verify:** simulator Always On + lock; the full view returns with the correct live seconds.
+- *As built:* Each Content view got an isAOD branch (frame 08): outlined chip/icons (LifeyAOD.symbol), hero in minutes (PJS Light → Bold fallback until the Light subset lands), HR and accents at 60 %, no fill, no kcal/card/buttons; rest shows '~1 p' + 'Mehet 9:42-kor' (end time = now + remaining, local zone) with a 2 pt outline line; cardio keeps the phone's distance decimal, collapses the field into one quiet line; the bench keeps a 2 pt rim, the stopped play time with seconds, gross time in minutes (parsed from the phone's 'mm:ss' string — falls back to the string if it cannot be parsed). Live pages switch from the 1 s TimelineView to MinuteTimeline (once a minute under reduced luminance). Also fixed a double side padding on the rest state introduced in X1.8. Frames AW2.20–2.23 (the gallery AOD toggle is not wired into the fixtures; they are rendered with isAOD = true). Not compiled; the wrist-raise ≤ 300 ms return needs a device.
 
 ### X2.12 — Watch iOS: AOD — rest (AW2.21)
 - "~1 p" hero (minutes, rounded up) + "Mehet 9:42-kor" (`aod_rest_until`, from `restEndsAtEpochMs` in the
