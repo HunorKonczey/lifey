@@ -1252,11 +1252,12 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** expire a rest on each page; animations off = static 1.1 s.
 - *As built:* The strength screen now shows components.GoFlash (9 dp primary ring where the rest ring drained, white 'Mehet!', 150 in / 250 hold / 700 out, static 1.1 s with animations off) over whatever page is showing; the old full-dial primary fill + display1 'GO' is deleted. GO_FLASH_HOLD_MS 1300 → 1150 so the overlay leaves the composition right after its own 1.1 s. The service's 400 ms vibration is untouched. Fixture W1.12.
 
-### X3.11 — Watch Wear: controls (W1.13, W1.14)
+### X3.11 — Watch Wear: controls (W1.13, W1.14) ✅
 - The two stacked M2 chips + decorative exercise card become the same two circles as Apple ("Vége" error
   tint, "Szünet" control); paused: "Folytatás" primary + a **secondary EdgeButton** "Gyakorlatok" (only
   with 2+ exercises; the page indicator hides under it). The card disappears (it was meaningless on cardio).
 - **Verify:** fixtures; pause → resume → end.
+- *As built:* ControlsPage.kt: ControlsModel + ControlsContent (stateless) + the thin stateful ControlsPage. Same two circles as Apple (ErrorTint 'Vége', Control 'Szünet' → Primary 'Folytatás' when paused); paused with 2+ exercises (planned minus phone-removed) adds a secondary EdgeButton 'Gyakorlatok' (control tone), the circles drop to 74 dp (WatchMetrics.circleButtonWithEdgeButton) and LifeyPager hides the indicator under it. Header = timer + elapsed (clay SZÜNETELTETVE while paused). The dimmed ExerciseCard and ExerciseListChip are deleted. The cardio screen reuses the page (no list button) and now ticks its own elapsed time via the new rememberElapsedMs helper (also used by the strength screen, replacing its inline ticker). Fixtures W1.13/W1.14.
 
 ### X3.12 — Watch Wear: exercise list (W1.15)
 - `DismissibleOverlay` — **no top-left arrow**, back = swipe / hardware back; `TransformingLazyColumn`

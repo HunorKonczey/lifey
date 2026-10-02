@@ -286,6 +286,20 @@ fun ActiveWorkoutScreen() {
     }
 }
 
+/** Whole elapsed workout time, ticking once a second from the session's own `elapsedRealtime` start mark. */
+@Composable
+internal fun rememberElapsedMs(startedAtElapsedRealtimeMs: Long?): Long {
+    var elapsedMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(startedAtElapsedRealtimeMs) {
+        val startedAt = startedAtElapsedRealtimeMs ?: return@LaunchedEffect
+        while (true) {
+            elapsedMs = SystemClock.elapsedRealtime() - startedAt
+            delay(1000)
+        }
+    }
+    return elapsedMs
+}
+
 @Composable
 internal fun StrengthActiveWorkoutScreen() {
     val metadata by SessionStateHolder.metadata.collectAsState()
@@ -295,14 +309,7 @@ internal fun StrengthActiveWorkoutScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var elapsedMs by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(liveMetrics.startedAtElapsedRealtimeMs) {
-        val startedAt = liveMetrics.startedAtElapsedRealtimeMs ?: return@LaunchedEffect
-        while (true) {
-            elapsedMs = SystemClock.elapsedRealtime() - startedAt
-            delay(1000)
-        }
-    }
+    val elapsedMs = rememberElapsedMs(liveMetrics.startedAtElapsedRealtimeMs)
 
     var restRemainingMs by remember { mutableLongStateOf(0L) }
     // Flips true for GO_FLASH_HOLD_MS the instant a countdown naturally
@@ -361,6 +368,9 @@ internal fun StrengthActiveWorkoutScreen() {
     }
 
     val resting = restRemainingMs > 0
+    // The secondary 'Gyakorlatok' EdgeButton on the paused controls page: only with two or more exercises.
+    val offersExerciseList = liveMetrics.isPaused && metadata.canChooseExercise &&
+        metadata.activePlanExercises.size - metadata.removedExerciseIndexes.size >= 2
     val isStandalone = metadata.isStandalone
     // Whether HeaderChip's "not connected" badge should show — a genuinely
     // disconnected standalone session, not one the phone has already joined
@@ -517,8 +527,9 @@ internal fun StrengthActiveWorkoutScreen() {
                 LifeyPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    bottomSlotOccupied = pagerState.currentPage == LOG_PAGE &&
-                        logPillKind(logSetState, !isStandalone && !hasConnectedNode) != null,
+                    bottomSlotOccupied = (pagerState.currentPage == LOG_PAGE &&
+                        logPillKind(logSetState, !isStandalone && !hasConnectedNode) != null) ||
+                        (pagerState.currentPage == CONTROLS_PAGE && offersExerciseList),
                 ) { page ->
                     when (page) {
                         LOG_PAGE -> LogPage(
@@ -555,13 +566,10 @@ internal fun StrengthActiveWorkoutScreen() {
                             onOpenExerciseList = { showExerciseList = true },
                         )
                         CONTROLS_PAGE -> ControlsPage(
-                            exerciseName = display.name,
-                            setsDone = display.setsDone,
-                            setsTotal = display.setsTotal,
+                            elapsedMs = elapsedMs,
                             isPaused = liveMetrics.isPaused,
-                            freeFormatSets = display.freeFormatSets,
-                            hasStandaloneTemplate = metadata.canChooseExercise,
-                            isCompact = isCompact,
+                            showsStandaloneMark = showsStandaloneBadge,
+                            offersExerciseList = offersExerciseList,
                             onEnd = { showEffortSelector = true },
                             onTogglePause = {
                                 val paused = liveMetrics.isPaused

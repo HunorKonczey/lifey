@@ -193,6 +193,7 @@ internal fun CardioActiveScreen() {
     val liveMetrics by SessionStateHolder.liveMetrics.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val elapsedMs = rememberElapsedMs(liveMetrics.startedAtElapsedRealtimeMs)
 
     var showEffortSelector by remember { mutableStateOf(false) }
     var effortRpe by remember { mutableIntStateOf(5) }
@@ -228,7 +229,6 @@ internal fun CardioActiveScreen() {
             )
         } else {
             val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
-            val display = activeExerciseDisplay(metadata)
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
@@ -254,13 +254,10 @@ internal fun CardioActiveScreen() {
                         },
                     )
                     else -> ControlsPage(
-                        exerciseName = display.name,
-                        setsDone = display.setsDone,
-                        setsTotal = display.setsTotal,
+                        elapsedMs = elapsedMs,
                         isPaused = liveMetrics.isPaused,
-                        freeFormatSets = display.freeFormatSets,
-                        hasStandaloneTemplate = false,
-                        isCompact = isCompact,
+                        showsStandaloneMark = false,
+                        offersExerciseList = false,
                         onEnd = { showEffortSelector = true },
                         onTogglePause = {
                             val paused = liveMetrics.isPaused
