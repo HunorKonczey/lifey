@@ -1098,7 +1098,7 @@ from X1.1's `Views/Active/Cardio.swift`.
 - **Verify:** fixtures; a run and an indoor-bike session started from the phone.
 - *As built:* One CardioContent (plain CardioModel) replaces DistanceMachineMetricsContent, GameMetricsContent, CardioHeartRateRow and CardioMetricBox: header chip in the activity accent, phone label + hero in white (dense hero for team sport), HeartRateSlot in the same place as on strength (so 'no HR' is just its missing state — the 86 % squeeze and the 2-line hint are gone; tap opens the explanation sheet), stacked CardioField rows, gross time in the HR row for team sport, 46 pt (44 compact) toggle button, bench = BenchFrame + clay gross time + text3 stopped play time. CardioActiveContent keeps the pager and draws BenchFrame instead of the old 5 pt rim. Field selection rules unchanged (distance shows the tertiary field only; machine shows secondary + tertiary; game shows secondary as gross time). Frames AW2.11–2.16. Not compiled.
 
-### X2.8 — Watch iOS: team sport — field and bench (AW2.13, AW2.14, AW2.16)
+### X2.8 — Watch iOS: team sport — field and bench (AW2.13, AW2.14, AW2.16) ✅
 - Field: hero "JÁTÉKIDŐ 12:05" (dense hero, D-X0.5); gross time moved into the HR row on the right
   ("15:40 BRUTTÓ IDŐ"); "Padra" button 46 pt (from 66) under the thumb; everything fits without the old
   ~78 % squeeze; 41 mm: hero 40, button 44.
@@ -1108,7 +1108,7 @@ from X1.1's `Views/Active/Cardio.swift`.
 - Replaces `GameMetricsContent`.
 - **Verify:** fixtures; basketball session field ↔ bench toggled from watch and phone.
 
-### X2.9 — Watch iOS: cardio without HR (AW2.15)
+### X2.9 — Watch iOS: cardio without HR (AW2.15) ✅
 - `HeartRateSlot` missing state in the cardio layout; tap → the AW2.19 sheet; the page never exceeds the
   display (old ~86 % squeeze gone).
 - **Verify:** fixture; run without HR samples.
