@@ -800,13 +800,14 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** `./gradlew :wear:testDebugUnitTest` green; changing one hex on either side makes it red.
 - *As built:* tests not run (no Android SDK / Google Maven in the cloud). The contrast assertions were pre-computed independently in Python — every pair passes (text3 on nested 4.75, the lowest). Note: #F2F1E6 on black computes to 18.5 : 1, the canvas says 19.4 : 1 (different sRGB threshold constant; no action). The parity test walks up from the module dir to find ios/LifeyWatch/Theme/LifeyColors.swift.
 
-### X0w.4 — CI: build and unit-test the Wear module
+### X0w.4 — CI: build and unit-test the Wear module ✅
 - Files: `.github/workflows/mobile-ci.yml` — a job (or step after the Flutter setup, which the wear module
   needs for `flutter.compileSdkVersion` in `gradle.properties`) running `./gradlew :wear:assembleDebug
   :wear:testDebugUnitTest` from `mobile/android`, path-filtered to `mobile/android/wear/**`,
   `mobile/ios/LifeyWatch/Theme/**` (parity) and the workflow file.
 - **Verify:** the PR's checks show the job green; a deliberately broken parity hex in a scratch commit
   turns it red (then reverted, not pushed).
+- *As built:* added as a step of the existing Mobile CI job instead of a separate job: settings.gradle.kts needs the Flutter plugin loader / local.properties, which `flutter build apk` produces, and the workflow's `mobile/**` filter already includes the module and the Swift token file. Not run here; the first PR run is the check. The deliberate-red parity check from the plan was not possible offline.
 
 ### X0w.5 — Watch Wear: radius, spacing, `WatchMetrics`, chord rule
 - Files: `ui/theme/LifeyShapes.kt` (8 / 14 / 22 / 30 / pill / circle, legacy aliased), new
