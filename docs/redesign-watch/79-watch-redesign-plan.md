@@ -1357,10 +1357,11 @@ permission revoke/grant; failure paths.
 - **Verify:** fixture; run with `BODY_SENSORS` revoked, grant from the slot.
 - *As built:* Built together with X4.9/X4.10: both cardio pages use HeartRateSlot, driven by heartRateState(LiveMetrics) — Missing = ghost heart + dash + 'nincs pulzus' + ⓘ → AlertDialog (replaces the old strap-hint paragraph), PermissionDenied = the 44 dp two-line button, whose tap launches the same RequestMultiplePermissions with HEART_RATE_PERMISSIONS the strength page uses (the new route for cardio). Fixtures W2.14 (missing) and W2.14b (permission). Revoking BODY_SENSORS and granting from the slot is for the emulator.
 
-### X4.12 — Watch Wear: sweep the remaining Wear screens
+### X4.12 — Watch Wear: sweep the remaining Wear screens ✅
 - What the canvases did not draw (adoption/retry states, transient loading, empty exercise list) moved to
   components and tokens; listed in the *As built* note.
 - **Verify:** grep in `ui/` finds no `Color(0x`, no `.sp` literal on a number, no legacy token name.
+- *As built:* What the canvases did not draw is on components and tokens already: the adoption/retry states (HeaderChip's mark Tapped state), the transient loading of the standalone summary (SyncRow pending), the empty exercise list (just the heading) and the empty picker (empty hint). This step removes 278 unused imports from ui/active and ui/*.kt (the Chip/CompactChip/MaterialTheme/ScalingLazyColumn leftovers of the split), four dead constants (REST_RING_NEGATIVE_THRESHOLD_MS, LOG_SET_TAP_DEBOUNCE_MS, LOG_ADJUST_ROTARY_STEP_DP, ADJUST_ROW_WIDTH_FRACTION) and the last legacy colour names in the cardio icon tints (secondary → clay, onSurfaceVariant → text2). Verified by grep: no Color(0x outside LifeyColors, no numeric .sp literal in ui/ outside theme. The legacy aliases themselves, DynamicSizing and Material 2 go in X4.16.
 
 ### X4.13 — Watch Wear: ambient — metric page (W2.17)
 - The active screen opts in to ambient (`LocalAmbientState`): hero "12 p" PJS Light `text2`, HR @ 60 %

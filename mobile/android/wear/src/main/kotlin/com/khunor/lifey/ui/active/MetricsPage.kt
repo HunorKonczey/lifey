@@ -1,9 +1,7 @@
 package com.khunor.lifey.ui.active
 
-import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -15,10 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Text
-import androidx.compose.ui.draw.alpha
 import com.khunor.lifey.LiveMetrics
 import com.khunor.lifey.R
 import com.khunor.lifey.ui.components.HeartRateState
@@ -27,7 +23,6 @@ import com.khunor.lifey.ui.components.MetricLevel
 import com.khunor.lifey.ui.components.MetricReading
 import com.khunor.lifey.ui.components.SetSegmentBar
 import com.khunor.lifey.ui.theme.LifeyColors
-import com.khunor.lifey.ui.theme.LifeyShapes
 import com.khunor.lifey.ui.theme.LifeySpacing
 import com.khunor.lifey.ui.theme.LifeyType
 import com.khunor.lifey.ui.theme.LocalWatchMetrics

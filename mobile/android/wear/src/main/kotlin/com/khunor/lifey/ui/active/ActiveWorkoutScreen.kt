@@ -2,137 +2,45 @@ package com.khunor.lifey.ui.active
 
 import android.Manifest
 import android.os.SystemClock
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AirlineSeatReclineNormal
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.DirectionsWalk
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.HeartBroken
-import androidx.compose.material.icons.filled.Hiking
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PedalBike
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.SignalWifiOff
-import androidx.compose.material.icons.filled.SportsBasketball
-import androidx.compose.material.icons.filled.SportsSoccer
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.focusable
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material.icons.filled.PhonelinkOff
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.material3.TimeText
 import com.khunor.lifey.ui.components.GoFlash
 import com.khunor.lifey.ui.components.LifeyAppScaffold
 import com.khunor.lifey.ui.components.LifeyPager
-import androidx.compose.ui.input.rotary.onRotaryScrollEvent
-import androidx.wear.compose.material.ChipDefaults
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.CompactChip
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
 import com.google.android.gms.wearable.Wearable
 import com.khunor.lifey.ActiveExerciseDisplay
-import com.khunor.lifey.CardioActiveMetrics
-import com.khunor.lifey.CardioActivityFamily
 import com.khunor.lifey.ExerciseService
-import com.khunor.lifey.LiveMetrics
-import com.khunor.lifey.LogAdjustField
-import com.khunor.lifey.LogAdjustState
 import com.khunor.lifey.LogSetState
 import com.khunor.lifey.R
 import com.khunor.lifey.SessionMetadata
 import com.khunor.lifey.SessionStateHolder
-import com.khunor.lifey.StandaloneSessionStore
-import com.khunor.lifey.StandaloneTemplate
-import com.khunor.lifey.StandaloneTemplateExercise
 import com.khunor.lifey.SummarySender
-import com.khunor.lifey.ui.theme.LifeyColors
-import com.khunor.lifey.ui.theme.LifeyShapes
 import java.util.UUID
-import kotlin.math.abs
-import java.util.Locale
 import kotlin.math.roundToInt
-import kotlin.math.sign
 import java.text.DecimalFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import com.khunor.lifey.ui.EffortSelectorScreen
-import com.khunor.lifey.ui.SCREEN_PADDING_FRACTION
-import com.khunor.lifey.ui.LOG_BUTTON_PAIR_DIAMETER_FRACTION
 import com.khunor.lifey.ui.isCompactScreen
-
-internal const val REST_RING_NEGATIVE_THRESHOLD_MS = 5_000L
 
 /** Total on-screen time for the rest-end "GO" flash (§3.4: "1–2 s flash/transition"). */
 internal const val GO_FLASH_HOLD_MS = 1_150
@@ -141,33 +49,6 @@ internal const val LOG_PAGE = 0
 internal const val METRICS_PAGE = 1
 internal const val CONTROLS_PAGE = 2
 internal const val PAGE_COUNT = 3
-
-/** 300 ms tap-debounce for the log-set control (docs/watch/
- * 43-watch-f5-set-logging-plan.md §4.2) — belt-and-braces alongside
- * [LogSetState] itself disabling the control the instant it leaves
- * [LogSetState.Ready]; this just also swallows a double-tap landing in the
- * same frame, before that state change has propagated back to `.clickable`. */
-internal const val LOG_SET_TAP_DEBOUNCE_MS = 300L
-
-/** How many dp of accumulated rotary scroll count as one adjust-stepper
- * step. Wear's rotary input reports continuous pixel deltas, not discrete
- * detents — firing a step on every single [onRotaryScrollEvent] (the
- * previous approach) meant a physical rotation could produce a wildly
- * different number of steps depending on how many small events the OS
- * happened to batch it into, which read as "inconsistent" in practice.
- * Accumulating to a fixed dp threshold before firing exactly one step (and
- * carrying the remainder forward, not discarding it) makes one rotation
- * consistently equal one step regardless of event granularity. */
-internal const val LOG_ADJUST_ROTARY_STEP_DP = 24f
-
-/** Width of the adjust stepper's −/value/+ row, as a fraction of the screen
- * — deliberately wider than the [SCREEN_PADDING_FRACTION] inset the rest of
- * that column keeps (0.84), reaching ~60% of the way into it on both sides.
- * That row sits at the vertical center of the dial, where the round screen
- * is at its widest and the safety margin isn't earning anything — and since
- * the two buttons are fixed-size, every dp reclaimed goes to the number
- * between them. Mirrors iOS's `-padding * 0.6` on the same row. */
-internal const val ADJUST_ROW_WIDTH_FRACTION = 0.936f
 
 /** How long the standalone badge shows its "syncing" glyph after a tap —
  * see [HeaderChip]'s own comment for why this is a fixed duration rather
