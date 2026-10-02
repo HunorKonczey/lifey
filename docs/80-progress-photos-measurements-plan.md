@@ -198,3 +198,8 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
   `pose`/date form parameter returned 500 in `GlobalExceptionHandler`, so P4 adds a global
   `MethodArgumentTypeMismatchException` → 400 handler. 289 non-Docker backend tests pass; the two
   Testcontainers integration tests and the Flyway-vs-entity `validate` need Docker and are still owed.
+- **P5 (mobile data, photos) — done.** `mobile/lib/features/progress_photos/{domain,data,application}`:
+  `ProgressPhotoRepository` (REST + ETag disk cache per id and variant, injectable cache root for tests),
+  `ProgressPhotoController` (async list, optimistic-free: inserts the server's response in date order),
+  thumbnail/full image providers. Logout now also clears the photo cache and invalidates the controller
+  (`AuthController`). 14 tests (fake Dio adapter, temp cache dir).

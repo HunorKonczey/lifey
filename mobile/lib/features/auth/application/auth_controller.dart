@@ -23,6 +23,8 @@ import '../../../core/sync/logout_preflight.dart';
 import '../../my_trainers/application/my_trainers_controller.dart';
 import '../../chat/data/chat_repository.dart';
 import '../../chat/data/peer_avatar_repository.dart';
+import '../../progress_photos/application/progress_photo_controller.dart';
+import '../../progress_photos/data/progress_photo_repository.dart';
 import '../../recipes/data/recipe_image_repository.dart';
 import '../../settings/application/avatar_controller.dart';
 import '../../settings/data/avatar_repository.dart';
@@ -205,6 +207,8 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     await ref.read(clientDetailTabPreferenceProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
     await ref.read(recipeImageRepositoryProvider).clearCache();
+    // Body photos: the most sensitive thing cached on disk (docs/80 §2.6).
+    await ref.read(progressPhotoRepositoryProvider).clearCache();
     // Chat pictures and anything still queued to upload — same reasoning, and
     // a staged attachment is somebody's private photo sitting on disk.
     await ref.read(chatRepositoryProvider).clearAttachmentCache();
@@ -214,6 +218,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // account's data to whichever account signs in next in the same app
     // session.
     ref.invalidate(avatarControllerProvider);
+    ref.invalidate(progressPhotoControllerProvider);
     ref.invalidate(myTrainersControllerProvider);
     ref.invalidate(trainerInviteControllerProvider);
     ref.invalidate(lastViewIsTrainerProvider);
