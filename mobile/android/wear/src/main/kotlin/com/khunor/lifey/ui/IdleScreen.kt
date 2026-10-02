@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Eco
@@ -40,14 +41,17 @@ import com.khunor.lifey.ui.theme.LocalWatchMetrics
 fun IdleScreen(onStartTapped: () -> Unit) {
     val metrics = LocalWatchMetrics.current
     val startA11yLabel = stringResource(R.string.standalone_start_button_a11y)
+    val width = metrics.widthDp
     Box(Modifier.fillMaxSize()) {
+        // Top-down like the canvas (holder 18 % of the dial, button at ~55 %): a centred stack is taller than the
+        // chord leaves room for — on the 192 dp dial the caption would land below the circle.
         Column(
-            Modifier.align(Alignment.Center).padding(horizontal = metrics.sideMargin).padding(top = LifeySpacing.lg),
+            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.15f).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LifeySpacing.md),
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
         ) {
             Box(
-                Modifier.size(44.dp).background(LifeyColors.nested, RoundedCornerShape(14.dp)),
+                Modifier.size((width * 0.18f).dp).background(LifeyColors.nested, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Filled.Eco, contentDescription = null, tint = LifeyColors.primary, modifier = Modifier.size(24.dp))
@@ -55,13 +59,15 @@ fun IdleScreen(onStartTapped: () -> Unit) {
             Text(stringResource(R.string.idle_title), style = LifeyType.metric(), color = LifeyColors.text, maxLines = 1)
             Button(
                 onClick = onStartTapped,
-                modifier = Modifier.fillMaxWidth().height(metrics.buttonHeight).semantics { contentDescription = startA11yLabel },
+                modifier = Modifier.fillMaxWidth(0.76f).height(metrics.buttonHeight).semantics { contentDescription = startA11yLabel },
             ) {
                 Text(stringResource(R.string.standalone_start_button), style = LifeyType.title(), color = LifeyColors.onPrimary, maxLines = 1)
             }
             Text(
-                stringResource(R.string.standalone_start_caption), style = LifeyType.body(), color = LifeyColors.text2,
-                textAlign = TextAlign.Center, maxLines = 2,
+                stringResource(R.string.standalone_start_caption),
+                style = if (metrics.isCompact) LifeyType.label() else LifeyType.body(),
+                color = LifeyColors.text2, textAlign = TextAlign.Center, maxLines = 2,
+                modifier = Modifier.widthIn(max = (width * 0.62f).dp),
             )
         }
         TimeText()

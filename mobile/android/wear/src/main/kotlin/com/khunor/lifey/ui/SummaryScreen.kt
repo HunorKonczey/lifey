@@ -73,7 +73,7 @@ fun SummaryContent(model: SummaryModel, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize()) {
         Column(
             Modifier.align(Alignment.TopCenter)
-                .padding(top = (width * (if (metrics.isCompact) 0.10f else 0.13f)).dp)
+                .padding(top = (width * 0.14f).dp)
                 .widthIn(max = (width * 0.78f).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(if (metrics.isCompact) LifeySpacing.xs else LifeySpacing.sm),

@@ -75,19 +75,25 @@ fun CardioContent(
     onRequestHeartRatePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val width = LocalWatchMetrics.current.widthDp
+    val metrics = LocalWatchMetrics.current
+    val width = metrics.widthDp
     val (number, unit) = splitUnit(model.primaryValue)
+    // Two long phone labels ("ÁTLAG / TELJESÍTMÉNY") side by side need the widest band of the dial: the stack above
+    // them tightens, and on the compact dial the primary label line goes (the header and hero say the same).
+    val twoFields = model.fields.size == 2
     Box(modifier.fillMaxSize()) {
         Column(
-            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.14f).dp),
+            Modifier.align(Alignment.TopCenter).padding(top = (width * (if (twoFields) 0.12f else 0.14f)).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xxs),
+            verticalArrangement = Arrangement.spacedBy(if (twoFields) 0.dp else LifeySpacing.xxs),
         ) {
             ActiveHeader(
                 model.activityIcon, model.headerLabel, isPaused = model.isPaused,
                 showsStandaloneMark = model.showsStandaloneMark, accent = model.accent,
             )
-            Text(model.primaryLabel.uppercase(), style = LifeyType.label(), color = LifeyColors.text2, maxLines = 1)
+            if (!(twoFields && metrics.isCompact)) {
+                Text(model.primaryLabel.uppercase(), style = LifeyType.label(), color = LifeyColors.text2, maxLines = 1)
+            }
             CardioHero(number, unit)
             HeartRateSlot(model.heartRate, onRequestPermission = onRequestHeartRatePermission)
             when (model.fields.size) {
