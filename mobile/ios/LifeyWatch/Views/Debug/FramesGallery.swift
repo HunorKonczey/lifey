@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { strength + logging + stepper + rest + controls + picker + finishing }
+    static var all: [GalleryFrame] { strength + logging + stepper + rest + controls + picker + finishing + summary }
 
     static var strength: [GalleryFrame] {
       [
@@ -137,6 +137,16 @@
         GalleryFrame("AW1.20", "Effort") { EffortFrame() },
         GalleryFrame("AW1.20b", "Effort · 41 mm", compact: true) { EffortFrame() },
         GalleryFrame("AW1.21", "Finish on the iPhone") { EndingContent() },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var summary: [GalleryFrame] {
+      [
+        GalleryFrame("AW1.22", "Summary") {
+          SummaryContent(model: SummaryModel(totalSeconds: 2734, averageHeartRate: 128, calories: 312, savedToHealth: true))
+        },
       ]
     }
   }

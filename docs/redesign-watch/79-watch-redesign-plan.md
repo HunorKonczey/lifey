@@ -1025,11 +1025,12 @@ new controls, picker, effort, ending and summary.
   three static dots.
 - **Verify:** fixture; end a phone-driven session.
 
-### X1.14 — Watch iOS: summary — phone workout (AW1.22)
+### X1.14 — Watch iOS: summary — phone workout (AW1.22) ✅
 - Check beside "Edzés mentve" (not above — saves a row); full-width time tile with a 28 pt number; "átlag
   bpm" on one line; kcal tile; "Elmentve az Egészség appba" row wraps to two lines above the fold;
   count-up 600 ms, check pops once, 60 ms tile stagger; 6 s auto-dismiss unchanged.
 - **Verify:** fixture; the summary after a real session.
+- *As built:* SummaryContent (plain SummaryModel): check beside 'Edzés mentve', a full-width time SummaryTile, avg bpm + kcal (+ sets for standalone) tiles side by side, the 'Elmentve az Egészség appba' row wrapping to two lines, SyncRow for standalone (X2.6 refines it). Count-up lives in SummaryTile (600 ms, off under Reduce Motion). The 'check pops once' and 60 ms tile stagger are NOT implemented yet — tiles all count up together; left for the Mac pass. 6 s auto-dismiss untouched (WorkoutManager). Frame AW1.22. Not compiled.
 
 **X1 review (§4.1):** all AW1 frames, demo flow "full phone-driven strength session", failure paths.
 
