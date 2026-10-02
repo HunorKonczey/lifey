@@ -241,16 +241,18 @@ fun LogContent(
             )
         }
         if (pill != null) {
+            val pillText = stringResource(
+                when (pill) {
+                    PillKind.Failed -> R.string.log_set_failed
+                    PillKind.Unreachable -> R.string.phone_unreachable
+                    PillKind.Pending -> R.string.log_set_pending
+                    else -> R.string.log_set_logged
+                },
+            )
             StatusPill(
                 kind = pill,
-                text = stringResource(
-                    when (pill) {
-                        PillKind.Failed -> R.string.log_set_failed
-                        PillKind.Unreachable -> R.string.phone_unreachable
-                        PillKind.Pending -> R.string.log_set_pending
-                        else -> R.string.log_set_logged
-                    },
-                ),
+                // The failure breaks deliberately after the dash ("Nem sikerült —" / "próbáld újra", W1.7).
+                text = if (pill == PillKind.Failed) pillText.replace(" — ", " —\n") else pillText,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.08f).dp).widthIn(max = (width * 0.7f).dp),
             )
         }

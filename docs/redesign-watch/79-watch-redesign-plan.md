@@ -1225,11 +1225,12 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** fixture; tap targets.
 - *As built:* LogPage.kt: LogModel + LogContent (stateless) and the stateful LogPage. CircleButton gained centerText ('+1' in PJS), caption (inner 'n/total') and a11y; circles take WatchMetrics.circleButton (78/66 dp), labels under, 'Módosítás' = Raised with the clay Tune icon, header = timer + elapsed, line = 'exercise · next/total szett' (tap opens the exercise list when there is one — the old list chip is gone from this page). New string log_set_circle_label ('szett'/'set'). The reachability hint (hasConnectedNode) moved up to the strength screen because the pager must know whether a pill occupies the bottom arc; the 300 ms debounce is now CircleButton's DoubleTapGuard. The old LogCircle/AdjustCircle/LogStatusLine/LogStatusPill are deleted; the adjust overlay (old M2) stays in this file until X3.8. Fixtures W1.5–W1.7c.
 
-### X3.7 — Watch Wear: logging states (W1.6, W1.7)
+### X3.7 — Watch Wear: logging states (W1.6, W1.7) ✅
 - Ghosted pair while pending; success-tint circle with check + "Naplózva" pill on the bottom chord (where
   the page dots were); failed pill on two deliberate centred lines; "A telefon nem érhető el" neutral
   (nested + `text2`, `SignalWifiOff`); 60·80·60 ms and the failure pattern unchanged.
 - **Verify:** fixtures; live with phone disconnected and with the backend down.
+- *As built:* All four states live in LogContent (built with X3.6): pending/failed/unreachable ghost the pair (CircleButton.isGhosted → ghosted tone, not just lowered alpha), confirmed = SuccessTint circle with check and 'n/total', one StatusPill on the bottom chord by priority failed › unreachable › pending › logged (logPillKind), and LifeyPager hides the page indicator under it. This step adds the deliberate break after the dash in the failed text ('Nem sikerült —' / 'próbáld újra'). The 60·80·60 ms success and the failure haptics are untouched (LifeyHaptics via ExerciseService). Fixtures W1.6/W1.7/W1.7b/W1.7c.
 
 ### X3.8 — Watch Wear: stepper with EdgeButton (W1.8, W1.9)
 - Clay header only; segmented "Ismétlés | Súly" short and centred; ± on the widest band inside the
