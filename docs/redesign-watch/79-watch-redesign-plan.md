@@ -994,7 +994,7 @@ new controls, picker, effort, ending and summary.
 - **Verify:** fixtures at 0:47 and 0:04; live rest; 41 mm.
 - *As built:* RestContent (plain RestModel): chip PIHENŐ, RestCountdown (hero over a white 8 pt bar, warning colour + pulse in the last 5 s), 'Következő …' line up to two lines, small HR + kcal row. The old full-green GoFlashView is gone — ActiveWorkoutView shows GoFlash() (8 pt primary rim following the display shape, white 'Mehet!', 150/250/700 ms, static 1.1 s under Reduce Motion); the haptic and the 1.3 s overlay cycle in ActiveWorkoutView are untouched, so it still overlays whichever page is visible. Old MetricReading removed. Frames AW1.13–1.16 (the gallery DeviceFrame now sets containerShape so the rim has a shape). Not compiled.
 
-### X1.9 — Watch iOS: "Mehet!" rim flash (AW1.15)
+### X1.9 — Watch iOS: "Mehet!" rim flash (AW1.15) ✅
 - `GoFlash` replaces `GoFlashView`'s full green screen: black background, 8 pt primary rim with the display
   radius, white "Mehet!"; over whichever page is visible; `.notification` haptic unchanged and independent.
 - **Verify:** let a rest expire on each of the three pages; reduced motion = static 1.1 s.
