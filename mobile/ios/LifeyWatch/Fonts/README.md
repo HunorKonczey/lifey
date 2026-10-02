@@ -15,6 +15,11 @@ pyftsubset mobile/assets/fonts/PlusJakartaSans-Bold.ttf --unicodes="$U" \
   --layout-features='tnum,kern,liga' --output-file=PlusJakartaSans-Bold-numerals.ttf
 ```
 
-`PlusJakartaSans-Light-numerals.ttf` (weight 300, Always-On numbers) is **not yet here**: the Light weight
-is not in `mobile/assets/fonts/` and fetching it from the upstream OFL release needs the owner's OK
-(plan §10 Q4). Until it lands, `Font.lifeyAodHero` falls back to the Bold subset.
+`PlusJakartaSans-Light-numerals.ttf` (weight 300, Always-On numbers) is subset from the upstream OFL release —
+`https://github.com/tokotype/PlusJakartaSans`, `fonts/ttf/PlusJakartaSans-Light.ttf`, version 2.071, the same
+version as the Bold / ExtraBold files in `mobile/assets/fonts/` — with the Bold command above (same glyphs):
+
+```bash
+pyftsubset PlusJakartaSans-Light.ttf --unicodes="$U" --layout-features='tnum,kern,liga' \
+  --output-file=PlusJakartaSans-Light-numerals.ttf
+```

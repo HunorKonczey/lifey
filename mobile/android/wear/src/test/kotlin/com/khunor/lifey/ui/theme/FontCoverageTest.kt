@@ -14,6 +14,7 @@ class FontCoverageTest {
     private val pairs = mapOf(
         "PlusJakartaSans-ExtraBold-numerals.ttf" to "pjs_numerals_extrabold.ttf",
         "PlusJakartaSans-Bold-numerals.ttf" to "pjs_numerals_bold.ttf",
+        "PlusJakartaSans-Light-numerals.ttf" to "pjs_numerals_light.ttf",
     )
 
     private val numeralGlyphs = "0123456789:.,+-−–—/~%×  "

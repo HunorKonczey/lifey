@@ -84,6 +84,7 @@
 		ED1031B41008B804014B7C1D /* RestHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4036790DEDF80E7721401BB2 /* RestHero.swift */; };
 		0E4D8A4396E5746FB6B783D5 /* Cardio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91B27738B6B0CDB6EAD38F99 /* Cardio.swift */; };
 		D84D57A4E8BE4B2067F76C38 /* FramesGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14006DF2297F47D86E2851E4 /* FramesGallery.swift */; };
+		10C39AA78760819386DDBEB9 /* PlusJakartaSans-Light-numerals.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A04041D8062E18B3F9F91589 /* PlusJakartaSans-Light-numerals.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -243,6 +244,7 @@
 		4036790DEDF80E7721401BB2 /* RestHero.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestHero.swift; sourceTree = "<group>"; };
 		91B27738B6B0CDB6EAD38F99 /* Cardio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Cardio.swift; sourceTree = "<group>"; };
 		14006DF2297F47D86E2851E4 /* FramesGallery.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FramesGallery.swift; sourceTree = "<group>"; };
+		A04041D8062E18B3F9F91589 /* PlusJakartaSans-Light-numerals.ttf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = PlusJakartaSans-Light-numerals.ttf; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -468,6 +470,7 @@
 			children = (
 				BA1FB0CF70EA68B9E62F8111 /* PlusJakartaSans-ExtraBold-numerals.ttf */,
 				D04C120B07CBCD587111BC8F /* PlusJakartaSans-Bold-numerals.ttf */,
+				A04041D8062E18B3F9F91589 /* PlusJakartaSans-Light-numerals.ttf */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -667,6 +670,7 @@
 				75313D3B93064FFE86C3D322 /* Assets.xcassets in Resources */,
 				527EB7396F24245898FD1924 /* PlusJakartaSans-ExtraBold-numerals.ttf in Resources */,
 				D996041E8BDCC6F5FC0F74EB /* PlusJakartaSans-Bold-numerals.ttf in Resources */,
+				10C39AA78760819386DDBEB9 /* PlusJakartaSans-Light-numerals.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

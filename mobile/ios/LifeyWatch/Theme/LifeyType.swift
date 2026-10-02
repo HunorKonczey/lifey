@@ -9,8 +9,7 @@ import SwiftUI
 enum LifeyFont {
   static let extraBold = "PlusJakartaSans-ExtraBold"
   static let bold = "PlusJakartaSans-Bold"
-  /// Weight 300 for Always-On numbers — the file is not bundled yet (Fonts/README.md); the lookup falls
-  /// back to `bold`.
+  /// Weight 300 for Always-On numbers (Fonts/PlusJakartaSans-Light-numerals.ttf).
   static let light = "PlusJakartaSans-Light"
 
   static let numberCap: CGFloat = 1.15
@@ -26,6 +25,7 @@ enum LifeyFont {
     #if DEBUG
       assert(isAvailable(extraBold), "PlusJakartaSans-ExtraBold-numerals.ttf is not registered")
       assert(isAvailable(bold), "PlusJakartaSans-Bold-numerals.ttf is not registered")
+      assert(isAvailable(light), "PlusJakartaSans-Light-numerals.ttf is not registered")
     #endif
   }
 }
@@ -85,7 +85,7 @@ extension View {
         tracking: 0))
   }
 
-  /// `aod-hero` — PJS 300 in Always-On (falls back to 700 until the Light subset is bundled).
+  /// `aod-hero` — PJS 300 in Always-On.
   func lifeyAodHero(_ metrics: WatchMetrics) -> some View {
     modifier(
       CappedSize(

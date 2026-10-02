@@ -25,8 +25,7 @@ import com.khunor.lifey.R
  * (800 / 700, tabular), every word stays in the system font. Hero and metric grow with the system font
  * scale to at most 115 %, body and label to 135 %.
  *
- * The Light (300) subset for ambient numbers is not bundled yet (redesign plan §10 Q4); [pjsLight]
- * falls back to Bold until it lands.
+ * The Light (300) subset is for the ambient numbers ([pjsLight], redesign plan §10 Q4).
  */
 object LifeyType {
     const val NUMBER_CAP = 1.15f
@@ -34,7 +33,7 @@ object LifeyType {
 
     val pjsExtraBold = FontFamily(Font(R.font.pjs_numerals_extrabold, FontWeight.ExtraBold))
     val pjsBold = FontFamily(Font(R.font.pjs_numerals_bold, FontWeight.Bold))
-    val pjsLight = pjsBold
+    val pjsLight = FontFamily(Font(R.font.pjs_numerals_light, FontWeight.Light))
 
     /** `sp` value with the system font scale clamped at [cap]: `base × min(fontScale, cap) / fontScale`. */
     fun capped(base: Float, fontScale: Float, cap: Float): Float =
