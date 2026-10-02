@@ -1051,13 +1051,14 @@ from X1.1's `Views/Active/Cardio.swift`.
 - **Verify:** fixture at both sizes; tap → picker.
 - *As built:* IdleContent: leaf in a card holder, 'Lifey' in PJS 800, full-width primary start button (one line, ≥ 44), caption in text2; the DEBUG long-press on the leaf opens the gallery as before. Frames AW2.1 / 2.1b. Not compiled.
 
-### X2.2 — Watch iOS: picker list (AW2.2 – AW2.4)
+### X2.2 — Watch iOS: picker list (AW2.2 – AW2.4) ✅
 - `ListRow` everywhere (22 radius): quick strength highlighted (`nested`, 36 pt `bolt.fill` holder — fits
   one line, today three); templates with "5 gyakorlat" + chevron; cardio rows with tinted icon circles
   (activity accent @ 16 %); "Minden edzéstípus" with its own control-circle `apps` icon, only when the type
   list is synced; empty state: `sync` icon + "A tervek a telefonról szinkronizálódnak" in `text2`
   footnote. Max 8 ranked rows, crown scrolls with the system indicator (unchanged).
 - **Verify:** fixtures AW2.2–2.4; with and without synced templates.
+- *As built:* PickerContent / AllTypesContent (plain PickerModel): ListRow everywhere, quick strength highlighted with the bolt holder (one line), templates with '5 gyakorlat' + chevron, cardio rows with tinted circles, 'Minden edzéstípus' with a control-circle icon only when the type list is synced, empty state = sync icon + the existing standalone_empty_hint. Large title via navigationTitle inside a NavigationStack + cancellationAction back chevron. ListRow got an explicit init (onClick second) plus isDisabled and .controlCircle. Selection/start logic (startTapped, templateTapped, cardioTapped, isStarting) untouched. Frames AW2.2, 2.4, 2.5. Not compiled.
 
 ### X2.3 — Watch iOS: all activity types (AW2.5)
 - `navigationTitle("Minden edzéstípus")` as a large title in the content that collapses into the nav bar

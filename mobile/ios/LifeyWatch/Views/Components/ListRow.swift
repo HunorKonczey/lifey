@@ -8,15 +8,31 @@ struct ListRow: View {
     case none
     case holder(icon: String)  // 36 pt `control` holder with a `primary` glyph
     case tintedCircle(icon: String, accent: Color)  // cardio types
+    case controlCircle(icon: String)  // "Minden edzéstípus": `control` circle, `text` glyph
   }
 
   let title: String
+  let action: () -> Void
   var subtitle: String? = nil
   var leading: Leading = .none
   var isHighlighted = false
   var showsChevron = false
   var showsCheck = false
-  let action: () -> Void
+  var isDisabled = false
+
+  init(
+    title: String, onClick action: @escaping () -> Void, subtitle: String? = nil, leading: Leading = .none,
+    isHighlighted: Bool = false, showsChevron: Bool = false, showsCheck: Bool = false, isDisabled: Bool = false
+  ) {
+    self.title = title
+    self.action = action
+    self.subtitle = subtitle
+    self.leading = leading
+    self.isHighlighted = isHighlighted
+    self.showsChevron = showsChevron
+    self.showsCheck = showsCheck
+    self.isDisabled = isDisabled
+  }
 
   @Environment(\.watchMetrics) private var metrics
 
@@ -47,6 +63,7 @@ struct ListRow: View {
       .contentShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
     }
     .buttonStyle(.plain)
+    .disabled(isDisabled)
   }
 
   @ViewBuilder private var leadingView: some View {
@@ -57,6 +74,12 @@ struct ListRow: View {
       Image(systemName: icon)
         .font(.system(size: 16, weight: .semibold))
         .foregroundColor(LifeyColors.primary)
+        .frame(width: 36, height: 36)
+        .background(LifeyColors.control, in: Circle())
+    case .controlCircle(let icon):
+      Image(systemName: icon)
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundColor(LifeyColors.text)
         .frame(width: 36, height: 36)
         .background(LifeyColors.control, in: Circle())
     case .tintedCircle(let icon, let accent):

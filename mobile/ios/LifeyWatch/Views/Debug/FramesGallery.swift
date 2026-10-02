@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { start + strength + logging + stepper + rest + controls + picker + finishing + summary }
+    static var all: [GalleryFrame] { start + picker2 + strength + logging + stepper + rest + controls + picker + finishing + summary }
 
     static var strength: [GalleryFrame] {
       [
@@ -156,6 +156,22 @@
       [
         GalleryFrame("AW2.1", "Idle") { IdleContent() },
         GalleryFrame("AW2.1b", "Idle · 41 mm", compact: true) { IdleContent() },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var picker2: [GalleryFrame] {
+      let entries: [PickerEntry] = [
+        .template(title: "Push nap", exerciseCount: 5), .cardio(activityType: "RUNNING", title: "Futás"),
+        .cardio(activityType: "INDOOR_BIKE", title: "Szobakerékpár"),
+      ]
+      return [
+        GalleryFrame("AW2.2", "Picker") { PickerContent(model: PickerModel(entries: entries, hasAllTypes: true)) },
+        GalleryFrame("AW2.4", "No synced plans yet") { PickerContent(model: PickerModel(entries: [], hasAllTypes: false)) },
+        GalleryFrame("AW2.5", "All activity types") {
+          AllTypesContent(entries: [("RUNNING", "Futás"), ("WALKING", "Séta"), ("INDOOR_BIKE", "Szobakerékpár"), ("OTHER_CARDIO", "Egyéb kardió")])
+        },
       ]
     }
   }
