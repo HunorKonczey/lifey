@@ -11,6 +11,8 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.ui.active.AdjustContent
 import com.khunor.lifey.ui.active.ControlsContent
 import com.khunor.lifey.ui.active.ControlsModel
+import com.khunor.lifey.ui.active.ExerciseListContent
+import com.khunor.lifey.ui.active.ExerciseRow
 import com.khunor.lifey.ui.active.LogContent
 import com.khunor.lifey.ui.components.GoFlash
 import com.khunor.lifey.ui.active.LogModel
@@ -45,6 +47,17 @@ val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
     "W1.12" to { Frame { GoFlash() } },
     "W1.13" to { Frame { ControlsContent(ControlsModel(elapsedMs = 12 * 60_000L + 34_000L, isPaused = false), {}, {}, {}) } },
     "W1.14" to { Frame { ControlsContent(ControlsModel(12 * 60_000L + 34_000L, isPaused = true, offersExerciseList = true), {}, {}, {}) } },
+    "W1.15" to {
+        ExerciseListContent(
+            rows = listOf(
+                ExerciseRow(0, "Fekvenyomás", "2/4 szett", isCurrent = true),
+                ExerciseRow(1, "Ferde pados nyomás", "0/3 szett", isCurrent = false),
+                ExerciseRow(2, "Tárogatás", "0/3 szett", isCurrent = false),
+                ExerciseRow(3, "Tricepsz letolás", "0/3 szett", isCurrent = false),
+            ),
+            onSelect = {},
+        )
+    },
     "W1.4" to { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
 )
 

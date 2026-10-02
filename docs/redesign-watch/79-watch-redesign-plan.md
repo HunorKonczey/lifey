@@ -1259,11 +1259,12 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** fixtures; pause → resume → end.
 - *As built:* ControlsPage.kt: ControlsModel + ControlsContent (stateless) + the thin stateful ControlsPage. Same two circles as Apple (ErrorTint 'Vége', Control 'Szünet' → Primary 'Folytatás' when paused); paused with 2+ exercises (planned minus phone-removed) adds a secondary EdgeButton 'Gyakorlatok' (control tone), the circles drop to 74 dp (WatchMetrics.circleButtonWithEdgeButton) and LifeyPager hides the indicator under it. Header = timer + elapsed (clay SZÜNETELTETVE while paused). The dimmed ExerciseCard and ExerciseListChip are deleted. The cardio screen reuses the page (no list button) and now ticks its own elapsed time via the new rememberElapsedMs helper (also used by the strength screen, replacing its inline ticker). Fixtures W1.13/W1.14.
 
-### X3.12 — Watch Wear: exercise list (W1.15)
+### X3.12 — Watch Wear: exercise list (W1.15) ✅
 - `DismissibleOverlay` — **no top-left arrow**, back = swipe / hardware back; `TransformingLazyColumn`
   with `lifeyTransformationSpec()`; rows = M3 Button pills "Fekvenyomás 2/4 szett"; selected = `raised` +
   check; `ScrollIndicator`; rotary scrolls; tap switches immediately.
 - **Verify:** fixture; swipe-back does not close the activity.
+- *As built:* ExerciseList.kt: ExerciseRow + ExerciseListContent (LifeyScreen scaffold → ScrollIndicator, TransformingLazyColumn with the default rotary scrolling, title + ListRow pills 'name / n/total szett', current = raised + check) and ExerciseListScreen wrapped in DismissibleOverlay (swipe or hardware back = back to the pager, never finishes the activity). Data flow unchanged (activePlanExercises, standaloneSetsDoneAt, removedExerciseIndexes skipped not renumbered, tap jumps immediately). Deviation: the custom edge transformation spec (lifeyTransformationSpec, scale ≥ 88 % / alpha ≥ 80 %) is not built — LifeyTransformation stays constants and the library default applies, as in X0w.10 — to be checked on the emulator. Fixture W1.15.
 
 ### X3.13 — Watch Wear: effort (W1.16)
 - `EffortScale` (white number, 10 segments), "Kihagyás" 40 dp real button, "Edzés lezárása" EdgeButton;
