@@ -55,6 +55,8 @@
 		527EB7396F24245898FD1924 /* PlusJakartaSans-ExtraBold-numerals.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BA1FB0CF70EA68B9E62F8111 /* PlusJakartaSans-ExtraBold-numerals.ttf */; };
 		D996041E8BDCC6F5FC0F74EB /* PlusJakartaSans-Bold-numerals.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D04C120B07CBCD587111BC8F /* PlusJakartaSans-Bold-numerals.ttf */; };
 		56424A87AB286A2F1E8CCEE5 /* LifeyType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E5E06FD56F3A0215EEB87C /* LifeyType.swift */; };
+		1F72299BBA64AB60D45701A3 /* LifeyHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */; };
+		926BD15225FDAB05FBF15D74 /* LifeyMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A183B7B64746BD684E846422 /* LifeyMotion.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,6 +187,8 @@
 		BA1FB0CF70EA68B9E62F8111 /* PlusJakartaSans-ExtraBold-numerals.ttf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = PlusJakartaSans-ExtraBold-numerals.ttf; sourceTree = "<group>"; };
 		D04C120B07CBCD587111BC8F /* PlusJakartaSans-Bold-numerals.ttf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = PlusJakartaSans-Bold-numerals.ttf; sourceTree = "<group>"; };
 		54E5E06FD56F3A0215EEB87C /* LifeyType.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyType.swift; sourceTree = "<group>"; };
+		F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyHaptics.swift; sourceTree = "<group>"; };
+		A183B7B64746BD684E846422 /* LifeyMotion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyMotion.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -261,6 +265,8 @@
 				566A6EB587B07E56099D6847 /* LifeySpacing.swift */,
 				659982E15119DC33B6B4F134 /* WatchMetrics.swift */,
 				54E5E06FD56F3A0215EEB87C /* LifeyType.swift */,
+				F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */,
+				A183B7B64746BD684E846422 /* LifeyMotion.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -723,6 +729,8 @@
 				F0D8E8D90F930650850E7EA3 /* LifeySpacing.swift in Sources */,
 				D4F9E359BA78C8E27EF3BBF0 /* WatchMetrics.swift in Sources */,
 				56424A87AB286A2F1E8CCEE5 /* LifeyType.swift in Sources */,
+				1F72299BBA64AB60D45701A3 /* LifeyHaptics.swift in Sources */,
+				926BD15225FDAB05FBF15D74 /* LifeyMotion.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

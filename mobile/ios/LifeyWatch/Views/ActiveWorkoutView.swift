@@ -1163,7 +1163,7 @@ private struct AdjustPage: View {
     .contentShape(Circle())
     .onTapGesture {
       guard enabled else { return }
-      WKInterfaceDevice.current().play(.click)
+      LifeyHaptics.stepperTick()
       workoutManager.stepLogAdjust(by: steps)
     }
     .accessibilityLabel(Text(a11yLabel))

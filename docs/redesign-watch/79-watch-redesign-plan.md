@@ -652,13 +652,14 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   next to them is SF Pro; Dynamic Type at the largest size stops the hero at 115 %.
 - *As built:* ExtraBold + Bold subsets (≈ 10 KB each, built with pyftsubset from mobile/assets/fonts, command in Fonts/README.md). The Light (300) subset is NOT bundled — it needs your OK to fetch from upstream (§10 Q4); `lifeyAodHero` falls back to Bold until then. Font availability uses CoreText (UIKit does not exist on watchOS); sizes use @ScaledMetric clamped at 115 % / 135 %. OFL.txt not added to the Resources phase.
 
-### X0a.4 — Watch iOS: motion tokens, reduced motion, haptic map
+### X0a.4 — Watch iOS: motion tokens, reduced motion, haptic map ✅
 - Files: new `Theme/LifeyMotion.swift` (durations + curves of D-X0.14 as `Animation` values; a
   `reducedMotion`-aware `withLifeyAnimation`), new `Theme/LifeyHaptics.swift` (one function per event of the
   haptic table wrapping `WKInterfaceDevice.current().play(_)`); the existing `play(` call sites (4) call
   it **from the same place they are today**.
 - **Verify:** build; grep shows no direct `WKInterfaceDevice.current().play` outside `LifeyHaptics`; a
   logged set still plays `.success` once.
+- *As built:* all 6 `WKInterfaceDevice.play` call sites now go through `LifeyHaptics` from the same place (grep: none left outside it). Events: setLogged ×2, logFailed, restOver, stepperTick (±), syncTap (adoption retry).
 
 ### X0a.5 — Watch iOS: DEBUG design gallery skeleton
 - Files: new `Views/Debug/DesignGalleryView.swift` (`#if DEBUG`): sections per DS frame (tokens swatches,
