@@ -60,6 +60,7 @@ class EntitySyncConfig {
 /// Registry for every entity type that gets its own [PendingOperations] row.
 const entitySyncConfigs = <String, EntitySyncConfig>{
   'weight_entry': EntitySyncConfig(tableName: 'weight_entries', basePath: '/weights'),
+  'body_measurement': EntitySyncConfig(tableName: 'body_measurements', basePath: '/measurements'),
   'food': EntitySyncConfig(tableName: 'foods', basePath: '/foods'),
   'recipe': EntitySyncConfig(
     tableName: 'recipes',
@@ -100,6 +101,7 @@ const entitySyncConfigs = <String, EntitySyncConfig>{
 /// to know which table it's in (clientIds are UUIDs, so at most one matches).
 const allEntityTableNames = [
   'weight_entries',
+  'body_measurements',
   'foods',
   'recipes',
   'meals',

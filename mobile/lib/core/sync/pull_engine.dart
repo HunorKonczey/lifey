@@ -63,6 +63,7 @@ class PullEngine {
         await _guard('exercises', _pullExercises);
         await _guard('water_sources', _pullWaterSources);
         await _guard('weight_entries', _pullWeightEntries);
+        await _guard('body_measurements', _pullBodyMeasurements);
         await _guard('water_entries', _pullWaterEntries);
         await _guard('daily_steps', _pullDailySteps);
         await _guard('settings', _pullSettings);
@@ -403,6 +404,81 @@ class PullEngine {
     if (clientId == null) return;
     if (await _hasPendingOperation(clientId)) return;
     await (_db.delete(_db.weightEntries)..where((t) => t.clientId.equals(clientId))).go();
+  }
+
+  Future<void> _pullBodyMeasurements() async {
+    final cursor = await _getSyncCursor('body_measurements');
+    if (cursor == null) {
+      await _pullBodyMeasurementsFull();
+    } else {
+      await _pullBodyMeasurementsDelta(cursor);
+    }
+  }
+
+  Future<void> _pullBodyMeasurementsFull() async {
+    final items = await _getList('/measurements');
+    final seen = <int>{};
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      seen.add(json['id'] as int);
+      await _upsertBodyMeasurement(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    await _deleteMissing('body_measurements', seen);
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('body_measurements', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullBodyMeasurementsDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/measurements',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteBodyMeasurementTombstone(json['id'] as int);
+      } else {
+        await _upsertBodyMeasurement(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('body_measurements', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _upsertBodyMeasurement(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('body_measurements', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final date = DateTime.parse(json['date'] as String);
+    final site = json['site'] as String;
+    final valueCm = (json['valueCm'] as num).toDouble();
+    if (existingClientId != null) {
+      // recordedAt is local-only (first seen on this device) — left alone.
+      await (_db.update(_db.bodyMeasurements)..where((t) => t.clientId.equals(existingClientId)))
+          .write(BodyMeasurementsCompanion(date: Value(date), site: Value(site), valueCm: Value(valueCm)));
+    } else {
+      await _db.into(_db.bodyMeasurements).insert(BodyMeasurementsCompanion.insert(
+            clientId: newClientId(),
+            serverId: Value(serverId),
+            date: date,
+            site: site,
+            valueCm: valueCm,
+            recordedAt: DateTime.now(),
+          ));
+    }
+  }
+
+  Future<void> _deleteBodyMeasurementTombstone(int serverId) async {
+    final clientId = await _localClientId('body_measurements', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await (_db.delete(_db.bodyMeasurements)..where((t) => t.clientId.equals(clientId))).go();
   }
 
   Future<void> _pullDailySteps() async {

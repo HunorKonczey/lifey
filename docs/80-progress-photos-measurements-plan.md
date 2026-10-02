@@ -181,3 +181,7 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
 - **P1 (backend measurements) — done.** `com.lifey.bodymeasurement`, `V78__body_measurements.sql`,
   `/api/v1/measurements`. Controller + service tests pass (`BodyMeasurement*Test`). Docker was not
   available in the session, so the Flyway-vs-entity `validate` run (`mvnw verify`) is still owed.
+- **P2 (mobile data, measurements) — done.** `mobile/lib/features/measurements/{domain,data,application}`,
+  Drift table `body_measurements` (schema v45), `entitySyncConfigs` + `allEntityTableNames`, pull
+  (full + delta + tombstones, pending-op guard) in `PullEngine`. Tests: repository + pull engine.
+  `flutter analyze` clean; the only failing suite tests are the known Windows chat-attachment ones.
