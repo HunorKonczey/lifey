@@ -9,6 +9,10 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.ui.active.LogContent
 import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.active.CardioContent
+import com.khunor.lifey.ui.active.CardioFieldModel
+import com.khunor.lifey.ui.active.CardioModel
+import androidx.compose.material.icons.filled.PedalBike
 import com.khunor.lifey.ui.SummaryContent
 import com.khunor.lifey.ui.SummaryModel
 import com.khunor.lifey.ui.active.ExerciseListContent
@@ -111,6 +115,18 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
     },
     "W2.8" to frame2 { SummaryContent(SummaryModel(38 * 60 + 12, 9, 126, 214, isSynced = false, pendingCount = 2)) },
     "W2.9" to frame2 { SummaryContent(SummaryModel(38 * 60 + 12, 9, 126, 214, isSynced = true, pendingCount = 0)) },
+    "W2.10" to frame2 { CardioFrame(runModel(HeartRateState.Live(142))) },
+    "W2.11" to frame2 {
+        CardioFrame(
+            CardioModel(
+                headerLabel = "Szobakerékpár", activityIcon = Icons.Filled.PedalBike, accent = LifeyColors.cardioIndoorBike,
+                primaryLabel = "Mozgásidő", primaryValue = "24:10", heartRate = HeartRateState.Live(131),
+                fields = listOf(CardioFieldModel("78 rpm", "Kadencia"), CardioFieldModel("165 W", "Átlag teljesítmény")),
+            ),
+        )
+    },
+    "W2.14" to frame2 { CardioFrame(runModel(HeartRateState.Missing)) },
+    "W2.14b" to frame2 { CardioFrame(runModel(HeartRateState.PermissionDenied)) }, // the slot is the permission button
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
         LifeyAppScaffold {
             PickerContent(
@@ -124,3 +140,17 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
 
 /** Gives the lambda a @Composable function type up front. */
 private fun frame2(content: @Composable () -> Unit): @Composable () -> Unit = content
+
+private fun runModel(heartRate: HeartRateState) = CardioModel(
+    headerLabel = "Futás", activityIcon = Icons.Filled.DirectionsRun, accent = LifeyColors.calories,
+    primaryLabel = "Távolság", primaryValue = "3.42 km", heartRate = heartRate,
+    fields = listOf(CardioFieldModel("5:23 /km", "Tempó")),
+)
+
+@Composable
+private fun CardioFrame(model: CardioModel) {
+    Box(Modifier.fillMaxSize()) {
+        CardioContent(model, onRequestHeartRatePermission = {})
+        TimeText()
+    }
+}

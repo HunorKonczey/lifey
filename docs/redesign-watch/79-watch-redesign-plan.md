@@ -1333,7 +1333,7 @@ permission revoke/grant; failure paths.
 - **Verify:** fixtures; finish standalone with the phone off, then on.
 - *As built:* SummaryScreen.kt: SummaryModel + SummaryContent (stateless) and the unchanged-logic SummaryScreen (isSynced/pendingCount from StandaloneSessionStore + standaloneSessionAcked, ~6 s auto-dismiss stays in ExerciseService). Check (success) beside 'Edzés mentve', SyncRow (nested ↔ success tint, 'n edzés vár' from two queued) right under it, then a 2 × 2 grid of dense SummaryTiles (value-level numbers, heart/calories tints) at full size; no Health row. SummaryTile/SyncRow gained a dense flag; on the compact dial the top margin and gaps tighten so the second tile row stays inside the chord (≈ 150 dp bottom edge). The old LazyVerticalGrid, StatTile and SyncChip are deleted. Fixtures W2.8 (pending) / W2.9 (synced). Finishing a standalone workout with the phone off then on is for the emulator.
 
-### X4.9 — Watch Wear: cardio — distance and machine (W2.10, W2.11)
+### X4.9 — Watch Wear: cardio — distance and machine (W2.10, W2.11) ✅
 - Distance: hero 30 → **48 sp white**, HR 28 sp (as on strength; today 24 vs 16); pace boxless, centred on
   the bottom chord; km/h for cycling.
 - Machine: two boxless values side by side, phone labels under them wrapping to two lines ("ÁTLAG /
@@ -1341,6 +1341,7 @@ permission revoke/grant; failure paths.
 - Replaces `DistanceMachineMetricsContent`, `CardioMetricBox`, `CardioHeartRateRow`; the cardio controls
   page loses the meaningless "Gyakorlat" card (via X3.11's `ControlsPage`).
 - **Verify:** fixtures; run + indoor bike from the phone.
+- *As built:* New CardioPage.kt: CardioModel/CardioContent (stateless) — accent header, CAPS label, hero 48 sp white (the activity accent stays on the header; distance now shows the number in PJS with 'km' beside it), HeartRateSlot at strength's size, then the phone's fields boxless: one centred pace line for distance, two side by side with two-line labels for machines (CardioField). Cardio.kt: CardioActiveScreen now uses LifeyPager + TimeText (rotary no longer pages), CardioMetricsPage builds the model from SessionMetadata.cardioMetrics/localCardioMetrics (formatters and the ticking moving time unchanged; km/h or mph for cycling comes from the phone's strings as before); DistanceMachineMetricsContent, CardioMetricBox's distance use, PageDots and the legacy MetricReading/HeartRateReading are deleted; the team-sport layout is still the Material 2 one until X4.10. The cardio controls page is the X3.11 ControlsPage (no exercise card). Fixtures W2.10, W2.11, W2.14, W2.14b. Run + indoor bike from the phone is for the emulator.
 
 ### X4.10 — Watch Wear: team sport — field and bench (W2.12, W2.13, W2.15)
 - Field: gross time beside HR, boxless; "Padra" EdgeButton; header + label + hero + row + button at full

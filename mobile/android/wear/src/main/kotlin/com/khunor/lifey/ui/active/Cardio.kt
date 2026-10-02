@@ -86,10 +86,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.wear.compose.material3.TimeText
+import com.khunor.lifey.ui.components.LifeyPager
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.CompactChip
@@ -229,25 +230,19 @@ internal fun CardioActiveScreen() {
             )
         } else {
             val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                rotaryScrollableBehavior = RotaryScrollableDefaults.snapBehavior(pagerState),
-            ) { page ->
+            // D-X0.9: the crown does not page; swipe between the metric page and the controls.
+            LifeyPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
                     0 -> CardioMetricsPage(
                         metadata = metadata, liveMetrics = liveMetrics, isCompact = isCompact, maxWidth = maxWidth,
                         onCourt = onCourt,
                         onToggleCourt = {
-                            // Only a real change goes over the wire — the
-                            // holder answers whether this was one.
+                            // Only a real change goes over the wire — the holder answers whether this was one.
                             if (SessionStateHolder.setOnCourt(!onCourt)) {
                                 val sessionClientId = metadata.sessionClientId
                                 if (sessionClientId != null) {
                                     scope.launch {
-                                        SummarySender.sendCourtChanged(
-                                            context, sessionClientId, !onCourt,
-                                        )
+                                        SummarySender.sendCourtChanged(context, sessionClientId, !onCourt)
                                     }
                                 }
                             }
@@ -269,10 +264,7 @@ internal fun CardioActiveScreen() {
                     )
                 }
             }
-            PageDots(
-                pageCount = 2, selectedPage = pagerState.currentPage,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
-            )
+            TimeText()
             // "A barna keret a képernyő szélén ... csuklóemeléskor, fél
             // másodperc alatt is látszik, hogy a mérés pihen" (W 19).
             if (metadata.cardioFamily == CardioActivityFamily.GAME && !onCourt) {
@@ -433,26 +425,56 @@ internal fun CardioMetricsPage(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = maxWidth * SCREEN_PADDING_FRACTION),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        if (family == CardioActivityFamily.GAME) {
+    if (family == CardioActivityFamily.GAME) {
+        // Team sport: still the Material 2 layout until X4.10.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = maxWidth * SCREEN_PADDING_FRACTION),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             GameMetricsContent(
                 metadata = metadata, cardioMetrics = cardioMetrics, liveMetrics = liveMetrics,
                 activityType = activityType, movingSeconds = movingSeconds, isCompact = isCompact,
                 onCourt = onCourt, onToggleCourt = onToggleCourt,
             )
-        } else {
-            DistanceMachineMetricsContent(
-                metadata = metadata, cardioMetrics = cardioMetrics, liveMetrics = liveMetrics, family = family,
-                activityType = activityType, movingSeconds = movingSeconds, isCompact = isCompact,
-            )
+        }
+        return
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { /* no-op — ExerciseService re-checks live before the next start */ }
+    val primaryValue = when {
+        cardioMetrics == null -> "—"
+        family == CardioActivityFamily.DISTANCE -> cardioMetrics.primaryValue
+        else -> formatCardioDuration(movingSeconds.toInt())
+    }
+    val fields = buildList {
+        if (cardioMetrics != null) {
+            if (family != CardioActivityFamily.DISTANCE && cardioMetrics.secondaryLabel != null) {
+                add(CardioFieldModel(cardioMetrics.secondaryValue ?: "—", cardioMetrics.secondaryLabel))
+            }
+            if (cardioMetrics.tertiaryLabel != null) {
+                add(CardioFieldModel(cardioMetrics.tertiaryValue ?: "—", cardioMetrics.tertiaryLabel))
+            }
         }
     }
+    CardioContent(
+        model = CardioModel(
+            headerLabel = cardioHeaderLabel(metadata),
+            activityIcon = cardioActivityIcon(activityType),
+            accent = cardioActivityTint(activityType),
+            primaryLabel = cardioMetrics?.primaryLabel ?: "",
+            primaryValue = primaryValue,
+            heartRate = heartRateState(liveMetrics),
+            fields = fields,
+            isPaused = liveMetrics.isPaused,
+            showsStandaloneMark = metadata.isStandalone && !metadata.isAdopted,
+        ),
+        onRequestHeartRatePermission = { permissionLauncher.launch(HEART_RATE_PERMISSIONS) },
+    )
 }
 
 /** The `activeHeaderLabel` computation `StrengthActiveWorkoutScreen` does
@@ -468,81 +490,6 @@ internal fun CardioMetricsPage(
 internal fun cardioHeaderLabel(metadata: SessionMetadata): String =
     metadata.title?.takeIf { it.isNotBlank() }?.uppercase()
         ?: stringResource(R.string.active_header_label)
-
-/** AW/W 17–18 (DISTANCE/MACHINE) — header, primary label+value (tinted, the
- * ticking moving-time slot per family), the heart-rate row
- * ([CardioHeartRateRow]), and up to two supporting boxes. */
-@Composable
-internal fun DistanceMachineMetricsContent(
-    metadata: SessionMetadata,
-    cardioMetrics: CardioActiveMetrics?,
-    liveMetrics: LiveMetrics,
-    family: CardioActivityFamily,
-    activityType: String,
-    movingSeconds: Long,
-    isCompact: Boolean,
-) {
-    val tint = cardioActivityTint(activityType)
-    val heroStyle = if (isCompact) MaterialTheme.typography.display3 else MaterialTheme.typography.display2
-    LegacyHeaderChip(
-        icon = cardioActivityIcon(activityType),
-        label = cardioHeaderLabel(metadata),
-        isStandalone = false,
-        isCompact = isCompact,
-        tint = tint,
-    )
-    if (cardioMetrics == null) {
-        // No `cardio` push has landed yet — right after the exercise starts,
-        // the watch's own Health Services session can begin before the
-        // first state sync arrives. Degrades to just the header + heart
-        // rate, never a blank/zero-valued distance.
-        CardioHeartRateRow(liveMetrics = liveMetrics, isCompact = isCompact)
-        return
-    }
-    Text(
-        // DISTANCE shows the phone's own `primaryLabel` (distance doesn't
-        // tick locally — it only changes on a fresh GPS fix, so the last
-        // string the phone pushed is always current); MACHINE ticks the
-        // primary itself (moving time), so its label is fixed regardless —
-        // only the value below switches to the local ticking one.
-        text = cardioMetrics.primaryLabel,
-        style = if (isCompact) MaterialTheme.typography.caption3 else MaterialTheme.typography.caption2,
-        color = LifeyColors.onSurfaceVariant,
-        letterSpacing = 0.5.sp,
-        maxLines = 1,
-    )
-    Text(
-        text = if (family == CardioActivityFamily.DISTANCE) {
-            cardioMetrics.primaryValue
-        } else {
-            formatCardioDuration(movingSeconds.toInt())
-        },
-        style = heroStyle,
-        color = tint,
-    )
-    CardioHeartRateRow(liveMetrics = liveMetrics, isCompact = isCompact)
-    Row(
-        modifier = Modifier.padding(top = if (isCompact) 6.dp else 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 10.dp),
-    ) {
-        // MACHINE/GAME's own primary/secondary swap (`family !=
-        // CardioActivityFamily.DISTANCE` above) means the secondary box
-        // shown here is `secondaryLabel`/`Value` as-is for every family
-        // except the one already spent on ticking it above.
-        if (family != CardioActivityFamily.DISTANCE && cardioMetrics.secondaryLabel != null) {
-            CardioMetricBox(
-                label = cardioMetrics.secondaryLabel, value = cardioMetrics.secondaryValue ?: "—",
-                isCompact = isCompact,
-            )
-        }
-        if (cardioMetrics.tertiaryLabel != null) {
-            CardioMetricBox(
-                label = cardioMetrics.tertiaryLabel, value = cardioMetrics.tertiaryValue ?: "—",
-                isCompact = isCompact,
-            )
-        }
-    }
-}
 
 /**
  * AW/W 19–20 (on court / on bench) — a dot+label primary caption instead of
@@ -728,30 +675,6 @@ internal fun CardioMetricBox(label: String, value: String, isCompact: Boolean, v
 }
 
 /**
- * A minimal 2-dot page indicator (canvas AW02/AW04's page-dots row, adapted
- * for Wear). `HorizontalPageIndicator` from `androidx.wear.compose.material`
- * was tried first, but on a round emulator it rendered nothing at all — its
- * default curved-style layout apparently needs more than just a `BoxScope`
- * to find its arc, and chasing that further wasn't worth it for something
- * this simple. Two plain circles, hand-drawn like [IdleScreen]'s leaf mark,
- * are trivially correct instead. */
-@Composable
-internal fun PageDots(pageCount: Int, selectedPage: Int, modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        repeat(pageCount) { index ->
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .background(
-                        if (index == selectedPage) LifeyColors.onSurface else LifeyColors.outline,
-                        CircleShape,
-                    ),
-            )
-        }
-    }
-}
-
-/**
  * The "STRENGTH"/"REST" uppercase icon+label row that anchors the top of the
  * metrics and rest-hero states (canvas AW02/Wear02, AW03/Wear04) — the one
  * bit of letter-spacing tracking the design calls for (41-watch-design-
@@ -849,60 +772,5 @@ internal fun LegacyHeaderChip(
                     .size(if (isCompact) 14.dp else 16.dp),
             )
         }
-    }
-}
-
-/** The heart-rate reading, or its degraded "--" state when the sensor
- * permission was denied (§12.1 B13) — split out from [MetricReading] because
- * it also needs the small variant used inside [RestHero]. */
-@Composable
-internal fun LegacyHeartRateReading(
-    liveMetrics: LiveMetrics,
-    iconSize: Dp,
-    valueStyle: TextStyle,
-) {
-    if (liveMetrics.hasHeartRatePermission) {
-        liveMetrics.heartRateBpm?.let { bpm ->
-            LegacyMetricReading(
-                icon = Icons.Filled.Favorite,
-                iconTint = LifeyColors.heart,
-                value = bpm.roundToInt().toString(),
-                iconSize = iconSize,
-                valueStyle = valueStyle,
-            )
-        }
-    } else {
-        // §12.1 B13: permission denied looks intentional (a muted
-        // placeholder + broken-heart glyph), not like a missing/late
-        // reading — distinct from heartRateBpm == null above, which just
-        // means "no sample yet".
-        LegacyMetricReading(
-            icon = Icons.Filled.HeartBroken,
-            iconTint = LifeyColors.outline,
-            value = stringResource(R.string.active_heart_rate_denied_placeholder),
-            iconSize = iconSize,
-            valueStyle = valueStyle,
-            valueColor = LifeyColors.onSurfaceVariant,
-        )
-    }
-}
-
-/** One icon + number metric reading (HR or kcal, canvas AW02/Wear02) — no
- * unit suffix next to the number; the icon itself already disambiguates HR
- * vs. kcal, and dropping the unit keeps the reading compact on a small
- * round display. [maxLines]/no-wrap on the value: a multi-digit number could
- * otherwise wrap mid-word onto its own second line. */
-@Composable
-internal fun LegacyMetricReading(
-    icon: ImageVector,
-    iconTint: Color,
-    value: String,
-    iconSize: Dp,
-    valueStyle: TextStyle,
-    valueColor: Color = LifeyColors.onSurface,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(iconSize))
-        Text(text = value, style = valueStyle, color = valueColor, maxLines = 1, softWrap = false)
     }
 }
