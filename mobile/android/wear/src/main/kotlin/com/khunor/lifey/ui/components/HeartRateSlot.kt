@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Icon
+import androidx.wear.compose.material.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,7 +89,7 @@ fun HeartRateSlot(
     }
 
     AlertDialog(
-        show = explaining,
+        visible = explaining,
         onDismissRequest = { explaining = false },
         title = { Text(stringResource(R.string.cardio_no_heart_rate_label), textAlign = TextAlign.Center) },
         text = { Text(stringResource(R.string.cardio_no_heart_rate_hint), textAlign = TextAlign.Center) },

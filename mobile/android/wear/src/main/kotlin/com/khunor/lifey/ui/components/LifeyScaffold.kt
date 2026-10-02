@@ -4,13 +4,13 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.wear.compose.foundation.SwipeToDismissBox
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.HorizontalPager
-import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
+import androidx.wear.compose.foundation.pager.PagerState
+import androidx.wear.compose.material.SwipeToDismissBox
+import androidx.wear.compose.material.rememberSwipeToDismissBoxState
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.HorizontalPageIndicator
 import androidx.wear.compose.material3.ScreenScaffold
@@ -40,12 +40,11 @@ fun LifeyScreen(
     edgeButton: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable BoxScope.(PaddingValues) -> Unit,
 ) {
-    ScreenScaffold(
-        scrollState = scrollState,
-        modifier = modifier,
-        edgeButton = edgeButton,
-        content = content,
-    )
+    if (edgeButton != null) {
+        ScreenScaffold(scrollState = scrollState, modifier = modifier, edgeButton = edgeButton, content = content)
+    } else {
+        ScreenScaffold(scrollState = scrollState, modifier = modifier, content = content)
+    }
 }
 
 /**

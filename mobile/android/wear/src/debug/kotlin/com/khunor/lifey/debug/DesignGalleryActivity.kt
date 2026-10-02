@@ -59,7 +59,7 @@ class GallerySection(val title: String, val content: @Composable () -> Unit)
 val galleryFrames: Map<String, @Composable () -> Unit> = emptyMap()
 
 /** Registry — later steps append their component sections here. */
-val gallerySections: List<GallerySection> = foundationSections + componentSections
+val gallerySections: List<GallerySection> get() = foundationSections + componentSections
 
 private val foundationSections: List<GallerySection> = listOf(
     GallerySection("01 Tokens") { TokenSwatches() },

@@ -12,7 +12,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.PhonelinkOff
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.Icon
+import androidx.wear.compose.material.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
