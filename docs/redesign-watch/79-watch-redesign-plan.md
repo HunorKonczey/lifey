@@ -1012,11 +1012,12 @@ new controls, picker, effort, ending and summary.
   two lines; crown scrolls; tap switches immediately, no confirmation (unchanged).
 - **Verify:** fixture; switching exercise on a 3-exercise template updates the log page.
 
-### X1.12 — Watch iOS: effort (AW1.20)
+### X1.12 — Watch iOS: effort (AW1.20) ✅
 - "Milyen nehéz volt?" title; `EffortScale` (white number, 10 segments); primary "Edzés lezárása"; real
   "Kihagyás" button (38 pt visible, 44 target); back = nav button; fits without scrolling at both sizes.
   Crown 1–10; no note collected (unchanged).
 - **Verify:** fixture; end a session with and without an effort value.
+- *As built:* X1.12: EffortContent = title, EffortScale (white number, 10 segments, crown 1–10), primary 'Edzés lezárása', real 'Kihagyás' button (38 pt visible / 44 target), back via NavigationStack toolbar; a ScrollView with minHeight stays as a safety net for long titles. X1.13: EndingContent = left-aligned StatusScreen with iphone in text colour, title, subtitle and an indeterminate ProgressView (linear) instead of three static dots. Behaviour (requestEnd / cancelEffortSelection) unchanged. Frames AW1.20, 1.20b (41 mm), 1.21. Not compiled.
 
 ### X1.13 — Watch iOS: finish on the iPhone (AW1.21)
 - `StatusScreen` left-aligned: icon holder with `iphone` in `text` (not green), "Fejezd be az iPhone-on",

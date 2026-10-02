@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { strength + logging + stepper + rest + controls + picker }
+    static var all: [GalleryFrame] { strength + logging + stepper + rest + controls + picker + finishing }
 
     static var strength: [GalleryFrame] {
       [
@@ -122,6 +122,21 @@
             ExerciseRowModel(id: 2, name: "Vállnyomás", setsDone: 2, setsTotal: nil, isCurrent: false),
           ])
         },
+      ]
+    }
+  }
+
+  struct EffortFrame: View {
+    @State private var rpe = 7
+    var body: some View { EffortContent(rpe: $rpe) }
+  }
+
+  extension FrameGallery {
+    static var finishing: [GalleryFrame] {
+      [
+        GalleryFrame("AW1.20", "Effort") { EffortFrame() },
+        GalleryFrame("AW1.20b", "Effort · 41 mm", compact: true) { EffortFrame() },
+        GalleryFrame("AW1.21", "Finish on the iPhone") { EndingContent() },
       ]
     }
   }
