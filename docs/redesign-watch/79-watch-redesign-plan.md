@@ -966,7 +966,7 @@ new controls, picker, effort, ending and summary.
 - **Verify:** AW1.5 / AW1.12 fixtures; tap targets 78 / 70 pt.
 - *As built:* X1.5 + X1.6 are one view. LogContent (plain LogModel): next-set line, primary '+1' circle (PJS '+1' in the circle, label 'szett' under it = the localized log_set_button without the '+1'), raised 'Módosítás' circle with the clay icon, and ONE bottom slot: pending / logged / failed / unreachable pill (StatusPill) or, when idle, the 'Gyakorlatok' compact chip. Pending/failed/unreachable ghost both circles with the token pair. The tap rules (canTap, hasLogSetPrefill → stepper, standalone exemption) are kept; the 300 ms guard moved into CircleButton. CircleButton gained centerText. Also: the crown no longer pages the TabView (D-X0.9) — crownRotation state removed from ActiveWorkoutView. Frames AW1.5–1.9, 1.12 registered. Not compiled.
 
-### X1.6 — Watch iOS: logging states in one slot (AW1.6 – AW1.9)
+### X1.6 — Watch iOS: logging states in one slot (AW1.6 – AW1.9) ✅
 - Pending: both circles ghosted (token pair, no opacity) + "Naplózás…" pill (`hourglass`, `log_set_pending`).
 - Confirmed (≈ 1.2 s): the "+1" circle becomes success tint with a check and "3/4 szett"; "Naplózva" pill;
   `.success` haptic; then rest starts (unchanged).
