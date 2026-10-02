@@ -1006,7 +1006,7 @@ new controls, picker, effort, ending and summary.
 - **Verify:** fixtures; pause → resume → end on the simulator.
 - *As built:* ControlsContent (plain ControlsModel): 'Vége' (error tint, stop.fill) + 'Szünet' (control, pause.fill) as two CircleButtons; paused: 'Folytatás' primary play.fill, clay header chip, 'Gyakorlatok' CompactChip. Cardio reuses it with the activity icon/accent in the header. ControlButton and ExerciseListChip removed. Frames AW1.17/1.18. Exercise picker (X1.11) is in the same commit tree: ExerciseListContent with NavigationStack + toolbar back button (cancellationAction, chevron.left), rows = SetSegmentBar in a card, current = control + check; frame AW1.19. Not compiled — whether the cancellationAction item renders as the 32/44 pt nav back button needs the simulator.
 
-### X1.11 — Watch iOS: exercise picker (AW1.19)
+### X1.11 — Watch iOS: exercise picker (AW1.19) ✅
 - Presented in the `NavigationStack` so the **watchOS 10 nav back button** (32 visible / 44 target) replaces
   the 8 pt arrow; rows = `ListRow` with a `SetSegmentBar` each; selected = `control` + check; names wrap to
   two lines; crown scrolls; tap switches immediately, no confirmation (unchanged).
