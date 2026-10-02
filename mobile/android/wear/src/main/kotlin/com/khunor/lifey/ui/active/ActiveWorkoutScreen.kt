@@ -173,6 +173,9 @@ internal const val ADJUST_ROW_WIDTH_FRACTION = 0.936f
  * than real progress. Mirrors iOS's `adoptionRetryFeedbackSeconds`. */
 internal const val ADOPTION_RETRY_FEEDBACK_MS = 1_500L
 
+/** How long the just-logged set segment stays `success` (frame 04/03). */
+internal const val JUST_LOGGED_SEGMENT_MS = 1_200L
+
 /** Re-requested by the "allow sensors" chip (§12.1 B13) — the same pair
  * [com.khunor.lifey.ExerciseService.startExercise] checks before adding
  * `HEART_RATE_BPM` to the exercise config. */
@@ -331,6 +334,16 @@ internal fun StrengthActiveWorkoutScreen() {
         showGoFlash = true
         delay(GO_FLASH_HOLD_MS.toLong())
         showGoFlash = false
+    }
+
+    // The segment of the set that was just logged turns `success` for 1.2 s (frame 04/03).
+    var justLogged by remember { mutableStateOf(false) }
+    LaunchedEffect(logSetState) {
+        if (logSetState is LogSetState.Confirmed) {
+            justLogged = true
+            delay(JUST_LOGGED_SEGMENT_MS)
+            justLogged = false
+        }
     }
 
     val resting = restRemainingMs > 0
@@ -509,16 +522,21 @@ internal fun StrengthActiveWorkoutScreen() {
                         )
                         METRICS_PAGE -> MetricsOrRestPage(
                             resting = resting,
-                            elapsedMs = elapsedMs,
                             restRemainingMs = restRemainingMs,
                             restTotalSeconds = metadata.restTotalSeconds,
-                            exerciseName = display.name,
-                            setsDone = display.setsDone,
-                            setsTotal = display.setsTotal,
+                            model = MetricsModel(
+                                headerLabel = activeHeaderLabel,
+                                elapsedMs = elapsedMs,
+                                heartRate = heartRateState(liveMetrics),
+                                kcal = liveMetrics.activeCalories?.roundToInt(),
+                                exerciseName = display.name,
+                                setsDone = display.setsDone,
+                                setsTotal = display.setsTotal,
+                                freeFormatSets = display.freeFormatSets,
+                                showsStandaloneMark = showsStandaloneBadge,
+                                justLoggedIndex = display.setsDone?.takeIf { justLogged && it > 0 }?.minus(1),
+                            ),
                             liveMetrics = liveMetrics,
-                            isStandalone = showsStandaloneBadge,
-                            headerLabel = activeHeaderLabel,
-                            freeFormatSets = display.freeFormatSets,
                             canChooseExercise = metadata.canChooseExercise,
                             onOpenExerciseList = { showExerciseList = true },
                             isCompact = isCompact,

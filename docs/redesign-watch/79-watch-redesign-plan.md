@@ -1197,11 +1197,12 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** crown on the metric page does nothing; swipe pages; the indicator hides under an EdgeButton.
 - *As built:* StrengthActiveWorkoutScreen is wrapped in LifeyAppScaffold; the three pages sit in LifeyPager (wear-foundation HorizontalPager with rotaryScrollableBehavior = null, M3 HorizontalPageIndicator replaces PageDots, which stays only for the cardio screen until X4); TimeText is drawn directly on the pager branch (ScreenScaffold is only used by scrolling overlays, where the AppScaffold shows it). Unverified until the CI compile; the crown-does-nothing and indicator-hides checks are for the emulator pass.
 
-### X3.3 — Watch Wear: metric page (W1.1, W1.4)
+### X3.3 — Watch Wear: metric page (W1.1, W1.4) ✅
 - Header chip "ERŐEDZÉS"; hero 48 white; HR 16 → **28 sp** heart colour **with "bpm"** — level two, not the
   smallest element; kcal at `value`; instead of the card, a **narrow exercise block with `SetSegmentBar`**
   (new on Wear) inside the bottom chord. 192 dp: hero 40, metric 24, value 15, block 96 dp wide.
 - **Verify:** fixtures at both sizes; live session.
+- *As built:* MetricsPage.kt: MetricsModel + MetricsContent (stateless) and MetricsOrRestPage (the stateful wrapper; the old M2 rest hero is still used while resting until X3.9). Header = ActiveHeader (HeaderChip + the unchanged adoption-request tap on the standalone mark), HeartRateSlot, kcal at value level, ExerciseBlock = SetSegmentBar at half the dial width in the bottom chord (free-form sessions: name + the existing 'set n · reps total' line; no plan: the name only); the block still opens the exercise list. JUST_LOGGED segment (1.2 s success) comes from LogSetState.Confirmed. The old ExerciseCard stays until X3.11. Gallery: DesignGalleryActivity takes --ei width 192 and renders a frame at the chosen dial size; FramesW1.kt registers W1.1/W1.4 (more per step). Unverified until the CI compile.
 
 ### X3.4 — Watch Wear: paused (W1.2)
 - Header chip turns clay "SZÜNETELTETVE"; content does not shift toward the top arc; the pause still drives

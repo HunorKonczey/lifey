@@ -199,7 +199,7 @@ internal fun RestHero(
     // glance) — docs/40-watch-app-plan.md §12.1 B1 follow-up feedback.
     val barHeight = if (isCompact) 60.dp else 78.dp
 
-    HeaderChip(
+    LegacyHeaderChip(
         icon = Icons.Filled.Timer,
         label = stringResource(R.string.rest_hero_label),
         isStandalone = isStandalone,
@@ -260,13 +260,13 @@ internal fun RestHero(
         modifier = Modifier.padding(top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp),
     ) {
-        HeartRateReading(
+        LegacyHeartRateReading(
             liveMetrics = liveMetrics,
             iconSize = smallMetricIconSize,
             valueStyle = smallMetricStyle,
         )
         liveMetrics.activeCalories?.let { kcal ->
-            MetricReading(
+            LegacyMetricReading(
                 icon = Icons.Filled.LocalFireDepartment,
                 iconTint = LifeyColors.calories,
                 value = kcal.roundToInt().toString(),

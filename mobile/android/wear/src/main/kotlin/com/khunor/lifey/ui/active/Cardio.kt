@@ -487,7 +487,7 @@ internal fun DistanceMachineMetricsContent(
 ) {
     val tint = cardioActivityTint(activityType)
     val heroStyle = if (isCompact) MaterialTheme.typography.display3 else MaterialTheme.typography.display2
-    HeaderChip(
+    LegacyHeaderChip(
         icon = cardioActivityIcon(activityType),
         label = cardioHeaderLabel(metadata),
         isStandalone = false,
@@ -581,7 +581,7 @@ internal fun GameMetricsContent(
     val tint = if (onCourt) activityTint else LifeyColors.secondary
     val heroStyle = if (isCompact) MaterialTheme.typography.display3 else MaterialTheme.typography.display2
 
-    HeaderChip(
+    LegacyHeaderChip(
         icon = if (onCourt) cardioActivityIcon(activityType) else Icons.Filled.AirlineSeatReclineNormal,
         label = if (onCourt) cardioHeaderLabel(metadata) else stringResource(R.string.cardio_on_bench_header_label),
         isStandalone = false,
@@ -763,7 +763,7 @@ internal fun PageDots(pageCount: Int, selectedPage: Int, modifier: Modifier = Mo
  * this screen is mixed-case body copy that tracking would only cramp.
  */
 @Composable
-internal fun HeaderChip(
+internal fun LegacyHeaderChip(
     icon: ImageVector,
     label: String,
     isStandalone: Boolean,
@@ -859,14 +859,14 @@ internal fun HeaderChip(
  * permission was denied (§12.1 B13) — split out from [MetricReading] because
  * it also needs the small variant used inside [RestHero]. */
 @Composable
-internal fun HeartRateReading(
+internal fun LegacyHeartRateReading(
     liveMetrics: LiveMetrics,
     iconSize: Dp,
     valueStyle: TextStyle,
 ) {
     if (liveMetrics.hasHeartRatePermission) {
         liveMetrics.heartRateBpm?.let { bpm ->
-            MetricReading(
+            LegacyMetricReading(
                 icon = Icons.Filled.Favorite,
                 iconTint = LifeyColors.heart,
                 value = bpm.roundToInt().toString(),
@@ -879,7 +879,7 @@ internal fun HeartRateReading(
         // placeholder + broken-heart glyph), not like a missing/late
         // reading — distinct from heartRateBpm == null above, which just
         // means "no sample yet".
-        MetricReading(
+        LegacyMetricReading(
             icon = Icons.Filled.HeartBroken,
             iconTint = LifeyColors.outline,
             value = stringResource(R.string.active_heart_rate_denied_placeholder),
@@ -896,7 +896,7 @@ internal fun HeartRateReading(
  * round display. [maxLines]/no-wrap on the value: a multi-digit number could
  * otherwise wrap mid-word onto its own second line. */
 @Composable
-internal fun MetricReading(
+internal fun LegacyMetricReading(
     icon: ImageVector,
     iconTint: Color,
     value: String,

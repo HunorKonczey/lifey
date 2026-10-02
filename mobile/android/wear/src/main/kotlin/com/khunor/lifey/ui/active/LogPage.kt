@@ -210,7 +210,7 @@ internal fun LogPage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        HeaderChip(
+        LegacyHeaderChip(
             icon = Icons.Filled.FitnessCenter,
             label = formatElapsed(elapsedMs),
             isStandalone = showsStandaloneBadge,

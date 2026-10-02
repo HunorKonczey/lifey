@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
@@ -40,7 +41,7 @@ import com.khunor.lifey.ui.theme.WatchMetrics
  * state, at the two reference sizes, plus a "Frames" section of canvas fixtures. Exported in debug builds
  * only, so a frame is one `adb` call away:
  *
- *     adb shell am start -n com.khunor.lifey/.debug.DesignGalleryActivity --es frame W1.5
+ *     adb shell am start -n com.khunor.lifey/.debug.DesignGalleryActivity --es frame W1.5 [--ei width 192]
  *
  * With no `frame` extra the full list opens. Later steps add their sections to [gallerySections].
  */
@@ -48,7 +49,8 @@ class DesignGalleryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val frame = intent.getStringExtra("frame")
-        setContent { LifeyTheme { Gallery(frame) } }
+        val compact = intent.getIntExtra("width", 227) < 200
+        setContent { LifeyTheme { Gallery(frame, compact) } }
     }
 }
 
@@ -56,7 +58,7 @@ class DesignGalleryActivity : ComponentActivity() {
 class GallerySection(val title: String, val content: @Composable () -> Unit)
 
 /** Frame fixtures by canvas id ("W1.5") — X3 / X4 register theirs here. */
-val galleryFrames: Map<String, @Composable () -> Unit> = emptyMap()
+val galleryFrames: Map<String, @Composable () -> Unit> get() = w1Frames
 
 /** Registry — later steps append their component sections here. */
 val gallerySections: List<GallerySection> get() = foundationSections + componentSections
@@ -68,16 +70,17 @@ private val foundationSections: List<GallerySection> = listOf(
 )
 
 @Composable
-private fun Gallery(frame: String?) {
+private fun Gallery(frame: String?, compact: Boolean) {
     val widths = listOf(WatchMetrics.REGULAR_REFERENCE_DP, WatchMetrics.COMPACT_REFERENCE_DP)
-    var widthIndex by remember { mutableStateOf(0) }
+    var widthIndex by remember { mutableStateOf(if (compact) 1 else 0) }
     var ambient by remember { mutableStateOf(false) }
     val width = widths[widthIndex]
     val fixture = frame?.let { galleryFrames[it] }
 
     CompositionLocalProvider(LocalWatchMetrics provides WatchMetrics(width), LocalGalleryAmbient provides ambient) {
         if (fixture != null) {
-            fixture()
+            // A canvas frame at the chosen dial size, black outside it (a 192 dp frame on the 227 dp AVD).
+            Box(Modifier.size(width.dp)) { fixture() }
             return@CompositionLocalProvider
         }
         TransformingLazyColumn(
