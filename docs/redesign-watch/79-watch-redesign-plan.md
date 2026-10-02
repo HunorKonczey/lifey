@@ -583,6 +583,16 @@ emulator running the Flutter app for phone-driven flows (as in docs/watch/40 §1
 
 **An iteration is done when its review log entry has no open bug.**
 
+### 4.3 Cloud-session review (no Xcode / simulator / emulator)
+
+The cloud sandbox has no Xcode, Android SDK or KVM, so builds and simulator screenshots are not possible
+there. The review is then: (1) an automated token check — every hex in `LifeyColors.swift` against the
+design-system canvas; (2) the canvases rendered headless with Playwright (React/Babel served from npm copies
+via request routing, Google Fonts blocked, so icons show as names); (3) an HTML reconstruction of the
+gallery built from the Swift token file and the `WatchMetrics` formulas, compared by eye with the canvas
+frames. This does **not** replace a real build and simulator pass; the first Mac session must run the
+§4.1 procedure and the `xcodebuild` checklist before the PR merges.
+
 ---
 
 ## X0.0 — Docs: make the canvases openable ✅
@@ -747,7 +757,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   9:42-kor" render in HU, "12 min", "Go at 9:42 AM" in EN.
 - *As built:* formatters (`elapsed`, `remaining`, `restUntil`, `symbol`) are pure statics in `LifeyAOD`; `AODReader` / `MinuteTimeline` pick reduced luminance or the gallery toggle. Strings aod_minutes / aod_hours_minutes / aod_rest_until added to Localizable.xcstrings (HU + EN). aod-hero falls back to Bold until the Light subset is bundled (§10 Q4).
 
-**X0a review (§4.1):** gallery vs DS frames 01–08 at 45 / 41 mm; every existing screen walked once to
+**X0a review (§4.1) — done in the cloud (§4.3), Mac pass still owed; log in §12:** gallery vs DS frames 01–08 at 45 / 41 mm; every existing screen walked once to
 confirm the alias swap broke nothing (colours change, layouts do not).
 
 ---
@@ -1497,4 +1507,17 @@ Deviations (intended): … (decision id)
 Bugs: X<n>.fix-1 … (open / fixed in <commit>)
 ```
 
-*(no entries yet)*
+### X0a review — 2026-10-02 (cloud session, §4.3 method)
+Environment: no Xcode; Chromium via Playwright; widths 198 / 176 pt; HU sample strings
+Frames checked: DS 01 (tokens), 03 (metrics), 04 (all 15 components)
+Matches: all 17 token hexes in `LifeyColors.swift` are present in the canvas (`tokens_check`); metric table
+reproduced at 198 / 176 (hero 48/42, metric 28/25, value 19/17, circle 78/70, button 48/44, margin 16/14);
+component structure and colour roles follow frame 04.
+Deviations (intended): `sensitivity: .high` on the stepper crown (existing finding); components
+`WatchHeaderChip` / `WatchMetricReading` named to avoid clashing with the old private types; Light 300
+subset not bundled (needs OK, Q4).
+Bugs: X0a.fix-1 — `SetSegmentBar` had "2/4" beside the bar; canvas has name left / "2/4" right over a
+full-width bar → fixed. Open for a Mac pass (could not be checked here): real compile, `UIAppFonts`
+registration of the two subsets, crown stepper feel, DS 04/04 shows the label *inside* the 66 pt circle
+while AW1.5 puts it under it (decide at X1.5), DS 04/15 sample stacks value over label while the note says
+one row (decide at X2.7).

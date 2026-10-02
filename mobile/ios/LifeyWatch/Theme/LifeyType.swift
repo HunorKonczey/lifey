@@ -105,6 +105,12 @@ extension View {
       SystemStyle(base: metrics.isCompact ? 14 : 15, weight: .medium, style: .body, caps: false))
   }
 
+  /// `body` in the PJS-free bold used for set counts ("2/4"): system 700 at body size.
+  func lifeyBodyBold(_ metrics: WatchMetrics) -> some View {
+    modifier(
+      SystemStyle(base: metrics.isCompact ? 14 : 15, weight: .bold, style: .body, caps: false))
+  }
+
   /// `label` — system 700, 12 / 11 pt, +6 % tracking; CAPS only in the header chip and cardio field labels.
   func lifeyLabel(_ metrics: WatchMetrics, caps: Bool = false) -> some View {
     modifier(

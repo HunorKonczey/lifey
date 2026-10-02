@@ -29,9 +29,9 @@
   struct SegmentBarGallery: View {
     var body: some View {
       VStack(alignment: .leading, spacing: LifeySpacing.md) {
-        SetSegmentBar(done: 2, total: 4)
-        SetSegmentBar(done: 3, total: 4, justLoggedIndex: 2)
-        SetSegmentBar(done: 5, total: 8)
+        SetSegmentBar(title: "Fekvenyomás", done: 2, total: 4)
+        SetSegmentBar(title: "Fekvenyomás", done: 3, total: 4, justLoggedIndex: 2)
+        SetSegmentBar(title: "Guggolás", done: 5, total: 8)
         SetSegmentBar(done: 0, total: 0, freeFormText: "3. szett · 24 ism.")
       }
     }
