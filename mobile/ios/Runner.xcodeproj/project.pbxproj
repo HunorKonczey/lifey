@@ -70,6 +70,12 @@
 		ACB69B00BB0203FBE839F69A /* GoFlash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A284F8B1841ECB7691ECB1 /* GoFlash.swift */; };
 		AD682035EC321A0B034AD570 /* ValueStepper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C782DFE3EC3D10CB43008813 /* ValueStepper.swift */; };
 		EBEA37B6C14403BD7B313201 /* EffortScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BAFF4DA861ECEDBF78E4C03 /* EffortScale.swift */; };
+		F53BCEE3A20B29D576C2ED06 /* ListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12DB3371B135E97AA2AE2A36 /* ListRow.swift */; };
+		60BD28FFB92F96C37804F609 /* CompactChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547C6C87EE3382933AA5269C /* CompactChip.swift */; };
+		30B7682E67EB4763D9C4BF74 /* SummaryTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC343C129B0C57F04E4449F3 /* SummaryTile.swift */; };
+		294B42E0FD9BBACE586A714E /* BenchFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF1D4420458F48D8E2610315 /* BenchFrame.swift */; };
+		ABEE5329CF851E771DC3790B /* CardioField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51665DEFC737AA522F664AF /* CardioField.swift */; };
+		85DC4BD7818E10FD7FF75910 /* StatusScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFD0125AB5D19F22E5C5F9A /* StatusScreen.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -215,6 +221,12 @@
 		68A284F8B1841ECB7691ECB1 /* GoFlash.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GoFlash.swift; sourceTree = "<group>"; };
 		C782DFE3EC3D10CB43008813 /* ValueStepper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ValueStepper.swift; sourceTree = "<group>"; };
 		6BAFF4DA861ECEDBF78E4C03 /* EffortScale.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EffortScale.swift; sourceTree = "<group>"; };
+		12DB3371B135E97AA2AE2A36 /* ListRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ListRow.swift; sourceTree = "<group>"; };
+		547C6C87EE3382933AA5269C /* CompactChip.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CompactChip.swift; sourceTree = "<group>"; };
+		DC343C129B0C57F04E4449F3 /* SummaryTile.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SummaryTile.swift; sourceTree = "<group>"; };
+		DF1D4420458F48D8E2610315 /* BenchFrame.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BenchFrame.swift; sourceTree = "<group>"; };
+		B51665DEFC737AA522F664AF /* CardioField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CardioField.swift; sourceTree = "<group>"; };
+		EEFD0125AB5D19F22E5C5F9A /* StatusScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatusScreen.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -466,6 +478,12 @@
 				68A284F8B1841ECB7691ECB1 /* GoFlash.swift */,
 				C782DFE3EC3D10CB43008813 /* ValueStepper.swift */,
 				6BAFF4DA861ECEDBF78E4C03 /* EffortScale.swift */,
+				12DB3371B135E97AA2AE2A36 /* ListRow.swift */,
+				547C6C87EE3382933AA5269C /* CompactChip.swift */,
+				DC343C129B0C57F04E4449F3 /* SummaryTile.swift */,
+				DF1D4420458F48D8E2610315 /* BenchFrame.swift */,
+				B51665DEFC737AA522F664AF /* CardioField.swift */,
+				EEFD0125AB5D19F22E5C5F9A /* StatusScreen.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -799,6 +817,12 @@
 				ACB69B00BB0203FBE839F69A /* GoFlash.swift in Sources */,
 				AD682035EC321A0B034AD570 /* ValueStepper.swift in Sources */,
 				EBEA37B6C14403BD7B313201 /* EffortScale.swift in Sources */,
+				F53BCEE3A20B29D576C2ED06 /* ListRow.swift in Sources */,
+				60BD28FFB92F96C37804F609 /* CompactChip.swift in Sources */,
+				30B7682E67EB4763D9C4BF74 /* SummaryTile.swift in Sources */,
+				294B42E0FD9BBACE586A714E /* BenchFrame.swift in Sources */,
+				ABEE5329CF851E771DC3790B /* CardioField.swift in Sources */,
+				85DC4BD7818E10FD7FF75910 /* StatusScreen.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

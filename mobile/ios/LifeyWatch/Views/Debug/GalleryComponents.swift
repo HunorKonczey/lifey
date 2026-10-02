@@ -126,3 +126,46 @@
     }
   }
 #endif
+
+#if DEBUG
+  struct ListRowGallery: View {
+    var body: some View {
+      VStack(spacing: LifeySpacing.sm) {
+        ListRow(title: "Gyors erőedzés", leading: .holder(icon: "bolt.fill"), isHighlighted: true) {}
+        ListRow(title: "Push nap — mell, vállak és tricepsz", subtitle: "5 gyakorlat", showsChevron: true) {}
+        ListRow(title: "Futás", leading: .tintedCircle(icon: "figure.run", accent: LifeyColors.calories)) {}
+        ListRow(title: "Minden edzéstípus", leading: .holder(icon: "square.grid.2x2.fill"), showsChevron: true) {}
+        ListRow(title: "Fekvenyomás", showsCheck: true) {}
+        HStack { CompactChip(title: "Gyakorlatok", icon: "list.bullet") {}; CompactChip(title: "Gyakorlatok", isGhosted: true) {} }
+      }
+    }
+  }
+
+  struct SummaryGallery: View {
+    var body: some View {
+      VStack(spacing: LifeySpacing.sm) {
+        SummaryTile(number: 148, format: { "\(Int($0.rounded()))" }, label: "átlag bpm", tint: LifeyColors.heart)
+        SyncRow(isSynced: false, title: "Szinkronizálás a telefonra", subtitle: "2 edzés vár szinkronizálásra")
+        SyncRow(isSynced: true, title: "Telefonra szinkronizálva")
+      }
+    }
+  }
+
+  struct StructuralGallery: View {
+    var body: some View {
+      VStack(spacing: LifeySpacing.md) {
+        ZStack {
+          RoundedRectangle(cornerRadius: LifeyShapes.hero).fill(LifeyColors.bg)
+          BenchFrame().containerShape(RoundedRectangle(cornerRadius: LifeyShapes.hero))
+          Text(verbatim: "Padon").foregroundColor(LifeyColors.clay)
+        }
+        .frame(height: 90)
+        CardioField(value: "5:12", label: "Tempó /km")
+        CardioField(value: "148", label: "Átlagos teljesítmény")
+        StatusScreen(
+          icon: "heart.text.square", title: "Engedélyezd az Egészség-hozzáférést",
+          subtitle: "A pulzus méréséhez szükséges.", buttonTitle: "Beállítások")
+      }
+    }
+  }
+#endif

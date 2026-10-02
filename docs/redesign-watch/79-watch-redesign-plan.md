@@ -719,7 +719,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   weight "102,5" at 41 mm without truncation.
 - *As built:* the stepper's crown uses `sensitivity: .high` (not `.low` as the plan wrote): the existing AdjustPage comment records that `.low` made detents-per-step inconsistent. Reduce Motion: pulse and drain animation off, flash static for 1.1 s.
 
-### X0a.10 — Watch iOS: list row, compact chip, summary tile + sync row, bench frame, cardio field, status screen
+### X0a.10 — Watch iOS: list row, compact chip, summary tile + sync row, bench frame, cardio field, status screen ✅
 - Files: new `Views/Components/ListRow.swift`, `CompactChip.swift`, `SummaryTile.swift` (+ `SyncRow`),
   `BenchFrame.swift`, `CardioField.swift`, `StatusScreen.swift`.
 - `ListRow` (04/09): 22-radius card row; highlighted = `nested` + 36 pt icon holder; title wraps to two
@@ -735,6 +735,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - `StatusScreen`: left-aligned pattern (icon holder or 26 pt icon, title max 2 lines, subtitle, button
   above the fold) — used by AW1.21 and AW2.17.
 - **Verify:** gallery entries for all six at 45 and 41 mm, HU.
+- *As built:* the six components are in Views/Components (SyncRow lives in SummaryTile.swift); the count-up is an `Animatable` Text so it really interpolates; gallery sections 04/09–04/15.
 
 ### X0a.11 — Watch iOS: Always-On primitives
 - Files: new `Theme/LifeyAOD.swift`: `isLuminanceReduced` reader, `AODStyle` (PJS 300 `text2`, metric @

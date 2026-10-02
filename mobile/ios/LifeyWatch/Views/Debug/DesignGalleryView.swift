@@ -84,6 +84,9 @@
         GallerySection("04/06 Rest countdown") { RestCountdownGallery() },
         GallerySection("04/07 Mehet! flash") { GoFlashGallery() },
         GallerySection("04/08 Stepper · 04/11 Effort") { StepperGallery() },
+        GallerySection("04/09-10 List row · chip") { ListRowGallery() },
+        GallerySection("04/12 Summary tile · sync row") { SummaryGallery() },
+        GallerySection("04/13-15 Bench · field · status") { StructuralGallery() },
       ]
     }
   }
