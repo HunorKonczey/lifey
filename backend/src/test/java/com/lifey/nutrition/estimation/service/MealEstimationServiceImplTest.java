@@ -90,19 +90,21 @@ class MealEstimationServiceImplTest {
     }
 
     @Test
-    void estimate_gateRejects_neitherCallsModelNorCounts() {
+    void estimate_gateRejects_neitherCallsModelNorCounts() throws IOException {
         doThrow(new AiCreditsExhaustedException()).when(aiFeatureGate).checkMealEstimation(USER_ID);
 
-        assertThatThrownBy(() -> service.estimate(png(64, 64))).isInstanceOf(AiCreditsExhaustedException.class);
+        var png2 = png(64, 64);
+        assertThatThrownBy(() -> service.estimate(png2)).isInstanceOf(AiCreditsExhaustedException.class);
 
         verifyNoInteractions(analyzer, aiUsageCounterService);
     }
 
     @Test
-    void estimate_modelFails_doesNotBurnACredit() {
+    void estimate_modelFails_doesNotBurnACredit() throws IOException {
         when(analyzer.analyze(any())).thenThrow(new AiUnavailableException("down"));
 
-        assertThatThrownBy(() -> service.estimate(png(64, 64))).isInstanceOf(AiUnavailableException.class);
+        var png2 = png(64, 64);
+        assertThatThrownBy(() -> service.estimate(png2)).isInstanceOf(AiUnavailableException.class);
 
         verify(aiUsageCounterService, never()).recordUsage(any());
     }

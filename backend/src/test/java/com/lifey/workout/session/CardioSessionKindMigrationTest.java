@@ -88,18 +88,18 @@ class CardioSessionKindMigrationTest {
 
     @Test
     void cardioWithoutAnActivityTypeViolatesTheCheckConstraint() {
-        assertThatThrownBy(() -> insertSession(
-                "insert into workout_sessions (user_id, started_at, session_kind) "
-                        + "values (" + userId + ", now(), 'CARDIO')"))
+        var arg = "insert into workout_sessions (user_id, started_at, session_kind) "
+                        + "values (" + userId + ", now(), 'CARDIO')";
+        assertThatThrownBy(() -> insertSession(arg))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("workout_sessions_kind_activity_ck");
     }
 
     @Test
     void strengthWithAnActivityTypeViolatesTheCheckConstraint() {
-        assertThatThrownBy(() -> insertSession(
-                "insert into workout_sessions (user_id, started_at, session_kind, activity_type) "
-                        + "values (" + userId + ", now(), 'STRENGTH', 'RUNNING')"))
+        var arg = "insert into workout_sessions (user_id, started_at, session_kind, activity_type) "
+                        + "values (" + userId + ", now(), 'STRENGTH', 'RUNNING')";
+        assertThatThrownBy(() -> insertSession(arg))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("workout_sessions_kind_activity_ck");
     }

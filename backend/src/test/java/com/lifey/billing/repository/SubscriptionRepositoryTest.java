@@ -79,8 +79,8 @@ class SubscriptionRepositoryTest {
         Long userId = saveUser("subscription-dup-user-provider-" + System.nanoTime() + "@example.com").getId();
         subscriptionRepository.save(newSubscription(userId, SubscriptionProvider.STRIPE, SubscriptionStatus.ACTIVE));
 
-        assertThatThrownBy(() ->
-                subscriptionRepository.save(newSubscription(userId, SubscriptionProvider.STRIPE, SubscriptionStatus.CANCELED)))
+        var subscription2 = newSubscription(userId, SubscriptionProvider.STRIPE, SubscriptionStatus.CANCELED);
+        assertThatThrownBy(() -> subscriptionRepository.save(subscription2))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 

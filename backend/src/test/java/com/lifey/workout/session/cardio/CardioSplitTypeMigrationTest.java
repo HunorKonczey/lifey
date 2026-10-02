@@ -100,9 +100,10 @@ class CardioSplitTypeMigrationTest {
 
     @Test
     void anUnknownSplitTypeViolatesTheCheckConstraint() {
-        assertThatThrownBy(() -> insertReturningId("insert into cardio_splits "
+        var arg = "insert into cardio_splits "
                 + "(workout_session_id, split_index, split_type, distance_meters, duration_seconds) "
-                + "values (" + sessionId + ", 0, 'LAP', 1000, 300) returning id"))
+                + "values (" + sessionId + ", 0, 'LAP', 1000, 300) returning id";
+        assertThatThrownBy(() -> insertReturningId(arg))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("cardio_splits_type_ck");
     }

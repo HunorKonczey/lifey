@@ -129,7 +129,8 @@ class StripeBillingServiceImplTest {
     void createCheckoutSession_unknownTrainer_throwsResourceNotFound() {
         when(userRepository.findById(TRAINER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().createCheckoutSession(TRAINER_ID, TrainerPlan.PRO, BillingInterval.MONTHLY))
+        var subject = service();
+        assertThatThrownBy(() -> subject.createCheckoutSession(TRAINER_ID, TrainerPlan.PRO, BillingInterval.MONTHLY))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -144,7 +145,8 @@ class StripeBillingServiceImplTest {
             mocked.when(() -> Session.create(any(SessionCreateParams.class), any(RequestOptions.class)))
                     .thenThrow(stripeException);
 
-            assertThatThrownBy(() -> service().createCheckoutSession(TRAINER_ID, TrainerPlan.PRO, BillingInterval.MONTHLY))
+            var subject = service();
+            assertThatThrownBy(() -> subject.createCheckoutSession(TRAINER_ID, TrainerPlan.PRO, BillingInterval.MONTHLY))
                     .isInstanceOf(StripeApiException.class)
                     .hasCause(stripeException);
         }
@@ -183,7 +185,8 @@ class StripeBillingServiceImplTest {
         when(subscriptionRepository.findByUserIdAndProvider(TRAINER_ID, SubscriptionProvider.STRIPE))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().createPortalSession(TRAINER_ID))
+        var subject = service();
+        assertThatThrownBy(() -> subject.createPortalSession(TRAINER_ID))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 }

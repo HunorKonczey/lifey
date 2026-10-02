@@ -135,7 +135,8 @@ class SeatLimitServiceImplTest {
     void assertCanAcquireClient_throwsWhenCannotAcquire() {
         stubSubscription(Optional.of(subscription(SubscriptionStatus.CANCELED, TrainerPlan.PRO)));
 
-        assertThatThrownBy(() -> service(ENABLED).assertCanAcquireClient(TRAINER_ID))
+        var subject = service(ENABLED);
+        assertThatThrownBy(() -> subject.assertCanAcquireClient(TRAINER_ID))
                 .isInstanceOf(SeatLimitExceededException.class);
     }
 
@@ -153,7 +154,8 @@ class SeatLimitServiceImplTest {
     void assertActiveState_throwsWhenNotOk() {
         stubSubscription(Optional.of(subscription(SubscriptionStatus.CANCELED, TrainerPlan.PRO)));
 
-        assertThatThrownBy(() -> service(ENABLED).assertActiveState(TRAINER_ID))
+        var subject = service(ENABLED);
+        assertThatThrownBy(() -> subject.assertActiveState(TRAINER_ID))
                 .isInstanceOf(SeatLimitExceededException.class);
     }
 
@@ -162,7 +164,8 @@ class SeatLimitServiceImplTest {
         stubSubscription(Optional.of(subscription(SubscriptionStatus.ACTIVE, TrainerPlan.STARTER)));
         when(trainerClientRepository.countByTrainerIdAndStatus(TRAINER_ID, TrainerClientStatus.ACTIVE)).thenReturn(12L);
 
-        assertThatThrownBy(() -> service(ENABLED).assertActiveState(TRAINER_ID))
+        var subject = service(ENABLED);
+        assertThatThrownBy(() -> subject.assertActiveState(TRAINER_ID))
                 .isInstanceOf(SeatLimitExceededException.class);
     }
 
@@ -180,7 +183,8 @@ class SeatLimitServiceImplTest {
     void assertCanSendInvite_throwsWhenNotEntitling() {
         stubSubscription(Optional.of(subscription(SubscriptionStatus.CANCELED, TrainerPlan.PRO)));
 
-        assertThatThrownBy(() -> service(ENABLED).assertCanSendInvite(TRAINER_ID))
+        var subject = service(ENABLED);
+        assertThatThrownBy(() -> subject.assertCanSendInvite(TRAINER_ID))
                 .isInstanceOf(SeatLimitExceededException.class);
         verify(trainerClientRepository, never()).countByTrainerIdAndStatusAndExpiresAtAfter(any(), any(), any());
     }
@@ -193,7 +197,8 @@ class SeatLimitServiceImplTest {
         when(trainerClientRepository.countByTrainerIdAndStatusAndExpiresAtAfter(eq(TRAINER_ID), eq(TrainerClientStatus.PENDING), any()))
                 .thenReturn(2L);
 
-        assertThatThrownBy(() -> service(ENABLED).assertCanSendInvite(TRAINER_ID))
+        var subject = service(ENABLED);
+        assertThatThrownBy(() -> subject.assertCanSendInvite(TRAINER_ID))
                 .isInstanceOf(SeatLimitExceededException.class);
     }
 
@@ -226,7 +231,8 @@ class SeatLimitServiceImplTest {
         when(subscriptionRepository.lockTrainerSubscriptionForUpdate(TRAINER_ID)).thenReturn(Optional.of(locked));
         when(trainerClientRepository.countByTrainerIdAndStatus(TRAINER_ID, TrainerClientStatus.ACTIVE)).thenReturn(5L);
 
-        assertThatThrownBy(() -> service(ENABLED).assertCanAcquireClientForAccept(TRAINER_ID))
+        var subject = service(ENABLED);
+        assertThatThrownBy(() -> subject.assertCanAcquireClientForAccept(TRAINER_ID))
                 .isInstanceOf(SeatLimitExceededException.class);
     }
 
@@ -234,7 +240,8 @@ class SeatLimitServiceImplTest {
     void assertCanAcquireClientForAccept_throwsWhenNoLockedSubscription() {
         when(subscriptionRepository.lockTrainerSubscriptionForUpdate(TRAINER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service(ENABLED).assertCanAcquireClientForAccept(TRAINER_ID))
+        var subject = service(ENABLED);
+        assertThatThrownBy(() -> subject.assertCanAcquireClientForAccept(TRAINER_ID))
                 .isInstanceOf(SeatLimitExceededException.class);
     }
 
