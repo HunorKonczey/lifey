@@ -419,7 +419,8 @@ class WorkoutScheduleServiceImplTest {
         WorkoutSession occurrence = ownedOccurrence(LocalDate.now().plusDays(1));
         occurrence.setStartedAt(Instant.now());
 
-        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null)))
+        var moveOccurrenceRequest = new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null);
+        assertThatThrownBy(() -> service.moveOccurrence(20L, moveOccurrenceRequest))
                 .isInstanceOf(OccurrenceNotMovableException.class);
         assertThat(occurrence.getScheduledFor()).isEqualTo(LocalDate.now().plusDays(1));
     }
@@ -429,7 +430,8 @@ class WorkoutScheduleServiceImplTest {
         WorkoutSession occurrence = ownedOccurrence(LocalDate.now().plusDays(1));
         occurrence.setDeletedAt(Instant.now());
 
-        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null)))
+        var moveOccurrenceRequest = new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null);
+        assertThatThrownBy(() -> service.moveOccurrence(20L, moveOccurrenceRequest))
                 .isInstanceOf(OccurrenceNotMovableException.class);
     }
 
@@ -437,7 +439,8 @@ class WorkoutScheduleServiceImplTest {
     void moveOccurrence_pastOccurrence_throwsConflict() {
         ownedOccurrence(LocalDate.now().minusDays(1));
 
-        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null)))
+        var moveOccurrenceRequest = new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null);
+        assertThatThrownBy(() -> service.moveOccurrence(20L, moveOccurrenceRequest))
                 .isInstanceOf(OccurrenceNotMovableException.class);
     }
 
@@ -445,7 +448,8 @@ class WorkoutScheduleServiceImplTest {
     void moveOccurrence_targetInThePast_throwsConflict() {
         ownedOccurrence(LocalDate.now().plusDays(1));
 
-        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().minusDays(1), null)))
+        var moveOccurrenceRequest = new MoveOccurrenceRequest(LocalDate.now().minusDays(1), null);
+        assertThatThrownBy(() -> service.moveOccurrence(20L, moveOccurrenceRequest))
                 .isInstanceOf(OccurrenceNotMovableException.class);
     }
 
@@ -453,7 +457,8 @@ class WorkoutScheduleServiceImplTest {
     void moveOccurrence_beyondTheThreeMonthHorizon_throwsHorizonExceeded() {
         ownedOccurrence(LocalDate.now().plusDays(1));
 
-        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusMonths(3).plusDays(1), null)))
+        var moveOccurrenceRequest = new MoveOccurrenceRequest(LocalDate.now().plusMonths(3).plusDays(1), null);
+        assertThatThrownBy(() -> service.moveOccurrence(20L, moveOccurrenceRequest))
                 .isInstanceOf(com.lifey.trainer.exception.ScheduleHorizonExceededException.class);
     }
 
@@ -466,7 +471,8 @@ class WorkoutScheduleServiceImplTest {
         when(workoutSessionRepository.findById(20L)).thenReturn(Optional.of(occurrence));
         when(workoutScheduleRepository.findByIdAndTrainerId(SCHEDULE_ID, TRAINER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.moveOccurrence(20L, new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null)))
+        var moveOccurrenceRequest = new MoveOccurrenceRequest(LocalDate.now().plusDays(2), null);
+        assertThatThrownBy(() -> service.moveOccurrence(20L, moveOccurrenceRequest))
                 .isInstanceOf(ScheduleNotFoundException.class);
         assertThat(occurrence.getScheduledFor()).isEqualTo(LocalDate.now().plusDays(1));
     }

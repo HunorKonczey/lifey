@@ -104,7 +104,9 @@ class TrainerRequestServiceImplTest {
     void submit_userAlreadyATrainer_throwsDuplicate() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user(USER_ID, Role.ROLE_USER, Role.ROLE_TRAINER)));
 
-        assertThatThrownBy(() -> service().submit(USER_ID, new TrainerRequestRequest(null, null, null)))
+        var subject = service();
+        var trainerRequestRequest = new TrainerRequestRequest(null, null, null);
+        assertThatThrownBy(() -> subject.submit(USER_ID, trainerRequestRequest))
                 .isInstanceOf(DuplicateResourceException.class);
         verify(trainerRequestRepository, never()).save(any());
         verify(mailService, never()).sendTrainerRequestNotification(any(), any(), any());
@@ -115,7 +117,9 @@ class TrainerRequestServiceImplTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user(USER_ID, Role.ROLE_USER)));
         when(trainerRequestRepository.existsByUserIdAndStatus(USER_ID, TrainerRequestStatus.PENDING)).thenReturn(true);
 
-        assertThatThrownBy(() -> service().submit(USER_ID, new TrainerRequestRequest(null, null, null)))
+        var subject = service();
+        var trainerRequestRequest = new TrainerRequestRequest(null, null, null);
+        assertThatThrownBy(() -> subject.submit(USER_ID, trainerRequestRequest))
                 .isInstanceOf(DuplicateResourceException.class);
         verify(trainerRequestRepository, never()).save(any());
     }
@@ -124,7 +128,9 @@ class TrainerRequestServiceImplTest {
     void submit_unknownUser_throwsNotFound() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().submit(USER_ID, new TrainerRequestRequest(null, null, null)))
+        var subject = service();
+        var trainerRequestRequest = new TrainerRequestRequest(null, null, null);
+        assertThatThrownBy(() -> subject.submit(USER_ID, trainerRequestRequest))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -147,7 +153,8 @@ class TrainerRequestServiceImplTest {
     void findMine_noneEverSubmitted_throwsNotFound() {
         when(trainerRequestRepository.findFirstByUserIdOrderByCreatedAtDesc(USER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().findMine(USER_ID)).isInstanceOf(ResourceNotFoundException.class);
+        var subject = service();
+        assertThatThrownBy(() -> subject.findMine(USER_ID)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     // --- findPending ------------------------------------------------------------------
@@ -195,7 +202,8 @@ class TrainerRequestServiceImplTest {
     void approve_unknownRequest_throwsNotFound() {
         when(trainerRequestRepository.findById(7L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().approve(7L)).isInstanceOf(ResourceNotFoundException.class);
+        var subject = service();
+        assertThatThrownBy(() -> subject.approve(7L)).isInstanceOf(ResourceNotFoundException.class);
         verify(roleManagementService, never()).grant(any(), any());
     }
 
@@ -206,7 +214,8 @@ class TrainerRequestServiceImplTest {
         request.setStatus(TrainerRequestStatus.APPROVED);
         when(trainerRequestRepository.findById(7L)).thenReturn(Optional.of(request));
 
-        assertThatThrownBy(() -> service().approve(7L)).isInstanceOf(TrainerRequestAlreadyDecidedException.class);
+        var subject = service();
+        assertThatThrownBy(() -> subject.approve(7L)).isInstanceOf(TrainerRequestAlreadyDecidedException.class);
         verify(roleManagementService, never()).grant(any(), any());
     }
 
@@ -236,6 +245,7 @@ class TrainerRequestServiceImplTest {
         request.setStatus(TrainerRequestStatus.REJECTED);
         when(trainerRequestRepository.findById(7L)).thenReturn(Optional.of(request));
 
-        assertThatThrownBy(() -> service().reject(7L)).isInstanceOf(TrainerRequestAlreadyDecidedException.class);
+        var subject = service();
+        assertThatThrownBy(() -> subject.reject(7L)).isInstanceOf(TrainerRequestAlreadyDecidedException.class);
     }
 }
