@@ -62,6 +62,7 @@
 		4CA3821509DCC6CCA6866239 /* WatchMetricReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A4DEBC2BCA67D70C44D98F5 /* WatchMetricReading.swift */; };
 		D79967E442A2613EC8E98244 /* SetSegmentBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */; };
 		52C12773121E2C5C4DDB8292 /* GalleryComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B758FAEC8C9228493B5A8C36 /* GalleryComponents.swift */; };
+		86C1CA785911F7EBCF3C7AB6 /* HeartRateSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63271778CC23CDAF97939A22 /* HeartRateSlot.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -199,6 +200,7 @@
 		6A4DEBC2BCA67D70C44D98F5 /* WatchMetricReading.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchMetricReading.swift; sourceTree = "<group>"; };
 		44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SetSegmentBar.swift; sourceTree = "<group>"; };
 		B758FAEC8C9228493B5A8C36 /* GalleryComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GalleryComponents.swift; sourceTree = "<group>"; };
+		63271778CC23CDAF97939A22 /* HeartRateSlot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HeartRateSlot.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -442,6 +444,7 @@
 				AAE1B56A44E960166AAF366B /* WatchHeaderChip.swift */,
 				6A4DEBC2BCA67D70C44D98F5 /* WatchMetricReading.swift */,
 				44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */,
+				63271778CC23CDAF97939A22 /* HeartRateSlot.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -767,6 +770,7 @@
 				4CA3821509DCC6CCA6866239 /* WatchMetricReading.swift in Sources */,
 				D79967E442A2613EC8E98244 /* SetSegmentBar.swift in Sources */,
 				52C12773121E2C5C4DDB8292 /* GalleryComponents.swift in Sources */,
+				86C1CA785911F7EBCF3C7AB6 /* HeartRateSlot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

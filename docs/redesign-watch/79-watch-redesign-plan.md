@@ -683,10 +683,11 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - **Verify:** gallery shows the DS 04/01–03 samples side by side with the canvas.
 - *As built:* named WatchHeaderChip / WatchMetricReading (not HeaderChip / MetricReading) because the old private types of the same names live in ActiveWorkoutView.swift until X1 switches the screens; gallery entries in Views/Debug/GalleryComponents.swift.
 
-### X0a.7 — Watch iOS: heart-rate slot + explanation sheet
+### X0a.7 — Watch iOS: heart-rate slot + explanation sheet ✅
 - Files: new `Views/Components/HeartRateSlot.swift` (D-X0.4: live / missing; tap → `.sheet` with the
   existing `cardio_no_heart_rate_label` + `cardio_no_heart_rate_hint`, close with X or the crown — AW2.19).
 - **Verify:** gallery: live, missing, missing + sheet open; the slot's frame is identical in both states.
+- *As built:* spoken form of the live reading is "128 bpm" (number + unit) — no new string key for a sentence form; the slot is `minHeight`-locked to the metric line so live and missing share a frame.
 
 ### X0a.8 — Watch iOS: circle button, status pill, ghosted modifier
 - Files: new `Views/Components/CircleButton.swift`, `StatusPill.swift`, `Theme/Ghosted.swift`.

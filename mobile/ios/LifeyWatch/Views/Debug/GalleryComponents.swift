@@ -37,3 +37,14 @@
     }
   }
 #endif
+
+#if DEBUG
+  struct HeartRateSlotGallery: View {
+    var body: some View {
+      VStack(alignment: .leading, spacing: LifeySpacing.md) {
+        HeartRateSlot(bpm: 128).border(LifeyColors.outline, width: 0.5)
+        HeartRateSlot(bpm: nil).border(LifeyColors.outline, width: 0.5)
+      }
+    }
+  }
+#endif

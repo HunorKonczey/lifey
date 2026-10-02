@@ -78,6 +78,7 @@
         GallerySection("04/01 Header chip") { HeaderChipGallery() },
         GallerySection("04/02 Metric reading") { MetricReadingGallery() },
         GallerySection("04/03 Set segment bar") { SegmentBarGallery() },
+        GallerySection("04/02 Heart-rate slot") { HeartRateSlotGallery() },
       ]
     }
   }
