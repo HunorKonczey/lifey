@@ -1,20 +1,63 @@
 import SwiftUI
 import WatchKit
 
-/// Below this many seconds remaining, the rest ring switches to
-/// `LifeyColors.negative` (docs/40-watch-app-plan.md §12.1 B1, mirrors
-/// Android's `REST_RING_NEGATIVE_THRESHOLD_MS`).
-let restRingNegativeThresholdSeconds = 5
+/// Below this many seconds remaining the rest countdown turns to the warning colour (frame 04/06). Kept for
+/// the callers that still name it; the component owns the real constant (`RestCountdown.warningSeconds`).
+let restRingNegativeThresholdSeconds = RestCountdown.warningSeconds
 
-/// Rest-as-hero state (docs/40-watch-app-plan.md §12.1 B1 / 41-watch-design-
-/// prompt.md §3.3, canvas AW 03): a drain-down progress ring takes the
-/// metrics page's hero slot instead of the countdown being a small caption
-/// line, with a "of <total>" target below it, a "Next · <exercise> — Set n
-/// of total" line for what resumes once rest ends, and a small HR/kcal
-/// reading underneath (rest doesn't mean the metrics disappear, just
-/// shrink). Color shifts to `LifeyColors.negative` for the final 5 seconds,
-/// matching the haptic that fires at 0 (`WorkoutManager`'s independently-
-/// scheduled vibration).
+// MARK: - Rest (redesign X1.8 — AW1.13, AW1.14, AW1.16)
+
+/// Plain data behind the rest state.
+struct RestModel {
+  var remainingSeconds: Int
+  var totalSeconds: Int?
+  /// "Következő · Fekvenyomás — 3/4. szett" — already formatted (one of the two `rest_hero_next_*` keys).
+  var nextLine: String
+  var heartRateBpm: Int?
+  var calories: Int?
+  var showsStandaloneMark = false
+  var markTapped = false
+}
+
+/// The rest countdown takes the metric page's hero slot (D1): header chip "PIHENŐ", the countdown number over
+/// a white bar, the "Következő" line (two lines, on long names "— 3/4. szett" falls to line two), and a small
+/// HR + kcal row. Last 5 s: number and fill in the calories colour, 1 Hz pulse (inside `RestCountdown`).
+struct RestContent: View {
+  let model: RestModel
+  var onMarkTap: () -> Void = {}
+
+  @Environment(\.watchMetrics) private var metrics
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      WatchHeaderChip(
+        icon: "timer", label: String(localized: "rest_hero_label"),
+        standaloneMark: model.showsStandaloneMark ? (model.markTapped ? .tapped : .idle) : nil,
+        onMarkTap: onMarkTap)
+      RestCountdown(remainingSeconds: model.remainingSeconds, totalSeconds: model.totalSeconds ?? 0)
+        .padding(.top, LifeySpacing.sm)
+      Text(verbatim: model.nextLine)
+        .lifeyBody(metrics)
+        .foregroundColor(LifeyColors.text2)
+        .lineLimit(2)
+        .multilineTextAlignment(.leading)
+        .padding(.top, LifeySpacing.md)
+      Spacer(minLength: LifeySpacing.xs)
+      HStack(spacing: LifeySpacing.lg) {
+        if let bpm = model.heartRateBpm {
+          WatchMetricReading(icon: "heart.fill", iconTint: LifeyColors.heart, number: "\(bpm)", level: .value)
+        }
+        if let calories = model.calories {
+          WatchMetricReading(icon: "flame.fill", iconTint: LifeyColors.calories, number: "\(calories)", level: .value)
+        }
+      }
+    }
+    .padding(.horizontal, metrics.sideMargin)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+  }
+}
+
+/// The live rest state, built from `WorkoutManager` values `MetricsPage` already reads.
 struct RestHeroView: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let remainingSeconds: Int
@@ -24,109 +67,23 @@ struct RestHeroView: View {
   let setsTotal: Int?
   let isCompact: Bool
 
-  private var progress: Double {
-    guard let totalSeconds, totalSeconds > 0 else { return 1 }
-    return min(1, max(0, Double(remainingSeconds) / Double(totalSeconds)))
-  }
-
-  private var ringColor: Color {
-    remainingSeconds <= restRingNegativeThresholdSeconds ? LifeyColors.negative : LifeyColors.primary
-  }
-
-  private var labelFont: Font { isCompact ? .caption2 : .caption }
-  private var ringNumberFont: Font { isCompact ? .system(.title, design: .rounded) : .system(.largeTitle, design: .rounded) }
-  private var nextLineFont: Font { isCompact ? .caption2 : .caption }
-  // Shrunk from caption/title3 (overflow fix, mirrors MetricsPage's row) —
-  // same 3-digit clipping risk for the small HR/kcal reading under the ring.
-  private var smallMetricFont: Font { isCompact ? .caption2 : .body }
-  private var smallMetricIconSize: CGFloat { isCompact ? 14 : 16 }
-  /// A wide, short bar rather than a ring (a round dial leaves the ring's
-  /// corners empty; a full-width bar uses that space and reads bigger at a
-  /// glance) — docs/40-watch-app-plan.md §12.1 B1 follow-up feedback.
-  private var barHeight: CGFloat { isCompact ? 60 : 78 }
-
   var body: some View {
-    VStack(spacing: 4) {
-      HeaderChip(
-        icon: "timer", label: String(localized: "rest_hero_label"), isCompact: isCompact,
-        isStandalone: workoutManager.showsStandaloneBadge)
-      GeometryReader { barGeometry in
-        ZStack(alignment: .leading) {
-          RoundedRectangle(cornerRadius: LifeyShapes.cardLarge)
-            .fill(LifeyColors.container)
-          RoundedRectangle(cornerRadius: LifeyShapes.cardLarge)
-            .fill(ringColor)
-            .frame(width: barGeometry.size.width * progress)
-        }
-        .overlay(
-          Text(formatSeconds(remainingSeconds))
-            .font(ringNumberFont)
-            .foregroundColor(LifeyColors.onSurface)
-            .monospacedDigit()
-        )
-      }
-      .frame(height: barHeight)
-      .padding(.top, 8)
-      if let totalSeconds {
-        Text(String(format: String(localized: "rest_hero_total_format"), formatSeconds(totalSeconds)))
-          .font(labelFont)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-      }
-      if let setsDone, let setsTotal {
-        Text(
-          String(
-            format: String(localized: "rest_hero_next_with_sets_format"), exerciseName,
-            min(setsDone + 1, setsTotal), setsTotal)
-        )
-        .font(nextLineFont)
-        .foregroundColor(LifeyColors.onSurfaceVariant)
-        .lineLimit(1)
-        .truncationMode(.tail)
-      } else {
-        Text(String(format: String(localized: "rest_hero_next_format"), exerciseName))
-          .font(nextLineFont)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-          .lineLimit(1)
-          .truncationMode(.tail)
-      }
-      HStack(spacing: isCompact ? 8 : 14) {
-        if let heartRate = workoutManager.heartRateBpm {
-          MetricReading(
-            icon: "heart.fill", iconTint: LifeyColors.heart, value: "\(Int(heartRate.rounded()))",
-            iconSize: smallMetricIconSize, valueFont: smallMetricFont)
-        }
-        if let calories = workoutManager.activeCalories {
-          MetricReading(
-            icon: "flame.fill", iconTint: LifeyColors.calories, value: "\(Int(calories.rounded()))",
-            iconSize: smallMetricIconSize, valueFont: smallMetricFont)
-        }
-      }
-      .padding(.top, 8)
-    }
+    RestContent(
+      model: RestModel(
+        remainingSeconds: remainingSeconds, totalSeconds: totalSeconds, nextLine: nextLine,
+        heartRateBpm: workoutManager.heartRateBpm.map { Int($0.rounded()) },
+        calories: workoutManager.activeCalories.map { Int($0.rounded()) },
+        showsStandaloneMark: workoutManager.showsStandaloneBadge,
+        markTapped: workoutManager.isRetryingAdoption),
+      onMarkTap: { workoutManager.retryAdoption() })
   }
-}
 
-/// The GO flash itself (docs/40-watch-app-plan.md §12.1 B2): a brief
-/// primary-color fill pulse with a "GO" wordmark covering the whole dial,
-/// mirroring Android's `GoFlash` animation timing (150ms fade in, 250ms
-/// hold, 700ms fade out). The haptic fires independently in
-/// `WorkoutManager` — this is purely decorative.
-struct GoFlashView: View {
-  @State private var opacity: Double = 0
-
-  var body: some View {
-    ZStack {
-      LifeyColors.primary.opacity(opacity)
-      Text("rest_go_label")
-        .font(.system(.title, design: .rounded))
-        .foregroundColor(LifeyColors.onPrimary.opacity(opacity))
+  private var nextLine: String {
+    if let setsDone, let setsTotal {
+      return String(
+        format: String(localized: "rest_hero_next_with_sets_format"), exerciseName,
+        min(setsDone + 1, setsTotal), setsTotal)
     }
-    .ignoresSafeArea()
-    .onAppear {
-      withAnimation(.easeInOut(duration: 0.15)) { opacity = 1 }
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-        withAnimation(.easeInOut(duration: 0.7)) { opacity = 0 }
-      }
-    }
+    return String(format: String(localized: "rest_hero_next_format"), exerciseName)
   }
 }

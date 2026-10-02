@@ -85,7 +85,7 @@ struct ActiveWorkoutView: View {
           // fits without scrolling, so the crown only steps values (stepper, effort) and scrolls lists.
         }
         if showGoFlash {
-          GoFlashView()
+          GoFlash()
         }
       }
     }

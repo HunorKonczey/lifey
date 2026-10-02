@@ -12,6 +12,7 @@
     var body: some View {
       content
         .environment(\.watchMetrics, WatchMetrics(width: width))
+        .containerShape(RoundedRectangle(cornerRadius: width < 190 ? 38 : 44))
         .frame(width: width, height: height)
         .background(LifeyColors.bg)
         .clipShape(RoundedRectangle(cornerRadius: width < 190 ? 38 : 44))
@@ -36,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { strength + logging + stepper }
+    static var all: [GalleryFrame] { strength + logging + stepper + rest }
 
     static var strength: [GalleryFrame] {
       [
@@ -77,6 +78,24 @@
         },
         GalleryFrame("AW1.11", "Stepper · weight", compact: true) {
           AdjustContent(model: AdjustModel(field: .weight, valueText: "102,5", captionText: "kg · 8 ism.", confirmText: "8 ismétlés naplózása"))
+        },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var rest: [GalleryFrame] {
+      func rest(_ seconds: Int, next: String = "Következő · Fekvenyomás — 3/4. szett") -> RestContent {
+        RestContent(model: RestModel(remainingSeconds: seconds, totalSeconds: 90, nextLine: next, heartRateBpm: 112, calories: 87))
+      }
+      return [
+        GalleryFrame("AW1.13", "Rest 0:47") { rest(47) },
+        GalleryFrame("AW1.14", "Rest last 5 s") { rest(4) },
+        GalleryFrame("AW1.15", "Mehet! rim") {
+          ZStack { rest(0); GoFlash() }
+        },
+        GalleryFrame("AW1.16", "Rest · 41 mm · long name", compact: true) {
+          rest(47, next: "Következő · Bulgarian Split Squat — 3/4. szett")
         },
       ]
     }

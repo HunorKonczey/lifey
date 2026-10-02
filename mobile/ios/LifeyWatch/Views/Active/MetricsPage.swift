@@ -79,32 +79,6 @@ struct HeaderChip: View {
   }
 }
 
-/// One icon + number metric reading (HR or kcal, canvas AW 02) — no unit
-/// suffix next to the number; the icon itself already disambiguates HR vs.
-/// kcal, and dropping the unit keeps the reading compact on a small dial.
-/// Used for the compact row under [RestHeroView]'s ring, not the main
-/// metrics-page hero readings (see [HeroMetricRow] for those).
-struct MetricReading: View {
-  let icon: String
-  let iconTint: Color
-  let value: String
-  let iconSize: CGFloat
-  let valueFont: Font
-
-  var body: some View {
-    HStack(spacing: 4) {
-      Image(systemName: icon)
-        .font(.system(size: iconSize))
-        .foregroundColor(iconTint)
-      Text(value)
-        .font(valueFont)
-        .foregroundColor(LifeyColors.onSurface)
-        .monospacedDigit()
-        .lineLimit(1)
-    }
-  }
-}
-
 /// Makes whatever it wraps open the exercise list — but only while there is
 /// something to switch to (`canChooseExercise`), so a Quick strength session
 /// or a phone that hasn't pushed its list keeps a plain, non-interactive

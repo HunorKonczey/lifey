@@ -987,11 +987,12 @@ new controls, picker, effort, ending and summary.
 - **Verify:** fixtures; "102,5" at 41 mm fits without the old 50 % squeeze.
 - *As built:* AdjustContent (plain AdjustModel): clay header only, v2 segmented switch Ismétlés|Súly, 44 pt ± circles reaching half into the side margin, big value in the hero style with minimumScaleFactor 0.5, caption, full-width primary confirm that can wrap to two lines. Behaviour unchanged (manager owns steps/bounds/clamp, crown .high, 3 s idle dismiss). Frames AW1.10 / AW1.11 (41 mm, '102,5'). Not compiled; whether '102,5' fits on 41 mm without shrinking below 50 % needs the Mac pass.
 
-### X1.8 — Watch iOS: rest countdown (AW1.13, AW1.14, AW1.16)
+### X1.8 — Watch iOS: rest countdown (AW1.13, AW1.14, AW1.16) ✅
 - `RestCountdown` in the metric page's hero slot; header chip "PIHENŐ" (`timer`); "Következő · Fekvenyomás
   — 3/4. szett" wraps to two lines (on long names "— 3/4. szett" goes to line two, AW1.16); HR + kcal small
   row. Last 5 s colour + pulse (AW1.14). The bar is white (fill is not a control → not primary).
 - **Verify:** fixtures at 0:47 and 0:04; live rest; 41 mm.
+- *As built:* RestContent (plain RestModel): chip PIHENŐ, RestCountdown (hero over a white 8 pt bar, warning colour + pulse in the last 5 s), 'Következő …' line up to two lines, small HR + kcal row. The old full-green GoFlashView is gone — ActiveWorkoutView shows GoFlash() (8 pt primary rim following the display shape, white 'Mehet!', 150/250/700 ms, static 1.1 s under Reduce Motion); the haptic and the 1.3 s overlay cycle in ActiveWorkoutView are untouched, so it still overlays whichever page is visible. Old MetricReading removed. Frames AW1.13–1.16 (the gallery DeviceFrame now sets containerShape so the rim has a shape). Not compiled.
 
 ### X1.9 — Watch iOS: "Mehet!" rim flash (AW1.15)
 - `GoFlash` replaces `GoFlashView`'s full green screen: black background, 8 pt primary rim with the display
