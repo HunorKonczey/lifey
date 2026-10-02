@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { strength + logging + stepper + rest }
+    static var all: [GalleryFrame] { strength + logging + stepper + rest + controls + picker }
 
     static var strength: [GalleryFrame] {
       [
@@ -96,6 +96,31 @@
         },
         GalleryFrame("AW1.16", "Rest · 41 mm · long name", compact: true) {
           rest(47, next: "Következő · Bulgarian Split Squat — 3/4. szett")
+        },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var controls: [GalleryFrame] {
+      [
+        GalleryFrame("AW1.17", "Controls") { ControlsContent(model: ControlsModel(elapsedText: "12:34")) },
+        GalleryFrame("AW1.18", "Controls · paused") {
+          ControlsContent(model: ControlsModel(elapsedText: "12:34", isPaused: true, canChooseExercise: true))
+        },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var picker: [GalleryFrame] {
+      [
+        GalleryFrame("AW1.19", "Exercise picker") {
+          ExerciseListContent(rows: [
+            ExerciseRowModel(id: 0, name: "Fekvenyomás", setsDone: 3, setsTotal: 4, isCurrent: true),
+            ExerciseRowModel(id: 1, name: "Bulgarian Split Squat", setsDone: 1, setsTotal: 3, isCurrent: false),
+            ExerciseRowModel(id: 2, name: "Vállnyomás", setsDone: 2, setsTotal: nil, isCurrent: false),
+          ])
         },
       ]
     }

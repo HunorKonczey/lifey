@@ -1,24 +1,79 @@
 import SwiftUI
 import WatchKit
 
-/// The "which exercise am I logging against" picker (docs/watch/
-/// 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
-/// `ExerciseListChip`, on either `LogPage` or `ControlsPage`; only ever
-/// shown during a template-backed standalone session. Replaces the pager the same way
-/// `AdjustPage` does (see `ActiveWorkoutView.body`), not a sheet/modal —
-/// this app has no other modal presentation, and the pager coming right
-/// back underneath once this closes matches `AdjustPage`'s own precedent.
-/// Visually the exact shape `StandalonePickerView`'s rows already
-/// established (T4) — a scrolling list of `surface`-background cards, the
-/// selected one highlighted `containerHigh` — not a new component language.
-///
-/// Tapping a row **jumps** straight to that exercise, not a "Next" stepper
-/// (D-F6b.8's own reasoning: a one-way Next either silently wraps back to
-/// exercise 1, logging wrong data, or dead-ends at the last exercise with
-/// no way back). No confirmation: this is fully reversible — a mis-tap
-/// costs one more tap to undo, not a lost set. Already-logged sets keep
-/// whatever `exerciseIndex` they were logged with, permanently; selecting
-/// here only changes what the *next* tap counts against.
+// MARK: - Exercise picker (redesign X1.11 — AW1.19)
+
+/// One row of the picker as plain data.
+struct ExerciseRowModel: Identifiable {
+  let id: Int
+  var name: String
+  var setsDone: Int
+  /// `nil` = free format: "n szett" instead of a bar.
+  var setsTotal: Int?
+  var isCurrent: Bool
+}
+
+/// The "which exercise am I logging against" list (docs/watch/49-watch-f6b-template-sync-plan.md §3.5,
+/// D-F6b.8). A scrolling list of rows, each with the exercise name (two lines) and a `SetSegmentBar`; the
+/// selected one is `control` + a check. The back button is the watchOS 10 navigation bar's own (32 pt
+/// visible, 44 pt target), not an 8 pt arrow. The crown scrolls.
+struct ExerciseListContent: View {
+  let rows: [ExerciseRowModel]
+  var onSelect: (Int) -> Void = { _ in }
+  var onBack: () -> Void = {}
+
+  @Environment(\.watchMetrics) private var metrics
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(alignment: .leading, spacing: LifeySpacing.sm) {
+          Text("standalone_exercise_list_title")
+            .lifeyTitle(metrics)
+            .foregroundColor(LifeyColors.text)
+          ForEach(rows) { row in
+            Button { onSelect(row.id) } label: { rowView(row) }
+              .buttonStyle(.plain)
+          }
+        }
+        .padding(.horizontal, metrics.sideMargin)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(action: onBack) { Image(systemName: "chevron.left") }
+            .accessibilityLabel(Text("effort_selector_back"))
+        }
+      }
+    }
+  }
+
+  private func rowView(_ row: ExerciseRowModel) -> some View {
+    HStack(alignment: .top, spacing: LifeySpacing.sm) {
+      Group {
+        if let total = row.setsTotal {
+          SetSegmentBar(title: row.name, done: row.setsDone, total: total)
+        } else {
+          SetSegmentBar(
+            title: row.name, done: 0, total: 0,
+            freeFormText: String(format: String(localized: "standalone_exercise_sets_done"), row.setsDone))
+        }
+      }
+      if row.isCurrent {
+        Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundColor(LifeyColors.text)
+      }
+    }
+    .padding(.horizontal, LifeySpacing.lg)
+    .padding(.vertical, LifeySpacing.md)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(row.isCurrent ? LifeyColors.control : LifeyColors.card, in: RoundedRectangle(cornerRadius: LifeyShapes.card))
+    .contentShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
+  }
+}
+
+/// The live picker. Tapping a row **jumps** straight to that exercise (no confirmation — fully reversible);
+/// already-logged sets keep the `exerciseIndex` they were logged with, selecting only changes what the next
+/// tap counts against.
 struct ExerciseListView: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
@@ -26,96 +81,28 @@ struct ExerciseListView: View {
   let onBack: () -> Void
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
-        HStack(spacing: 6) {
-          Button(action: onBack) {
-            Image(systemName: "chevron.left")
-              .font(.system(size: 14, weight: .semibold))
-              .foregroundColor(LifeyColors.onSurfaceVariant)
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel(Text("effort_selector_back"))
-          Text("standalone_exercise_list_title")
-            .font(isCompact ? .title3 : .title2)
-            .fontWeight(.heavy)
-            .foregroundColor(LifeyColors.onSurface)
-          Spacer(minLength: 0)
-        }
-        // The phone's live session plan when it has pushed one, the cached
-        // template otherwise (F6c) — `activePlanExercises` is the same list
-        // every other "which exercise" decision reads, so what's on screen and
-        // what a tap logs into can't drift apart.
-        do {
-          // Enumerated *before* filtering, so a row keeps the position the
-          // logged sets are attributed by — in the template fallback this list
-          // only ever hides an entry the phone removed from the session, it
-          // never renumbers (see `WorkoutManager.removedExerciseIndexes`); a
-          // session plan has nothing to hide, it simply lacks removed ones.
-          ForEach(
-            Array(workoutManager.activePlanExercises.enumerated())
-              .filter { !workoutManager.standaloneExerciseIsRemoved($0.offset) },
-            id: \.offset
-          ) { index, exercise in
-            ExerciseListRow(
-              exercise: exercise, isCompact: isCompact,
-              isCurrent: exercise.exerciseId == workoutManager.currentExerciseId,
-              // `standaloneSetsDone(at:)`, not a count of this watch's own set
-              // list: a watch-started workout is logged into from the phone
-              // too, and only the phone's row holds both halves. Counting
-              // locally showed a lower number here than the phone had — and a
-              // different number than the active page, which already reconciles
-              // the two.
-              setsDone: workoutManager.standaloneSetsDone(at: index)
-            ) {
-              workoutManager.selectExercise(at: index)
-              onBack()
-            }
-          }
-        }
-      }
-      .padding(.horizontal, padding)
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    ExerciseListContent(
+      rows: rows,
+      onSelect: { index in
+        workoutManager.selectExercise(at: index)
+        onBack()
+      },
+      onBack: onBack)
   }
-}
 
-/// One exercise row (canvas-less — see `ExerciseListView`'s doc comment for
-/// why this reuses `StandalonePickerView`'s `TemplateRow` visual language
-/// rather than inventing a new one).
-struct ExerciseListRow: View {
-  let exercise: CachedTemplateExercise
-  let isCompact: Bool
-  let isCurrent: Bool
-  let setsDone: Int
-  let onTap: () -> Void
-
-  var body: some View {
-    Button(action: onTap) {
-      VStack(alignment: .leading, spacing: 1) {
-        Text(exercise.name)
-          .font(.body)
-          .fontWeight(.bold)
-          .foregroundColor(LifeyColors.onSurface)
-          .lineLimit(1)
-          .truncationMode(.tail)
-        if let targetSets = exercise.targetSets {
-          Text(String(format: String(localized: "active_sets_format"), setsDone, targetSets))
-            .font(.caption2)
-            .foregroundColor(LifeyColors.onSurfaceVariant)
-        } else {
-          Text(String(format: String(localized: "standalone_exercise_sets_done"), setsDone))
-            .font(.caption2)
-            .foregroundColor(LifeyColors.onSurfaceVariant)
-        }
+  /// The phone's live session plan when it has pushed one, the cached template otherwise (F6c). Enumerated
+  /// *before* filtering, so a row keeps the position its logged sets are attributed by; the template fallback
+  /// only hides an entry the phone removed, it never renumbers.
+  private var rows: [ExerciseRowModel] {
+    Array(workoutManager.activePlanExercises.enumerated())
+      .filter { !workoutManager.standaloneExerciseIsRemoved($0.offset) }
+      .map { index, exercise in
+        ExerciseRowModel(
+          id: index, name: exercise.name,
+          // `standaloneSetsDone(at:)`, not a count of this watch's own set list: the phone logs into the same
+          // session too, and only that row holds both halves.
+          setsDone: workoutManager.standaloneSetsDone(at: index), setsTotal: exercise.targetSets,
+          isCurrent: exercise.exerciseId == workoutManager.currentExerciseId)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 14)
-    }
-    .buttonStyle(.plain)
-    .background(isCurrent ? LifeyColors.containerHigh : LifeyColors.surface)
-    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
   }
 }

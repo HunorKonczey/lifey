@@ -999,11 +999,12 @@ new controls, picker, effort, ending and summary.
   radius, white "Mehet!"; over whichever page is visible; `.notification` haptic unchanged and independent.
 - **Verify:** let a rest expire on each of the three pages; reduced motion = static 1.1 s.
 
-### X1.10 — Watch iOS: controls page (AW1.17, AW1.18)
+### X1.10 — Watch iOS: controls page (AW1.17, AW1.18) ✅
 - Two 78 pt circles side by side: "Vége" (error tint, `stop.fill`) + "Szünet" (control, `pause.fill`).
   Paused: "Folytatás" becomes the **primary** circle (`play.fill`), header icon clay pause, "Gyakorlatok"
   compact chip at the bottom (2+ exercises). Cardio uses the same page with the activity icon in the header.
 - **Verify:** fixtures; pause → resume → end on the simulator.
+- *As built:* ControlsContent (plain ControlsModel): 'Vége' (error tint, stop.fill) + 'Szünet' (control, pause.fill) as two CircleButtons; paused: 'Folytatás' primary play.fill, clay header chip, 'Gyakorlatok' CompactChip. Cardio reuses it with the activity icon/accent in the header. ControlButton and ExerciseListChip removed. Frames AW1.17/1.18. Exercise picker (X1.11) is in the same commit tree: ExerciseListContent with NavigationStack + toolbar back button (cancellationAction, chevron.left), rows = SetSegmentBar in a card, current = control + check; frame AW1.19. Not compiled — whether the cancellationAction item renders as the 32/44 pt nav back button needs the simulator.
 
 ### X1.11 — Watch iOS: exercise picker (AW1.19)
 - Presented in the `NavigationStack` so the **watchOS 10 nav back button** (32 visible / 44 target) replaces
