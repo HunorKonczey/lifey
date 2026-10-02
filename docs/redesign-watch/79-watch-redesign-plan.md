@@ -858,7 +858,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   and by the back key without closing the activity.
 - *As built:* UNVERIFIED offline — the M3/foundation signatures (AppScaffold(timeText), ScreenScaffold(scrollState, edgeButton), HorizontalPageIndicator(pagerState), SwipeToDismissBox, HorizontalPager(rotaryScrollableBehavior = null)) are from memory of the 1.5/1.6 API and must be compiled on the first Windows run. Deviation: the ≤ 12 % / ≥ 80 % edge-row spec is recorded as constants (LifeyTransformation) but the library default transformation is used until it can be built against a compiler. The gallery's 12-row list / overlay demo is added with the first screen that uses them (X3.2).
 
-### X0w.10 — Watch Wear: header chip, metric reading, set segment bar, heart-rate slot
+### X0w.10 — Watch Wear: header chip, metric reading, set segment bar, heart-rate slot ✅
 - Files: new `ui/components/HeaderChip.kt`, `MetricReading.kt`, `SetSegmentBar.kt`, `HeartRateSlot.kt`.
 - As X0a.6 / X0a.7 with the Wear differences: standalone mark 24 dp visible / 48 dp target; template name in
   the header ≤ 14 characters + ellipsis (W2.6); the narrow centred exercise block (96 dp on 192 dp, inside
@@ -868,6 +868,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   Strings: split `active_heart_rate_denied_chip` into the two ⚑ keys (HU + EN); the old key is removed in
   X3.5 when its last usage goes.
 - **Verify:** gallery at 227 / 192 dp, HU + EN; the permission slot's two lines never ellipsize.
+- *As built:* not built (M3 Button/AlertDialog/ButtonDefaults.filledTonalButtonColors signatures unverified offline). New keys active_heart_rate_denied_title / _action (HU+EN); the old _chip key stays until X3.5. HeartRateSlot has three states (Live / Missing / PermissionDenied) in one min-height frame; the 'nincs pulzus' explanation is an M3 AlertDialog with the existing error_ok_button text. Gallery: debug/ComponentGallery.kt.
 
 ### X0w.11 — Watch Wear: circle button, status pill, ghosted modifier
 - Files: new `ui/components/CircleButton.kt`, `StatusPill.kt`, `ui/theme/Ghosted.kt`.

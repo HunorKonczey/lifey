@@ -22,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,7 +59,9 @@ class GallerySection(val title: String, val content: @Composable () -> Unit)
 val galleryFrames: Map<String, @Composable () -> Unit> = emptyMap()
 
 /** Registry — later steps append their component sections here. */
-val gallerySections: List<GallerySection> = listOf(
+val gallerySections: List<GallerySection> = foundationSections + componentSections
+
+private val foundationSections: List<GallerySection> = listOf(
     GallerySection("01 Tokens") { TokenSwatches() },
     GallerySection("02 Type") { TypeRamp() },
     GallerySection("03 Metrics") { MetricsReadout() },
@@ -126,11 +127,7 @@ private fun TokenSwatches() {
             Row(horizontalArrangement = Arrangement.spacedBy(LifeySpacing.xs)) {
                 for ((name, color) in row) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            Modifier.width(36.dp).height(22.dp)
-                                .background(color, RoundedCornerShape(LifeySpacingTag))
-                                .then(Modifier.background(Color.Transparent)),
-                        )
+                        Box(Modifier.width(36.dp).height(22.dp).background(color, RoundedCornerShape(LifeySpacingTag)))
                         Text(name, fontSize = 8.sp, fontFamily = FontFamily.Monospace, color = LifeyColors.text2)
                     }
                 }
