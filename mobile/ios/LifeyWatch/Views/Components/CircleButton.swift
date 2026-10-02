@@ -13,7 +13,10 @@ struct CircleButton: View {
   }
 
   let style: Style
-  let icon: String
+  /// SF Symbol; optional when the circle carries text ("+1") instead.
+  var icon: String? = nil
+  /// PJS text in the circle ("+1", "3/4"), alone or under the icon.
+  var centerText: String? = nil
   let label: String
   var iconTint: Color? = nil
   var isGhosted = false
@@ -32,9 +35,18 @@ struct CircleButton: View {
       Button {
         if guardTap.accept() { action() }
       } label: {
-        Image(systemName: icon)
-          .font(.system(size: size * 0.36, weight: .bold))
-          .foregroundColor(isGhosted ? LifeyColors.ghost : (iconTint ?? content))
+        VStack(spacing: LifeySpacing.xxs) {
+          if let icon {
+            Image(systemName: icon)
+              .font(.system(size: size * (centerText == nil ? 0.36 : 0.34), weight: .bold))
+          }
+          if let centerText {
+            Text(verbatim: centerText)
+              .font(.custom(LifeyFont.extraBold, fixedSize: icon == nil ? size * 0.36 : size * 0.19))
+              .monospacedDigit()
+          }
+        }
+        .foregroundColor(isGhosted ? LifeyColors.ghost : (iconTint ?? content))
           .frame(width: size, height: size)
           .background(isGhosted ? LifeyColors.card : fill, in: Circle())
       }

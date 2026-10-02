@@ -947,23 +947,24 @@ new controls, picker, effort, ending and summary.
 - **Verify:** AW1.1 and AW1.4 fixtures + live session at both sizes.
 - *As built:* X1.2–X1.4 land together because they are one view: MetricsContent (plain MetricsModel) = hero time (white; text3 when paused) › HeartRateSlot (always present, so a missing HR keeps its place — X1.4) › kcal › exercise card with SetSegmentBar (name wraps to two lines); paused = the header chip turns clay (X1.3), no extra row. The numbers carry the metric colour as in the canvas (121 heart, 87 calories). HeroMetricRow / ExerciseCard removed; HeaderChip and MetricReading (old) stay for Log/Controls/Rest until their steps. Frames AW1.1–1.4 registered in the new Frames gallery (FramesGallery.swift); the 41 mm frame is a fixed 176 pt device frame. Not compiled.
 
-### X1.3 — Watch iOS: paused metric page (AW1.2)
+### X1.3 — Watch iOS: paused metric page (AW1.2) ✅
 - The orange "Szüneteltetve" row is gone; the header chip itself turns clay "SZÜNETELTETVE" (`pause.fill`,
   key `active_paused_indicator`), the stopped time fades to `text3`. No extra row, no squeeze.
 - **Verify:** pause from the controls page; AW1.2 fixture.
 
-### X1.4 — Watch iOS: missing HR on strength + long exercise names (AW1.3)
+### X1.4 — Watch iOS: missing HR on strength + long exercise names (AW1.3) ✅
 - The HR row no longer disappears: `HeartRateSlot` missing state (ghost heart, "—", "nincs pulzus" + ⓘ;
   tap → AW2.19 sheet); kcal does not move up. Exercise name wraps to two lines ("Bulgarian Split Squat"),
   never "Bulgarian Sp…".
 - **Verify:** simulator without HR samples; AW1.3 fixture; the slot's position equals AW1.1's.
 
-### X1.5 — Watch iOS: log page — "+1 szett" ready (AW1.5, AW1.12)
+### X1.5 — Watch iOS: log page — "+1 szett" ready (AW1.5, AW1.12) ✅
 - Next set line on top ("Fekvenyomás · 3/4 szett"); filled **primary** circle with dark "+1" (no green
   ring/text); "Módosítás" = `raised` circle with clay `slider.horizontal.3`, label under the circle at full
   size; header chip `timer` + elapsed. 41 mm: circles 70 pt, "Gyakorlatok" compact chip (36 / 44) in the
   status slot (2+ exercises, standalone and phone mode as today).
 - **Verify:** AW1.5 / AW1.12 fixtures; tap targets 78 / 70 pt.
+- *As built:* X1.5 + X1.6 are one view. LogContent (plain LogModel): next-set line, primary '+1' circle (PJS '+1' in the circle, label 'szett' under it = the localized log_set_button without the '+1'), raised 'Módosítás' circle with the clay icon, and ONE bottom slot: pending / logged / failed / unreachable pill (StatusPill) or, when idle, the 'Gyakorlatok' compact chip. Pending/failed/unreachable ghost both circles with the token pair. The tap rules (canTap, hasLogSetPrefill → stepper, standalone exemption) are kept; the 300 ms guard moved into CircleButton. CircleButton gained centerText. Also: the crown no longer pages the TabView (D-X0.9) — crownRotation state removed from ActiveWorkoutView. Frames AW1.5–1.9, 1.12 registered. Not compiled.
 
 ### X1.6 — Watch iOS: logging states in one slot (AW1.6 – AW1.9)
 - Pending: both circles ghosted (token pair, no opacity) + "Naplózás…" pill (`hourglass`, `log_set_pending`).

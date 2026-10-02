@@ -36,7 +36,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { strength }
+    static var all: [GalleryFrame] { strength + logging }
 
     static var strength: [GalleryFrame] {
       [
@@ -46,6 +46,25 @@
           MetricsContent(model: .fixture(hr: nil, name: "Bulgarian Split Squat"))
         },
         GalleryFrame("AW1.4", "Metric page · 41 mm", compact: true) { MetricsContent(model: .fixture()) },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var logging: [GalleryFrame] {
+      func page(_ state: LogPageState, counter: String = "", chip: Bool = false, compact: Bool = false) -> LogContent {
+        LogContent(
+          model: LogModel(
+            elapsedSeconds: 12 * 60 + 34, contextName: "Fekvenyomás", contextSuffix: " · 3/4 szett", state: state,
+            confirmedCounter: counter, canChooseExercise: chip))
+      }
+      return [
+        GalleryFrame("AW1.5", "Log page") { page(.ready) },
+        GalleryFrame("AW1.6", "Logging pending") { page(.pending) },
+        GalleryFrame("AW1.7", "Set logged") { page(.confirmed, counter: "3/4") },
+        GalleryFrame("AW1.8", "Logging failed") { page(.failed) },
+        GalleryFrame("AW1.9", "Phone unreachable") { page(.unreachable) },
+        GalleryFrame("AW1.12", "Log page · 41 mm · chip", compact: true) { page(.ready, chip: true) },
       ]
     }
   }

@@ -26,12 +26,6 @@ struct ActiveWorkoutView: View {
   /// Starts on the metrics page (tag 1) — the calorie/HR/exercise readout is
   /// what a glance should land on; the log-set page is one swipe away.
   @State private var selectedPage = 1
-  /// Mirrors `selectedPage` as a `Double` for `.digitalCrownRotation`, which
-  /// needs its own continuous binding rather than the page `Int` itself —
-  /// kept in sync with `selectedPage` in both directions so a crown turn and
-  /// a swipe agree on where the "next" turn should land. Must start equal to
-  /// `selectedPage`, since `onChange(of:)` doesn't fire for the initial value.
-  @State private var crownRotation: Double = 1
   /// Whether `ExerciseListView` is showing instead of the pager (docs/watch/
   /// 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
   /// the "Gyakorlatok" chip on either the log or the controls page, only ever
@@ -87,15 +81,8 @@ struct ActiveWorkoutView: View {
             ).tag(2)
           }
           .tabViewStyle(.page)
-          .digitalCrownRotation(
-            $crownRotation, from: 0, through: 2, by: 1,
-            sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
-          .onChange(of: crownRotation) { _, newValue in
-            selectedPage = Int(newValue.rounded())
-          }
-          .onChange(of: selectedPage) { _, newValue in
-            crownRotation = Double(newValue)
-          }
+          // The crown does not page (D-X0.9): no accidental paging with a sweaty hand. Every active page
+          // fits without scrolling, so the crown only steps values (stepper, effort) and scrolls lists.
         }
         if showGoFlash {
           GoFlashView()
