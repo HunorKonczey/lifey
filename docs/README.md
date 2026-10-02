@@ -50,7 +50,7 @@ iterations.
 | [`personal_trainer/`](personal_trainer) | Trainer role: concept, domain, backend, web admin, mobile, scheduling, calendar — has its own README |
 | [`web/`](web) | The Next.js web surface: feature inventory, architecture, API integration, design system, screens — has its own README, own `01–09` numbering |
 | [`chat/`](chat) | Trainer ↔ client chat (40–44), including the extraction of the chat into its own service (44) |
-| [`watch/`](watch) | Apple Watch + Wear OS app (40–50): set logging, standalone sessions, template and session sync |
+| [`watch/`](watch) | Apple Watch + Wear OS app (40–50, 79): set logging, standalone sessions, template and session sync, watchOS redesign verification |
 | [`design/`](design) | Design system prompt, design implementation tasks, workout-tab redesigns |
 | [`redesign/`](redesign) | Mobile redesign v2 (77): the Claude Design canvases (design system + 6 screen canvases) and the iteration plan R0–R7 — has its own README |
 | [`music/`](music) | In-workout music controls (46–47) |

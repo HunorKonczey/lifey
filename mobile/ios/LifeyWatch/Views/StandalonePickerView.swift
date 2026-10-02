@@ -183,6 +183,10 @@ struct StandalonePickerView: View {
             .font(.body)
             .fontWeight(.bold)
             .foregroundColor(LifeyColors.onSurface)
+            // The word "strength" is wider than the text column on a 46 mm dial and
+            // used to break mid-word ("strengt / h"); shrinking keeps it whole.
+            .lineLimit(2)
+            .minimumScaleFactor(0.7)
           Text("standalone_quick_caption")
             .font(.caption2)
             .foregroundColor(LifeyColors.onSurfaceVariant)
