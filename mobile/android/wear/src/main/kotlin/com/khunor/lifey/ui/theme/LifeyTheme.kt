@@ -10,29 +10,24 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Typography
 
 /**
- * Maps [LifeyColors] onto Wear Compose Material's [Colors] slots
- * (docs/40-watch-app-plan.md §12.1 B6 / 41-watch-design-prompt.md §2) —
- * `primaryContainer`/`container` share one hex in the prompt's own token
- * table, so `primaryVariant` reuses [LifeyColors.container] rather than
- * inventing a darker primary shade. `background` is true black, not
- * [LifeyColors.bg]: every canvas frame renders the dial content directly on
- * `#000`, using `bg`/`surface`/`container` only for specific chips and cards
- * (§2.1's own note: "on watch: may sit on #000000").
+ * Maps the v2 [LifeyColors] tokens onto Wear Compose Material's [Colors]
+ * slots (redesign plan 79, D-X0.2). `background` is [LifeyColors.bg], true
+ * `#000`; cards and chips use `card` / `nested` / `control` / `raised`.
  */
 private val LifeyWearColors = Colors(
     primary = LifeyColors.primary,
-    primaryVariant = LifeyColors.container,
-    secondary = LifeyColors.secondary,
-    secondaryVariant = LifeyColors.secondaryContainer,
-    background = LifeyColors.trueBlack,
-    surface = LifeyColors.surface,
+    primaryVariant = LifeyColors.nested,
+    secondary = LifeyColors.clay,
+    secondaryVariant = LifeyColors.tint(LifeyColors.clay),
+    background = LifeyColors.bg,
+    surface = LifeyColors.card,
     error = LifeyColors.error,
     onPrimary = LifeyColors.onPrimary,
     onSecondary = LifeyColors.onPrimary,
-    onBackground = LifeyColors.onSurface,
-    onSurface = LifeyColors.onSurface,
-    onSurfaceVariant = LifeyColors.onSurfaceVariant,
-    onError = LifeyColors.onError,
+    onBackground = LifeyColors.text,
+    onSurface = LifeyColors.text,
+    onSurfaceVariant = LifeyColors.text2,
+    onError = LifeyColors.bg,
 )
 
 /**

@@ -296,7 +296,7 @@ fun cardioActivityIcon(activityType: String): ImageVector = when (activityType) 
 fun cardioActivityTint(activityType: String): Color = when (activityType) {
     "RUNNING" -> LifeyColors.calories
     "WALKING" -> LifeyColors.cardioWalking
-    "HIKING" -> LifeyColors.tertiary
+    "HIKING" -> LifeyColors.cardioHiking
     "CYCLING" -> LifeyColors.secondary // mirrors mobile's colorScheme.secondary
     "INDOOR_BIKE" -> LifeyColors.cardioIndoorBike
     "BASKETBALL" -> LifeyColors.cardioBasketball

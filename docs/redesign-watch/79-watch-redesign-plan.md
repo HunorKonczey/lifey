@@ -772,11 +772,12 @@ round-screen scaffolding, tests and CI, and every component of the W canvases in
 04 (M3 Button / EdgeButton for every touchable), 05 (TransformingLazyColumn, TimeText, ScrollIndicator,
 no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 
-### X0w.1 — Watch Wear: v2 colour tokens + legacy aliases
+### X0w.1 — Watch Wear: v2 colour tokens + legacy aliases ✅
 - Files: `ui/theme/LifeyColors.kt` (same names and values as Apple X0a.1; `primaryContainer`,
   `secondaryContainer`, `tertiaryContainer` aliased; `@Deprecated(replaceWith = ...)` on legacy names),
   `ui/theme/LifeyTheme.kt` (M2 `Colors` mapped from the new names).
 - **Verify:** `:wear:assembleDebug`; idle, picker, active page on the emulator show the v2 palette.
+- *As built:* no Android SDK in the cloud session, so nothing was built; values are identical to LifeyColors.swift (checked by script, formal TokenParityTest follows in X0w.3). Added cardioHiking (hiking was tertiary, which now aliases success); the M2 theme maps from the new names.
 
 ### X0w.2 — Watch Wear: Compose Material 3 alongside Material 2
 - Files: `mobile/android/wear/build.gradle.kts` (`compose-material3` on the foundation's version line,
