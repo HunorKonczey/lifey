@@ -350,6 +350,19 @@ void main() {
     });
   });
 
+  group('monthShownFor', () {
+    test('a week straddling two months opens the month that contains today', () {
+      // Mon 28 Sep – Sun 4 Oct 2026, today Fri 2 Oct: October, not the Monday's September.
+      expect(monthShownFor(DateTime(2026, 9, 28), DateTime(2026, 10, 2)), DateTime(2026, 10));
+      expect(monthShownFor(DateTime(2026, 9, 28), DateTime(2026, 9, 29)), DateTime(2026, 9));
+    });
+
+    test('another week falls back to the month of its Thursday', () {
+      expect(monthShownFor(DateTime(2026, 9, 28), DateTime(2026, 1, 15)), DateTime(2026, 10));
+      expect(monthShownFor(DateTime(2026, 8, 31), DateTime(2026, 1, 15)), DateTime(2026, 9));
+    });
+  });
+
   group('the month view', () {
     testWidgets('is reachable and hands back to the agenda on a day tap',
         (tester) async {
