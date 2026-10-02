@@ -76,6 +76,7 @@
 		294B42E0FD9BBACE586A714E /* BenchFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF1D4420458F48D8E2610315 /* BenchFrame.swift */; };
 		ABEE5329CF851E771DC3790B /* CardioField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51665DEFC737AA522F664AF /* CardioField.swift */; };
 		85DC4BD7818E10FD7FF75910 /* StatusScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFD0125AB5D19F22E5C5F9A /* StatusScreen.swift */; };
+		1236A7A0F6508423461B414D /* LifeyAOD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FC2E84CDB69BC04C36BD059 /* LifeyAOD.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -227,6 +228,7 @@
 		DF1D4420458F48D8E2610315 /* BenchFrame.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BenchFrame.swift; sourceTree = "<group>"; };
 		B51665DEFC737AA522F664AF /* CardioField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CardioField.swift; sourceTree = "<group>"; };
 		EEFD0125AB5D19F22E5C5F9A /* StatusScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatusScreen.swift; sourceTree = "<group>"; };
+		8FC2E84CDB69BC04C36BD059 /* LifeyAOD.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyAOD.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -308,6 +310,7 @@
 				F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */,
 				A183B7B64746BD684E846422 /* LifeyMotion.swift */,
 				2C8D2A70CF25646A20493809 /* Ghosted.swift */,
+				8FC2E84CDB69BC04C36BD059 /* LifeyAOD.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -823,6 +826,7 @@
 				294B42E0FD9BBACE586A714E /* BenchFrame.swift in Sources */,
 				ABEE5329CF851E771DC3790B /* CardioField.swift in Sources */,
 				85DC4BD7818E10FD7FF75910 /* StatusScreen.swift in Sources */,
+				1236A7A0F6508423461B414D /* LifeyAOD.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

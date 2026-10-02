@@ -169,3 +169,27 @@
     }
   }
 #endif
+
+#if DEBUG
+  struct AODGallery: View {
+    @Environment(\.watchMetrics) private var metrics
+    var body: some View {
+      AODReader { isAOD in
+        VStack(alignment: .leading, spacing: LifeySpacing.sm) {
+          Text(verbatim: LifeyAOD.elapsed(12 * 60 + 34)).lifeyAodNumber(metrics)
+          Text(verbatim: LifeyAOD.elapsed(65 * 60 + 10)).lifeyAodNumber(metrics)
+          Text(verbatim: LifeyAOD.remaining(59)).foregroundColor(LifeyAOD.numberColor)
+          Text(verbatim: LifeyAOD.restUntil(endsAt: Date().addingTimeInterval(60)))
+            .foregroundColor(LifeyAOD.numberColor)
+          HStack {
+            Image(systemName: LifeyAOD.symbol("heart.fill", filled: !isAOD))
+              .foregroundColor(isAOD ? LifeyAOD.metricTint(LifeyColors.heart) : LifeyColors.heart)
+            Text(verbatim: isAOD ? "AOD" : "full")
+          }
+        }
+        .padding(LifeySpacing.md)
+        .background(isAOD ? LifeyColors.bg : LifeyColors.card)
+      }
+    }
+  }
+#endif

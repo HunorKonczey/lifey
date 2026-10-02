@@ -737,7 +737,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - **Verify:** gallery entries for all six at 45 and 41 mm, HU.
 - *As built:* the six components are in Views/Components (SyncRow lives in SummaryTile.swift); the count-up is an `Animatable` Text so it really interpolates; gallery sections 04/09–04/15.
 
-### X0a.11 — Watch iOS: Always-On primitives
+### X0a.11 — Watch iOS: Always-On primitives ✅
 - Files: new `Theme/LifeyAOD.swift`: `isLuminanceReduced` reader, `AODStyle` (PJS 300 `text2`, metric @
   60 %, outlined SF symbol names via a `symbol(_:filled:)` helper), `aodElapsed(_:)` ("12 p" / "1 ó 05 p"),
   `aodRestUntil(endsAt:)` + `aodRemaining` rounded up, a `MinuteTimeline` wrapper (`TimelineView(.everyMinute)`
@@ -745,6 +745,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   `aod_minutes`, `aod_hours_minutes`, `aod_rest_until` (HU + EN).
 - **Verify:** gallery "AOD" toggle forces the reduced-luminance environment; "12 p", "1 ó 05 p", "Mehet
   9:42-kor" render in HU, "12 min", "Go at 9:42 AM" in EN.
+- *As built:* formatters (`elapsed`, `remaining`, `restUntil`, `symbol`) are pure statics in `LifeyAOD`; `AODReader` / `MinuteTimeline` pick reduced luminance or the gallery toggle. Strings aod_minutes / aod_hours_minutes / aod_rest_until added to Localizable.xcstrings (HU + EN). aod-hero falls back to Bold until the Light subset is bundled (§10 Q4).
 
 **X0a review (§4.1):** gallery vs DS frames 01–08 at 45 / 41 mm; every existing screen walked once to
 confirm the alias swap broke nothing (colours change, layouts do not).
