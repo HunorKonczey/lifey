@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.wear.compose.material3.TimeText
+import com.khunor.lifey.LogAdjustField
+import com.khunor.lifey.LogAdjustState
 import com.khunor.lifey.LogSetState
+import com.khunor.lifey.ui.active.AdjustContent
 import com.khunor.lifey.ui.active.LogContent
 import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.active.MetricsContent
@@ -30,6 +33,8 @@ val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
     "W1.7" to { Frame { LogContent(logModel(LogSetState.Pending("fixture")), {}, {}, {}) } },
     "W1.7b" to { Frame { LogContent(logModel(LogSetState.Failed), {}, {}, {}) } }, // failed: two centred lines
     "W1.7c" to { Frame { LogContent(logModel(LogSetState.Ready, phoneUnreachable = true), {}, {}, {}) } },
+    "W1.8" to { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.REPS), {}, {}, {}) },
+    "W1.9" to { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.WEIGHT), {}, {}, {}) },
     "W1.4" to { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
 )
 

@@ -448,8 +448,6 @@ internal fun StrengthActiveWorkoutScreen() {
                 // the pager comes back exactly where it was.
                 AdjustOverlay(
                     state = logAdjustState!!,
-                    isCompact = isCompact,
-                    maxWidth = maxWidth,
                     onConfirm = {
                         val adjust = logAdjustState!!
                         val currentSessionClientId = metadata.sessionClientId

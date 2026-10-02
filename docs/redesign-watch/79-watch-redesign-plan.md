@@ -1232,12 +1232,13 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** fixtures; live with phone disconnected and with the backend down.
 - *As built:* All four states live in LogContent (built with X3.6): pending/failed/unreachable ghost the pair (CircleButton.isGhosted → ghosted tone, not just lowered alpha), confirmed = SuccessTint circle with check and 'n/total', one StatusPill on the bottom chord by priority failed › unreachable › pending › logged (logPillKind), and LifeyPager hides the page indicator under it. This step adds the deliberate break after the dash in the failed text ('Nem sikerült —' / 'próbáld újra'). The 60·80·60 ms success and the failure haptics are untouched (LifeyHaptics via ExerciseService). Fixtures W1.6/W1.7/W1.7b/W1.7c.
 
-### X3.8 — Watch Wear: stepper with EdgeButton (W1.8, W1.9)
+### X3.8 — Watch Wear: stepper with EdgeButton (W1.8, W1.9) ✅
 - Clay header only; segmented "Ismétlés | Súly" short and centred; ± on the widest band inside the
   margin; **EdgeButton** "8 ismétlés naplózása" on the bottom arc replaces the full-width chip (the dense
   stepper fix — nothing overhangs the comfortable zone). 192 dp: number 34 sp, ± 40 / 48. Rotary ≈ 24 dp =
   one step + `EFFECT_TICK` (unchanged).
 - **Verify:** fixtures; rotary on the emulator; "102,5" at 192 dp.
+- *As built:* AdjustOverlay.kt: AdjustContent (stateless) + the stateful AdjustOverlay inside DismissibleOverlay (swipe/back = SessionStateHolder.onLogAdjustCancelled, never finishes the activity). Clay HeaderChip, short 'Ismétlés | Súly' segment, ValueStepper (± 44/40 dp visible, ≥ 48 target, value in PJS, rotary 24 dp = one step) with the not-edited value as its unit caption, and the EdgeButton '{n} ismétlés naplózása' placed on the bottom arc by the screen (not inside the stepper). SessionStateHolder keeps the real step/clamping; ValueStepper only mirrors the bounds for its ghosted buttons and gained tickOnStep=false so the stepper does not buzz twice (ExerciseService already ticks on every logAdjustState change). The three old M2 composables (AdjustCircle row, AdjustStepButton, AdjustFieldSegment) and ADJUST_ROW_WIDTH_FRACTION are dead and removed with the old file body. Fixtures W1.8/W1.9.
 
 ### X3.9 — Watch Wear: rest edge ring (W1.10, W1.11)
 - `RestRing` (6 dp at the display edge) replaces the horizontal bar; centred hero "0:47" + "/ 1:30";

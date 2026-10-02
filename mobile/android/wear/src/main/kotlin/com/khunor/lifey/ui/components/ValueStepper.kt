@@ -54,6 +54,8 @@ fun ValueStepper(
     unit: String? = null,
     confirmLabel: String? = null,
     onConfirm: () -> Unit = {},
+    /** False when the caller's state change already makes the haptic (the adjust stepper: `ExerciseService`). */
+    tickOnStep: Boolean = true,
 ) {
     val metrics = LocalWatchMetrics.current
     val context = LocalContext.current
@@ -66,7 +68,7 @@ fun ValueStepper(
         val next = (value + delta).coerceIn(range)
         if (next != value) {
             onValueChange(next)
-            LifeyHaptics.stepperTick(context)
+            if (tickOnStep) LifeyHaptics.stepperTick(context)
         }
     }
 
