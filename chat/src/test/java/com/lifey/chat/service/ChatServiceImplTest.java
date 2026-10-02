@@ -349,9 +349,9 @@ class ChatServiceImplTest {
 
         chatService.listMessages(CONVERSATION_ID, null, null, 5000);
 
-        verify(messageRepository).findLatestPage(eq(CONVERSATION_ID),
+        verify(messageRepository).findLatestPage(CONVERSATION_ID,
                 // page size + 1 probe row
-                eq(Pageable.ofSize(101)));
+                Pageable.ofSize(101));
     }
 
     // --- search (I6) --------------------------------------------------------
@@ -365,9 +365,9 @@ class ChatServiceImplTest {
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.hasMore()).isFalse();
-        verify(messageRepository).searchInConversation(eq(CONVERSATION_ID), eq("%lábnap%"), eq(null),
+        verify(messageRepository).searchInConversation(CONVERSATION_ID, "%lábnap%", null,
                 // Page size + 1 probe row, the same "is there more?" trick the thread uses.
-                eq(PageRequest.of(0, 31)));
+                PageRequest.of(0, 31));
     }
 
     @Test

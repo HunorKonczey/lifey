@@ -25,6 +25,7 @@ public class AuthController {
      * httpOnly cookie carrying the refresh token for browser clients.
      */
     private static final String REFRESH_COOKIE = "refreshToken";
+    @SuppressWarnings("java:S1075") // must equal the @RequestMapping above: the cookie is scoped to this controller
     private static final String COOKIE_PATH = "/api/v1/auth";
 
     private final AuthService authService;

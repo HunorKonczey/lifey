@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintValidatorContext;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZoneId;
 
 class BirthDateValidator implements ConstraintValidator<ValidBirthDate, LocalDate> {
 
@@ -16,7 +17,7 @@ class BirthDateValidator implements ConstraintValidator<ValidBirthDate, LocalDat
         if (birthDate == null) {
             return true; // let @NotNull report the missing-value case
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
         if (!birthDate.isBefore(today)) {
             return false;
         }

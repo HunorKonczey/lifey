@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
@@ -77,7 +78,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
         WorkoutTemplate sourceTemplate = workoutTemplateRepository.findByIdAndUserId(request.templateId(), trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workout template not found: " + request.templateId()));
 
-        if (request.startDate().isBefore(LocalDate.now())) {
+        if (request.startDate().isBefore(LocalDate.now(ZoneId.systemDefault()))) {
             throw new ScheduleInPastException("Schedule start date cannot be in the past");
         }
         if (request.recurrence() == Recurrence.WEEKLY && request.daysOfWeek().isEmpty()) {
@@ -132,7 +133,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
         Long trainerId = currentUserProvider.getUserId();
         trainerAccessService.requireActiveClient(trainerId, clientId);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
         return workoutScheduleRepository.findByTrainerIdAndClientIdAndCancelledAtIsNullOrderByStartDateDesc(trainerId, clientId)
                 .stream()
                 .map(schedule -> toSummary(schedule, today))
@@ -180,7 +181,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
             return OccurrenceStatus.CANCELLED;
         } else if (session.getStartedAt() != null) {
             return OccurrenceStatus.DONE;
-        } else if (session.getScheduledFor().isBefore(LocalDate.now())) {
+        } else if (session.getScheduledFor().isBefore(LocalDate.now(ZoneId.systemDefault()))) {
             return OccurrenceStatus.MISSED;
         } else {
             return OccurrenceStatus.UPCOMING;
@@ -259,7 +260,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
         Instant now = Instant.now();
         for (WorkoutSession occurrence : workoutSessionRepository
                 .findByScheduleIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForGreaterThanEqual(
-                        schedule.getId(), LocalDate.now())) {
+                        schedule.getId(), LocalDate.now(ZoneId.systemDefault()))) {
             occurrence.setDeletedAt(now);
         }
     }
@@ -269,7 +270,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
         WorkoutSession occurrence = requireOwnedOccurrence(sessionId, currentUserProvider.getUserId());
 
         if (occurrence.getStartedAt() != null || occurrence.getDeletedAt() != null
-                || occurrence.getScheduledFor().isBefore(LocalDate.now())) {
+                || occurrence.getScheduledFor().isBefore(LocalDate.now(ZoneId.systemDefault()))) {
             throw new OccurrenceNotCancellableException(
                     "Only a future, not-yet-started occurrence can be cancelled: " + sessionId);
         }
@@ -278,7 +279,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
 
     @Override
     public ScheduledSessionResponse moveOccurrence(Long sessionId, MoveOccurrenceRequest request) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
         WorkoutSession occurrence = requireOwnedOccurrence(sessionId, currentUserProvider.getUserId());
 
         if (occurrence.getStartedAt() != null || occurrence.getDeletedAt() != null

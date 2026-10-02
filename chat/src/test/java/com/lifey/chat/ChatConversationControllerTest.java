@@ -18,7 +18,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -92,7 +91,7 @@ class ChatConversationControllerTest {
                         .content("{\"lastReadMessageId\":4310}"))
                 .andExpect(status().isNoContent());
 
-        verify(chatService).markRead(eq(12L), eq(4310L));
+        verify(chatService).markRead(12L, 4310L);
     }
 
     @Test
