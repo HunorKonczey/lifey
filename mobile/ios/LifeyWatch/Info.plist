@@ -36,6 +36,12 @@
 	<array>
 		<string>workout-processing</string>
 	</array>
+	<!-- Numeral subsets, docs/redesign-watch/79-watch-redesign-plan.md D-X0.6 (see Fonts/README.md) -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>PlusJakartaSans-ExtraBold-numerals.ttf</string>
+		<string>PlusJakartaSans-Bold-numerals.ttf</string>
+	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

@@ -639,7 +639,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   the table.
 - *As built:* no Xcode in the cloud session (verified by §4.3 screenshot comparison). Metrics scale the class table by width/reference width, so the reference sizes return the canvas table exactly; DynamicSizing.isCompact now delegates to WatchMetrics; legacy radius names aliased (chip/button/cardLarge); the root injection wraps ContentView's content in a GeometryReader sized to the proposal.
 
-### X0a.3 — Watch iOS: Plus Jakarta Sans numerals + type styles
+### X0a.3 — Watch iOS: Plus Jakarta Sans numerals + type styles ✅
 - Files: new `mobile/ios/LifeyWatch/Fonts/PlusJakartaSans-{ExtraBold,Bold,Light}-numerals.ttf` + `OFL.txt`
   (subset per D-X0.6; the `pyftsubset` command goes into the README), `Info.plist` (`UIAppFonts`),
   pbxproj (Resources phase), new `Theme/LifeyType.swift`: `Font.lifeyHero/metric/value/aodHero` via
@@ -650,6 +650,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - **Needs the user's OK** to fetch PlusJakartaSans-Light from the upstream release (D-X0.6, §10 Q4).
 - **Verify:** build; a preview shows "12:34", "62,5", "3.42", "—", "1:05:12" in PJS at both sizes; text
   next to them is SF Pro; Dynamic Type at the largest size stops the hero at 115 %.
+- *As built:* ExtraBold + Bold subsets (≈ 10 KB each, built with pyftsubset from mobile/assets/fonts, command in Fonts/README.md). The Light (300) subset is NOT bundled — it needs your OK to fetch from upstream (§10 Q4); `lifeyAodHero` falls back to Bold until then. Font availability uses CoreText (UIKit does not exist on watchOS); sizes use @ScaledMetric clamped at 115 % / 135 %. OFL.txt not added to the Resources phase.
 
 ### X0a.4 — Watch iOS: motion tokens, reduced motion, haptic map
 - Files: new `Theme/LifeyMotion.swift` (durations + curves of D-X0.14 as `Animation` values; a

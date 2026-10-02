@@ -5,6 +5,10 @@ import SwiftUI
 struct LifeyWatchApp: App {
   @WKApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+  init() {
+    LifeyFont.assertBundled()  // DEBUG only: the numeral subsets must be registered (plan §9.3)
+  }
+
   var body: some Scene {
     WindowGroup {
       ContentView()

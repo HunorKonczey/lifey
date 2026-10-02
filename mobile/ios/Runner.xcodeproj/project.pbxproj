@@ -52,6 +52,9 @@
 		FD1BEC0458A6625490415513 /* StandaloneSessionPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE875E9CE92E980591E3ADF7 /* StandaloneSessionPayload.swift */; };
 		F0D8E8D90F930650850E7EA3 /* LifeySpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566A6EB587B07E56099D6847 /* LifeySpacing.swift */; };
 		D4F9E359BA78C8E27EF3BBF0 /* WatchMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659982E15119DC33B6B4F134 /* WatchMetrics.swift */; };
+		527EB7396F24245898FD1924 /* PlusJakartaSans-ExtraBold-numerals.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BA1FB0CF70EA68B9E62F8111 /* PlusJakartaSans-ExtraBold-numerals.ttf */; };
+		D996041E8BDCC6F5FC0F74EB /* PlusJakartaSans-Bold-numerals.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D04C120B07CBCD587111BC8F /* PlusJakartaSans-Bold-numerals.ttf */; };
+		56424A87AB286A2F1E8CCEE5 /* LifeyType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E5E06FD56F3A0215EEB87C /* LifeyType.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -179,6 +182,9 @@
 		F3E1B2D6084DD2CF55DBF111 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		566A6EB587B07E56099D6847 /* LifeySpacing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeySpacing.swift; sourceTree = "<group>"; };
 		659982E15119DC33B6B4F134 /* WatchMetrics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchMetrics.swift; sourceTree = "<group>"; };
+		BA1FB0CF70EA68B9E62F8111 /* PlusJakartaSans-ExtraBold-numerals.ttf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = PlusJakartaSans-ExtraBold-numerals.ttf; sourceTree = "<group>"; };
+		D04C120B07CBCD587111BC8F /* PlusJakartaSans-Bold-numerals.ttf */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file; path = PlusJakartaSans-Bold-numerals.ttf; sourceTree = "<group>"; };
+		54E5E06FD56F3A0215EEB87C /* LifeyType.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyType.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -254,6 +260,7 @@
 				4FBAC8928C47BE228C8BD2B7 /* LifeyShapes.swift */,
 				566A6EB587B07E56099D6847 /* LifeySpacing.swift */,
 				659982E15119DC33B6B4F134 /* WatchMetrics.swift */,
+				54E5E06FD56F3A0215EEB87C /* LifeyType.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -375,6 +382,7 @@
 				B199F30DFF924EE0928C6D21 /* Assets.xcassets */,
 				70242DA06A8699B3E8E851BF /* LifeyWatch.entitlements */,
 				C172D655068797390A33BC32 /* Info.plist */,
+				DD7B3E3736848F16CFAC17B4 /* Fonts */,
 			);
 			path = LifeyWatch;
 			sourceTree = "<group>";
@@ -390,6 +398,15 @@
 				70BEDFEC892401DB1C8D9BAA /* Pods-RunnerTests.profile.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		DD7B3E3736848F16CFAC17B4 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				BA1FB0CF70EA68B9E62F8111 /* PlusJakartaSans-ExtraBold-numerals.ttf */,
+				D04C120B07CBCD587111BC8F /* PlusJakartaSans-Bold-numerals.ttf */,
+			);
+			path = Fonts;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -537,6 +554,8 @@
 			files = (
 				A8A974CAA75743428DE0CAAD /* Localizable.xcstrings in Resources */,
 				75313D3B93064FFE86C3D322 /* Assets.xcassets in Resources */,
+				527EB7396F24245898FD1924 /* PlusJakartaSans-ExtraBold-numerals.ttf in Resources */,
+				D996041E8BDCC6F5FC0F74EB /* PlusJakartaSans-Bold-numerals.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -703,6 +722,7 @@
 				6FA25C1A3FE6FE2086FBA112 /* LifeyShapes.swift in Sources */,
 				F0D8E8D90F930650850E7EA3 /* LifeySpacing.swift in Sources */,
 				D4F9E359BA78C8E27EF3BBF0 /* WatchMetrics.swift in Sources */,
+				56424A87AB286A2F1E8CCEE5 /* LifeyType.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
