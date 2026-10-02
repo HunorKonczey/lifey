@@ -878,7 +878,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** gallery: every style and pill kind at both sizes, HU.
 - *As built:* not built. CircleButton is a plain clickable circle (no M3 Button) so the 0.96 press scale and double-tap guard work as on Apple; ghosted is a token pair (Modifier.ghosted + ghostedContent); the failed/unreachable pills wrap to two centred lines via explicit line breaks in the caller's text. The icon name Icons.Filled.ErrorOutline etc. needs the extended icon pack already in the module.
 
-### X0w.12 — Watch Wear: rest ring, "Mehet!" ring, stepper, effort, EdgeButton usage
+### X0w.12 — Watch Wear: rest ring, "Mehet!" ring, stepper, effort, EdgeButton usage ✅
 - Files: new `ui/components/RestRing.kt`, `GoFlash.kt`, `ValueStepper.kt`, `EffortScale.kt`.
 - `RestRing` (04/06 Wear): full-screen M3 `CircularProgressIndicator`, 6 dp, white on `control` track,
   hero number in the centre, "/ 1:30" under it; last 5 s: remainder + hero `calories`, 1 Hz pulse; driven
@@ -888,6 +888,7 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
   confirm** on the bottom arc ("8 ismétlés naplózása"), rotary ≈ 24 dp = one step + `EFFECT_TICK`.
 - `EffortScale`: stepper 1–10 + 10 segments; "Kihagyás" a 40 dp secondary Button; "Edzés lezárása" EdgeButton.
 - **Verify:** gallery at both sizes; rotary on the emulator steps the stepper (extended controls ▸ rotary).
+- *As built:* not built. M3 CircularProgressIndicator(progress = { }), ProgressIndicatorDefaults.colors and EdgeButton signatures unverified offline. The stepper keeps the proven rotary scheme (≈ 24 dp per step + EFFECT_TICK via LifeyHaptics); on the compact dial the number is the metric style scaled to 34 sp. The 'rotary steps the stepper' emulator check stays with the Windows pass.
 
 ### X0w.13 — Watch Wear: list row, summary tile + sync row, bench ring, cardio field, status screen
 - Files: new `ui/components/ListRow.kt` (M3 `Button` pill for **every** row incl. quick strength;

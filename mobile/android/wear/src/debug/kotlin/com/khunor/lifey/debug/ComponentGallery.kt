@@ -13,7 +13,21 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material.Text
+import com.khunor.lifey.ui.components.EffortScale
+import com.khunor.lifey.ui.components.GoFlash
+import com.khunor.lifey.ui.components.RestRing
+import com.khunor.lifey.ui.components.ValueStepper
+import com.khunor.lifey.ui.theme.LocalWatchMetrics
 import androidx.compose.ui.Modifier
 import com.khunor.lifey.ui.components.CircleButton
 import com.khunor.lifey.ui.components.CircleStyle
@@ -36,6 +50,9 @@ val componentSections: List<GallerySection> = listOf(
     GallerySection("04/03 Set segment bar") { SegmentBarGallery() },
     GallerySection("04/04 Circle button") { CircleButtonGallery() },
     GallerySection("04/05 Status pill") { StatusPillGallery() },
+    GallerySection("04/06 Rest ring") { RestGallery() },
+    GallerySection("04/07 Mehet! ring") { GoFlashGallery() },
+    GallerySection("04/08 Stepper · 04/11 Effort") { StepperGallery() },
 )
 
 @Composable
@@ -86,4 +103,32 @@ private fun StatusPillGallery() = Column(verticalArrangement = Arrangement.space
     StatusPill(PillKind.Pending, "Naplózás…")
     StatusPill(PillKind.Failed, "Nem sikerült —\npróbáld újra")
     StatusPill(PillKind.Unreachable, "Nincs kapcsolat\na telefonnal")
+}
+
+@Composable
+private fun RestGallery() = Column(verticalArrangement = Arrangement.spacedBy(LifeySpacing.lg)) {
+    Box(Modifier.size(LocalWatchMetrics.current.widthDp.dp)) { RestRing(remainingSeconds = 47, totalSeconds = 90) }
+    Box(Modifier.size(LocalWatchMetrics.current.widthDp.dp)) { RestRing(remainingSeconds = 4, totalSeconds = 90) }
+}
+
+@Composable
+private fun GoFlashGallery() {
+    var token by remember { mutableStateOf(0) }
+    Column {
+        Text("Replay", color = LifeyColors.text, modifier = Modifier.clickable { token++ })
+        Box(Modifier.size(LocalWatchMetrics.current.widthDp.dp)) { GoFlash(replayToken = token) }
+    }
+}
+
+@Composable
+private fun StepperGallery() {
+    var reps by remember { mutableStateOf(8.0) }
+    var weight by remember { mutableStateOf(102.5) }
+    var effort by remember { mutableStateOf(7) }
+    Column(verticalArrangement = Arrangement.spacedBy(LifeySpacing.lg)) {
+        ValueStepper(reps, { reps = it }, 1.0..99.0, 1.0, { it.toInt().toString() }, unit = "ismétlés", confirmLabel = "${reps.toInt()} ismétlés naplózása")
+        ValueStepper(1.0, {}, 1.0..99.0, 1.0, { it.toInt().toString() }, unit = "alsó határ")
+        ValueStepper(weight, { weight = it }, 0.0..500.0, 2.5, { "%g".format(it).replace('.', ',') }, unit = "kg")
+        EffortScale(effort, { effort = it }, "Kihagyás", {}, "Edzés lezárása", {})
+    }
 }
