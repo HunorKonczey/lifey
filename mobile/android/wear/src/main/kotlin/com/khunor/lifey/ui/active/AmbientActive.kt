@@ -1,5 +1,6 @@
 package com.khunor.lifey.ui.active
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,9 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,4 +103,43 @@ internal fun AmbientLine(text: String, modifier: Modifier = Modifier) {
         text, modifier = modifier.widthIn(max = (width * 0.7f).dp), style = LifeyType.body(), color = LifeyColors.text2,
         textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
     )
+}
+
+/**
+ * The ambient rest page (W2.18): the edge ring is a static 2 dp `text3` outline, the header "PIHENŐ", the
+ * remaining time rounded *up* to minutes ("~1 p") with the clock time the rest ends ("Mehet 9:42-kor"), and the
+ * "Következő · …" line at the bottom. The end time is computed from the real deadline, so it equals the moment
+ * of the expiry vibration, which stays in `ExerciseService`.
+ */
+@Composable
+fun AmbientRestContent(
+    state: AmbientState,
+    remainingSeconds: Int,
+    endsAtEpochMs: Long,
+    nextLine: String,
+    modifier: Modifier = Modifier,
+) {
+    val width = LocalWatchMetrics.current.widthDp
+    Box(modifier.fillMaxSize().ambientBurnInShift(state)) {
+        Box(Modifier.fillMaxSize().padding(2.dp).border(2.dp, LifeyColors.text3, CircleShape))
+        Column(
+            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.16f).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
+        ) {
+            AmbientHeader(Icons.Outlined.Timer, stringResource(R.string.rest_hero_label))
+            Text(
+                AmbientFormat.remaining(remainingSeconds, stringResource(R.string.aod_minutes)),
+                style = LifeyType.aodHero(), color = AmbientStyle.number, maxLines = 1,
+            )
+            Text(
+                AmbientFormat.restUntil(endsAtEpochMs, stringResource(R.string.aod_rest_until)),
+                style = LifeyType.title(), color = LifeyColors.text2, maxLines = 1,
+            )
+        }
+        AmbientLine(
+            nextLine.replace(" · ", " ·\n"),
+            Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.14f).dp),
+        )
+    }
 }

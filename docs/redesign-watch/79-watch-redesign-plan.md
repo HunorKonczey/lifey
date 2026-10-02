@@ -1370,10 +1370,11 @@ permission revoke/grant; failure paths.
 - **Verify:** emulator ambient; exit restores the live view.
 - *As built:* MainActivity registers androidx.wear.ambient.AmbientLifecycleObserver (enter/update/exit → AmbientState with the minute of day, provided as LocalAmbientState above LifeyTheme) and the manifest gains WAKE_LOCK. The strength screen opts in: while ambient it draws AmbientMetricsContent whatever page was open — outlined header, the elapsed time as '12 p' (AmbientFormat.elapsed, light PJS style in text2; the Light cut is still not bundled so it falls back to Bold, plan §10 Q4), the heart rate at 60 % with the outlined heart (nothing when there is no reading), a quiet 'exercise · n/total' line, no buttons / pills / indicator / TimeText, ±4 dp shift per minute. The elapsed seconds are recomputed from SystemClock.elapsedRealtime() on each ambient update and not from the 1 Hz ticker, so exiting ambient shows no stale frame. Fixture W2.17. Emulator ambient (and the exact trigger to record in §4.2) is still owed.
 
-### X4.14 — Watch Wear: ambient — rest (W2.18)
+### X4.14 — Watch Wear: ambient — rest (W2.18) ✅
 - Edge ring as a 2 dp `text3` outline; "~1 p" + "Mehet 9:42-kor"; per-minute refresh; the expiry vibration
   stays in `ExerciseService`.
 - **Verify:** ambient during rest; the end time equals the vibration moment.
+- *As built:* AmbientRestContent: static 2 dp text3 ring outline, outlined 'PIHENŐ' header, remaining time rounded up to minutes ('~1 p'), the end clock time in the device zone and 12/24 h convention (AmbientFormat.restUntil) and the 'Következő ·' / 'exercise — n/total. szett' line at the bottom. The strength screen picks it while ambient and a rest deadline is in the future; remaining seconds and end time come from restDeadlineElapsedRealtimeMs (the same value the expiry vibration in ExerciseService is scheduled from), recomputed on each minute update. Fixture W2.18. Checking that the end time equals the vibration moment on a real rest is for the emulator.
 
 ### X4.15 — Watch Wear: ambient — bench and cardio (W2.19 + derived)
 - Bench: clay ring 2 dp @ 60 %; stopped play time with seconds; gross time in minutes; no buttons.

@@ -304,6 +304,28 @@ internal fun StrengthActiveWorkoutScreen() {
             val ambientElapsedSeconds = remember(ambient.minuteOfDay, startedAt) {
                 if (startedAt == null) 0 else ((SystemClock.elapsedRealtime() - startedAt) / 1000L).toInt()
             }
+            // The rest deadline is this device's own elapsedRealtime, so the remaining time and the end time
+            // are exact however long the screen slept.
+            val restDeadline = metadata.restDeadlineElapsedRealtimeMs
+            val restLeftSeconds = remember(ambient.minuteOfDay, restDeadline) {
+                if (restDeadline == null) 0 else ((restDeadline - SystemClock.elapsedRealtime()) / 1000L).toInt()
+            }
+            if (restLeftSeconds > 0) {
+                AmbientRestContent(
+                    state = ambient,
+                    remainingSeconds = restLeftSeconds,
+                    endsAtEpochMs = remember(ambient.minuteOfDay, restDeadline) { System.currentTimeMillis() + restLeftSeconds * 1000L },
+                    nextLine = if (display.setsDone != null && display.setsTotal != null) {
+                        stringResource(
+                            R.string.rest_hero_next_with_sets_format,
+                            display.name, (display.setsDone + 1).coerceAtMost(display.setsTotal), display.setsTotal,
+                        )
+                    } else {
+                        stringResource(R.string.rest_hero_next_format, display.name)
+                    },
+                )
+                return@LifeyAppScaffold
+            }
             AmbientMetricsContent(
                 state = ambient,
                 headerLabel = activeHeaderLabel,
