@@ -890,12 +890,13 @@ no back arrow), 06 (permission slot), 08 (ambient, burn-in).
 - **Verify:** gallery at both sizes; rotary on the emulator steps the stepper (extended controls ▸ rotary).
 - *As built:* not built. M3 CircularProgressIndicator(progress = { }), ProgressIndicatorDefaults.colors and EdgeButton signatures unverified offline. The stepper keeps the proven rotary scheme (≈ 24 dp per step + EFFECT_TICK via LifeyHaptics); on the compact dial the number is the metric style scaled to 34 sp. The 'rotary steps the stepper' emulator check stays with the Windows pass.
 
-### X0w.13 — Watch Wear: list row, summary tile + sync row, bench ring, cardio field, status screen
+### X0w.13 — Watch Wear: list row, summary tile + sync row, bench ring, cardio field, status screen ✅
 - Files: new `ui/components/ListRow.kt` (M3 `Button` pill for **every** row incl. quick strength;
   highlighted = `raised` + icon circle; 52 / 48 dp), `SummaryTile.kt` (+ `SyncRow`, centred), `BenchRing.kt`
   (clay ring 4 dp; ambient 2 dp @ 60 %), `CardioField.kt` (boxless: value above, label below, centred,
   two lines max), `StatusScreen.kt` (centred icon, 2-line title, text, **EdgeButton** action).
 - **Verify:** gallery entries at both sizes, HU.
+- *As built:* not built (M3 Button/EdgeButton/animateColorAsState imports unverified; animateColorAsState is androidx.compose.animation.animateColorAsState). ListRow is an M3 Button pill for every row; SyncRow centred; BenchRing 4 dp (ambient 2 dp @ 60 %); CardioField boxless. Gallery sections 04/09–04/15 added.
 
 ### X0w.14 — Watch Wear: ambient primitives
 - Files: `build.gradle.kts` (`androidx.wear:wear` for `AmbientLifecycleObserver`), new

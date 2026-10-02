@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Pause
@@ -21,9 +23,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Text
+import com.khunor.lifey.ui.components.BenchRing
+import com.khunor.lifey.ui.components.CardioField
 import com.khunor.lifey.ui.components.EffortScale
+import com.khunor.lifey.ui.components.ListRow
+import com.khunor.lifey.ui.components.RowLeading
+import com.khunor.lifey.ui.components.StatusScreen
+import com.khunor.lifey.ui.components.SummaryTile
+import com.khunor.lifey.ui.components.SyncRow
 import com.khunor.lifey.ui.components.GoFlash
 import com.khunor.lifey.ui.components.RestRing
 import com.khunor.lifey.ui.components.ValueStepper
@@ -53,6 +63,9 @@ val componentSections: List<GallerySection> = listOf(
     GallerySection("04/06 Rest ring") { RestGallery() },
     GallerySection("04/07 Mehet! ring") { GoFlashGallery() },
     GallerySection("04/08 Stepper · 04/11 Effort") { StepperGallery() },
+    GallerySection("04/09 List row") { ListRowGallery() },
+    GallerySection("04/12 Summary tile · sync row") { SummaryGallery() },
+    GallerySection("04/13-15 Bench · field · status") { StructuralGallery() },
 )
 
 @Composable
