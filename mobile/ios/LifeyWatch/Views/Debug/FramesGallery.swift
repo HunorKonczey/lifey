@@ -36,7 +36,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { strength + logging }
+    static var all: [GalleryFrame] { strength + logging + stepper }
 
     static var strength: [GalleryFrame] {
       [
@@ -65,6 +65,19 @@
         GalleryFrame("AW1.8", "Logging failed") { page(.failed) },
         GalleryFrame("AW1.9", "Phone unreachable") { page(.unreachable) },
         GalleryFrame("AW1.12", "Log page · 41 mm · chip", compact: true) { page(.ready, chip: true) },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var stepper: [GalleryFrame] {
+      [
+        GalleryFrame("AW1.10", "Stepper · reps") {
+          AdjustContent(model: AdjustModel(field: .reps, valueText: "8", captionText: "ism. · 62,5 kg", confirmText: "8 ismétlés naplózása"))
+        },
+        GalleryFrame("AW1.11", "Stepper · weight", compact: true) {
+          AdjustContent(model: AdjustModel(field: .weight, valueText: "102,5", captionText: "kg · 8 ism.", confirmText: "8 ismétlés naplózása"))
+        },
       ]
     }
   }

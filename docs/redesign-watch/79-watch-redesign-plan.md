@@ -978,13 +978,14 @@ new controls, picker, effort, ending and summary.
 - **Verify:** fixtures AW1.6–1.9; live: log with the phone app paused (unreachable), with the backend down
   (failed).
 
-### X1.7 — Watch iOS: stepper — reps and weight (AW1.10, AW1.11)
+### X1.7 — Watch iOS: stepper — reps and weight (AW1.10, AW1.11) ✅
 - Only the header is clay ("MÓDOSÍTÁS"), not the whole page; v2 segmented switch "Ismétlés | Súly";
   `ValueStepper` with 44 pt ± inside the margin; caption "ism. · 62,5 kg" / "kg · 8 ism."
   (`log_adjust_caption_weight`); full-width pill confirm "8 ismétlés naplózása" (wraps to two lines).
 - Unchanged: reps 1–99, weight 0–500 step 2,5 kg with the locale decimal separator, crown = one step,
   auto-close after 3 s idle.
 - **Verify:** fixtures; "102,5" at 41 mm fits without the old 50 % squeeze.
+- *As built:* AdjustContent (plain AdjustModel): clay header only, v2 segmented switch Ismétlés|Súly, 44 pt ± circles reaching half into the side margin, big value in the hero style with minimumScaleFactor 0.5, caption, full-width primary confirm that can wrap to two lines. Behaviour unchanged (manager owns steps/bounds/clamp, crown .high, 3 s idle dismiss). Frames AW1.10 / AW1.11 (41 mm, '102,5'). Not compiled; whether '102,5' fits on 41 mm without shrinking below 50 % needs the Mac pass.
 
 ### X1.8 — Watch iOS: rest countdown (AW1.13, AW1.14, AW1.16)
 - `RestCountdown` in the metric page's hero slot; header chip "PIHENŐ" (`timer`); "Következő · Fekvenyomás
