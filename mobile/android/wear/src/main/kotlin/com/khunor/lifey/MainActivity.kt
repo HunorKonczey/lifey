@@ -6,6 +6,9 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.wear.ambient.AmbientLifecycleObserver
+import java.util.Calendar
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -14,12 +17,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.khunor.lifey.ui.ActiveWorkoutScreen
+import com.khunor.lifey.ui.active.ActiveWorkoutScreen
 import com.khunor.lifey.ui.ErrorScreen
 import com.khunor.lifey.ui.IdleScreen
 import com.khunor.lifey.ui.StandalonePickerScreen
 import com.khunor.lifey.ui.SummaryScreen
+import com.khunor.lifey.ui.theme.AmbientState
 import com.khunor.lifey.ui.theme.LifeyTheme
+import com.khunor.lifey.ui.theme.LocalAmbientState
 import kotlinx.coroutines.launch
 
 /**
@@ -40,8 +45,31 @@ class MainActivity : ComponentActivity() {
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { /* no-op — ExerciseService re-checks live before each start */ }
 
+    /** Always-On state for the screens that have an ambient layout (frame 08, D-X0.15). */
+    private val ambient = mutableStateOf(AmbientState())
+
+    private fun minuteOfDay(): Int = Calendar.getInstance().let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
+
+    private val ambientCallback = object : AmbientLifecycleObserver.AmbientLifecycleCallback {
+        override fun onEnterAmbient(ambientDetails: AmbientLifecycleObserver.AmbientDetails) {
+            ambient.value = AmbientState(isAmbient = true, minuteOfDay = minuteOfDay())
+        }
+
+        override fun onExitAmbient() {
+            ambient.value = AmbientState(isAmbient = false, minuteOfDay = minuteOfDay())
+        }
+
+        // Once a minute while ambient: the screens recompute their minute-resolution values from this.
+        override fun onUpdateAmbient() {
+            ambient.value = AmbientState(isAmbient = true, minuteOfDay = minuteOfDay())
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Keeps the app visible (instead of the watch face) on wrist-down; only screens with an ambient layout
+        // draw it, the others show their normal layout dimmed by the system.
+        lifecycle.addObserver(AmbientLifecycleObserver(this, ambientCallback))
         requestSensorPermissionsIfNeeded()
         // App-start retry for any standalone session still queued from a
         // previous run (docs/watch/44-watch-f6-standalone-plan.md §4.1) —
@@ -61,6 +89,7 @@ class MainActivity : ComponentActivity() {
         // overwhelmingly common case (nothing to recover).
         lifecycleScope.launch { ExerciseService.recoverIfNeeded(applicationContext) }
         setContent {
+          CompositionLocalProvider(LocalAmbientState provides ambient.value) {
             LifeyTheme {
                 val phase by SessionStateHolder.phase.collectAsState()
                 // Whether StandalonePickerScreen is showing instead of the
@@ -70,7 +99,7 @@ class MainActivity : ComponentActivity() {
                 // (mirrors iOS's identical S10 call: `showEffortSelector`-
                 // style manager state is for things the business logic
                 // itself needs to read/drive, this isn't one of them).
-                var showStandalonePicker by remember { mutableStateOf(false) }
+                var showStandalonePicker by remember { mutableStateOf(intent.getBooleanExtra(EXTRA_OPEN_PICKER, false)) }
                 when (phase) {
                     SessionPhase.IDLE -> {
                         if (showStandalonePicker) {
@@ -131,6 +160,7 @@ class MainActivity : ComponentActivity() {
                     SessionPhase.SUMMARY -> SummaryScreen()
                 }
             }
+          }
         }
     }
 

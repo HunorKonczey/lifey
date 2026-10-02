@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug builds only (redesign plan 79, D-X0.11): the design gallery. Not in the release manifest. -->
+    <application>
+        <activity
+            android:name=".debug.DesignGalleryActivity"
+            android:exported="true"
+            android:label="Lifey gallery"
+            android:theme="@android:style/Theme.DeviceDefault" />
+    </application>
+</manifest>

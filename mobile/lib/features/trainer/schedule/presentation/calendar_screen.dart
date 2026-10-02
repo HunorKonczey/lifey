@@ -45,6 +45,19 @@ class TrainerCalendarScreen extends ConsumerStatefulWidget {
       _TrainerCalendarScreenState();
 }
 
+/// The month the month view shows for the week starting at [weekStart]. A week can straddle two months, so
+/// the Monday's month is wrong half the time (on Fri 2 Oct the "this week" view would open September).
+/// Today's month wins when today is inside the week; otherwise the month of the week's Thursday (ISO rule).
+@visibleForTesting
+DateTime monthShownFor(DateTime weekStart, DateTime now) {
+  final start = DateTime(weekStart.year, weekStart.month, weekStart.day);
+  final today = DateTime(now.year, now.month, now.day);
+  final end = DateTime(start.year, start.month, start.day + 6);
+  if (!today.isBefore(start) && !today.isAfter(end)) return DateTime(today.year, today.month);
+  final thursday = DateTime(start.year, start.month, start.day + 3);
+  return DateTime(thursday.year, thursday.month);
+}
+
 class _TrainerCalendarScreenState extends ConsumerState<TrainerCalendarScreen> {
   bool _monthView = false;
   DateTime _selectedDay = dateOnly(DateTime.now());
@@ -59,10 +72,11 @@ class _TrainerCalendarScreenState extends ConsumerState<TrainerCalendarScreen> {
 
     // The agenda reads a week; the month view reads a month. Two ranges, two
     // cache entries, so switching back and forth costs nothing.
+    final month = monthShownFor(weekStart, DateTime.now());
     final range = _monthView
         ? (
-            from: DateTime(weekStart.year, weekStart.month),
-            to: DateTime(weekStart.year, weekStart.month + 1, 0),
+            from: DateTime(month.year, month.month),
+            to: DateTime(month.year, month.month + 1, 0),
           )
         : (from: weekStart, to: weekStart.add(const Duration(days: 6)));
 
@@ -80,7 +94,7 @@ class _TrainerCalendarScreenState extends ConsumerState<TrainerCalendarScreen> {
     }
 
     final header = LifeyHeader(
-      title: _monthView ? DateFormat.yMMMM(locale).format(weekStart) : l10n.trainerCalendarTitle,
+      title: _monthView ? DateFormat.yMMMM(locale).format(month) : l10n.trainerCalendarTitle,
       badge: const TrainerViewBadge(),
       // The mark is a 12/16 caps line in a padded pill; it grows with the text.
       badgeHeight: MediaQuery.textScalerOf(context).scale(16) + 2 * AppSpacing.s4,
@@ -183,7 +197,7 @@ class _TrainerCalendarScreenState extends ConsumerState<TrainerCalendarScreen> {
       return [
         if (filterChip != null) filterChip,
         SliverToBoxAdapter(
-          child: MonthOverview(month: weekStart, sessions: sessions, onSelectDay: selectDay),
+          child: MonthOverview(month: monthShownFor(weekStart, DateTime.now()), sessions: sessions, onSelectDay: selectDay),
         ),
         SliverToBoxAdapter(child: SizedBox(height: bottomPad)),
       ];

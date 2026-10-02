@@ -83,119 +83,20 @@ struct StandalonePickerView: View {
   }
 
   private var picker: some View {
-    GeometryReader { geometry in
-      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
-      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
-
-      // A ScrollView, not a fixed-height VStack: with up to 5 synced
-      // templates the content is taller than any watch face, and without a
-      // scrollable container neither the Digital Crown nor a finger swipe
-      // can reach the rows below the fold. The design called for this from
-      // the start ("watchOS lista-carousel", 44-doc §3.1) — the F6a picker
-      // only got away with a plain VStack because it had exactly one card.
-      ScrollView {
-        VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
-          // Back affordance sits *in* the scrolling flow, next to the
-          // title, rather than floating over it in a ZStack: a floating
-          // button would keep swallowing taps in the top-left corner as
-          // rows scroll underneath it. Not in the design frame itself, but
-          // the picker needs a way out — reuses effort_selector_back's
-          // string (a plain "Back"/"Vissza") rather than adding a
-          // picker-scoped key for one word.
-          HStack(spacing: 6) {
-            Button(action: onBack) {
-              Image(systemName: "chevron.left")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(LifeyColors.onSurfaceVariant)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("effort_selector_back"))
-            Text("standalone_picker_title")
-              .font(isCompact ? .title3 : .title2)
-              .fontWeight(.heavy)
-              .foregroundColor(LifeyColors.onSurface)
-            Spacer(minLength: 0)
-          }
-          quickStrengthCard
-          if entries.isEmpty {
-            Text("standalone_empty_hint")
-              .font(.caption2)
-              .foregroundColor(LifeyColors.onSurfaceVariant)
-              .multilineTextAlignment(.leading)
-          } else {
-            // Index-keyed, not by a natural id: a `WatchQuickStartEntry` has
-            // none of its own (a cardio row isn't even backed by a stable
-            // server id, just an activity-type code that could repeat if the
-            // phone ever ranked one twice), and the list is a point-in-time
-            // snapshot re-read on every appearance anyway (see `entries`'
-            // own doc comment) — nothing here needs SwiftUI's identity-
-            // preserving diffing across in-place updates.
-            ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
-              switch entry {
-              case .template(let template):
-                TemplateRow(template: template, isCompact: isCompact, isDisabled: isStarting) {
-                  templateTapped(template)
-                }
-              case .cardio(let activityType, let title):
-                CardioRow(
-                  activityType: activityType, title: title, isCompact: isCompact,
-                  isDisabled: isStarting
-                ) {
-                  cardioTapped(activityType, title: title)
-                }
-              }
-            }
-          }
-          // The ranked list above is capped at 8 rows shared between
-          // templates and cardio, so a user who trains that many templates
-          // regularly can end up with no cardio row at all — this is the way
-          // to every type regardless of what the ranking fit. Hidden, not
-          // disabled, while the cache is empty (a phone that hasn't synced
-          // one yet): a row that opens an empty screen is worse than no row.
-          if !allCardio.isEmpty {
-            AllTypesRow(isDisabled: isStarting) { showAllTypes = true }
-          }
-        }
-        .padding(.horizontal, padding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-      .frame(width: geometry.size.width, height: geometry.size.height)
-      .background(LifeyColors.trueBlack)
-    }
+    PickerContent(
+      model: PickerModel(entries: entries.map(PickerEntry.init), hasAllTypes: !allCardio.isEmpty, isStarting: isStarting),
+      onBack: onBack,
+      onQuick: startTapped,
+      onTemplate: { index in
+        if case .template(let template) = entries[index] { templateTapped(template) }
+      },
+      onCardio: cardioTapped,
+      onAllTypes: { showAllTypes = true }
+    )
     .onAppear {
       entries = StandaloneSessionStore.shared.quickStartEntries()
       allCardio = StandaloneSessionStore.shared.allCardio()
     }
-  }
-
-  private var quickStrengthCard: some View {
-    Button(action: startTapped) {
-      HStack(spacing: 13) {
-        ZStack {
-          RoundedRectangle(cornerRadius: LifeyShapes.button)
-            .fill(LifeyColors.containerHigh)
-            .frame(width: 44, height: 44)
-          Image(systemName: "bolt.fill")
-            .foregroundColor(LifeyColors.primary)
-        }
-        VStack(alignment: .leading, spacing: 1) {
-          Text("standalone_quick_start")
-            .font(.body)
-            .fontWeight(.bold)
-            .foregroundColor(LifeyColors.onSurface)
-          Text("standalone_quick_caption")
-            .font(.caption2)
-            .foregroundColor(LifeyColors.onSurfaceVariant)
-        }
-        Spacer(minLength: 0)
-      }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 14)
-    }
-    .buttonStyle(.plain)
-    .disabled(isStarting)
-    .background(LifeyColors.container)
-    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
   }
 
   private func startTapped() {
@@ -241,161 +142,138 @@ struct StandalonePickerView: View {
 /// secondary). No icon, matching the canvas exactly — just title + the
 /// existing `standalone_plan_exercises` count string (added in F6a's S1,
 /// unused until now).
-private struct TemplateRow: View {
-  let template: CachedTemplate
-  let isCompact: Bool
-  let isDisabled: Bool
-  let onTap: () -> Void
 
-  var body: some View {
-    Button(action: onTap) {
-      VStack(alignment: .leading, spacing: 1) {
-        Text(template.title)
-          .font(.body)
-          .fontWeight(.bold)
-          .foregroundColor(LifeyColors.onSurface)
-          .lineLimit(1)
-          .truncationMode(.tail)
-        Text(String(format: String(localized: "standalone_plan_exercises"), template.exercises.count))
-          .font(.caption2)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 14)
+// MARK: - Picker (redesign X2.2 / X2.3 — AW2.2 … AW2.5)
+
+/// One ranked row of the picker as plain data (a template or a cardio type).
+enum PickerEntry {
+  case template(title: String, exerciseCount: Int)
+  case cardio(activityType: String, title: String)
+
+  init(_ entry: WatchQuickStartEntry) {
+    switch entry {
+    case .template(let template): self = .template(title: template.title, exerciseCount: template.exercises.count)
+    case .cardio(let type, let title): self = .cardio(activityType: type, title: title)
     }
-    .buttonStyle(.plain)
-    .disabled(isDisabled)
-    .background(LifeyColors.surface)
-    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
   }
 }
 
-/// One ranked cardio activity-type row (canvas AW 16) — an icon circle
-/// tinted per activity type (`cardioActivityIcon`/`cardioActivityTint`,
-/// `Views/ActiveWorkoutView.swift` — shared with that file's own cardio
-/// pages, C5.5), `TemplateRow`'s plain `surface` card and tap-to-start
-/// behavior otherwise (C5.7b) — a `Button`, same as `TemplateRow`, unlike
-/// the C5.4/C5.5-era version of this row.
-private struct CardioRow: View {
-  let activityType: String
-  let title: String
-  let isCompact: Bool
-  let isDisabled: Bool
-  let onTap: () -> Void
+struct PickerModel {
+  var entries: [PickerEntry]
+  var hasAllTypes: Bool
+  var isStarting = false
+}
+
+/// The standalone picker (docs/watch/44-watch-f6-standalone-plan.md §3.1): `ListRow` everywhere (22 radius).
+/// Quick strength is highlighted (`nested`, 36 pt `bolt.fill` holder — one line, three before); templates show
+/// "5 gyakorlat" and a chevron; cardio rows a tinted icon circle; "Minden edzéstípus" only when the type list
+/// is synced; the empty state is a `sync` icon with a `text2` footnote. The crown scrolls.
+struct PickerContent: View {
+  let model: PickerModel
+  var onBack: () -> Void = {}
+  var onQuick: () -> Void = {}
+  var onTemplate: (Int) -> Void = { _ in }
+  var onCardio: (String, String) -> Void = { _, _ in }
+  var onAllTypes: () -> Void = {}
+
+  @Environment(\.watchMetrics) private var metrics
 
   var body: some View {
-    Button(action: onTap) {
-      HStack(spacing: 13) {
-        ZStack {
-          Circle()
-            .fill(cardioActivityTint(for: activityType).opacity(0.18))
-            .frame(width: 40, height: 40)
-          Image(systemName: cardioActivityIcon(for: activityType))
-            .foregroundColor(cardioActivityTint(for: activityType))
+    NavigationStack {
+      ScrollView {
+        VStack(spacing: LifeySpacing.sm) {
+          ListRow(
+            title: String(localized: "standalone_quick_start"), onClick: onQuick,
+            subtitle: String(localized: "standalone_quick_caption"), leading: .holder(icon: "bolt.fill"),
+            isHighlighted: true)
+          if model.entries.isEmpty {
+            HStack(alignment: .top, spacing: LifeySpacing.sm) {
+              Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 13))
+              Text("standalone_empty_hint").lifeyLabel(metrics).multilineTextAlignment(.leading)
+            }
+            .foregroundColor(LifeyColors.text2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, LifeySpacing.lg)
+          } else {
+            // Index-keyed: a ranked entry has no stable id of its own and the list is a point-in-time snapshot.
+            ForEach(Array(model.entries.enumerated()), id: \.offset) { index, entry in
+              switch entry {
+              case .template(let title, let count):
+                ListRow(
+                  title: title, onClick: { onTemplate(index) },
+                  subtitle: String(format: String(localized: "standalone_plan_exercises"), count), showsChevron: true,
+                  isDisabled: model.isStarting)
+              case .cardio(let type, let title):
+                ListRow(
+                  title: title, onClick: { onCardio(type, title) },
+                  leading: .tintedCircle(icon: cardioActivityIcon(for: type), accent: cardioActivityTint(for: type)),
+                  isDisabled: model.isStarting)
+              }
+            }
+          }
+          if model.hasAllTypes {
+            ListRow(
+              title: String(localized: "standalone_all_types"), onClick: onAllTypes,
+              leading: .controlCircle(icon: "square.grid.2x2.fill"), showsChevron: true, isDisabled: model.isStarting)
+          }
         }
-        Text(title)
-          .font(.body)
-          .fontWeight(.bold)
-          .foregroundColor(LifeyColors.onSurface)
-          .lineLimit(1)
-          .truncationMode(.tail)
-        Spacer(minLength: 0)
+        .padding(.horizontal, metrics.sideMargin)
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 14)
+      .navigationTitle(Text("standalone_picker_title"))
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(action: onBack) { Image(systemName: "chevron.left") }
+            .accessibilityLabel(Text("effort_selector_back"))
+        }
+      }
     }
-    .buttonStyle(.plain)
-    .disabled(isDisabled)
-    .background(LifeyColors.surface)
-    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
   }
 }
 
-/// The row that opens the "all activity types" screen — deliberately the
-/// quietest card on the picker (no accent fill, a chevron instead of an
-/// icon circle): the ranked list above is the fast path, this is the
-/// completeness guarantee behind it.
-private struct AllTypesRow: View {
-  let isDisabled: Bool
-  let onTap: () -> Void
+/// "Minden edzéstípus" (AW2.5): the full list of cardio types as a large title in the content that collapses
+/// into the navigation bar on scroll; rows are never clipped ("Egyéb kardió" has a `text2` icon).
+struct AllTypesContent: View {
+  let entries: [(activityType: String, title: String)]
+  var isDisabled = false
+  var onBack: () -> Void = {}
+  var onTap: (String, String) -> Void = { _, _ in }
+
+  @Environment(\.watchMetrics) private var metrics
 
   var body: some View {
-    Button(action: onTap) {
-      HStack(spacing: 13) {
-        Text("standalone_all_types")
-          .font(.body)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-          .lineLimit(1)
-        Spacer(minLength: 0)
-        Image(systemName: "chevron.right")
-          .font(.system(size: 12, weight: .semibold))
-          .foregroundColor(LifeyColors.onSurfaceVariant)
+    NavigationStack {
+      ScrollView {
+        VStack(spacing: LifeySpacing.sm) {
+          // Keyed by activity type, which really is unique here (the phone builds the list from kActivityTypes).
+          ForEach(entries, id: \.activityType) { entry in
+            ListRow(
+              title: entry.title, onClick: { onTap(entry.activityType, entry.title) },
+              leading: .tintedCircle(icon: cardioActivityIcon(for: entry.activityType), accent: cardioActivityTint(for: entry.activityType)),
+              isDisabled: isDisabled)
+          }
+        }
+        .padding(.horizontal, metrics.sideMargin)
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
+      .navigationTitle(Text("standalone_all_types"))
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(action: onBack) { Image(systemName: "chevron.left") }
+            .accessibilityLabel(Text("effort_selector_back"))
+        }
+      }
     }
-    .buttonStyle(.plain)
-    .disabled(isDisabled)
-    .background(LifeyColors.surface)
-    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
   }
 }
 
-/// Every activity type the phone offers, in its display order — the picker's
-/// second page. Renders the same `CardioRow` and starts a session the same
-/// way (`onTap` is `StandalonePickerView.cardioTapped` itself), so a type
-/// reached here behaves identically to one that happened to rank into the
-/// list on the previous screen.
-///
-/// No "Quick strength" card and no ranked entries: this screen answers
-/// exactly one question ("what else can I start?"), and repeating the
-/// picker's own rows would just make the two pages ambiguous.
-private struct AllActivityTypesView: View {
+struct AllActivityTypesView: View {
   let entries: [CachedActivityType]
   let isDisabled: Bool
   let onBack: () -> Void
   let onTap: (String, String) -> Void
 
   var body: some View {
-    GeometryReader { geometry in
-      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
-      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
-
-      ScrollView {
-        VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
-          HStack(spacing: 6) {
-            Button(action: onBack) {
-              Image(systemName: "chevron.left")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(LifeyColors.onSurfaceVariant)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("effort_selector_back"))
-            Text("standalone_all_types")
-              .font(isCompact ? .title3 : .title2)
-              .fontWeight(.heavy)
-              .foregroundColor(LifeyColors.onSurface)
-            Spacer(minLength: 0)
-          }
-          // Keyed by activity type, which really is unique here (the phone
-          // builds this list from `kActivityTypes` itself), unlike the ranked
-          // list's index keying.
-          ForEach(entries, id: \.activityType) { entry in
-            CardioRow(
-              activityType: entry.activityType, title: entry.title, isCompact: isCompact,
-              isDisabled: isDisabled
-            ) {
-              onTap(entry.activityType, entry.title)
-            }
-          }
-        }
-        .padding(.horizontal, padding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-      .frame(width: geometry.size.width, height: geometry.size.height)
-      .background(LifeyColors.trueBlack)
-    }
+    AllTypesContent(
+      entries: entries.map { ($0.activityType, $0.title) }, isDisabled: isDisabled, onBack: onBack, onTap: onTap)
   }
 }
 

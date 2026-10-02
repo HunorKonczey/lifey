@@ -1,5 +1,7 @@
 # 42 – Watch design-implementációs terv (F4B → F4-design → F5 → F6)
 
+> **Superseded (visual sections) by [79-watch-redesign-plan.md](../redesign-watch/79-watch-redesign-plan.md).** The styling steps (D2.x) were replaced by the v2 redesign; behaviour specs here still stand.
+
 Státusz: **terv, 2026-07-17 — a D1 (F4B fejlesztés) és a D2.1/D2.3 (design-rendszer + frame-styling) Wear OS oldalon nagyrészt lefejlesztve és emulátoron ellenőrizve, még ugyanaznap (2026-07-17, lásd 40-es doc 7.5.9). iOS oldalon (D1.2 W1–W7, D2.2) és a telefon-oldalon (D1.4/D2.4) még semmi nem indult el. D0-ból a D0.1/D0.2 döntése a Wear OS implementációban meg is valósult; D0.3/D0.4 továbbra is nyitott/nem implementált.**
 Kapcsolódó dokumentumok:
 - [40-watch-app-plan.md](40-watch-app-plan.md) — az implementációs terv; az F4B design-adósság kód ellen ellenőrzött listája a **12. fejezetében** (B1–B15) — ez a doc arra hivatkozik, nem ismétli meg

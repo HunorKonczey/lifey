@@ -1,126 +1,75 @@
 package com.khunor.lifey.ui
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Eco
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
-import androidx.wear.compose.material.ChipDefaults
-import androidx.wear.compose.material.CompactChip
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.TimeText
 import com.khunor.lifey.R
 import com.khunor.lifey.ui.theme.LifeyColors
-
-/** The badge behind the leaf mark, and the leaf itself within it, as
- * fractions of the shorter screen dimension — slightly smaller than the
- * original idle screen's (canvas Wear 01: 0.22/0.13) to make room for the
- * launcher's "Start workout" button below (canvas W 11: "brand moment
- * kept... slightly compacted", mirrors iOS's identical S10 adjustment). */
-private const val LEAF_BADGE_SIZE_FRACTION = 0.19f
-private const val LEAF_MARK_SIZE_FRACTION = 0.11f
+import com.khunor.lifey.ui.theme.LifeySpacing
+import com.khunor.lifey.ui.theme.LifeyType
+import com.khunor.lifey.ui.theme.LocalWatchMetrics
 
 /**
- * No active session — now a **launcher**, not just a status screen
- * (docs/watch/44-watch-f6-standalone-plan.md §3.1, design canvas W 11). The
- * calm brand-moment the design canvas asks for (§12.1 B5 /
- * 41-watch-design-prompt.md §3.1) is kept — leaf badge + "Lifey" wordmark —
- * but compacted, since the `primary`-fill "Start workout" button is now the
- * screen's only saturated element, opening `StandalonePickerScreen`. The old
- * `idle_subtitle` demotes to a quiet second line under the button
- * (`standalone_start_caption`) — the key itself stays in the string
- * resources (harmless, unreferenced) rather than being deleted. Padding and
- * type scale are dial-size-relative, not fixed dp values (§12.1 B4 — see
- * `DynamicSizing.kt`).
+ * No active session — the **launcher** (docs/watch/44 §3.1; frame W2.1): a small brand moment — the
+ * Material `Eco` leaf in a `nested` holder (one source for both platforms, the hand-drawn `LeafMark` is
+ * gone) and the PJS wordmark — over the 52 dp M3 "Edzés indítása" button, which is the screen's only
+ * saturated element and opens the picker. The old subtitle stays a quiet line under it.
  */
 @Composable
 fun IdleScreen(onStartTapped: () -> Unit) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val isCompact = isCompactScreen(maxWidth)
-        val shortSide = minOf(maxWidth, maxHeight)
-        val badgeSize = shortSide * LEAF_BADGE_SIZE_FRACTION
-        val leafSize = shortSide * LEAF_MARK_SIZE_FRACTION
-        val startA11yLabel = stringResource(R.string.standalone_start_button_a11y)
+    val metrics = LocalWatchMetrics.current
+    val startA11yLabel = stringResource(R.string.standalone_start_button_a11y)
+    val width = metrics.widthDp
+    Box(Modifier.fillMaxSize()) {
+        // Top-down like the canvas (holder 18 % of the dial, button at ~55 %): a centred stack is taller than the
+        // chord leaves room for — on the 192 dp dial the caption would land below the circle.
         Column(
-            modifier = Modifier.fillMaxSize().padding(maxWidth * SCREEN_PADDING_FRACTION),
+            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.15f).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(badgeSize * 0.3f, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
         ) {
             Box(
-                modifier = Modifier
-                    .size(badgeSize)
-                    .background(LifeyColors.surface, RoundedCornerShape(badgeSize * 0.3f)),
+                Modifier.size((width * 0.18f).dp).background(LifeyColors.nested, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                LeafMark(size = leafSize)
+                Icon(Icons.Filled.Eco, contentDescription = null, tint = LifeyColors.primary, modifier = Modifier.size(24.dp))
+            }
+            Text(stringResource(R.string.idle_title), style = LifeyType.metric(), color = LifeyColors.text, maxLines = 1)
+            Button(
+                onClick = onStartTapped,
+                modifier = Modifier.fillMaxWidth(0.76f).height(metrics.buttonHeight).semantics { contentDescription = startA11yLabel },
+            ) {
+                Text(stringResource(R.string.standalone_start_button), style = LifeyType.title(), color = LifeyColors.onPrimary, maxLines = 1)
             }
             Text(
-                text = stringResource(R.string.idle_title),
-                style = if (isCompact) MaterialTheme.typography.title3 else MaterialTheme.typography.title2,
-                color = LifeyColors.onSurface,
-            )
-            CompactChip(
-                onClick = onStartTapped,
-                modifier = Modifier.semantics { contentDescription = startA11yLabel },
-                label = {
-                    Text(
-                        text = stringResource(R.string.standalone_start_button),
-                        style = if (isCompact) MaterialTheme.typography.caption1 else MaterialTheme.typography.button,
-                    )
-                },
-                colors = ChipDefaults.chipColors(
-                    backgroundColor = LifeyColors.primary,
-                    contentColor = LifeyColors.onPrimary,
-                ),
-            )
-            Text(
-                text = stringResource(R.string.standalone_start_caption),
-                style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
-                color = LifeyColors.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+                stringResource(R.string.standalone_start_caption),
+                style = if (metrics.isCompact) LifeyType.label() else LifeyType.body(),
+                color = LifeyColors.text2, textAlign = TextAlign.Center, maxLines = 2,
+                modifier = Modifier.widthIn(max = (width * 0.62f).dp),
             )
         }
-    }
-}
-
-/**
- * A minimal drawn leaf/eco mark (§12.1 B5) — no image asset exists for
- * Lifey's brand yet, so this is a plain vector shape (a pointed lens/almond
- * silhouette + center vein) in the brand's moss-olive accent, sized relative
- * to the dial rather than a fixed dp value (§12.1 B4).
- */
-@Composable
-private fun LeafMark(size: Dp) {
-    Canvas(modifier = Modifier.size(size)) {
-        val w = this.size.width
-        val h = this.size.height
-        val leafPath = Path().apply {
-            moveTo(w / 2f, 0f)
-            cubicTo(w * 0.95f, h * 0.28f, w * 0.95f, h * 0.72f, w / 2f, h)
-            cubicTo(w * 0.05f, h * 0.72f, w * 0.05f, h * 0.28f, w / 2f, 0f)
-            close()
-        }
-        drawPath(leafPath, color = LifeyColors.primary)
-        drawLine(
-            color = LifeyColors.primary.copy(alpha = 0.45f),
-            start = Offset(w / 2f, h * 0.1f),
-            end = Offset(w / 2f, h * 0.9f),
-            strokeWidth = w * 0.05f,
-        )
+        TimeText()
     }
 }

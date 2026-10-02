@@ -612,6 +612,8 @@ A frame-hivatkozások a canvas számozását követik (Apple Watch 01–07, Wear
 
 ### 12.1 Mindkét watch-platformon hiányzik
 
+> **Megjegyzés (2026-10):** a B4 (dynamic sizing) és a B6 (tokenek, styling) értékeit a [79-watch-redesign-plan.md](../redesign-watch/79-watch-redesign-plan.md) váltja fel — lásd D-X0.5 (méretosztályok) és D-X0.2 (tokenek). A viselkedés-leírások érvényesek maradnak.
+
 | # | Hiányzó funkció | Design-forrás | Mai állapot a kódban |
 |---|---|---|---|
 | B1 | **Pihenő mint hero-állapot**: a visszaszámláló átveszi a képernyőt — drain-elő progress-ring, „of 1:30” cél-idő, „Next · Bench Press — Set 3 of 4” sor, utolsó 5 mp színváltás `negative #E08A52`-re | AW 03, Wear 04; prompt §3.3 | **✅ Kész mindkét platformon.** Android: `ActiveWorkoutScreen.kt`'s `RestHero` (`c2c42b7`). iOS: `ActiveWorkoutView.swift`'s `RestHeroView` — a `WorkoutManager` egyúttal átállt a wall-clock `restEndsAtEpochMs`-ról a monoton `restDeadlineUptime`-ra (`ProcessInfo.systemUptime`-hoz kötve), az Android-oldali `SystemClock.elapsedRealtime()`-fixhez hasonlóan (12.1 bugfix elve — a két eszköz wall clockja eltérhet). Dynamic sizing (B4) és a teljes szín/tipó-styling (B6) még nincs az iOS ring/hero-nál — fix pt-méretek. |

@@ -1,103 +1,76 @@
 import SwiftUI
 
-private let rpeMin = 1
-private let rpeMax = 10
+// MARK: - Effort (redesign X1.12 — AW1.20)
 
-/// Shown over `ActiveWorkoutView` right after the End button is tapped,
-/// before anything is sent to the phone (docs/40-watch-app-plan.md §8.2
-/// decision (b) — the round-trip that actually stops the sensors is
-/// unchanged, only *where* the effort rating is collected moves here
-/// instead of the phone's own post-workout feedback sheet). A big stepper
-/// rather than the phone's 10-chip row: a row of 10 numbered chips doesn't
-/// fit legibly on a round dial. Skip closes the workout with no rating at
-/// all — the note is never collected here either way, it always stays
-/// empty for a watch-closed session. The back button (top-leading, out of
-/// the centered VStack's flow) dismisses this screen without ending the
-/// workout at all — nothing is sent to the phone, `ActiveWorkoutView` just
-/// resumes exactly as it was.
+/// Rating content as plain data/callbacks so the gallery can render it. "Milyen nehéz volt?", the white
+/// number with 10 segments (`EffortScale`), a primary "Edzés lezárása" pill, a real "Kihagyás" button (38 pt
+/// visible, 44 pt target). Back is the navigation bar's button. The crown steps 1–10; no note is collected.
+struct EffortContent: View {
+  @Binding var rpe: Int
+  var onConfirm: () -> Void = {}
+  var onSkip: () -> Void = {}
+  var onBack: () -> Void = {}
+
+  @Environment(\.watchMetrics) private var metrics
+
+  var body: some View {
+    NavigationStack {
+      // Scrollable only as a safety net: title + scale + confirm + skip should fit both faces, but a title
+      // that wraps to two lines in a longer locale must never push "Kihagyás" out of reach.
+      GeometryReader { geometry in
+        ScrollView {
+          VStack(spacing: LifeySpacing.md) {
+            Text("effort_selector_title")
+              .lifeyBodyBold(metrics)
+              .foregroundColor(LifeyColors.text)
+              .multilineTextAlignment(.center)
+            EffortScale(value: $rpe)
+            Button(action: onConfirm) {
+              Text("effort_selector_confirm")
+                .lifeyBodyBold(metrics)
+                .foregroundColor(LifeyColors.onPrimary)
+                .frame(maxWidth: .infinity, minHeight: metrics.minTouchTarget)
+                .background(LifeyColors.primary, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            Button(action: onSkip) {
+              Text("effort_selector_skip")
+                .lifeyBody(metrics)
+                .foregroundColor(LifeyColors.text)
+                .frame(maxWidth: .infinity, minHeight: 38)
+                .background(LifeyColors.control, in: Capsule())
+                .frame(minHeight: metrics.minTouchTarget)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+          }
+          .padding(.horizontal, metrics.sideMargin)
+          .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+        }
+      }
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(action: onBack) { Image(systemName: "chevron.left") }
+            .accessibilityLabel(Text("effort_selector_back"))
+        }
+      }
+    }
+  }
+}
+
+/// Shown over `ActiveWorkoutView` right after End is tapped, before anything is sent to the phone
+/// (docs/40-watch-app-plan.md §8.2 decision (b)). Skip closes the workout with no rating; back dismisses this
+/// screen without ending anything — `ActiveWorkoutView` resumes exactly as it was.
 struct EffortSelectorView: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   @State private var rpe = 5
 
   var body: some View {
-    GeometryReader { geometry in
-      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
-      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
-      ZStack(alignment: .topLeading) {
-        // Scrollable: title + stepper + confirm + skip already fills a
-        // 41 mm face, and a title that wraps to two lines pushes Skip off
-        // the bottom where nothing could reach it.
-        ScrollView {
-        VStack(spacing: 8) {
-          Text("effort_selector_title")
-            .font(isCompact ? .caption : .body)
-            .fontWeight(.bold)
-            .foregroundColor(LifeyColors.onSurface)
-            .multilineTextAlignment(.center)
-          HStack(spacing: 16) {
-            StepButton(systemImage: "minus") { rpe = max(rpeMin, rpe - 1) }
-            Text("\(rpe)")
-              .font(.system(size: isCompact ? 34 : 42, weight: .bold))
-              .foregroundColor(LifeyColors.primary)
-              .frame(minWidth: isCompact ? 40 : 50)
-            StepButton(systemImage: "plus") { rpe = min(rpeMax, rpe + 1) }
-          }
-          .padding(.vertical, 4)
-          Button(action: { workoutManager.requestEnd(rpe: rpe) }) {
-            Text("effort_selector_confirm")
-              .font(isCompact ? .caption : .body)
-              .fontWeight(.semibold)
-              .foregroundColor(LifeyColors.onPrimary)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, 8)
-          }
-          .background(LifeyColors.primary)
-          .clipShape(Capsule())
-          .buttonStyle(.plain)
-          Button(action: { workoutManager.requestEnd(rpe: nil) }) {
-            Text("effort_selector_skip")
-              .font(.caption2)
-              .foregroundColor(LifeyColors.onSurfaceVariant)
-          }
-          .buttonStyle(.plain)
-          .padding(.top, 2)
-        }
-        .padding(.horizontal, padding)
-        .frame(maxWidth: .infinity)
-        // Keeps the stepper vertically centred when it does fit, matching
-        // the pre-scroll layout — the ScrollView only takes over once the
-        // content is genuinely taller than the face.
-        .frame(minHeight: geometry.size.height)
-        }
-        .frame(width: geometry.size.width, height: geometry.size.height)
-
-        Button(action: { workoutManager.cancelEffortSelection() }) {
-          Image(systemName: "chevron.left")
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(LifeyColors.onSurfaceVariant)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("effort_selector_back"))
-      }
-      .background(LifeyColors.trueBlack)
-    }
-  }
-}
-
-private struct StepButton: View {
-  let systemImage: String
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Image(systemName: systemImage)
-        .font(.system(size: 16, weight: .semibold))
-        .foregroundColor(LifeyColors.onSurface)
-        .frame(width: 32, height: 32)
-        .background(LifeyColors.container)
-        .clipShape(Circle())
-    }
-    .buttonStyle(.plain)
+    EffortContent(
+      rpe: $rpe,
+      onConfirm: { workoutManager.requestEnd(rpe: rpe) },
+      onSkip: { workoutManager.requestEnd(rpe: nil) },
+      onBack: { workoutManager.cancelEffortSelection() })
   }
 }
 

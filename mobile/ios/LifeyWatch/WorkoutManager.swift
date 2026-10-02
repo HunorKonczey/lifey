@@ -1657,7 +1657,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     sendAdoptionRequestIfNeeded()
 
     logSetState = .confirmed
-    WKInterfaceDevice.current().play(.success)
+    LifeyHaptics.setLogged()
     scheduleLogSetSettle(after: logSetConfirmedSettleSeconds)
 
     let restSeconds = currentStandaloneRestSeconds
@@ -1708,7 +1708,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     logSetTimeoutTask = nil
     if accepted {
       logSetState = .confirmed
-      WKInterfaceDevice.current().play(.success)
+      LifeyHaptics.setLogged()
       scheduleLogSetSettle(after: logSetConfirmedSettleSeconds)
     } else {
       failLogSet()
@@ -1717,7 +1717,7 @@ final class WorkoutManager: NSObject, ObservableObject {
 
   private func failLogSet() {
     logSetState = .failed
-    WKInterfaceDevice.current().play(.failure)
+    LifeyHaptics.logFailed()
     scheduleLogSetSettle(after: logSetFailedSettleSeconds)
   }
 
@@ -2028,7 +2028,7 @@ final class WorkoutManager: NSObject, ObservableObject {
   func retryAdoption() {
     guard isStandalone, !isRetryingAdoption else { return }
     isRetryingAdoption = true
-    WKInterfaceDevice.current().play(.click)
+    LifeyHaptics.syncTap()
     sendAdoptionRequest()
     adoptionRetryTask?.cancel()
     adoptionRetryTask = Task { [weak self] in
@@ -2317,7 +2317,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     restHapticTask = Task {
       try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
       guard !Task.isCancelled else { return }
-      WKInterfaceDevice.current().play(.notification)
+      LifeyHaptics.restOver()
     }
   }
 }

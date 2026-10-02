@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&display=block" rel="stylesheet">
+<style>
+html{background:#E7E5DA}body{margin:0;background:#E7E5DA;color:#1C1D16;font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#4E6530;text-decoration:none;font-weight:600}a:hover{color:#2F3F1B;text-decoration:underline}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 1}
+</style>
+</helmet>
+
+<section style="padding:64px 80px 24px;display:flex;flex-direction:column;gap:16px;width:1700px;box-sizing:border-box">
+  <div style="font:600 14px/1.2 'JetBrains Mono',monospace;color:#56574B;letter-spacing:0.04em">LIFEY · WEAR OS · W2 · INDÍTÁS, HIBA, ÖNÁLLÓ MÓD, KARDIÓ, ALWAYS-ON</div>
+  <h1 style="margin:0;font:800 48px/1.06 'Plus Jakarta Sans';letter-spacing:-0.03em;max-width:1200px;text-wrap:balance">Egy komponensnyelv a körön: pirula-gombok, peremgyűrű, EdgeButton</h1>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:15px"><a href="Lifey Watch Design System.dc.html">← Óra design system</a><span style="color:#8C8C7D">/</span><a href="Lifey Watch 3 Wear OS Strength.dc.html">← W1 · Wear erőedzés</a><span style="color:#8C8C7D">/</span><a href="Lifey Watch 2 Apple Watch Start Standalone Cardio.dc.html">AW2 · Apple megfelelő</a></div>
+</section>
+
+<section data-screen-label="5 Indítás és hiba" style="padding:28px 80px;display:flex;flex-direction:column;gap:24px;width:1700px;box-sizing:border-box">
+  <div style="display:flex;align-items:baseline;gap:16px"><div style="font:700 13px/1 'JetBrains Mono';color:#4E6530">5</div><h2 style="margin:0;font:800 32px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Alapképernyő, kiválasztó, hibaképernyő</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start">
+
+    <div id="W2-1" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;inset:26px 28px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+          <div style="width:46px;height:46px;border-radius:14px;background:#1A1C15;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:26px;color:#B5C47C">eco</span></div>
+          <div style="font:800 22px/1 'Plus Jakarta Sans';letter-spacing:-0.02em">Lifey</div>
+          <div style="align-self:stretch;height:52px;border-radius:999px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;justify-content:center;font:700 14px/1 system-ui,sans-serif;margin-top:4px">Edzés indítása</div>
+          <div style="font:500 12px/1.2 system-ui,sans-serif;color:#B6B5A5">vagy indítsd a telefonon</div>
+        </div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.1</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-01</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Alapképernyő</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">A 32 dp-s kompakt chip helyett 52 dp-s M3 Button (a célfelület majdnem kétszeres); TimeText fent. A levél a Material „Eco” ikon a kézzel rajzolt vektor helyett — egy forrás a két platformon.</div>
+    </div>
+
+    <div id="W2-2" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:28px;left:0;right:0;text-align:center;font:600 14px/1 system-ui,sans-serif">Indítás</div>
+        <div style="position:absolute;top:48px;left:20px;right:20px;display:flex;flex-direction:column;gap:5px;align-items:center">
+          <div style="align-self:stretch;height:58px;border-radius:999px;background:#36392D;display:flex;align-items:center;gap:9px;padding:0 14px 0 10px;box-sizing:border-box"><div style="width:36px;height:36px;border-radius:999px;background:#45483B;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">bolt</span></div><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font:600 14px/1.1 system-ui,sans-serif">Gyors erőedzés</span><span style="font:500 11px/1 system-ui,sans-serif;color:#B6B5A5">Terv nélkül is megy</span></div></div>
+          <div style="align-self:stretch;height:52px;border-radius:999px;background:#1A1C15;display:flex;align-items:center;padding:0 16px;box-sizing:border-box"><div style="display:flex;flex-direction:column;gap:3px;flex:1"><span style="font:600 14px/1.1 system-ui,sans-serif">Push nap</span><span style="font:500 11px/1 system-ui,sans-serif;color:#B6B5A5">5 gyakorlat</span></div><span class="ms" style="font-size:17px;color:#8F8F80">chevron_right</span></div>
+          <div style="width:90%;height:48px;border-radius:999px;background:#1A1C15;display:flex;align-items:center;gap:8px;padding:0 14px 0 8px;box-sizing:border-box"><div style="width:32px;height:32px;border-radius:999px;background:rgba(224,145,90,0.16);display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:18px;color:#E0915A">directions_run</span></div><span style="font:600 13px/1.1 system-ui,sans-serif">Futás</span></div>
+        </div>
+        <svg width="227" height="227" viewBox="0 0 227 227" style="position:absolute;inset:0"><path d="M 213 80 A 104 104 0 0 1 213 147" fill="none" stroke="#2C2F24" stroke-width="4" stroke-linecap="round"></path><path d="M 213 80 A 104 104 0 0 1 216 96" fill="none" stroke="#B6B5A5" stroke-width="4" stroke-linecap="round"></path></svg>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.2</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-02 · W-03</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Indítás kiválasztó</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B;display:flex;flex-direction:column;gap:6px"><div><b style="color:#1C1D16">Változott:</b> a Chip + kártya keverék helyett minden sor M3 Button pirula; a kiemelt raised háttért és ikon-kört kap. Nincs sarokba eső vissza-nyíl. A szélek kicsinyedése enyhébb (≤ 88 %), a szöveg olvasható marad.</div><div style="font:500 12px/1.4 'JetBrains Mono';color:#6B6C5F">TransformingLazyColumn · Icons.Filled: Bolt · DirectionsRun</div></div>
+    </div>
+
+    <div id="W2-3" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:28px;left:0;right:0;text-align:center;font:600 14px/1 system-ui,sans-serif">Minden edzéstípus</div>
+        <div style="position:absolute;top:48px;left:20px;right:20px;display:flex;flex-direction:column;gap:5px;align-items:center">
+          <div style="align-self:stretch;height:52px;border-radius:999px;background:#1A1C15;display:flex;align-items:center;gap:9px;padding:0 14px 0 10px;box-sizing:border-box"><div style="width:34px;height:34px;border-radius:999px;background:rgba(224,145,90,0.16);display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:19px;color:#E0915A">directions_run</span></div><span style="font:600 14px/1.1 system-ui,sans-serif">Futás</span></div>
+          <div style="align-self:stretch;height:52px;border-radius:999px;background:#1A1C15;display:flex;align-items:center;gap:9px;padding:0 14px 0 10px;box-sizing:border-box"><div style="width:34px;height:34px;border-radius:999px;background:rgba(176,138,200,0.16);display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:19px;color:#B08AC8">directions_walk</span></div><span style="font:600 14px/1.1 system-ui,sans-serif">Séta</span></div>
+          <div style="width:90%;height:48px;border-radius:999px;background:#1A1C15;display:flex;align-items:center;gap:8px;padding:0 14px 0 8px;box-sizing:border-box"><div style="width:32px;height:32px;border-radius:999px;background:rgba(110,154,106,0.16);display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:18px;color:#6E9A6A">hiking</span></div><span style="font:600 13px/1.1 system-ui,sans-serif">Túra</span></div>
+        </div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.3</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-05</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Minden edzéstípus</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Ugyanaz a pirula-sor. A cím a felső húron belül (14 sp, 1 sor); görgetéskor a TimeText alá csúszik.</div>
+    </div>
+
+    <div id="W2-4" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:30px;left:30px;right:30px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center">
+          <div style="width:34px;height:34px;border-radius:999px;background:rgba(236,154,102,0.16);display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;color:#EC9A66">priority_high</span></div>
+          <div style="font:600 15px/1.2 system-ui,sans-serif">Már fut egy másik edzés az órán</div>
+          <div style="font:500 12px/1.3 system-ui,sans-serif;color:#B6B5A5">Egy másik alkalmazás rögzít edzést. Fejezd be előbb azt.</div>
+        </div>
+        <div style="position:absolute;left:46px;right:46px;bottom:8px;height:52px;border-radius:14px 14px 60px 60px;background:#2C2F24;display:flex;align-items:flex-start;justify-content:center;padding-top:12px;box-sizing:border-box;font:700 13px/1 system-ui,sans-serif">Rendben</div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.4</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-06</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Hiba · már fut egy edzés</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B;display:flex;flex-direction:column;gap:6px"><div><b style="color:#1C1D16">Változott:</b> a „negative” narancs helyett figyelmeztetés = kalóriaszín tinta (v2); a cím tudatosan 2 sorban; a „Rendben” EdgeButton, így a teljes szöveg a hajtás fölött fér. A gomb control: csak nyugtáz, nem indít.</div><div style="font:500 12px/1.4 'JetBrains Mono';color:#6B6C5F">Icons.Filled: PriorityHigh</div></div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="6 Önálló mód" style="padding:28px 80px;display:flex;flex-direction:column;gap:24px;width:1700px;box-sizing:border-box">
+  <div style="display:flex;align-items:baseline;gap:16px"><div style="font:700 13px/1 'JetBrains Mono';color:#4E6530">6</div><h2 style="margin:0;font:800 32px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Önálló mód · jel, összegzés, szinkron</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start">
+
+    <div id="W2-5" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:24px;left:20px;right:20px;bottom:24px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#B6B5A5"><span class="ms" style="font-size:14px">fitness_center</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">ERŐEDZÉS</span><div style="margin-left:3px;width:24px;height:24px;border-radius:999px;background:#2C2F24;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:14px">phonelink_off</span></div></div>
+          <div style="font:800 48px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:4px">12:34</div>
+          <div style="display:flex;align-items:baseline;gap:12px;margin-top:8px"><span style="display:flex;align-items:baseline;gap:4px"><span class="ms" style="font-size:19px;color:#E07F76;align-self:center">favorite</span><span style="font:800 28px/1 'Plus Jakarta Sans';color:#E07F76">128</span><span style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.04em;color:#B6B5A5">BPM</span></span><span style="display:flex;align-items:baseline;gap:3px"><span class="ms" style="font-size:14px;color:#EC9A66;align-self:center">local_fire_department</span><span style="font:700 17px/1 'Plus Jakarta Sans';color:#EC9A66">87</span></span></div>
+          <div style="flex:1"></div>
+          <div style="max-width:140px;display:flex;flex-direction:column;gap:2px;align-items:center;text-align:center"><span style="font:600 13px/1.1 system-ui,sans-serif">Gyors erőedzés</span><span style="font:500 11px/1.25 system-ui,sans-serif;color:#B6B5A5">3. szett · összesen 24 ismétlés</span></div>
+        </div>
+        <div style="position:absolute;bottom:9px;left:0;right:0;display:flex;justify-content:center;gap:4px"><div style="width:5px;height:5px;border-radius:3px;background:#5E5F55"></div><div style="width:5px;height:5px;border-radius:3px;background:#F2F1E6"></div><div style="width:5px;height:5px;border-radius:3px;background:#5E5F55"></div></div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.5</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-24</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Önálló · gyors erőedzés</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">A jel 24 dp control kör (48 célfelület, a ma ~16 helyett). A terv nélküli összesítés 2 sorban középre zárva — nem csonkul a kör szélén („összesen 2…”).</div>
+    </div>
+
+    <div id="W2-6" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:24px;left:20px;right:20px;bottom:24px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#B6B5A5"><span class="ms" style="font-size:14px">fitness_center</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">PUSH NAP</span><div style="margin-left:3px;width:24px;height:24px;border-radius:999px;background:#36392D;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:14px;color:#F2F1E6">sync</span></div></div>
+          <div style="font:800 48px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:4px">12:34</div>
+          <div style="display:flex;align-items:baseline;gap:12px;margin-top:8px"><span style="display:flex;align-items:baseline;gap:4px"><span class="ms" style="font-size:19px;color:#E07F76;align-self:center">favorite</span><span style="font:800 28px/1 'Plus Jakarta Sans';color:#E07F76">128</span><span style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.04em;color:#B6B5A5">BPM</span></span><span style="display:flex;align-items:baseline;gap:3px"><span class="ms" style="font-size:14px;color:#EC9A66;align-self:center">local_fire_department</span><span style="font:700 17px/1 'Plus Jakarta Sans';color:#EC9A66">87</span></span></div>
+          <div style="flex:1"></div>
+          <div style="width:118px;display:flex;flex-direction:column;gap:5px;align-items:center"><div style="display:flex;align-items:baseline;gap:5px"><span style="font:600 13px/1.1 system-ui,sans-serif">Fekvenyomás</span><span style="font:700 13px/1 'Plus Jakarta Sans'">2<span style="color:#8F8F80">/4</span></span></div><div style="align-self:stretch;display:flex;gap:3px"><div style="flex:1;height:4px;border-radius:2px;background:#F2F1E6"></div><div style="flex:1;height:4px;border-radius:2px;background:#F2F1E6"></div><div style="flex:1;height:4px;border-radius:2px;background:#36392D"></div><div style="flex:1;height:4px;border-radius:2px;background:#36392D"></div></div></div>
+        </div>
+        <div style="position:absolute;bottom:9px;left:0;right:0;display:flex;justify-content:center;gap:4px"><div style="width:5px;height:5px;border-radius:3px;background:#5E5F55"></div><div style="width:5px;height:5px;border-radius:3px;background:#F2F1E6"></div><div style="width:5px;height:5px;border-radius:3px;background:#5E5F55"></div></div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.6</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-25 · jel megérintve</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Sablonból · szinkron-koppintás</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">A meglévő viselkedés (1,5 mp-ig sync ikon) most jól látható: a jel raised háttérre vált. A sablonnév a fejlécben max. 14 karakter, utána ellipszis — a teljes név a gyakorlatválasztó tetején.</div>
+    </div>
+
+    <div id="W2-7" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:24px;left:20px;right:20px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#B6B5A5"><span class="ms" style="font-size:13px">timer</span><span style="font:700 13px/1 'Plus Jakarta Sans'">12:34</span><div style="margin-left:3px;width:24px;height:24px;border-radius:999px;background:#2C2F24;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:14px">phonelink_off</span></div></div>
+          <div style="font:600 13px/1.2 system-ui,sans-serif;margin-top:4px">Fekvenyomás <span style="color:#B6B5A5">· 3/4 szett</span></div>
+          <div style="display:flex;gap:10px;margin-top:7px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:74px;height:74px;border-radius:999px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;justify-content:center;font:800 27px/1 'Plus Jakarta Sans'">+1</div><span style="font:600 12px/1 system-ui,sans-serif;color:#B6B5A5">szett</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:74px;height:74px;border-radius:999px;background:#2C2F24;color:#C49A6C;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:29px">tune</span></div><span style="font:600 12px/1 system-ui,sans-serif;color:#B6B5A5">Módosítás</span></div>
+          </div>
+        </div>
+        <div style="position:absolute;left:50px;right:50px;bottom:8px;height:44px;border-radius:12px 12px 56px 56px;background:#2C2F24;display:flex;align-items:flex-start;justify-content:center;gap:5px;padding-top:9px;box-sizing:border-box;font:600 13px/1 system-ui,sans-serif"><span class="ms" style="font-size:15px">list</span>Gyakorlatok</div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.7</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-26</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Önálló napló, „Gyakorlatok”</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Négy sor + két kör helyett: fejléc, szett-sor, körök (74 dp), és másodlagos EdgeButton. Semmi nem tolódik az alsó ívre. A naplózás helyi — nincs „nincs telefon” állapot.</div>
+    </div>
+
+    <div id="W2-8" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:26px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:5px"><span class="ms" style="font-size:18px;color:#93C98C">check_circle</span><span style="font:600 15px/1 system-ui,sans-serif">Edzés mentve</span></div>
+        <div style="position:absolute;top:50px;left:26px;right:26px;display:flex;align-items:center;gap:7px;padding:6px 12px 6px 10px;border-radius:999px;background:#22251C"><span class="ms" style="font-size:16px;color:#B6B5A5">cloud_upload</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 12px/1.1 system-ui,sans-serif">Szinkronizálás a telefonra</span><span style="font:500 10px/1.1 system-ui,sans-serif;color:#8F8F80">2 edzés vár szinkronizálásra</span></div></div>
+        <div style="position:absolute;top:94px;left:34px;right:34px;display:grid;grid-template-columns:1fr 1fr;gap:5px">
+          <div style="padding:6px 9px;border-radius:14px;background:#1A1C15;display:flex;flex-direction:column;gap:3px;align-items:center"><span style="font:700 17px/1 'Plus Jakarta Sans'">38:12</span><span style="font:600 10px/1 system-ui,sans-serif;color:#B6B5A5">idő</span></div>
+          <div style="padding:6px 9px;border-radius:14px;background:#1A1C15;display:flex;flex-direction:column;gap:3px;align-items:center"><span style="font:700 17px/1 'Plus Jakarta Sans'">9</span><span style="font:600 10px/1 system-ui,sans-serif;color:#B6B5A5">szett</span></div>
+          <div style="padding:6px 9px;border-radius:14px;background:#1A1C15;display:flex;flex-direction:column;gap:3px;align-items:center"><span style="font:700 17px/1 'Plus Jakarta Sans';color:#E07F76">126</span><span style="font:600 10px/1 system-ui,sans-serif;color:#B6B5A5">átlag bpm</span></div>
+          <div style="padding:6px 9px;border-radius:14px;background:#1A1C15;display:flex;flex-direction:column;gap:3px;align-items:center"><span style="font:700 17px/1 'Plus Jakarta Sans';color:#EC9A66">214</span><span style="font:600 10px/1 system-ui,sans-serif;color:#B6B5A5">kcal</span></div>
+        </div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.8</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-27 (összenyomva ~85 %)</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Önálló összegzés · szinkronra vár</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B;display:flex;flex-direction:column;gap:6px"><div><b style="color:#1C1D16">Változott:</b> pipa a cím mellé, szinkron-sor rögtön alá (a legszélesebb sávba), a négy csempe kompakt, középre zárt. Teljes méretben fér, összenyomás nélkül. Egészség-sor Wear-en nincs (a telefon ír a Health Connectbe) — változatlan.</div><div style="font:500 12px/1.4 'JetBrains Mono';color:#6B6C5F">Icons.Filled: CheckCircle · CloudUpload</div></div>
+    </div>
+
+    <div id="W2-9" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:26px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:5px"><span class="ms" style="font-size:18px;color:#93C98C">check_circle</span><span style="font:600 15px/1 system-ui,sans-serif">Edzés mentve</span></div>
+        <div style="position:absolute;top:52px;left:30px;right:30px;display:flex;align-items:center;justify-content:center;gap:6px;height:30px;border-radius:999px;background:rgba(147,201,140,0.16);color:#93C98C"><span class="ms" style="font-size:15px">check_circle</span><span style="font:600 12px/1 system-ui,sans-serif">Telefonra szinkronizálva</span></div>
+        <div style="position:absolute;top:94px;left:34px;right:34px;display:grid;grid-template-columns:1fr 1fr;gap:5px">
+          <div style="padding:6px 9px;border-radius:14px;background:#1A1C15;display:flex;flex-direction:column;gap:3px;align-items:center"><span style="font:700 17px/1 'Plus Jakarta Sans'">38:12</span><span style="font:600 10px/1 system-ui,sans-serif;color:#B6B5A5">idő</span></div>
+          <div style="padding:6px 9px;border-radius:14px;background:#1A1C15;display:flex;flex-direction:column;gap:3px;align-items:center"><span style="font:700 17px/1 'Plus Jakarta Sans'">9</span><span style="font:600 10px/1 system-ui,sans-serif;color:#B6B5A5">szett</span></div>
+          <div style="padding:6px 9px;border-radius:14px;background:#1A1C15;display:flex;flex-direction:column;gap:3px;align-items:center"><span style="font:700 17px/1 'Plus Jakarta Sans';color:#E07F76">126</span><span style="font:600 10px/1 system-ui,sans-serif;color:#B6B5A5">átlag bpm</span></div>
+          <div style="padding:6px 9px;border-radius:14px;background:#1A1C15;display:flex;flex-direction:column;gap:3px;align-items:center"><span style="font:700 17px/1 'Plus Jakarta Sans';color:#EC9A66">214</span><span style="font:600 10px/1 system-ui,sans-serif;color:#B6B5A5">kcal</span></div>
+        </div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.9</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-28</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Önálló összegzés · szinkronizálva</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Függő (nested) ↔ kész (success tinta) — a v1 tertiaryContainer helyett. Élőben, a képernyőn maradva vált; ~6 mp után alapképernyő.</div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="7 Kardió" style="padding:28px 80px;display:flex;flex-direction:column;gap:24px;width:1700px;box-sizing:border-box">
+  <div style="display:flex;align-items:baseline;gap:16px"><div style="font:700 13px/1 'JetBrains Mono';color:#4E6530">7</div><h2 style="margin:0;font:800 32px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Kardió</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start">
+
+    <div id="W2-10" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:28px;left:20px;right:20px;bottom:24px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#E0915A"><span class="ms" style="font-size:14px">directions_run</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">FUTÁS</span></div>
+          <div style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.06em;color:#B6B5A5;margin-top:8px">TÁVOLSÁG</div>
+          <div style="display:flex;align-items:baseline;gap:3px;margin-top:3px"><span style="font:800 48px/1 'Plus Jakarta Sans';letter-spacing:-0.02em">3.42</span><span style="font:600 14px/1 system-ui,sans-serif;color:#B6B5A5">km</span></div>
+          <div style="display:flex;align-items:baseline;gap:4px;margin-top:6px"><span class="ms" style="font-size:19px;color:#E07F76;align-self:center">favorite</span><span style="font:800 28px/1 'Plus Jakarta Sans';color:#E07F76">142</span><span style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.04em;color:#B6B5A5">BPM</span></div>
+          <div style="flex:1"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font:700 16px/1 'Plus Jakarta Sans'">5:23<span style="font:600 11px system-ui,sans-serif;color:#B6B5A5"> /km</span></span><span style="font:700 9px/1 system-ui,sans-serif;letter-spacing:0.05em;color:#B6B5A5">TEMPÓ</span></div>
+        </div>
+        <div style="position:absolute;bottom:9px;left:0;right:0;display:flex;justify-content:center;gap:4px"><div style="width:5px;height:5px;border-radius:3px;background:#F2F1E6"></div><div style="width:5px;height:5px;border-radius:3px;background:#5E5F55"></div></div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.10</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-29</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Távolság alapú (futás)</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Hős 30 → 48 sp, fehér; pulzus 28 sp — ugyanakkora, mint erőedzésen (ma 24 vs. 16). A tempó doboz nélkül, az alsó húron középre zárva; kerékpárnál km/h.</div>
+    </div>
+
+    <div id="W2-11" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:28px;left:20px;right:20px;bottom:22px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#D8B35A"><span class="ms" style="font-size:14px">pedal_bike</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">SZOBAKERÉKPÁR</span></div>
+          <div style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.06em;color:#B6B5A5;margin-top:8px">MOZGÁSIDŐ</div>
+          <div style="font:800 46px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:3px">24:10</div>
+          <div style="display:flex;align-items:baseline;gap:4px;margin-top:5px"><span class="ms" style="font-size:18px;color:#E07F76;align-self:center">favorite</span><span style="font:800 26px/1 'Plus Jakarta Sans';color:#E07F76">131</span><span style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.04em;color:#B6B5A5">BPM</span></div>
+          <div style="display:flex;gap:6px;width:136px;margin-top:10px">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center"><span style="font:700 15px/1 'Plus Jakarta Sans'">78<span style="font:600 10px system-ui,sans-serif;color:#B6B5A5"> rpm</span></span><span style="font:700 8.5px/1.15 system-ui,sans-serif;letter-spacing:0.04em;color:#B6B5A5">KADENCIA</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center"><span style="font:700 15px/1 'Plus Jakarta Sans'">165<span style="font:600 10px system-ui,sans-serif;color:#B6B5A5"> W</span></span><span style="font:700 8.5px/1.15 system-ui,sans-serif;letter-spacing:0.04em;color:#B6B5A5">ÁTLAG TELJESÍTMÉNY</span></div>
+          </div>
+        </div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.11</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-30 (összenyomva ~90 %)</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Gép (szobakerékpár)</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Dobozok nélkül: két érték egymás mellett, a telefonos címke alattuk 2 sorig tör („ÁTLAG / TELJESÍTMÉNY”), nem „ÁTLAG TELJESÍ…”. Kerek kijelzőn a doboz nem ad információt, csak helyet vesz.</div>
+    </div>
+
+    <div id="W2-12" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:26px;left:20px;right:20px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#8E8EC4"><span class="ms" style="font-size:14px">sports_basketball</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">KOSÁRLABDA</span></div>
+          <div style="display:flex;align-items:center;gap:4px;margin-top:7px"><div style="width:5px;height:5px;border-radius:3px;background:#93C98C"></div><span style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.06em;color:#B6B5A5">JÁTÉKIDŐ</span></div>
+          <div style="font:800 46px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:3px">12:05</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-top:5px"><span style="display:flex;align-items:baseline;gap:3px"><span class="ms" style="font-size:17px;color:#E07F76;align-self:center">favorite</span><span style="font:800 24px/1 'Plus Jakarta Sans';color:#E07F76">138</span></span><span style="display:flex;flex-direction:column;align-items:flex-start;gap:2px"><span style="font:700 14px/1 'Plus Jakarta Sans'">15:40</span><span style="font:700 8.5px/1 system-ui,sans-serif;letter-spacing:0.05em;color:#B6B5A5">BRUTTÓ IDŐ</span></span></div>
+        </div>
+        <div style="position:absolute;left:46px;right:46px;bottom:8px;height:52px;border-radius:14px 14px 60px 60px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:flex-start;justify-content:center;gap:5px;padding-top:11px;box-sizing:border-box;font:700 14px/1 system-ui,sans-serif"><span class="ms" style="font-size:17px">airline_seat_recline_normal</span>Padra</div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.12</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-31 (összenyomva ~76 %)</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Csapatsport · pályán</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">A legsűrűbb képernyő: bruttó idő a pulzus mellé, doboz nélkül; „Padra” EdgeButton. Fejléc + címke + hős + sor + gomb teljes méretben fér.</div>
+    </div>
+
+    <div id="W2-13" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;box-shadow:inset 0 0 0 4px #C49A6C">
+        <div style="position:absolute;top:11px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:26px;left:20px;right:20px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#C49A6C"><span class="ms" style="font-size:14px">airline_seat_recline_normal</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">PADON</span></div>
+          <div style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.06em;color:#B6B5A5;margin-top:7px">JÁTÉKIDŐ — ÁLL</div>
+          <div style="font:800 46px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:3px;color:#8F8F80">12:05</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-top:5px"><span style="display:flex;align-items:baseline;gap:3px"><span class="ms" style="font-size:17px;color:#E07F76;align-self:center">favorite</span><span style="font:800 24px/1 'Plus Jakarta Sans';color:#E07F76">118</span></span><span style="display:flex;flex-direction:column;align-items:flex-start;gap:2px"><span style="font:700 14px/1 'Plus Jakarta Sans';color:#C49A6C">15:40</span><span style="font:700 8.5px/1 system-ui,sans-serif;letter-spacing:0.05em;color:#B6B5A5">BRUTTÓ IDŐ</span></span></div>
+        </div>
+        <div style="position:absolute;left:44px;right:44px;bottom:10px;height:50px;border-radius:14px 14px 60px 60px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:flex-start;justify-content:center;gap:4px;padding-top:11px;box-sizing:border-box;font:700 13px/1 system-ui,sans-serif"><span class="ms" style="font-size:16px">sports_basketball</span>Vissza a pályára</div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.13</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-32 (összenyomva)</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Csapatsport · padon</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Megtartva a clay körgyűrű — itt a kerek forma előny. Az EdgeButton a gyűrűn belül ül; a „Vissza a pályára” egy sorban, az aktivitás ikonjával (ma is).</div>
+    </div>
+
+    <div id="W2-14" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:28px;left:20px;right:20px;bottom:24px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#E0915A"><span class="ms" style="font-size:14px">directions_run</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">FUTÁS</span></div>
+          <div style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.06em;color:#B6B5A5;margin-top:8px">TÁVOLSÁG</div>
+          <div style="display:flex;align-items:baseline;gap:3px;margin-top:3px"><span style="font:800 48px/1 'Plus Jakarta Sans';letter-spacing:-0.02em">3.42</span><span style="font:600 14px/1 system-ui,sans-serif;color:#B6B5A5">km</span></div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:6px;height:28px"><span class="ms" style="font-size:18px;color:#5E5F55">favorite</span><span style="font:800 26px/1 'Plus Jakarta Sans';color:#5E5F55">—</span><span style="font:600 12px/1 system-ui,sans-serif;color:#8F8F80">nincs pulzus</span><span class="ms" style="font-size:13px;color:#8F8F80">info</span></div>
+          <div style="flex:1"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font:700 16px/1 'Plus Jakarta Sans'">5:23<span style="font:600 11px system-ui,sans-serif;color:#B6B5A5"> /km</span></span><span style="font:700 9px/1 system-ui,sans-serif;letter-spacing:0.05em;color:#B6B5A5">TEMPÓ</span></div>
+        </div>
+        <div style="position:absolute;bottom:9px;left:0;right:0;display:flex;justify-content:center;gap:4px"><div style="width:5px;height:5px;border-radius:3px;background:#F2F1E6"></div><div style="width:5px;height:5px;border-radius:3px;background:#5E5F55"></div></div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.14</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-33 (összenyomva ~86 %)</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Kardió · nincs pulzus</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Az egységes szabály (DS 06): ghost szív, „—”, ⓘ. A magyarázat koppintásra (W2.16). Ha az ok engedélyhiány, a sor itt is engedély-gomb lesz, mint W1.3-on — ma kardión nincs ilyen útvonal.</div>
+    </div>
+
+    <div id="W2-15" style="width:320px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:206px;height:206px;padding:7px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:192px;height:192px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:9px;left:0;right:0;text-align:center;font:600 11px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:22px;left:16px;right:16px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:3px;color:#8E8EC4"><span class="ms" style="font-size:12px">sports_basketball</span><span style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.06em">KOSÁRLABDA</span></div>
+          <div style="display:flex;align-items:center;gap:4px;margin-top:6px"><div style="width:5px;height:5px;border-radius:3px;background:#93C98C"></div><span style="font:700 9px/1 system-ui,sans-serif;letter-spacing:0.06em;color:#B6B5A5">JÁTÉKIDŐ</span></div>
+          <div style="font:800 38px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:2px">12:05</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:4px"><span style="display:flex;align-items:baseline;gap:3px"><span class="ms" style="font-size:14px;color:#E07F76;align-self:center">favorite</span><span style="font:800 20px/1 'Plus Jakarta Sans';color:#E07F76">138</span></span><span style="display:flex;flex-direction:column;gap:2px"><span style="font:700 12px/1 'Plus Jakarta Sans'">15:40</span><span style="font:700 7.5px/1 system-ui,sans-serif;letter-spacing:0.05em;color:#B6B5A5">BRUTTÓ IDŐ</span></span></div>
+        </div>
+        <div style="position:absolute;left:38px;right:38px;bottom:7px;height:46px;border-radius:12px 12px 54px 54px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:flex-start;justify-content:center;gap:4px;padding-top:10px;box-sizing:border-box;font:700 13px/1 system-ui,sans-serif"><span class="ms" style="font-size:15px">airline_seat_recline_normal</span>Padra</div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.15</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">kompakt · 192 dp</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Csapatsport, kompakt</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">A legsűrűbb tartalom a legkisebb körön: hős 38, EdgeButton 46 dp (48 célfelület az ív menti kiterjesztéssel).</div>
+    </div>
+
+    <div id="W2-16" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:36px;left:30px;right:30px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+          <span class="ms" style="font-size:24px;color:#5E5F55">favorite</span>
+          <div style="font:600 15px/1.2 system-ui,sans-serif">nincs pulzus</div>
+          <div style="font:500 13px/1.35 system-ui,sans-serif;color:#B6B5A5">Lazább a szíj? A mérés fut tovább, az idő pontos.</div>
+        </div>
+        <div style="position:absolute;left:46px;right:46px;bottom:8px;height:52px;border-radius:14px 14px 60px 60px;background:#2C2F24;display:flex;align-items:flex-start;justify-content:center;padding-top:12px;box-sizing:border-box;font:700 13px/1 system-ui,sans-serif">Rendben</div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.16</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">← W-33 magyarázat</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Pulzus-magyarázat (M3 AlertDialog)</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Meglévő szövegek és meglévő „Rendben” kulcs; swipe-to-dismiss is bezárja.</div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="9 Always-On" style="padding:28px 80px;display:flex;flex-direction:column;gap:24px;width:1700px;box-sizing:border-box">
+  <div style="display:flex;align-items:baseline;gap:16px"><div style="font:700 13px/1 'JetBrains Mono';color:#4E6530">9</div><h2 style="margin:0;font:800 32px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Ambient (Always-On) változatok</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start">
+
+    <div id="W2-17" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#B6B5A5;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:34px;left:20px;right:20px;bottom:28px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#8F8F80"><span class="ms" style="font-size:14px;font-variation-settings:'FILL' 0">fitness_center</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">ERŐEDZÉS</span></div>
+          <div style="font:300 48px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:6px">12 p</div>
+          <div style="display:flex;align-items:baseline;gap:4px;margin-top:8px;opacity:0.6"><span class="ms" style="font-size:19px;color:#E07F76;align-self:center;font-variation-settings:'FILL' 0">favorite</span><span style="font:300 28px/1 'Plus Jakarta Sans';color:#E07F76">128</span></div>
+          <div style="flex:1"></div>
+          <div style="font:500 12px/1 system-ui,sans-serif;color:#8F8F80">Fekvenyomás · 2/4</div>
+        </div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.17</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">új · ambient</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Metrika · ambient</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">Mint Apple-on: PJS 300, „12 p”, Material Outlined ikonok, pulzus 60 %. A tartalom percenként ±4 dp-t vándorol (beégés ellen). AmbientLifecycleObserver.</div>
+    </div>
+
+    <div id="W2-18" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#B6B5A5;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums">
+        <svg width="227" height="227" viewBox="0 0 227 227" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="113.5" cy="113.5" r="110" fill="none" stroke="#2C2F24" stroke-width="2"></circle><circle cx="113.5" cy="113.5" r="110" fill="none" stroke="#8F8F80" stroke-width="2" stroke-dasharray="360 692"></circle></svg>
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:36px;left:24px;right:24px;bottom:30px;display:flex;flex-direction:column;align-items:center;text-align:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#8F8F80"><span class="ms" style="font-size:14px;font-variation-settings:'FILL' 0">timer</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">PIHENŐ</span></div>
+          <div style="font:300 48px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:6px">~1 p</div>
+          <div style="font:600 14px/1.2 system-ui,sans-serif;margin-top:6px">Mehet 9:42-kor</div>
+          <div style="flex:1"></div>
+          <div style="font:500 11px/1.3 system-ui,sans-serif;color:#8F8F80;max-width:140px">Következő · Fekvenyomás — 3/4. szett</div>
+        </div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.18</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">új · ambient</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Pihenő · ambient</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">A peremgyűrű 2 dp körvonal text-3-ban, percenként frissül; a hátralevő helyett a vége időpontja. ⚑ új kulcsok: aod_minutes, aod_rest_until.</div>
+    </div>
+
+    <div id="W2-19" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#B6B5A5;font-family:system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;box-shadow:inset 0 0 0 2px rgba(196,154,108,0.6)">
+        <div style="position:absolute;top:10px;left:0;right:0;text-align:center;font:600 12px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:34px;left:20px;right:20px;bottom:30px;display:flex;flex-direction:column;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;color:#C49A6C;opacity:0.8"><span class="ms" style="font-size:14px;font-variation-settings:'FILL' 0">airline_seat_recline_normal</span><span style="font:700 11px/1 system-ui,sans-serif;letter-spacing:0.06em">PADON</span></div>
+          <div style="font:700 10px/1 system-ui,sans-serif;letter-spacing:0.06em;color:#8F8F80;margin-top:8px">JÁTÉKIDŐ — ÁLL</div>
+          <div style="font:300 46px/1 'Plus Jakarta Sans';letter-spacing:-0.02em;margin-top:3px;color:#8F8F80">12:05</div>
+          <div style="display:flex;align-items:baseline;gap:4px;margin-top:6px;opacity:0.6"><span class="ms" style="font-size:18px;color:#E07F76;align-self:center;font-variation-settings:'FILL' 0">favorite</span><span style="font:300 26px/1 'Plus Jakarta Sans';color:#E07F76">118</span></div>
+          <div style="flex:1"></div>
+          <div style="font:500 12px/1 system-ui,sans-serif;color:#8F8F80">Bruttó idő 16 p</div>
+        </div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.19</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">új · ambient</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Padon · ambient</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">A clay gyűrű 2 dp, 60 %-on marad; a megállt játékidő másodperccel, a bruttó idő percre kerekítve. Gombok nincsenek.</div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="Opcionális Tile és Ongoing" style="padding:28px 80px 96px;display:flex;flex-direction:column;gap:24px;width:1700px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:14px"><h2 style="margin:0;font:800 32px/1.1 'Plus Jakarta Sans';letter-spacing:-0.02em">Tile és Ongoing Activity</h2><div style="padding:6px 12px;border-radius:999px;background:#F3E3D3;color:#8A4F1E;font:700 12px/1 'JetBrains Mono'">OPCIONÁLIS · NEM AZ ALAPKÖR RÉSZE</div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px 36px;align-items:flex-start">
+    <div id="W2-20" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif">
+        <div style="position:absolute;top:22px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:4px"><span class="ms" style="font-size:16px;color:#B5C47C">eco</span><span style="font:800 14px/1 'Plus Jakarta Sans'">Lifey</span></div>
+        <div style="position:absolute;top:48px;left:26px;right:26px;display:flex;flex-direction:column;gap:6px">
+          <div style="height:52px;border-radius:999px;background:#B5C47C;color:#1A1F0A;display:flex;align-items:center;justify-content:center;gap:6px;font:700 14px/1 system-ui,sans-serif"><span class="ms" style="font-size:18px">bolt</span>Gyors erőedzés</div>
+          <div style="height:52px;border-radius:999px;background:#1A1C15;display:flex;align-items:center;padding:0 16px;box-sizing:border-box"><div style="display:flex;flex-direction:column;gap:3px"><span style="font:600 14px/1.1 system-ui,sans-serif">Push nap</span><span style="font:500 11px/1 system-ui,sans-serif;color:#B6B5A5">5 gyakorlat</span></div></div>
+        </div>
+        <div style="position:absolute;bottom:26px;left:0;right:0;text-align:center;font:500 11px/1.2 system-ui,sans-serif;color:#B6B5A5">vagy indítsd a telefonon</div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.20</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">opcionális · Tile</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Indító tile</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">ProtoLayout Material 3: „Gyors erőedzés” + az első rangsorolt sablon. Adat: a már szinkronizált helyi gyorsítótár, nincs új protokoll-adat.</div>
+    </div>
+    <div id="W2-21" style="width:364px;display:flex;flex-direction:column;gap:14px">
+      <div style="zoom:1.5;width:243px;height:243px;padding:8px;box-sizing:border-box;border-radius:50%;background:#1D1D1B;box-shadow:inset 0 0 0 1px #34342F"><div style="position:relative;width:227px;height:227px;border-radius:50%;background:#000;overflow:hidden;color:#F2F1E6;font-family:system-ui,-apple-system,sans-serif">
+        <div style="position:absolute;top:66px;left:0;right:0;text-align:center;font:300 60px/1 system-ui,sans-serif">9:41</div>
+        <div style="position:absolute;top:140px;left:0;right:0;text-align:center;font:500 12px/1 system-ui,sans-serif;color:#B6B5A5">Csüt, okt 2</div>
+        <div style="position:absolute;bottom:22px;left:50%;margin-left:-20px;width:40px;height:40px;border-radius:999px;background:#1A1C15;box-shadow:inset 0 0 0 2px #F2F1E6;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">fitness_center</span></div>
+      </div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="padding:4px 9px;border-radius:999px;background:#12130E;color:#B5C47C;font:700 12px/1 'JetBrains Mono'">W2.21</div><div style="font:600 12px/1 'JetBrains Mono';color:#6B6C5F">opcionális · Ongoing Activity</div></div>
+      <div style="font:700 17px/1.3 'Plus Jakarta Sans'">Ongoing Activity a számlapon</div>
+      <div style="font:500 13px/1.5 'Plus Jakarta Sans';color:#56574B">A meglévő előtér-értesítéshez kötött Ongoing Activity: a számlapon ikon (pihenőben gyűrűvel), koppintás = vissza az edzéshez. Nem igényel új adatot.</div>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

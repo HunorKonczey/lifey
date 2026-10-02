@@ -41,3 +41,11 @@ jobs:
 
       - name: Build APK
         run: flutter build apk --debug
+
+      # Wear OS watch app (redesign plan 79, X0w.4): the module needs the Flutter-generated
+      # local.properties / gradlew, so it runs here after `flutter build apk` rather than as its own job.
+      # The workflow's `mobile/**` filter already covers the module and the Apple token file that the
+      # parity test reads (mobile/ios/LifeyWatch/Theme/LifeyColors.swift).
+      - name: Build and unit-test the Wear OS module
+        working-directory: mobile/android
+        run: ./gradlew :wear:assembleDebug :wear:testDebugUnitTest
