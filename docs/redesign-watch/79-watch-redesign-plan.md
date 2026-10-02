@@ -1314,10 +1314,11 @@ permission revoke/grant; failure paths.
 - **Verify:** start quick strength standalone; fixture.
 - *As built:* The 24 dp mark inside a 48 dp target is HeaderChip's standalone mark, wired in X3.3 (ActiveHeader); this step widens the free-form exercise block to 68 % of the dial (the segment-bar block stays 50 %) so 'Gyors erőedzés' / '3. szett · összesen 24 ismétlés' reads on two centred lines instead of clipping. Fixture W2.5. Starting quick strength standalone is for the emulator pass.
 
-### X4.6 — Watch Wear: sync tap feedback + template header (W2.6)
+### X4.6 — Watch Wear: sync tap feedback + template header (W2.6) ✅
 - The existing 1.5 s sync icon now sits on a `raised` mark background (visible); the template name in the
   header ≤ 14 characters + ellipsis, the full name at the top of the exercise list.
 - **Verify:** fixture; tap the mark with the phone reachable.
+- *As built:* The sync feedback is HeaderChip's Tapped mark (raised background + sync glyph for the unchanged 1.5 s, X3.3); the header cuts a template name at 14 characters + ellipsis (truncate()); the exercise list now takes the template's full title as its heading (ExerciseListContent/Screen title, from standaloneTemplate.title, the 'Gyakorlatok' string otherwise). Fixtures W2.6 (header + tapped mark) and W2.6b (list heading). Tapping the mark with the phone reachable is for the emulator.
 
 ### X4.7 — Watch Wear: standalone log page (W2.7)
 - Header, set line, circles at **74 dp**, secondary EdgeButton "Gyakorlatok" — four rows + two circles no

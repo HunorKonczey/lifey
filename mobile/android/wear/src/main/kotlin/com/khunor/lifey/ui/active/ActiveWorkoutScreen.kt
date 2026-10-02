@@ -501,6 +501,7 @@ internal fun StrengthActiveWorkoutScreen() {
                         metadata.standaloneSetsDoneAt(it)
                     },
                     removedExerciseIndexes = metadata.removedExerciseIndexes,
+                    title = metadata.standaloneTemplate?.title?.takeIf { it.isNotBlank() },
                     onSelect = { index ->
                         if (metadata.isStandalone) {
                             SessionStateHolder.onStandaloneExerciseSelected(index)

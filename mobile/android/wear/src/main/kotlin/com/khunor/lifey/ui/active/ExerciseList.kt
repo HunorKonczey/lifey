@@ -29,14 +29,20 @@ data class ExerciseRow(val index: Int, val name: String, val subtitle: String, v
  * (fully reversible: already-logged sets keep the exercise they were logged with).
  */
 @Composable
-fun ExerciseListContent(rows: List<ExerciseRow>, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun ExerciseListContent(
+    rows: List<ExerciseRow>,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    /** The full template name when the session has one (the header truncates it at 14 characters, W2.6). */
+    title: String? = null,
+) {
     val state = rememberTransformingLazyColumnState()
     LifeyScreen(scrollState = state, modifier = modifier) { contentPadding ->
         TransformingLazyColumn(state = state, contentPadding = contentPadding) {
             item {
                 Text(
-                    stringResource(R.string.standalone_exercise_list_title), style = LifeyType.title(), color = LifeyColors.text,
-                    textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = LifeySpacing.md),
+                    title ?: stringResource(R.string.standalone_exercise_list_title), style = LifeyType.title(), color = LifeyColors.text,
+                    textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.fillMaxWidth().padding(bottom = LifeySpacing.md),
                 )
             }
             rows.forEach { row ->
@@ -67,6 +73,7 @@ internal fun ExerciseListScreen(
     removedExerciseIndexes: Set<Int>,
     onSelect: (Int) -> Unit,
     onBack: () -> Unit,
+    title: String? = null,
 ) {
     val rows = exercises.mapIndexedNotNull { index, exercise ->
         if (index in removedExerciseIndexes) return@mapIndexedNotNull null
@@ -84,6 +91,6 @@ internal fun ExerciseListScreen(
         )
     }
     DismissibleOverlay(onDismiss = onBack) {
-        ExerciseListContent(rows = rows, onSelect = onSelect)
+        ExerciseListContent(rows = rows, onSelect = onSelect, title = title)
     }
 }
