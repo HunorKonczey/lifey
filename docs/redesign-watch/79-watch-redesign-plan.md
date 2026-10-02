@@ -1075,7 +1075,7 @@ from X1.1's `Views/Active/Cardio.swift`.
 - **Verify:** start quick strength standalone; fixtures.
 - *As built:* X2.4 needed no new view: the standalone mark lives in WatchHeaderChip (26 pt glyph, 44 pt hit area) on the metrics, log, controls and rest pages, quick strength shows 'Gyors erőedzés' + active_sets_free_format through SetSegmentBar's free-form branch, and local logging never reaches the 'unreachable' state (LogPage.requiresPhone). X2.5: the existing isRetryingAdoption window (adoptionRetryFeedbackSeconds) now also shows a handoff StatusPill 'Folytatás a telefonon…' in the log page's status slot (new ⚑ key standalone_handoff_pending, HU+EN); the mark is already shown raised with the sync glyph while retrying. Frames AW2.6–2.8. Not compiled.
 
-### X2.5 — Watch iOS: "sync now" tap feedback (AW2.7)
+### X2.5 — Watch iOS: "sync now" tap feedback (AW2.7) ✅
 - Tapping the mark (existing `retryAdoption()`) now shows: mark `raised` + `arrow.triangle.2.circlepath`
   for 1.5 s and a `handoff` pill "Folytatás a telefonon…" (⚑ `standalone_handoff_pending`, HU + EN) in the
   status slot. No behaviour change beyond the feedback.
