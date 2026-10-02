@@ -527,7 +527,8 @@ internal fun StrengthActiveWorkoutScreen() {
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     bottomSlotOccupied = (pagerState.currentPage == LOG_PAGE &&
-                        logPillKind(logSetState, !isStandalone && !hasConnectedNode) != null) ||
+                        (if (isStandalone && metadata.canChooseExercise) true else
+                            logPillKind(logSetState, !isStandalone && !hasConnectedNode) != null)) ||
                         (pagerState.currentPage == CONTROLS_PAGE && offersExerciseList),
                 ) { page ->
                     when (page) {

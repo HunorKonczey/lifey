@@ -1320,10 +1320,11 @@ permission revoke/grant; failure paths.
 - **Verify:** fixture; tap the mark with the phone reachable.
 - *As built:* The sync feedback is HeaderChip's Tapped mark (raised background + sync glyph for the unchanged 1.5 s, X3.3); the header cuts a template name at 14 characters + ellipsis (truncate()); the exercise list now takes the template's full title as its heading (ExerciseListContent/Screen title, from standaloneTemplate.title, the 'Gyakorlatok' string otherwise). Fixtures W2.6 (header + tapped mark) and W2.6b (list heading). Tapping the mark with the phone reachable is for the emulator.
 
-### X4.7 — Watch Wear: standalone log page (W2.7)
+### X4.7 — Watch Wear: standalone log page (W2.7) ✅
 - Header, set line, circles at **74 dp**, secondary EdgeButton "Gyakorlatok" — four rows + two circles no
   longer push onto the bottom arc; no "unreachable" state (local logging).
 - **Verify:** fixture; log sets standalone.
+- *As built:* LogModel.offersExerciseList (standalone with a plan): the circles take WatchMetrics.circleButtonWithEdgeButton (74 dp), a control-tone LifeyEdgeButton 'Gyakorlatok' sits on the bottom arc, the status pill is not shown (standalone logs locally — there is no unreachable state, and the circle's own check + n/total says 'logged'), and LifeyPager hides the indicator under the button. Deviation: on the compact dial the labels under the circles are dropped in this variant — header + context line + labelled circles do not fit above a 46 dp arc button (the geometry check showed a 3 dp overlap); they come back if the emulator shows room. Fixture W2.7.
 
 ### X4.8 — Watch Wear: standalone summary + sync (W2.8, W2.9)
 - Check beside the title; `SyncRow` right under it in the widest band; four compact centred tiles; fits at

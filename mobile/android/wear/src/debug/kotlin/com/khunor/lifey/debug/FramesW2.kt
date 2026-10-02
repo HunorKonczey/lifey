@@ -5,6 +5,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.DirectionsRun
 import com.khunor.lifey.ui.ErrorContent
+import com.khunor.lifey.LogSetState
+import com.khunor.lifey.ui.active.LogContent
+import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.IdleScreen
 import com.khunor.lifey.ui.active.ExerciseListContent
 import com.khunor.lifey.ui.active.ExerciseRow
@@ -90,6 +93,18 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
                 rows = listOf(ExerciseRow(0, "Fekvenyomás", "2/4 szett", true), ExerciseRow(1, "Tárogatás", "0/3 szett", false)),
                 onSelect = {}, title = "Push nap — mell és váll",
             )
+        }
+    },
+    "W2.7" to frame2 { // standalone log page: 74 dp circles, secondary "Gyakorlatok" EdgeButton, no unreachable state
+        Box(Modifier.fillMaxSize()) {
+            LogContent(
+                LogModel(
+                    elapsedMs = 12 * 60_000L + 34_000L, exerciseName = "Fekvenyomás", setsDone = 2, setsTotal = 4,
+                    freeFormatSets = null, logState = LogSetState.Ready, showsStandaloneMark = true, offersExerciseList = true,
+                ),
+                onLogSet = {}, onAdjust = {}, onOpenExerciseList = {},
+            )
+            TimeText()
         }
     },
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
