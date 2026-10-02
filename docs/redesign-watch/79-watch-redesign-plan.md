@@ -1148,7 +1148,7 @@ from X1.1's `Views/Active/Cardio.swift`.
   number, no `opacity(0.75`, no legacy token name.
 - *As built:* Sweep: the only remaining v1 usages were ActiveWorkoutView's black background and the old private HeaderChip (unused after X1/X2) — both gone; DynamicSizing's two call sites (ActiveWorkoutView, Cardio) read WatchMetrics directly. X2.15: LifeyColors / LifeyShapes legacy aliases removed, DynamicSizing.swift deleted with its pbxproj entries (id check: no dangling or duplicate ids). Grep for legacy colour/shape names and DynamicSizing under mobile/ios/LifeyWatch is empty. Remaining '.font(.system(size:' are icon glyph sizes, not numbers. Adoption/retry states were already moved onto the mark + handoff pill in X2.5; empty exercise lists need no UI (the chip is hidden). Wear parity test compares only D-X0.2 names, so removing the Swift aliases cannot affect it — to be confirmed by CI. Not compiled.
 
-### X2.15 — Watch iOS: delete the legacy aliases and `DynamicSizing`
+### X2.15 — Watch iOS: delete the legacy aliases and `DynamicSizing` ✅
 - Files: `LifeyColors.swift` (aliases removed), `LifeyShapes.swift` (old names removed),
   `DynamicSizing.swift` deleted (pbxproj entries removed), the private structs superseded by components
   deleted. The Wear parity test (X0w.3) compares only the D-X0.2 names, never aliases, so removing the
