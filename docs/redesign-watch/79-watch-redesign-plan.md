@@ -1351,10 +1351,11 @@ permission revoke/grant; failure paths.
 - **Verify:** fixtures; basketball field ↔ bench from watch and phone.
 - *As built:* CardioPage.kt: GameModel/GameContent (stateless). Field: accent header, '● JÁTÉKIDŐ' with the primary dot, dense hero (38 sp on 192 dp), HR slot with the boxless gross-time field beside it, 'Padra' as a primary EdgeButton with the bench glyph. Bench: clay header 'PADON', label 'Játékidő — áll', hero in text2 (clock stopped), BenchRing (4 dp clay) around the dial, 'Vissza a pályára' on one line with the activity icon. The court/bench state stays two-way synced through SessionStateHolder.setOnCourt + SummarySender.sendCourtChanged (unchanged). Deleted: GameMetricsContent, CardioHeartRateRow, CardioMetricBox, the legacy header chip and the old 5 dp brown border. Fixtures W2.12/W2.13. Basketball field ↔ bench from watch and phone is for the emulator.
 
-### X4.11 — Watch Wear: cardio without HR, incl. permission route (W2.14)
+### X4.11 — Watch Wear: cardio without HR, incl. permission route (W2.14) ✅
 - `HeartRateSlot` in the cardio layout; when the cause is a missing permission the slot is the permission
   button as on strength (W1.3) — a new route to the existing request (§1.7).
 - **Verify:** fixture; run with `BODY_SENSORS` revoked, grant from the slot.
+- *As built:* Built together with X4.9/X4.10: both cardio pages use HeartRateSlot, driven by heartRateState(LiveMetrics) — Missing = ghost heart + dash + 'nincs pulzus' + ⓘ → AlertDialog (replaces the old strap-hint paragraph), PermissionDenied = the 44 dp two-line button, whose tap launches the same RequestMultiplePermissions with HEART_RATE_PERMISSIONS the strength page uses (the new route for cardio). Fixtures W2.14 (missing) and W2.14b (permission). Revoking BODY_SENSORS and granting from the slot is for the emulator.
 
 ### X4.12 — Watch Wear: sweep the remaining Wear screens
 - What the canvases did not draw (adoption/retry states, transient loading, empty exercise list) moved to
