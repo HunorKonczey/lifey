@@ -1032,7 +1032,7 @@ new controls, picker, effort, ending and summary.
 - **Verify:** fixture; the summary after a real session.
 - *As built:* SummaryContent (plain SummaryModel): check beside 'Edzés mentve', a full-width time SummaryTile, avg bpm + kcal (+ sets for standalone) tiles side by side, the 'Elmentve az Egészség appba' row wrapping to two lines, SyncRow for standalone (X2.6 refines it). Count-up lives in SummaryTile (600 ms, off under Reduce Motion). The 'check pops once' and 60 ms tile stagger are NOT implemented yet — tiles all count up together; left for the Mac pass. 6 s auto-dismiss untouched (WorkoutManager). Frame AW1.22. Not compiled.
 
-**X1 review (§4.1):** all AW1 frames, demo flow "full phone-driven strength session", failure paths.
+**X1 review (§4.1) — done in the cloud (§4.3), Mac pass still owed; log in §12:** all AW1 frames, demo flow "full phone-driven strength session", failure paths.
 
 ---
 
@@ -1565,3 +1565,11 @@ existing job instead of a new job (X0w.4).
 Bugs: none found by the runs above. Open for the Windows pass: first `./gradlew :wear:assembleDebug
 :wear:testDebugUnitTest` — expect compile errors in the M3 call sites, fix as `X0w.fix-k`; then create the
 192 dp AVD, walk the gallery, check the release manifest has no gallery activity.
+
+
+### X1 review — 2026-10-02 (cloud session, §4.3 method — no Xcode, no simulator)
+Environment: Chromium/Playwright; canvas `Lifey Watch 1 Apple Watch Strength.dc.html` rendered headless (fonts blocked, icons show as names); HTML reconstruction of the frames from the Swift layout values, 198 pt
+Frames checked: AW1.1, 1.5, 1.7, 1.10, 1.13, 1.17 (canvas screenshot vs reconstruction); the other frames (1.2–1.4, 1.6, 1.8, 1.9, 1.11, 1.12, 1.14–1.16, 1.18–1.22) only by reading the canvas markup against the code
+Matches: structure and order of every compared frame (hero › HR › kcal › card with segment bar; log page: next-set line, primary "+1" with the label under it, raised "Módosítás", one bottom slot; success circle + "Naplózva" pill; stepper: clay header, segmented switch, ± around the value, caption, primary pill; rest: number over a white bar, "Következő" two lines, HR + kcal row; controls: error-tint + control circle). Metric numbers carry the metric colour as in the canvas (found and fixed during the step: the first component draft used white numbers).
+Deviations (intended): crown no longer pages the TabView (D-X0.9); `AW1.5` label under the "+1" is derived from `log_set_button` by dropping "+1" (no new key); summary check-pop and 60 ms tile stagger not implemented; the nav back button is a `cancellationAction` toolbar item.
+Bugs: none found by the comparison. Open for the Mac pass (could not be exercised): compile of everything in Views/Active, Views/Components and the three rewritten screens; the file-split `private` → internal change (name clashes would show up as redeclaration errors); the `CircleButton` inside `TabView(.page)` (taps vs page swipes); the `cancellationAction` back button size; "102,5" on 41 mm; the three failure paths (phone unreachable, logging failed, backend down); reduced-motion end states; haptic moments.
