@@ -20,7 +20,6 @@
 		36AABD05BF944D39BFA79582 /* PhoneConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12F2C6137F4746E0A1818C6D /* PhoneConnector.swift */; };
 		39871BBBAB9589F3BD6A0E62 /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E93BE46D4190EF727DF5AEC2 /* WorkoutLiveActivity.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
-		3BA9433482684EBBA84C44CA /* ActiveWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */; };
 		4EEF1AC98123BD8D0100B686 /* HealthDeniedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30F1283363772E14034D7802 /* HealthDeniedView.swift */; };
 		56E72C8003929A92311B886F /* LiveActivityChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDB98529ABD178C01B5DCBF9 /* LiveActivityChannel.swift */; };
 		5A350FF24DF1393842091E5D /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */; };
@@ -77,6 +76,14 @@
 		ABEE5329CF851E771DC3790B /* CardioField.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51665DEFC737AA522F664AF /* CardioField.swift */; };
 		85DC4BD7818E10FD7FF75910 /* StatusScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEFD0125AB5D19F22E5C5F9A /* StatusScreen.swift */; };
 		1236A7A0F6508423461B414D /* LifeyAOD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FC2E84CDB69BC04C36BD059 /* LifeyAOD.swift */; };
+		5CBB6731F6B2DE0E45543BDD /* ActiveWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42E21B1983EF1C35A4C58E32 /* ActiveWorkoutView.swift */; };
+		93751759A90FC0FD644D344C /* MetricsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C4FD7825D119DE8F110F1D5 /* MetricsPage.swift */; };
+		240099B2840BB10AB519CACA /* LogPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05CC76AAD83ACDB3E8CD39 /* LogPage.swift */; };
+		1FD87B4FDD5E160364C3AFF7 /* AdjustPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 962EB55F56509CEB2C14E3D2 /* AdjustPage.swift */; };
+		BFD2D2AC752BB953E365DA9B /* ControlsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD435FA45C446F62F50D6CB /* ControlsPage.swift */; };
+		8BF190F15D91E7313C7DB7DF /* ExerciseList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60488860E926F897B6703748 /* ExerciseList.swift */; };
+		ED1031B41008B804014B7C1D /* RestHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4036790DEDF80E7721401BB2 /* RestHero.swift */; };
+		0E4D8A4396E5746FB6B783D5 /* Cardio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91B27738B6B0CDB6EAD38F99 /* Cardio.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -195,7 +202,6 @@
 		D09C188311B803C0C0E14467 /* ShortcutsChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShortcutsChannel.swift; sourceTree = "<group>"; };
 		D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		D7B6D3E9C246452BD2D969C9 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
-		E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutView.swift; sourceTree = "<group>"; };
 		E93BE46D4190EF727DF5AEC2 /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
 		EA3BF88F253170342B80ADE0 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		EDB98529ABD178C01B5DCBF9 /* LiveActivityChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityChannel.swift; sourceTree = "<group>"; };
@@ -229,6 +235,14 @@
 		B51665DEFC737AA522F664AF /* CardioField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CardioField.swift; sourceTree = "<group>"; };
 		EEFD0125AB5D19F22E5C5F9A /* StatusScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatusScreen.swift; sourceTree = "<group>"; };
 		8FC2E84CDB69BC04C36BD059 /* LifeyAOD.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyAOD.swift; sourceTree = "<group>"; };
+		42E21B1983EF1C35A4C58E32 /* ActiveWorkoutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutView.swift; sourceTree = "<group>"; };
+		1C4FD7825D119DE8F110F1D5 /* MetricsPage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetricsPage.swift; sourceTree = "<group>"; };
+		BE05CC76AAD83ACDB3E8CD39 /* LogPage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LogPage.swift; sourceTree = "<group>"; };
+		962EB55F56509CEB2C14E3D2 /* AdjustPage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjustPage.swift; sourceTree = "<group>"; };
+		6DD435FA45C446F62F50D6CB /* ControlsPage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ControlsPage.swift; sourceTree = "<group>"; };
+		60488860E926F897B6703748 /* ExerciseList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExerciseList.swift; sourceTree = "<group>"; };
+		4036790DEDF80E7721401BB2 /* RestHero.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestHero.swift; sourceTree = "<group>"; };
+		91B27738B6B0CDB6EAD38F99 /* Cardio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Cardio.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -278,7 +292,6 @@
 		2FE3F11E4B1E48CF97E6DD86 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */,
 				216887D75EC840DFA5F1098B /* IdleView.swift */,
 				A28464D6E07EF14CEF283772 /* StandalonePickerView.swift */,
 				15894AC08BE110C70266202E /* EndingView.swift */,
@@ -287,6 +300,7 @@
 				30F1283363772E14034D7802 /* HealthDeniedView.swift */,
 				0D558080C822F4686E03747F /* Debug */,
 				D0913E9913758986C8A8F3C3 /* Components */,
+				16361BB0C7A76CAAE9BEFA5E /* Active */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -489,6 +503,21 @@
 				EEFD0125AB5D19F22E5C5F9A /* StatusScreen.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		16361BB0C7A76CAAE9BEFA5E /* Active */ = {
+			isa = PBXGroup;
+			children = (
+				42E21B1983EF1C35A4C58E32 /* ActiveWorkoutView.swift */,
+				1C4FD7825D119DE8F110F1D5 /* MetricsPage.swift */,
+				BE05CC76AAD83ACDB3E8CD39 /* LogPage.swift */,
+				962EB55F56509CEB2C14E3D2 /* AdjustPage.swift */,
+				6DD435FA45C446F62F50D6CB /* ControlsPage.swift */,
+				60488860E926F897B6703748 /* ExerciseList.swift */,
+				4036790DEDF80E7721401BB2 /* RestHero.swift */,
+				91B27738B6B0CDB6EAD38F99 /* Cardio.swift */,
+			);
+			path = Active;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -793,7 +822,6 @@
 				36AABD05BF944D39BFA79582 /* PhoneConnector.swift in Sources */,
 				FD1BEC0458A6625490415513 /* StandaloneSessionPayload.swift in Sources */,
 				B93497364237CFA11B59135C /* StandaloneSessionStore.swift in Sources */,
-				3BA9433482684EBBA84C44CA /* ActiveWorkoutView.swift in Sources */,
 				15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */,
 				88ED2662CC0E4020525BB1DD /* StandalonePickerView.swift in Sources */,
 				F4608790FA1570EE9F3CE57B /* EndingView.swift in Sources */,
@@ -827,6 +855,14 @@
 				ABEE5329CF851E771DC3790B /* CardioField.swift in Sources */,
 				85DC4BD7818E10FD7FF75910 /* StatusScreen.swift in Sources */,
 				1236A7A0F6508423461B414D /* LifeyAOD.swift in Sources */,
+				5CBB6731F6B2DE0E45543BDD /* ActiveWorkoutView.swift in Sources */,
+				93751759A90FC0FD644D344C /* MetricsPage.swift in Sources */,
+				240099B2840BB10AB519CACA /* LogPage.swift in Sources */,
+				1FD87B4FDD5E160364C3AFF7 /* AdjustPage.swift in Sources */,
+				BFD2D2AC752BB953E365DA9B /* ControlsPage.swift in Sources */,
+				8BF190F15D91E7313C7DB7DF /* ExerciseList.swift in Sources */,
+				ED1031B41008B804014B7C1D /* RestHero.swift in Sources */,
+				0E4D8A4396E5746FB6B783D5 /* Cardio.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

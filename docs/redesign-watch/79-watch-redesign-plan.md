@@ -927,7 +927,7 @@ new controls, picker, effort, ending and summary.
 `ControlButton`, `ExerciseListChip`, `ExerciseListView`, `ExerciseListRow`), `EffortSelectorView.swift`,
 `EndingView.swift`, `SummaryView.swift`.
 
-### X1.1 — Watch iOS: split ActiveWorkoutView into files with presentational content views
+### X1.1 — Watch iOS: split ActiveWorkoutView into files with presentational content views ✅
 - Files: `ActiveWorkoutView.swift` → `Views/Active/{ActiveWorkoutView,MetricsPage,LogPage,AdjustPage,
   RestHero,ControlsPage,ExerciseList,Cardio}.swift` (pbxproj); each page gets a `…Content` view taking a
   plain `struct …Model` (built from `WorkoutManager` by the outer view) so the gallery can render it.
@@ -936,6 +936,7 @@ new controls, picker, effort, ending and summary.
   makes its frames match).
 - **Verify:** build; a phone-driven session on the simulator behaves exactly as before (log a set, rest,
   adjust, pause, end).
+- *As built:* mechanical split by a script (top-level declarations moved verbatim; `private` removed from file-scope types/functions so they can be shared across the new files): ActiveWorkoutView, MetricsPage (+HeaderChip, MetricReading, HeroMetricRow, ExerciseCard), LogPage, AdjustPage, ControlsPage (+ExerciseListChip, ControlButton), ExerciseList, RestHero (+GoFlashView), Cardio. Not compiled. Deviation: the plain `…Model`/`…Content` extraction and the AW1.x gallery fixtures are done per page in X1.2–X1.14 while each page is rewritten, instead of as a no-op refactor first (a second pass over unchanged code would only double the uncompiled risk).
 
 ### X1.2 — Watch iOS: metric page — the hero rule (AW1.1, AW1.4)
 - Requirements: one hero (elapsed time, `hero`, **white**, not primary) › HR (`metric`, heart colour, via
