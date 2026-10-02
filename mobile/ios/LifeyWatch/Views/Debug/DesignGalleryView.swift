@@ -79,6 +79,8 @@
         GallerySection("04/02 Metric reading") { MetricReadingGallery() },
         GallerySection("04/03 Set segment bar") { SegmentBarGallery() },
         GallerySection("04/02 Heart-rate slot") { HeartRateSlotGallery() },
+        GallerySection("04/04 Circle button") { CircleButtonGallery() },
+        GallerySection("04/05 Status pill") { StatusPillGallery() },
       ]
     }
   }

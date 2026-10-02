@@ -63,6 +63,9 @@
 		D79967E442A2613EC8E98244 /* SetSegmentBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */; };
 		52C12773121E2C5C4DDB8292 /* GalleryComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B758FAEC8C9228493B5A8C36 /* GalleryComponents.swift */; };
 		86C1CA785911F7EBCF3C7AB6 /* HeartRateSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63271778CC23CDAF97939A22 /* HeartRateSlot.swift */; };
+		1DB4491AACAEA70899F472D9 /* Ghosted.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C8D2A70CF25646A20493809 /* Ghosted.swift */; };
+		53CE8E516CE6CA44E7D69FF2 /* CircleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BFDB23CADDF1E61FC93E9A1 /* CircleButton.swift */; };
+		665FF33425054388FFF4C434 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE2EB078A1522697C88A9E2A /* StatusPill.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -201,6 +204,9 @@
 		44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SetSegmentBar.swift; sourceTree = "<group>"; };
 		B758FAEC8C9228493B5A8C36 /* GalleryComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GalleryComponents.swift; sourceTree = "<group>"; };
 		63271778CC23CDAF97939A22 /* HeartRateSlot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HeartRateSlot.swift; sourceTree = "<group>"; };
+		2C8D2A70CF25646A20493809 /* Ghosted.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Ghosted.swift; sourceTree = "<group>"; };
+		3BFDB23CADDF1E61FC93E9A1 /* CircleButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CircleButton.swift; sourceTree = "<group>"; };
+		BE2EB078A1522697C88A9E2A /* StatusPill.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatusPill.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -281,6 +287,7 @@
 				54E5E06FD56F3A0215EEB87C /* LifeyType.swift */,
 				F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */,
 				A183B7B64746BD684E846422 /* LifeyMotion.swift */,
+				2C8D2A70CF25646A20493809 /* Ghosted.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -445,6 +452,8 @@
 				6A4DEBC2BCA67D70C44D98F5 /* WatchMetricReading.swift */,
 				44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */,
 				63271778CC23CDAF97939A22 /* HeartRateSlot.swift */,
+				3BFDB23CADDF1E61FC93E9A1 /* CircleButton.swift */,
+				BE2EB078A1522697C88A9E2A /* StatusPill.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -771,6 +780,9 @@
 				D79967E442A2613EC8E98244 /* SetSegmentBar.swift in Sources */,
 				52C12773121E2C5C4DDB8292 /* GalleryComponents.swift in Sources */,
 				86C1CA785911F7EBCF3C7AB6 /* HeartRateSlot.swift in Sources */,
+				1DB4491AACAEA70899F472D9 /* Ghosted.swift in Sources */,
+				53CE8E516CE6CA44E7D69FF2 /* CircleButton.swift in Sources */,
+				665FF33425054388FFF4C434 /* StatusPill.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

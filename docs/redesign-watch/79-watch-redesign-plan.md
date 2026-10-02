@@ -689,7 +689,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - **Verify:** gallery: live, missing, missing + sheet open; the slot's frame is identical in both states.
 - *As built:* spoken form of the live reading is "128 bpm" (number + unit) — no new string key for a sentence form; the slot is `minHeight`-locked to the metric line so live and missing share a frame.
 
-### X0a.8 — Watch iOS: circle button, status pill, ghosted modifier
+### X0a.8 — Watch iOS: circle button, status pill, ghosted modifier ✅
 - Files: new `Views/Components/CircleButton.swift`, `StatusPill.swift`, `Theme/Ghosted.swift`.
 - `CircleButton` (04/04): diameter from `WatchMetrics`, styles `primary` (fill + `onPrimary` content),
   `raised` (+ clay icon), `control`, `errorTint`, `successTint` (logged), ghosted; label **under** the
@@ -702,6 +702,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - `.ghosted(_:)` applies `card` + `ghost` (D-X0.10).
 - **Verify:** gallery: every style × enabled/ghosted, every pill kind in HU at 41 mm (the failed pill must
   fit one line at 45 mm, AW1.8).
+- *As built:* the double-tap guard is a small `DoubleTapGuard` struct in Theme/Ghosted.swift (LogPage keeps its own copy until X1.5 switches over); the pill uses the card radius (22) for both one and two lines; pill copy is supplied by the caller from the existing log_set_* keys (the gallery uses sample text).
 
 ### X0a.9 — Watch iOS: rest bar, "Mehet!" rim, stepper, effort scale
 - Files: new `Views/Components/RestCountdown.swift`, `GoFlash.swift`, `ValueStepper.swift`, `EffortScale.swift`.

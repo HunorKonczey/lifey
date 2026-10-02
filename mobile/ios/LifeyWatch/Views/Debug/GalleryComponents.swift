@@ -48,3 +48,37 @@
     }
   }
 #endif
+
+#if DEBUG
+  struct CircleButtonGallery: View {
+    var body: some View {
+      VStack(alignment: .leading, spacing: LifeySpacing.lg) {
+        HStack(alignment: .top, spacing: LifeySpacing.md) {
+          CircleButton(style: .primary, icon: "plus", label: "+1 szett") {}
+          CircleButton(style: .raised, icon: "slider.horizontal.3", label: "Módosítás", iconTint: LifeyColors.clay) {}
+        }
+        HStack(alignment: .top, spacing: LifeySpacing.md) {
+          CircleButton(style: .primary, icon: "plus", label: "+1 szett", isGhosted: true) {}
+          CircleButton(style: .raised, icon: "slider.horizontal.3", label: "Módosítás", isGhosted: true) {}
+        }
+        HStack(alignment: .top, spacing: LifeySpacing.md) {
+          CircleButton(style: .successTint, icon: "checkmark", label: "3/4 szett") {}
+          CircleButton(style: .errorTint, icon: "xmark", label: "Vége") {}
+          CircleButton(style: .control, icon: "pause.fill", label: "Szünet") {}
+        }
+      }
+    }
+  }
+
+  struct StatusPillGallery: View {
+    var body: some View {
+      VStack(alignment: .leading, spacing: LifeySpacing.sm) {
+        StatusPill(kind: .logged, text: "Naplózva")
+        StatusPill(kind: .pending, text: "Naplózás…")
+        StatusPill(kind: .failed, text: "Nem sikerült — próbáld újra")
+        StatusPill(kind: .unreachable, text: "Nincs kapcsolat a telefonnal")
+        StatusPill(kind: .handoff, text: "Folytatás a telefonon…")
+      }
+    }
+  }
+#endif
