@@ -181,7 +181,7 @@ func cardioActivityTint(for activityType: String) -> Color {
   switch activityType {
   case "RUNNING": return LifeyColors.calories
   case "WALKING": return LifeyColors.cardioWalking
-  case "HIKING": return LifeyColors.tertiary
+  case "HIKING": return LifeyColors.cardioHiking
   case "CYCLING": return LifeyColors.secondary // mirrors mobile's colorScheme.secondary
   case "INDOOR_BIKE": return LifeyColors.cardioIndoorBike
   case "BASKETBALL": return LifeyColors.cardioBasketball

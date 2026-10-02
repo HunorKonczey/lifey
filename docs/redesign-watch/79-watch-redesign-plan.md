@@ -612,7 +612,7 @@ the unchanged values.
 **Principles every later Apple step is held to** (DS header): one number per screen; black AMOLED with the
 v2 tone ladder above it; finger-sized targets; primary is a control colour; Hungarian is the yardstick.
 
-### X0a.1 — Watch iOS: v2 colour tokens + legacy aliases
+### X0a.1 — Watch iOS: v2 colour tokens + legacy aliases ✅
 - Files: `mobile/ios/LifeyWatch/Theme/LifeyColors.swift`.
 - Add the D-X0.2 names and values, the cardio accents per the mobile v2 mapping, a `tint(_:)` helper (16 %).
   Re-point every legacy name at its alias target (`trueBlack`/`bg` → `bg`, `surface` → `card`, `container`
@@ -624,6 +624,9 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - Rewrite the enum doc comment: source = this plan D-X0.2 (the old canvas-vs-prompt `heart` note is obsolete).
 - **Verify:** build; idle, picker and an active page in the simulator show the v2 olive, `#000` screen,
   new heart/calories.
+- *As built:* no Xcode in the cloud session — verified by the screenshot comparison of §4.3, not a build.
+  `Color.tint` is `lifeyTint` (avoids clashing with SwiftUI's `.tint` style); added `cardioHiking`
+  (`#6E9A6A`) because `tertiary` now aliases `success`; hiking in `cardioActivityTint` uses it.
 
 ### X0a.2 — Watch iOS: radius, spacing, `WatchMetrics` size classes
 - Files: `Theme/LifeyShapes.swift` (tag 8, control 14, card 22, hero 30; old `chip/button/card/cardLarge`
