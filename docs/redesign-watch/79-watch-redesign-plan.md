@@ -669,7 +669,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
 - **Verify:** build Debug + Release; the gallery opens in Debug, the long-press does nothing in Release.
 - *As built:* gallery = sheet opened by a long-press on the idle leaf, wrapped in `#if DEBUG`; width button toggles the 198 / 176 pt column; AOD toggle is exposed as `EnvironmentValues.galleryAOD` for X0a.11. Sections register in `GallerySection.all`.
 
-### X0a.6 — Watch iOS: header chip, metric reading, set segment bar
+### X0a.6 — Watch iOS: header chip, metric reading, set segment bar ✅
 - Files: new `Views/Components/HeaderChip.swift`, `MetricReading.swift`, `SetSegmentBar.swift` (pbxproj).
   The existing private structs in `ActiveWorkoutView.swift` are **not** replaced yet (screens switch in X1).
 - `HeaderChip` (04/01): icon + CAPS label, `text2` (cardio: accent); paused state turns the whole chip clay
@@ -681,6 +681,7 @@ v2 tone ladder above it; finger-sized targets; primary is a control colour; Hung
   only "3. szett · 24 ism.".
 - Gallery entries with every state at both sizes.
 - **Verify:** gallery shows the DS 04/01–03 samples side by side with the canvas.
+- *As built:* named WatchHeaderChip / WatchMetricReading (not HeaderChip / MetricReading) because the old private types of the same names live in ActiveWorkoutView.swift until X1 switches the screens; gallery entries in Views/Debug/GalleryComponents.swift.
 
 ### X0a.7 — Watch iOS: heart-rate slot + explanation sheet
 - Files: new `Views/Components/HeartRateSlot.swift` (D-X0.4: live / missing; tap → `.sheet` with the

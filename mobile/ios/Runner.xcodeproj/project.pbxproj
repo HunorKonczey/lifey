@@ -58,6 +58,10 @@
 		1F72299BBA64AB60D45701A3 /* LifeyHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */; };
 		926BD15225FDAB05FBF15D74 /* LifeyMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A183B7B64746BD684E846422 /* LifeyMotion.swift */; };
 		82174576416CD132DE7B7CE4 /* DesignGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12C3189D2758C46056A48D9 /* DesignGalleryView.swift */; };
+		5A3061D065F1E27C58859C49 /* WatchHeaderChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE1B56A44E960166AAF366B /* WatchHeaderChip.swift */; };
+		4CA3821509DCC6CCA6866239 /* WatchMetricReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A4DEBC2BCA67D70C44D98F5 /* WatchMetricReading.swift */; };
+		D79967E442A2613EC8E98244 /* SetSegmentBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */; };
+		52C12773121E2C5C4DDB8292 /* GalleryComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B758FAEC8C9228493B5A8C36 /* GalleryComponents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -191,6 +195,10 @@
 		F12C2D4F43080FAE39BFA0AD /* LifeyHaptics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyHaptics.swift; sourceTree = "<group>"; };
 		A183B7B64746BD684E846422 /* LifeyMotion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyMotion.swift; sourceTree = "<group>"; };
 		D12C3189D2758C46056A48D9 /* DesignGalleryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DesignGalleryView.swift; sourceTree = "<group>"; };
+		AAE1B56A44E960166AAF366B /* WatchHeaderChip.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchHeaderChip.swift; sourceTree = "<group>"; };
+		6A4DEBC2BCA67D70C44D98F5 /* WatchMetricReading.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchMetricReading.swift; sourceTree = "<group>"; };
+		44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SetSegmentBar.swift; sourceTree = "<group>"; };
+		B758FAEC8C9228493B5A8C36 /* GalleryComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GalleryComponents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -248,6 +256,7 @@
 				9579E90AC7DE881411D162D8 /* SummaryView.swift */,
 				30F1283363772E14034D7802 /* HealthDeniedView.swift */,
 				0D558080C822F4686E03747F /* Debug */,
+				D0913E9913758986C8A8F3C3 /* Components */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -422,8 +431,19 @@
 			isa = PBXGroup;
 			children = (
 				D12C3189D2758C46056A48D9 /* DesignGalleryView.swift */,
+				B758FAEC8C9228493B5A8C36 /* GalleryComponents.swift */,
 			);
 			path = Debug;
+			sourceTree = "<group>";
+		};
+		D0913E9913758986C8A8F3C3 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				AAE1B56A44E960166AAF366B /* WatchHeaderChip.swift */,
+				6A4DEBC2BCA67D70C44D98F5 /* WatchMetricReading.swift */,
+				44FCFDB7919648B51A9A6648 /* SetSegmentBar.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -743,6 +763,10 @@
 				1F72299BBA64AB60D45701A3 /* LifeyHaptics.swift in Sources */,
 				926BD15225FDAB05FBF15D74 /* LifeyMotion.swift in Sources */,
 				82174576416CD132DE7B7CE4 /* DesignGalleryView.swift in Sources */,
+				5A3061D065F1E27C58859C49 /* WatchHeaderChip.swift in Sources */,
+				4CA3821509DCC6CCA6866239 /* WatchMetricReading.swift in Sources */,
+				D79967E442A2613EC8E98244 /* SetSegmentBar.swift in Sources */,
+				52C12773121E2C5C4DDB8292 /* GalleryComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

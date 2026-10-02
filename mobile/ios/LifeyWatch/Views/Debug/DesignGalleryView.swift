@@ -75,6 +75,9 @@
         GallerySection("01 Tokens") { TokenSwatches() },
         GallerySection("02 Type") { TypeRamp() },
         GallerySection("03 Metrics") { MetricsReadout() },
+        GallerySection("04/01 Header chip") { HeaderChipGallery() },
+        GallerySection("04/02 Metric reading") { MetricReadingGallery() },
+        GallerySection("04/03 Set segment bar") { SegmentBarGallery() },
       ]
     }
   }
