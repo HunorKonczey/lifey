@@ -69,6 +69,10 @@ dependencies {
     implementation("androidx.wear:wear:1.3.0")
     // Ongoing Activity (X4.o2): the workout notification also shows on the watch face.
     implementation("androidx.wear:wear-ongoing:1.0.0")
+    // Launcher Tile (X4.o1): the platform's own Tile service + layout builders (no Compose-for-Tiles needed).
+    implementation("androidx.wear.tiles:tiles:1.4.1")
+    implementation("androidx.wear.protolayout:protolayout:1.2.1")
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
     implementation("androidx.compose.ui:ui-tooling-preview")
     // Material Symbols equivalents for the brand icon set (favorite, flame,
     // fitness_center, timer, pause/stop, heart_broken, priority_high —

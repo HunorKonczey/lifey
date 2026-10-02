@@ -99,7 +99,7 @@ class MainActivity : ComponentActivity() {
                 // (mirrors iOS's identical S10 call: `showEffortSelector`-
                 // style manager state is for things the business logic
                 // itself needs to read/drive, this isn't one of them).
-                var showStandalonePicker by remember { mutableStateOf(false) }
+                var showStandalonePicker by remember { mutableStateOf(intent.getBooleanExtra(EXTRA_OPEN_PICKER, false)) }
                 when (phase) {
                     SessionPhase.IDLE -> {
                         if (showStandalonePicker) {

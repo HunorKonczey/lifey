@@ -1391,9 +1391,10 @@ permission revoke/grant; failure paths.
   shows no `compose-material:` (M2); full X4 flow walk.
 - *As built:* build.gradle.kts drops androidx.wear.compose:compose-material; every Text/Icon is the Material 3 one (29 files); LifeyTheme is M3 only (the Colors/Typography mapping is deleted); DismissibleOverlay uses wear-foundation's BasicSwipeToDismissBox with the foundation state it already used (the M2 SwipeToDismissBox is gone — the name BasicSwipeToDismissBox is from memory, CI is the check); the legacy colour and shape aliases are deleted from LifeyColors/LifeyShapes (no use was left after X4.12); ui/DynamicSizing.kt is deleted together with its last two callers. Verified by grep: no androidx.wear.compose.material.* (non-3) import, no MaterialTheme.colors/typography, no legacy token name left in main/debug/test. The  check and the full X4 flow walk are for the first build and the emulator.
 
-### X4.o1 — Watch Wear (optional, needs go-ahead §10 Q2): launcher Tile (W2.20)
+### X4.o1 — Watch Wear (optional, needs go-ahead §10 Q2): launcher Tile (W2.20) ✅
 - `TileService` with ProtoLayout Material 3: "Gyors erőedzés" + the first ranked template, from the
   already-synced local cache.
+- *As built:* LauncherTileService (androidx.wear.tiles TileService with plain ProtoLayout builders, no Compose-for-Tiles): a primary rounded box 'Gyors erőedzés' with the first non-cardio entry of StandaloneSessionStore.entries() under it (local cache only, no phone contact); the tap launches MainActivity with EXTRA_OPEN_PICKER, which now starts on the picker (the permission re-check and the actual start stay in the picker's callbacks). Manifest: service with BIND_TILE_PROVIDER; new dependencies androidx.wear.tiles:tiles:1.4.1, androidx.wear.protolayout:protolayout:1.2.1 and androidx.concurrent:concurrent-futures:1.2.0 (ResolvableFuture for the immediate futures) — the platform libraries for exactly this, justified under the project rule. Deviations: no tile preview image (the carousel picker shows the label only), no rest/active-workout state on the tile, and the colours are LifeyColors converted with toArgb (the tile is rendered by the system, not Compose). The ProtoLayout/Tile signatures are from memory — CI is the compiler.
 
 ### X4.o2 — Watch Wear (optional, needs go-ahead §10 Q2): Ongoing Activity (W2.21) ✅
 - `OngoingActivity` bound to the existing foreground notification: icon on the watch face (ring during
@@ -1532,10 +1533,10 @@ each line, ticked when its review is logged in §12. If review load demands it, 
 
 - **Q1 (before X2.o1/o2):** go-ahead for the Smart Stack widget and complications (new WidgetKit target,
   App Group, separate signing setup)?
-- **Q2 (before X4.o1/o2):** go-ahead for the Tile and the Ongoing Activity?
+- **Q2 (before X4.o1/o2):** go-ahead for the Tile and the Ongoing Activity? — **given 2026-10-02 ("Elso kettot megtudod csinalni?"); built as X4.o1 / X4.o2.**
 - **Q3 (X4.6):** should Wear also show the "Folytatás a telefonon…" pill on a mark tap, as Apple does
   (AW2.7)? The Wear canvas (W2.6) draws only the raised mark. Default: follow the canvas (no pill).
-- **Q4 (X0a.3):** fetch PlusJakartaSans-Light from the upstream OFL release for the AOD numerals (default),
+- **Q4 (X0a.3) — answered: fetched 2026-10-02 (commit `28aae3e`, upstream v2.071, Apple + Wear).** Fetch PlusJakartaSans-Light from the upstream OFL release for the AOD numerals (default),
   or use the Regular (400) already in the repo and accept a heavier AOD (more lit pixels)?
 - **Q5 (before merging to main):** is a physical Apple Watch / Wear OS pass required, or are simulators
   and emulators enough for this release-less app (memory: app not released)?

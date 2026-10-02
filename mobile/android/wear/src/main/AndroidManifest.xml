@@ -61,6 +61,17 @@
             </intent-filter>
         </service>
 
+        <!-- Launcher Tile (redesign X4.o1): "Gyors erőedzés" + the first synced template. -->
+        <service
+            android:name=".LauncherTileService"
+            android:exported="true"
+            android:label="@string/standalone_quick_start"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+        </service>
+
         <!-- Owns the Health Services ExerciseClient for the strength-workout
              session (docs/40-watch-app-plan.md §5.3). -->
         <service
