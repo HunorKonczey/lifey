@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material3.CircularProgressIndicator
@@ -35,7 +37,15 @@ const val REST_WARNING_SECONDS = 5
  * by the existing `elapsedRealtime`-based state: [remainingSeconds] comes from there.
  */
 @Composable
-fun RestRing(remainingSeconds: Int, totalSeconds: Int, modifier: Modifier = Modifier) {
+fun RestRing(
+    remainingSeconds: Int,
+    totalSeconds: Int,
+    modifier: Modifier = Modifier,
+    /** Shifts the number block up so a header fits above it and a "next" line below (W1.10). */
+    heroOffset: Dp = 0.dp,
+    /** False when the rest has no known total (a rest the phone started without one): ring stays full. */
+    showTotal: Boolean = true,
+) {
     val reduced = rememberReducedMotion()
     val warning = remainingSeconds in 1..REST_WARNING_SECONDS
     val accent = if (warning) LifeyColors.calories else LifeyColors.text
@@ -53,9 +63,9 @@ fun RestRing(remainingSeconds: Int, totalSeconds: Int, modifier: Modifier = Modi
             strokeWidth = 6.dp,
             colors = ProgressIndicatorDefaults.colors(indicatorColor = accent, trackColor = LifeyColors.control),
         )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.offset(y = heroOffset), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(formatRest(remainingSeconds), style = LifeyType.hero(), color = accent, modifier = Modifier.scale(pulse))
-            Text("/ ${formatRest(totalSeconds)}", style = LifeyType.body(), color = LifeyColors.text2)
+            if (showTotal) Text("/ ${formatRest(totalSeconds)}", style = LifeyType.body(), color = LifeyColors.text2)
         }
     }
 }

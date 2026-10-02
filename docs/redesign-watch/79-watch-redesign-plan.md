@@ -1240,11 +1240,12 @@ hierarchy as Apple, platform-native layout (centred column, edge ring, EdgeButto
 - **Verify:** fixtures; rotary on the emulator; "102,5" at 192 dp.
 - *As built:* AdjustOverlay.kt: AdjustContent (stateless) + the stateful AdjustOverlay inside DismissibleOverlay (swipe/back = SessionStateHolder.onLogAdjustCancelled, never finishes the activity). Clay HeaderChip, short 'Ismétlés | Súly' segment, ValueStepper (± 44/40 dp visible, ≥ 48 target, value in PJS, rotary 24 dp = one step) with the not-edited value as its unit caption, and the EdgeButton '{n} ismétlés naplózása' placed on the bottom arc by the screen (not inside the stepper). SessionStateHolder keeps the real step/clamping; ValueStepper only mirrors the bounds for its ghosted buttons and gained tickOnStep=false so the stepper does not buzz twice (ExerciseService already ticks on every logAdjustState change). The three old M2 composables (AdjustCircle row, AdjustStepButton, AdjustFieldSegment) and ADJUST_ROW_WIDTH_FRACTION are dead and removed with the old file body. Fixtures W1.8/W1.9.
 
-### X3.9 — Watch Wear: rest edge ring (W1.10, W1.11)
+### X3.9 — Watch Wear: rest edge ring (W1.10, W1.11) ✅
 - `RestRing` (6 dp at the display edge) replaces the horizontal bar; centred hero "0:47" + "/ 1:30";
   "Következő · …" on two centred lines; HR + kcal row; last 5 s calories colour + pulse. The 400 ms expiry
   vibration stays in the foreground service.
 - **Verify:** fixtures; live rest; ring tracks `elapsedRealtime` after a pause/resume.
+- *As built:* RestHero.kt: RestModel + RestContent on RestRing (RestRing gained heroOffset and showTotal); 'Következő ·' / 'exercise — n/total. szett' as two deliberate centred lines; HR + kcal at value level on the bottom chord, missing/denied HR = ghost heart + dash (one rule). The countdown still floors remaining ms to whole seconds exactly like the old formatElapsed and is driven by the existing elapsedRealtime LaunchedEffect (restRemainingMs), so it tracks real time after a pause/resume; the last-5-s calories colour + 1 Hz pulse live in RestRing. The old horizontal-bar RestHero is deleted; the page still opens the exercise list on tap. Vertical positions are width fractions (header 14 %, hero centre 41 %, next line 67 %, metrics 13 % from the bottom) and need the emulator check at 227/192 dp. Fixtures W1.10/W1.11.
 
 ### X3.10 — Watch Wear: "Mehet!" ring (W1.12)
 - 9 dp primary ring where the rest ring drained, white "Mehet!", 150 / 250 / 700 ms over the pager.

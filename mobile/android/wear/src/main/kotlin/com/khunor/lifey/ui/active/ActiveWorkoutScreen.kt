@@ -550,11 +550,8 @@ internal fun StrengthActiveWorkoutScreen() {
                                 showsStandaloneMark = showsStandaloneBadge,
                                 justLoggedIndex = display.setsDone?.takeIf { justLogged && it > 0 }?.minus(1),
                             ),
-                            liveMetrics = liveMetrics,
                             canChooseExercise = metadata.canChooseExercise,
                             onOpenExerciseList = { showExerciseList = true },
-                            isCompact = isCompact,
-                            maxWidth = maxWidth,
                         )
                         CONTROLS_PAGE -> ControlsPage(
                             exerciseName = display.name,

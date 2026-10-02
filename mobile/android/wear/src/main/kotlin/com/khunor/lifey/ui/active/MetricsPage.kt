@@ -152,32 +152,23 @@ internal fun MetricsOrRestPage(
     restRemainingMs: Long,
     restTotalSeconds: Int?,
     model: MetricsModel,
-    liveMetrics: LiveMetrics,
     canChooseExercise: Boolean,
     onOpenExerciseList: () -> Unit,
-    isCompact: Boolean,
-    maxWidth: Dp,
 ) {
     if (resting) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = maxWidth * com.khunor.lifey.ui.SCREEN_PADDING_FRACTION),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Box(modifier = Modifier.exercisePickerTarget(canChooseExercise, onOpenExerciseList)) {
-                RestHero(
-                    restRemainingMs = restRemainingMs,
-                    restTotalSeconds = restTotalSeconds,
+        Box(Modifier.fillMaxSize().exercisePickerTarget(canChooseExercise, onOpenExerciseList)) {
+            RestContent(
+                RestModel(
+                    remainingMs = restRemainingMs,
+                    totalSeconds = restTotalSeconds,
                     exerciseName = model.exerciseName,
                     setsDone = model.setsDone,
                     setsTotal = model.setsTotal,
-                    liveMetrics = liveMetrics,
-                    isStandalone = model.showsStandaloneMark,
-                    isCompact = isCompact,
-                )
-            }
+                    heartRate = model.heartRate,
+                    kcal = model.kcal,
+                    showsStandaloneMark = model.showsStandaloneMark,
+                ),
+            )
         }
         return
     }

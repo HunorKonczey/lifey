@@ -12,6 +12,8 @@ import com.khunor.lifey.ui.active.AdjustContent
 import com.khunor.lifey.ui.active.LogContent
 import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.active.MetricsContent
+import com.khunor.lifey.ui.active.RestContent
+import com.khunor.lifey.ui.active.RestModel
 import com.khunor.lifey.ui.active.MetricsModel
 import com.khunor.lifey.ui.components.HeartRateState
 
@@ -35,6 +37,8 @@ val w1Frames: Map<String, @Composable () -> Unit> = mapOf(
     "W1.7c" to { Frame { LogContent(logModel(LogSetState.Ready, phoneUnreachable = true), {}, {}, {}) } },
     "W1.8" to { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.REPS), {}, {}, {}) },
     "W1.9" to { AdjustContent(LogAdjustState(reps = 8, weight = 62.5, field = LogAdjustField.WEIGHT), {}, {}, {}) },
+    "W1.10" to { Frame { RestContent(restModel(47_000L)) } },
+    "W1.11" to { Frame { RestContent(restModel(4_000L)) } }, // the last five seconds: calories colour + pulse
     "W1.4" to { Frame { MetricsContent(strengthModel(), {}, {}) } }, // same page at 192 dp: --ei width 192
 )
 
@@ -55,4 +59,9 @@ private fun strengthModel(heartRate: HeartRateState = HeartRateState.Live(128), 
 private fun logModel(state: LogSetState, setsDone: Int = 2, phoneUnreachable: Boolean = false) = LogModel(
     elapsedMs = 12 * 60_000L + 36_000L, exerciseName = "Fekvenyomás", setsDone = setsDone, setsTotal = 4,
     freeFormatSets = null, logState = state, phoneUnreachable = phoneUnreachable,
+)
+
+private fun restModel(remainingMs: Long) = RestModel(
+    remainingMs = remainingMs, totalSeconds = 90, exerciseName = "Fekvenyomás", setsDone = 2, setsTotal = 4,
+    heartRate = HeartRateState.Live(128), kcal = 87,
 )
