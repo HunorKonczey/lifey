@@ -37,7 +37,7 @@
   }
 
   enum FrameGallery {
-    static var all: [GalleryFrame] { start + picker2 + errors + standalone + strength + logging + stepper + rest + controls + picker + finishing + summary }
+    static var all: [GalleryFrame] { start + picker2 + errors + standalone + cardio + strength + logging + stepper + rest + controls + picker + finishing + summary }
 
     static var strength: [GalleryFrame] {
       [
@@ -216,6 +216,33 @@
               elapsedSeconds: 12 * 60 + 34, contextName: "Fekvenyomás", contextSuffix: " · 3/4 szett",
               canChooseExercise: true, showsStandaloneMark: true))
         },
+      ]
+    }
+  }
+
+  extension FrameGallery {
+    static var cardio: [GalleryFrame] {
+      let run = CardioModel(
+        activityType: "RUNNING", headerLabel: "Futás", primaryLabel: "Távolság", primaryValue: "3.42 km",
+        heartRateBpm: 148, fields: [("5:23 /km", "Tempó")])
+      let bike = CardioModel(
+        activityType: "INDOOR_BIKE", headerLabel: "Szobakerékpár", primaryLabel: "Mozgásidő", primaryValue: "24:10",
+        heartRateBpm: 136, fields: [("78 rpm", "Kadencia"), ("165 W", "Átlagos teljesítmény")])
+      let field = CardioModel(
+        activityType: "BASKETBALL", headerLabel: "Kosárlabda", primaryLabel: "Játékidő", primaryValue: "12:05",
+        heartRateBpm: 142, isGame: true, onCourt: true, gross: ("15:40", "Bruttó idő"), toggleTitle: "Padra")
+      var bench = field
+      bench.onCourt = false; bench.headerLabel = "Padon"; bench.primaryLabel = "Játékidő — áll"
+      bench.toggleTitle = "Vissza a pályára"
+      var noHr = run
+      noHr.heartRateBpm = nil
+      return [
+        GalleryFrame("AW2.11", "Cardio distance") { CardioContent(model: run) },
+        GalleryFrame("AW2.12", "Cardio machine") { CardioContent(model: bike) },
+        GalleryFrame("AW2.13", "Team sport · field") { CardioContent(model: field) },
+        GalleryFrame("AW2.14", "Team sport · bench") { ZStack { CardioContent(model: bench); BenchFrame() } },
+        GalleryFrame("AW2.15", "Cardio without HR") { CardioContent(model: noHr) },
+        GalleryFrame("AW2.16", "Team sport · 41 mm", compact: true) { CardioContent(model: field) },
       ]
     }
   }

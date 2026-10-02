@@ -38,41 +38,26 @@ func cardioActivityTint(for activityType: String) -> Color {
   case "RUNNING": return LifeyColors.calories
   case "WALKING": return LifeyColors.cardioWalking
   case "HIKING": return LifeyColors.cardioHiking
-  case "CYCLING": return LifeyColors.secondary // mirrors mobile's colorScheme.secondary
+  case "CYCLING": return LifeyColors.clay  // mirrors mobile's colorScheme.secondary
   case "INDOOR_BIKE": return LifeyColors.cardioIndoorBike
   case "BASKETBALL": return LifeyColors.cardioBasketball
   case "FOOTBALL": return LifeyColors.cardioFootball
-  default: return LifeyColors.onSurfaceVariant
+  default: return LifeyColors.text2
   }
 }
 
-/// The cardio counterpart of `ActiveWorkoutView`'s STRENGTH `TabView` — two
-/// pages only (`CardioMetricsPage`, then the reused `ControlsPage`), no
-/// crown-driven page indicator beyond what `.tabViewStyle(.page)` draws on
-/// its own.
+/// The cardio counterpart of `ActiveWorkoutView`'s STRENGTH `TabView` — two pages (`CardioMetricsPage`, then the
+/// reused `ControlsPage`).
 ///
-/// **`onCourt` is two-way synced** (docs/cardio/55-cardio-watch-plan.md §7,
-/// W-9) and therefore lives on `WorkoutManager`, not in a view-local
-/// `@State`: a tap here reaches the phone (`PhoneConnector.sendCourtChanged`
-/// → `CardioSessionScreen._setOnCourt`), and the phone's own switch reaches
-/// this screen on its next state push. It is a real accounting switch on
-/// both sides now — benched minutes stop counting towards playing time,
-/// while gross time keeps running — not just a choice between AW 19's and
-/// AW 20's layouts.
+/// **`onCourt` is two-way synced** (docs/cardio/55-cardio-watch-plan.md §7, W-9) and lives on `WorkoutManager`:
+/// a tap here reaches the phone and the phone's own switch reaches this screen. Benched minutes stop counting
+/// towards playing time while gross time keeps running.
 struct CardioActiveContent: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   @State private var selectedPage = 0
-  /// Read from `WorkoutManager`, not a `@State` of this view's own: the phone
-  /// shows the same switch and either side can flip it (W-9), so the state
-  /// has to live where a pushed update can reach it too.
-  private var onCourt: Bool { workoutManager.isOnCourt }
 
-  /// AW 20's edge border: the watch equivalent of the phone's top rail
-  /// (M07/M09) — "csuklóemeléskor, fél másodperc alatt is látszik, hogy a
-  /// mérés pihen". Only GAME has a benched state to signal.
-  private var isBenched: Bool {
-    workoutManager.cardioFamily == .game && !onCourt
-  }
+  /// The bench rim: the watch equivalent of the phone's top rail — readable in half a second on wrist raise.
+  private var isBenched: Bool { workoutManager.cardioFamily == .game && !workoutManager.isOnCourt }
 
   var body: some View {
     GeometryReader { geometry in
@@ -83,294 +68,160 @@ struct CardioActiveContent: View {
         ControlsPage(isCompact: isCompact, padding: padding, onOpenExerciseList: {}).tag(1)
       }
       .tabViewStyle(.page)
-      // Drawn over the pager, ignoring its own safe area, so the stroke hugs
-      // the physical screen edge on every case size instead of insetting
-      // with the content.
-      .overlay {
-        if isBenched {
-          RoundedRectangle(cornerRadius: geometry.size.width * 0.28)
-            .strokeBorder(LifeyColors.secondary, lineWidth: 5)
-            .allowsHitTesting(false)
-            .ignoresSafeArea()
-        }
-      }
+      // Drawn over the pager, ignoring its own safe area, so the stroke hugs the physical screen edge.
+      .overlay { if isBenched { BenchFrame() } }
     }
-    .background(LifeyColors.trueBlack)
+    .background(LifeyColors.bg)
   }
 }
 
-/// The family-dispatching cardio metrics page (canvas AW 17–20) — `GAME`
-/// gets its own layout (`GameMetricsContent`, the pályán/padon toggle and
-/// its single "bruttó" box), everything else shares `DistanceMachineMetricsContent`
-/// (two boxes, no toggle). Ticks once a second via `TimelineView` purely to
-/// re-evaluate `WorkoutManager.currentCardioMovingSeconds()` — every other
-/// value here (`cardioMetrics`'s pre-formatted strings, `heartRateBpm`) is
-/// `@Published` and already re-renders on its own.
+// MARK: - Cardio metrics (redesign X2.7 – X2.9 — AW2.11 … AW2.16)
+
+/// Plain data behind every cardio metrics layout (distance, machine, team sport).
+struct CardioModel {
+  var activityType: String
+  var headerLabel: String
+  var showsStandaloneMark = false
+  var markTapped = false
+  /// "TÁVOLSÁG" / "MOZGÁSIDŐ" / "JÁTÉKIDŐ" — phone-supplied.
+  var primaryLabel: String
+  var primaryValue: String
+  var heartRateBpm: Int?
+  /// Stacked field rows under the HR slot (phone-supplied labels, two lines at most).
+  var fields: [(value: String, label: String)] = []
+  /// Team sport only.
+  var isGame = false
+  var onCourt = true
+  /// Gross time, shown in the HR row on the right while on court and in clay on the bench.
+  var gross: (value: String, label: String)? = nil
+  var toggleTitle = ""
+}
+
+/// One layout for the three cardio families (D1): the workout's unit is the hero in **white** (the accent moves
+/// to the header chip), HR sits in the same slot and size as on strength, phone-supplied fields stack under it.
+/// Team sport: dense hero, gross time in the HR row, a 46 pt toggle button; on the bench the play time is
+/// stopped (`text3`), the gross time clay, and the rim (`BenchFrame`) is drawn by the page.
+struct CardioContent: View {
+  let model: CardioModel
+  var onMarkTap: () -> Void = {}
+  var onToggle: () -> Void = {}
+
+  @Environment(\.watchMetrics) private var metrics
+
+  private var accent: Color { model.isGame && !model.onCourt ? LifeyColors.clay : cardioActivityTint(for: model.activityType) }
+  private var icon: String {
+    model.isGame && !model.onCourt ? "figure.seated.side.right" : cardioActivityIcon(for: model.activityType)
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      WatchHeaderChip(
+        icon: icon, label: model.headerLabel, accent: accent,
+        standaloneMark: model.showsStandaloneMark ? (model.markTapped ? .tapped : .idle) : nil,
+        onMarkTap: onMarkTap)
+      Text(verbatim: model.primaryLabel)
+        .lifeyLabel(metrics, caps: true)
+        .foregroundColor(model.isGame && !model.onCourt ? LifeyColors.text3 : LifeyColors.text2)
+        .lineLimit(1)
+        .padding(.top, LifeySpacing.xs)
+      Text(verbatim: model.primaryValue)
+        .lifeyHero(metrics, dense: model.isGame)
+        .foregroundColor(model.isGame && !model.onCourt ? LifeyColors.text3 : LifeyColors.text)
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+      hrRow.padding(.top, LifeySpacing.md)
+      VStack(spacing: LifeySpacing.xs) {
+        ForEach(Array(model.fields.enumerated()), id: \.offset) { _, field in
+          CardioField(value: field.value, label: field.label)
+        }
+      }
+      .padding(.top, LifeySpacing.sm)
+      Spacer(minLength: LifeySpacing.xs)
+      if model.isGame { toggleButton }
+    }
+    .padding(.horizontal, metrics.sideMargin)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+  }
+
+  /// The HR slot, with the gross time on the right for team sport.
+  private var hrRow: some View {
+    HStack(alignment: .center, spacing: LifeySpacing.md) {
+      HeartRateSlot(bpm: model.heartRateBpm)
+      if let gross = model.gross {
+        Spacer(minLength: 0)
+        VStack(alignment: .trailing, spacing: 0) {
+          Text(verbatim: gross.value).lifeyValue(metrics)
+            .foregroundColor(model.onCourt ? LifeyColors.text : LifeyColors.clay)
+          Text(verbatim: gross.label).lifeyLabel(metrics, caps: true).foregroundColor(LifeyColors.text2).lineLimit(1)
+        }
+      }
+    }
+  }
+
+  /// "Padra" / "Vissza a pályára": 46 pt (44 on the compact dial) — under the thumb, not the old 66 pt block.
+  private var toggleButton: some View {
+    Button(action: onToggle) {
+      HStack(spacing: LifeySpacing.md) {
+        Image(systemName: model.onCourt ? "figure.seated.side.right" : "figure.run")
+        Text(verbatim: model.toggleTitle).lineLimit(1).minimumScaleFactor(0.8)
+      }
+      .lifeyBodyBold(metrics)
+      .foregroundColor(model.onCourt ? LifeyColors.text : LifeyColors.onPrimary)
+      .frame(maxWidth: .infinity, minHeight: metrics.isCompact ? 44 : 46)
+      .background(model.onCourt ? LifeyColors.control : LifeyColors.primary, in: Capsule())
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+/// The live cardio metrics page. Ticks once a second via `TimelineView` purely to re-evaluate
+/// `WorkoutManager.currentCardioMovingSeconds()` — every other value is `@Published` and re-renders on its own.
 struct CardioMetricsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
   let padding: CGFloat
 
-  private var onCourt: Bool { workoutManager.isOnCourt }
   private var activityType: String { workoutManager.cardioActivityType ?? "OTHER_CARDIO" }
   private var family: CardioActivityFamily { workoutManager.cardioFamily ?? .distance }
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { _ in
-      Group {
-        if family == .game {
-          GameMetricsContent(isCompact: isCompact, activityType: activityType)
-        } else {
-          DistanceMachineMetricsContent(isCompact: isCompact, family: family, activityType: activityType)
-        }
-      }
-      .padding(.horizontal, padding)
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-    }
-  }
-}
-
-/// AW 17 (DISTANCE) / AW 18 (MACHINE) — header, primary label+value (tinted,
-/// the ticking moving-time slot per [tickingSlot]), the heart-rate row
-/// (`CardioHeartRateRow`), and up to two supporting boxes.
-struct DistanceMachineMetricsContent: View {
-  @ObservedObject private var workoutManager = WorkoutManager.shared
-  let isCompact: Bool
-  let family: CardioActivityFamily
-  let activityType: String
-
-  private var heroFont: Font {
-    isCompact ? .system(.title, design: .rounded) : .system(.largeTitle, design: .rounded)
-  }
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
-      HeaderChip(
-        icon: cardioActivityIcon(for: activityType), label: workoutManager.activeHeaderLabel,
-        isCompact: isCompact, isStandalone: workoutManager.showsStandaloneBadge)
-      if let metrics = workoutManager.activeCardioMetrics {
-        Text(primaryLabel(metrics))
-          .font(isCompact ? .caption2 : .caption)
-          .fontWeight(.bold)
-          .tracking(1)
-          .textCase(.uppercase)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-        Text(primaryValue(metrics))
-          .font(heroFont)
-          .fontWeight(.heavy)
-          .foregroundColor(cardioActivityTint(for: activityType))
-          .monospacedDigit()
-          .lineLimit(1)
-          .minimumScaleFactor(0.6)
-        CardioHeartRateRow(isCompact: isCompact)
-        HStack(spacing: isCompact ? 8 : 10) {
-          // MACHINE's own `family == .distance` primary/secondary swap
-          // (`DISTANCE` ticks its *secondary* box, not the primary) means the
-          // secondary box shown here is `metrics.secondaryLabel`/`Value`
-          // as-is for every family except the one already spent on ticking
-          // it above — see `primaryLabel`/`primaryValue` below.
-          if family != .distance, let secondaryLabel = metrics.secondaryLabel {
-            CardioMetricBox(
-              label: secondaryLabel, value: metrics.secondaryValue ?? "—", isCompact: isCompact)
-          }
-          if let tertiaryLabel = metrics.tertiaryLabel {
-            CardioMetricBox(
-              label: tertiaryLabel, value: metrics.tertiaryValue ?? "—", isCompact: isCompact)
-          }
-        }
-        .padding(.top, isCompact ? 4 : 8)
-      } else {
-        // No `cardio` push has landed yet — right after `startWorkout`, the
-        // watch's own `HKWorkoutSession` can start before the first
-        // `updateState` arrives. Degrades to just the header + heart rate,
-        // never a blank/zero-valued distance or a crash on a force-unwrap.
-        CardioHeartRateRow(isCompact: isCompact)
-      }
-      Spacer(minLength: 0)
+      CardioContent(
+        model: model(),
+        onMarkTap: { workoutManager.retryAdoption() },
+        onToggle: { workoutManager.setOnCourt(!workoutManager.isOnCourt) })
     }
   }
 
-  /// `DISTANCE` shows the phone's own `primaryLabel` (distance doesn't tick
-  /// locally — it only changes on a fresh GPS fix, so the last string the
-  /// phone pushed is always current); `MACHINE` ticks the primary itself
-  /// (moving time), so its label is fixed to `primaryLabel` regardless —
-  /// only the *value* below switches to the local ticking one.
-  private func primaryLabel(_ metrics: CardioActiveMetrics) -> String { metrics.primaryLabel }
-
-  /// The moving-time duration ticks locally (`WorkoutManager
-  /// .currentCardioMovingSeconds()`) rather than showing whatever string the
-  /// phone last pushed — `MACHINE`'s primary slot IS that duration; `DISTANCE`'s
-  /// is the distance itself, which is only as fresh as the last GPS fix
-  /// (i.e. always current on its own, no ticking needed).
-  private func primaryValue(_ metrics: CardioActiveMetrics) -> String {
-    family == .distance
-      ? metrics.primaryValue
-      : formatCardioDuration(workoutManager.currentCardioMovingSeconds())
-  }
-}
-
-/// AW 19 (on court) / AW 20 (on bench) — a dot+label primary caption instead
-/// of the plain grey one `DistanceMachineMetricsContent` uses (both
-/// families' primary is *always* the ticking moving/game time, unlike
-/// `DISTANCE`, so there's no swap to reason about here), a single "bruttó"
-/// box (GAME's `tertiaryValue` is a placeholder the phone never fills — see
-/// `CardioLiveMetrics`'s Dart doc — so only `secondaryLabel`/`Value` renders),
-/// and the pályán/padon toggle. See `CardioActiveContent`'s doc for where
-/// `onCourt` lives and why.
-struct GameMetricsContent: View {
-  @ObservedObject private var workoutManager = WorkoutManager.shared
-  let isCompact: Bool
-  let activityType: String
-
-  private var onCourt: Bool { workoutManager.isOnCourt }
-
-  private var tint: Color { onCourt ? cardioActivityTint(for: activityType) : LifeyColors.secondary }
-  private var heroFont: Font {
-    isCompact ? .system(.title, design: .rounded) : .system(.largeTitle, design: .rounded)
-  }
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
-      HeaderChip(
-        icon: onCourt ? cardioActivityIcon(for: activityType) : "figure.seated.side.right",
-        label: onCourt ? workoutManager.activeHeaderLabel : String(localized: "cardio_on_bench_header_label"),
-        isCompact: isCompact, isStandalone: workoutManager.showsStandaloneBadge)
-      if let metrics = workoutManager.activeCardioMetrics {
-        HStack(spacing: 7) {
-          if onCourt {
-            Circle().fill(LifeyColors.primary).frame(width: 8, height: 8)
-          }
-          Text(onCourt ? metrics.primaryLabel : String(localized: "cardio_game_paused_primary_label"))
-            .font(isCompact ? .caption2 : .caption)
-            .fontWeight(.bold)
-            .tracking(1)
-            .textCase(.uppercase)
-            .foregroundColor(onCourt ? LifeyColors.primary : LifeyColors.secondary)
-        }
-        Text(formatCardioDuration(workoutManager.currentCardioMovingSeconds()))
-          .font(heroFont)
-          .fontWeight(.heavy)
-          .foregroundColor(onCourt ? tint : LifeyColors.onSurfaceVariant)
-          .monospacedDigit()
-          .lineLimit(1)
-          .minimumScaleFactor(0.6)
-        CardioHeartRateRow(isCompact: isCompact)
-        if let secondaryLabel = metrics.secondaryLabel {
-          CardioMetricBox(
-            label: secondaryLabel, value: metrics.secondaryValue ?? "—", isCompact: isCompact,
-            tint: onCourt ? nil : LifeyColors.secondary)
-          .padding(.top, isCompact ? 4 : 8)
-        }
-        Spacer(minLength: 0)
-        toggleButton
-      } else {
-        CardioHeartRateRow(isCompact: isCompact)
-        Spacer(minLength: 0)
-      }
+  private func model() -> CardioModel {
+    let hr = workoutManager.heartRateBpm.map { Int($0.rounded()) }
+    let onCourt = workoutManager.isOnCourt
+    var model = CardioModel(
+      activityType: activityType, headerLabel: workoutManager.activeHeaderLabel,
+      showsStandaloneMark: workoutManager.showsStandaloneBadge, markTapped: workoutManager.isRetryingAdoption,
+      primaryLabel: "", primaryValue: "—", heartRateBpm: hr)
+    // No `cardio` push has landed yet (the watch's own session can start before the first update): only the
+    // header and the HR slot, never a zero-valued distance or a force-unwrap.
+    guard let metrics = workoutManager.activeCardioMetrics else { return model }
+    model.primaryLabel = metrics.primaryLabel
+    switch family {
+    case .distance:
+      // Distance only changes on a fresh GPS fix, so the last string the phone pushed is always current.
+      model.primaryValue = metrics.primaryValue
+      if let label = metrics.tertiaryLabel { model.fields = [(metrics.tertiaryValue ?? "—", label)] }
+    case .machine:
+      model.primaryValue = formatCardioDuration(workoutManager.currentCardioMovingSeconds())
+      if let label = metrics.secondaryLabel { model.fields.append((metrics.secondaryValue ?? "—", label)) }
+      if let label = metrics.tertiaryLabel { model.fields.append((metrics.tertiaryValue ?? "—", label)) }
+    case .game:
+      model.isGame = true
+      model.onCourt = onCourt
+      model.headerLabel = onCourt ? workoutManager.activeHeaderLabel : String(localized: "cardio_on_bench_header_label")
+      model.primaryLabel = onCourt ? metrics.primaryLabel : String(localized: "cardio_game_paused_primary_label")
+      model.primaryValue = formatCardioDuration(workoutManager.currentCardioMovingSeconds())
+      if let label = metrics.secondaryLabel { model.gross = (metrics.secondaryValue ?? "—", label) }
+      model.toggleTitle = String(localized: onCourt ? "cardio_go_to_bench_button" : "cardio_back_to_court_button")
     }
-  }
-
-  private var toggleButton: some View {
-    Button(action: { workoutManager.setOnCourt(!onCourt) }) {
-      HStack(spacing: 10) {
-        Image(systemName: onCourt ? "figure.seated.side.right" : "figure.run")
-          .font(.system(size: isCompact ? 22 : 26))
-        // A ternary of two string literals infers as `String`, not
-        // `LocalizedStringKey` — `Text(_:)` would then pick its verbatim
-        // overload and show the raw key. `String(localized:)` first, like
-        // `ControlsPage`'s own `active_resume_button`/`active_pause_button`
-        // toggle a few lines below in this same file.
-        Text(String(localized: onCourt ? "cardio_go_to_bench_button" : "cardio_back_to_court_button"))
-          .font(isCompact ? .body : .title3)
-          .fontWeight(.bold)
-      }
-      .foregroundColor(onCourt ? LifeyColors.onPrimary : LifeyColors.onSurface)
-      .frame(maxWidth: .infinity)
-      .frame(height: isCompact ? 56 : 66)
-    }
-    .buttonStyle(.plain)
-    .background(onCourt ? LifeyColors.primary : LifeyColors.secondary)
-    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.cardLarge))
-  }
-}
-
-/// The heart-rate row every cardio layout shares — a real reading when
-/// `WorkoutManager.heartRateBpm` has one (this watch's own `HKWorkoutSession`,
-/// same sensor the STRENGTH `MetricsPage` already reads), or the degraded
-/// "—" / `cardio_no_heart_rate_label` / strap hint (canvas AW 22) when it
-/// doesn't. Unlike `MetricsPage`'s STRENGTH-side `HeroMetricRow`, which is
-/// simply omitted when `heartRateBpm` is nil, this row's **space is always
-/// reserved** — the design's own reasoning for M10's GPS chip applies here
-/// too: "a hely megmarad, hogy az elrendezés ne ugráljon, és látszódjon,
-/// hogy hiányzik."
-struct CardioHeartRateRow: View {
-  @ObservedObject private var workoutManager = WorkoutManager.shared
-  let isCompact: Bool
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: isCompact ? 6 : 8) {
-      HStack(spacing: isCompact ? 8 : 12) {
-        Image(systemName: "heart.fill")
-          .font(.system(size: isCompact ? 24 : 30))
-          .foregroundColor(workoutManager.heartRateBpm == nil ? LifeyColors.ghostedOnSurface : LifeyColors.heart)
-        if let heartRate = workoutManager.heartRateBpm {
-          Text("\(Int(heartRate.rounded()))")
-            .font(isCompact ? .system(.title2, design: .rounded) : .system(.title, design: .rounded))
-            .fontWeight(.heavy)
-            .foregroundColor(LifeyColors.onSurface)
-            .monospacedDigit()
-        } else {
-          Text("—")
-            .font(isCompact ? .system(.title2, design: .rounded) : .system(.title, design: .rounded))
-            .fontWeight(.heavy)
-            .foregroundColor(LifeyColors.ghostedOnSurface)
-          Text("cardio_no_heart_rate_label")
-            .font(isCompact ? .caption2 : .caption)
-            .foregroundColor(LifeyColors.onSurfaceVariant)
-            .lineLimit(2)
-        }
-      }
-      if workoutManager.heartRateBpm == nil {
-        Text("cardio_no_heart_rate_hint")
-          .font(.caption2)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-          .lineLimit(2)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-    }
-  }
-}
-
-/// One of `DistanceMachineMetricsContent`/`GameMetricsContent`'s supporting
-/// boxes (canvas AW 17/18's two-box row, AW 19/20's single "bruttó" one) —
-/// [tint] overrides the value's color for GAME's on-bench state (muted
-/// `secondary` instead of the default `onSurface`), `nil` everywhere else.
-struct CardioMetricBox: View {
-  let label: String
-  let value: String
-  let isCompact: Bool
-  var tint: Color? = nil
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
-      Text(value)
-        .font(isCompact ? .callout : .title3)
-        .fontWeight(.heavy)
-        .foregroundColor(LifeyColors.onSurface)
-        .monospacedDigit()
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-      Text(label)
-        .font(.caption2)
-        .foregroundColor(tint ?? LifeyColors.onSurfaceVariant)
-        .lineLimit(1)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, isCompact ? 10 : 14)
-    .padding(.vertical, isCompact ? 8 : 12)
-    // AW 20 tints the whole box, not just its text: benched, this is the one
-    // clock still running, and it has to read that way at a glance.
-    .background(tint == nil ? LifeyColors.surface : tint!.opacity(0.16))
-    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
+    return model
   }
 }

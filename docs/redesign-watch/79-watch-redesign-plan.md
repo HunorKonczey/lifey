@@ -1089,13 +1089,14 @@ from X1.1's `Views/Active/Cardio.swift`.
 - **Verify:** fixtures; finish standalone with the phone off, then on.
 - *As built:* SummaryContent: for a standalone summary the SyncRow sits directly under the title and the four tiles (idő, szett, átlag bpm, kcal) form a 2 × 2 grid; the Health row follows. The live pending→synced switch is the existing .standaloneSessionAcked handling in SummaryView; SyncRow animates the tint in 250 ms. Frames AW2.9 / 2.10. Not compiled.
 
-### X2.7 — Watch iOS: cardio — distance and machine (AW2.11, AW2.12)
+### X2.7 — Watch iOS: cardio — distance and machine (AW2.11, AW2.12) ✅
 - Distance: header chip "FUTÁS" in the accent (`figure.run`); "TÁVOLSÁG" label + hero **48 white** "3.42 km";
   HR as on strength (same slot and size); pace as a `CardioField` row ("5:23 /km TEMPÓ"); cycling km/h.
 - Machine: hero "MOZGÁSIDŐ 24:10"; two **stacked** `CardioField` rows ("78 rpm KADENCIA", "165 W ÁTLAG
   TELJESÍTMÉNY") — phone labels complete, wrap to two lines; no side-by-side boxes.
 - Replaces `DistanceMachineMetricsContent`, `CardioMetricBox`, `CardioHeartRateRow`.
 - **Verify:** fixtures; a run and an indoor-bike session started from the phone.
+- *As built:* One CardioContent (plain CardioModel) replaces DistanceMachineMetricsContent, GameMetricsContent, CardioHeartRateRow and CardioMetricBox: header chip in the activity accent, phone label + hero in white (dense hero for team sport), HeartRateSlot in the same place as on strength (so 'no HR' is just its missing state — the 86 % squeeze and the 2-line hint are gone; tap opens the explanation sheet), stacked CardioField rows, gross time in the HR row for team sport, 46 pt (44 compact) toggle button, bench = BenchFrame + clay gross time + text3 stopped play time. CardioActiveContent keeps the pager and draws BenchFrame instead of the old 5 pt rim. Field selection rules unchanged (distance shows the tertiary field only; machine shows secondary + tertiary; game shows secondary as gross time). Frames AW2.11–2.16. Not compiled.
 
 ### X2.8 — Watch iOS: team sport — field and bench (AW2.13, AW2.14, AW2.16)
 - Field: hero "JÁTÉKIDŐ 12:05" (dense hero, D-X0.5); gross time moved into the HR row on the right
