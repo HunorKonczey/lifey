@@ -1,21 +1,33 @@
 package com.khunor.lifey.ui.active
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AirlineSeatReclineNormal
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.Text
+import com.khunor.lifey.R
+import com.khunor.lifey.ui.components.BenchRing
+import com.khunor.lifey.ui.components.LifeyEdgeButton
 import com.khunor.lifey.ui.components.CardioField
 import com.khunor.lifey.ui.components.HeartRateSlot
 import com.khunor.lifey.ui.components.HeartRateState
@@ -101,4 +113,83 @@ internal fun CardioHero(number: String, unit: String?, dense: Boolean = false) {
         style = LifeyType.hero(dense = dense).copy(lineHeight = 1.05.em),
         color = LifeyColors.text,
     )
+}
+
+/** What a team-sport page shows (frames W2.12, W2.13), as plain data. */
+data class GameModel(
+    val headerLabel: String,
+    val activityIcon: ImageVector,
+    val accent: Color,
+    val onCourt: Boolean,
+    /** The phone's play-time label ("Játékidő"); on the bench the "Játékidő — áll" string replaces it. */
+    val playLabel: String,
+    val playTime: String,
+    val grossValue: String?,
+    val grossLabel: String?,
+    val heartRate: HeartRateState,
+    val isPaused: Boolean = false,
+    val showsStandaloneMark: Boolean = false,
+)
+
+/**
+ * Team-sport page (W2.12 field / W2.13 bench): header, play-time label with the small primary dot, the hero,
+ * the heart-rate slot with the gross time beside it — boxless — and the court/bench switch as a primary
+ * EdgeButton on the bottom arc ("Padra" with the bench glyph; "Vissza a pályára" with the activity icon).
+ * On the bench the header turns clay "PADON", the label reads "Játékidő — áll", the hero is `text2` (the
+ * clock is stopped) and a 4 dp clay [BenchRing] hugs the display — the round shape is an advantage here.
+ */
+@Composable
+fun GameContent(
+    model: GameModel,
+    onToggleCourt: () -> Unit,
+    onRequestHeartRatePermission: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val metrics = LocalWatchMetrics.current
+    val width = metrics.widthDp
+    val bench = !model.onCourt
+    val tint = if (bench) LifeyColors.clay else model.accent
+    Box(modifier.fillMaxSize()) {
+        Column(
+            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.14f).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xxs),
+        ) {
+            ActiveHeader(
+                icon = if (bench) Icons.Filled.AirlineSeatReclineNormal else model.activityIcon,
+                label = if (bench) stringResource(R.string.cardio_on_bench_header_label) else model.headerLabel,
+                isPaused = model.isPaused, showsStandaloneMark = model.showsStandaloneMark, accent = tint,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(LifeySpacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                if (!bench) Box(Modifier.size(6.dp).background(LifeyColors.primary, CircleShape))
+                Text(
+                    (if (bench) stringResource(R.string.cardio_game_paused_primary_label) else model.playLabel).uppercase(),
+                    style = LifeyType.label(), color = LifeyColors.text2, maxLines = 1,
+                )
+            }
+            LifeyNumber(
+                number = model.playTime,
+                style = LifeyType.hero(dense = true).copy(lineHeight = 1.05.em),
+                color = if (bench) LifeyColors.text2 else LifeyColors.text,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(LifeySpacing.lg), verticalAlignment = Alignment.CenterVertically) {
+                HeartRateSlot(model.heartRate, onRequestPermission = onRequestHeartRatePermission)
+                if (model.grossValue != null && model.grossLabel != null) CardioField(model.grossValue, model.grossLabel)
+            }
+        }
+        Box(Modifier.align(Alignment.BottomCenter)) {
+            LifeyEdgeButton(onClick = onToggleCourt) {
+                Icon(
+                    if (bench) model.activityIcon else Icons.Filled.AirlineSeatReclineNormal, contentDescription = null,
+                    tint = LifeyColors.onPrimary, modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(LifeySpacing.sm))
+                Text(
+                    stringResource(if (bench) R.string.cardio_back_to_court_button else R.string.cardio_go_to_bench_button),
+                    style = LifeyType.body(), color = LifeyColors.onPrimary, maxLines = 1,
+                )
+            }
+        }
+        if (bench) BenchRing()
+    }
 }

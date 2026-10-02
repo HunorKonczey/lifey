@@ -1343,12 +1343,13 @@ permission revoke/grant; failure paths.
 - **Verify:** fixtures; run + indoor bike from the phone.
 - *As built:* New CardioPage.kt: CardioModel/CardioContent (stateless) — accent header, CAPS label, hero 48 sp white (the activity accent stays on the header; distance now shows the number in PJS with 'km' beside it), HeartRateSlot at strength's size, then the phone's fields boxless: one centred pace line for distance, two side by side with two-line labels for machines (CardioField). Cardio.kt: CardioActiveScreen now uses LifeyPager + TimeText (rotary no longer pages), CardioMetricsPage builds the model from SessionMetadata.cardioMetrics/localCardioMetrics (formatters and the ticking moving time unchanged; km/h or mph for cycling comes from the phone's strings as before); DistanceMachineMetricsContent, CardioMetricBox's distance use, PageDots and the legacy MetricReading/HeartRateReading are deleted; the team-sport layout is still the Material 2 one until X4.10. The cardio controls page is the X3.11 ControlsPage (no exercise card). Fixtures W2.10, W2.11, W2.14, W2.14b. Run + indoor bike from the phone is for the emulator.
 
-### X4.10 — Watch Wear: team sport — field and bench (W2.12, W2.13, W2.15)
+### X4.10 — Watch Wear: team sport — field and bench (W2.12, W2.13, W2.15) ✅
 - Field: gross time beside HR, boxless; "Padra" EdgeButton; header + label + hero + row + button at full
   size (old ~76 % squeeze gone). 192 dp: hero 38, EdgeButton 46 dp (48 target with the arc extension).
 - Bench: clay `BenchRing` (the round shape is an advantage here); EdgeButton inside the ring, "Vissza a
   pályára" one line with the activity icon.
 - **Verify:** fixtures; basketball field ↔ bench from watch and phone.
+- *As built:* CardioPage.kt: GameModel/GameContent (stateless). Field: accent header, '● JÁTÉKIDŐ' with the primary dot, dense hero (38 sp on 192 dp), HR slot with the boxless gross-time field beside it, 'Padra' as a primary EdgeButton with the bench glyph. Bench: clay header 'PADON', label 'Játékidő — áll', hero in text2 (clock stopped), BenchRing (4 dp clay) around the dial, 'Vissza a pályára' on one line with the activity icon. The court/bench state stays two-way synced through SessionStateHolder.setOnCourt + SummarySender.sendCourtChanged (unchanged). Deleted: GameMetricsContent, CardioHeartRateRow, CardioMetricBox, the legacy header chip and the old 5 dp brown border. Fixtures W2.12/W2.13. Basketball field ↔ bench from watch and phone is for the emulator.
 
 ### X4.11 — Watch Wear: cardio without HR, incl. permission route (W2.14)
 - `HeartRateSlot` in the cardio layout; when the cause is a missing permission the slot is the permission

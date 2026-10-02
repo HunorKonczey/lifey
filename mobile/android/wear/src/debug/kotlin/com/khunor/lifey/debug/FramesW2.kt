@@ -9,6 +9,9 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.ui.active.LogContent
 import com.khunor.lifey.ui.active.LogModel
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.active.GameContent
+import com.khunor.lifey.ui.active.GameModel
+import androidx.compose.material.icons.filled.SportsBasketball
 import com.khunor.lifey.ui.active.CardioContent
 import com.khunor.lifey.ui.active.CardioFieldModel
 import com.khunor.lifey.ui.active.CardioModel
@@ -127,6 +130,8 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
     },
     "W2.14" to frame2 { CardioFrame(runModel(HeartRateState.Missing)) },
     "W2.14b" to frame2 { CardioFrame(runModel(HeartRateState.PermissionDenied)) }, // the slot is the permission button
+    "W2.12" to frame2 { GameFrame(gameModel(onCourt = true, hr = 138)) },
+    "W2.13" to frame2 { GameFrame(gameModel(onCourt = false, hr = 118)) },
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
         LifeyAppScaffold {
             PickerContent(
@@ -151,6 +156,20 @@ private fun runModel(heartRate: HeartRateState) = CardioModel(
 private fun CardioFrame(model: CardioModel) {
     Box(Modifier.fillMaxSize()) {
         CardioContent(model, onRequestHeartRatePermission = {})
+        TimeText()
+    }
+}
+
+private fun gameModel(onCourt: Boolean, hr: Int) = GameModel(
+    headerLabel = "Kosárlabda", activityIcon = Icons.Filled.SportsBasketball, accent = LifeyColors.cardioBasketball,
+    onCourt = onCourt, playLabel = "Játékidő", playTime = "12:05", grossValue = "15:40", grossLabel = "Bruttó idő",
+    heartRate = HeartRateState.Live(hr),
+)
+
+@Composable
+private fun GameFrame(model: GameModel) {
+    Box(Modifier.fillMaxSize()) {
+        GameContent(model, onToggleCourt = {}, onRequestHeartRatePermission = {})
         TimeText()
     }
 }
