@@ -12,7 +12,7 @@ import com.khunor.lifey.ui.theme.LocalWatchMetrics
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.PagerState
-import androidx.wear.compose.material.SwipeToDismissBox
+import androidx.wear.compose.foundation.BasicSwipeToDismissBox
 import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ButtonDefaults
@@ -95,7 +95,7 @@ fun DismissibleOverlay(
     content: @Composable () -> Unit,
 ) {
     BackHandler(onBack = onDismiss)
-    SwipeToDismissBox(
+    BasicSwipeToDismissBox(
         state = rememberSwipeToDismissBoxState(),
         modifier = modifier,
         onDismissed = onDismiss,

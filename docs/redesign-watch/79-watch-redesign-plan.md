@@ -1383,12 +1383,13 @@ permission revoke/grant; failure paths.
 - **Verify:** ambient during bench and during a run.
 - *As built:* AmbientActive.kt: AmbientBenchContent (clay ring 2 dp @ 60 %, outlined 'PADON' header, 'Játékidő — áll' with the stopped play time *with seconds*, heart rate at 60 %, 'Bruttó idő 16 p' from the phone's mm:ss gross string via clockMinutes) and AmbientCardioContent (no Wear canvas frame — DERIVED from AW2.22, to be listed as such in the review log: outlined accent header at 60 %, hero centred in the light style — a distance keeps its decimals and unit, a duration drops to minutes — heart rate at 60 %, one quiet field line = the pace). CardioActiveScreen shows the metric page alone while ambient (no pager, indicator or TimeText); the moving seconds are recomputed from the metrics' elapsedRealtime anchor once a minute. cardioActivityIconOutlined maps the activity icons. Fixtures W2.19, W2.22 (derived). Ambient during bench and during a run is for the emulator.
 
-### X4.16 — Watch Wear: remove Material 2, legacy aliases and `DynamicSizing`
+### X4.16 — Watch Wear: remove Material 2, legacy aliases and `DynamicSizing` ✅
 - Files: `build.gradle.kts` (drop `androidx.wear.compose:compose-material`), `LifeyTheme.kt` (M3 only),
   `LifeyColors.kt` / `LifeyShapes.kt` aliases removed, `ui/DynamicSizing.kt` deleted, superseded private
   composables deleted.
 - **Verify:** `./gradlew :wear:assembleDebug :wear:testDebugUnitTest` green; `./gradlew :wear:dependencies`
   shows no `compose-material:` (M2); full X4 flow walk.
+- *As built:* build.gradle.kts drops androidx.wear.compose:compose-material; every Text/Icon is the Material 3 one (29 files); LifeyTheme is M3 only (the Colors/Typography mapping is deleted); DismissibleOverlay uses wear-foundation's BasicSwipeToDismissBox with the foundation state it already used (the M2 SwipeToDismissBox is gone — the name BasicSwipeToDismissBox is from memory, CI is the check); the legacy colour and shape aliases are deleted from LifeyColors/LifeyShapes (no use was left after X4.12); ui/DynamicSizing.kt is deleted together with its last two callers. Verified by grep: no androidx.wear.compose.material.* (non-3) import, no MaterialTheme.colors/typography, no legacy token name left in main/debug/test. The  check and the full X4 flow walk are for the first build and the emulator.
 
 ### X4.o1 — Watch Wear (optional, needs go-ahead §10 Q2): launcher Tile (W2.20)
 - `TileService` with ProtoLayout Material 3: "Gyors erőedzés" + the first ranked template, from the

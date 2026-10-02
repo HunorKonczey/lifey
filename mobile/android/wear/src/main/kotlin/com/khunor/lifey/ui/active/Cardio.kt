@@ -49,7 +49,6 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.khunor.lifey.ui.EffortSelectorScreen
-import com.khunor.lifey.ui.isCompactScreen
 
 // MARK: - Cardio (docs/cardio/55-cardio-watch-plan.md §4, C5.6)
 
@@ -135,7 +134,6 @@ internal fun CardioActiveScreen() {
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val isCompact = isCompactScreen(maxWidth)
 
         if (showEffortSelector) {
             val sessionClientId = metadata.sessionClientId

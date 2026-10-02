@@ -7,32 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.wear.compose.material.Colors
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Typography
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme as Material3Theme
-
-/**
- * Maps the v2 [LifeyColors] tokens onto Wear Compose Material's [Colors]
- * slots (redesign plan 79, D-X0.2). `background` is [LifeyColors.bg], true
- * `#000`; cards and chips use `card` / `nested` / `control` / `raised`.
- */
-private val LifeyWearColors = Colors(
-    primary = LifeyColors.primary,
-    primaryVariant = LifeyColors.nested,
-    secondary = LifeyColors.clay,
-    secondaryVariant = LifeyColors.tint(LifeyColors.clay),
-    background = LifeyColors.bg,
-    surface = LifeyColors.card,
-    error = LifeyColors.error,
-    onPrimary = LifeyColors.onPrimary,
-    onSecondary = LifeyColors.onPrimary,
-    onBackground = LifeyColors.text,
-    onSurface = LifeyColors.text,
-    onSurfaceVariant = LifeyColors.text2,
-    onError = LifeyColors.bg,
-)
 
 /**
  * The Material 3 colour scheme from the same tokens (D-X0.8): surface containers = card / nested /
@@ -66,30 +42,6 @@ internal val LifeyM3ColorScheme = ColorScheme(
     onErrorContainer = LifeyColors.error,
 )
 
-/**
- * Tabular figures on the numeric-hero styles only (elapsed time, the rest
- * ring's countdown) — 41-watch-design-prompt.md §1 "Big tabular numbers...
- * so digits don't jump as they tick." Everything else (body/caption/button)
- * keeps the platform default; those styles are never used for a ticking
- * number in this app.
- */
-private val LifeyWearTypography = Typography().let { base ->
-    Typography(
-        display1 = base.display1.copy(fontFeatureSettings = "tnum"),
-        display2 = base.display2.copy(fontFeatureSettings = "tnum"),
-        display3 = base.display3.copy(fontFeatureSettings = "tnum"),
-        title1 = base.title1.copy(fontFeatureSettings = "tnum"),
-        title2 = base.title2.copy(fontFeatureSettings = "tnum"),
-        title3 = base.title3.copy(fontFeatureSettings = "tnum"),
-        body1 = base.body1,
-        body2 = base.body2,
-        button = base.button,
-        caption1 = base.caption1,
-        caption2 = base.caption2,
-        caption3 = base.caption3,
-    )
-}
-
 /** Wraps the app's Compose content in the Lifey brand theme
  * (docs/40-watch-app-plan.md §12.1 B6) — applied once in `MainActivity`. No
  * `themes.xml` exists in this module, so without an explicit background here
@@ -97,20 +49,14 @@ private val LifeyWearTypography = Typography().let { base ->
  * background instead of the AMOLED true-black every canvas frame assumes. */
 @Composable
 fun LifeyTheme(content: @Composable () -> Unit) {
-    // Material 3 outside, Material 2 inside: both read the same tokens while screens migrate
-    // (D-X0.8); the M2 layer is deleted in X4.16.
+    // Material 3 only (D-X0.8): the Material 2 layer is gone with X4.16.
     Material3Theme(colorScheme = LifeyM3ColorScheme, typography = LifeyType.m3Typography) {
-        MaterialTheme(
-            colors = LifeyWearColors,
-            typography = LifeyWearTypography,
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize().background(LifeyColors.bg),
         ) {
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background),
-            ) {
-                // The dial's diameter, once, for every screen below (D-X0.5).
-                val metrics = remember(maxWidth.value) { WatchMetrics(maxWidth.value) }
-                CompositionLocalProvider(LocalWatchMetrics provides metrics) { content() }
-            }
+            // The dial's diameter, once, for every screen below (D-X0.5).
+            val metrics = remember(maxWidth.value) { WatchMetrics(maxWidth.value) }
+            CompositionLocalProvider(LocalWatchMetrics provides metrics) { content() }
         }
     }
 }

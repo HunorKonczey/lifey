@@ -25,7 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Text
+import androidx.wear.compose.material3.Text
 import com.khunor.lifey.ui.components.BenchRing
 import com.khunor.lifey.ui.components.CardioField
 import com.khunor.lifey.ui.components.EffortScale

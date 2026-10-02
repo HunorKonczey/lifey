@@ -41,7 +41,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import com.khunor.lifey.ui.EffortSelectorScreen
-import com.khunor.lifey.ui.isCompactScreen
 
 /** Total on-screen time for the rest-end "GO" flash (§3.4: "1–2 s flash/transition"). */
 internal const val GO_FLASH_HOLD_MS = 1_150
@@ -336,7 +335,6 @@ internal fun StrengthActiveWorkoutScreen() {
             return@LifeyAppScaffold
         }
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isCompact = isCompactScreen(maxWidth)
 
             if (showEffortSelector) {
                 val sessionClientId = metadata.sessionClientId

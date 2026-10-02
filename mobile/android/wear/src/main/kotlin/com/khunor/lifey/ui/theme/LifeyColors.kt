@@ -55,25 +55,4 @@ object LifeyColors {
     fun tint(role: Color): Color = role.copy(alpha = TINT_ALPHA)
 
     const val TINT_ALPHA = 0.16f
-
-    // ---- Legacy aliases (D-X0.1) — remove in X4.16 ----
-    @Deprecated("v2", ReplaceWith("bg")) val trueBlack get() = bg
-    @Deprecated("v2", ReplaceWith("card")) val surface get() = card
-    @Deprecated("v2", ReplaceWith("nested")) val container get() = nested
-    @Deprecated("v2", ReplaceWith("control")) val containerHigh get() = control
-    @Deprecated("v2", ReplaceWith("raised")) val containerHighest get() = raised
-    @Deprecated("v2", ReplaceWith("clay")) val secondary get() = clay
-    @Deprecated("v2", ReplaceWith("success")) val tertiary get() = success
-    @Deprecated("v2", ReplaceWith("nested")) val primaryContainer get() = nested
-    @Deprecated("v2", ReplaceWith("tint(clay)")) val secondaryContainer get() = tint(clay)
-    @Deprecated("v2", ReplaceWith("tint(success)")) val tertiaryContainer get() = tint(success)
-    @Deprecated("v2", ReplaceWith("text")) val onSurface get() = text
-    @Deprecated("v2", ReplaceWith("text2")) val onSurfaceVariant get() = text2
-    @Deprecated("v2", ReplaceWith("primary")) val positive get() = primary
-    @Deprecated("v2", ReplaceWith("calories")) val negative get() = calories
-    @Deprecated("v2", ReplaceWith("error")) val onErrorContainer get() = error
-    @Deprecated("v2", ReplaceWith("tint(error)")) val errorContainer get() = tint(error)
-    @Deprecated("v2", ReplaceWith("bg")) val onError get() = bg
-    @Deprecated("v2", ReplaceWith("ghost")) val ghostedOnSurface get() = ghost
-    @Deprecated("v2", ReplaceWith("text2")) val standaloneIndicator get() = text2
 }

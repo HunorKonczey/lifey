@@ -23,9 +23,4 @@ object LifeyShapes {
         RoundedCornerShape(max(parent.value - padding.value, 0f).dp)
 
     private fun max(a: Float, b: Float) = if (a > b) a else b
-
-    // ---- Legacy aliases (D-X0.1) — remove in X4.16 ----
-    @Deprecated("v2", ReplaceWith("tag")) val chip get() = tag
-    @Deprecated("v2", ReplaceWith("control")) val button get() = control
-    @Deprecated("v2", ReplaceWith("hero")) val cardLarge get() = hero
 }

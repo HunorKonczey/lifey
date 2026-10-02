@@ -57,14 +57,13 @@ dependencies {
     // Compose for Wear OS UI (docs/40-watch-app-plan.md §5, F3).
     implementation(platform("androidx.compose:compose-bom:2026.06.00"))
     implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.wear.compose:compose-material:1.6.2")
     // 1.6.2: androidx.wear.compose.foundation.pager's HorizontalPager, needed
     // for its `rotaryScrollableBehavior` param (1.4.1 only has the plain
     // androidx.compose.foundation.pager one, with no rotary/crown support).
     implementation("androidx.wear.compose:compose-foundation:1.6.2")
     // Material 3 for Wear (redesign plan 79, D-X0.8): EdgeButton, TransformingLazyColumn, ScreenScaffold/
     // AppScaffold + TimeText, HorizontalPageIndicator, Button, AlertDialog. Same version line as the
-    // foundation; coexists with the Material 2 artifact above until X4.16 removes that one.
+    // foundation. Material 2 (`compose-material`) is gone since X4.16.
     implementation("androidx.wear.compose:compose-material3:1.6.2")
     // AmbientLifecycleObserver for the Always-On layouts (D-X0.15); required for any ambient support.
     implementation("androidx.wear:wear:1.3.0")
@@ -73,7 +72,7 @@ dependencies {
     // fitness_center, timer, pause/stop, heart_broken, priority_high —
     // docs/40-watch-app-plan.md §12.1 B6). Wear Compose's own `Icon` accepts
     // any `ImageVector`, so this classic Compose Material icon pack works
-    // fine here even though the rest of the UI uses `compose-material` (Wear).
+    // fine here with the Wear Material 3 components.
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 

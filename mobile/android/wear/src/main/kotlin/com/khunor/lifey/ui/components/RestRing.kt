@@ -17,7 +17,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Text
+import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import com.khunor.lifey.ui.theme.LifeyColors
