@@ -33,6 +33,20 @@ val w2Frames: Map<String, @Composable () -> Unit> = mapOf(
             )
         }
     },
+    "W2.3" to frame2 {
+        LifeyAppScaffold {
+            PickerContent(
+                title = "Összes tevékenység",
+                rows = listOf(
+                    PickerRow("Futás", null, RowLeading.Tinted(Icons.Filled.DirectionsRun, LifeyColors.calories), onClick = {}),
+                    PickerRow("Gyaloglás", null, RowLeading.Tinted(Icons.Filled.DirectionsRun, LifeyColors.cardioWalking), onClick = {}),
+                    PickerRow("Túrázás", null, RowLeading.Tinted(Icons.Filled.DirectionsRun, LifeyColors.cardioHiking), onClick = {}),
+                    PickerRow("Kosárlabda", null, RowLeading.Tinted(Icons.Filled.DirectionsRun, LifeyColors.cardioBasketball), onClick = {}),
+                ),
+                emptyHint = null,
+            )
+        }
+    },
     "W2.2b" to frame2 { // no synced templates: the empty hint, centred
         LifeyAppScaffold {
             PickerContent(

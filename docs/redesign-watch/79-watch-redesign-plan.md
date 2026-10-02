@@ -1297,9 +1297,10 @@ permission revoke/grant; failure paths.
 - **Verify:** fixture; with and without synced templates (empty hint as Apple AW2.4, centred).
 - *As built:* StandalonePickerScreen.kt rewritten: PickerContent (stateless, PickerRow list + empty hint) over LifeyScreen/TransformingLazyColumn; every row — quick strength (raised + Bolt holder), templates (title + 'n gyakorlat'), cardio types (accent icon circle), 'all types' — is a ListRow pill; the Chip/card mix is gone. Back = swipe or hardware back through DismissibleOverlay(onDismiss = onBack) instead of the corner arrow; the callbacks and the store reads are unchanged, MainActivity untouched. Deviation: ListRow has no trailing chevron (the canvas draws one on templates) — rows are plain pills. The empty-hint text (standalone_empty_hint) is the existing key. Fixtures W2.2 / W2.2b.
 
-### X4.3 — Watch Wear: all activity types (W2.3)
+### X4.3 — Watch Wear: all activity types (W2.3) ✅
 - Same pill rows; title inside the top chord (14 sp, one line) that slides under `TimeText` when scrolled.
 - **Verify:** fixture; HU at 192 dp.
+- *As built:* Built with X4.2's rewrite: the 'Összes tevékenység' page is the same PickerContent over the full allCardio list, shown inside its own DismissibleOverlay so a swipe returns to the picker (an inner back handler wins over the picker's own, so it never skips to idle). The title scrolls away under the TimeText; it uses the title style (16/15 sp, one line) rather than the canvas's 14 sp. Fixture W2.3 (the HU 192 dp check is for the emulator).
 
 ### X4.4 — Watch Wear: "another workout is running" (W2.4)
 - `StatusScreen`: `PriorityHigh` in a calories-tint circle (warning = calories, replaces the v1 `negative`
