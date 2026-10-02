@@ -585,7 +585,7 @@ emulator running the Flutter app for phone-driven flows (as in docs/watch/40 §1
 
 ---
 
-## X0.0 — Docs: make the canvases openable
+## X0.0 — Docs: make the canvases openable ✅
 
 - Files: `docs/redesign-watch/support.js` (copy of the newest canvas runtime, `docs/redesign-web/support.js`;
   if a canvas does not render with it, try `docs/redesign/support.js` and note which one works),
@@ -596,6 +596,8 @@ emulator running the Flutter app for phone-driven flows (as in docs/watch/40 §1
   the README; the canvas files are not edited.
 - **Verify:** `python -m http.server 5520 --directory docs/redesign-watch`; all five canvases render every
   frame and the cross-links between them work.
+- *As built:* `docs/redesign-web/support.js` works. The runtime pulls React/Babel from unpkg; in the sandbox
+  they are served from npm copies via Playwright request routing (see §4.3). The DS canvas rendered headless.
 
 ---
 

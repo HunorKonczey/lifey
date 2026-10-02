@@ -84,6 +84,9 @@ Mobile uses **Plus Jakarta Sans**. On watch, use the platform system font
 
 ## 2. Color tokens (complete — this is the entire palette)
 
+> **Superseded:** the token values below are the v1 palette. The v2 watch values live in
+> [docs/redesign-watch/79-watch-redesign-plan.md](../redesign-watch/79-watch-redesign-plan.md) D-X0.2.
+
 The watch app uses the **dark palette only**. `#000000` true black is allowed
 (and encouraged) as the outermost background on AMOLED; the warm near-blacks
 below are the brand's dark surfaces layered on top of it.
