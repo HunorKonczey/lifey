@@ -1599,3 +1599,6 @@ After fix-1 the Wear module's compiler output shrank from 38 errors to one: the 
 
 ### X0w.fix-3 — 2026-10-02 (CI run for fix-2)
 The whole Wear module compiled for the first time (`:wear:assembleDebug` up to date; the one remaining main-source error was fixed by fix-2). The unit-test compile then failed: `java.awt.Font` is not on the Android unit-test classpath. `FontCoverageTest` now reads the TTF `cmap` table itself (a 40-line format-4 reader); run on the real font files in a scratch JVM project it passes 4/4 (glyph coverage of both subsets, wordmark glyphs, Apple/Wear byte identity, font-scale clamp).
+
+### X0w.fix-4 — 2026-10-02 (CI run 287)
+The Wear unit tests ran for the first time: 17 of 18 passed (contrast, metrics, ambient formatting, font coverage). `TokenParityTest` failed with `NoSuchMethodException`: `Color` is an inline value class, so `LifeyColors`' getters are name-mangled and reflection cannot find them. The test now uses an explicit name → `Color` map (22 tokens) and fails if the Apple file has a token the map lacks — so a new token still has to be added on both sides.

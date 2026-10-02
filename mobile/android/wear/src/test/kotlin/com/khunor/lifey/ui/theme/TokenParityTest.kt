@@ -21,10 +21,25 @@ class TokenParityTest {
         .findAll(swift.readText())
         .associate { it.groupValues[1] to (0xFF000000.toInt() or it.groupValues[2].replace("_", "").toInt(16)) }
 
-    private fun wearToken(name: String): Int {
-        val getter = LifeyColors::class.java.getMethod("get" + name.replaceFirstChar { it.uppercase() })
-        return (getter.invoke(LifeyColors) as Color).toArgb()
-    }
+    /**
+     * Every palette token by name. [Color] is an inline value class, so its getters are name-mangled and cannot
+     * be found by reflection; the map is explicit instead — and the test fails when the Apple file gains a
+     * token this map does not know, so a new token has to be added on both sides.
+     */
+    private val wearTokens: Map<String, Color> = mapOf(
+        "bg" to LifeyColors.bg, "card" to LifeyColors.card, "nested" to LifeyColors.nested,
+        "control" to LifeyColors.control, "raised" to LifeyColors.raised, "outline" to LifeyColors.outline,
+        "text" to LifeyColors.text, "text2" to LifeyColors.text2, "text3" to LifeyColors.text3,
+        "ghost" to LifeyColors.ghost, "primary" to LifeyColors.primary, "onPrimary" to LifeyColors.onPrimary,
+        "heart" to LifeyColors.heart, "calories" to LifeyColors.calories, "success" to LifeyColors.success,
+        "error" to LifeyColors.error, "clay" to LifeyColors.clay,
+        "cardioWalking" to LifeyColors.cardioWalking, "cardioHiking" to LifeyColors.cardioHiking,
+        "cardioIndoorBike" to LifeyColors.cardioIndoorBike, "cardioBasketball" to LifeyColors.cardioBasketball,
+        "cardioFootball" to LifeyColors.cardioFootball,
+    )
+
+    private fun wearToken(name: String): Int =
+        (wearTokens[name] ?: error("token '$name' exists in LifeyColors.swift but not in the Wear parity map")).toArgb()
 
     @Test
     fun appleFileHasTheTokens() {
