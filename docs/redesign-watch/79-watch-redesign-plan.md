@@ -1291,10 +1291,11 @@ permission revoke/grant; failure paths.
 - **Verify:** fixture; tap → picker.
 - *As built:* IdleScreen.kt rewritten: Material Eco icon in a nested 44 dp holder (the hand-drawn LeafMark and the dial-fraction maths are gone), the 'Lifey' wordmark in the PJS metric style, an M3 Button at WatchMetrics.buttonHeight (52/48 dp) with the existing a11y label, and the quiet 'vagy indítsd a telefonon' line; TimeText drawn directly. New debug FramesW2.kt (w2Frames, merged into galleryFrames) with fixture W2.1.
 
-### X4.2 — Watch Wear: picker (W2.2)
+### X4.2 — Watch Wear: picker (W2.2) ✅
 - Every row an M3 Button pill (`ListRow`), including quick strength (highlighted: `raised` + icon circle);
   no corner arrow (swipe back to idle); `TransformingLazyColumn` (≤ 12 % shrink); the Chip + card mix gone.
 - **Verify:** fixture; with and without synced templates (empty hint as Apple AW2.4, centred).
+- *As built:* StandalonePickerScreen.kt rewritten: PickerContent (stateless, PickerRow list + empty hint) over LifeyScreen/TransformingLazyColumn; every row — quick strength (raised + Bolt holder), templates (title + 'n gyakorlat'), cardio types (accent icon circle), 'all types' — is a ListRow pill; the Chip/card mix is gone. Back = swipe or hardware back through DismissibleOverlay(onDismiss = onBack) instead of the corner arrow; the callbacks and the store reads are unchanged, MainActivity untouched. Deviation: ListRow has no trailing chevron (the canvas draws one on templates) — rows are plain pills. The empty-hint text (standalone_empty_hint) is the existing key. Fixtures W2.2 / W2.2b.
 
 ### X4.3 — Watch Wear: all activity types (W2.3)
 - Same pill rows; title inside the top chord (14 sp, one line) that slides under `TimeText` when scrolled.
