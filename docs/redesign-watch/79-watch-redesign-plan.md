@@ -1596,3 +1596,6 @@ Bugs: none open from the comparison. Open for the Mac pass (could not be exercis
 
 ### X0w.fix-2 — 2026-10-02 (CI run 285, after fix-1)
 After fix-1 the Wear module's compiler output shrank from 38 errors to one: the Material 2 `SwipeToDismissBox` takes the *foundation* `SwipeToDismissBoxState`, so `rememberSwipeToDismissBoxState` has to come from `androidx.wear.compose.foundation`, not `androidx.wear.compose.material`. Import swapped. (Each CI cycle is ~15 min because `flutter build apk` runs the Flutter tests first.)
+
+### X0w.fix-3 — 2026-10-02 (CI run for fix-2)
+The whole Wear module compiled for the first time (`:wear:assembleDebug` up to date; the one remaining main-source error was fixed by fix-2). The unit-test compile then failed: `java.awt.Font` is not on the Android unit-test classpath. `FontCoverageTest` now reads the TTF `cmap` table itself (a 40-line format-4 reader); run on the real font files in a scratch JVM project it passes 4/4 (glyph coverage of both subsets, wordmark glyphs, Apple/Wear byte identity, font-scale clamp).
