@@ -79,7 +79,7 @@ public class ChatMetrics {
                 .description("Chat SSE connections currently open on this instance")
                 .register(registry);
 
-        for (String kind : new String[]{"text", "image"}) {
+        for (String kind : new String[]{"text", "image", "card"}) {
             messagesSent(kind);
         }
         for (PushDecision decision : PushDecision.values()) {
@@ -94,7 +94,7 @@ public class ChatMetrics {
         relationshipsReconciled();
     }
 
-    /** @param kind {@code text} or {@code image} — the split the storage cost follows */
+    /** @param kind {@code text}, {@code image} or {@code card} — the split the storage cost follows */
     public void messageSent(String kind) {
         messagesSent(kind).increment();
     }

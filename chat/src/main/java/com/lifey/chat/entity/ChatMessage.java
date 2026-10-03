@@ -13,7 +13,7 @@ import lombok.Setter;
 import java.time.Instant;
 
 /**
- * One plain-text message. Immutable once written, apart from the tombstone:
+ * One message: plain text, an image or a result card. Immutable once written, apart from the tombstone:
  * deleting clears {@link #body} and stamps {@link #deletedAt}, leaving the row
  * in place so the other side keeps the context of their replies
  * (docs/chat/40-trainer-chat-plan.md §1.3/2).
@@ -69,8 +69,31 @@ public class ChatMessage extends BaseEntity {
     @Column(name = "attachment_byte_size")
     private Integer attachmentByteSize;
 
+    /**
+     * The shared result card, as the validated JSON text of a
+     * {@code MessageCard}, and its kind beside it for the database to check.
+     * Both set or both null (docs/chat/83-chat-result-card-plan.md §2.4). Never
+     * read as data by anything but the clients' renderers — it is what the
+     * sender said, not a record (§2.3).
+     */
+    @Column(name = "card_kind", length = 16)
+    private String cardKind;
+
+    @Column(name = "card_data")
+    private String cardData;
+
     public boolean hasAttachment() {
         return attachmentWidth != null;
+    }
+
+    public boolean hasCard() {
+        return cardKind != null;
+    }
+
+    /** Clears the card; part of the tombstone, so the details really go (§8 risk 3). */
+    public void clearCard() {
+        cardKind = null;
+        cardData = null;
     }
 
     /** Clears the metadata; the bytes are removed by the caller (§18.4/2). */

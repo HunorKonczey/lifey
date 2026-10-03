@@ -28,7 +28,8 @@ public final class ChatMapper {
                 message.getClientMessageId(),
                 message.getCreatedAt(),
                 message.getDeletedAt(),
-                toAttachment(message));
+                toAttachment(message),
+                MessageCards.fromJson(message.getCardData()));
     }
 
     /** Metadata only — the bytes are a separate, cacheable request (§18.2). */

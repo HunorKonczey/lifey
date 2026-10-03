@@ -12,6 +12,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -26,6 +27,8 @@ import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -436,6 +439,130 @@ class ChatFlowIntegrationTest {
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.items[0].id").value(first))
                 .andExpect(jsonPath("$.hasMore").value(false));
+    }
+
+    // --- result cards (docs/chat/83) ---------------------------------------
+
+    private static final String PR_CARD = "{\"kind\":\"PR\",\"sessionId\":481,\"occurredAt\":\"2026-10-03T07:12:00Z\","
+            + "\"pr\":{\"exerciseName\":\"Bench press\",\"prType\":\"MAX_WEIGHT\",\"value\":102.5,"
+            + "\"previousValue\":100,\"weightKg\":102.5,\"reps\":3}}";
+
+    private ResultActions sendCard(long conversationId, String token, String card, String caption,
+                                   String clientMessageId) throws Exception {
+        String body = caption == null ? "" : "\"body\":\"" + caption + "\",";
+        return mockMvc.perform(post("/api/v1/chat/conversations/" + conversationId + "/messages")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{" + body + "\"clientMessageId\":\"" + clientMessageId + "\",\"card\":" + card + "}"));
+    }
+
+    @Test
+    void aCardIsAWholeMessage_andTheOtherSideReadsItBackFromPostgres() throws Exception {
+        long conversationId = openConversation();
+
+        sendCard(conversationId, clientToken, PR_CARD, null, "client-card-1")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.body").doesNotExist())
+                .andExpect(jsonPath("$.card.kind").value("PR"));
+
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + trainerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].card.kind").value("PR"))
+                .andExpect(jsonPath("$.items[0].card.sessionId").value(481))
+                .andExpect(jsonPath("$.items[0].card.occurredAt").value("2026-10-03T07:12:00Z"))
+                .andExpect(jsonPath("$.items[0].card.pr.exerciseName").value("Bench press"))
+                .andExpect(jsonPath("$.items[0].card.pr.previousValue").value(100.0));
+
+        // The conversation list carries the same full message as its preview.
+        mockMvc.perform(get("/api/v1/chat/conversations").header("Authorization", "Bearer " + trainerToken))
+                .andExpect(jsonPath("$.items[0].lastMessage.card.kind").value("PR"))
+                .andExpect(jsonPath("$.items[0].unreadCount").value(1));
+    }
+
+    @Test
+    void aCardKeepsItsCaption_andReplayingTheSameIdStoresOne() throws Exception {
+        long conversationId = openConversation();
+
+        sendCard(conversationId, clientToken, PR_CARD, "Végre!", "card-same-id")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.body").value("Végre!"));
+        sendCard(conversationId, clientToken, PR_CARD, "Végre!", "card-same-id")
+                .andExpect(status().isOk());
+
+        Integer rows = jdbcClient.sql("select count(*) from chat_messages where conversation_id = ?")
+                .param(conversationId).query(Integer.class).single();
+        assertThat(rows).isEqualTo(1);
+    }
+
+    @Test
+    void aCardOfTheWrongShapeIsRefused_andNothingIsStored() throws Exception {
+        long conversationId = openConversation();
+        String wrong = "{\"kind\":\"WORKOUT\",\"occurredAt\":\"2026-10-03T07:12:00Z\","
+                + "\"pr\":{\"exerciseName\":\"Squat\",\"prType\":\"MAX_WEIGHT\",\"value\":140}}";
+
+        sendCard(conversationId, clientToken, wrong, null, "wrong-card").andExpect(status().isBadRequest());
+
+        Integer rows = jdbcClient.sql("select count(*) from chat_messages where conversation_id = ?")
+                .param(conversationId).query(Integer.class).single();
+        assertThat(rows).isZero();
+    }
+
+    @Test
+    void deletingACardMessageClearsTheCardFromTheTable() throws Exception {
+        long conversationId = openConversation();
+        String response = sendCard(conversationId, clientToken, PR_CARD, null, "card-to-delete")
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long messageId = idAt(response, "$.id");
+
+        mockMvc.perform(delete("/api/v1/chat/messages/" + messageId)
+                        .header("Authorization", "Bearer " + clientToken))
+                .andExpect(status().isNoContent());
+
+        // Gone from the row itself, not just hidden by the response mapper.
+        var row = jdbcClient.sql("select card_kind, card_data from chat_messages where id = ?")
+                .param(messageId).query().singleRow();
+        assertThat(row.get("card_kind")).isNull();
+        assertThat(row.get("card_data")).isNull();
+
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + trainerToken))
+                .andExpect(jsonPath("$.items[0].card").doesNotExist())
+                .andExpect(jsonPath("$.items[0].deletedAt").isNotEmpty());
+    }
+
+    /**
+     * The service's "body or image or card" and the table's check are two
+     * statements of one rule; this is the test that keeps them agreeing.
+     */
+    @Test
+    void theTablesOwnChecksAgreeWithTheServiceRule() throws Exception {
+        long conversationId = openConversation();
+        String insert = "insert into chat_messages (conversation_id, sender_id, client_message_id, created_at, "
+                + "card_kind, card_data) values (?, ?, ?, now(), ?, ?)";
+
+        // A card with nothing else is a valid row (V1001 re-created the content check).
+        jdbcClient.sql(insert).params(conversationId, clientId, "ck-ok", "WORKOUT", "{}").update();
+
+        // The pair is all-or-nothing, in both directions.
+        assertThatThrownBy(() -> jdbcClient.sql(insert)
+                .params(conversationId, clientId, "ck-kind-only", "WORKOUT", null).update())
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbcClient.sql(
+                "insert into chat_messages (conversation_id, sender_id, client_message_id, created_at, body, card_data) "
+                        + "values (?, ?, ?, now(), 'hi', '{}')")
+                .params(conversationId, clientId, "ck-data-only").update())
+                .isInstanceOf(DataIntegrityViolationException.class);
+        // Only the kinds the app knows.
+        assertThatThrownBy(() -> jdbcClient.sql(insert)
+                .params(conversationId, clientId, "ck-unknown", "MEAL", "{}").update())
+                .isInstanceOf(DataIntegrityViolationException.class);
+        // A row with no content at all is still refused.
+        assertThatThrownBy(() -> jdbcClient.sql(
+                "insert into chat_messages (conversation_id, sender_id, client_message_id, created_at) "
+                        + "values (?, ?, ?, now())")
+                .params(conversationId, clientId, "ck-empty").update())
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     // --- helpers -----------------------------------------------------------

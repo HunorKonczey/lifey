@@ -334,6 +334,33 @@ class ChatNotificationServiceImplTest {
 
     // --- fixtures ----------------------------------------------------------
 
+    @Test
+    void aCardMessageWithNoBody_stillSaysWhatItIs() {
+        storedCard("WORKOUT", null);
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        // A card has no text at all — without the marker this push would be blank.
+        assertThat(capturePushTo(CLIENT_ID).body()).isEqualTo("🏋️ Shared a workout");
+    }
+
+    @Test
+    void aRecordCard_isLocalizedAndKeepsItsCaption() {
+        storedCard("PR", "Végre megvan!");
+        when(preferences.load(CLIENT_ID)).thenReturn(prefs(true, 0, null, null, true));
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        assertThat(capturePushTo(CLIENT_ID).body()).isEqualTo("🏆 Rekordot osztott meg · Végre megvan!");
+    }
+
+    private void storedCard(String kind, String caption) {
+        storedMessage(TRAINER_ID, caption);
+        ChatMessage message = messageRepository.findById(MESSAGE_ID).orElseThrow();
+        message.setCardKind(kind);
+        message.setCardData("{}");
+    }
+
     private void storedMessage(Long senderId, String body) {
         ChatMessage message = new ChatMessage();
         message.setId(MESSAGE_ID);

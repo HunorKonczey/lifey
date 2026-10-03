@@ -7,6 +7,7 @@ import com.lifey.chat.ChatMessageStoredEvent;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.dto.ChatPeerRole;
 import com.lifey.chat.dto.ConversationResponse;
+import com.lifey.chat.dto.MessageCard;
 import com.lifey.chat.dto.MessageListResponse;
 import com.lifey.chat.dto.SendMessageRequest;
 import com.lifey.chat.entity.ChatConversation;
@@ -17,6 +18,7 @@ import com.lifey.chat.exception.AttachmentTooLargeException;
 import com.lifey.chat.exception.ChatDisabledException;
 import com.lifey.chat.exception.ConversationArchivedException;
 import com.lifey.chat.exception.InvalidMessageBodyException;
+import com.lifey.chat.exception.InvalidMessageCardException;
 import com.lifey.chat.repository.ChatConversationRepository;
 import com.lifey.chat.repository.ChatMessageAttachmentRepository;
 import com.lifey.chat.repository.ChatMessageRepository;
@@ -179,7 +181,7 @@ class ChatServiceImplTest {
 
     @Test
     void sendMessage_storesMessageAndUpdatesConversationPointers() {
-        var result = chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("  Holnap 17:00 jó?  ", "uuid-1"));
+        var result = chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("  Holnap 17:00 jó?  ", "uuid-1", null));
 
         assertThat(result.created()).isTrue();
         assertThat(result.message().body()).isEqualTo("Holnap 17:00 jó?");
@@ -190,7 +192,7 @@ class ChatServiceImplTest {
 
     @Test
     void sendMessage_marksTheSendersOwnMessageAsRead() {
-        chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Persze!", "uuid-1"));
+        chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Persze!", "uuid-1", null));
 
         assertThat(trainerParticipant.getLastReadMessageId()).isEqualTo(100L);
         assertThat(trainerParticipant.getLastReadAt()).isNotNull();
@@ -202,7 +204,7 @@ class ChatServiceImplTest {
         when(messageRepository.findByConversationIdAndClientMessageId(CONVERSATION_ID, "uuid-1"))
                 .thenReturn(Optional.of(stored));
 
-        var result = chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Persze!", "uuid-1"));
+        var result = chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Persze!", "uuid-1", null));
 
         assertThat(result.created()).isFalse();
         assertThat(result.message().id()).isEqualTo(42L);
@@ -215,7 +217,7 @@ class ChatServiceImplTest {
 
     @Test
     void sendMessage_publishesTheStoredEventThatDrivesThePush() {
-        chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Persze!", "uuid-1"));
+        chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Persze!", "uuid-1", null));
 
         verify(eventPublisher).publishEvent(new ChatMessageStoredEvent(100L));
     }
@@ -227,7 +229,7 @@ class ChatServiceImplTest {
         // write (docs/chat/44-chat-service-extraction-plan.md §5.4).
         when(relationshipGuard.findActive(RELATIONSHIP_ID)).thenReturn(Optional.empty());
 
-        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1");
+        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1", null);
         assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(ConversationArchivedException.class);
         verify(messageRepository, never()).save(any());
@@ -237,7 +239,7 @@ class ChatServiceImplTest {
     void sendMessage_toArchivedConversation_isRejected() {
         conversation.setArchivedAt(Instant.now());
 
-        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1");
+        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1", null);
         assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(ConversationArchivedException.class);
         verify(messageRepository, never()).save(any());
@@ -250,7 +252,7 @@ class ChatServiceImplTest {
                 Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false,
                 Duration.ofHours(24), 8L * 1024 * 1024, 1600, 400, Duration.ofSeconds(2), Duration.ofSeconds(5), 2));
 
-        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1");
+        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1", null);
         assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(ChatDisabledException.class);
     }
@@ -259,7 +261,7 @@ class ChatServiceImplTest {
     void sendMessage_overTheConfiguredBodyLength_isRejected() {
         String tooLong = "x".repeat(2001);
 
-        var sendMessageRequest = new SendMessageRequest(tooLong, "uuid-1");
+        var sendMessageRequest = new SendMessageRequest(tooLong, "uuid-1", null);
         assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(InvalidMessageBodyException.class);
         verify(messageRepository, never()).save(any());
@@ -270,7 +272,7 @@ class ChatServiceImplTest {
         when(caller.currentUserId()).thenReturn(999L);
         when(conversationRepository.findByIdForParticipant(CONVERSATION_ID, 999L)).thenReturn(Optional.empty());
 
-        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1");
+        var sendMessageRequest = new SendMessageRequest("Hi", "uuid-1", null);
         assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, sendMessageRequest))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
@@ -629,6 +631,109 @@ class ChatServiceImplTest {
     }
 
     // --- fixtures ----------------------------------------------------------
+
+    // --- result cards (docs/chat/83) ---------------------------------------
+
+    @Test
+    void sendMessage_cardWithNoBody_isAWholeMessage() {
+        var result = chatService.sendMessage(CONVERSATION_ID,
+                new SendMessageRequest(null, "uuid-1", prCard(" Bench press ")));
+
+        assertThat(result.created()).isTrue();
+        assertThat(result.message().body()).isNull();
+        assertThat(result.message().card()).isNotNull();
+        // What was validated is what is stored and served: trimmed.
+        assertThat(result.message().card().pr().exerciseName()).isEqualTo("Bench press");
+
+        ArgumentCaptor<ChatMessage> captor = ArgumentCaptor.captor();
+        verify(messageRepository).save(captor.capture());
+        assertThat(captor.getValue().getCardKind()).isEqualTo("PR");
+        assertThat(captor.getValue().getCardData()).contains("Bench press").contains("2026-10-03T07:12:00Z");
+        verify(attachmentRepository, never()).save(any());
+    }
+
+    @Test
+    void sendMessage_cardWithACaption_keepsBoth() {
+        var result = chatService.sendMessage(CONVERSATION_ID,
+                new SendMessageRequest("  Végre!  ", "uuid-1", workoutCard()));
+
+        assertThat(result.message().body()).isEqualTo("Végre!");
+        assertThat(result.message().card().kind()).isEqualTo(MessageCard.Kind.WORKOUT);
+    }
+
+    @Test
+    void sendMessage_cardStillSpendsTheRateLimit() {
+        chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest(null, "uuid-1", workoutCard()));
+
+        verify(rateLimiter).requireSendAllowance(TRAINER_ID);
+    }
+
+    @Test
+    void sendMessage_cardOfTheWrongShape_isRejectedBeforeAnythingIsStored() {
+        MessageCard both = new MessageCard(MessageCard.Kind.WORKOUT, null, Instant.parse("2026-10-03T07:12:00Z"),
+                new MessageCard.Workout(MessageCard.WorkoutKind.STRENGTH, null, null, null, null, null, null),
+                new MessageCard.Pr("Squat", MessageCard.PrType.MAX_WEIGHT, 140.0, null, null, null));
+        var request = new SendMessageRequest(null, "uuid-1", both);
+
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, request))
+                .isInstanceOf(InvalidMessageCardException.class)
+                // To the caller it is the same 400 as any unstorable body.
+                .isInstanceOf(InvalidMessageBodyException.class);
+        verify(messageRepository, never()).save(any());
+        verify(rateLimiter, never()).requireSendAllowance(anyLong());
+    }
+
+    @Test
+    void sendMessage_blankBodyAndNoCard_isRejected() {
+        var request = new SendMessageRequest("   ", "uuid-1", null);
+
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, request))
+                .isInstanceOf(InvalidMessageBodyException.class);
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    void sendMessage_replayedCard_returnsTheStoredMessageWithoutWriting() {
+        ChatMessage stored = message(42L, TRAINER_ID, null, "uuid-1");
+        stored.setCardKind("WORKOUT");
+        stored.setCardData(com.lifey.chat.MessageCards.toJson(workoutCard()));
+        when(messageRepository.findByConversationIdAndClientMessageId(CONVERSATION_ID, "uuid-1"))
+                .thenReturn(Optional.of(stored));
+
+        // The replay even carries a different card — the stored one wins, like a different body does.
+        var result = chatService.sendMessage(CONVERSATION_ID,
+                new SendMessageRequest(null, "uuid-1", prCard("Deadlift")));
+
+        assertThat(result.created()).isFalse();
+        assertThat(result.message().card().kind()).isEqualTo(MessageCard.Kind.WORKOUT);
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteMessage_withACard_removesTheCardToo() {
+        ChatMessage stored = message(42L, TRAINER_ID, null, "uuid-1");
+        stored.setCardKind("PR");
+        stored.setCardData(com.lifey.chat.MessageCards.toJson(prCard("Bench press")));
+        when(messageRepository.findById(42L)).thenReturn(Optional.of(stored));
+
+        chatService.deleteMessage(42L);
+
+        // Left behind, the workout's details would stay readable in the table.
+        assertThat(stored.hasCard()).isFalse();
+        assertThat(stored.getCardData()).isNull();
+        assertThat(stored.getDeletedAt()).isNotNull();
+    }
+
+    private static MessageCard prCard(String exercise) {
+        return new MessageCard(MessageCard.Kind.PR, 481L, Instant.parse("2026-10-03T07:12:00Z"), null,
+                new MessageCard.Pr(exercise, MessageCard.PrType.MAX_WEIGHT, 102.5, 100.0, 102.5, 3));
+    }
+
+    private static MessageCard workoutCard() {
+        return new MessageCard(MessageCard.Kind.WORKOUT, 481L, Instant.parse("2026-10-03T07:12:00Z"),
+                new MessageCard.Workout(MessageCard.WorkoutKind.STRENGTH, "Push day", 3600, 8450.0, 6, null, 2),
+                null);
+    }
 
     private ChatMessage message(Long id, Long senderId, String body, String clientMessageId) {
         ChatMessage message = new ChatMessage();
