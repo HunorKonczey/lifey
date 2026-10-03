@@ -65,6 +65,8 @@ export const queryKeys = {
   },
   trainerInvites: {
     all: () => ["trainer-invites"] as const,
+    /** Under `all`, so every invite mutation that invalidates the live list refreshes the history too. */
+    history: (size: number) => ["trainer-invites", "history", size] as const,
   },
   trainerRequests: {
     /** This user's own most-recent request (docs/landing_page/66 §2) — there's only ever one row worth polling. */

@@ -3,7 +3,10 @@ package com.lifey.trainer.service;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.RespondToInviteRequest;
 import com.lifey.trainer.dto.TrainerInviteRequest;
+import com.lifey.trainer.dto.TrainerInviteHistoryResponse;
 import com.lifey.trainer.dto.TrainerInviteResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -12,6 +15,9 @@ public interface TrainerInviteService {
     TrainerInviteResponse invite(TrainerInviteRequest request);
 
     List<TrainerInviteResponse> findPendingForTrainer();
+
+    /** Every invite this trainer sent, newest first, each with its outcome (docs/redesign-web/82 section 2.2). */
+    Page<TrainerInviteHistoryResponse> findHistoryForTrainer(Pageable pageable);
 
     void cancel(Long inviteId);
 

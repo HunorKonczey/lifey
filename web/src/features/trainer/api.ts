@@ -24,6 +24,7 @@ import type {
   TrainerCalendarSessionResponse,
   TrainerClientResponse,
   TrainerInviteRequest,
+  TrainerInviteHistoryResponse,
   TrainerInviteResponse,
   TrainerPreferencesRequest,
   TrainerPreferencesResponse,
@@ -33,6 +34,9 @@ export const trainerApi = {
   invite: (body: TrainerInviteRequest) =>
     api.post<TrainerInviteResponse>("/trainer/invites", body),
   pendingInvites: () => api.get<TrainerInviteResponse[]>("/trainer/invites"),
+  /** Every invite ever sent, newest first, with its outcome (the live list above is only the pending ones). */
+  inviteHistory: (params: { page?: number; size?: number }) =>
+    api.get<Page<TrainerInviteHistoryResponse>>(`/trainer/invites/history?page=${params.page ?? 0}&size=${params.size ?? 30}`),
   cancelInvite: (id: number) => api.delete(`/trainer/invites/${id}`),
 
   clients: () => api.get<TrainerClientResponse[]>("/trainer/clients"),

@@ -1,5 +1,8 @@
 package com.lifey.trainer;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import com.lifey.trainer.entity.TrainerClient;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -56,6 +59,13 @@ public interface TrainerClientRepository extends JpaRepository<TrainerClient, Lo
 
     List<TrainerClient> findByTrainerIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
             Long trainerId, TrainerClientStatus status, Instant now);
+
+    /**
+     * Every invite a trainer ever sent, newest first: the invite history (docs/redesign-web/82 section 2.2). The
+     * client is fetched with the page because the response shows its e-mail on every row.
+     */
+    @EntityGraph(attributePaths = "client")
+    Page<TrainerClient> findByTrainerIdOrderByCreatedAtDescIdDesc(Long trainerId, Pageable pageable);
 
     Optional<TrainerClient> findByIdAndTrainerIdAndStatus(Long id, Long trainerId, TrainerClientStatus status);
 

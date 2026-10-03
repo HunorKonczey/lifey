@@ -143,7 +143,7 @@
       "revoked": "Invite revoked",
       "revokeFailed": "Failed to revoke invite",
       "emptyTitle": "No pending invites",
-      "emptyBody": "Invites automatically expire after 24 hours — expired ones don't show up here.",
+      "emptyBody": "Invites expire automatically after 24 hours; the ones that already have an outcome are in the history below.",
       "cardTitle": "Invite a client",
       "statusPending": "Pending",
       "statusExpired": "Expired",
@@ -151,7 +151,18 @@
       "revokeConfirmTitle": "Revoke this invite?",
       "revokeConfirmBody": "The invite sent to {email} stops working. You can send a new one later.",
       "revokeConfirm": "Revoke",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "historyTitle": "History · {count}",
+      "outcomeAccepted": "Accepted",
+      "outcomeDeclined": "Declined",
+      "outcomeCancelled": "Withdrawn",
+      "outcomeExpired": "Expired",
+      "outcomeAcceptedAt": "accepted {time}",
+      "outcomeDeclinedAt": "declined {time}",
+      "outcomeCancelledAt": "withdrawn {time}",
+      "outcomeExpiredAt": "expired {time}",
+      "relationshipEndedAt": "relationship ended {time}",
+      "showMore": "Show more"
     },
     "billing": {
       "title": "Billing",

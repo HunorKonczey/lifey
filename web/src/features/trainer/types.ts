@@ -5,6 +5,21 @@ export interface TrainerInviteResponse {
   expiresAt: string;
 }
 
+/** How an invite ended (docs/redesign-web/82 section 2.2). */
+export type InviteOutcome = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELLED" | "EXPIRED";
+
+export interface TrainerInviteHistoryResponse {
+  id: number;
+  clientEmail: string;
+  outcome: InviteOutcome;
+  createdAt: string;
+  expiresAt: string;
+  /** When the client answered; null while unanswered and on a withdrawn invite. */
+  respondedAt: string | null;
+  /** When a withdrawn invite was withdrawn, or an accepted relationship ended; null otherwise. */
+  endedAt: string | null;
+}
+
 export interface TrainerInviteRequest {
   email: string;
 }

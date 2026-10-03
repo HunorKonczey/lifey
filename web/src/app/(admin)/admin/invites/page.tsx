@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { Button, Card, ConfirmModal, Icon, TextField, TintedChip } from "@/components/ds";
 import { trainerApi } from "@/features/trainer/api";
-import { inviteStatus, inviteUrgent } from "@/features/trainer/invites";
+import { canResend, historyRows, inviteStatus, inviteUrgent, outcomeAt } from "@/features/trainer/invites";
 import { queryKeys, invalidationMap } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { useLocale } from "@/lib/hooks/useLocale";
@@ -17,14 +17,24 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
-import type { TrainerInviteResponse } from "@/features/trainer/types";
+import type { InviteOutcome, TrainerInviteResponse } from "@/features/trainer/types";
 
 /**
  * Invites with their state (W9-B): a "Kliens meghívása" card (e-mail + Küldés), then a row per invite — the e-mail, "3 napja
  * küldve", a status chip (Függő carbs tint · Lejárt neutral, from `expiresAt`) and the next step: "Visszavonás…" behind a
- * confirmation for a pending one, "Újraküldés" (a fresh invite to the same e-mail) for one that has run out. The API lists only
- * live invites, so there are no "Elfogadva" rows and no shareable link (D-W0.19).
+ * confirmation for a pending one, "Újraküldés" (a fresh invite to the same e-mail) for one that has run out. Below the live list
+ * the **history** (docs/redesign-web/82 S2): every invite that has an outcome — elfogadva, elutasítva, visszavonva, lejárt — newest
+ * first, "Továbbiak" for more. There is still no shareable link (D-W0.19).
  */
+const HISTORY_PAGE = 20;
+
+/** Icon, chip colour and label key of an outcome row. */
+const OUTCOME_LOOK: Record<Exclude<InviteOutcome, "PENDING">, { icon: string; color: string; label: string; at: string }> = {
+  ACCEPTED: { icon: "check_circle", color: "var(--primary)", label: "outcomeAccepted", at: "outcomeAcceptedAt" },
+  DECLINED: { icon: "cancel", color: "var(--text-2)", label: "outcomeDeclined", at: "outcomeDeclinedAt" },
+  CANCELLED: { icon: "mail_off", color: "var(--text-2)", label: "outcomeCancelled", at: "outcomeCancelledAt" },
+  EXPIRED: { icon: "schedule", color: "var(--text-2)", label: "outcomeExpired", at: "outcomeExpiredAt" },
+};
 export default function AdminInvitesPage() {
   const t = useTranslations("admin.invites");
   const queryClient = useQueryClient();
@@ -47,6 +57,14 @@ export default function AdminInvitesPage() {
     queryKey: queryKeys.trainerInvites.all(),
     queryFn: trainerApi.pendingInvites,
   });
+
+  const [historySize, setHistorySize] = useState(HISTORY_PAGE);
+  const { data: history } = useQuery({
+    queryKey: queryKeys.trainerInvites.history(historySize),
+    queryFn: () => trainerApi.inviteHistory({ size: historySize }),
+    placeholderData: keepPreviousData,
+  });
+  const pastInvites = historyRows(history?.content ?? []);
 
   const refresh = () => invalidationMap.trainerInvite.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
 
@@ -164,6 +182,46 @@ export default function AdminInvitesPage() {
               );
             })}
           </ul>
+        </section>
+      )}
+
+      {pastInvites.length > 0 && (
+        <section aria-label={t("historyTitle", { count: history?.totalElements ?? pastInvites.length })} className="flex flex-col gap-2">
+          <p className="type-overline" style={{ color: "var(--text-3)" }}>
+            {t("historyTitle", { count: history?.totalElements ?? pastInvites.length })}
+          </p>
+          <ul className="flex flex-col gap-2">
+            {pastInvites.map((row) => {
+              const look = OUTCOME_LOOK[row.outcome as Exclude<InviteOutcome, "PENDING">];
+              const ago = (iso: string) => formatDistanceToNow(new Date(iso), { addSuffix: true, locale: dateLocale });
+              return (
+                <li key={row.id} data-testid="invite-history-row" data-outcome={row.outcome}>
+                  <Card className="flex flex-wrap items-center gap-x-4 gap-y-2 !py-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--nested)" }}>
+                      <Icon name={look.icon} size={18} color={look.color} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="type-body block truncate" style={{ fontWeight: 700 }}>{row.clientEmail}</span>
+                      <span className="type-body-s block" style={{ color: "var(--text-3)" }}>
+                        {t("sentAt", { time: ago(row.createdAt) })}
+                        {` · ${t(look.at, { time: ago(outcomeAt(row)) })}`}
+                        {row.outcome === "ACCEPTED" && row.endedAt && ` · ${t("relationshipEndedAt", { time: ago(row.endedAt) })}`}
+                      </span>
+                    </span>
+                    <TintedChip label={t(look.label)} color={look.color} />
+                    {canResend(row.outcome) && (
+                      <Button variant="secondary" onClick={() => send(row.clientEmail)} disabled={inviteMutation.isPending}>{t("resend")}</Button>
+                    )}
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
+          {history && history.totalElements > historySize && (
+            <div>
+              <Button variant="secondary" onClick={() => setHistorySize((size) => size + HISTORY_PAGE)}>{t("showMore")}</Button>
+            </div>
+          )}
         </section>
       )}
 
