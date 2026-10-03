@@ -25,16 +25,16 @@ export async function ChatSection() {
           {t("eyebrow").toUpperCase()}
         </div>
         <h2 className="text-[28px] font-bold tracking-[-0.02em] leading-[1.14] mt-2.5">{t("titleMobile")}</h2>
-        <p className="text-[17px] leading-[1.55] mt-3" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-[17px] leading-[1.55] mt-3" style={{ color: "var(--text-2)" }}>
           {t("bodyMobile")}
         </p>
         <div
           className="rounded-lg border border-outline p-3 mt-4.5 flex flex-col gap-2"
-          style={{ background: "var(--surface)" }}
+          style={{ background: "var(--card)" }}
         >
           <div
             className="rounded-lg rounded-tl-sm px-2.5 py-2 text-[11.5px] leading-[1.5]"
-            style={{ background: "var(--surface-container)" }}
+            style={{ background: "var(--nested)" }}
           >
             {t("mockClientMsgShort")}
           </div>

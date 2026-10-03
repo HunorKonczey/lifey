@@ -35,7 +35,7 @@ export async function ProofStrip({
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <p
           className="text-lg md:text-xl font-medium leading-[1.6] max-w-[62ch]"
-          style={{ color: "var(--on-surface-variant)" }}
+          style={{ color: "var(--text-2)" }}
         >
           {t("fallback")}
         </p>

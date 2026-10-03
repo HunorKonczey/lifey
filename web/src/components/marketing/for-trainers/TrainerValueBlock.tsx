@@ -43,13 +43,13 @@ export function TrainerValueBlock({
 
       <section
         className="md:hidden py-9 px-4"
-        style={{ background: background === "bg" ? "var(--bg)" : "var(--surface-container)" }}
+        style={{ background: background === "bg" ? "var(--bg)" : "var(--nested)" }}
       >
         <div className="text-[11px] font-extrabold tracking-wide" style={{ color: "var(--primary)" }}>
           {eyebrow.toUpperCase()}
         </div>
         <h2 className="text-[24px] font-bold tracking-[-0.02em] leading-[1.16] mt-2.5">{title}</h2>
-        <p className="text-[15px] leading-[1.55] mt-3" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-[15px] leading-[1.55] mt-3" style={{ color: "var(--text-2)" }}>
           {body}
         </p>
         <ul className="flex flex-col gap-2 mt-4">

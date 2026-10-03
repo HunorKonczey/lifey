@@ -54,7 +54,7 @@ export default async function DownloadPage({
           <h1 className="text-xl font-extrabold">Lifey</h1>
         </div>
 
-        <p className="text-base font-medium" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-base font-medium" style={{ color: "var(--text-2)" }}>
           {footer("tagline")}
         </p>
 
@@ -66,7 +66,7 @@ export default async function DownloadPage({
           <InviteReassuranceLine text={t("inviteWaits")} />
         </Suspense>
 
-        <div className="flex items-center justify-center gap-3 mt-10 text-[11px]" style={{ color: "var(--muted)" }}>
+        <div className="flex items-center justify-center gap-3 mt-10 text-[11px]" style={{ color: "var(--text-3)" }}>
           <Link href="/legal/terms">{footer("legalTerms")}</Link>
           <span>·</span>
           <Link href="/legal/privacy">{footer("legalPrivacy")}</Link>

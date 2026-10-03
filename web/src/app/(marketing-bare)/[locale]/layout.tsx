@@ -40,9 +40,6 @@ export default async function BareMarketingLayout({
 
   return (
     <NextIntlClientProvider locale={locale}>
-      {/* Marks the marketing tree so globals.css can pin its pre-v2 palette
-          (D-W0.2) — `:has()` on `:root` sees this regardless of nesting. */}
-      <span data-surface="marketing" hidden aria-hidden="true" />
       <AttributionCapture />
       {children}
     </NextIntlClientProvider>

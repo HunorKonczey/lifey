@@ -25,7 +25,7 @@ export function ValueSection({
   return (
     <section
       className="hidden md:block py-24"
-      style={{ background: background === "bg" ? "var(--bg)" : "var(--surface-container)" }}
+      style={{ background: background === "bg" ? "var(--bg)" : "var(--nested)" }}
     >
       <div
         className="max-w-[1200px] mx-auto px-8 grid gap-14 items-center"
@@ -37,7 +37,7 @@ export function ValueSection({
             {eyebrow.toUpperCase()}
           </div>
           <h2 className="text-[44px] font-bold tracking-[-0.02em] leading-[1.1] mt-3.5">{title}</h2>
-          <p className="text-xl font-medium leading-[1.6] mt-4.5" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="text-xl font-medium leading-[1.6] mt-4.5" style={{ color: "var(--text-2)" }}>
             {body}
           </p>
           <ul className="flex flex-col gap-3 mt-6.5">

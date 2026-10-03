@@ -101,7 +101,7 @@ export default async function FaqPage({
 
       <div className="max-w-[1000px] mx-auto px-4 md:px-8">
         <h1 className="text-[32px] md:text-[44px] font-bold tracking-[-0.02em] text-center">{t("title")}</h1>
-        <p className="text-base md:text-lg mt-3 text-center max-w-[62ch] mx-auto" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-base md:text-lg mt-3 text-center max-w-[62ch] mx-auto" style={{ color: "var(--text-2)" }}>
           {t("sub")}
         </p>
 
@@ -113,7 +113,7 @@ export default async function FaqPage({
                   key={cat.id}
                   href={`#${cat.id}`}
                   className="text-sm font-bold py-2 border-l-2 pl-3.5"
-                  style={{ borderColor: "var(--outline)", color: "var(--on-surface-variant)" }}
+                  style={{ borderColor: "var(--outline)", color: "var(--text-2)" }}
                 >
                   {cat.label}
                 </a>
@@ -130,7 +130,7 @@ export default async function FaqPage({
                     <details
                       key={item.q}
                       className="group rounded-lg border border-outline px-5 py-4"
-                      style={{ background: "var(--surface-container)" }}
+                      style={{ background: "var(--nested)" }}
                     >
                       <summary className="flex items-center gap-4 cursor-pointer list-none">
                         <span className="text-base font-bold flex-1">{item.q}</span>
@@ -141,7 +141,7 @@ export default async function FaqPage({
                           expand_more
                         </span>
                       </summary>
-                      <p className="text-sm leading-[1.6] mt-3 max-w-[62ch]" style={{ color: "var(--on-surface-variant)" }}>
+                      <p className="text-sm leading-[1.6] mt-3 max-w-[62ch]" style={{ color: "var(--text-2)" }}>
                         {item.a}
                       </p>
                     </details>

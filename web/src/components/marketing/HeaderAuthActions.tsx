@@ -54,7 +54,7 @@ export function HeaderAuthActions({
         {variant === "desktop" && (
           <span
             className="w-11 h-11 rounded-pill flex items-center justify-center text-[15px] font-extrabold"
-            style={{ background: "var(--secondary)", color: "var(--bg)" }}
+            style={{ background: "var(--role)", color: "var(--bg)" }}
           >
             {initials}
           </span>
@@ -70,7 +70,7 @@ export function HeaderAuthActions({
           href="/login"
           onClick={onNavigate}
           className="h-[52px] flex items-center text-[17px] font-bold border-t border-outline mt-2"
-          style={{ color: "var(--on-surface-variant)" }}
+          style={{ color: "var(--text-2)" }}
         >
           {labels.login}
         </Link>
@@ -94,7 +94,7 @@ export function HeaderAuthActions({
       <Link
         href="/login"
         className="h-11 flex items-center px-4 text-[15px] font-bold"
-        style={{ color: "var(--on-surface)" }}
+        style={{ color: "var(--text)" }}
       >
         {labels.login}
       </Link>

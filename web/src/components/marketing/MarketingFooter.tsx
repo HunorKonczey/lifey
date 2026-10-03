@@ -9,7 +9,7 @@ export async function MarketingFooter() {
   const footer = await getTranslations("footer");
 
   return (
-    <footer id="site-footer" className="mt-8" style={{ background: "var(--surface)" }}>
+    <footer id="site-footer" className="mt-8" style={{ background: "var(--card)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-10 md:pt-12 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-8">
           <div>
@@ -27,7 +27,7 @@ export async function MarketingFooter() {
               </span>
               <span className="text-lg font-extrabold">Lifey</span>
             </div>
-            <p className="text-sm max-w-70" style={{ color: "var(--on-surface-variant)" }}>
+            <p className="text-sm max-w-70" style={{ color: "var(--text-2)" }}>
               {footer("tagline")}
             </p>
             <div className="mt-4">
@@ -61,7 +61,7 @@ export async function MarketingFooter() {
 
         <div
           className="border-t border-outline mt-8 pt-5 text-[12.5px]"
-          style={{ color: "var(--muted)" }}
+          style={{ color: "var(--text-3)" }}
         >
           {footer("copyright", { year: new Date().getFullYear() })}
         </div>
@@ -75,11 +75,11 @@ function FooterColumn({ heading, children }: { heading: string; children: React.
     <div>
       <div
         className="text-xs font-extrabold tracking-wide mb-3 uppercase"
-        style={{ color: "var(--muted)" }}
+        style={{ color: "var(--text-3)" }}
       >
         {heading}
       </div>
-      <div className="flex flex-col gap-2.5 text-sm" style={{ color: "var(--on-surface-variant)" }}>
+      <div className="flex flex-col gap-2.5 text-sm" style={{ color: "var(--text-2)" }}>
         {children}
       </div>
     </div>

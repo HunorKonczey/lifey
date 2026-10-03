@@ -24,10 +24,10 @@ export async function AppFeatureGrid() {
   ];
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--surface-container)" }}>
+    <section className="py-16 md:py-24" style={{ background: "var(--nested)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <h2 className="text-[28px] md:text-[44px] font-bold tracking-[-0.02em] max-w-[18ch]">{t("title")}</h2>
-        <p className="text-base md:text-xl mt-2.5 md:mt-3.5 max-w-[62ch]" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-base md:text-xl mt-2.5 md:mt-3.5 max-w-[62ch]" style={{ color: "var(--text-2)" }}>
           {t("sub")}
         </p>
 
@@ -40,7 +40,7 @@ export async function AppFeatureGrid() {
             >
               <span
                 className="material-symbols-rounded text-2xl md:text-[28px] shrink-0"
-                style={{ color: "var(--secondary)", fontVariationSettings: "'FILL' 1" }}
+                style={{ color: "var(--role)", fontVariationSettings: "'FILL' 1" }}
               >
                 {f.icon}
               </span>
@@ -48,7 +48,7 @@ export async function AppFeatureGrid() {
                 <div className="text-base md:text-[19px] font-bold md:mt-3.5">{f.title}</div>
                 <p
                   className="text-sm md:text-[15px] leading-[1.5] md:leading-[1.55] mt-0.5 md:mt-1.5"
-                  style={{ color: "var(--on-surface-variant)" }}
+                  style={{ color: "var(--text-2)" }}
                 >
                   {f.body}
                 </p>

@@ -204,6 +204,19 @@ Rejected: (a) changing values globally (recolours marketing, breaks its CI thres
 a wrapper class around the app shell — modals and toasts portal into `<body>` and would escape the scope.
 `app/not-found.tsx` belongs to marketing (it is the public 404) and gets the marker too.
 
+**Retired 2026-10-03.** The pin existed so the app retheme could not recolour a tree with its own CI gates; once
+W10 had deleted the legacy aliases, the pin was the *only* thing still defining the old variable names, and the
+marketing site was the last surface off the v2 palette. The marketing components were moved to the v2 tokens
+(`--surface`→`--card`, `--surface-container`→`--nested`, `--surface-high`→`--control`, `--on-surface`→`--text`,
+`--on-surface-variant`→`--text-2`, `--muted`→`--text-3`, `--secondary`→`--role`, `--tertiary`→`--primary`, per the
+table below), the two pin blocks, the legacy Tailwind colour keys and the `data-surface` markers were deleted, and
+the `rounded-sm/md/lg/input/nav` utilities now resolve to the v2 radius steps (8 / 14 / 22 / 14 / 22 / 30 → `--r-tag`,
+`--r-control`, `--r-card`, `--r-control`, `--r-card`, `--r-hero`). Known small deviation from the table: marketing's
+`--surface-high` chips/frame borders become `--control` in *both* themes (the table's light value, `--card`, would
+have made them white-on-white). Verified: `e2e/marketing` axe in both themes (50/50), `e2e/ds` (238/238), unit
+(1062), and a before/after screenshot pass of all nine marketing pages in both themes. **Not** re-measured:
+Lighthouse (needs a deployed URL) — the palette is lighter/different, so re-run `lhci` before trusting its thresholds.
+
 ### D-W0.3 v2 token names mirror the mobile `AppPalette`; legacy names stay as aliases until W10
 
 New CSS variables use the mobile names so a value can be looked up across clients:
@@ -3831,3 +3844,5 @@ frames were compared by eye, strip by strip).
 *The e2e specs.* The full `chromium` Playwright project (the backend-dependent specs) was run: **4 specs failed on the old UI and are updated** — `trainer-flow`, `trainer-calendar`, `trainer-compliance` (the removed "Your clients" modal; the templates / programs "⋯" menus instead of the row buttons; the client card's menu items; the Schedule header button; tabs as `tab` roles; the Day · Week · Month switch as radios, the filter popover and the confirm dialog living outside their old containers; the empty-hour fold; the date segments in the drawer; "Needs your attention today" and the Attention sort), and `trainer-chat` (the chat API is its own service on :8081 since the chat extraction — the spec now calls it there, and the web must be started with `NEXT_PUBLIC_CHAT_BASE_URL`, the `web-chat` dev config). `billing-blocked-dialog` used the removed `assign-template` / `program-assign-button` ids (the "⋯" menus now) and `dashboardTiles` (ds) the old `--metric-steps` name (W10.fix-1). **Result:** with the default backend **16 passed, 10 skipped**; the 10 skipped specs (billing banner, blocked dialog, over-limit archiving) skip themselves unless the backend runs with `BILLING_ENABLED=true` — they were run that way too and **all 10 passed**. (The four trainer specs fail under `BILLING_ENABLED=true`: their DB-granted trainers have no subscription, so the workspace is blocked — they are written for the default.) Two environment facts worth knowing: the chat spec needs the chat service and the `web-chat` web; the billing specs need `BILLING_ENABLED=true`.
 
 *Still not done:* the English pass of the trainer pages was done in the trainer's own (English) setting but the HU / EN pass of every page, the 200 % zoom pass, the phone on-screen keyboard and keyboard dragging remain unchecked (see `docs/REMAINING-WORK.md` §2.2).
+
+*Marketing palette (2026-10-03).* See D-W0.2 "Retired": the marketing tree is on the v2 tokens, the pin and the legacy variable names no longer exist anywhere in `globals.css`; `contrast.test.ts` now asserts that. The OG image (`lib/ogImage.tsx`, Satori, cannot read CSS variables) carries the v2 dark hexes by hand. Left as literals on purpose: the pastel avatar colours inside the marketing mocks (`ClientsMock`, `Hero`), which are illustration, not theme.

@@ -15,27 +15,27 @@ export async function PricingFinePrint() {
   return (
     <div className="grid md:grid-cols-[1.2fr_1fr] gap-6 mt-8 items-start">
       <div className="order-2 md:order-1">
-        <p className="hidden md:block text-[13px] leading-[1.75]" style={{ color: "var(--muted)" }}>
+        <p className="hidden md:block text-[13px] leading-[1.75]" style={{ color: "var(--text-3)" }}>
           {t("finePrint")}
         </p>
-        <p className="md:hidden text-xs leading-[1.7]" style={{ color: "var(--muted)" }}>
+        <p className="md:hidden text-xs leading-[1.7]" style={{ color: "var(--text-3)" }}>
           {t("finePrintMobile")}
         </p>
       </div>
 
-      <div className="order-1 md:order-2 rounded-lg p-5.5" style={{ background: "var(--surface-container)" }}>
+      <div className="order-1 md:order-2 rounded-lg p-5.5" style={{ background: "var(--nested)" }}>
         <div className="flex items-center gap-2">
-          <span className="material-symbols-rounded text-xl" style={{ color: "var(--secondary)", fontVariationSettings: "'FILL' 1" }}>
+          <span className="material-symbols-rounded text-xl" style={{ color: "var(--role)", fontVariationSettings: "'FILL' 1" }}>
             smartphone
           </span>
-          <div className="text-[13px] font-extrabold tracking-wide" style={{ color: "var(--secondary)" }}>
+          <div className="text-[13px] font-extrabold tracking-wide" style={{ color: "var(--role)" }}>
             {t("mobileProLabel").toUpperCase()}
           </div>
         </div>
 
         <div className="hidden md:block">
           <div className="text-lg font-bold mt-2.5">{t("mobileProTitle")}</div>
-          <p className="text-sm leading-[1.55] mt-1.5" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="text-sm leading-[1.55] mt-1.5" style={{ color: "var(--text-2)" }}>
             {t("mobileProBody")}
           </p>
           <div className="text-lg font-extrabold tabular-nums mt-3">
@@ -50,7 +50,7 @@ export async function PricingFinePrint() {
           <div className="text-base font-bold mt-1.5">
             {t("mobileProTitleMobile", { monthly: formatHuf(MOBILE_PRO.monthlyHuf) })}
           </div>
-          <div className="text-[13px] tabular-nums mt-0.5" style={{ color: "var(--muted)" }}>
+          <div className="text-[13px] tabular-nums mt-0.5" style={{ color: "var(--text-3)" }}>
             {t("mobileProSubMobile", { yearly: formatHuf(MOBILE_PRO.yearlyHuf) })}
           </div>
         </div>

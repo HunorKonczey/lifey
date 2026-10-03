@@ -15,12 +15,12 @@ export async function ManagePlanNotice({ billingHref }: { billingHref: string })
   return (
     <div
       className="mt-7 rounded-lg p-4.5 md:p-5 flex flex-col md:flex-row md:items-center gap-3.5 md:gap-4"
-      style={{ background: "var(--surface-container)" }}
+      style={{ background: "var(--nested)" }}
     >
       <span className="material-symbols-rounded text-2xl shrink-0" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>
         info
       </span>
-      <p className="text-sm flex-1" style={{ color: "var(--on-surface-variant)" }}>
+      <p className="text-sm flex-1" style={{ color: "var(--text-2)" }}>
         {t("manageNoticeText")}
       </p>
       <Link

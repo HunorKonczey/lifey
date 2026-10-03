@@ -256,13 +256,11 @@ describe("globals.css token map (D-W0.3)", () => {
     expect(resolve("m-protein", lightRaw)?.toUpperCase()).toBe(light.metrics.protein);
   });
 
-  it("the marketing pin restores the pre-v2 hexes untouched", () => {
-    const marketingRaw = parseDeclarations(extractBlock(':root:has([data-surface="marketing"]) {'));
-    const marketingLightRaw = parseDeclarations(extractBlock('[data-theme="light"]:has([data-surface="marketing"]) {'));
-    expect(marketingRaw.get("bg")).toBe("#161611");
-    expect(marketingRaw.get("primary")).toBe("#9DAE6B");
-    expect(marketingRaw.get("tertiary")).toBe("#6E9A6A"); // not re-pointed here
-    expect(marketingLightRaw.get("bg")).toBe("#F3F2E8");
-    expect(marketingLightRaw.get("primary")).toBe("#586E38");
+  it("the marketing pin is gone: no block scopes legacy values under data-surface (D-W0.2 retired)", () => {
+    expect(css).not.toContain('[data-surface="marketing"]');
+    // None of the legacy variable names is defined anywhere any more.
+    for (const name of ["surface", "surface-container", "surface-high", "on-surface", "on-surface-variant", "muted", "secondary", "tertiary", "metric-kcal", "goal-positive"]) {
+      expect(css, name).not.toMatch(new RegExp(`--${name}\s*:`));
+    }
   });
 });

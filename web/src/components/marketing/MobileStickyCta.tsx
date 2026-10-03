@@ -62,7 +62,7 @@ export function MobileStickyCta({ cta, noCard }: { cta: string; noCard: string }
       id="mobile-sticky-cta"
       className="md:hidden fixed left-0 right-0 bottom-0 z-30 px-4 pt-3 transition-transform duration-200"
       style={{
-        background: "var(--surface)",
+        background: "var(--card)",
         borderTop: "1px solid var(--outline)",
         paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
         transform: visible ? "translateY(0)" : "translateY(100%)",
@@ -77,7 +77,7 @@ export function MobileStickyCta({ cta, noCard }: { cta: string; noCard: string }
       >
         {cta}
       </Link>
-      <div className="text-center text-[11.5px] mt-2" style={{ color: "var(--muted)" }}>
+      <div className="text-center text-[11.5px] mt-2" style={{ color: "var(--text-3)" }}>
         {noCard}
       </div>
     </div>

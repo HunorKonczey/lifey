@@ -13,16 +13,16 @@ export async function SponsoredMock() {
   return (
     <div
       className="rounded-lg border border-outline p-5 md:p-6"
-      style={{ background: "var(--surface)", boxShadow: "0 24px 60px rgba(0,0,0,.25)" }}
+      style={{ background: "var(--card)", boxShadow: "0 24px 60px rgba(0,0,0,.25)" }}
     >
-      <div className="text-[11px] font-extrabold tracking-wide" style={{ color: "var(--muted)" }}>
+      <div className="text-[11px] font-extrabold tracking-wide" style={{ color: "var(--text-3)" }}>
         {t("mockSectionLabel").toUpperCase()}
       </div>
 
-      <div className="rounded-md p-3.5 mt-2.5 flex items-center gap-3" style={{ background: "var(--surface-container)" }}>
+      <div className="rounded-md p-3.5 mt-2.5 flex items-center gap-3" style={{ background: "var(--nested)" }}>
         <span
           className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"
-          style={{ background: "var(--secondary)", color: "var(--bg)" }}
+          style={{ background: "var(--role)", color: "var(--bg)" }}
         >
           <span className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
             workspace_premium
@@ -30,7 +30,7 @@ export async function SponsoredMock() {
         </span>
         <div className="flex-1">
           <div className="text-sm font-extrabold">{t("mockTierName")}</div>
-          <div className="text-[11.5px]" style={{ color: "var(--tertiary)" }}>{t("mockSponsoredBy")}</div>
+          <div className="text-[11.5px]" style={{ color: "var(--primary)" }}>{t("mockSponsoredBy")}</div>
         </div>
       </div>
 
@@ -40,12 +40,12 @@ export async function SponsoredMock() {
           { icon: "history", label: t("mockRowHistory") },
           { icon: "smart_toy", label: t("mockRowAi") },
         ].map((row) => (
-          <div key={row.label} className="flex items-center gap-2.5 rounded-md px-3 py-2.5" style={{ background: "var(--surface-container)" }}>
-            <span className="material-symbols-rounded text-lg" style={{ color: "var(--secondary)" }}>
+          <div key={row.label} className="flex items-center gap-2.5 rounded-md px-3 py-2.5" style={{ background: "var(--nested)" }}>
+            <span className="material-symbols-rounded text-lg" style={{ color: "var(--role)" }}>
               {row.icon}
             </span>
             <span className="text-[12.5px] font-bold flex-1">{row.label}</span>
-            <span className="material-symbols-rounded text-lg" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>
+            <span className="material-symbols-rounded text-lg" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>
               check_circle
             </span>
           </div>

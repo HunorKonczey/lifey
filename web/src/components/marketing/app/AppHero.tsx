@@ -21,7 +21,7 @@ export async function AppHero() {
         <div className="md:col-span-7">
           <div
             className="inline-flex items-center gap-2 h-8 px-3.5 rounded-pill text-[12.5px] font-extrabold tracking-wide"
-            style={{ background: "var(--surface-container)", color: "var(--secondary)" }}
+            style={{ background: "var(--nested)", color: "var(--role)" }}
           >
             <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
               fitness_center
@@ -33,11 +33,11 @@ export async function AppHero() {
           </h1>
           <p
             className="hidden md:block text-xl font-medium leading-[1.6] mt-5 max-w-[56ch]"
-            style={{ color: "var(--on-surface-variant)" }}
+            style={{ color: "var(--text-2)" }}
           >
             {t("sub")}
           </p>
-          <p className="md:hidden text-[17px] font-medium leading-[1.55] mt-3.5" style={{ color: "var(--on-surface-variant)" }}>
+          <p className="md:hidden text-[17px] font-medium leading-[1.55] mt-3.5" style={{ color: "var(--text-2)" }}>
             {t("subMobile")}
           </p>
 
@@ -47,18 +47,18 @@ export async function AppHero() {
 
           <div
             className="flex items-center gap-2.5 mt-4 md:mt-5 text-sm font-semibold"
-            style={{ color: "var(--muted)" }}
+            style={{ color: "var(--text-3)" }}
           >
             <span
               className="material-symbols-rounded text-lg"
-              style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}
+              style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
             >
               check_circle
             </span>
             {t("reassurance")}
           </div>
 
-          <Link href="/for-trainers" className="inline-block mt-3 text-sm font-bold" style={{ color: "var(--secondary)" }}>
+          <Link href="/for-trainers" className="inline-block mt-3 text-sm font-bold" style={{ color: "var(--role)" }}>
             {t("trainerLink")}
           </Link>
         </div>
@@ -66,20 +66,20 @@ export async function AppHero() {
         <div className="md:col-span-5 flex justify-center">
           <div
             className="w-[230px] rounded-3xl overflow-hidden border-[6px]"
-            style={{ background: "var(--bg)", borderColor: "var(--surface-high)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
+            style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
           >
-            <div className="h-5 flex items-center justify-center" style={{ background: "var(--surface-container)" }}>
+            <div className="h-5 flex items-center justify-center" style={{ background: "var(--nested)" }}>
               <div className="w-12 h-1.5 rounded-pill" style={{ background: "var(--outline)" }} />
             </div>
             <div className="p-3.5">
-              <div className="text-[13px] font-bold" style={{ color: "var(--muted)" }}>{t("mockGreeting")}</div>
+              <div className="text-[13px] font-bold" style={{ color: "var(--text-3)" }}>{t("mockGreeting")}</div>
               <div className="grid grid-cols-2 gap-2 mt-3">
-                <div className="rounded-md p-2.5" style={{ background: "var(--surface-container)" }}>
-                  <div className="text-[10px] font-bold" style={{ color: "var(--muted)" }}>{t("mockKcal").toUpperCase()}</div>
+                <div className="rounded-md p-2.5" style={{ background: "var(--nested)" }}>
+                  <div className="text-[10px] font-bold" style={{ color: "var(--text-3)" }}>{t("mockKcal").toUpperCase()}</div>
                   <div className="text-lg font-extrabold tabular-nums mt-0.5">1 840</div>
                 </div>
-                <div className="rounded-md p-2.5" style={{ background: "var(--surface-container)" }}>
-                  <div className="text-[10px] font-bold" style={{ color: "var(--muted)" }}>{t("mockSteps").toUpperCase()}</div>
+                <div className="rounded-md p-2.5" style={{ background: "var(--nested)" }}>
+                  <div className="text-[10px] font-bold" style={{ color: "var(--text-3)" }}>{t("mockSteps").toUpperCase()}</div>
                   <div className="text-lg font-extrabold tabular-nums mt-0.5">7 240</div>
                 </div>
               </div>
@@ -89,7 +89,7 @@ export async function AppHero() {
                   already carry the hierarchy against the 15 px name — the same
                   call commit 1c252fd made for the 15 mobile sites that drew
                   small text at 0.6–0.8 alpha. */}
-              <div className="rounded-md p-3 mt-2.5" style={{ background: "var(--secondary)", color: "var(--bg)" }}>
+              <div className="rounded-md p-3 mt-2.5" style={{ background: "var(--role)", color: "var(--bg)" }}>
                 <div className="text-[10.5px] font-bold">{t("mockWorkoutLabel").toUpperCase()}</div>
                 <div className="text-[15px] font-extrabold mt-0.5">{t("mockWorkoutName")}</div>
                 <div className="text-[11px] font-semibold mt-0.5">{t("mockWorkoutMeta")}</div>
