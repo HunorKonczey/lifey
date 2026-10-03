@@ -52,11 +52,11 @@ class ProgressPhotoTile extends ConsumerWidget {
                 right: 0,
                 bottom: 0,
                 child: DecoratedBox(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Color(0xB3000000)],
+                      colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
                     ),
                   ),
                   child: Padding(

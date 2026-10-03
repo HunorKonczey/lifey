@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/next";
+import { DeferredTelemetry } from "@/components/status/DeferredTelemetry";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -53,12 +52,7 @@ export default function RootLayout({
         {children}
         {/* Vercel's scripts are blocked by our dev CSP and meaningless off Vercel,
             so `next dev` would log two errors per page for nothing. */}
-        {process.env.NODE_ENV === "production" && (
-          <>
-            <SpeedInsights />
-            <Analytics />
-          </>
-        )}
+        {process.env.NODE_ENV === "production" && <DeferredTelemetry />}
       </body>
     </html>
   );

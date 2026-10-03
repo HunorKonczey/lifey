@@ -36,6 +36,11 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # Design-system drift gate (docs/redesign/77 R7.1): raw font sizes, Color(0x..), legacy radii and
+      # AppBars outside the DS. The count is 0 today, so any new hit fails the build.
+      - name: Design audit
+        run: dart run tool/design_audit.dart --strict
+
       - name: Run tests
         run: flutter test
 

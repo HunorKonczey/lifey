@@ -436,11 +436,20 @@ class ChatRepository {
   ) async {
     try {
       final hasImage = attachmentPath != null && File(attachmentPath).existsSync();
+      // Read once, so no file handle outlives this call: `MultipartFile.fromFile`
+      // keeps one open, and on Windows that blocks deleting the staged copy right
+      // after the upload (the long-standing chat-attachment test failures). The
+      // size is bounded by the attachment limit, so holding it in memory is fine.
+      final imageBytes = hasImage ? await File(attachmentPath).readAsBytes() : null;
       final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.chatMessages(conversationId),
         data: hasImage
             ? FormData.fromMap({
-                'file': await MultipartFile.fromFile(attachmentPath),
+                'file': MultipartFile.fromBytes(
+                  imageBytes!,
+                  filename: p.basename(attachmentPath),
+                  contentType: DioMediaType('image', 'jpeg'),
+                ),
                 if (body.isNotEmpty) 'body': body,
                 'clientMessageId': clientId,
               })
