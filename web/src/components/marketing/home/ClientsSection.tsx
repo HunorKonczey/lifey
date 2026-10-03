@@ -28,22 +28,22 @@ export async function ClientsSection() {
           {t("eyebrow").toUpperCase()}
         </div>
         <h2 className="text-[28px] font-bold tracking-[-0.02em] leading-[1.14] mt-2.5">{t("titleMobile")}</h2>
-        <p className="text-[17px] leading-[1.55] mt-3" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-[17px] leading-[1.55] mt-3" style={{ color: "var(--text-2)" }}>
           {t("bodyMobile")}
         </p>
-        <div className="rounded-lg border border-outline p-3 mt-4.5" style={{ background: "var(--surface)" }}>
+        <div className="rounded-lg border border-outline p-3 mt-4.5" style={{ background: "var(--card)" }}>
           <div className="text-xs font-extrabold mb-2">
-            {t("mockClientsHeading")} <span style={{ color: "var(--muted)" }}>12</span>
+            {t("mockClientsHeading")} <span style={{ color: "var(--text-3)" }}>12</span>
           </div>
           <div className="flex flex-col gap-1.5">
             {[
-              { name: "Szabó Anna", ratio: "4/4", bg: "var(--secondary)", ok: true },
-              { name: "Tóth Márk", ratio: "2/4", bg: "var(--tertiary)", ok: false },
+              { name: "Szabó Anna", ratio: "4/4", bg: "var(--role)", ok: true },
+              { name: "Tóth Márk", ratio: "2/4", bg: "var(--primary)", ok: false },
             ].map((row) => (
               <div
                 key={row.name}
                 className="flex items-center gap-2 rounded-md p-2"
-                style={{ background: "var(--surface-container)" }}
+                style={{ background: "var(--nested)" }}
               >
                 <span
                   className="w-6 h-6 rounded-pill flex items-center justify-center text-[9.5px] font-extrabold"
@@ -54,7 +54,7 @@ export async function ClientsSection() {
                 <span className="text-[11.5px] font-bold flex-1">{row.name}</span>
                 <span
                   className="text-[10px] font-extrabold"
-                  style={{ color: row.ok ? "var(--tertiary)" : "var(--secondary)" }}
+                  style={{ color: row.ok ? "var(--primary)" : "var(--role)" }}
                 >
                   {row.ratio}
                 </span>

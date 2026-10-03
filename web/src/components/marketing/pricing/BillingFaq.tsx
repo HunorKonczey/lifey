@@ -16,7 +16,7 @@ export async function BillingFaq() {
   }));
 
   return (
-    <section className="py-16 md:py-20" style={{ background: "var(--surface-container)" }}>
+    <section className="py-16 md:py-20" style={{ background: "var(--nested)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <h2 className="text-[28px] md:text-[44px] font-bold tracking-[-0.02em]">{t("billingFaqTitle")}</h2>
         <div className="flex flex-col gap-3 mt-7 md:mt-9 max-w-[820px]">
@@ -37,7 +37,7 @@ export async function BillingFaq() {
               </summary>
               <p
                 className="text-sm md:text-base leading-[1.6] md:leading-[1.65] mt-3 max-w-[62ch]"
-                style={{ color: "var(--on-surface-variant)" }}
+                style={{ color: "var(--text-2)" }}
               >
                 {item.a}
               </p>

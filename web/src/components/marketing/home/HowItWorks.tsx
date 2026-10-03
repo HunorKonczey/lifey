@@ -29,7 +29,7 @@ export async function HowItWorks() {
             <div
               key={step.title}
               className="rounded-lg p-6 md:p-7 relative"
-              style={{ background: "var(--surface-container)" }}
+              style={{ background: "var(--nested)" }}
             >
               <div
                 className="w-11 h-11 rounded-pill flex items-center justify-center text-lg font-extrabold tabular-nums relative"
@@ -38,7 +38,7 @@ export async function HowItWorks() {
                 {i + 1}
               </div>
               <h3 className="text-xl md:text-[22px] font-bold mt-4.5">{step.title}</h3>
-              <p className="text-base leading-[1.6] mt-2.5" style={{ color: "var(--on-surface-variant)" }}>
+              <p className="text-base leading-[1.6] mt-2.5" style={{ color: "var(--text-2)" }}>
                 {step.body}
               </p>
               {step.calloutBold && (
@@ -48,7 +48,7 @@ export async function HowItWorks() {
                 >
                   <span
                     className="material-symbols-rounded text-xl shrink-0"
-                    style={{ color: "var(--secondary)" }}
+                    style={{ color: "var(--role)" }}
                   >
                     schedule
                   </span>

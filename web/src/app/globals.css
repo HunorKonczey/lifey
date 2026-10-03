@@ -211,111 +211,15 @@
 
 }
 
-/* ─── Marketing pin (D-W0.2): the marketing tree keeps its pre-v2 palette ───
-   The marketing layouts and the root not-found page render a
-   `data-surface="marketing"` marker; `:has()` on `:root` (== `<html>`, where
-   `data-theme` also lives) restores every legacy value the marketing tree
-   reads directly, so retheming the app doesn't silently recolour it. */
-:root:has([data-surface="marketing"]) {
-  --bg:                 #161611;
-  --surface:            #1C1E16;
-  --surface-container:  #22241B;
-  --surface-high:       #2A2C20;
-  --surface-highest:    #32342A;
-  --primary:            #9DAE6B;
-  --secondary:          #C49A6C;
-  --tertiary:           #6E9A6A;
-  --on-surface:         #F1F0E4;
-  --on-surface-variant: #A8A899;
-  --muted:              #918B7A;
-  --outline:            #3C3E32;
-  --border:             transparent;
-  --error:              #CF6679;
-  --tertiary-container:    rgba(110, 154, 106, .18);
-  --on-tertiary-container: #A9CBA5;
-  --error-container:       rgba(207, 102, 121, .16);
-  --metric-kcal:    #E0915A;
-  --metric-protein: #9DAE6B;
-  --metric-carbs:   #D8B35A;
-  --metric-fat:     #8E8EC4;
-  --metric-steps:   #B08AC8;
-  --metric-weight:  #8AA0B4;
-  --metric-water:   #6FA8C4;
-  --metric-hr:      #C46A6A;
-  --goal-positive: #9DAE6B;
-  --goal-negative: #E08A52;
-  /* Radius/shadow (D-W0.5/W0.2 pin, same reasoning as the colour pin above) */
-  --r-sm:    8px;
-  --r-md:    16px;
-  --r-input: 18px;
-  --r-card:  20px;
-  --r-lg:    24px;
-  --r-nav:   28px;
-  --shadow-float: 0 1px 3px rgba(0, 0, 0, .18);
-}
-
-[data-theme="light"]:has([data-surface="marketing"]) {
-  --bg:                 #F3F2E8;
-  --surface:            #FFFFFF;
-  --surface-container:  #ECEBDE;
-  --surface-high:       #FFFFFF;
-  --surface-highest:    #ECEBDE;
-  --primary:            #586E38;
-  --secondary:          #7E613C;
-  --tertiary:           #44704C;
-  --on-surface:         #1E1F18;
-  --on-surface-variant: #5C5C50;
-  --muted:              #696960;
-  --outline:            #CDCBBC;
-  --border:             #E2E0D2;
-  --error:              #CF6679;
-  --tertiary-container:    rgba(74, 122, 82, .14);
-  --on-tertiary-container: #2F5B39;
-  --error-container:       rgba(207, 102, 121, .14);
-  --metric-kcal:    #D27A3E;
-  --metric-protein: #586E38;
-  --metric-carbs:   #B8902F;
-  --metric-fat:     #6A6AB0;
-  --metric-steps:   #8A6AB0;
-  --metric-weight:  #5E7A92;
-  --metric-water:   #4E8AA8;
-  --metric-hr:      #C46A6A;
-  --goal-positive: #44704C;
-  --goal-negative: #E08A52;
-}
-
 /* ─── Tailwind theme extension ─── */
 @theme inline {
   /* D-W0.6: 2xl = the 1440 "desktop · base" frame, 3xl = where the grid stops growing. */
   --breakpoint-2xl: 90rem;
   --breakpoint-3xl: 100rem;
 
-  /* Legacy colour keys: only the marketing surface still uses them (its pinned copy of the old values is
-     defined above, scoped to `:root:has([data-surface="marketing"])`); app code uses the v2 keys below. */
   --color-bg:                 var(--bg);
-  --color-surface:            var(--surface);
-  --color-surface-container:  var(--surface-container);
-  --color-surface-high:       var(--surface-high);
-  --color-surface-highest:    var(--surface-highest);
   --color-primary:            var(--primary);
-  --color-secondary:          var(--secondary);
-  --color-tertiary:           var(--tertiary);
-  --color-on-surface:         var(--on-surface);
-  --color-on-surface-variant: var(--on-surface-variant);
-  --color-muted:              var(--muted);
   --color-outline:            var(--outline);
-  --color-error:              var(--error);
-  --color-tertiary-container:    var(--tertiary-container);
-  --color-on-tertiary-container: var(--on-tertiary-container);
-  --color-error-container:       var(--error-container);
-
-  --color-metric-kcal:    var(--metric-kcal);
-  --color-metric-protein: var(--metric-protein);
-  --color-metric-carbs:   var(--metric-carbs);
-  --color-metric-fat:     var(--metric-fat);
-  --color-metric-steps:   var(--metric-steps);
-  --color-metric-weight:  var(--metric-weight);
-  --color-metric-water:   var(--metric-water);
 
   /* v2 colour keys (D-W0.3) — "fg" not "text" so `text-fg-2` stays readable */
   --color-card:              var(--card);
@@ -341,12 +245,15 @@
   --color-m-weight:          var(--m-weight);
   --color-m-heart:           var(--m-heart);
 
-  --radius-sm:    var(--r-sm);
-  --radius-md:    var(--r-md);
-  --radius-input: var(--r-input);
+  /* The utility names (`rounded-md`, `rounded-lg`, …) predate the v2 radius steps and are used all over the
+     marketing tree; they now resolve to the four v2 steps + pill (D-W0.5; docs/redesign-web/78 D-W0.3 table
+     8 / 14 / 14 / 22 / 22 / 30) instead of the marketing pin's own scale. */
+  --radius-sm:    var(--r-tag);
+  --radius-md:    var(--r-control);
+  --radius-input: var(--r-control);
   --radius-card:  var(--r-card);
-  --radius-lg:    var(--r-lg);
-  --radius-nav:   var(--r-nav);
+  --radius-lg:    var(--r-card);
+  --radius-nav:   var(--r-hero);
   --radius-pill:  var(--r-pill);
 
   --font-sans: "Plus Jakarta Sans", sans-serif;

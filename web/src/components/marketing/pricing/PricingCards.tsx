@@ -73,13 +73,13 @@ export function PricingCards({
       <div className="flex justify-center">
         <div
           className="inline-flex items-center gap-1 rounded-pill p-1.5"
-          style={{ background: "var(--surface-container)" }}
+          style={{ background: "var(--nested)" }}
         >
           <button
             type="button"
             onClick={() => setYearly(false)}
             className="h-11 px-5 rounded-pill text-sm font-bold"
-            style={!yearly ? { background: "var(--primary)", color: "var(--bg)" } : { color: "var(--on-surface-variant)" }}
+            style={!yearly ? { background: "var(--primary)", color: "var(--bg)" } : { color: "var(--text-2)" }}
           >
             {labels.toggleMonthly}
           </button>
@@ -87,7 +87,7 @@ export function PricingCards({
             type="button"
             onClick={() => setYearly(true)}
             className="h-11 px-5 rounded-pill text-sm font-extrabold flex items-center gap-2"
-            style={yearly ? { background: "var(--primary)", color: "var(--bg)" } : { color: "var(--on-surface-variant)" }}
+            style={yearly ? { background: "var(--primary)", color: "var(--bg)" } : { color: "var(--text-2)" }}
           >
             {labels.toggleYearly}
             <span
@@ -111,7 +111,7 @@ export function PricingCards({
               key={plan.id}
               className="rounded-lg p-8 relative"
               style={{
-                background: "var(--surface-container)",
+                background: "var(--nested)",
                 border: plan.recommended ? "2px solid var(--primary)" : "1px solid var(--outline)",
                 boxShadow: plan.recommended ? "0 8px 32px rgba(0,0,0,.18)" : undefined,
               }}
@@ -125,13 +125,13 @@ export function PricingCards({
                 </div>
               )}
 
-              <div className="text-[13px] font-extrabold tracking-wide" style={{ color: plan.recommended ? "var(--primary)" : "var(--muted)" }}>
+              <div className="text-[13px] font-extrabold tracking-wide" style={{ color: plan.recommended ? "var(--primary)" : "var(--text-3)" }}>
                 {plan.name.toUpperCase()}
               </div>
               <div className="text-[44px] font-extrabold tracking-[-0.02em] tabular-nums mt-3.5">
                 {plan.seats ?? plan.unlimitedLabel}
               </div>
-              <div className="text-base font-bold" style={{ color: "var(--on-surface-variant)" }}>
+              <div className="text-base font-bold" style={{ color: "var(--text-2)" }}>
                 {plan.activeClientsLabel}
               </div>
 
@@ -141,9 +141,9 @@ export function PricingCards({
                 <>
                   <div className="text-2xl font-extrabold tabular-nums">
                     {formatHuf(plan.yearlyPriceHuf)}
-                    <span className="text-sm font-semibold" style={{ color: "var(--muted)" }}> {labels.perYear}</span>
+                    <span className="text-sm font-semibold" style={{ color: "var(--text-3)" }}> {labels.perYear}</span>
                   </div>
-                  <div className="text-[13.5px] tabular-nums mt-1" style={{ color: "var(--muted)" }}>
+                  <div className="text-[13.5px] tabular-nums mt-1" style={{ color: "var(--text-3)" }}>
                     {formatHuf(monthlyEquivalent(plan.yearlyPriceHuf))} {labels.perMonthSuffix} · {labels.billedMonthlyPrefix}{" "}
                     {formatHuf(plan.monthlyPriceHuf)}
                   </div>
@@ -151,7 +151,7 @@ export function PricingCards({
               ) : (
                 <div className="text-2xl font-extrabold tabular-nums">
                   {formatHuf(plan.monthlyPriceHuf)}
-                  <span className="text-sm font-semibold" style={{ color: "var(--muted)" }}> {labels.perMonth}</span>
+                  <span className="text-sm font-semibold" style={{ color: "var(--text-3)" }}> {labels.perMonth}</span>
                 </div>
               )}
 
@@ -171,7 +171,7 @@ export function PricingCards({
                   <li key={b} className="flex gap-2.5 items-start text-[14.5px]">
                     <span
                       className="material-symbols-rounded text-lg mt-0.5"
-                      style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}
+                      style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
                     >
                       check_circle
                     </span>

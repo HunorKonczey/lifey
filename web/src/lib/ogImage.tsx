@@ -13,6 +13,8 @@ export const OG_IMAGE_CONTENT_TYPE = "image/png";
  * card doesn't have a light/dark visitor preference to honor, it's one
  * fixed image.
  */
+// The hexes are the v2 *dark* tokens (--bg, --text, --primary — globals.css, D-W0.4): Satori renders outside the
+// page, so it cannot read the CSS variables and the values are copied by hand.
 export function renderOgImage({ eyebrow, title }: { eyebrow: string; title: string }) {
   return new ImageResponse(
     (
@@ -24,8 +26,8 @@ export function renderOgImage({ eyebrow, title }: { eyebrow: string; title: stri
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px 96px",
-          background: "#161611",
-          color: "#F1F0E4",
+          background: "#12130E",
+          color: "#F2F1E6",
           fontFamily: "sans-serif",
         }}
       >
@@ -35,7 +37,7 @@ export function renderOgImage({ eyebrow, title }: { eyebrow: string; title: stri
               width: 56,
               height: 56,
               borderRadius: 14,
-              background: "#9DAE6B",
+              background: "#B5C47C",
               display: "flex",
             }}
           />
@@ -48,7 +50,7 @@ export function renderOgImage({ eyebrow, title }: { eyebrow: string; title: stri
             fontSize: 24,
             fontWeight: 800,
             letterSpacing: 2,
-            color: "#9DAE6B",
+            color: "#B5C47C",
             marginTop: 56,
             textTransform: "uppercase",
           }}

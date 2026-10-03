@@ -65,11 +65,11 @@ export function ContactForm({
     return (
       <div
         className="rounded-lg p-6 md:p-7 flex items-center gap-3"
-        style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}
+        style={{ background: "var(--card)", border: "1px solid var(--outline)" }}
       >
         <span
           className="material-symbols-rounded text-2xl"
-          style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}
+          style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
         >
           check_circle
         </span>
@@ -82,7 +82,7 @@ export function ContactForm({
     <form
       onSubmit={handleSubmit}
       className="rounded-lg p-6 md:p-7 flex flex-col gap-4"
-      style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}
+      style={{ background: "var(--card)", border: "1px solid var(--outline)" }}
     >
       <div className="flex flex-col gap-1.5">
         <label htmlFor="contact-name" className="text-sm font-bold">
@@ -130,7 +130,7 @@ export function ContactForm({
       </div>
 
       {status === "error" && (
-        <p className="text-sm font-semibold" style={{ color: "var(--secondary)" }}>
+        <p className="text-sm font-semibold" style={{ color: "var(--role)" }}>
           {labels.error}
         </p>
       )}

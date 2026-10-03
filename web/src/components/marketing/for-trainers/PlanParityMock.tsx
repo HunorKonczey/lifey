@@ -23,7 +23,7 @@ export async function PlanParityMock() {
   return (
     <div
       className="rounded-lg border border-outline p-5 md:p-6"
-      style={{ background: "var(--surface)", boxShadow: "0 24px 60px rgba(0,0,0,.25)" }}
+      style={{ background: "var(--card)", boxShadow: "0 24px 60px rgba(0,0,0,.25)" }}
     >
       {/*
         One grid for the whole card, not a separate chip row + loose
@@ -42,11 +42,11 @@ export async function PlanParityMock() {
             key={plan.id}
             className="rounded-md px-3 py-2.5 text-center"
             style={{
-              background: "var(--surface-container)",
+              background: "var(--nested)",
               border: plan.recommended ? "1.5px solid var(--primary)" : undefined,
             }}
           >
-            <div className="text-[10px] font-extrabold" style={{ color: "var(--muted)" }}>
+            <div className="text-[10px] font-extrabold" style={{ color: "var(--text-3)" }}>
               {names[plan.id].toUpperCase()}
             </div>
             <div className="text-lg font-extrabold tabular-nums mt-0.5">{plan.seats ?? t("unlimited")}</div>
@@ -71,7 +71,7 @@ export async function PlanParityMock() {
 
       <div
         className="rounded-md p-2.5 mt-3.5 text-[11.5px] leading-[1.5] text-center"
-        style={{ background: "var(--surface-high)", color: "var(--on-surface-variant)" }}
+        style={{ background: "var(--control)", color: "var(--text-2)" }}
       >
         {t("mockNote")}
       </div>

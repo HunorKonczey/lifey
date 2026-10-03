@@ -36,7 +36,7 @@ export function MarketingNav({
               href={item.href}
               onClick={onNavigate}
               className="h-[52px] flex items-center text-[17px] font-bold"
-              style={{ color: active ? "var(--on-surface)" : "var(--on-surface-variant)" }}
+              style={{ color: active ? "var(--text)" : "var(--text-2)" }}
             >
               {labels[item.labelKey]}
             </Link>
@@ -54,7 +54,7 @@ export function MarketingNav({
           <Link
             key={item.href}
             href={item.href}
-            style={{ color: active ? "var(--on-surface)" : "var(--on-surface-variant)" }}
+            style={{ color: active ? "var(--text)" : "var(--text-2)" }}
           >
             {labels[item.labelKey]}
           </Link>

@@ -25,12 +25,12 @@ export default async function MarketingNotFound() {
       <div className="max-w-[560px] mx-auto px-4 md:px-8 text-center">
         <div
           className="text-[13px] font-extrabold tracking-[0.12em]"
-          style={{ color: "var(--secondary)" }}
+          style={{ color: "var(--role)" }}
         >
           {t("eyebrow")}
         </div>
         <h1 className="text-[32px] md:text-[44px] font-bold tracking-[-0.02em] mt-3">{t("title")}</h1>
-        <p className="text-base md:text-lg mt-3" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-base md:text-lg mt-3" style={{ color: "var(--text-2)" }}>
           {t("body")}
         </p>
 

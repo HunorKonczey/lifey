@@ -9,8 +9,8 @@ export async function ClientsMock() {
   const rows = [
     // `fg` per entry for the same reason as Hero's AVATARS — the two theme
     // tokens need the light --bg on top, the literal pastels keep #161611.
-    { name: "Szabó Anna", meta: demo("strength"), bg: "var(--secondary)", fg: "var(--bg)", active: true },
-    { name: "Tóth Márk", meta: demo("fatLoss"), bg: "var(--tertiary)", fg: "var(--bg)", active: false },
+    { name: "Szabó Anna", meta: demo("strength"), bg: "var(--role)", fg: "var(--bg)", active: true },
+    { name: "Tóth Márk", meta: demo("fatLoss"), bg: "var(--primary)", fg: "var(--bg)", active: false },
     { name: "Nagy Réka", meta: demo("hypertrophy"), bg: "#8AA0B4", fg: "#161611", active: false },
     { name: "Kiss Dávid", meta: t("mockInvited"), bg: "#B08AC8", fg: "#161611", active: false },
     { name: "Horváth Lilla", meta: demo("cardio"), bg: "#E0915A", fg: "#161611", active: false },
@@ -23,11 +23,11 @@ export async function ClientsMock() {
       <div className="flex">
         <div className="w-[220px] border-r border-outline p-4">
           <div className="text-sm font-extrabold mb-3">
-            {t("mockClientsHeading")} <span className="font-semibold" style={{ color: "var(--muted)" }}>12</span>
+            {t("mockClientsHeading")} <span className="font-semibold" style={{ color: "var(--text-3)" }}>12</span>
           </div>
           <div
             className="h-8.5 rounded-pill flex items-center gap-2 px-3 text-xs mb-3"
-            style={{ background: "var(--surface-container)", color: "var(--muted)" }}
+            style={{ background: "var(--nested)", color: "var(--text-3)" }}
           >
             <span className="material-symbols-rounded text-base">search</span>
             {t("mockSearch")}
@@ -41,7 +41,7 @@ export async function ClientsMock() {
               >
                 <span
                   className="w-7 h-7 rounded-pill flex items-center justify-center text-[10.5px] font-extrabold"
-                  style={{ background: row.active ? "var(--bg)" : row.bg, color: row.active ? "var(--secondary)" : row.fg }}
+                  style={{ background: row.active ? "var(--bg)" : row.bg, color: row.active ? "var(--role)" : row.fg }}
                 >
                   {row.name.split(" ").map((p) => p[0]).join("")}
                 </span>
@@ -54,7 +54,7 @@ export async function ClientsMock() {
                       already separate this line from the name above it. */}
                   <div
                     className="text-[10px] font-semibold"
-                    style={{ color: row.active ? undefined : "var(--muted)" }}
+                    style={{ color: row.active ? undefined : "var(--text-3)" }}
                   >
                     {row.meta}
                   </div>
@@ -68,13 +68,13 @@ export async function ClientsMock() {
           <div className="flex items-center gap-3">
             <span
               className="w-11 h-11 rounded-pill flex items-center justify-center text-[15px] font-extrabold"
-              style={{ background: "var(--secondary)", color: "var(--bg)" }}
+              style={{ background: "var(--role)", color: "var(--bg)" }}
             >
               SZ
             </span>
             <div>
               <div className="text-lg font-extrabold">Szabó Anna</div>
-              <div className="text-xs" style={{ color: "var(--muted)" }}>
+              <div className="text-xs" style={{ color: "var(--text-3)" }}>
                 {demo("strength")} · {t("mockProgramLength")}
               </div>
             </div>
@@ -91,12 +91,12 @@ export async function ClientsMock() {
             </div>
           </div>
 
-          <div className="flex gap-4.5 mt-4 border-b border-outline pb-2 text-xs font-bold" style={{ color: "var(--muted)" }}>
+          <div className="flex gap-4.5 mt-4 border-b border-outline pb-2 text-xs font-bold" style={{ color: "var(--text-3)" }}>
             {tabs.map((tab, i) => (
               <span
                 key={tab}
                 className={i === 0 ? "pb-2" : ""}
-                style={i === 0 ? { color: "var(--on-surface)", borderBottom: "2px solid var(--primary)" } : {}}
+                style={i === 0 ? { color: "var(--text)", borderBottom: "2px solid var(--primary)" } : {}}
               >
                 {tab}
               </span>
@@ -104,36 +104,36 @@ export async function ClientsMock() {
           </div>
 
           <div className="grid grid-cols-3 gap-2.5 mt-3.5">
-            <div className="rounded-md p-3" style={{ background: "var(--surface-container)" }}>
-              <div className="text-[10.5px] font-bold" style={{ color: "var(--muted)" }}>{t("mockWeeklyWorkouts").toUpperCase()}</div>
+            <div className="rounded-md p-3" style={{ background: "var(--nested)" }}>
+              <div className="text-[10.5px] font-bold" style={{ color: "var(--text-3)" }}>{t("mockWeeklyWorkouts").toUpperCase()}</div>
               <div className="text-2xl font-extrabold tabular-nums mt-1">4/4</div>
             </div>
-            <div className="rounded-md p-3" style={{ background: "var(--surface-container)" }}>
-              <div className="text-[10.5px] font-bold" style={{ color: "var(--muted)" }}>{t("mockWeightLabel").toUpperCase()}</div>
+            <div className="rounded-md p-3" style={{ background: "var(--nested)" }}>
+              <div className="text-[10.5px] font-bold" style={{ color: "var(--text-3)" }}>{t("mockWeightLabel").toUpperCase()}</div>
               <div className="text-2xl font-extrabold tabular-nums mt-1">
-                64,2<span className="text-xs" style={{ color: "var(--muted)" }}> kg</span>
+                64,2<span className="text-xs" style={{ color: "var(--text-3)" }}> kg</span>
               </div>
             </div>
-            <div className="rounded-md p-3" style={{ background: "var(--surface-container)" }}>
-              <div className="text-[10.5px] font-bold" style={{ color: "var(--muted)" }}>{t("mockAvgKcal").toUpperCase()}</div>
+            <div className="rounded-md p-3" style={{ background: "var(--nested)" }}>
+              <div className="text-[10.5px] font-bold" style={{ color: "var(--text-3)" }}>{t("mockAvgKcal").toUpperCase()}</div>
               <div className="text-2xl font-extrabold tabular-nums mt-1">1 940</div>
             </div>
           </div>
 
-          <div className="rounded-md p-3.5 mt-2.5" style={{ background: "var(--surface-container)" }}>
+          <div className="rounded-md p-3.5 mt-2.5" style={{ background: "var(--nested)" }}>
             <div className="text-xs font-extrabold mb-2.5">{t("mockLastWorkouts")}</div>
             <div className="flex flex-col gap-2">
               {[
                 { icon: "fitness_center", name: "Erő 5×5 — A", meta: "aug. 24. · 52 perc", color: "var(--primary)" },
                 { icon: "fitness_center", name: "Erő 5×5 — B", meta: "aug. 22. · 48 perc", color: "var(--primary)" },
-                { icon: "directions_run", name: "Futás · 6,2 km", meta: "aug. 21. · 34 perc", color: "var(--metric-water)" },
+                { icon: "directions_run", name: "Futás · 6,2 km", meta: "aug. 21. · 34 perc", color: "var(--m-water)" },
               ].map((w) => (
                 <div key={w.name} className="flex items-center gap-2.5">
                   <span className="material-symbols-rounded text-base" style={{ color: w.color, fontVariationSettings: "'FILL' 1" }}>
                     {w.icon}
                   </span>
                   <span className="text-[11.5px] font-bold flex-1">{w.name}</span>
-                  <span className="text-[11px] tabular-nums" style={{ color: "var(--muted)" }}>{w.meta}</span>
+                  <span className="text-[11px] tabular-nums" style={{ color: "var(--text-3)" }}>{w.meta}</span>
                 </div>
               ))}
             </div>

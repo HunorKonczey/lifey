@@ -32,7 +32,7 @@ export function LegalDocument({
 
       <div className="max-w-[1000px] mx-auto px-4 md:px-8">
         <h1 className="text-[32px] md:text-[44px] font-bold tracking-[-0.02em]">{title}</h1>
-        <p className="text-sm mt-2" style={{ color: "var(--muted)" }}>
+        <p className="text-sm mt-2" style={{ color: "var(--text-3)" }}>
           {updated}
         </p>
 
@@ -44,7 +44,7 @@ export function LegalDocument({
                   key={s.id}
                   href={`#${s.id}`}
                   className="text-sm font-bold py-1.5 border-l-2 pl-3.5"
-                  style={{ borderColor: "var(--outline)", color: "var(--on-surface-variant)" }}
+                  style={{ borderColor: "var(--outline)", color: "var(--text-2)" }}
                 >
                   {s.heading}
                 </a>
@@ -58,7 +58,7 @@ export function LegalDocument({
                 <h2 className="text-lg md:text-xl font-bold">{s.heading}</h2>
                 <div
                   className="text-base leading-[1.7] mt-3 flex flex-col gap-3"
-                  style={{ color: "var(--on-surface-variant)" }}
+                  style={{ color: "var(--text-2)" }}
                 >
                   {s.body.split("\n").map((line, i) => (
                     <p key={i}>{line}</p>

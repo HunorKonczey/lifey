@@ -77,7 +77,6 @@ Nincs integráció. A HealthKit és a Health Connect kész.
 |---|---|---|
 | Web (marad) | a `/hu` első betöltése ~215 KB gzip (volt 278), a cél 100 KB: a maradék a közös React/Next + React Query/Zustand alap; a marketing tokenek (`72` D5) és a Lighthouse újramérés (`lhci`, telepített URL kell) is nyitva | `landing_page/REMAINING-WORK.md` §2.2, §2.3 |
 | Zene M4 | Spotify iOS-en (App Remote) — Spotify Developer regisztráció kell | [`music/46`](music/46-workout-music-controls-plan.md) |
-| Chat kiszervezése | `com.lifey.chat` → önálló `lifey-chat` szolgáltatás; terv jóváhagyásra vár, csak skálázási igény esetén sürgős | [`chat/44`](chat/44-chat-service-extraction-plan.md) |
 | Design-backlog | a redesign mockupjaiból adódó extra UI-elemek — egyenként ellenőrizni, mi készült el (a kalória-sparkline pl. már kész) | [`design/19`](design/19-new-features.md) |
 
 ### 2.1 A mobil-redesign (`77`) után
@@ -88,7 +87,6 @@ is ott oldódott meg: a metrikaszínek AA-k a saját 12 / 16 %-os tintájukon, a
 
 | Tétel | Mi | Hol |
 |---|---|---|
-| Web palettaillesztés | a Next.js app még a régi palettát használja; külön terv kell a `web/`-re | `77` §6 |
 | Chat-eredménykártya | edzés / PR megosztása chat-kártyaként — a csatolmány jelenleg csak kép, a chat-szolgáltatáson is változtatni kell | `77` §6 |
 | Darabos adagok | „½ db", „1 db" chipek az étel hozzáadása lapon — étel-modellbe darabsúly + sync kell | `77` §6 |
 | Health Connect / HealthKit írás | a súly visszaírása; amíg nincs írási út, a „Health Connect-ben is mentve" sor rejtve marad | `77` §6 |

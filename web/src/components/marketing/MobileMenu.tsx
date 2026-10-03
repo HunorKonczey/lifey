@@ -53,7 +53,7 @@ export function MobileMenu({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-surface flex flex-col"
+          className="fixed inset-0 z-50 bg-card flex flex-col"
           role="dialog"
           aria-modal="true"
         >

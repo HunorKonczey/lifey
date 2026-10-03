@@ -20,7 +20,7 @@ export async function TrainerHero() {
       <div className="max-w-[840px] mx-auto px-4 md:px-8 text-center">
         <div
           className="inline-flex items-center gap-2 h-8 px-3.5 rounded-pill text-[12.5px] font-extrabold tracking-wide"
-          style={{ background: "var(--surface-container)", color: "var(--primary)" }}
+          style={{ background: "var(--nested)", color: "var(--primary)" }}
         >
           <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
             groups
@@ -32,13 +32,13 @@ export async function TrainerHero() {
         </h1>
         <p
           className="hidden md:block text-xl font-medium leading-[1.6] mt-5 max-w-[62ch] mx-auto"
-          style={{ color: "var(--on-surface-variant)" }}
+          style={{ color: "var(--text-2)" }}
         >
           {t("sub")}
         </p>
         <p
           className="md:hidden text-[17px] font-medium leading-[1.55] mt-3.5"
-          style={{ color: "var(--on-surface-variant)" }}
+          style={{ color: "var(--text-2)" }}
         >
           {t("subMobile")}
         </p>
@@ -67,17 +67,17 @@ export async function TrainerHero() {
 
         <div
           className="flex items-center justify-center gap-2.5 mt-4 md:mt-5 text-sm font-semibold"
-          style={{ color: "var(--muted)" }}
+          style={{ color: "var(--text-3)" }}
         >
           <span
             className="material-symbols-rounded text-lg"
-            style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}
+            style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
           >
             check_circle
           </span>
           {t("reassurance")}
           <span style={{ color: "var(--outline)" }}>·</span>
-          <span style={{ color: "var(--secondary)" }}>{t("reassuranceHighlight")}</span>
+          <span style={{ color: "var(--role)" }}>{t("reassuranceHighlight")}</span>
         </div>
       </div>
     </section>

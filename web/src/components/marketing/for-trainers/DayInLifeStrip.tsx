@@ -18,7 +18,7 @@ export async function DayInLifeStrip() {
   }));
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--surface-container)" }}>
+    <section className="py-16 md:py-24" style={{ background: "var(--nested)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <h2 className="text-[28px] md:text-[44px] font-bold tracking-[-0.02em] max-w-[20ch]">{t("title")}</h2>
         <div className="grid md:grid-cols-4 gap-5 md:gap-5 mt-8 md:mt-11 relative">
@@ -36,7 +36,7 @@ export async function DayInLifeStrip() {
                 {item.time}
               </div>
               <h3 className="text-base md:text-lg font-bold mt-4">{item.title}</h3>
-              <p className="text-sm leading-[1.55] mt-2" style={{ color: "var(--on-surface-variant)" }}>
+              <p className="text-sm leading-[1.55] mt-2" style={{ color: "var(--text-2)" }}>
                 {item.body}
               </p>
             </div>

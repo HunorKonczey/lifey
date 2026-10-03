@@ -1,6 +1,9 @@
 # 44 – A chat kiemelése önálló szolgáltatásba (migrációs terv)
 
-**Státusz:** terv, jóváhagyásra vár. Kód még nem készült hozzá.
+**Státusz:** kész (2026-10-03 lezárva) — M1–M5 és M7 megvalósítva, M6 (deploy) előkészítve és lokálisan két processzen
+végigmérve (§17.8). A `chat/` önálló Maven-projekt, a monolit `com.lifey.chat` modulja törölve, a kliensek a
+`GET /api/v1/client-config` által adott chat URL-t használják. A Render-oldali lépések (Neon-grantok, a `lifey-chat`
+service, `CHAT_PUBLIC_BASE_URL`, §10.2) üzemeltetési feladatok — a végrehajtásukat a §17 naplóba érdemes felvenni.
 **Előzmény:** [40-trainer-chat-plan.md](40-trainer-chat-plan.md) (a chat teljes terve, I1–I7),
 [devops/chat-operations.md](../../devops/chat-operations.md) (üzemeltetés),
 [devops/deploy-backend-render.md](../../devops/deploy-backend-render.md) (a mai deploy).

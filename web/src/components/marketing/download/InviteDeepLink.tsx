@@ -68,7 +68,7 @@ export function InviteDeepLinkOverlay() {
       <div className="flex flex-col items-center gap-4">
         <span
           className="material-symbols-rounded text-5xl animate-pulse"
-          style={{ color: "var(--secondary)" }}
+          style={{ color: "var(--role)" }}
         >
           smartphone
         </span>
@@ -85,7 +85,7 @@ export function InviteReassuranceLine({ text }: { text: string }) {
   if (!token) return null;
 
   return (
-    <p className="text-sm font-semibold mt-4" style={{ color: "var(--secondary)" }}>
+    <p className="text-sm font-semibold mt-4" style={{ color: "var(--role)" }}>
       {text}
     </p>
   );

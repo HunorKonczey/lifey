@@ -35,7 +35,7 @@ export default async function ContactPage({
     <main className="py-14 md:py-20" style={{ background: "var(--bg)" }}>
       <div className="max-w-[560px] mx-auto px-4 md:px-8">
         <h1 className="text-[32px] md:text-[44px] font-bold tracking-[-0.02em] text-center">{t("title")}</h1>
-        <p className="text-base md:text-lg mt-3 text-center" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="text-base md:text-lg mt-3 text-center" style={{ color: "var(--text-2)" }}>
           {t("sub")}
         </p>
 
@@ -54,7 +54,7 @@ export default async function ContactPage({
           />
         </div>
 
-        <p className="text-sm text-center mt-6" style={{ color: "var(--muted)" }}>
+        <p className="text-sm text-center mt-6" style={{ color: "var(--text-3)" }}>
           {t("directEmailPrefix")}{" "}
           <a href={`mailto:${footer("email")}`} className="font-bold" style={{ color: "var(--primary)" }}>
             {footer("email")}

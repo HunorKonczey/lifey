@@ -61,14 +61,14 @@ export async function StoreBadges({
               key={b.icon}
               aria-disabled="true"
               className={`rounded-md border border-outline flex items-center font-bold ${sizeClasses}`}
-              style={{ color: "var(--muted)", opacity: 0.6 }}
+              style={{ color: "var(--text-3)", opacity: 0.6 }}
             >
               <span className={`material-symbols-rounded ${iconSize}`}>{b.icon}</span>
               {b.label}
             </div>
           ))}
         </div>
-        <div className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
+        <div className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>
           {t("storesComingSoon")}
         </div>
       </div>

@@ -29,7 +29,7 @@ export async function PricingPreview({ page = "home" }: { page?: string }) {
   };
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--surface-container)" }}>
+    <section className="py-16 md:py-24" style={{ background: "var(--nested)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <div className="text-xs font-extrabold tracking-wide" style={{ color: "var(--primary)" }}>
           {t("eyebrow").toUpperCase()}
@@ -61,22 +61,22 @@ export async function PricingPreview({ page = "home" }: { page?: string }) {
                     {t("recommended").toUpperCase()}
                   </div>
                 )}
-                <div className="text-xs font-extrabold tracking-wide" style={{ color: "var(--muted)" }}>
+                <div className="text-xs font-extrabold tracking-wide" style={{ color: "var(--text-3)" }}>
                   {names[plan.id].toUpperCase()}
                 </div>
                 <div className="text-[40px] font-extrabold tracking-[-0.02em] tabular-nums mt-2">
                   {plan.seats ?? t("unlimited")}
                 </div>
-                <div className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+                <div className="text-sm" style={{ color: "var(--text-2)" }}>
                   {t("activeClients")}
                 </div>
                 <div className="mt-4">
                   <span className="text-lg font-bold">{formatHuf(plan.monthlyPriceHuf)}</span>
-                  <span className="text-sm" style={{ color: "var(--muted)" }}>{t("perMonth")}</span>
+                  <span className="text-sm" style={{ color: "var(--text-3)" }}>{t("perMonth")}</span>
                 </div>
                 <div
                   className="inline-flex h-7 items-center px-2.5 rounded-pill text-[11px] font-bold mt-2"
-                  style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+                  style={{ background: "var(--nested)", color: "var(--text-2)" }}
                 >
                   {t("trial14")}
                 </div>

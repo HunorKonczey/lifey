@@ -8,8 +8,8 @@ import { BrowserWindowFrame } from "./BrowserWindowFrame";
 // top), while the two literal pastels are the same in both themes and keep
 // the near-black they were picked against.
 const AVATARS = [
-  { initials: "SZ", bg: "var(--secondary)", fg: "var(--bg)" },
-  { initials: "TM", bg: "var(--tertiary)", fg: "var(--bg)" },
+  { initials: "SZ", bg: "var(--role)", fg: "var(--bg)" },
+  { initials: "TM", bg: "var(--primary)", fg: "var(--bg)" },
   { initials: "NR", bg: "#8AA0B4", fg: "#161611" },
   { initials: "KD", bg: "#B08AC8", fg: "#161611" },
 ];
@@ -30,7 +30,7 @@ export async function Hero() {
         <div className="md:col-span-7">
           <div
             className="inline-flex items-center gap-2 h-8 px-3.5 rounded-pill text-[12.5px] font-extrabold tracking-wide"
-            style={{ background: "var(--surface-container)", color: "var(--primary)" }}
+            style={{ background: "var(--nested)", color: "var(--primary)" }}
           >
             <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
               workspace_premium
@@ -44,13 +44,13 @@ export async function Hero() {
           </h1>
           <p
             className="hidden md:block text-xl font-medium leading-[1.6] mt-5 max-w-[62ch]"
-            style={{ color: "var(--on-surface-variant)" }}
+            style={{ color: "var(--text-2)" }}
           >
             {t("sub")}
           </p>
           <p
             className="md:hidden text-[17px] font-medium leading-[1.55] mt-3.5"
-            style={{ color: "var(--on-surface-variant)" }}
+            style={{ color: "var(--text-2)" }}
           >
             {t("subMobile")}
           </p>
@@ -79,20 +79,20 @@ export async function Hero() {
 
           <div
             className="flex items-center gap-2.5 mt-4 md:mt-5 text-sm font-semibold"
-            style={{ color: "var(--muted)" }}
+            style={{ color: "var(--text-3)" }}
           >
-            <span className="material-symbols-rounded text-lg" style={{ color: "var(--tertiary)", fontVariationSettings: "'FILL' 1" }}>
+            <span className="material-symbols-rounded text-lg" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>
               check_circle
             </span>
             <span className="hidden md:inline">
               {t("reassurance")}
               <span style={{ color: "var(--outline)" }}> · </span>
-              <span style={{ color: "var(--secondary)" }}>{t("reassuranceHighlight")}</span>
+              <span style={{ color: "var(--role)" }}>{t("reassuranceHighlight")}</span>
             </span>
             <span className="md:hidden">
               {t("reassurance")}
               <br />
-              <span style={{ color: "var(--secondary)" }}>{t("reassuranceHighlight")}</span>
+              <span style={{ color: "var(--role)" }}>{t("reassuranceHighlight")}</span>
             </span>
           </div>
         </div>
@@ -104,7 +104,7 @@ export async function Hero() {
                 <div className="flex h-[340px]">
                   <div
                     className="w-14 py-3 flex flex-col items-center gap-3.5"
-                    style={{ background: "var(--surface-container)" }}
+                    style={{ background: "var(--nested)" }}
                   >
                     <span
                       className="w-[30px] h-[30px] rounded-md flex items-center justify-center"
@@ -115,16 +115,16 @@ export async function Hero() {
                       </span>
                     </span>
                     <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>groups</span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--muted)" }}>assignment</span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--muted)" }}>calendar_month</span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--muted)" }}>chat</span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--muted)" }}>insights</span>
+                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>assignment</span>
+                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>calendar_month</span>
+                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>chat</span>
+                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>insights</span>
                   </div>
                   <div className="flex-1 p-4">
                     <div className="flex items-center justify-between">
                       <div className="text-base font-extrabold">
                         {t("mockClientsHeading")}{" "}
-                        <span className="font-semibold tabular-nums" style={{ color: "var(--muted)" }}>12</span>
+                        <span className="font-semibold tabular-nums" style={{ color: "var(--text-3)" }}>12</span>
                       </div>
                       <div
                         className="h-[26px] flex items-center px-3 rounded-pill text-[11px] font-extrabold"
@@ -143,7 +143,7 @@ export async function Hero() {
                         <div
                           key={row.name}
                           className="flex items-center gap-2.5 rounded-md px-2.5 py-2.5"
-                          style={{ background: "var(--surface-container)" }}
+                          style={{ background: "var(--nested)" }}
                         >
                           <span
                             className="w-[30px] h-[30px] rounded-pill flex items-center justify-center text-[11px] font-extrabold"
@@ -153,11 +153,11 @@ export async function Hero() {
                           </span>
                           <div className="flex-1">
                             <div className="text-xs font-bold">{row.name}</div>
-                            <div className="text-[10.5px]" style={{ color: "var(--muted)" }}>{row.meta}</div>
+                            <div className="text-[10.5px]" style={{ color: "var(--text-3)" }}>{row.meta}</div>
                           </div>
                           <div
                             className="text-[11px] font-extrabold tabular-nums"
-                            style={{ color: row.ok === null ? "var(--muted)" : row.ok ? "var(--tertiary)" : "var(--secondary)" }}
+                            style={{ color: row.ok === null ? "var(--text-3)" : row.ok ? "var(--primary)" : "var(--role)" }}
                           >
                             {row.badge}
                           </div>
@@ -171,21 +171,21 @@ export async function Hero() {
 
             <div
               className="absolute -left-7.5 -bottom-10 w-[170px] rounded-3xl overflow-hidden border-[6px]"
-              style={{ background: "var(--bg)", borderColor: "var(--surface-high)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
+              style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
             >
-              <div className="h-4.5 flex items-center justify-center" style={{ background: "var(--surface-container)" }}>
+              <div className="h-4.5 flex items-center justify-center" style={{ background: "var(--nested)" }}>
                 <div className="w-11 h-1.5 rounded-pill" style={{ background: "var(--outline)" }} />
               </div>
               <div className="p-2.5">
-                <div className="text-[10px] font-bold" style={{ color: "var(--muted)" }}>{t("mockWatchDay")}</div>
+                <div className="text-[10px] font-bold" style={{ color: "var(--text-3)" }}>{t("mockWatchDay")}</div>
                 <div className="text-[15px] font-extrabold mb-2">{t("mockWatchTitle")}</div>
-                <div className="rounded-md p-2 mb-1.5" style={{ background: "var(--surface-container)" }}>
+                <div className="rounded-md p-2 mb-1.5" style={{ background: "var(--nested)" }}>
                   <div className="text-[10.5px] font-bold">{demo("squat")}</div>
-                  <div className="text-[9.5px] tabular-nums" style={{ color: "var(--muted)" }}>5×5 · 82,5 kg</div>
+                  <div className="text-[9.5px] tabular-nums" style={{ color: "var(--text-3)" }}>5×5 · 82,5 kg</div>
                 </div>
-                <div className="rounded-md p-2 mb-1.5" style={{ background: "var(--surface-container)" }}>
+                <div className="rounded-md p-2 mb-1.5" style={{ background: "var(--nested)" }}>
                   <div className="text-[10.5px] font-bold">{demo("benchPress")}</div>
-                  <div className="text-[9.5px] tabular-nums" style={{ color: "var(--muted)" }}>5×5 · 65 kg</div>
+                  <div className="text-[9.5px] tabular-nums" style={{ color: "var(--text-3)" }}>5×5 · 65 kg</div>
                 </div>
                 <div
                   className="h-7.5 rounded-pill flex items-center justify-center text-[11px] font-extrabold"
@@ -201,17 +201,17 @@ export async function Hero() {
           <div className="md:hidden flex justify-center mt-2">
             <div
               className="w-[220px] rounded-3xl overflow-hidden border-[6px]"
-              style={{ background: "var(--bg)", borderColor: "var(--surface-high)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
+              style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
             >
-              <div className="h-5 flex items-center justify-center" style={{ background: "var(--surface-container)" }}>
+              <div className="h-5 flex items-center justify-center" style={{ background: "var(--nested)" }}>
                 <div className="w-12 h-1.5 rounded-pill" style={{ background: "var(--outline)" }} />
               </div>
               <div className="p-3">
-                <div className="text-[11px] font-bold" style={{ color: "var(--muted)" }}>{t("mockWatchDay")}</div>
+                <div className="text-[11px] font-bold" style={{ color: "var(--text-3)" }}>{t("mockWatchDay")}</div>
                 <div className="text-base font-extrabold mb-2.5">{t("mockWatchTitle")}</div>
-                <div className="rounded-md p-2.5 mb-2" style={{ background: "var(--surface-container)" }}>
+                <div className="rounded-md p-2.5 mb-2" style={{ background: "var(--nested)" }}>
                   <div className="text-xs font-bold">{demo("squat")}</div>
-                  <div className="text-[10.5px] tabular-nums" style={{ color: "var(--muted)" }}>5×5 · 82,5 kg</div>
+                  <div className="text-[10.5px] tabular-nums" style={{ color: "var(--text-3)" }}>5×5 · 82,5 kg</div>
                 </div>
                 <div
                   className="h-9 rounded-pill flex items-center justify-center text-xs font-extrabold"

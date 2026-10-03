@@ -17,14 +17,14 @@ export async function FeatureGrid() {
   ];
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--surface-container)" }}>
+    <section className="py-16 md:py-24" style={{ background: "var(--nested)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <h2 className="hidden md:block text-[44px] font-bold tracking-[-0.02em]">{t("title")}</h2>
-        <p className="hidden md:block text-xl mt-3.5 max-w-[62ch]" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="hidden md:block text-xl mt-3.5 max-w-[62ch]" style={{ color: "var(--text-2)" }}>
           {t("sub")}
         </p>
         <h2 className="md:hidden text-[28px] font-bold tracking-[-0.02em] leading-[1.14]">{t("titleMobile")}</h2>
-        <p className="md:hidden text-[17px] mt-2.5" style={{ color: "var(--on-surface-variant)" }}>
+        <p className="md:hidden text-[17px] mt-2.5" style={{ color: "var(--text-2)" }}>
           {t("subMobile")}
         </p>
 
@@ -46,7 +46,7 @@ export async function FeatureGrid() {
                   {f.titleMobile ? <span className="md:hidden">{f.titleMobile}</span> : null}
                   <span className={f.titleMobile ? "hidden md:inline" : ""}>{f.title}</span>
                 </div>
-                <p className="text-sm md:text-[15px] leading-[1.5] md:leading-[1.55] mt-0.5 md:mt-1.5" style={{ color: "var(--on-surface-variant)" }}>
+                <p className="text-sm md:text-[15px] leading-[1.5] md:leading-[1.55] mt-0.5 md:mt-1.5" style={{ color: "var(--text-2)" }}>
                   <span className="hidden md:inline">{f.body}</span>
                   <span className="md:hidden">{f.bodyMobile}</span>
                 </p>

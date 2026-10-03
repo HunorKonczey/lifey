@@ -16,18 +16,18 @@ export function BrowserWindowFrame({
   return (
     <div
       className="rounded-lg overflow-hidden border border-outline"
-      style={{ background: "var(--surface)", boxShadow: "var(--shadow-float), 0 24px 60px rgba(0,0,0,.25)" }}
+      style={{ background: "var(--card)", boxShadow: "var(--e1), 0 24px 60px rgba(0,0,0,.25)" }}
     >
       <div
         className="h-[34px] flex items-center gap-1.5 px-3 border-b border-outline"
-        style={{ background: "var(--surface-container)" }}
+        style={{ background: "var(--nested)" }}
       >
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--outline)" }} />
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--outline)" }} />
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--outline)" }} />
         <div
           className="ml-2.5 h-5 flex-1 rounded-pill flex items-center px-2.5 text-[10px]"
-          style={{ background: "var(--bg)", color: "var(--muted)" }}
+          style={{ background: "var(--bg)", color: "var(--text-3)" }}
         >
           {url}
         </div>

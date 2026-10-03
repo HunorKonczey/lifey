@@ -5,14 +5,14 @@ function PhoneFrame({ children, label }: { children: React.ReactNode; label: str
     <div className="shrink-0 snap-center" style={{ scrollSnapAlign: "center" }}>
       <div
         className="w-[190px] h-[380px] rounded-3xl overflow-hidden border-[6px] flex flex-col"
-        style={{ background: "var(--bg)", borderColor: "var(--surface-high)", boxShadow: "0 20px 44px rgba(0,0,0,.3)" }}
+        style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "0 20px 44px rgba(0,0,0,.3)" }}
       >
-        <div className="h-5 flex items-center justify-center shrink-0" style={{ background: "var(--surface-container)" }}>
+        <div className="h-5 flex items-center justify-center shrink-0" style={{ background: "var(--nested)" }}>
           <div className="w-11 h-1.5 rounded-pill" style={{ background: "var(--outline)" }} />
         </div>
         <div className="flex-1 p-3 overflow-hidden">{children}</div>
       </div>
-      <div className="text-center text-[13px] font-bold mt-3" style={{ color: "var(--on-surface-variant)" }}>
+      <div className="text-center text-[13px] font-bold mt-3" style={{ color: "var(--text-2)" }}>
         {label}
       </div>
     </div>
@@ -54,14 +54,14 @@ export async function AppScreenshotRow() {
         style={{ scrollSnapType: "x mandatory" }}
       >
         <PhoneFrame label={t("nutritionLabel")}>
-          <div className="text-[10px] font-bold" style={{ color: "var(--muted)" }}>{t("nutritionToday").toUpperCase()}</div>
-          <div className="text-xl font-extrabold tabular-nums mt-0.5">1 840 <span className="text-xs font-semibold" style={{ color: "var(--muted)" }}>/ 2 200 kcal</span></div>
+          <div className="text-[10px] font-bold" style={{ color: "var(--text-3)" }}>{t("nutritionToday").toUpperCase()}</div>
+          <div className="text-xl font-extrabold tabular-nums mt-0.5">1 840 <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>/ 2 200 kcal</span></div>
           <div className="h-2 rounded-pill mt-2" style={{ background: "var(--outline)" }}>
-            <div className="h-2 rounded-pill w-4/5" style={{ background: "var(--secondary)" }} />
+            <div className="h-2 rounded-pill w-4/5" style={{ background: "var(--role)" }} />
           </div>
           <div className="flex flex-col gap-1.5 mt-3">
             {[t("nutritionBreakfast"), t("nutritionLunch")].map((m) => (
-              <div key={m} className="rounded-md p-2" style={{ background: "var(--surface-container)" }}>
+              <div key={m} className="rounded-md p-2" style={{ background: "var(--nested)" }}>
                 <div className="text-[11px] font-bold">{m}</div>
               </div>
             ))}
@@ -70,56 +70,56 @@ export async function AppScreenshotRow() {
 
         <PhoneFrame label={t("workoutsLabel")}>
           <div className="text-[13px] font-extrabold">{t("workoutsType")}</div>
-          <div className="text-[10px]" style={{ color: "var(--muted)" }}>{t("workoutsWeek")}</div>
+          <div className="text-[10px]" style={{ color: "var(--text-3)" }}>{t("workoutsWeek")}</div>
           <div className="flex flex-col gap-1.5 mt-2.5">
             {[demo("squat"), demo("benchPress")].map((ex) => (
-              <div key={ex} className="rounded-md p-2 flex justify-between" style={{ background: "var(--surface-container)" }}>
+              <div key={ex} className="rounded-md p-2 flex justify-between" style={{ background: "var(--nested)" }}>
                 <span className="text-[11px] font-bold">{ex}</span>
-                <span className="text-[10.5px] tabular-nums" style={{ color: "var(--muted)" }}>5×5</span>
+                <span className="text-[10.5px] tabular-nums" style={{ color: "var(--text-3)" }}>5×5</span>
               </div>
             ))}
           </div>
-          <div className="h-9 rounded-pill flex items-center justify-center text-xs font-extrabold mt-3" style={{ background: "var(--secondary)", color: "var(--bg)" }}>
+          <div className="h-9 rounded-pill flex items-center justify-center text-xs font-extrabold mt-3" style={{ background: "var(--role)", color: "var(--bg)" }}>
             {t("workoutsStart")}
           </div>
         </PhoneFrame>
 
         <PhoneFrame label={t("cardioLabel")}>
-          <div className="text-[10px] font-bold" style={{ color: "var(--muted)" }}>{t("cardioType").toUpperCase()}</div>
-          <div className="text-xl font-extrabold tabular-nums mt-0.5">6,2 <span className="text-xs font-semibold" style={{ color: "var(--muted)" }}>km</span></div>
+          <div className="text-[10px] font-bold" style={{ color: "var(--text-3)" }}>{t("cardioType").toUpperCase()}</div>
+          <div className="text-xl font-extrabold tabular-nums mt-0.5">6,2 <span className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>km</span></div>
           <div className="grid grid-cols-2 gap-1.5 mt-2.5">
-            <div className="rounded-md p-2" style={{ background: "var(--surface-container)" }}>
-              <div className="text-[9.5px] font-bold" style={{ color: "var(--muted)" }}>{t("cardioPace").toUpperCase()}</div>
+            <div className="rounded-md p-2" style={{ background: "var(--nested)" }}>
+              <div className="text-[9.5px] font-bold" style={{ color: "var(--text-3)" }}>{t("cardioPace").toUpperCase()}</div>
               <div className="text-sm font-extrabold tabular-nums">5:12</div>
             </div>
-            <div className="rounded-md p-2" style={{ background: "var(--surface-container)" }}>
-              <div className="text-[9.5px] font-bold" style={{ color: "var(--muted)" }}>{t("cardioTime").toUpperCase()}</div>
+            <div className="rounded-md p-2" style={{ background: "var(--nested)" }}>
+              <div className="text-[9.5px] font-bold" style={{ color: "var(--text-3)" }}>{t("cardioTime").toUpperCase()}</div>
               <div className="text-sm font-extrabold tabular-nums">32:08</div>
             </div>
           </div>
         </PhoneFrame>
 
         <PhoneFrame label={t("watchLabel")}>
-          <div className="text-[10px] font-bold" style={{ color: "var(--muted)" }}>{t("watchToday").toUpperCase()}</div>
+          <div className="text-[10px] font-bold" style={{ color: "var(--text-3)" }}>{t("watchToday").toUpperCase()}</div>
           <div className="text-[15px] font-extrabold mt-1">{demo("squat")}</div>
-          <div className="rounded-md p-2 mt-2" style={{ background: "var(--surface-container)" }}>
+          <div className="rounded-md p-2 mt-2" style={{ background: "var(--nested)" }}>
             <div className="text-[10.5px] font-bold">5×5 · 82,5 kg</div>
           </div>
-          <div className="h-8 rounded-pill flex items-center justify-center text-[11px] font-extrabold mt-2.5" style={{ background: "var(--secondary)", color: "var(--bg)" }}>
+          <div className="h-8 rounded-pill flex items-center justify-center text-[11px] font-extrabold mt-2.5" style={{ background: "var(--role)", color: "var(--bg)" }}>
             {t("watchNextSet")}
           </div>
         </PhoneFrame>
 
         <PhoneFrame label={t("offlineLabel")}>
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>cloud_off</span>
-            <div className="text-[10.5px] font-bold" style={{ color: "var(--muted)" }}>{t("offlineBadge")}</div>
+            <span className="material-symbols-rounded text-base" style={{ color: "var(--text-3)" }}>cloud_off</span>
+            <div className="text-[10.5px] font-bold" style={{ color: "var(--text-3)" }}>{t("offlineBadge")}</div>
           </div>
-          <div className="rounded-md p-2 mt-2.5" style={{ background: "var(--surface-container)" }}>
+          <div className="rounded-md p-2 mt-2.5" style={{ background: "var(--nested)" }}>
             <div className="text-[11px] font-bold">{demo("squat")}</div>
-            <div className="text-[10px] tabular-nums" style={{ color: "var(--muted)" }}>5×5 · 82,5 kg</div>
+            <div className="text-[10px] tabular-nums" style={{ color: "var(--text-3)" }}>5×5 · 82,5 kg</div>
           </div>
-          <div className="text-[10.5px] leading-[1.5] mt-2.5" style={{ color: "var(--on-surface-variant)" }}>
+          <div className="text-[10.5px] leading-[1.5] mt-2.5" style={{ color: "var(--text-2)" }}>
             {t("offlineNote")}
           </div>
         </PhoneFrame>

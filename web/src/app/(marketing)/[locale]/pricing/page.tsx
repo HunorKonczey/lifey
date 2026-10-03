@@ -79,7 +79,7 @@ export default async function PricingPage({
         <div className="max-w-[1200px] mx-auto px-4 md:px-8">
           <div className="text-center max-w-[720px] mx-auto">
             <h1 className="text-[32px] md:text-[44px] font-bold tracking-[-0.02em]">{t("title")}</h1>
-            <p className="text-lg md:text-xl mt-3.5" style={{ color: "var(--on-surface-variant)" }}>
+            <p className="text-lg md:text-xl mt-3.5" style={{ color: "var(--text-2)" }}>
               {t("subtitle")}
             </p>
           </div>

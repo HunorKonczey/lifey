@@ -30,8 +30,8 @@ export function FooterLanguageSwitch() {
             locale={l}
             className="h-9 rounded-pill flex items-center px-3 text-[13px] font-extrabold"
             style={{
-              background: active ? "var(--surface-container)" : "transparent",
-              color: active ? "var(--on-surface)" : "var(--muted)",
+              background: active ? "var(--nested)" : "transparent",
+              color: active ? "var(--text)" : "var(--text-3)",
             }}
             aria-current={active ? "true" : undefined}
           >
