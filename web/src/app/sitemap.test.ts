@@ -26,6 +26,17 @@ describe("sitemap (65 §5.3)", () => {
     }
   });
 
+  it("every entry's x-default is the Hungarian (default-locale) URL of the same route", () => {
+    const huUrls = new Set(entries.filter((e) => e.url.includes("/hu")).map((e) => e.url));
+    for (const entry of entries) {
+      const xDefault = entry.alternates?.languages?.["x-default"];
+      expect(xDefault).toBeDefined();
+      expect(huUrls.has(xDefault as string)).toBe(true);
+      // The default-locale entry is its own x-default.
+      if (entry.url.includes("/hu")) expect(xDefault).toBe(entry.url);
+    }
+  });
+
   it("the hu and en entries for the same route point at different localized paths", () => {
     // /for-trainers is hu:"/edzoknek" vs en:"/for-trainers" — a real
     // divergence, not the root "/" which is identical in both locales.

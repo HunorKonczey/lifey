@@ -7,7 +7,7 @@ top to bottom, and it is not.
 
 It answers one question: *given that `63`–`74` are done, what is genuinely left?*
 
-Last reviewed: **2026-09-03**, after `72` F1–F5.
+Last reviewed: **2026-10-03** (quick-wins pass: W10, W11, B5, M10 and the first-load JS work closed; before that 2026-09-03, after `72` F1–F5).
 
 ---
 
@@ -67,23 +67,20 @@ below is the state this started from:
 `docs/23` now carries the exact call order, the transaction boundary and the status codes the
 gate must use (`72` F3 Prompt 14), so the billing side is specified rather than guessed.
 
-### 2.2 Web: first-load JS (`72` W7 / F6)
+### 2.2 Web: first-load JS — ✅ mostly done (2026-10-03)
 
-`/hu` ships ~275 KB gzipped against `65` §8's 100 KB target; Lighthouse 93 / SEO 92 / LCP 3.16 s
-against 95 / 100 / 2.5 s. Only ~16 KB of that is marketing-specific — the rest is a shared
-root-layout baseline `/login` already paid. The work is `@next/bundle-analyzer` over the root
-layout and deferring `<Analytics>`/`<SpeedInsights>` behind an idle callback, then re-measuring
-and tightening the CI thresholds in the same commit.
+`/hu` went from ~278 KB to **~215 KB** gzipped: `lib/env.ts` no longer imports zod (~64 KB, pulled into every
+marketing page through the header's API client), and Vercel's Analytics/Speed Insights now load behind an idle
+callback (`DeferredTelemetry`; on its own it moved nothing measurable). The CI ceiling in
+`scripts/check-js-budget.mjs` is tightened 320 → 240 KB. Still short of `65` §8's 100 KB: what remains is the shared
+React/Next baseline plus React Query and Zustand in the root layout. Lighthouse (93 / 92 / LCP 3.16 s) was **not**
+re-measured — it needs `lhci` against a deployed URL — so its thresholds in `lighthouserc.js` are unchanged.
 
 ### 2.3 Small, self-contained
 
 | Item | What | Size |
 |---|---|---|
-| `72` W10 | `sitemap.xml` emits `hu`/`en` alternates but no `x-default` | minutes |
-| `72` W11 | The pricing fine print promises prices "forintban vagy euróban … a számlázási országtól függően", but `lib/pricing.ts` carries HUF only and no page shows a EUR figure. Either surface EUR or make the sentence true | small |
 | `72` D5 | `68` §2.2–2.3's marketing type scale and `--mkt-*` tokens exist in neither `globals.css` nor `docs/web/06-design-system-web.md` — the shipped pages use Tailwind arbitrary values plus the app's tokens. Either land the tokens or record the deviation | small |
-| `72` B5 | No runbook for `BillingReconciliationJob` corrections (`64` §15 asks for one). `73` covers the verification passes, not this | small |
-| `72` M10 | 2–4 chat-attachment tests fail on Windows per run — a file-lock race in the test's own temp handling, unrelated to this work but noisy in every full-suite run | small |
 
 ---
 

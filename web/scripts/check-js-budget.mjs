@@ -30,11 +30,12 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 const PORT = 4173;
 const BASE_URL = `http://localhost:${PORT}`;
-// Baseline measured on `/hu` across Prompts 3–10: ~275–283 KB gzipped.
-// 320 KB leaves ~40 KB of legitimate headroom (e.g. a future page's own
-// small client island, like the pricing page's ~1.4 KB) while still
-// catching anything recharts-sized (~95 KB) with room to spare.
-const BUDGET_BYTES = 320 * 1024;
+// Baseline measured on `/hu`: ~275–283 KB gzipped until docs/landing_page/72 W7 / F6,
+// then ~215 KB once `lib/env.ts` stopped importing zod (~64 KB, pulled in through the
+// header's API client) and Vercel's scripts moved behind an idle callback. 240 KB leaves
+// ~25 KB of legitimate headroom (a page's own small client island, like the pricing
+// page's ~1.4 KB) while still failing on anything zod- or recharts-sized.
+const BUDGET_BYTES = 240 * 1024;
 
 const ROUTES = [
   "/hu",
