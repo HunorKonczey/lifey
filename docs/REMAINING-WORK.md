@@ -131,8 +131,10 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
   böngészős ellenőrzés hátravan.
 - **[`watch/50`](watch/50-watch-f6c-session-plan-sync-plan.md) (F6c)** — kód kész, eszközös
   végpróba hátravan.
-- **Edzés üres szettsorai** — ismert bug (2026-07-15-én még javítatlan), az edzői feature után
-  újra kellett volna nézni.
+- **Edzés üres szettsorai** — kódszinten átnézve (2026-10-03) nincs nyoma: a képernyő `targetSets: rows.length`-et ment
+  (`_buildPlanned`), a `planSessionRows` ebből építi újra a sorokat, a pull nem írja felül, és a szerver már maga is tárolja
+  (`pull_engine_workout_session_target_sets_test`). A körforgást most teszt is rögzíti (`session_row_plan_test`). Nyitva csak
+  az eszközös ellenőrzés: üres sor hozzáadása → kilépés → visszatérés, illetve Live Activity / értesítés koppintás.
 - **[`80`](80-progress-photos-measurements-plan.md)** — testméretek + progress fotók: kód és tesztek kész,
   hátravan az emulátoros végigpróba (Body képernyő, kamera/galéria, összehasonlítás) és a Docker-es
   `mvnw verify` (V78/V79 Flyway ↔ entitás `validate`, Testcontainers-tesztek).
