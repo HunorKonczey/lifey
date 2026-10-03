@@ -77,8 +77,8 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
-ChatShareTarget get _someone => ChatShareTarget(
-      peer: const ChatPeer(userId: 50, displayName: 'Edző Elek', email: 'e@example.com', role: ChatPeerRole.trainer),
+ChatShareTarget get _someone => const ChatShareTarget(
+      peer: ChatPeer(userId: 50, displayName: 'Edző Elek', email: 'e@example.com', role: ChatPeerRole.trainer),
       conversationId: 1,
     );
 
