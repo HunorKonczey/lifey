@@ -86,6 +86,40 @@ void main() {
     });
   });
 
+  group('persist -> rebuild round trip (the "empty rows disappear" report)', () {
+    // The screen persists `targetSets: block.rows.length` (_buildPlanned) and
+    // rebuilds from `storedTargetSets` + the logged sets (_rebuildBlocks). A
+    // blank row the user added by hand must therefore come back after leaving
+    // the screen or resuming from the Live Activity, without any template.
+    int rowsAfterRebuild({required int rows, required int done}) {
+      final plan = planSessionRows(
+        storedTargetSets: rows, // what _buildPlanned wrote
+        templateTargetSets: null,
+        doneSets: done,
+        sessionFinished: false,
+      );
+      return done + plan.blankRows;
+    }
+
+    test('hand-added blank rows survive: 1 done + 2 blank comes back as 3 rows', () {
+      expect(rowsAfterRebuild(rows: 3, done: 1), 3);
+    });
+
+    test('a blank row added past the template plan survives too', () {
+      // Template planned 3, the user added a 4th and logged 2.
+      expect(rowsAfterRebuild(rows: 4, done: 2), 4);
+    });
+
+    test('rebuilding twice is stable: the second rebuild writes back the same count', () {
+      final first = rowsAfterRebuild(rows: 5, done: 2);
+      expect(rowsAfterRebuild(rows: first, done: 2), first);
+    });
+
+    test('nothing logged yet still keeps every planned row', () {
+      expect(rowsAfterRebuild(rows: 4, done: 0), 4);
+    });
+  });
+
   group('finished sessions', () {
     test('are not decorated with a blank row they never had', () {
       final plan = planSessionRows(
