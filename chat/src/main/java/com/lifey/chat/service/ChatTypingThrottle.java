@@ -45,11 +45,20 @@ public class ChatTypingThrottle {
         pruneIfLarge(now, interval);
 
         Key key = new Key(conversationId, userId);
-        // merge() rather than get-then-put: two keystrokes racing must not both
-        // come out allowed.
-        Instant stored = lastSignal.merge(key, now,
-                (previous, candidate) -> previous.isAfter(candidate.minus(interval)) ? previous : candidate);
-        return stored.equals(now);
+        // compute() rather than get-then-put: two keystrokes racing must not both
+        // come out allowed. The decision is made inside it and reported through
+        // the flag — comparing the stored instant with `now` afterwards would
+        // call two signals in the same clock tick (Windows ticks are coarse)
+        // "the same signal", and let both through.
+        boolean[] allowed = {false};
+        lastSignal.compute(key, (k, previous) -> {
+            if (previous != null && previous.isAfter(now.minus(interval))) {
+                return previous;
+            }
+            allowed[0] = true;
+            return now;
+        });
+        return allowed[0];
     }
 
     private void pruneIfLarge(Instant now, Duration interval) {
