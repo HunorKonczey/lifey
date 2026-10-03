@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditTransition, bulkTargets, personLabel, roleFilterParam, primaryRole, runBulk } from "./userRoles";
+import { auditTransition, bulkTargets, personLabel, roleFilterParam, primaryRole, runBulk, lastActiveSortKey } from "./userRoles";
 import type { SuperAdminUserResponse } from "./types";
 
 const user = (id: number, ...roles: string[]) => ({ id, email: `u${id}@x.hu`, roles, createdAt: "2026-01-01T00:00:00Z", hasAvatar: false }) as SuperAdminUserResponse;
@@ -49,5 +49,15 @@ describe("auditTransition / personLabel", () => {
     expect(personLabel("Szabó Bence", "b@x.hu")).toBe("Szabó Bence");
     expect(personLabel(null, "b@x.hu")).toBe("b@x.hu");
     expect(personLabel(" ", null)).toBeNull();
+  });
+});
+
+describe("lastActiveSortKey", () => {
+  it("keeps an instant as is, so ISO strings sort chronologically", () => {
+    expect(lastActiveSortKey("2026-10-02T09:30:00Z") > lastActiveSortKey("2026-10-01T09:30:00Z")).toBe(true);
+  });
+  it("sorts an unknown activity as the oldest, never as the newest", () => {
+    expect(lastActiveSortKey(null) < lastActiveSortKey("2000-01-01T00:00:00Z")).toBe(true);
+    expect(lastActiveSortKey(undefined)).toBe("");
   });
 });

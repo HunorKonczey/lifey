@@ -3427,16 +3427,16 @@ W0.1–W0.4 and can land before the component kit, which is why M1 is the shell.
 
 ## 6. Non-goals (deferred)
 
-- **Goal attribution** ("Célok: Szabó Bence", "set by your trainer on Sep 12", "he gets notified") —
-  needs persisted who/when on goal changes. Own plan (§10 Q1).
+- ~~**Goal attribution**~~ ("Célok: Szabó Bence", "set by your trainer on Sep 12", "he gets notified") —
+  **done by `82` S4 (2026-10-03):** who/when is persisted and shown as a chip on the client's goals and the trainer's client tab.
 - **Weight time of day and notes** — `WeightResponse` is date-only.
 - **Food servings / portions ("1 pohár · 150 g"), fibre, sugar, food favourites, own vs catalogue foods**
   — food model changes (same deferral as mobile 77 §6 piece-based portions).
 - **"From your trainer" marker on assigned recipes** — the copy doesn't carry its origin to the client.
 - **Trainer meal comments; trainer-edited step goal** — new endpoints/data.
 - **Chat presence ("online") and shared workout/meal cards** — chat-service work (same as mobile 77 §6).
-- **Invite history (accepted), shareable join link, invite reminders** — invite model changes.
-- **Superadmin "last login", trainer-request "qualification"** — not tracked / not collected.
+- **Invite history (accepted)** — **done by `82` S2** (the rows were always kept; only an endpoint was missing). **Shareable join link, invite reminders** — still open, invite model changes.
+- **Superadmin "last login"** — **done by `82` S3** (`users.last_active_at`). **Trainer-request "qualification"** — not collected.
 - **Calendar drag-to-move and auto-shifting conflicts** — unless W8.b1 is approved.
 - **Marketing pages** — have their own design; only pinned (D-W0.2).
 - **Client web chat** — the client nav has no chat today; not added.
@@ -3846,3 +3846,5 @@ frames were compared by eye, strip by strip).
 *Still not done:* the English pass of the trainer pages was done in the trainer's own (English) setting but the HU / EN pass of every page, the 200 % zoom pass, the phone on-screen keyboard and keyboard dragging remain unchecked (see `docs/REMAINING-WORK.md` §2.2).
 
 *Marketing palette (2026-10-03).* See D-W0.2 "Retired": the marketing tree is on the v2 tokens, the pin and the legacy variable names no longer exist anywhere in `globals.css`; `contrast.test.ts` now asserts that. The OG image (`lib/ogImage.tsx`, Satori, cannot read CSS variables) carries the v2 dark hexes by hand. Left as literals on purpose: the pastel avatar colours inside the marketing mocks (`ClientsMock`, `Hero`), which are illustration, not theme.
+
+*Closed by `82` (2026-10-03):* goal attribution, invite history, real last activity and the server-side role filter — see `docs/redesign-web/82-web-backend-gaps-plan.md`.

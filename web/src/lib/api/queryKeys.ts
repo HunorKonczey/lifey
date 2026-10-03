@@ -5,6 +5,8 @@ export const queryKeys = {
   settings: {
     all: () => ["settings"] as const,
     avatar: () => ["settings", "avatar"] as const,
+    /** Under `all`, so saving settings refreshes who-set-the-goals too. */
+    goalsSource: () => ["settings", "goals-source"] as const,
   },
   userDetails: {
     all: () => ["user-details"] as const,
@@ -89,6 +91,8 @@ export const queryKeys = {
     avatar: (clientId: number) => ["trainer-client-data", clientId, "avatar"] as const,
     meals: (clientId: number, date: string) => ["trainer-client-data", clientId, "meals", date] as const,
     nutritionGoals: (clientId: number) => ["trainer-client-data", clientId, "nutrition-goals"] as const,
+    /** Under `nutritionGoals`, so saving the goals refreshes the attribution. */
+    nutritionGoalsSource: (clientId: number) => ["trainer-client-data", clientId, "nutrition-goals", "source"] as const,
   },
   trainerSchedules: {
     forClient: (clientId: number) => ["trainer-schedules", "client", clientId] as const,

@@ -1,4 +1,5 @@
 import { api, ApiError, type Page } from "@/lib/api/client";
+import type { ClientNutritionGoalsSourceResponse } from "@/features/settings/goalsSource";
 import type { StatisticsResponse } from "@/features/statistics/types";
 import type { DailyStepCountResponse } from "@/features/steps/types";
 import type { WeightResponse } from "@/features/weight/types";
@@ -88,6 +89,8 @@ export const trainerApi = {
   },
   clientNutritionGoals: (clientId: number) =>
     api.get<ClientNutritionGoalsResponse>(`/trainer/clients/${clientId}/nutrition-goals`),
+  clientNutritionGoalsSource: (clientId: number) =>
+    api.get<ClientNutritionGoalsSourceResponse>(`/trainer/clients/${clientId}/nutrition-goals/source`),
   updateClientNutritionGoals: (clientId: number, goals: ClientNutritionGoalsRequest) =>
     api.put<ClientNutritionGoalsResponse>(`/trainer/clients/${clientId}/nutrition-goals`, goals),
   /** Returns null (not an error) when the client has no profile picture set. */

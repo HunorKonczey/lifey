@@ -342,6 +342,9 @@
       "commentDeleteCancel": "Mégse",
       "commentDeleteConfirm": "Törlés",
       "goalsEdit": "Célok szerkesztése",
+      "goalsSetByYou": "Te állítottad be · {date}",
+      "goalsSetByOtherTrainer": "Másik edző állította be · {date}",
+      "goalsSetByClient": "A kliens állította be · {date}",
       "goalsSave": "Mentés",
       "goalsUpdated": "A táplálkozási célok frissítve",
       "goalsSaveFailed": "A célok mentése nem sikerült",
@@ -779,6 +782,8 @@
     "colUser": "Felhasználó",
     "colRole": "Szerepkör",
     "colRegistered": "Regisztrált",
+    "colLastActive": "Utolsó aktivitás",
+    "lastActiveUnknown": "Még nincs rögzített aktivitás",
     "role": {
       "USER": "Kliens",
       "TRAINER": "Edző",
@@ -1901,6 +1906,8 @@
   "settings": {
     "profile": "Profil",
     "dailyGoals": "Napi célok",
+    "goalsSetByTrainerNamed": "{name} állította be · {date}",
+    "goalsSetByTrainer": "Az edződ állította be · {date}",
     "units": "Mértékegységek",
     "theme": "Téma",
     "language": "Nyelv",

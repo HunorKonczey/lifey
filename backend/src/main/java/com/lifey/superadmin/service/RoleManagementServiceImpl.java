@@ -228,6 +228,6 @@ public class RoleManagementServiceImpl implements RoleManagementService {
     private static SuperAdminUserResponse toUserResponse(User user, boolean hasAvatar, String trainerName, Integer clientCount) {
         Set<String> roleNames = user.getRoles().stream().map(Enum::name).collect(Collectors.toUnmodifiableSet());
         return new SuperAdminUserResponse(user.getId(), user.getEmail(), roleNames, user.getCreatedAt(), hasAvatar,
-                user.getFirstName(), user.getLastName(), trainerName, clientCount);
+                user.getFirstName(), user.getLastName(), trainerName, clientCount, user.getLastActiveAt());
     }
 }

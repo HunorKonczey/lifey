@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 import { useTranslations } from "next-intl";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Checkbox, ConfirmModal, DataTable, SegmentedControl, type DataTableColumn } from "@/components/ds";
@@ -14,10 +15,12 @@ import { RoleHistoryDrawer } from "@/features/superadmin/components/RoleHistoryD
 import { SuperAdminStatsRow } from "@/features/superadmin/components/SuperAdminStatsRow";
 import { UserAvatar } from "@/features/superadmin/components/UserAvatar";
 import type { SuperAdminUserResponse } from "@/features/superadmin/types";
-import { bulkTargets, personLabel, primaryRole, roleFilterParam, runBulk, type BulkRoleAction, type RoleFilter } from "@/features/superadmin/userRoles";
+import { bulkTargets, lastActiveSortKey, personLabel, primaryRole, roleFilterParam, runBulk, type BulkRoleAction, type RoleFilter } from "@/features/superadmin/userRoles";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useFormat } from "@/lib/i18n/format";
 import { useToast } from "@/lib/hooks/useToast";
+import { useLocale } from "@/lib/hooks/useLocale";
+import { DATE_LOCALES } from "@/lib/i18n/format";
 
 /** The users the table can show at once; a search goes to the server, so a longer list is still reachable. */
 const LIMIT = 500;
@@ -40,6 +43,7 @@ interface PendingChange {
 export default function SuperAdminUsersPage() {
   const t = useTranslations("superadmin");
   const fmt = useFormat();
+  const locale = useLocale((st) => st.locale);
   const queryClient = useQueryClient();
   const { show } = useToast();
   const me = useSessionStore((s) => s.user);
@@ -141,6 +145,19 @@ export default function SuperAdminUsersPage() {
           <span className="type-body-s truncate" style={{ color: "var(--text-2)" }}>{u.trainerName}</span>
         ) : (
           <span className="type-body-s" style={{ color: "var(--text-3)" }}>—</span>
+        ),
+    },
+    {
+      key: "lastActive",
+      header: t("colLastActive"),
+      sort: (u) => lastActiveSortKey(u.lastActiveAt),
+      render: (u) =>
+        u.lastActiveAt ? (
+          <span className="type-body-s" style={{ color: "var(--text-2)" }} title={fmt.date(u.lastActiveAt, "dateTime")}>
+            {formatDistanceToNow(new Date(u.lastActiveAt), { addSuffix: true, locale: DATE_LOCALES[locale] })}
+          </span>
+        ) : (
+          <span className="type-body-s" style={{ color: "var(--text-3)" }} title={t("lastActiveUnknown")}>—</span>
         ),
     },
     {

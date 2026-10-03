@@ -14,6 +14,8 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -90,7 +92,10 @@ class BackfillTrainerTrialsMigrationTest {
                 assertThat(rs.getString("plan")).isEqualTo("PRO");
                 assertThat(rs.getString("provider")).isEqualTo("STRIPE");
                 Instant trialEndsAt = rs.getTimestamp("trial_ends_at").toInstant();
-                Instant expected = Instant.now().plus(Duration.ofDays(30));
+                // `now() + interval '30 days'` is 30 *calendar* days in the session time zone (the JVM's, which pgjdbc sends),
+                // so across a daylight-saving change it is 29 or 31 days' worth of hours. Adding 30 x 24 h here made this test
+                // fail by exactly one hour for the whole month before every clock change.
+                Instant expected = ZonedDateTime.now(ZoneId.systemDefault()).plusDays(30).toInstant();
                 assertThat(trialEndsAt).isCloseTo(expected, within(Duration.ofMinutes(5)));
                 assertThat(rs.next()).isFalse();
             }

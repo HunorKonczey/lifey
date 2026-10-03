@@ -1,5 +1,6 @@
 package com.lifey.settings;
 
+import com.lifey.settings.dto.NutritionGoalsSourceResponse;
 import com.lifey.settings.dto.SettingsRequest;
 import com.lifey.settings.dto.SettingsResponse;
 import com.lifey.settings.service.SettingsService;
@@ -21,6 +22,14 @@ public class SettingsController {
     @GetMapping
     public SettingsResponse get() {
         return settingsService.get();
+    }
+
+    @Operation(summary = "Who last set the current user's nutrition goals, and when",
+            description = "source is SELF, TRAINER or UNKNOWN (never recorded: no date is invented). setByName is "
+                    + "the trainer's display name for TRAINER, null if that account is gone.")
+    @GetMapping("/nutrition-goals-source")
+    public NutritionGoalsSourceResponse nutritionGoalsSource() {
+        return settingsService.nutritionGoalsSource();
     }
 
     @Operation(summary = "Replace the current user's settings")

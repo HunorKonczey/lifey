@@ -70,3 +70,8 @@ export function auditTransition(entry: AuditEntryLike): AuditTransition {
     ? { icon: "how_to_reg", tone: "grant", from: "USER", to: "TRAINER" }
     : { icon: "person_remove", tone: "revoke", from: "TRAINER", to: "USER" };
 }
+
+/** Sort key of the "last active" column: ISO instants sort as text, and an unknown value sorts as the oldest. */
+export function lastActiveSortKey(lastActiveAt: string | null | undefined): string {
+  return lastActiveAt ?? "";
+}

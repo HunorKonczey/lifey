@@ -1,6 +1,5 @@
 package com.lifey.superadmin.service;
 
-import com.lifey.auth.repository.RefreshTokenRepository;
 import com.lifey.superadmin.dto.SuperAdminStatsResponse;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
@@ -29,21 +28,19 @@ class SuperAdminStatsServiceImplTest {
     @Mock
     UserRepository userRepository;
     @Mock
-    RefreshTokenRepository refreshTokenRepository;
-    @Mock
     TrainerClientRepository trainerClientRepository;
     @Mock
     TrainerRequestRepository trainerRequestRepository;
 
     private SuperAdminStatsServiceImpl service() {
-        return new SuperAdminStatsServiceImpl(userRepository, refreshTokenRepository, trainerClientRepository,
+        return new SuperAdminStatsServiceImpl(userRepository, trainerClientRepository,
                 trainerRequestRepository, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
     void stats_collectsTheCounts_andCountsActivityOverTheLastThirtyDays() {
         when(userRepository.count()).thenReturn(120L);
-        when(refreshTokenRepository.countDistinctUsersSince(Instant.parse("2026-09-01T12:00:00Z"))).thenReturn(64L);
+        when(userRepository.countActiveSince(Instant.parse("2026-09-01T12:00:00Z"))).thenReturn(64L);
         when(userRepository.countByRole(Role.ROLE_TRAINER)).thenReturn(9L);
         when(trainerClientRepository.countDistinctClientsByStatus(TrainerClientStatus.ACTIVE)).thenReturn(41L);
         when(trainerRequestRepository.countByStatus(TrainerRequestStatus.PENDING)).thenReturn(3L);

@@ -6,6 +6,7 @@ import com.lifey.auth.properties.GoogleOAuthProperties;
 import com.lifey.auth.properties.JwtProperties;
 import com.lifey.auth.service.CustomUserDetailsService;
 import com.lifey.auth.service.JwtService;
+import com.lifey.user.UserActivityTracker;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -94,6 +95,7 @@ public class SecurityConfig {
     @SuppressWarnings("java:S4502") // reviewed: see the .csrf(...) comment below
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtService jwtService,
+                                           UserActivityTracker activityTracker,
                                            JwtAuthenticationEntryPoint entryPoint,
                                            JwtAccessDeniedHandler accessDeniedHandler,
                                            CorsConfigurationSource corsConfigurationSource) {
@@ -129,7 +131,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 // Not a bean (see JwtAuthenticationFilter's Javadoc) — constructed
                 // directly so Spring Boot doesn't also auto-register it globally.
-                .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService, activityTracker), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

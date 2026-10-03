@@ -342,6 +342,9 @@
       "commentDeleteCancel": "Cancel",
       "commentDeleteConfirm": "Delete",
       "goalsEdit": "Edit goals",
+      "goalsSetByYou": "You set these · {date}",
+      "goalsSetByOtherTrainer": "Set by another trainer · {date}",
+      "goalsSetByClient": "The client set these · {date}",
       "goalsSave": "Save",
       "goalsUpdated": "Nutrition goals updated",
       "goalsSaveFailed": "Failed to update the goals",
@@ -779,6 +782,8 @@
     "colUser": "User",
     "colRole": "Role",
     "colRegistered": "Registered",
+    "colLastActive": "Last active",
+    "lastActiveUnknown": "No activity recorded yet",
     "role": {
       "USER": "Client",
       "TRAINER": "Trainer",
@@ -1901,6 +1906,8 @@
   "settings": {
     "profile": "Profile",
     "dailyGoals": "Daily goals",
+    "goalsSetByTrainerNamed": "Set by {name} · {date}",
+    "goalsSetByTrainer": "Set by your trainer · {date}",
     "units": "Units",
     "theme": "Theme",
     "language": "Language",

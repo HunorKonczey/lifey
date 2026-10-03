@@ -1,9 +1,12 @@
 import { api, ApiError } from "@/lib/api/client";
 import type { SettingsResponse, SettingsRequest } from "./types";
+import type { NutritionGoalsSourceResponse } from "./goalsSource";
 
 export const settingsApi = {
   get: () => api.get<SettingsResponse>("/settings"),
   update: (body: SettingsRequest) => api.put<SettingsResponse>("/settings", body),
+  /** Who last set the nutrition goals, and when (docs/redesign-web/82 section 2.4). */
+  nutritionGoalsSource: () => api.get<NutritionGoalsSourceResponse>("/settings/nutrition-goals-source"),
 };
 
 export const avatarApi = {

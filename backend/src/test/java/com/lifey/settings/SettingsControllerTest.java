@@ -1,5 +1,6 @@
 package com.lifey.settings;
 
+import com.lifey.settings.dto.NutritionGoalsSourceResponse;
 import com.lifey.settings.dto.SettingsResponse;
 import com.lifey.settings.service.SettingsService;
 import org.junit.jupiter.api.Test;
@@ -8,6 +9,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -108,5 +111,28 @@ class SettingsControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(settingsService, never()).update(any());
+    }
+
+    @Test
+    void nutritionGoalsSource_returnsWhoSetThemAndWhen() throws Exception {
+        when(settingsService.nutritionGoalsSource()).thenReturn(new NutritionGoalsSourceResponse(
+                GoalsSource.TRAINER, Instant.parse("2026-09-12T08:00:00Z"), "Bence Edzo"));
+
+        mockMvc.perform(get("/api/v1/settings/nutrition-goals-source"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source").value("TRAINER"))
+                .andExpect(jsonPath("$.setAt").value("2026-09-12T08:00:00Z"))
+                .andExpect(jsonPath("$.setByName").value("Bence Edzo"));
+    }
+
+    @Test
+    void nutritionGoalsSource_unknownHasNoDate() throws Exception {
+        when(settingsService.nutritionGoalsSource())
+                .thenReturn(new NutritionGoalsSourceResponse(GoalsSource.UNKNOWN, null, null));
+
+        mockMvc.perform(get("/api/v1/settings/nutrition-goals-source"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source").value("UNKNOWN"))
+                .andExpect(jsonPath("$.setAt").doesNotExist());
     }
 }

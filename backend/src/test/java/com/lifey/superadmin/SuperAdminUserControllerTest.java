@@ -49,14 +49,16 @@ class SuperAdminUserControllerTest {
         when(roleManagementService.findUsers(any(), any(), any())).thenReturn(new PageImpl<>(List.of(
                 new SuperAdminUserResponse(2L, "client@example.com", Set.of("ROLE_USER"),
                         Instant.parse("2026-06-01T00:00:00Z"), false,
-                        "Anna", "Kiss", "Bence Edzo", null)), pageable, 1));
+                        "Anna", "Kiss", "Bence Edzo", null,
+                        Instant.parse("2026-10-02T09:30:00Z"))), pageable, 1));
 
         mockMvc.perform(get("/api/v1/superadmin/users"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].email").value("client@example.com"))
                 .andExpect(jsonPath("$.content[0].firstName").value("Anna"))
                 .andExpect(jsonPath("$.content[0].trainerName").value("Bence Edzo"))
-                .andExpect(jsonPath("$.content[0].clientCount").doesNotExist());
+                .andExpect(jsonPath("$.content[0].clientCount").doesNotExist())
+                .andExpect(jsonPath("$.content[0].lastActiveAt").value("2026-10-02T09:30:00Z"));
     }
 
     @Test

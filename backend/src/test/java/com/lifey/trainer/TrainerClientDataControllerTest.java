@@ -8,6 +8,7 @@ import com.lifey.nutrition.meal.service.MealService;
 import com.lifey.settings.LanguagePreference;
 import com.lifey.settings.ThemePreference;
 import com.lifey.settings.UnitSystem;
+import com.lifey.settings.NutritionGoalsAttribution;
 import com.lifey.settings.dto.SettingsResponse;
 import com.lifey.settings.service.SettingsService;
 import com.lifey.statistics.dto.StatisticsResponse;
@@ -374,5 +375,41 @@ class TrainerClientDataControllerTest {
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/weights", CLIENT_ID))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void nutritionGoalsSource_flagsYourOwnChange_andNeverNamesAnyone() throws Exception {
+        when(settingsService.nutritionGoalsAttribution(CLIENT_ID)).thenReturn(
+                NutritionGoalsAttribution.of(CLIENT_ID, Instant.parse("2026-09-12T08:00:00Z"), TRAINER_ID));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/nutrition-goals/source", CLIENT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source").value("TRAINER"))
+                .andExpect(jsonPath("$.setByYou").value(true))
+                .andExpect(jsonPath("$.setByName").doesNotExist());
+    }
+
+    @Test
+    void nutritionGoalsSource_anotherTrainersChangeIsNotYours() throws Exception {
+        when(settingsService.nutritionGoalsAttribution(CLIENT_ID)).thenReturn(
+                NutritionGoalsAttribution.of(CLIENT_ID, Instant.parse("2026-09-12T08:00:00Z"), 77L));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/nutrition-goals/source", CLIENT_ID))
+                .andExpect(jsonPath("$.source").value("TRAINER"))
+                .andExpect(jsonPath("$.setByYou").value(false));
+    }
+
+    @Test
+    void nutritionGoalsSource_theClientsOwnGoalsAndUnknownAreNeverSetByYou() throws Exception {
+        when(settingsService.nutritionGoalsAttribution(CLIENT_ID)).thenReturn(
+                NutritionGoalsAttribution.of(CLIENT_ID, Instant.parse("2026-09-12T08:00:00Z"), CLIENT_ID));
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/nutrition-goals/source", CLIENT_ID))
+                .andExpect(jsonPath("$.source").value("SELF"))
+                .andExpect(jsonPath("$.setByYou").value(false));
+
+        when(settingsService.nutritionGoalsAttribution(CLIENT_ID)).thenReturn(NutritionGoalsAttribution.unknown());
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/nutrition-goals/source", CLIENT_ID))
+                .andExpect(jsonPath("$.source").value("UNKNOWN"))
+                .andExpect(jsonPath("$.setAt").doesNotExist());
     }
 }
