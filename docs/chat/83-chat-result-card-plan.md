@@ -1,6 +1,6 @@
 # 83 – Chat result card: sharing a workout or a PR as a message
 
-Status: in progress (branch `feature/chat-result-card`; step log in §9)
+Status: built (2026-10-03, branch `feature/chat-result-card`) — S1–S7 done; chat 218, backend, mobile 2,972 and web 1,089 tests green; an emulator / two-device walk is owed (log in §9)
 Scope: chat service · backend (monolith) · mobile · web (read-only)
 Depends on: `docs/chat/40-trainer-chat-plan.md` (messages, attachments §18, push §5),
 `docs/chat/44-chat-service-extraction-plan.md` (the chat is its own service with its own migrations),
@@ -22,8 +22,9 @@ conversation list, and opens the real session when the trainer taps it.
    on its own), the finished strength session, and the cardio summary. One shared "send to chat" sheet shows
    the card as it will arrive, a caption field and, only when the person has more than one open thread, who to
    send it to. With no open thread the share action is not offered at all.
-3. **The thread renders it** — a card bubble in the family of the existing ones (own side olive, peer side
-   surface), in dark and light, HU and EN, with the numbers formatted for the *reader's* locale.
+3. **The thread renders it** — a card of its own in the thread (not text in a bubble: a card inside a bubble is
+   the nested box the design system forbids), in dark and light, HU and EN, with the numbers formatted for the
+   *reader's* locale.
 4. **Tap to open** — the trainer taps a card from their client and the real session opens (the same detail
    sheet as the client's Workouts tab, comment box included). The owner taps their own card and their own
    session detail opens. Anyone else sees a static card.
@@ -93,9 +94,10 @@ send must never do is wait on a different feature.
 
 ### 2.7 Who may share, and who may open
 
-Any participant may share *their own* sessions (a trainer logs workouts too). The card is tappable when the
-tapper is the card's sender and the session exists on their device, or when the tapper is the trainer of the
-sender. For a trainer's card in a client's thread there is nothing the client can open — it renders static. The
+Any participant may share *their own* sessions (a trainer logs workouts too). The card is tappable when it
+carries a session id **and** either the tapper sent it (their own session, looked up locally by server id) or the
+sender is the tapper's *client* — which the mobile app reads straight off the conversation's peer role, no role
+provider needed. For a trainer's card in a client's thread there is nothing the client can open — it renders static. The
 chat service decides none of this; the clients do, from data they already hold.
 
 ### 2.8 A new by-id read for the trainer's session view
@@ -140,8 +142,9 @@ text null`.
 
 ## 4. UI spec
 
-- **Card bubble** (`chat/presentation/widgets/chat_card_view.dart`): `LifeyCard`-nested surface inside the
-  bubble. Header row: a tinted 36 dp icon holder (strength dumbbell in the workout colour, cardio icon in the
+- **Card** (`chat/presentation/widgets/chat_card_view.dart`): a `LifeyCard` that *replaces* the text bubble on
+  both sides; own cards keep a primary hairline so the sides still read (the olive own-side fill would put every
+  number on a tint the metric colours were never contrast-checked against). Header row: a tinted 36 dp icon holder (strength dumbbell in the workout colour, cardio icon in the
   cardio colour, trophy in the record colour) + the kind label ("Workout" / "Personal record") as an overline.
   Title 17/700 (session name or exercise). Then the numbers: workout → duration · volume (or distance) ·
   exercises, plus a "🏆 3 records" chip when any; PR → the big new value (28/800, tabular figures) with the
@@ -187,7 +190,7 @@ thread); M3 adds the open-the-session payoff, M4 the second client.
 ## 7. Edge cases
 
 - **No open thread** → no share action. **Archived thread** → not a target (readable, not writable).
-- **Several threads** → the picker; the last-used one is preselected.
+- **Several threads** → the picker; the one with the newest activity (the first in the list) is preselected.
 - **Session deleted after sharing** → the trainer's tap answers 404; the sheet says "This workout is no longer
   available" and the card stays readable as a snapshot.
 - **Not yet synced and offline** → a static card; never an error.
@@ -244,3 +247,24 @@ existing message), so they can ship ahead of the clients.
 
 - **S1 (chat service) — done.** `V1001__chat_message_cards.sql` (`card_kind`, `card_data`, the all-or-nothing check, the re-created content check), `dto/MessageCard` (kind + typed `workout` / `pr` sub-records, bean-validation bounds), `MessageCards` (cross-field rules, trim, the JSON text format on this module's Jackson 2 mapper with ISO instants), `SendMessageRequest.card` with `body` optional, `MessageResponse.card`, the tombstone clearing the card, push markers ("🏋️ Shared a workout" / "🏆 Shared a record", HU), metric kind `card`. Verified against real Postgres in `ChatFlowIntegrationTest` (card-only message, caption, replay, wrong shape → 400 with no row, delete clears the columns, the table's checks agree with the service rule). Two fixes found on the way: `ChatTypingThrottle` decided by `Instant` equality (failed on Windows' coarse clock; now `compute()` + a flag) and `ChatMetricsTest` learning the third series.
 - **S2 (backend) — done.** `GET /api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}` → `WorkoutSessionService.findByIdForUser` (not-deleted, started, that user's; everything else is a 404). Controller + service tests incl. the 403 that never reaches the service.
+- **S3 (mobile data) — done.** `chat/domain/chat_card.dart` (sealed `WorkoutChatCard` / `PrChatCard` / `UnknownChatCard` that keeps its raw JSON, `withSessionId`), Drift schema 46 (`chat_messages.card_json`, `chat_conversations.last_message_card_kind`), `ChatRepository.send(card:)` serialising once and replaying the same text, the preview kind, the tombstone clearing the cached card. **`flushPending` / `retry` skipped rows with no body and no picture** — exactly a card-only row — so a card written offline would never have left; `_hasNothingToReplay` now asks about the card too, with a test that replays one.
+- **S4 (mobile UI) — done.** `ChatCardView` (+ `ChatCardText`, one source for what is seen and what is spoken), the thread bubble, the list preview, EN + HU keys. Sharing: `chat_share.dart` (`chatShareTargetsProvider` = open threads newest-first, then trainers with no thread yet, archived never; `ChatShareService`, which resolves the session id at send time with a bounded wait and sends either way), `share_to_chat_sheet.dart` (card preview, note, a picker only for several people), `share_to_chat_buttons.dart` (hidden — not disabled — with nobody to send to), and the entry points: the workout-success sheet (the workout, and a share icon on each record row; opt-in through `WorkoutShareConfig`, so the sheet is unchanged where it is not given), the finished strength session's header, the cardio summary's header. `pollSessionServerId` is the injected-lookup wait.
+- **S5 (open) — done.** `canOpenChatCard` / `openChatCard`: the owner opens their own session by server id, a trainer opens the client's through the new `ClientSessionsController.openById` (the row is *adopted* into a list kept apart from the paged sessions, so it never shows out of order and a comment written on it shows on it); a 404 says "no longer available". A client cannot open a card from their trainer.
+- **S6 (web) — done.** `MessageCardResponse` types, `card.ts` (pure rules, tested), `ChatCardTile`, the bubble, the list preview, `applyDeletion` clearing the card; EN + HU. Read-only — the web has no per-session page to open.
+- **S7 (docs) — done.** Postman (*Send message with a result card*, *Client workout session by id*), `devops/chat-operations.md` (the `card` meter series), `REMAINING-WORK`, `77` §6, `78` §6, the docs README.
+
+### Where the build differs from the plan above
+
+- The card replaces the bubble on both sides instead of sitting in an olive own-side one (§4 / §1.3 text updated).
+- The preselected target is the newest thread, not a remembered "last used" — nothing stores the last choice (§7 updated).
+- Opening is decided from the conversation's peer role (§2.7 updated); no role provider is consulted.
+- The finished-session entry is a header icon on both screens rather than a button in the body.
+
+### Verification
+
+- **Chat service:** `./mvnw -B verify` → 218 tests, all green, including `ChatFlowIntegrationTest` against real Postgres 16 (V1000 + V1001; card-only message, caption, replay, wrong shape → 400 with no row, delete clears the columns, the table's checks agree with the service rule).
+- **Monolith:** `./mvnw -B verify` (full suite, real Postgres) → 1,165 tests, 0 failures, 3 skipped, BUILD SUCCESS.
+- **Mobile:** `flutter analyze` clean; the whole `flutter test` suite green (2,972 tests), incl. the repository's offline replay, the card in both themes and locales, the share sheet, the opt-in sheet buttons, the open rules and `openById`.
+- **Web:** vitest 1,089 tests, `tsc --noEmit` and eslint clean.
+- **Found on the way and fixed:** `ChatTypingThrottle` decided by `Instant` equality (two signals in one clock tick on Windows were both let through) → `compute()` + a flag; a `Future<int>` passed where `Future<int?>.timeout(onTimeout: () => null)` was called threw at runtime → re-typed with `then<int?>`.
+- **Not verified:** an emulator or two-device walk (send from a client, see it on the trainer's phone, tap it open) and the web tile in a browser against a running chat service — neither was run here. The share flow's snackbar action (`/chat/{id}`) and the session screens it opens are covered by widget tests with fakes, not by a real navigation stack.

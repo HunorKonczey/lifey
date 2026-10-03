@@ -2243,6 +2243,30 @@
             "description": "Who last changed the client's nutrition goals, as the trainer sees it: `source` SELF / TRAINER / UNKNOWN, `setAt`, and `setByYou` (your own change vs another trainer's). No names are returned."
           },
           "response": []
+        },
+        {
+          "name": "Client workout session by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/workout-sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "trainer",
+                "clients",
+                "{{clientId}}",
+                "workout-sessions",
+                "{{sessionId}}"
+              ]
+            },
+            "description": "One of the client's sessions, whatever its age \u2014 what a chat result card opens for the trainer (docs/chat/83 section 2.8). The paged *workout sessions* list only reaches the newest. 404 when it is not this client's, was deleted or never started; 403 when the caller is not this client's active trainer."
+          },
+          "response": []
         }
       ]
     },
@@ -2649,6 +2673,51 @@
             "body": { "mode": "raw", "raw": "{\n  \"conversationId\": {{conversationId}}\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/chat/typing", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "typing"] },
             "description": "Sends the *other* participant a `typing` frame on their open stream, and nobody else — not even the caller's own second device. Returns 204 whether or not anything was delivered: it is dropped when the peer has no live stream, when the thread is archived, and when it arrives inside `lifey.chat.typing-throttle` of the previous one. Nothing is stored and it never produces a push; the indicator expires on the receiving client after `lifey.chat.typing-ttl`. 404 for a thread the caller is not in.\n\nTo see it: open *Subscribe to the caller's chat events* as the peer (or run the app), then fire this."
+          },
+          "response": []
+        },
+        {
+          "name": "Send message with a result card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 201', () =\u003e pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const body = pm.response.json();",
+                  "if (body \u0026\u0026 body.id) { pm.collectionVariables.set('chatMessageId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"V\u00e9gre megvan!\",\n  \"clientMessageId\": \"{{$guid}}\",\n  \"card\": {\n    \"kind\": \"PR\",\n    \"sessionId\": 481,\n    \"occurredAt\": \"2026-10-03T07:12:00Z\",\n    \"pr\": {\n      \"exerciseName\": \"Bench press\",\n      \"prType\": \"MAX_WEIGHT\",\n      \"value\": 102.5,\n      \"previousValue\": 100,\n      \"weightKg\": 102.5,\n      \"reps\": 3\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ]
+            },
+            "description": "A shared workout or personal record (docs/chat/83-chat-result-card-plan.md). `card.kind` is `PR` (with a `pr` object) or `WORKOUT` (with a `workout` object: `workoutKind` STRENGTH|CARDIO, `title`, `durationSeconds`, `volumeKg`, `exerciseCount`, `distanceMeters`, `recordCount`) \u2014 exactly the matching sub-object, never both (400 otherwise, and for any value out of its bounds or an `occurredAt` more than a day ahead). `body` is the optional caption: a card with no text is a complete message. `sessionId` is the workout session's id in the main API, only the target of the recipient's tap \u2014 null when it had not synced yet. The card is a snapshot and a claim: the server checks its shape, not its truth. Same idempotency, rate limit and 409/503 rules as *Send message*; a card cannot be combined with an image (the multipart request takes none)."
           },
           "response": []
         }

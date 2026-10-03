@@ -99,7 +99,7 @@ iterations.
 | 78 | [Web redesign](redesign-web/78-web-redesign-plan.md) (in `redesign-web/`) | done |
 | 80 | [Progress photos + body measurements (roadmap #10)](80-progress-photos-measurements-plan.md) | built — emulator walk and Docker verify owed |
 | 82 | [Web-redesign backend gaps: goal attribution, last activity, invite history, role filter](redesign-web/82-web-backend-gaps-plan.md) (in `redesign-web/`) | built |
-| 83 | [Chat result card: sharing a workout or a PR as a message](chat/83-chat-result-card-plan.md) (in `chat/`) | in progress |
+| 83 | [Chat result card: sharing a workout or a PR as a message](chat/83-chat-result-card-plan.md) (in `chat/`) | built — emulator walk owed |
 
 Plans 40–74 live in the topic folders above.
 

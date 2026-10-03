@@ -5,7 +5,7 @@ felvett vagy elvetett tételnél változik. A landing page / monetizáció sajá
 [`landing_page/REMAINING-WORK.md`](landing_page/REMAINING-WORK.md) — ez a fájl arra hivatkozik,
 nem ismétli meg.
 
-Utolsó átnézés: **2026-10-02** (a progress fotók + testméretek lezárása után; korábban 2026-09-26 a teljes `docs/` alapján).
+Utolsó átnézés: **2026-10-03** (a chat-eredménykártya — edzés / PR megosztása — lezárása után; korábban 2026-10-02, a progress fotók + testméretek lezárása után; korábban 2026-09-26 a teljes `docs/` alapján).
 
 **Használat:** ha egy tételt felveszel, csináld meg, **töröld a sorát**, és a landolt állapotot
 a hozzá tartozó számozott tervbe írd.
@@ -87,7 +87,6 @@ is ott oldódott meg: a metrikaszínek AA-k a saját 12 / 16 %-os tintájukon, a
 
 | Tétel | Mi | Hol |
 |---|---|---|
-| Chat-eredménykártya | edzés / PR megosztása chat-kártyaként — a csatolmány jelenleg csak kép, a chat-szolgáltatáson is változtatni kell | `77` §6 |
 | Darabos adagok | „½ db", „1 db" chipek az étel hozzáadása lapon — étel-modellbe darabsúly + sync kell | `77` §6 |
 | Health Connect / HealthKit írás | a súly visszaírása; amíg nincs írási út, a „Health Connect-ben is mentve" sor rejtve marad | `77` §6 |
 | Natív felületek | iOS widget / Live Activity, Android widget színillesztése (a Watch kész: [`watch/79`](watch/79-watch-redesign-verification.md); watch-komplikáció nincs, külön terv kell) | `77` §6 |
@@ -109,7 +108,7 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 | Súly napszak / jegyzet, étel-adagok, rost / cukor, kedvenc ételek | a `WeightResponse` csak dátumos; az étel-modell nem ismeri az adagot | `78` §6 |
 | „Az edződtől" jelölés a kiosztott recepten | a másolat nem őrzi a származást | `78` §6 |
 | Edzői étkezés-komment, edzői lépéscél | új végpont / adat | `78` §6 |
-| Chat jelenlét, megosztott edzés / étkezés kártya | chat-szolgáltatás munka | `78` §6 |
+| Chat jelenlét, megosztott étkezés kártya | chat-szolgáltatás munka; az edzés / PR kártya kész ([`chat/83`](chat/83-chat-result-card-plan.md)), a `kind` bővíthető | `78` §6 |
 | Edzői kérelem „végzettség" | nem gyűjtjük | `78` §6 |
 | Sablon időtartam, ismétlésszám | a sablon csak szettszámot tárol; az idő becslés | `78` W9.1 |
 | Sablonhasználat ütemezésből | a „Használja" csak a kiosztottakat számolja; az ütemezésekhez kliensenként külön lekérés kell | `78` W9.1 |

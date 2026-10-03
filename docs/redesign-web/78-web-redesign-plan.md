@@ -3434,7 +3434,7 @@ W0.1–W0.4 and can land before the component kit, which is why M1 is the shell.
   — food model changes (same deferral as mobile 77 §6 piece-based portions).
 - **"From your trainer" marker on assigned recipes** — the copy doesn't carry its origin to the client.
 - **Trainer meal comments; trainer-edited step goal** — new endpoints/data.
-- **Chat presence ("online") and shared workout/meal cards** — chat-service work (same as mobile 77 §6).
+- **Chat presence ("online")** — chat-service work. **Shared workout / PR cards** — **done by `chat/83`** (read-only tile on the web); a shared *meal* card is still open.
 - **Invite history (accepted)** — **done by `82` S2** (the rows were always kept; only an endpoint was missing). **Shareable join link, invite reminders** — still open, invite model changes.
 - **Superadmin "last login"** — **done by `82` S3** (`users.last_active_at`). **Trainer-request "qualification"** — not collected.
 - **Calendar drag-to-move and auto-shifting conflicts** — unless W8.b1 is approved.
