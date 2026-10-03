@@ -55,11 +55,7 @@ class SessionDetailSheet extends ConsumerWidget {
     // Read by id, not by value: the comment sheet replaces this row in the
     // controller, and the detail behind it has to show the new text without
     // being reopened.
-    final session = ref
-        .watch(clientSessionsControllerProvider(clientId))
-        .sessions
-        .where((s) => s.id == sessionId)
-        .firstOrNull;
+    final session = ref.watch(clientSessionsControllerProvider(clientId)).byId(sessionId);
 
     if (session == null) return const SizedBox.shrink();
 

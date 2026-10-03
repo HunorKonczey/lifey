@@ -68,7 +68,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 
 | Meter | Type | What it answers |
 |---|---|---|
-| `lifey.chat.messages.sent` (`kind` = `text` \| `image`) | counter | Is the chat being used, and how much of it is images (the part that costs storage)? |
+| `lifey.chat.messages.sent` (`kind` = `text` \| `image` \| `card`) | counter | Is the chat being used, how much of it is images (the part that costs storage), and how much is shared workouts / records (a few hundred bytes of JSON each, never a storage concern)? |
 | `lifey.chat.stream.connections` | gauge | How many SSE connections are open **on this instance right now** |
 | `lifey.chat.push.decisions` (`outcome` = `sent` \| `skipped-viewing` \| `skipped-disabled` \| `skipped-quiet-hours` \| `skipped-muted` \| `skipped-coalesced`) | counter | Of every message worth notifying about, how many actually interrupted someone — and when they didn't, which gate stopped it |
 | `lifey.chat.reminders.sent` (`channel` = `push` \| `email`) | counter | How often the §5.4 safety net had to fire |
@@ -126,7 +126,7 @@ Grep the Render logs for push errors; see
 [push-notifications-ios.md](push-notifications-ios.md) /
 [push-notifications-android.md](push-notifications-android.md).
 
-**4. Storage growth.** `lifey.chat.messages.sent{kind=image}` is the driver.
+**4. Storage growth.** `lifey.chat.messages.sent{kind=image}` is the driver (a `card` message is one text column of at most 4,000 characters).
 Attachment bytes live in Postgres (`chat_message_attachments`), capped at
 `CHAT_ATTACHMENT_MAX_BYTES` (8 MB) per upload before re-encoding, and stored at
 `CHAT_ATTACHMENT_MAX_SIDE` (1600 px) plus a thumbnail — realistically a few

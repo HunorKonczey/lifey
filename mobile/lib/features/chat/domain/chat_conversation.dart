@@ -18,6 +18,7 @@ class ChatConversation {
     this.peerLastReadMessageId,
     this.mutedUntil,
     this.lastMessageHasAttachment = false,
+    this.lastMessageCardKind,
   });
 
   final int id;
@@ -34,6 +35,11 @@ class ChatConversation {
   /// Whether the previewed message is a picture, so the row can say so
   /// instead of showing an empty line or the tombstone text (I6).
   final bool lastMessageHasAttachment;
+
+  /// The previewed message's card kind (`WORKOUT` / `PR`), when it is one — a
+  /// card has no body, so without this the row would read as the tombstone
+  /// (docs/chat/83 §8 risk 2).
+  final String? lastMessageCardKind;
 
   /// Set once the relationship ended: readable forever, not writable.
   final DateTime? archivedAt;
@@ -67,6 +73,7 @@ class ChatConversation {
       lastMessagePreview: lastMessage?['body'] as String?,
       lastMessageSenderId: lastMessage?['senderId'] as int?,
       lastMessageHasAttachment: lastMessage?['attachment'] != null,
+      lastMessageCardKind: (lastMessage?['card'] as Map<String, dynamic>?)?['kind'] as String?,
       archivedAt: json['archivedAt'] == null
           ? null
           : DateTime.parse(json['archivedAt'] as String).toLocal(),

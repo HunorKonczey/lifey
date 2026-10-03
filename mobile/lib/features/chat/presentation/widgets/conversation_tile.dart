@@ -59,7 +59,15 @@ class ConversationTile extends StatelessWidget {
     // picture sent without a caption — only the attachment flag separates the
     // last one from the tombstone.
     final String preview;
-    if (conversation.lastMessageHasAttachment) {
+    if (conversation.lastMessageCardKind != null) {
+      // A card has no body of its own, so the kind is the preview; a caption
+      // follows it like it does a picture's (docs/chat/83 §4).
+      final caption = conversation.lastMessagePreview;
+      final marker = conversation.lastMessageCardKind == 'PR'
+          ? l10n.chatCardPreviewRecord
+          : l10n.chatCardPreviewWorkout;
+      preview = '$ownPrefix$marker${caption == null || caption.isEmpty ? '' : ' · $caption'}';
+    } else if (conversation.lastMessageHasAttachment) {
       final caption = conversation.lastMessagePreview;
       preview = '$ownPrefix${l10n.chatImagePreview}'
           '${caption == null || caption.isEmpty ? '' : ' $caption'}';

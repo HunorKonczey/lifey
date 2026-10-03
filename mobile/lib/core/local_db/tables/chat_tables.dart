@@ -56,6 +56,11 @@ class ChatConversations extends Table {
   BoolColumn get lastMessageHasAttachment =>
       boolean().withDefault(const Constant(false))();
 
+  /// The previewed message's result-card kind, when it is one
+  /// (docs/chat/83): a card has no body, so a null preview alone would read as
+  /// "message deleted".
+  TextColumn get lastMessageCardKind => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {serverId};
 }
@@ -102,6 +107,12 @@ class ChatMessages extends Table {
   /// disk there would be nothing to replay for a picture. Cleared — and the
   /// file deleted — once the server has it.
   TextColumn get attachmentLocalPath => text().nullable()();
+
+  /// The shared result card, as its wire JSON (docs/chat/83) — one text column
+  /// for the same reason the server has one: it is what the outbox replays and
+  /// what the bubble parses, and a future kind needs no migration here.
+  /// Cleared by a tombstone, like the body.
+  TextColumn get cardJson => text().nullable()();
 
   /// Composite: `clientMessageId` is only unique *within* a conversation on
   /// the server, so it alone would be the wrong key here.

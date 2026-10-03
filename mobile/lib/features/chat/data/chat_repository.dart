@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -14,6 +15,7 @@ import '../../../core/local_db/database_provider.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/sync/client_id.dart';
 import '../../auth/application/auth_controller.dart';
+import '../domain/chat_card.dart';
 import '../domain/chat_conversation.dart';
 import '../domain/chat_message.dart';
 import '../domain/chat_peer.dart';
@@ -200,16 +202,24 @@ class ChatRepository {
   /// Writes the bubble immediately, then tries the network. Offline (or on
   /// any failure) the row simply stays `pending` and [flushPending] picks it
   /// up later — the composer is never blocked on connectivity.
-  Future<void> send(int conversationId, String body, {File? image}) async {
+  ///
+  /// A [card] (docs/chat/83) is a complete message on its own, like a picture;
+  /// [body] is then its optional caption. The two are exclusive — a card never
+  /// travels with an [image].
+  Future<void> send(int conversationId, String body, {File? image, ChatCard? card}) async {
+    assert(image == null || card == null, 'a message carries a picture or a card, not both');
     final trimmed = body.trim();
-    // A picture on its own is a complete message; text alone must not be blank.
-    if (trimmed.isEmpty && image == null) return;
+    // A picture or a card on its own is a complete message; text alone must not be blank.
+    if (trimmed.isEmpty && image == null && card == null) return;
 
     final clientId = newClientId();
     final now = DateTime.now();
     // Copied out of the picker's cache before anything else: that cache is the
     // OS's to clear, and an image queued offline may wait there for days.
     final localPath = image == null ? null : await _stageAttachment(clientId, image);
+    // Serialised once, here: this exact text is what the row stores, what the
+    // outbox replays and what goes on the wire, so a retry cannot drift.
+    final cardJson = card == null ? null : jsonEncode(card.toJson());
 
     await _db.into(_db.chatMessages).insert(ChatMessagesCompanion.insert(
           clientId: clientId,
@@ -219,23 +229,25 @@ class ChatRepository {
           createdAt: now,
           syncState: const Value('pending'),
           attachmentLocalPath: Value(localPath),
+          cardJson: Value(cardJson),
         ));
     await _touchConversationPreview(
       conversationId,
       trimmed.isEmpty ? null : trimmed,
       now,
       hasAttachment: localPath != null,
+      cardKind: card?.kindCode,
     );
-    await _deliver(conversationId, clientId, trimmed, localPath);
+    await _deliver(conversationId, clientId, trimmed, localPath, cardJson);
   }
 
   /// Manual "Resend" from the failed-bubble menu. Safe because the send is
   /// idempotent on the same [clientId] we stored the first time.
   Future<void> retry(int conversationId, String clientId) async {
     final row = await _findMessage(conversationId, clientId);
-    if (row == null || (row.body == null && row.attachmentLocalPath == null)) return;
+    if (row == null || _hasNothingToReplay(row)) return;
     await _setState(conversationId, clientId, 'pending');
-    await _deliver(conversationId, clientId, row.body ?? '', row.attachmentLocalPath);
+    await _deliver(conversationId, clientId, row.body ?? '', row.attachmentLocalPath, row.cardJson);
   }
 
   /// Replays every unsent message, oldest first, so a thread that was written
@@ -247,12 +259,13 @@ class ChatRepository {
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
         .get();
     for (final row in rows) {
-      if (row.body == null && row.attachmentLocalPath == null) continue;
+      if (_hasNothingToReplay(row)) continue;
       await _deliver(
         row.conversationId,
         row.clientId,
         row.body ?? '',
         row.attachmentLocalPath,
+        row.cardJson,
       );
     }
   }
@@ -352,6 +365,7 @@ class ChatRepository {
       lastMessagePreview: Value(message.body),
       lastMessageSenderId: Value(message.senderId),
       lastMessageHasAttachment: Value(message.attachment != null),
+      lastMessageCardKind: Value(message.card?.kindCode),
       unreadCount: Value(isOwn ? row.unreadCount : row.unreadCount + 1),
     ));
   }
@@ -433,6 +447,7 @@ class ChatRepository {
     String clientId,
     String body,
     String? attachmentPath,
+    String? cardJson,
   ) async {
     try {
       final hasImage = attachmentPath != null && File(attachmentPath).existsSync();
@@ -453,7 +468,11 @@ class ChatRepository {
                 if (body.isNotEmpty) 'body': body,
                 'clientMessageId': clientId,
               })
-            : {'body': body, 'clientMessageId': clientId},
+            : {
+                'body': body,
+                'clientMessageId': clientId,
+                if (cardJson != null) 'card': jsonDecode(cardJson),
+              },
         onSendProgress: hasImage
             ? (sent, total) => _publishProgress(clientId, total <= 0 ? null : sent / total)
             : null,
@@ -598,6 +617,7 @@ class ChatRepository {
             attachmentWidth: Value(message.attachment?.width),
             attachmentHeight: Value(message.attachment?.height),
             attachmentByteSize: Value(message.attachment?.byteSize),
+            cardJson: Value(message.card == null ? null : jsonEncode(message.card!.toJson())),
             // Deliberately left null: the server has the picture, so the
             // staged copy is no longer the source of truth for this row.
             attachmentLocalPath: const Value(null),
@@ -624,6 +644,7 @@ class ChatRepository {
             lastMessagePreview: Value(conversation.lastMessagePreview),
             lastMessageSenderId: Value(conversation.lastMessageSenderId),
             lastMessageHasAttachment: Value(conversation.lastMessageHasAttachment),
+            lastMessageCardKind: Value(conversation.lastMessageCardKind),
             archivedAt: Value(conversation.archivedAt),
             peerLastDeliveredMessageId: Value(conversation.peerLastDeliveredMessageId),
             peerLastReadMessageId: Value(conversation.peerLastReadMessageId),
@@ -640,6 +661,7 @@ class ChatRepository {
     String? body,
     DateTime at, {
     bool hasAttachment = false,
+    String? cardKind,
   }) async {
     await (_db.update(_db.chatConversations)..where((t) => t.serverId.equals(conversationId)))
         .write(ChatConversationsCompanion(
@@ -647,6 +669,7 @@ class ChatRepository {
       lastMessagePreview: Value(body),
       lastMessageSenderId: Value(_currentUserId()),
       lastMessageHasAttachment: Value(hasAttachment),
+      lastMessageCardKind: Value(cardKind),
     ));
   }
 
@@ -677,6 +700,9 @@ class ChatRepository {
       attachmentWidth: const Value(null),
       attachmentHeight: const Value(null),
       attachmentByteSize: const Value(null),
+      // And the card: left in the cache, a deleted workout's numbers would
+      // stay readable on this device (docs/chat/83 §8 risk 3).
+      cardJson: const Value(null),
     ));
     if (existing.attachmentWidth != null) {
       await _evictCachedAttachment(messageId);
@@ -697,6 +723,7 @@ class ChatRepository {
           .write(const ChatConversationsCompanion(
         lastMessagePreview: Value(null),
         lastMessageHasAttachment: Value(false),
+        lastMessageCardKind: Value(null),
       ));
     }
   }
@@ -717,6 +744,26 @@ class ChatRepository {
       }
     } catch (_) {
       // See above.
+    }
+  }
+
+  /// A row with no text, no staged picture and no card has nothing to send.
+  ///
+  /// This is the guard of [retry] and [flushPending]; before cards it asked only
+  /// about the body and the picture, which would have skipped a card-only row
+  /// forever — a card written offline that never left, with no error anywhere
+  /// (docs/chat/83 §8 risk 1).
+  static bool _hasNothingToReplay(ChatMessageRow row) =>
+      row.body == null && row.attachmentLocalPath == null && row.cardJson == null;
+
+  /// The cache holds the wire JSON; a row that no longer parses (a hand-edited
+  /// database, a shape from the future) reads as a message without a card
+  /// rather than breaking the thread.
+  static ChatCard? _parseCard(String json) {
+    try {
+      return ChatCard.tryParse(jsonDecode(json));
+    } catch (_) {
+      return null;
     }
   }
 
@@ -766,6 +813,7 @@ class ChatRepository {
       peerLastReadMessageId: row.peerLastReadMessageId,
       mutedUntil: row.mutedUntil,
       lastMessageHasAttachment: row.lastMessageHasAttachment,
+      lastMessageCardKind: row.lastMessageCardKind,
     );
   }
 
@@ -786,6 +834,7 @@ class ChatRepository {
               byteSize: row.attachmentByteSize ?? 0,
             ),
       attachmentLocalPath: row.attachmentLocalPath,
+      card: row.cardJson == null ? null : _parseCard(row.cardJson!),
       state: switch (row.syncState) {
         'pending' => ChatMessageState.pending,
         'failed' => ChatMessageState.failed,

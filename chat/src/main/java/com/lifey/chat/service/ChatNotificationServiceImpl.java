@@ -183,17 +183,35 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
     }
 
     /**
-     * A picture with no caption still has to say something in the notification
-     * shade. The marker goes in front of a caption too, so the recipient can
-     * tell there is an image before opening the thread.
+     * A picture or a card with no caption still has to say something in the
+     * notification shade. The marker goes in front of a caption too, so the
+     * recipient can tell what it is before opening the thread.
      */
     private static String singleBody(ChatMessage message, boolean hungarian) {
         String text = truncate(message.getBody());
-        if (!message.hasAttachment()) {
+        String marker = marker(message, hungarian);
+        if (marker == null) {
             return text;
         }
-        String marker = hungarian ? "📷 Kép" : "📷 Photo";
         return text.isEmpty() ? marker : marker + " · " + text;
+    }
+
+    /**
+     * What a message with no text says in the shade — null for plain text. A
+     * card has no body at all, so without this its push would be empty
+     * (docs/chat/83-chat-result-card-plan.md §8 risk 2).
+     */
+    private static String marker(ChatMessage message, boolean hungarian) {
+        if (message.hasAttachment()) {
+            return hungarian ? "📷 Kép" : "📷 Photo";
+        }
+        if (message.hasCard()) {
+            return switch (message.getCardKind()) {
+                case "PR" -> hungarian ? "🏆 Rekordot osztott meg" : "🏆 Shared a record";
+                default -> hungarian ? "🏋️ Edzést osztott meg" : "🏋️ Shared a workout";
+            };
+        }
+        return null;
     }
 
     private static String aggregatedBody(long unread, boolean hungarian) {

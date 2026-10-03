@@ -131,6 +131,38 @@ class WorkoutSessionServiceImplTest {
     }
 
     @Test
+    void findByIdForUser_returnsASessionOfThatUser() {
+        WorkoutSession session = new WorkoutSession();
+        session.setId(481L);
+        session.setStartedAt(Instant.parse("2026-04-01T05:00:00Z"));
+        when(sessionRepository.findByIdAndUserIdAndDeletedAtIsNull(481L, 99L)).thenReturn(Optional.of(session));
+
+        WorkoutSessionResponse result = service.findByIdForUser(99L, 481L);
+
+        assertThat(result.id()).isEqualTo(481L);
+    }
+
+    @Test
+    void findByIdForUser_aSessionOfSomeoneElseOrADeletedOneIsNotFound() {
+        // The repository scopes by user and by not-deleted, so both look like "no row".
+        when(sessionRepository.findByIdAndUserIdAndDeletedAtIsNull(481L, 99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findByIdForUser(99L, 481L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void findByIdForUser_aScheduledSessionThatNeverStartedIsNotFound() {
+        WorkoutSession scheduled = new WorkoutSession();
+        scheduled.setId(482L);
+        when(sessionRepository.findByIdAndUserIdAndDeletedAtIsNull(482L, 99L)).thenReturn(Optional.of(scheduled));
+
+        // The same rule as the paged list: a planned row is not a workout anyone did.
+        assertThatThrownBy(() -> service.findByIdForUser(99L, 482L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
     void create_resolvesPlannedExercisesAndSets() {
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));

@@ -32,6 +32,18 @@ public interface WorkoutSessionService {
      */
     Page<WorkoutSessionResponse> findPageForUser(Long userId, Pageable pageable);
 
+    /**
+     * One finished (or running) session of an explicit user — the trainer's "open this
+     * workout" read, behind a chat result card (docs/chat/83-chat-result-card-plan.md
+     * §2.8). The paged list only reaches the newest sessions, so a card pointing at an
+     * older one needs a read by id. Same visibility as {@link #findPageForUser}: soft-deleted
+     * and never-started (scheduled) rows are not found. Callers authorize {@code userId}
+     * first, exactly as for {@link #findPageForUser}.
+     *
+     * @throws com.lifey.common.exception.ResourceNotFoundException when it is not that user's
+     */
+    WorkoutSessionResponse findByIdForUser(Long userId, Long sessionId);
+
     Page<WorkoutSessionResponse> findDelta(Instant updatedSince, Pageable pageable);
 
     WorkoutSessionResponse create(WorkoutSessionRequest request);

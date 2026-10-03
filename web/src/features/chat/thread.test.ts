@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   MAX_MESSAGE_LENGTH,
   applyDeletion,
+  hasCard,
   hasImage,
   highlightSegments,
   buildThreadItems,
@@ -31,6 +32,7 @@ function serverMessage(over: Partial<MessageResponse> & { id: number }): Message
     createdAt: "2026-08-06T09:00:00Z",
     deletedAt: null,
     attachment: null,
+    card: null,
     ...over,
   };
 }
@@ -45,6 +47,7 @@ function pending(clientMessageId: string, over: Partial<ThreadMessage> = {}): Th
     createdAt: "2026-08-06T10:00:00Z",
     deletedAt: null,
     attachment: null,
+    card: null,
     state: "pending",
     ...over,
   };
@@ -179,6 +182,52 @@ describe("applyDeletion", () => {
     const messages = [stored(30)];
 
     expect(applyDeletion(messages, 999, "2026-08-07T10:00:00Z")).toBe(messages);
+  });
+
+  it("takes a shared card with it, so a deleted workout's numbers do not stay in the cache", () => {
+    const withCard = stored(30, { body: null, card: prCard() });
+
+    const after = applyDeletion([withCard], 30, "2026-08-07T10:00:00Z");
+
+    expect(after[0].card).toBeNull();
+    expect(after[0].deletedAt).toBe("2026-08-07T10:00:00Z");
+  });
+});
+
+function prCard(): NonNullable<MessageResponse["card"]> {
+  return {
+    kind: "PR",
+    sessionId: 481,
+    occurredAt: "2026-10-03T07:12:00Z",
+    workout: null,
+    pr: { exerciseName: "Bench press", prType: "MAX_WEIGHT", value: 102.5, previousValue: 100, weightKg: 102.5, reps: 3 },
+  };
+}
+
+describe("result cards", () => {
+  it("a card is content: no body is not the same as deleted", () => {
+    const message = serverMessage({ id: 1, body: null, card: prCard() });
+
+    expect(hasCard(message)).toBe(true);
+  });
+
+  it("a tombstone is never a card, even if a stale one is still attached", () => {
+    const stale = serverMessage({ id: 1, body: null, card: prCard(), deletedAt: "2026-08-07T10:00:00Z" });
+
+    expect(hasCard(stale)).toBe(false);
+  });
+
+  it("plain text and pictures are not cards", () => {
+    const text = serverMessage({ id: 1 });
+    expect(hasCard(text)).toBe(false);
+  });
+
+  it("a card survives the merge with the server echo", () => {
+    const merged = mergeMessages([pending("abc", { body: null })], [
+      serverMessage({ id: 4310, clientMessageId: "abc", body: null, card: prCard() }),
+    ]);
+
+    expect(merged[0].card?.pr?.exerciseName).toBe("Bench press");
   });
 });
 

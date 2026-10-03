@@ -49,6 +49,8 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -197,6 +199,40 @@ class TrainerClientDataControllerTest {
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions", CLIENT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1));
+    }
+
+    @Test
+    void workoutSession_returnsOneOfTheClientsSessionsById() throws Exception {
+        WorkoutSessionResponse session = new WorkoutSessionResponse(481L, Instant.parse("2026-04-01T08:00:00Z"),
+                Instant.parse("2026-04-01T09:00:00Z"), List.of(), List.of(),
+                null, null, null, null, null, null, null, null, null, null, null, null, Instant.now(), null,
+                SessionKind.STRENGTH, null, null, null, List.of(), null);
+        when(workoutSessionService.findByIdForUser(CLIENT_ID, 481L)).thenReturn(session);
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}", CLIENT_ID, 481L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(481));
+
+        verify(trainerAccessService).requireActiveClient(TRAINER_ID, CLIENT_ID);
+    }
+
+    @Test
+    void workoutSession_unknownOrForeignSessionReturns404() throws Exception {
+        when(workoutSessionService.findByIdForUser(CLIENT_ID, 99L))
+                .thenThrow(new ResourceNotFoundException("Workout session not found: 99"));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}", CLIENT_ID, 99L))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void workoutSession_notYourClientReturns403_andNeverReadsTheSession() throws Exception {
+        doThrow(new NotYourClientException("nope")).when(trainerAccessService).requireActiveClient(TRAINER_ID, CLIENT_ID);
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}", CLIENT_ID, 481L))
+                .andExpect(status().isForbidden());
+
+        verify(workoutSessionService, never()).findByIdForUser(any(), any());
     }
 
     @Test

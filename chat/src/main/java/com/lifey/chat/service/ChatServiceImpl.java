@@ -6,8 +6,10 @@ import com.lifey.chat.ChatMessageStoredEvent;
 import com.lifey.chat.ChatMetrics;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.ChatReadCursorEvent;
+import com.lifey.chat.MessageCards;
 import com.lifey.chat.dto.ConversationListResponse;
 import com.lifey.chat.dto.ConversationResponse;
+import com.lifey.chat.dto.MessageCard;
 import com.lifey.chat.dto.MessageListResponse;
 import com.lifey.chat.dto.SendMessageRequest;
 import com.lifey.chat.entity.ChatConversation;
@@ -227,17 +229,17 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public SendMessageResult sendMessage(Long conversationId, SendMessageRequest request) {
-        return store(conversationId, request.body(), request.clientMessageId(), null);
+        return store(conversationId, request.body(), request.clientMessageId(), null, request.card());
     }
 
     @Override
     public SendMessageResult sendMessage(Long conversationId, String body, String clientMessageId,
                                          MultipartFile image) {
-        return store(conversationId, body, clientMessageId, image);
+        return store(conversationId, body, clientMessageId, image, null);
     }
 
     private SendMessageResult store(Long conversationId, String rawBody, String clientMessageId,
-                                    MultipartFile image) {
+                                    MultipartFile image, MessageCard rawCard) {
         Long senderId = caller.currentUserId();
         ChatConversation conversation = requireParticipation(conversationId, senderId);
 
@@ -275,14 +277,19 @@ public class ChatServiceImpl implements ChatService {
 
         boolean hasImage = image != null && !image.isEmpty();
         String body = rawBody == null ? "" : rawBody.trim();
-        // An image on its own is a complete message; the caption is optional.
-        if (body.isEmpty() && !hasImage) {
+        boolean hasCard = rawCard != null;
+        // An image or a card on its own is a complete message; the caption is optional.
+        if (body.isEmpty() && !hasImage && !hasCard) {
             throw new InvalidMessageBodyException("Message body must not be blank");
         }
         if (body.length() > properties.maxBodyLength()) {
             throw new InvalidMessageBodyException(
                     "Message body exceeds " + properties.maxBodyLength() + " characters");
         }
+
+        // The cross-field rules and the trimming (docs/chat/83 §3). Before the rate
+        // limit and the write: a malformed card costs a 400, never a stored row.
+        MessageCard card = hasCard ? MessageCards.validated(rawCard, Instant.now()) : null;
 
         // Before the decode, not after: the rate limit exists to bound exactly
         // this kind of work, and re-encoding an image is the expensive part.
@@ -305,6 +312,11 @@ public class ChatServiceImpl implements ChatService {
             message.setAttachmentHeight(reencoded.height());
             message.setAttachmentByteSize(reencoded.image().length);
         }
+        if (card != null) {
+            message.setCardKind(card.kind().name());
+            // What is stored is the validated, trimmed copy — not what arrived.
+            message.setCardData(MessageCards.toJson(card));
+        }
         messageRepository.save(message);
 
         if (reencoded != null) {
@@ -317,7 +329,7 @@ public class ChatServiceImpl implements ChatService {
             attachmentRepository.save(attachment);
         }
 
-        metrics.messageSent(reencoded == null ? "text" : "image");
+        metrics.messageSent(card != null ? "card" : reencoded == null ? "text" : "image");
 
         conversation.setLastMessageAt(now);
         conversation.setLastMessageId(message.getId());
@@ -379,6 +391,9 @@ public class ChatServiceImpl implements ChatService {
         message.setDeletedAt(Instant.now());
         // The row survives as a tombstone; the text itself is genuinely gone.
         message.setBody(null);
+        // So is a shared card: left behind, the workout's details would stay
+        // readable in the table and in anything that cached the message.
+        message.clearCard();
         // And so is the picture. "Deleted" that left the image downloadable
         // would be a lie — the bytes go, not just the reference to them.
         if (message.hasAttachment()) {

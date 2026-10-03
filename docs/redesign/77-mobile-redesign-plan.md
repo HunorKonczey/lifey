@@ -1951,9 +1951,10 @@ priorities change; the canvas priority order (dashboard, nutrition, workouts, �
 
 - **Piece-based portion chips** ("½ pc", "1 pc") in the add-food sheet — needs a per-food piece
   weight in the food model + sync. Gram chips only for now.
-- **Sharing a PR / workout as a chat card** (canvas 7 "Megosztható eredmények") — chat
+- ~~**Sharing a PR / workout as a chat card**~~ (canvas 7 "Megosztható eredmények") — chat
   attachments are images only (`chat/domain/chat_message.dart` `ChatAttachment`); a new
-  attachment kind needs chat-service work. Own plan later.
+  attachment kind needs chat-service work. **Done by `docs/chat/83` (2026-10-03):** a typed
+  `card` on the message, rendered on mobile and web, opened by tap into the session.
 - **Writing weight to Health Connect / HealthKit** — the app imports only; the "Also saved to
   Health Connect" line stays hidden until a write path exists.
 - **Web redesign** — the Next.js app shares the palette today (see the light `secondary` note

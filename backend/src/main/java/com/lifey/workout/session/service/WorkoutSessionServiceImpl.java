@@ -87,6 +87,17 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
 
     @Override
     @Transactional(readOnly = true)
+    public WorkoutSessionResponse findByIdForUser(Long userId, Long sessionId) {
+        // Scoped by the user in the query itself, so a session id that belongs to anyone
+        // else is indistinguishable from one that does not exist.
+        return sessionRepository.findByIdAndUserIdAndDeletedAtIsNull(sessionId, userId)
+                .filter(session -> session.getStartedAt() != null)
+                .map(WorkoutSessionMapper::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Workout session not found: " + sessionId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<WorkoutSessionResponse> findDelta(Instant updatedSince, Pageable pageable) {
         // Delta-sync feed: fixed ordering, includes tombstoned rows — see
         // docs/16-delta-sync-rollout.md and WorkoutSessionRepository.findByUserIdAndUpdatedAtGreaterThanEqual.

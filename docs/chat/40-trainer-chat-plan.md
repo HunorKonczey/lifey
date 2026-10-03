@@ -1762,7 +1762,7 @@ A négy méter:
 
 | Méter | Típus | Címkék |
 |---|---|---|
-| `lifey.chat.messages.sent` | counter | `kind` = `text` \| `image` |
+| `lifey.chat.messages.sent` | counter | `kind` = `text` \| `image` (\| `card`, docs/chat/83) |
 | `lifey.chat.stream.connections` | gauge | — |
 | `lifey.chat.push.decisions` | counter | `outcome` = `sent` \| `skipped-viewing` \| `skipped-disabled` \| `skipped-quiet-hours` \| `skipped-muted` \| `skipped-coalesced` |
 | `lifey.chat.reminders.sent` | counter | `channel` = `push` \| `email` |

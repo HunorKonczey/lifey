@@ -6,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
 import 'package:lifey/features/chat/data/chat_repository.dart';
+import 'package:lifey/features/chat/domain/chat_card.dart';
 import 'package:lifey/features/chat/domain/chat_message.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
@@ -85,6 +86,7 @@ Map<String, dynamic> _messageJson({
   String createdAt = '2026-08-06T09:00:00Z',
   String? deletedAt,
   Map<String, dynamic>? attachment,
+  Map<String, dynamic>? card,
 }) {
   return {
     'id': id,
@@ -95,6 +97,7 @@ Map<String, dynamic> _messageJson({
     'createdAt': createdAt,
     'deletedAt': deletedAt,
     'attachment': attachment,
+    'card': card,
   };
 }
 
@@ -602,6 +605,218 @@ void main() {
 
       expect(await repo.watchMessages(_conversationId).first, isEmpty);
       expect(File(queued.attachmentLocalPath!).existsSync(), isFalse);
+    });
+  });
+
+  // --- result cards (docs/chat/83) ----------------------------------------
+
+  group('result cards', () {
+    final prCard = PrChatCard(
+      occurredAt: DateTime.utc(2026, 10, 3, 7, 12),
+      sessionId: 481,
+      exerciseName: 'Bench press',
+      prKind: ChatPrKind.maxWeight,
+      value: 102.5,
+      previousValue: 100,
+      weightKg: 102.5,
+      reps: 3,
+    );
+    final workoutCard = WorkoutChatCard(
+      occurredAt: DateTime.utc(2026, 10, 3, 7, 12),
+      workoutKind: ChatWorkoutKind.strength,
+      title: 'Push day',
+      durationSeconds: 3600,
+      volumeKg: 8450,
+      recordCount: 1,
+    );
+
+    Map<String, dynamic> echo(RequestOptions options, int id) {
+      final data = options.data as Map<String, dynamic>;
+      return _messageJson(
+        id: id,
+        clientMessageId: data['clientMessageId'] as String,
+        senderId: _meId,
+        body: null,
+        card: data['card'] as Map<String, dynamic>,
+      );
+    }
+
+    test('a card goes out as the card object, with no body needed', () async {
+      await seedConversation();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] =
+          (options) => echo(options, 4400);
+
+      await repo.send(_conversationId, '', card: prCard);
+
+      final sent = requestFor('POST', '/chat/conversations/$_conversationId/messages').data
+          as Map<String, dynamic>;
+      final card = sent['card'] as Map<String, dynamic>;
+      expect(card['kind'], 'PR');
+      expect((card['pr'] as Map<String, dynamic>)['exerciseName'], 'Bench press');
+      expect(card.containsKey('workout'), isFalse);
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.state, ChatMessageState.sent);
+      expect(message.hasCard, isTrue);
+      expect((message.card as PrChatCard).value, 102.5);
+      expect(message.body, isNull);
+    });
+
+    test('a card keeps its caption', () async {
+      await seedConversation();
+      adapter.failing.add('/chat/conversations/$_conversationId/messages');
+
+      await repo.send(_conversationId, '  Végre!  ', card: workoutCard);
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.body, 'Végre!');
+      expect(message.card, isA<WorkoutChatCard>());
+    });
+
+    test('the conversation preview carries the kind, so a card never reads as deleted', () async {
+      await seedConversation();
+      adapter.failing.add('/chat/conversations/$_conversationId/messages');
+
+      await repo.send(_conversationId, '', card: workoutCard);
+
+      final conversation = (await repo.findConversation(_conversationId))!;
+      expect(conversation.lastMessagePreview, isNull);
+      expect(conversation.lastMessageCardKind, 'WORKOUT');
+      expect(conversation.lastMessageSenderId, _meId);
+    });
+
+    test('a card written offline waits as a pending row and goes out on the next flush', () async {
+      await seedConversation();
+      adapter.failing.add('/chat/conversations/$_conversationId/messages');
+      await repo.send(_conversationId, '', card: prCard);
+      final queued = (await repo.watchMessages(_conversationId).first).single;
+      expect(queued.state, ChatMessageState.failed);
+      expect(queued.card, isNotNull, reason: 'the card is what the outbox replays');
+
+      adapter.failing.clear();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] =
+          (options) => echo(options, 4401);
+      adapter.requests.clear();
+
+      // The row has no body and no picture — the guard that used to skip
+      // exactly such rows must not skip this one.
+      await repo.flushPending();
+
+      final posts = adapter.requests.where((r) => r.method == 'POST').toList();
+      expect(posts, hasLength(1));
+      final data = posts.single.data as Map<String, dynamic>;
+      expect(data['clientMessageId'], queued.clientId);
+      expect((data['card'] as Map)['kind'], 'PR');
+      final after = (await repo.watchMessages(_conversationId).first).single;
+      expect(after.state, ChatMessageState.sent);
+      expect(after.serverId, 4401);
+    });
+
+    test('a manual retry replays a card-only row too', () async {
+      await seedConversation();
+      adapter.failing.add('/chat/conversations/$_conversationId/messages');
+      await repo.send(_conversationId, '', card: workoutCard);
+      final failed = (await repo.watchMessages(_conversationId).first).single;
+
+      adapter.failing.clear();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] =
+          (options) => echo(options, 4402);
+      adapter.requests.clear();
+
+      await repo.retry(_conversationId, failed.clientId);
+
+      expect(adapter.requests.where((r) => r.method == 'POST'), hasLength(1));
+      expect((await repo.watchMessages(_conversationId).first).single.state, ChatMessageState.sent);
+    });
+
+    test('a card from the server is cached and parsed back', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [
+          _messageJson(id: 4403, clientMessageId: 'peer-card', body: null, card: workoutCard.toJson()),
+        ],
+        'hasMore': false,
+      };
+
+      await repo.loadNewer(_conversationId);
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect((message.card as WorkoutChatCard).title, 'Push day');
+      expect(message.body, isNull);
+    });
+
+    test('an incoming card lands in the preview with its kind and counts as unread', () async {
+      await seedConversation();
+
+      await repo.applyIncomingMessage(
+        _conversationId,
+        ChatMessage.fromJson(
+          _messageJson(id: 4404, clientMessageId: 'peer-pr', body: null, card: prCard.toJson()),
+        ),
+      );
+
+      final conversation = (await repo.findConversation(_conversationId))!;
+      expect(conversation.lastMessageCardKind, 'PR');
+      expect(conversation.unreadCount, 1);
+    });
+
+    test("the list endpoint's last message gives the conversation its card kind", () async {
+      adapter.responses['GET /chat/conversations'] = {
+        'items': [
+          _conversationJson(
+            lastMessage: _messageJson(id: 4405, clientMessageId: 'x', body: null, card: prCard.toJson()),
+          ),
+        ],
+      };
+
+      await repo.refreshConversations();
+
+      expect((await repo.findConversation(_conversationId))!.lastMessageCardKind, 'PR');
+    });
+
+    test('a card from a newer app survives the cache untouched', () async {
+      await seedConversation();
+      final future = {
+        'kind': 'MEAL',
+        'occurredAt': '2026-10-03T07:12:00Z',
+        'meal': {'name': 'Lunch'},
+      };
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [_messageJson(id: 4406, clientMessageId: 'future', body: null, card: future)],
+        'hasMore': false,
+      };
+
+      await repo.loadNewer(_conversationId);
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.card, isA<UnknownChatCard>());
+      expect(message.card!.toJson(), future);
+    });
+
+    test('deleting a card message clears the card from the cache and the preview', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [
+          _messageJson(id: 4407, clientMessageId: 'mine', senderId: _meId, body: null, card: prCard.toJson()),
+        ],
+        'hasMore': false,
+      };
+      await repo.loadNewer(_conversationId);
+      await repo.applyIncomingMessage(
+        _conversationId,
+        ChatMessage.fromJson(
+          _messageJson(id: 4407, clientMessageId: 'mine', senderId: _meId, body: null, card: prCard.toJson()),
+        ),
+      );
+
+      await repo.deleteMessage(_conversationId, 'mine');
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.isDeleted, isTrue);
+      expect(message.card, isNull, reason: 'a deleted workout must not stay readable on the device');
+      final row = await (db.select(db.chatMessages)..where((t) => t.clientId.equals('mine'))).getSingle();
+      expect(row.cardJson, isNull);
+      expect((await repo.findConversation(_conversationId))!.lastMessageCardKind, isNull);
     });
   });
 

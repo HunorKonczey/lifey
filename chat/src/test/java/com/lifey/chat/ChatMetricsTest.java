@@ -39,7 +39,7 @@ class ChatMetricsTest {
         assertThat(registry.find("lifey.chat.push.decisions").counters())
                 .hasSize(ChatMetrics.PushDecision.values().length);
 
-        assertThat(registry.find("lifey.chat.messages.sent").counters()).hasSize(2);
+        assertThat(registry.find("lifey.chat.messages.sent").counters()).hasSize(3); // text, image, card
         assertThat(registry.find("lifey.chat.reminders.sent").counters()).hasSize(2);
     }
 
@@ -48,7 +48,10 @@ class ChatMetricsTest {
         metrics.messageSent("text");
         metrics.messageSent("text");
         metrics.messageSent("image");
+        metrics.messageSent("card");
 
+        assertThat(registry.get("lifey.chat.messages.sent").tag("kind", "card").counter().count())
+                .isEqualTo(1);
         assertThat(registry.get("lifey.chat.messages.sent").tag("kind", "text").counter().count())
                 .isEqualTo(2);
         assertThat(registry.get("lifey.chat.messages.sent").tag("kind", "image").counter().count())

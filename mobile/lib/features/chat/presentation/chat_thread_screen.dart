@@ -16,11 +16,14 @@ import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/trainer_view_menu.dart';
+import '../../settings/application/settings_controller.dart';
+import '../../settings/domain/user_settings.dart';
 import '../domain/chat_peer.dart';
 import '../application/chat_thread_controller.dart';
 import '../data/chat_repository.dart';
 import '../application/chat_stream_controller.dart';
 import '../application/chat_typing_controller.dart';
+import '../application/open_chat_card.dart';
 import '../domain/chat_conversation.dart';
 import '../domain/chat_message.dart';
 import 'widgets/chat_avatar.dart';
@@ -285,6 +288,23 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
     );
   }
 
+  /// The tap behind a shared-workout card, or null when the card is just a
+  /// snapshot for this reader (docs/chat/83 §2.7). While the message is still
+  /// unsent there is nothing for the *other* side to open, but its owner can
+  /// still open their own session, so that case is not excluded.
+  VoidCallback? _cardTapFor(ChatMessage message, bool isOwn, ChatConversation? conversation) {
+    final card = message.card;
+    if (card == null || message.isDeleted || conversation == null) return null;
+    if (!canOpenChatCard(card: card, isOwn: isOwn, peerRole: conversation.peer.role)) return null;
+    return () => openChatCard(
+          context,
+          ref,
+          card: card,
+          isOwn: isOwn,
+          peerUserId: conversation.peer.userId,
+        );
+  }
+
   Widget _buildStream(
     List<ChatMessage> messages,
     ChatConversation? conversation,
@@ -292,6 +312,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
   ) {
     final l10n = AppLocalizations.of(context)!;
     final uploads = ref.watch(chatUploadProgressProvider).value ?? const <String, double>{};
+    // A cardio card writes its distance the way the *reader* has chosen.
+    final unitSystem = ref.watch(settingsControllerProvider).value?.unitSystem ?? UnitSystem.metric;
     // Reversed so the thread sits at the bottom and the keyboard pushes it up
     // without any manual scroll maths — index 0 is the newest message.
     final ordered = messages.reversed.toList();
@@ -323,6 +345,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
           senderName: isOwn ? '' : (conversation?.peer.displayName ?? ''),
           showTail: endsRun,
           uploadProgress: uploads[message.clientId],
+          cardUnitSystem: unitSystem,
+          onCardTap: _cardTapFor(message, isOwn, conversation),
           onRetry: () => ref.read(_controllerProvider.notifier).retry(message.clientId),
           onDelete: () => message.isUnsent
               // Never sent, so nobody else has it and there is nothing to

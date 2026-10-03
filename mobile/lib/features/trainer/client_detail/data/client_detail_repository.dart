@@ -119,6 +119,16 @@ class ClientDetailRepository {
     return ClientSessionPage.fromJson(response.data ?? const {});
   }
 
+  /// One session by id, whatever its age — the paged list above only reaches
+  /// the newest, and a chat card can point at any. A 404 (deleted, or not this
+  /// client's) surfaces as the usual [DioException]; the caller says so.
+  Future<ClientWorkoutSession> fetchWorkoutSession(int clientId, int sessionId) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiEndpoints.trainerClientWorkoutSession(clientId, sessionId),
+    );
+    return ClientWorkoutSession.fromJson(response.data ?? const {});
+  }
+
   /// Writes (or rewrites) the trainer's comment. Returns the session the
   /// server ended up with, so the caller shows what was actually stored
   /// rather than what it hoped to store — this surface has no optimistic UI
