@@ -1,3 +1,5 @@
+import 'chat_card.dart';
+
 /// Delivery state of one of *our own* messages. Anything received is always
 /// [sent] — the states only describe the outbound path.
 ///
@@ -44,6 +46,7 @@ class ChatMessage {
     required this.state,
     this.attachment,
     this.attachmentLocalPath,
+    this.card,
   });
 
   /// The `clientMessageId`: our idempotency key on every send/retry, and the
@@ -70,6 +73,13 @@ class ChatMessage {
 
   bool get hasAttachment => attachment != null || attachmentLocalPath != null;
 
+  /// A shared workout or personal record (docs/chat/83), with [body] as its
+  /// optional caption. Mutually exclusive with a picture. Present while the
+  /// send is still `pending` too: the card is what the outbox replays.
+  final ChatCard? card;
+
+  bool get hasCard => card != null;
+
   bool get isDeleted => deletedAt != null;
 
   /// A message that never reached the server has no id to delete server-side;
@@ -91,6 +101,7 @@ class ChatMessage {
       attachment: json['attachment'] == null
           ? null
           : ChatAttachment.fromJson(json['attachment'] as Map<String, dynamic>),
+      card: ChatCard.tryParse(json['card']),
     );
   }
 }

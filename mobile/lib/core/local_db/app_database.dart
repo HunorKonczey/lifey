@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 45;
+  int get schemaVersion => 46;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -393,6 +393,13 @@ class AppDatabase extends _$AppDatabase {
           // V45: body measurements (docs/80) — a brand-new synced table.
           if (from < 45) {
             await m.createTable(bodyMeasurements);
+          }
+          // V46: chat result cards (docs/chat/83) — the card's JSON on the
+          // message and its kind on the conversation preview.
+          if (from < 46) {
+            await _addColumnIfMissing(m, chatMessages, chatMessages.cardJson);
+            await _addColumnIfMissing(
+                m, chatConversations, chatConversations.lastMessageCardKind);
           }
         },
       );
