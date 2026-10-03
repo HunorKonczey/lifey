@@ -19,6 +19,7 @@ import 'tables/settings_table.dart';
 import 'tables/step_count_table.dart';
 import 'tables/sync_cursor_table.dart';
 import 'tables/water_tables.dart';
+import 'tables/body_measurement_table.dart';
 import 'tables/weight_table.dart';
 import 'tables/workout_session_tables.dart';
 import 'tables/workout_template_tables.dart';
@@ -36,6 +37,7 @@ part 'app_database.g.dart';
 /// `ConnectivitySyncController` (see `lib/core/sync/`).
 @DriftDatabase(tables: [
   WeightEntries,
+  BodyMeasurements,
   Foods,
   Recipes,
   RecipeIngredients,
@@ -67,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 44;
+  int get schemaVersion => 45;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -387,6 +389,10 @@ class AppDatabase extends _$AppDatabase {
           // default (D-P4) in the meantime.
           if (from < 44) {
             await m.createTable(entitlementCacheTable);
+          }
+          // V45: body measurements (docs/80) — a brand-new synced table.
+          if (from < 45) {
+            await m.createTable(bodyMeasurements);
           }
         },
       );

@@ -5,7 +5,7 @@ the code cites those plans by section — migrations, entity javadoc and Dart
 comments all refer back to them.
 
 **Numbering.** Root docs and most topic folders share one global sequence
-(currently up to `77`). Take the next free number, never reuse a
+(currently up to `80`). Take the next free number, never reuse a
 gap, and keep the `NN-<kebab-topic>-plan.md` shape. Two exceptions exist for
 historical reasons: `web/` runs its own `01–09` series, and a few early numbers
 are duplicated at the root (`05`, `06`, `15`, `16`).
@@ -97,6 +97,7 @@ iterations.
 | 76 | [Smarter weight trend (roadmap #11)](76-smarter-weight-trend-plan.md) | built |
 | 77 | [Mobile redesign v2](redesign/77-mobile-redesign-plan.md) (in `redesign/`) | done |
 | 78 | [Web redesign](redesign-web/78-web-redesign-plan.md) (in `redesign-web/`) | done |
+| 80 | [Progress photos + body measurements (roadmap #10)](80-progress-photos-measurements-plan.md) | built — emulator walk and Docker verify owed |
 
 Plans 40–74 live in the topic folders above.
 

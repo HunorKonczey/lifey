@@ -6713,5 +6713,183 @@
   "trainerNavClientsLabel": "Clients",
   "@trainerNavClientsLabel": {
     "description": "Label of the Clients destination in the trainer navigation bar and rail (the screen itself is titled My clients)"
+  },
+  "bodyMeasurementsTitle": "Body measurements",
+  "@bodyMeasurementsTitle": {
+    "description": "Title of the body measurements screen, and the tooltip of its entry button in the weight screen header (docs/80)"
+  },
+  "measurementSiteWaist": "Waist",
+  "@measurementSiteWaist": {
+    "description": "Name of the waist measurement site, shown as a chip and in history rows (docs/80)"
+  },
+  "measurementSiteChest": "Chest",
+  "@measurementSiteChest": {
+    "description": "Name of the chest measurement site"
+  },
+  "measurementSiteHips": "Hips",
+  "@measurementSiteHips": {
+    "description": "Name of the hips measurement site"
+  },
+  "measurementSiteArm": "Arm",
+  "@measurementSiteArm": {
+    "description": "Name of the arm measurement site"
+  },
+  "measurementSiteThigh": "Thigh",
+  "@measurementSiteThigh": {
+    "description": "Name of the thigh measurement site"
+  },
+  "bodyMeasurementsEmptyTitle": "No measurements yet",
+  "@bodyMeasurementsEmptyTitle": {
+    "description": "Empty-state title on the body measurements screen"
+  },
+  "bodyMeasurementsEmptySubtitle": "Log your first one to see how your body changes over time.",
+  "@bodyMeasurementsEmptySubtitle": {
+    "description": "Empty-state subtitle on the body measurements screen"
+  },
+  "bodyMeasurementsNoSiteData": "Nothing logged for this part yet",
+  "@bodyMeasurementsNoSiteData": {
+    "description": "Shown in place of the chart when the selected body part has no measurements while others do"
+  },
+  "bodyMeasurementsHistoryLabel": "History",
+  "@bodyMeasurementsHistoryLabel": {
+    "description": "Section heading above the list of past measurements for the selected site"
+  },
+  "bodyMeasurementsLogTitle": "Log a measurement",
+  "@bodyMeasurementsLogTitle": {
+    "description": "Title of the bottom sheet that logs a body measurement"
+  },
+  "bodyMeasurementValueLabel": "Measurement (cm)",
+  "@bodyMeasurementValueLabel": {
+    "description": "Label of the centimetre input in the log-measurement sheet"
+  },
+  "bodyMeasurementOutOfRangeError": "Enter a value between 1 and 300 cm",
+  "@bodyMeasurementOutOfRangeError": {
+    "description": "Validation error when the typed measurement is not a number in range"
+  },
+  "bodyMeasurementDeletedMessage": "Measurement deleted",
+  "@bodyMeasurementDeletedMessage": {
+    "description": "Snackbar after a measurement is swiped away"
+  },
+  "bodyMeasurementCmValue": "{value} cm",
+  "@bodyMeasurementCmValue": {
+    "description": "A measurement value with its unit; the placeholder is the already-formatted number",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "bodyTitle": "Body",
+  "@bodyTitle": {
+    "description": "Title of the Body screen (measurements and progress photos) and the tooltip of its entry button in the weight screen header (docs/80)"
+  },
+  "bodyTabMeasurements": "Measurements",
+  "@bodyTabMeasurements": {
+    "description": "Label of the Measurements tab on the Body screen"
+  },
+  "bodyTabPhotos": "Photos",
+  "@bodyTabPhotos": {
+    "description": "Label of the Photos tab on the Body screen"
+  },
+  "photosEmptyTitle": "No progress photos yet",
+  "@photosEmptyTitle": {
+    "description": "Empty-state title of the progress photos timeline"
+  },
+  "photosEmptySubtitle": "Add a photo to start your visual timeline. Only you can see these photos.",
+  "@photosEmptySubtitle": {
+    "description": "Empty-state subtitle of the progress photos timeline; reassures the photos are private"
+  },
+  "photosAddButton": "Add photo",
+  "@photosAddButton": {
+    "description": "Caption of the floating button that adds a progress photo"
+  },
+  "photosSourceCamera": "Take a photo",
+  "@photosSourceCamera": {
+    "description": "Option in the add-photo source sheet that opens the camera"
+  },
+  "photosSourceGallery": "Choose from gallery",
+  "@photosSourceGallery": {
+    "description": "Option in the add-photo source sheet that opens the photo library"
+  },
+  "photosDetailsTitle": "Photo details",
+  "@photosDetailsTitle": {
+    "description": "Title of the bottom sheet that sets a progress photo's date, pose and note, when adding or editing"
+  },
+  "photoPoseLabel": "Pose",
+  "@photoPoseLabel": {
+    "description": "Label above the pose chips in the photo details sheet"
+  },
+  "photoPoseFront": "Front",
+  "@photoPoseFront": {
+    "description": "Pose chip: photographed from the front"
+  },
+  "photoPoseSide": "Side",
+  "@photoPoseSide": {
+    "description": "Pose chip: photographed from the side"
+  },
+  "photoPoseBack": "Back",
+  "@photoPoseBack": {
+    "description": "Pose chip: photographed from the back"
+  },
+  "photoPoseOther": "Other",
+  "@photoPoseOther": {
+    "description": "Pose chip: no particular pose"
+  },
+  "photoNoteLabel": "Note (optional)",
+  "@photoNoteLabel": {
+    "description": "Label of the optional note field in the photo details sheet"
+  },
+  "photoUploadFailedMessage": "Couldn't upload the photo. Check your connection and try again.",
+  "@photoUploadFailedMessage": {
+    "description": "Error shown in the photo details sheet when the upload fails"
+  },
+  "photoSaveFailedMessage": "Couldn't save the changes. Check your connection and try again.",
+  "@photoSaveFailedMessage": {
+    "description": "Error shown in the photo details sheet when editing a photo's details fails"
+  },
+  "photoDeleteTitle": "Delete this photo?",
+  "@photoDeleteTitle": {
+    "description": "Title of the confirmation dialog before deleting a progress photo"
+  },
+  "photoDeleteMessage": "It will be removed from your timeline for good.",
+  "@photoDeleteMessage": {
+    "description": "Body of the confirmation dialog before deleting a progress photo"
+  },
+  "photoDeletedMessage": "Photo deleted",
+  "@photoDeletedMessage": {
+    "description": "Snackbar after a progress photo is deleted"
+  },
+  "photoEditAction": "Edit details",
+  "@photoEditAction": {
+    "description": "Tooltip of the edit button in the full-screen photo viewer"
+  },
+  "photoDeleteAction": "Delete photo",
+  "@photoDeleteAction": {
+    "description": "Tooltip of the delete button in the full-screen photo viewer"
+  },
+  "photoImageUnavailableMessage": "The photo couldn't be loaded.",
+  "@photoImageUnavailableMessage": {
+    "description": "Shown in the full-screen viewer when the image bytes are unavailable (offline and not cached)"
+  },
+  "photosCompareButton": "Compare",
+  "@photosCompareButton": {
+    "description": "Caption of the button above the photo timeline that opens the side-by-side compare screen (docs/80)"
+  },
+  "photosCompareTitle": "Compare",
+  "@photosCompareTitle": {
+    "description": "Title of the side-by-side photo compare screen"
+  },
+  "photosCompareBefore": "Before",
+  "@photosCompareBefore": {
+    "description": "Caption above the left photo on the compare screen"
+  },
+  "photosCompareAfter": "After",
+  "@photosCompareAfter": {
+    "description": "Caption above the right photo on the compare screen"
+  },
+  "photosComparePickTitle": "Choose a photo",
+  "@photosComparePickTitle": {
+    "description": "Title of the sheet that picks which photo goes on one side of the compare screen"
+  },
+  "photosCompareDaysApart": "{count, plural, one{1 day apart} other{{count} days apart}}",
+  "@photosCompareDaysApart": {
+    "description": "Caption between the two compared photos: how many calendar days separate them",
+    "placeholders": {"count": {"type": "int"}}
   }
 }
