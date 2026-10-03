@@ -136,7 +136,7 @@ export const queryKeys = {
     entitlements: () => ["billing", "entitlements"] as const,
   },
   superAdminUsers: {
-    page: (params: { page: number; size?: number; search?: string }) =>
+    page: (params: { page: number; size?: number; search?: string; role?: string }) =>
       ["superadmin-users", "page", params] as const,
     roleAudit: (userId: number) => ["superadmin-users", userId, "role-audit"] as const,
     stats: () => ["superadmin-users", "stats"] as const,

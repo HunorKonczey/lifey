@@ -23,7 +23,9 @@ import java.util.List;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,7 +46,7 @@ class SuperAdminUserControllerTest {
     @Test
     void findUsers_returnsPage() throws Exception {
         Pageable pageable = PageRequest.of(0, 50);
-        when(roleManagementService.findUsers(any(), any())).thenReturn(new PageImpl<>(List.of(
+        when(roleManagementService.findUsers(any(), any(), any())).thenReturn(new PageImpl<>(List.of(
                 new SuperAdminUserResponse(2L, "client@example.com", Set.of("ROLE_USER"),
                         Instant.parse("2026-06-01T00:00:00Z"), false,
                         "Anna", "Kiss", "Bence Edzo", null)), pageable, 1));
@@ -55,6 +57,22 @@ class SuperAdminUserControllerTest {
                 .andExpect(jsonPath("$.content[0].firstName").value("Anna"))
                 .andExpect(jsonPath("$.content[0].trainerName").value("Bence Edzo"))
                 .andExpect(jsonPath("$.content[0].clientCount").doesNotExist());
+    }
+
+    @Test
+    void findUsers_passesTheRoleKindAndSearchToTheService() throws Exception {
+        when(roleManagementService.findUsers(any(), any(), any())).thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/v1/superadmin/users").param("role", "TRAINER").param("search", "coa"))
+                .andExpect(status().isOk());
+
+        verify(roleManagementService).findUsers(eq("coa"), eq(UserRoleKind.TRAINER), any());
+    }
+
+    @Test
+    void findUsers_unknownRoleKindIsABadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/superadmin/users").param("role", "OWNER"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

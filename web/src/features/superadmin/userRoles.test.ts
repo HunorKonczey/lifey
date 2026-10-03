@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditTransition, bulkTargets, matchesRoleFilter, personLabel, primaryRole, runBulk } from "./userRoles";
+import { auditTransition, bulkTargets, personLabel, roleFilterParam, primaryRole, runBulk } from "./userRoles";
 import type { SuperAdminUserResponse } from "./types";
 
 const user = (id: number, ...roles: string[]) => ({ id, email: `u${id}@x.hu`, roles, createdAt: "2026-01-01T00:00:00Z", hasAvatar: false }) as SuperAdminUserResponse;
@@ -10,10 +10,15 @@ describe("primaryRole / filter", () => {
     expect(primaryRole(["ROLE_USER", "ROLE_TRAINER"])).toBe("TRAINER");
     expect(primaryRole(["ROLE_USER"])).toBe("USER");
   });
-  it("filters by the primary role", () => {
-    expect(matchesRoleFilter(user(1, "ROLE_USER", "ROLE_TRAINER"), "TRAINER")).toBe(true);
-    expect(matchesRoleFilter(user(1, "ROLE_USER", "ROLE_TRAINER"), "USER")).toBe(false);
-    expect(matchesRoleFilter(user(1, "ROLE_USER"), "all")).toBe(true);
+  it("sends the role kind the server filters by, and nothing for \"all\"", () => {
+    expect(roleFilterParam("all")).toBeUndefined();
+    expect(roleFilterParam("TRAINER")).toBe("TRAINER");
+    expect(roleFilterParam("USER")).toBe("USER");
+    expect(roleFilterParam("ADMIN")).toBe("ADMIN");
+  });
+  it("uses the same kinds the server does: a user who is both admin and trainer is one ADMIN row", () => {
+    expect(primaryRole(["ROLE_USER", "ROLE_TRAINER", "ROLE_ADMIN"])).toBe("ADMIN");
+    expect(primaryRole(["ROLE_USER", "ROLE_TRAINER"])).toBe("TRAINER");
   });
 });
 

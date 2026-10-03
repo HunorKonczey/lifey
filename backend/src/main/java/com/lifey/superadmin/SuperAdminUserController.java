@@ -29,13 +29,15 @@ public class SuperAdminUserController {
 
     private final RoleManagementService roleManagementService;
 
-    @Operation(summary = "List users, paged and optionally searched by email")
+    @Operation(summary = "List users, paged, optionally searched by email and filtered by displayed role")
     @GetMapping
     public Page<SuperAdminUserResponse> findUsers(
             @PageableDefault(size = 50, sort = "id") Pageable pageable,
             @Parameter(description = "Case-insensitive email contains-match")
-            @RequestParam(required = false) String search) {
-        return roleManagementService.findUsers(search, pageable);
+            @RequestParam(required = false) String search,
+            @Parameter(description = "Filter by the role a user is shown as: ADMIN (admin or super-admin) over TRAINER over USER")
+            @RequestParam(required = false) UserRoleKind role) {
+        return roleManagementService.findUsers(search, role, pageable);
     }
 
     @Operation(summary = "Grant a role to a user",

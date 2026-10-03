@@ -26,4 +26,26 @@ public interface UserRepository extends JpaRepository<User, Long> {
             + "WHERE cast(function('unaccent', lower(u.email)) as string) "
             + "LIKE cast(function('unaccent', lower(concat('%', :search, '%'))) as string)")
     Page<User> findByEmailContainingIgnoreCase(@Param("search") String search, Pageable pageable);
+
+    /**
+     * The super-admin list filtered by the role a user is shown as ({@code kind} is a {@code UserRoleKind} name —
+     * a string, never null, so Postgres can type the parameter). {@code search} is the e-mail fragment, empty for
+     * "everyone". Precedence mirrors the web table: ADMIN (admin or super-admin) over TRAINER over USER.
+     */
+    @Query("""
+            SELECT u FROM User u
+            WHERE cast(function('unaccent', lower(u.email)) as string)
+                  LIKE cast(function('unaccent', lower(concat('%', :search, '%'))) as string)
+              AND (
+                   (:kind = 'ADMIN' AND (com.lifey.user.Role.ROLE_ADMIN MEMBER OF u.roles
+                                         OR com.lifey.user.Role.ROLE_SUPER_ADMIN MEMBER OF u.roles))
+                OR (:kind = 'TRAINER' AND com.lifey.user.Role.ROLE_TRAINER MEMBER OF u.roles
+                                      AND com.lifey.user.Role.ROLE_ADMIN NOT MEMBER OF u.roles
+                                      AND com.lifey.user.Role.ROLE_SUPER_ADMIN NOT MEMBER OF u.roles)
+                OR (:kind = 'USER' AND com.lifey.user.Role.ROLE_TRAINER NOT MEMBER OF u.roles
+                                   AND com.lifey.user.Role.ROLE_ADMIN NOT MEMBER OF u.roles
+                                   AND com.lifey.user.Role.ROLE_SUPER_ADMIN NOT MEMBER OF u.roles)
+              )
+            """)
+    Page<User> findByRoleKind(@Param("search") String search, @Param("kind") String kind, Pageable pageable);
 }

@@ -14,7 +14,7 @@ import { RoleHistoryDrawer } from "@/features/superadmin/components/RoleHistoryD
 import { SuperAdminStatsRow } from "@/features/superadmin/components/SuperAdminStatsRow";
 import { UserAvatar } from "@/features/superadmin/components/UserAvatar";
 import type { SuperAdminUserResponse } from "@/features/superadmin/types";
-import { bulkTargets, matchesRoleFilter, personLabel, primaryRole, runBulk, type BulkRoleAction, type RoleFilter } from "@/features/superadmin/userRoles";
+import { bulkTargets, personLabel, primaryRole, roleFilterParam, runBulk, type BulkRoleAction, type RoleFilter } from "@/features/superadmin/userRoles";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useFormat } from "@/lib/i18n/format";
 import { useToast } from "@/lib/hooks/useToast";
@@ -51,13 +51,14 @@ export default function SuperAdminUsersPage() {
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.superAdminUsers.page({ page: 0, size: LIMIT, search: search || undefined }),
-    queryFn: () => superAdminApi.users({ page: 0, size: LIMIT, search: search || undefined }),
+    queryKey: queryKeys.superAdminUsers.page({ page: 0, size: LIMIT, search: search || undefined, role: roleFilterParam(roleFilter) }),
+    queryFn: () => superAdminApi.users({ page: 0, size: LIMIT, search: search || undefined, role: roleFilterParam(roleFilter) }),
     placeholderData: keepPreviousData,
   });
 
   const users = useMemo(() => data?.content ?? [], [data]);
-  const rows = useMemo(() => users.filter((u) => matchesRoleFilter(u, roleFilter)), [users, roleFilter]);
+  // The role filter is applied by the server, so `users` already is the filtered list.
+  const rows = users;
   const truncated = data != null && data.totalElements > users.length;
   const trainers = users.filter((u) => primaryRole(u.roles) === "TRAINER").length;
   const selectedUsers = users.filter((u) => selected.has(u.id));
@@ -157,7 +158,7 @@ export default function SuperAdminUsersPage() {
     <div className="flex flex-col gap-4">
       <div>
         <p className="type-body-s" style={{ color: "var(--text-2)" }} data-testid="users-summary">
-          {truncated ? t("usersCount", { count: data?.totalElements ?? 0 }) : t("usersSummary", { count: users.length, trainers })}
+          {truncated || roleFilter !== "all" ? t("usersCount", { count: data?.totalElements ?? 0 }) : t("usersSummary", { count: users.length, trainers })}
         </p>
       </div>
 

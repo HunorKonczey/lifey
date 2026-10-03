@@ -6,6 +6,7 @@ import com.lifey.superadmin.RoleAuditAction;
 import com.lifey.superadmin.RoleAuditLog;
 import com.lifey.superadmin.RoleAuditLogRepository;
 import com.lifey.superadmin.TrainerRoleGrantedEvent;
+import com.lifey.superadmin.UserRoleKind;
 import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.superadmin.exception.CannotModifySelfException;
@@ -83,7 +84,7 @@ class RoleManagementServiceImplTest {
         User user = user(TARGET_ID, "client@example.com", Role.ROLE_USER);
         when(userRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(user)));
 
-        Page<SuperAdminUserResponse> result = service.findUsers(null, pageable);
+        Page<SuperAdminUserResponse> result = service.findUsers(null, null, pageable);
 
         assertThat(result.getContent()).singleElement().satisfies(r -> {
             assertThat(r.email()).isEqualTo("client@example.com");
@@ -99,9 +100,32 @@ class RoleManagementServiceImplTest {
         User user = user(TARGET_ID, "client@example.com", Role.ROLE_USER);
         when(userRepository.findByEmailContainingIgnoreCase("client", pageable)).thenReturn(new PageImpl<>(List.of(user)));
 
-        Page<SuperAdminUserResponse> result = service.findUsers("  client  ", pageable);
+        Page<SuperAdminUserResponse> result = service.findUsers("  client  ", null, pageable);
 
         assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(TARGET_ID));
+    }
+
+    @Test
+    void findUsers_withARoleKind_filtersInSqlAndNeverFallsBackToFindAll() {
+        Pageable pageable = PageRequest.of(0, 10);
+        User trainer = user(TARGET_ID, "coach@example.com", Role.ROLE_USER, Role.ROLE_TRAINER);
+        when(userRepository.findByRoleKind("", "TRAINER", pageable)).thenReturn(new PageImpl<>(List.of(trainer)));
+
+        Page<SuperAdminUserResponse> result = service.findUsers(null, UserRoleKind.TRAINER, pageable);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.email()).isEqualTo("coach@example.com"));
+        verify(userRepository, never()).findAll(any(Pageable.class));
+        verify(userRepository, never()).findByEmailContainingIgnoreCase(any(), any());
+    }
+
+    @Test
+    void findUsers_roleKindAndSearchTogether_passTheTrimmedSearchToTheSameQuery() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(userRepository.findByRoleKind("coa", "ADMIN", pageable)).thenReturn(new PageImpl<>(List.of()));
+
+        service.findUsers("  coa ", UserRoleKind.ADMIN, pageable);
+
+        verify(userRepository).findByRoleKind("coa", "ADMIN", pageable);
     }
 
     @Test
@@ -111,7 +135,7 @@ class RoleManagementServiceImplTest {
         when(userRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(user)));
         when(userAvatarRepository.findUserIdsWithAvatar(any())).thenReturn(Set.of(TARGET_ID));
 
-        Page<SuperAdminUserResponse> result = service.findUsers(null, pageable);
+        Page<SuperAdminUserResponse> result = service.findUsers(null, null, pageable);
 
         assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.hasAvatar()).isTrue());
     }
@@ -136,7 +160,7 @@ class RoleManagementServiceImplTest {
         when(count.getClientCount()).thenReturn(3L);
         when(trainerClientRepository.countByTrainerIds(any(), eq(TrainerClientStatus.ACTIVE))).thenReturn(List.of(count));
 
-        List<SuperAdminUserResponse> rows = service.findUsers(null, pageable).getContent();
+        List<SuperAdminUserResponse> rows = service.findUsers(null, null, pageable).getContent();
 
         assertThat(rows.get(0).clientCount()).isEqualTo(3);
         assertThat(rows.get(0).trainerName()).isNull();
@@ -159,7 +183,7 @@ class RoleManagementServiceImplTest {
         when(trainerClientRepository.findWithTrainerByClientIds(any(), eq(TrainerClientStatus.ACTIVE))).thenReturn(List.of(link));
         when(trainerClientRepository.countByTrainerIds(any(), eq(TrainerClientStatus.ACTIVE))).thenReturn(List.of());
 
-        List<SuperAdminUserResponse> rows = service.findUsers(null, pageable).getContent();
+        List<SuperAdminUserResponse> rows = service.findUsers(null, null, pageable).getContent();
 
         assertThat(rows.get(0).clientCount()).isZero();
         assertThat(rows.get(1).trainerName()).isEqualTo("bence@example.com");
