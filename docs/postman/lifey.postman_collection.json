@@ -1508,6 +1508,27 @@
             "description": "Demonstrates the 400 validation response (missing unitSystem/theme/language, negative calorie goal)."
           },
           "response": []
+        },
+        {
+          "name": "Who set the nutrition goals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/settings/nutrition-goals-source",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "settings",
+                "nutrition-goals-source"
+              ]
+            },
+            "description": "Who last changed the current user's nutrition goals and when (docs/redesign-web/82 section 2.4). `source` is SELF, TRAINER or UNKNOWN (never recorded: no date is invented); `setByName` is the trainer's display name, null if that account is gone. The stamp moves only when one of calories/protein/carbs/fat actually changes, so re-sending unchanged goals never overwrites a trainer's attribution."
+          },
+          "response": []
         }
       ]
     },
@@ -1911,6 +1932,40 @@
             "description": "Cancels a pending invite. Returns 204."
           },
           "response": []
+        },
+        {
+          "name": "Invite history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/invites/history?page=0\u0026size=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "trainer",
+                "invites",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Zero-based page"
+                },
+                {
+                  "key": "size",
+                  "value": "30",
+                  "description": "Page size"
+                }
+              ]
+            },
+            "description": "Every invite this trainer ever sent, newest first, with its outcome: PENDING, ACCEPTED, DECLINED, CANCELLED (the trainer withdrew it) or EXPIRED. `endedAt` is when a withdrawn invite was withdrawn or an accepted relationship later ended. Paged, default size 30."
+          },
+          "response": []
         }
       ]
     },
@@ -2162,6 +2217,30 @@
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/avatar", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "avatar"] },
             "description": "Client's profile picture as binary image data. Returns 404 if the client has no picture set."
+          },
+          "response": []
+        },
+        {
+          "name": "Client nutrition goals - who set them",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/nutrition-goals/source",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "trainer",
+                "clients",
+                "{{clientId}}",
+                "nutrition-goals",
+                "source"
+              ]
+            },
+            "description": "Who last changed the client's nutrition goals, as the trainer sees it: `source` SELF / TRAINER / UNKNOWN, `setAt`, and `setByYou` (your own change vs another trainer's). No names are returned."
           },
           "response": []
         }
@@ -2684,6 +2763,44 @@
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/v1/superadmin/users/{{superAdminUserId}}/avatar", "host": ["{{baseUrl}}"], "path": ["api", "v1", "superadmin", "users", "{{superAdminUserId}}", "avatar"] },
             "description": "Gets a user's profile picture as binary image data. Returns 404 if no picture is set."
+          },
+          "response": []
+        },
+        {
+          "name": "List users by displayed role",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/superadmin/users?role=TRAINER\u0026page=0\u0026size=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "superadmin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "TRAINER",
+                  "description": "USER, TRAINER or ADMIN"
+                },
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Zero-based page"
+                },
+                {
+                  "key": "size",
+                  "value": "50",
+                  "description": "Page size"
+                }
+              ]
+            },
+            "description": "Same list as *List users*, filtered on the server by the role a user is shown as: ADMIN (admin or super-admin) over TRAINER over USER, so a user who is both admin and trainer is one ADMIN row. Each row carries `lastActiveAt` (the last authenticated request, null until the user's first request after the column existed)."
           },
           "response": []
         }

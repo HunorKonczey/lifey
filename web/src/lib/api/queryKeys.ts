@@ -5,6 +5,8 @@ export const queryKeys = {
   settings: {
     all: () => ["settings"] as const,
     avatar: () => ["settings", "avatar"] as const,
+    /** Under `all`, so saving settings refreshes who-set-the-goals too. */
+    goalsSource: () => ["settings", "goals-source"] as const,
   },
   userDetails: {
     all: () => ["user-details"] as const,
@@ -65,6 +67,8 @@ export const queryKeys = {
   },
   trainerInvites: {
     all: () => ["trainer-invites"] as const,
+    /** Under `all`, so every invite mutation that invalidates the live list refreshes the history too. */
+    history: (size: number) => ["trainer-invites", "history", size] as const,
   },
   trainerRequests: {
     /** This user's own most-recent request (docs/landing_page/66 §2) — there's only ever one row worth polling. */
@@ -87,6 +91,8 @@ export const queryKeys = {
     avatar: (clientId: number) => ["trainer-client-data", clientId, "avatar"] as const,
     meals: (clientId: number, date: string) => ["trainer-client-data", clientId, "meals", date] as const,
     nutritionGoals: (clientId: number) => ["trainer-client-data", clientId, "nutrition-goals"] as const,
+    /** Under `nutritionGoals`, so saving the goals refreshes the attribution. */
+    nutritionGoalsSource: (clientId: number) => ["trainer-client-data", clientId, "nutrition-goals", "source"] as const,
   },
   trainerSchedules: {
     forClient: (clientId: number) => ["trainer-schedules", "client", clientId] as const,
@@ -136,7 +142,7 @@ export const queryKeys = {
     entitlements: () => ["billing", "entitlements"] as const,
   },
   superAdminUsers: {
-    page: (params: { page: number; size?: number; search?: string }) =>
+    page: (params: { page: number; size?: number; search?: string; role?: string }) =>
       ["superadmin-users", "page", params] as const,
     roleAudit: (userId: number) => ["superadmin-users", userId, "role-audit"] as const,
     stats: () => ["superadmin-users", "stats"] as const,

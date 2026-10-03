@@ -11,6 +11,7 @@ import com.lifey.trainer.TrainerInviteProperties;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.RespondToInviteRequest;
 import com.lifey.trainer.dto.TrainerInviteRequest;
+import com.lifey.trainer.dto.TrainerInviteHistoryResponse;
 import com.lifey.trainer.dto.TrainerInviteResponse;
 import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.exception.AlreadyClientException;
@@ -21,6 +22,9 @@ import com.lifey.trainer.exception.UserNotFoundForInviteException;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -145,6 +149,16 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
                 .stream()
                 .map(TrainerClientMapper::toInviteResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TrainerInviteHistoryResponse> findHistoryForTrainer(Pageable pageable) {
+        Instant now = Instant.now();
+        // The sort is fixed by the repository method (newest first); a caller-supplied sort is dropped on purpose.
+        Pageable fixed = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        return trainerClientRepository.findByTrainerIdOrderByCreatedAtDescIdDesc(currentUserProvider.getUserId(), fixed)
+                .map(tc -> TrainerClientMapper.toInviteHistoryResponse(tc, now));
     }
 
     @Override

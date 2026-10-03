@@ -58,7 +58,7 @@ class ClientNutritionGoalsServiceImplTest {
     @Test
     void updateGoals_persistsAndReturnsGoals() {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(settings(2000, 140, 200, 60));
-        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, 2200, 150, 240, 70))
+        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, TRAINER_ID, 2200, 150, 240, 70))
                 .thenReturn(settings(2200, 150, 240, 70));
         when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
 
@@ -75,7 +75,7 @@ class ClientNutritionGoalsServiceImplTest {
     @Test
     void updateGoals_nullsClearGoals() {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(settings(2200, 150, 240, 70));
-        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, null, null, null, null))
+        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, TRAINER_ID, null, null, null, null))
                 .thenReturn(settings(null, null, null, null));
         when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
 
@@ -97,14 +97,14 @@ class ClientNutritionGoalsServiceImplTest {
         assertThatThrownBy(() -> service.updateGoals(TRAINER_ID, CLIENT_ID, request))
                 .isInstanceOf(NotYourClientException.class);
 
-        verify(settingsService, never()).updateNutritionGoalsForUser(any(), any(), any(), any(), any());
+        verify(settingsService, never()).updateNutritionGoalsForUser(any(), any(), any(), any(), any(), any());
         verify(pushService, never()).sendToUser(any(), any());
     }
 
     @Test
     void updateGoals_realChangeSendsPushWithSummary() {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(settings(2000, 140, 200, 60));
-        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, 2200, 150, 240, 70))
+        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, TRAINER_ID, 2200, 150, 240, 70))
                 .thenReturn(settings(2200, 150, 240, 70));
         when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
 
@@ -121,7 +121,7 @@ class ClientNutritionGoalsServiceImplTest {
     @Test
     void updateGoals_identicalValuesDoNotSendPush() {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(settings(2200, 150, 240, 70));
-        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, 2200, 150, 240, 70))
+        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, TRAINER_ID, 2200, 150, 240, 70))
                 .thenReturn(settings(2200, 150, 240, 70));
 
         service.updateGoals(TRAINER_ID, CLIENT_ID, new ClientNutritionGoalsRequest(2200, 150, 240, 70));
@@ -132,7 +132,7 @@ class ClientNutritionGoalsServiceImplTest {
     @Test
     void updateGoals_clearingAllGoalsSendsClearedPush() {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(settings(2200, 150, 240, 70));
-        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, null, null, null, null))
+        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, TRAINER_ID, null, null, null, null))
                 .thenReturn(settings(null, null, null, null));
         when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
 
@@ -146,7 +146,7 @@ class ClientNutritionGoalsServiceImplTest {
     @Test
     void updateGoals_skipsPushWhenTrainerGoalsPushDisabled() {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(settings(2000, 140, 200, 60));
-        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, 2200, 150, 240, 70))
+        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, TRAINER_ID, 2200, 150, 240, 70))
                 .thenReturn(settings(2200, 150, 240, 70));
         UserSettings settingsRow = new UserSettings();
         settingsRow.setTrainerGoalsPushEnabled(false);
@@ -160,7 +160,7 @@ class ClientNutritionGoalsServiceImplTest {
     @Test
     void updateGoals_sendsPushWithHungarianCopyWhenClientPrefersHungarian() {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(settings(2000, 140, 200, 60));
-        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, 2200, 150, 240, 70))
+        when(settingsService.updateNutritionGoalsForUser(CLIENT_ID, TRAINER_ID, 2200, 150, 240, 70))
                 .thenReturn(settings(2200, 150, 240, 70));
         UserSettings settingsRow = new UserSettings();
         settingsRow.setLanguage(LanguagePreference.HUNGARIAN);

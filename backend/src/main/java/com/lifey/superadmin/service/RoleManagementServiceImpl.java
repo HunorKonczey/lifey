@@ -6,6 +6,7 @@ import com.lifey.superadmin.RoleAuditAction;
 import com.lifey.superadmin.RoleAuditLog;
 import com.lifey.superadmin.RoleAuditLogRepository;
 import com.lifey.superadmin.TrainerRoleGrantedEvent;
+import com.lifey.superadmin.UserRoleKind;
 import com.lifey.superadmin.dto.GlobalRoleAuditResponse;
 import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
@@ -59,10 +60,17 @@ public class RoleManagementServiceImpl implements RoleManagementService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<SuperAdminUserResponse> findUsers(String search, Pageable pageable) {
-        Page<User> page = (search == null || search.isBlank())
-                ? userRepository.findAll(pageable)
-                : userRepository.findByEmailContainingIgnoreCase(search.trim(), pageable);
+    public Page<SuperAdminUserResponse> findUsers(String search, UserRoleKind role, Pageable pageable) {
+        boolean searching = search != null && !search.isBlank();
+        Page<User> page;
+        if (role != null) {
+            // The kind is filtered in SQL (not on the loaded page), so the filter stays correct past the page size.
+            page = userRepository.findByRoleKind(searching ? search.trim() : "", role.name(), pageable);
+        } else {
+            page = searching
+                    ? userRepository.findByEmailContainingIgnoreCase(search.trim(), pageable)
+                    : userRepository.findAll(pageable);
+        }
         Set<Long> userIds = page.getContent().stream().map(User::getId).collect(Collectors.toSet());
         Set<Long> withAvatar = userAvatarRepository.findUserIdsWithAvatar(userIds);
 
@@ -220,6 +228,6 @@ public class RoleManagementServiceImpl implements RoleManagementService {
     private static SuperAdminUserResponse toUserResponse(User user, boolean hasAvatar, String trainerName, Integer clientCount) {
         Set<String> roleNames = user.getRoles().stream().map(Enum::name).collect(Collectors.toUnmodifiableSet());
         return new SuperAdminUserResponse(user.getId(), user.getEmail(), roleNames, user.getCreatedAt(), hasAvatar,
-                user.getFirstName(), user.getLastName(), trainerName, clientCount);
+                user.getFirstName(), user.getLastName(), trainerName, clientCount, user.getLastActiveAt());
     }
 }

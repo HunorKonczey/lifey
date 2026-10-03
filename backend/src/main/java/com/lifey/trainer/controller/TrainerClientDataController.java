@@ -4,6 +4,8 @@ import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.meal.dto.MealResponse;
 import com.lifey.nutrition.meal.service.MealService;
+import com.lifey.settings.GoalsSource;
+import com.lifey.settings.NutritionGoalsAttribution;
 import com.lifey.settings.dto.SettingsResponse;
 import com.lifey.settings.service.SettingsService;
 import com.lifey.statistics.dto.StatisticsResponse;
@@ -11,6 +13,7 @@ import com.lifey.statistics.service.StatisticsService;
 import com.lifey.steps.dto.DailyStepCountResponse;
 import com.lifey.steps.service.DailyStepCountService;
 import com.lifey.trainer.dto.ClientNutritionGoalsRequest;
+import com.lifey.trainer.dto.ClientNutritionGoalsSourceResponse;
 import com.lifey.trainer.dto.ClientNutritionGoalsResponse;
 import com.lifey.trainer.dto.SessionCommentRequest;
 import com.lifey.trainer.service.ClientNutritionGoalsService;
@@ -172,6 +175,18 @@ public class TrainerClientDataController {
         return new ClientNutritionGoalsResponse(
                 settings.dailyCalorieGoal(), settings.dailyProteinGoal(),
                 settings.dailyCarbsGoal(), settings.dailyFatGoal());
+    }
+
+    @Operation(summary = "Who last changed the client's nutrition goals, and when",
+            description = "source is SELF (the client), TRAINER or UNKNOWN (never recorded). setByYou separates your own "
+                    + "change from another trainer's; no names are returned.")
+    @GetMapping("/nutrition-goals/source")
+    public ClientNutritionGoalsSourceResponse nutritionGoalsSource(@PathVariable Long clientId) {
+        requireActiveClient(clientId);
+        NutritionGoalsAttribution attribution = settingsService.nutritionGoalsAttribution(clientId);
+        boolean setByYou = attribution.source() == GoalsSource.TRAINER
+                && currentUserProvider.getUserId().equals(attribution.setByUserId());
+        return new ClientNutritionGoalsSourceResponse(attribution.source(), attribution.setAt(), setByYou);
     }
 
     @Operation(summary = "Set a client's daily nutrition goals",

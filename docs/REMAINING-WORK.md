@@ -105,15 +105,12 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 
 | Tétel | Mi | Hol |
 |---|---|---|
-| Cél-hozzárendelés | „Célok: Szabó Bence" / „beállította az edződ" — tárolni kell, ki és mikor állította a célt | `78` §6, §10 Q1 |
+| Meghívó: megosztható link, emlékeztető | az előzmény már kész (`82` S2); a link és az emlékeztető a meghívó-modell bővítését kéri | `78` §6 |
 | Súly napszak / jegyzet, étel-adagok, rost / cukor, kedvenc ételek | a `WeightResponse` csak dátumos; az étel-modell nem ismeri az adagot | `78` §6 |
 | „Az edződtől" jelölés a kiosztott recepten | a másolat nem őrzi a származást | `78` §6 |
 | Edzői étkezés-komment, edzői lépéscél | új végpont / adat | `78` §6 |
 | Chat jelenlét, megosztott edzés / étkezés kártya | chat-szolgáltatás munka | `78` §6 |
-| Meghívó-előzmény (elfogadott), megosztható link, emlékeztető | a meghívó-modell nem tárolja; a `GET /trainer/invites` csak élő függőket ad | `78` §6, W9.4 |
-| Valódi utolsó belépés / aktivitás | a „30 napos aktív fiók" a munkamenet-frissítésekből számol; kell egy rögzített utolsó-aktivitás | `78` W9.b2 |
 | Edzői kérelem „végzettség" | nem gyűjtjük | `78` §6 |
-| Szerepkör-szűrő a felhasználólistán | az API-nak nincs; a lista egyben (max. 500) töltődik, a szűrés a kliensen fut | `78` W9.7 |
 | Sablon időtartam, ismétlésszám | a sablon csak szettszámot tárol; az idő becslés | `78` W9.1 |
 | Sablonhasználat ütemezésből | a „Használja" csak a kiosztottakat számolja; az ütemezésekhez kliensenként külön lekérés kell | `78` W9.1 |
 | Számlázás: két csomagos canvas | a canvas Alap / Pro, a termékben Starter / Pro / Studio; az „utána ingyenes" mondat nincs definiálva | `78` W9.5 |
@@ -133,9 +130,9 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
   (`_buildPlanned`), a `planSessionRows` ebből építi újra a sorokat, a pull nem írja felül, és a szerver már maga is tárolja
   (`pull_engine_workout_session_target_sets_test`). A körforgást most teszt is rögzíti (`session_row_plan_test`). Nyitva csak
   az eszközös ellenőrzés: üres sor hozzáadása → kilépés → visszatérés, illetve Live Activity / értesítés koppintás.
-- **[`80`](80-progress-photos-measurements-plan.md)** — testméretek + progress fotók: kód és tesztek kész,
-  hátravan az emulátoros végigpróba (Body képernyő, kamera/galéria, összehasonlítás) és a Docker-es
-  `mvnw verify` (V78/V79 Flyway ↔ entitás `validate`, Testcontainers-tesztek).
+- **[`80`](80-progress-photos-measurements-plan.md)** — testméretek + progress fotók: kód és tesztek kész, a Docker-es
+  `mvnw verify` lefutott (2026-10-03, 1159 teszt, zöld — V78–V81 Flyway ↔ entitás `validate` is). Hátravan az emulátoros
+  végigpróba (Body képernyő, kamera/galéria, összehasonlítás).
 
 ---
 

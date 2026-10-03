@@ -224,7 +224,6 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
 
 1. Emulator walk: Weight → Body → add a measurement (offline, then reconnect), add a photo from the gallery
    and the camera, viewer edit/delete, compare, light theme and Hungarian.
-2. `cd backend && ./mvnw -B verify` with Docker running: Flyway V78/V79 against the entities (`validate`) and
-   the Testcontainers integration tests. Nothing in this branch has been run against a real Postgres.
+2. ~~`cd backend && ./mvnw -B verify` with Docker running~~ — **done 2026-10-03** (during plan 82): the whole suite, 1159 tests, ran green against Postgres 16, V78 and V79 included.
 3. Consider before release: the photo list is unpaged (fine for hundreds, revisit with a cap), and the
    Weight header now has two action buttons — check the title still fits at large text scale.

@@ -34,7 +34,7 @@ public class ClientNutritionGoalsServiceImpl implements ClientNutritionGoalsServ
         trainerAccessService.requireActiveClient(trainerId, clientId);
         SettingsResponse before = settingsService.forUser(clientId);
         SettingsResponse updated = settingsService.updateNutritionGoalsForUser(
-                clientId, request.dailyCalorieGoal(), request.dailyProteinGoal(),
+                clientId, trainerId, request.dailyCalorieGoal(), request.dailyProteinGoal(),
                 request.dailyCarbsGoal(), request.dailyFatGoal());
         if (changed(before, updated)) {
             sendGoalsPush(clientId, updated);

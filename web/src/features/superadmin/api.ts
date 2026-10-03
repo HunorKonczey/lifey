@@ -1,12 +1,15 @@
 import { api, ApiError, type Page } from "@/lib/api/client";
+import type { UserRoleKind } from "./userRoles";
 import type { GlobalRoleAuditResponse, RoleAuditLogResponse, SuperAdminStatsResponse, SuperAdminUserResponse } from "./types";
 
 export const superAdminApi = {
-  users: (params: { page: number; size?: number; search?: string }) => {
+  users: (params: { page: number; size?: number; search?: string; role?: UserRoleKind }) => {
     const query = new URLSearchParams({
       page: String(params.page),
       size: String(params.size ?? 50),
       ...(params.search ? { search: params.search } : {}),
+      // Filtered on the server (docs/redesign-web/82 §2.1), so it stays correct past the page size.
+      ...(params.role ? { role: params.role } : {}),
     });
     return api.get<Page<SuperAdminUserResponse>>(`/superadmin/users?${query}`);
   },

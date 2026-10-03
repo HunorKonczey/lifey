@@ -1,0 +1,14 @@
+-- Real last activity (docs/redesign-web/82 section 2.3): when a user last made an authenticated request.
+--
+-- Until now the only per-user activity the server recorded was refresh_tokens.created_at, i.e. the last
+-- sign-in or session refresh, which the superadmin "active accounts" KPI approximated "activity" with
+-- (docs/redesign-web/78 W9.b2). This column is stamped by UserActivityTracker, throttled to about one write
+-- per user per five minutes, so it costs next to nothing and is accurate to that window.
+--
+-- Nullable: existing users have no value until their next request, and null means "unknown", never "never".
+-- The KPI counts a user as active on EITHER this column or a session refresh in the window, so the number does
+-- not drop to zero on the day this ships.
+--
+-- No index: the only read is a count over a table of a few thousand rows, and an index would be rewritten on
+-- every stamp.
+alter table users add column last_active_at timestamptz;

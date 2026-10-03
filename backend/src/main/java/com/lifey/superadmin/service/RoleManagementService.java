@@ -2,6 +2,7 @@ package com.lifey.superadmin.service;
 
 import com.lifey.superadmin.dto.GlobalRoleAuditResponse;
 import com.lifey.superadmin.dto.RoleAuditLogResponse;
+import com.lifey.superadmin.UserRoleKind;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.user.Role;
 import com.lifey.user.UserAvatar;
@@ -12,7 +13,7 @@ import java.util.List;
 
 public interface RoleManagementService {
 
-    Page<SuperAdminUserResponse> findUsers(String search, Pageable pageable);
+    Page<SuperAdminUserResponse> findUsers(String search, UserRoleKind role, Pageable pageable);
 
     void grant(Long targetUserId, Role role);
 

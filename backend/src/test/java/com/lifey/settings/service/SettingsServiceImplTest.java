@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 class SettingsServiceImplTest {
 
     private static final Long USER_ID = 1L;
+    private static final Long ACTOR_ID = 9L;
 
     @Mock
     UserSettingsRepository repository;
@@ -253,7 +254,7 @@ class SettingsServiceImplTest {
         when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        SettingsResponse result = service.updateNutritionGoalsForUser(USER_ID, 2200, 150, 240, 70);
+        SettingsResponse result = service.updateNutritionGoalsForUser(USER_ID, ACTOR_ID, 2200, 150, 240, 70);
 
         assertThat(result.dailyCalorieGoal()).isEqualTo(2200);
         assertThat(result.dailyProteinGoal()).isEqualTo(150);
@@ -270,7 +271,7 @@ class SettingsServiceImplTest {
         when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        SettingsResponse result = service.updateNutritionGoalsForUser(USER_ID, null, null, null, null);
+        SettingsResponse result = service.updateNutritionGoalsForUser(USER_ID, ACTOR_ID, null, null, null, null);
 
         assertThat(result.dailyCalorieGoal()).isNull();
         assertThat(result.dailyProteinGoal()).isNull();

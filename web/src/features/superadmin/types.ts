@@ -11,6 +11,8 @@ export interface SuperAdminUserResponse {
   trainerName: string | null;
   /** A trainer's number of active clients; null for non-trainers. */
   clientCount: number | null;
+  /** The user's last authenticated request (docs/redesign-web/82 §2.3); null until their first request after the column existed. */
+  lastActiveAt: string | null;
 }
 
 export type RoleAuditAction = "GRANT" | "REVOKE";

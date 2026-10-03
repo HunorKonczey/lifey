@@ -1,6 +1,7 @@
 package com.lifey.trainer;
 
 import com.lifey.trainer.controller.TrainerInviteController;
+import com.lifey.trainer.dto.TrainerInviteHistoryResponse;
 import com.lifey.trainer.dto.TrainerInviteResponse;
 import com.lifey.trainer.exception.AlreadyClientException;
 import com.lifey.trainer.exception.InviteRateLimitedException;
@@ -9,6 +10,7 @@ import com.lifey.trainer.service.TrainerInviteService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -17,6 +19,8 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -93,5 +97,31 @@ class TrainerInviteControllerTest {
     void cancel_returnsNoContent() throws Exception {
         mockMvc.perform(delete("/api/v1/trainer/invites/1"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void history_returnsEveryInviteWithItsOutcome() throws Exception {
+        Instant sent = Instant.parse("2026-06-01T00:00:00Z");
+        when(trainerInviteService.findHistoryForTrainer(any())).thenReturn(new PageImpl<>(List.of(
+                new TrainerInviteHistoryResponse(2L, "a@example.com", InviteOutcome.ACCEPTED, sent, sent.plusSeconds(86400),
+                        sent.plusSeconds(60), sent.plusSeconds(7200)),
+                new TrainerInviteHistoryResponse(1L, "b@example.com", InviteOutcome.CANCELLED, sent, sent.plusSeconds(86400),
+                        null, null))));
+
+        mockMvc.perform(get("/api/v1/trainer/invites/history"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].outcome").value("ACCEPTED"))
+                .andExpect(jsonPath("$.content[0].endedAt").exists())
+                .andExpect(jsonPath("$.content[1].outcome").value("CANCELLED"))
+                .andExpect(jsonPath("$.content[1].endedAt").doesNotExist());
+    }
+
+    @Test
+    void history_defaultsToThirtyPerPage_andIsNotShadowedByTheDeleteRoute() throws Exception {
+        when(trainerInviteService.findHistoryForTrainer(any())).thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/v1/trainer/invites/history")).andExpect(status().isOk());
+
+        verify(trainerInviteService).findHistoryForTrainer(argThat(p -> p.getPageSize() == 30 && p.getPageNumber() == 0));
     }
 }

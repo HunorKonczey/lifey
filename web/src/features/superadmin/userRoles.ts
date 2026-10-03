@@ -11,8 +11,9 @@ export function primaryRole(roles: readonly string[]): UserRoleKind {
   return "USER";
 }
 
-export function matchesRoleFilter(user: Pick<SuperAdminUserResponse, "roles">, filter: RoleFilter): boolean {
-  return filter === "all" || primaryRole(user.roles) === filter;
+/** The `role` query parameter of `GET /superadmin/users` for a filter choice; "all" sends none. */
+export function roleFilterParam(filter: RoleFilter): UserRoleKind | undefined {
+  return filter === "all" ? undefined : filter;
 }
 
 /**
@@ -68,4 +69,9 @@ export function auditTransition(entry: AuditEntryLike): AuditTransition {
   return entry.action === "GRANT"
     ? { icon: "how_to_reg", tone: "grant", from: "USER", to: "TRAINER" }
     : { icon: "person_remove", tone: "revoke", from: "TRAINER", to: "USER" };
+}
+
+/** Sort key of the "last active" column: ISO instants sort as text, and an unknown value sorts as the oldest. */
+export function lastActiveSortKey(lastActiveAt: string | null | undefined): string {
+  return lastActiveAt ?? "";
 }

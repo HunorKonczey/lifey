@@ -1,6 +1,7 @@
 package com.lifey.auth;
 
 import com.lifey.auth.service.JwtService;
+import com.lifey.user.UserActivityTracker;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,6 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public static final String AUTH_ERROR_ATTRIBUTE = "lifey.auth.error";
 
     private final JwtService jwtService;
+    /** Stamps the user's last activity; null in tests that do not care. Never throws. */
+    private final UserActivityTracker activityTracker;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -54,6 +57,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         principal, null, principal.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (activityTracker != null) {
+                    activityTracker.touch(principal.id());
+                }
             } catch (RuntimeException ex) {
                 SecurityContextHolder.clearContext();
                 request.setAttribute(AUTH_ERROR_ATTRIBUTE, ex);

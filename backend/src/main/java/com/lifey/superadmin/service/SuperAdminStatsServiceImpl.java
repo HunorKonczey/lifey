@@ -1,6 +1,5 @@
 package com.lifey.superadmin.service;
 
-import com.lifey.auth.repository.RefreshTokenRepository;
 import com.lifey.superadmin.dto.SuperAdminStatsResponse;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
@@ -24,7 +23,6 @@ public class SuperAdminStatsServiceImpl implements SuperAdminStatsService {
     private static final Duration ACTIVE_WINDOW = Duration.ofDays(30);
 
     private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final TrainerClientRepository trainerClientRepository;
     private final TrainerRequestRepository trainerRequestRepository;
     private final Clock clock;
@@ -33,7 +31,7 @@ public class SuperAdminStatsServiceImpl implements SuperAdminStatsService {
     public SuperAdminStatsResponse stats() {
         return new SuperAdminStatsResponse(
                 userRepository.count(),
-                refreshTokenRepository.countDistinctUsersSince(clock.instant().minus(ACTIVE_WINDOW)),
+                userRepository.countActiveSince(clock.instant().minus(ACTIVE_WINDOW)),
                 userRepository.countByRole(Role.ROLE_TRAINER),
                 trainerClientRepository.countDistinctClientsByStatus(TrainerClientStatus.ACTIVE),
                 trainerRequestRepository.countByStatus(TrainerRequestStatus.PENDING),

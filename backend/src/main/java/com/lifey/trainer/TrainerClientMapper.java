@@ -4,6 +4,7 @@ import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;
+import com.lifey.trainer.dto.TrainerInviteHistoryResponse;
 import com.lifey.trainer.dto.TrainerInviteResponse;
 import com.lifey.trainer.dto.WeightTrendPoint;
 
@@ -24,6 +25,15 @@ public final class TrainerClientMapper {
 
     public static TrainerInviteResponse toInviteResponse(TrainerClient tc) {
         return new TrainerInviteResponse(tc.getId(), tc.getClient().getEmail(), tc.getCreatedAt(), tc.getExpiresAt());
+    }
+
+    public static TrainerInviteHistoryResponse toInviteHistoryResponse(TrainerClient tc, Instant now) {
+        InviteOutcome outcome = InviteOutcome.of(tc.getStatus(), tc.getRespondedAt(), tc.getExpiresAt(), now);
+        // revokedAt is when the row stopped being live: a withdrawn invite (CANCELLED) or an accepted relationship
+        // that was later ended (ACCEPTED). Both come from a REVOKED row; every other outcome has no such moment.
+        Instant endedAt = tc.getStatus() == TrainerClientStatus.REVOKED ? tc.getRevokedAt() : null;
+        return new TrainerInviteHistoryResponse(tc.getId(), tc.getClient().getEmail(), outcome,
+                tc.getCreatedAt(), tc.getExpiresAt(), tc.getRespondedAt(), endedAt);
     }
 
     public static PendingInviteResponse toPendingInviteResponse(TrainerClient tc) {

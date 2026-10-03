@@ -58,6 +58,14 @@ public class User extends BaseEntity {
     @Column(name = "signup_source")
     private String signupSource;
 
+    /**
+     * When this user last made an authenticated request, stamped by {@link UserActivityTracker} at most about
+     * every five minutes (docs/redesign-web/82 section 2.3). Null means unknown (a user who has not made a request
+     * since the column was added), never "never active".
+     */
+    @Column(name = "last_active_at")
+    private Instant lastActiveAt;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)

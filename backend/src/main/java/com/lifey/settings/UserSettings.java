@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.time.LocalTime;
 
 /**
@@ -46,6 +47,18 @@ public class UserSettings extends BaseEntity {
 
     @Column(name = "daily_fat_goal")
     private Integer dailyFatGoal;
+
+    /**
+     * Who last changed the four nutrition goals above, and when (docs/redesign-web/82 section 2.4). Moves only when one
+     * of the four values actually changes (see SettingsServiceImpl), so a client that re-sends unchanged goals with an
+     * unrelated settings sync never overwrites "set by your trainer". A plain id, not a relation: it is a fact about who
+     * acted, and becomes null (set_at stays) if that account is deleted. Null set_at means "never recorded".
+     */
+    @Column(name = "nutrition_goals_set_by")
+    private Long nutritionGoalsSetBy;
+
+    @Column(name = "nutrition_goals_set_at")
+    private Instant nutritionGoalsSetAt;
 
     @Column(name = "daily_water_goal_liters")
     private Double dailyWaterGoalLiters;

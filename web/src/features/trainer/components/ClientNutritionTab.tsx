@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Button, Card, Icon, MetricBar } from "@/components/ds";
+import { Button, Card, Icon, MetricBar, TintedChip } from "@/components/ds";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 import { MealCard, mealCarbs, mealFat, mealKcal, mealProtein } from "@/features/nutrition/components/MealCard";
@@ -12,8 +12,16 @@ import type { MealResponse, MealType } from "@/features/nutrition/types";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDateStore } from "@/lib/hooks/useDateStore";
 import { useFormat } from "@/lib/format/useFormat";
+import { trainerGoalsChip, type TrainerGoalsChip } from "@/features/settings/goalsSource";
 import { trainerApi } from "../api";
 import { NutritionGoalsDrawer } from "./NutritionGoalsDrawer";
+
+/** The message each attribution chip uses (admin.clientDetail). */
+const GOALS_CHIP_KEY = {
+  byYou: "goalsSetByYou",
+  byOtherTrainer: "goalsSetByOtherTrainer",
+  byClient: "goalsSetByClient",
+} as const satisfies Record<TrainerGoalsChip["key"], string>;
 
 interface ClientNutritionTabProps {
   clientId: number;
@@ -44,6 +52,10 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
     queryKey: queryKeys.trainerClientData.meals(clientId, dateStr),
     queryFn: () => trainerApi.clientMeals(clientId, dateStr, dateStr),
   });
+  const goalsSourceQ = useQuery({
+    queryKey: queryKeys.trainerClientData.nutritionGoalsSource(clientId),
+    queryFn: () => trainerApi.clientNutritionGoalsSource(clientId),
+  });
   const goalsQ = useQuery({
     queryKey: queryKeys.trainerClientData.nutritionGoals(clientId),
     queryFn: () => trainerApi.clientNutritionGoals(clientId),
@@ -61,6 +73,7 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
 
   const meals: MealResponse[] = mealsQ.data ?? [];
   const goals = goalsQ.data;
+  const goalsChip = trainerGoalsChip(goalsSourceQ.data);
   const sum = (pick: (m: MealResponse) => number) => meals.reduce((s, m) => s + pick(m), 0);
   const kcal = sum(mealKcal);
   const macros = [
@@ -107,6 +120,11 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
             {t("goalsEdit")}
           </Button>
         </div>
+        {goalsChip && (
+          <div data-testid="goals-source-chip">
+            <TintedChip icon="person" color="var(--role)" label={t(GOALS_CHIP_KEY[goalsChip.key], { date: fmt.shortDate(new Date(goalsChip.at)) })} />
+          </div>
+        )}
         <div>
           <div className="flex items-baseline gap-2">
             <span className="num" style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.02em" }}>{fmt.number(kcal, 0)}</span>
