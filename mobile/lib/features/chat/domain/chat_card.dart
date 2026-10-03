@@ -23,6 +23,10 @@ sealed class ChatCard {
 
   Map<String, dynamic> toJson();
 
+  /// The same card pointing at [sessionId] — the share flow fills it in at
+  /// send time, once the session has a server id.
+  ChatCard withSessionId(int? sessionId);
+
   /// Reads a card off the wire. A kind this build does not know becomes an
   /// [UnknownChatCard] instead of throwing — one message from a newer app must
   /// not make the whole thread unreadable (§2.9). Returns null only when there
@@ -125,6 +129,19 @@ class WorkoutChatCard extends ChatCard {
   @override
   String get kindCode => 'WORKOUT';
 
+  @override
+  WorkoutChatCard withSessionId(int? sessionId) => WorkoutChatCard(
+        occurredAt: occurredAt,
+        sessionId: sessionId,
+        workoutKind: workoutKind,
+        title: title,
+        durationSeconds: durationSeconds,
+        volumeKg: volumeKg,
+        exerciseCount: exerciseCount,
+        distanceMeters: distanceMeters,
+        recordCount: recordCount,
+      );
+
   bool get isCardio => workoutKind == ChatWorkoutKind.cardio;
 
   @override
@@ -177,6 +194,18 @@ class PrChatCard extends ChatCard {
   String get kindCode => 'PR';
 
   @override
+  PrChatCard withSessionId(int? sessionId) => PrChatCard(
+        occurredAt: occurredAt,
+        sessionId: sessionId,
+        exerciseName: exerciseName,
+        prKind: prKind,
+        value: value,
+        previousValue: previousValue,
+        weightKg: weightKg,
+        reps: reps,
+      );
+
+  @override
   Map<String, dynamic> toJson() => {
         'kind': kindCode,
         if (sessionId != null) 'sessionId': sessionId,
@@ -203,6 +232,10 @@ class UnknownChatCard extends ChatCard {
 
   @override
   String get kindCode => kind;
+
+  /// Never re-pointed: it is not ours to rewrite.
+  @override
+  UnknownChatCard withSessionId(int? sessionId) => this;
 
   @override
   Map<String, dynamic> toJson() => raw;

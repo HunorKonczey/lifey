@@ -6891,5 +6891,93 @@
   "@photosCompareDaysApart": {
     "description": "Caption between the two compared photos: how many calendar days separate them",
     "placeholders": {"count": {"type": "int"}}
+  },
+  "chatCardWorkoutLabel": "Workout",
+  "@chatCardWorkoutLabel": {
+    "description": "Small overline above the title of a shared-workout card in a chat thread (docs/chat/83)"
+  },
+  "chatCardCardioLabel": "Cardio",
+  "@chatCardCardioLabel": {
+    "description": "Small overline above the title of a shared cardio-session card in a chat thread"
+  },
+  "chatCardRecordLabel": "Personal record",
+  "@chatCardRecordLabel": {
+    "description": "Small overline above the title of a shared personal-record card in a chat thread"
+  },
+  "chatCardUntitledWorkout": "Workout",
+  "@chatCardUntitledWorkout": {
+    "description": "Title of a shared strength-workout card when the session had no template name"
+  },
+  "chatCardUntitledCardio": "Cardio session",
+  "@chatCardUntitledCardio": {
+    "description": "Title of a shared cardio card when the session had no name"
+  },
+  "chatCardExercises": "{count, plural, one{1 exercise} other{{count} exercises}}",
+  "@chatCardExercises": {
+    "description": "How many exercises a shared workout card covers, in its summary line",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "chatCardRecordsChip": "{count, plural, one{1 record} other{{count} records}}",
+  "@chatCardRecordsChip": {
+    "description": "Chip on a shared workout card: how many personal records the workout produced",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "chatCardUnsupported": "Update the app to see this card",
+  "@chatCardUnsupported": {
+    "description": "Shown in place of a chat card of a kind this version of the app does not know"
+  },
+  "chatCardOpenHint": "Opens the workout",
+  "@chatCardOpenHint": {
+    "description": "Screen-reader hint on a tappable shared-workout card"
+  },
+  "chatCardSemantics": "{kind}: {summary}",
+  "@chatCardSemantics": {
+    "description": "Screen-reader label of a chat result card: its kind, then its numbers",
+    "placeholders": {"kind": {"type": "String"}, "summary": {"type": "String"}}
+  },
+  "chatCardPreviewWorkout": "🏋️ Workout",
+  "@chatCardPreviewWorkout": {
+    "description": "Conversation-list preview of a message that is a shared workout"
+  },
+  "chatCardPreviewRecord": "🏆 Personal record",
+  "@chatCardPreviewRecord": {
+    "description": "Conversation-list preview of a message that is a shared personal record"
+  },
+  "chatCardUnavailable": "This workout is no longer available",
+  "@chatCardUnavailable": {
+    "description": "Snackbar when a trainer taps a shared-workout card whose session was deleted"
+  },
+  "shareInChatButton": "Share in chat",
+  "@shareInChatButton": {
+    "description": "Button that sends the finished workout, as a card, to a trainer or client in the chat"
+  },
+  "shareRecordTooltip": "Share this record in chat",
+  "@shareRecordTooltip": {
+    "description": "Tooltip of the share icon on one personal-record row of the workout-success sheet"
+  },
+  "shareToChatTitle": "Share in chat",
+  "@shareToChatTitle": {
+    "description": "Title of the sheet that previews a result card and sends it to a thread"
+  },
+  "shareToChatPickPeer": "Send to",
+  "@shareToChatPickPeer": {
+    "description": "Label above the list of people the card can be sent to, shown when there is more than one"
+  },
+  "shareToChatNoteHint": "Add a note (optional)",
+  "@shareToChatNoteHint": {
+    "description": "Hint of the caption field in the share-to-chat sheet"
+  },
+  "shareToChatSend": "Send",
+  "@shareToChatSend": {
+    "description": "Primary button of the share-to-chat sheet"
+  },
+  "shareToChatSent": "Shared with {name}",
+  "@shareToChatSent": {
+    "description": "Snackbar after a result card was handed to the chat for a person; it is retried by itself when offline",
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "shareToChatOpenChat": "Open chat",
+  "@shareToChatOpenChat": {
+    "description": "Action on the snackbar after sharing a card: opens the thread it was sent to"
   }
 }

@@ -15,9 +15,27 @@ class ClientSessionsState {
     this.loadingMore = false,
     this.hasMore = false,
     this.error,
+    this.adopted = const [],
   });
 
   final List<ClientWorkoutSession> sessions;
+
+  /// Sessions opened by id from outside the paged list — a chat card pointing
+  /// at one the trainer has not scrolled to (docs/chat/83 §2.8). Kept apart
+  /// from [sessions] so they never appear as rows out of order, and read
+  /// through [byId] so the detail sheet and the comment editor cannot tell
+  /// the difference.
+  final List<ClientWorkoutSession> adopted;
+
+  ClientWorkoutSession? byId(int sessionId) {
+    for (final session in sessions) {
+      if (session.id == sessionId) return session;
+    }
+    for (final session in adopted) {
+      if (session.id == sessionId) return session;
+    }
+    return null;
+  }
 
   /// The first page is on its way — the tab shows a spinner.
   final bool loading;
@@ -39,6 +57,7 @@ class ClientSessionsState {
     bool? hasMore,
     Object? error,
     bool clearError = false,
+    List<ClientWorkoutSession>? adopted,
   }) {
     return ClientSessionsState(
       sessions: sessions ?? this.sessions,
@@ -46,6 +65,7 @@ class ClientSessionsState {
       loadingMore: loadingMore ?? this.loadingMore,
       hasMore: hasMore ?? this.hasMore,
       error: clearError ? null : (error ?? this.error),
+      adopted: adopted ?? this.adopted,
     );
   }
 }
@@ -102,10 +122,11 @@ class ClientSessionsController extends Notifier<ClientSessionsState> {
         sessions: page.sessions,
         loading: false,
         hasMore: !page.isLast,
+        adopted: state.adopted,
       );
     } catch (error) {
       if (generation != _generation) return;
-      state = ClientSessionsState(loading: false, error: error);
+      state = ClientSessionsState(loading: false, error: error, adopted: state.adopted);
     }
   }
 
@@ -133,6 +154,18 @@ class ClientSessionsController extends Notifier<ClientSessionsState> {
     }
   }
 
+  /// Reads one session by id and makes it readable through [ClientSessionsState.byId]
+  /// — the entry for a chat result card (docs/chat/83 §2.8). Returns the row from the
+  /// loaded list when it is already there, so a recent session costs no request.
+  /// Throws what the repository throws (a 404 for a deleted or foreign session).
+  Future<ClientWorkoutSession> openById(int sessionId) async {
+    final known = state.byId(sessionId);
+    if (known != null) return known;
+    final fetched = await _repo.fetchWorkoutSession(clientId, sessionId);
+    state = state.copyWith(adopted: [...state.adopted, fetched]);
+    return fetched;
+  }
+
   /// Writes the comment and replaces the row with what the server stored.
   /// Throws on failure — the editor is the one place that knows how to say so.
   Future<CommentSaveOutcome> saveComment(int sessionId, String comment) async {
@@ -148,12 +181,7 @@ class ClientSessionsController extends Notifier<ClientSessionsState> {
     return CommentSaveOutcome.removed;
   }
 
-  ClientWorkoutSession? _sessionById(int sessionId) {
-    for (final session in state.sessions) {
-      if (session.id == sessionId) return session;
-    }
-    return null;
-  }
+  ClientWorkoutSession? _sessionById(int sessionId) => state.byId(sessionId);
 
   /// Swaps one row for the server's version of it. No refetch: the comment
   /// endpoints return the whole updated session, and re-reading page 0 would
@@ -162,6 +190,10 @@ class ClientSessionsController extends Notifier<ClientSessionsState> {
     state = state.copyWith(
       sessions: [
         for (final session in state.sessions)
+          session.id == updated.id ? updated : session,
+      ],
+      adopted: [
+        for (final session in state.adopted)
           session.id == updated.id ? updated : session,
       ],
     );

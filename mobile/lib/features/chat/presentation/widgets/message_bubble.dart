@@ -6,8 +6,10 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../settings/domain/user_settings.dart';
 import '../../domain/chat_message.dart';
 import 'chat_attachment_view.dart';
+import 'chat_card_view.dart';
 
 /// One message.
 ///
@@ -30,7 +32,17 @@ class MessageBubble extends StatelessWidget {
     this.onRetry,
     this.onDelete,
     this.uploadProgress,
+    this.cardUnitSystem = UnitSystem.metric,
+    this.onCardTap,
   });
+
+  /// How a shared cardio card writes its distance — the *reader's* setting
+  /// (docs/chat/83 §7).
+  final UnitSystem cardUnitSystem;
+
+  /// Opens the session behind a shared-workout card. Null makes the card
+  /// static: the caller decides who may open what (§2.7), the bubble only draws.
+  final VoidCallback? onCardTap;
 
   /// 0..1 while this message's picture is uploading; null otherwise.
   final double? uploadProgress;
@@ -71,6 +83,8 @@ class MessageBubble extends StatelessWidget {
     // Own messages are the brand colour with its own "on" text, the peer's the
     // card surface (canvas Lifey 5 › 7).
     final bubbleColor = isOwn ? scheme.primary : p.card;
+    // A result card is its own surface, not text in a bubble (docs/chat/83 §4).
+    final showCard = message.hasCard && !message.isDeleted;
 
     return Semantics(
       label: l10n.chatMessageSemantics(
@@ -78,7 +92,7 @@ class MessageBubble extends StatelessWidget {
         time,
         message.isDeleted
             ? l10n.chatDeletedMessage
-            : _spokenBody(l10n),
+            : _spokenBody(context, l10n),
         isOwn ? _statusLabel(l10n) : '',
       ),
       excludeSemantics: true,
@@ -94,25 +108,36 @@ class MessageBubble extends StatelessWidget {
           children: [
             GestureDetector(
               onLongPress: message.isDeleted ? null : () => _showActions(context, l10n),
-              child: Container(
-                constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.8),
-                // A picture wants to fill its bubble, not float in it.
-                padding: message.hasAttachment && !message.isDeleted
-                    ? const EdgeInsets.all(AppSpacing.s4)
-                    : const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
-                decoration: BoxDecoration(
-                  color: bubbleColor,
-                  border: isOwn ? null : Border.all(color: context.elevation.border),
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(radius),
-                    topRight: const Radius.circular(radius),
-                    // The flattened corner stands in for a drawn tail.
-                    bottomLeft: Radius.circular(!isOwn && showTail ? _tailRadius : radius),
-                    bottomRight: Radius.circular(isOwn && showTail ? _tailRadius : radius),
+              child: showCard
+                  ? ChatCardView(
+                      card: message.card!,
+                      isOwn: isOwn,
+                      caption: message.body,
+                      unitSystem: cardUnitSystem,
+                      onTap: onCardTap,
+                      // A tappable card owns its taps, so it has to own the long
+                      // press too; a static one leaves it to the gesture above.
+                      onLongPress: onCardTap == null ? null : () => _showActions(context, l10n),
+                    )
+                  : Container(
+                    constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.8),
+                    // A picture wants to fill its bubble, not float in it.
+                    padding: message.hasAttachment && !message.isDeleted
+                        ? const EdgeInsets.all(AppSpacing.s4)
+                        : const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      border: isOwn ? null : Border.all(color: context.elevation.border),
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(radius),
+                        topRight: const Radius.circular(radius),
+                        // The flattened corner stands in for a drawn tail.
+                        bottomLeft: Radius.circular(!isOwn && showTail ? _tailRadius : radius),
+                        bottomRight: Radius.circular(isOwn && showTail ? _tailRadius : radius),
+                      ),
+                    ),
+                    child: _body(context, scheme, l10n),
                   ),
-                ),
-                child: _body(context, scheme, l10n),
-              ),
             ),
             // Time and receipt sit under the bubble, not inside it.
             if (showTail)
@@ -185,9 +210,18 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  /// A picture with no caption still has to be announced as something.
-  String _spokenBody(AppLocalizations l10n) {
+  /// A picture or a card with no caption still has to be announced as something.
+  String _spokenBody(BuildContext context, AppLocalizations l10n) {
     final body = message.body ?? '';
+    final card = message.card;
+    if (card != null) {
+      final text = ChatCardText.of(context, card, unitSystem: cardUnitSystem);
+      final spoken = l10n.chatCardSemantics(
+        text.kind,
+        text.summary == null ? text.title : '${text.title}, ${text.summary}',
+      );
+      return body.isEmpty ? spoken : '$spoken. $body';
+    }
     if (!message.hasAttachment) return body;
     return body.isEmpty ? l10n.chatImageAlt : '${l10n.chatImageAlt}: $body';
   }

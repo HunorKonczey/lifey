@@ -37,6 +37,7 @@ ChatConversation _conversation({
   String? preview = 'Rendben',
   int? lastSenderId = 88,
   DateTime? archivedAt,
+  String? cardKind,
 }) {
   return ChatConversation(
     id: id,
@@ -51,6 +52,7 @@ ChatConversation _conversation({
     lastMessagePreview: preview,
     lastMessageSenderId: lastSenderId,
     archivedAt: archivedAt,
+    lastMessageCardKind: cardKind,
   );
 }
 
@@ -192,6 +194,40 @@ void main() {
 
       expect(find.text('Closed'), findsOneWidget);
       expect(find.text('Kiss Luca'), findsOneWidget);
+    });
+
+    testWidgets('a shared workout is previewed by its kind, never as a deleted message', (tester) async {
+      await _pump(
+        tester,
+        roles: ['ROLE_USER'],
+        conversations: [
+          _conversation(
+              id: 1, name: 'Nagy Péter', role: ChatPeerRole.trainer, preview: null, cardKind: 'WORKOUT'),
+        ],
+      );
+
+      expect(find.text('🏋️ Workout'), findsOneWidget);
+      expect(find.text('This message was deleted'), findsNothing);
+    });
+
+    testWidgets('a shared record keeps its caption and our own prefix', (tester) async {
+      await _pump(
+        tester,
+        roles: ['ROLE_USER'],
+        conversations: [
+          _conversation(
+            id: 1,
+            name: 'Nagy Péter',
+            role: ChatPeerRole.trainer,
+            preview: 'Végre!',
+            cardKind: 'PR',
+            lastSenderId: 7,
+          ),
+        ],
+      );
+
+      expect(find.textContaining('🏆 Personal record · Végre!'), findsOneWidget);
+      expect(find.textContaining('You:'), findsOneWidget);
     });
 
     testWidgets('a deleted last message shows the tombstone in the preview', (tester) async {

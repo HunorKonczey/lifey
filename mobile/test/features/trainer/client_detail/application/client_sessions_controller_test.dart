@@ -29,6 +29,9 @@ class _FakeRepository extends ClientDetailRepository {
   final int? failFromPage;
 
   final List<int> requestedPages = [];
+  final List<int> fetchedById = [];
+  final Map<int, ClientWorkoutSession> byId = {};
+  Object? byIdFailure;
   final List<({int sessionId, String comment})> writes = [];
   final List<int> deletes = [];
 
@@ -48,6 +51,13 @@ class _FakeRepository extends ClientDetailRepository {
       return const ClientSessionPage(sessions: [], isLast: true);
     }
     return pages[page];
+  }
+
+  @override
+  Future<ClientWorkoutSession> fetchWorkoutSession(int clientId, int sessionId) async {
+    fetchedById.add(sessionId);
+    if (byIdFailure != null) throw byIdFailure!;
+    return byId[sessionId] ?? _session(sessionId);
   }
 
   @override
@@ -116,6 +126,80 @@ void main() {
       expect(state.error, isNotNull);
       expect(state.sessions, isEmpty);
       expect(state.loading, isFalse);
+    });
+  });
+
+  group('opening by id (a chat card, docs/chat/83 §2.8)', () {
+    test('a session already in the loaded list costs no request', () async {
+      final repo = _FakeRepository(pages: [
+        ClientSessionPage(sessions: [_session(1), _session(2)], isLast: true),
+      ]);
+      final container = _containerWith(repo);
+      await _settled(container, 5);
+
+      final opened = await container.read(clientSessionsControllerProvider(5).notifier).openById(2);
+
+      expect(opened.id, 2);
+      expect(repo.fetchedById, isEmpty);
+    });
+
+    test('an older one is fetched and readable through byId, without joining the list', () async {
+      final repo = _FakeRepository(pages: [
+        ClientSessionPage(sessions: [_session(1)], isLast: false),
+      ]);
+      final container = _containerWith(repo);
+      await _settled(container, 5);
+
+      await container.read(clientSessionsControllerProvider(5).notifier).openById(77);
+
+      final state = container.read(clientSessionsControllerProvider(5));
+      expect(repo.fetchedById, [77]);
+      expect(state.byId(77)?.id, 77);
+      // Never a row out of order in the Workouts tab.
+      expect(state.sessions.map((s) => s.id), [1]);
+    });
+
+    test('a comment written on an adopted session shows on it', () async {
+      final repo = _FakeRepository(pages: [ClientSessionPage(sessions: const [], isLast: true)]);
+      final container = _containerWith(repo);
+      await _settled(container, 5);
+      final controller = container.read(clientSessionsControllerProvider(5).notifier);
+      await controller.openById(77);
+
+      await controller.saveComment(77, 'Nice pace');
+
+      expect(container.read(clientSessionsControllerProvider(5)).byId(77)?.trainerComment, 'Nice pace');
+    });
+
+    test('a refresh keeps the adopted session, so an open sheet does not go blank', () async {
+      final repo = _FakeRepository(pages: [
+        ClientSessionPage(sessions: [_session(1)], isLast: true),
+        ClientSessionPage(sessions: [_session(1)], isLast: true),
+      ]);
+      final container = _containerWith(repo);
+      await _settled(container, 5);
+      final controller = container.read(clientSessionsControllerProvider(5).notifier);
+      await controller.openById(77);
+
+      await controller.refresh();
+
+      expect(container.read(clientSessionsControllerProvider(5)).byId(77), isNotNull);
+    });
+
+    test('a session that is gone surfaces the error and adopts nothing', () async {
+      final repo = _FakeRepository(pages: [ClientSessionPage(sessions: const [], isLast: true)])
+        ..byIdFailure = DioException(
+          requestOptions: RequestOptions(path: '/x'),
+          response: Response(requestOptions: RequestOptions(path: '/x'), statusCode: 404),
+        );
+      final container = _containerWith(repo);
+      await _settled(container, 5);
+
+      await expectLater(
+        container.read(clientSessionsControllerProvider(5).notifier).openById(77),
+        throwsA(isA<DioException>()),
+      );
+      expect(container.read(clientSessionsControllerProvider(5)).byId(77), isNull);
     });
   });
 

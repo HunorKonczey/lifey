@@ -41,6 +41,11 @@ class ApiEndpoints {
   static String trainerClientWorkoutSessions(int clientId) =>
       '/trainer/clients/$clientId/workout-sessions';
 
+  /// One of the client's sessions by id — what a chat result card opens
+  /// (docs/chat/83-chat-result-card-plan.md §2.8).
+  static String trainerClientWorkoutSession(int clientId, int sessionId) =>
+      '/trainer/clients/$clientId/workout-sessions/$sessionId';
+
   /// The trainer's one editable comment on a client's session — PUT upserts
   /// it, DELETE clears it (docs/31-session-feedback-loop-plan.md B2).
   static String trainerClientSessionComment(int clientId, int sessionId) =>
