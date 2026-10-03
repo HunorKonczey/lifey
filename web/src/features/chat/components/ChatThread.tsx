@@ -230,6 +230,7 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onIn
           createdAt: new Date().toISOString(),
           deletedAt: null,
           attachment: null,
+          card: null,
           state: "pending",
           // The picked file shows immediately, before there is a message id to
           // fetch a server thumbnail with; the File is kept so a retry doesn't

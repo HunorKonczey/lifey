@@ -24,10 +24,53 @@ export interface MessageAttachmentResponse {
   byteSize: number;
 }
 
+/** The kinds of result card a message can carry (docs/chat/83-chat-result-card-plan.md). */
+export type MessageCardKind = "WORKOUT" | "PR";
+export type MessageCardWorkoutKind = "STRENGTH" | "CARDIO";
+export type MessageCardPrType = "MAX_WEIGHT" | "REPS_AT_WEIGHT" | "ESTIMATED_ONE_RM";
+
+export interface MessageCardWorkout {
+  workoutKind: MessageCardWorkoutKind;
+  title: string | null;
+  durationSeconds: number | null;
+  volumeKg: number | null;
+  exerciseCount: number | null;
+  distanceMeters: number | null;
+  recordCount: number | null;
+}
+
+export interface MessageCardPr {
+  exerciseName: string;
+  prType: MessageCardPrType;
+  /** kg for MAX_WEIGHT and ESTIMATED_ONE_RM, reps for REPS_AT_WEIGHT. */
+  value: number;
+  previousValue: number | null;
+  weightKg: number | null;
+  reps: number | null;
+}
+
 /**
- * Text, an image (with an optional caption in `body`), or a tombstone. `body`
- * and `attachment` are both null only when `deletedAt` is set — the tombstone
- * text is ours to localize, and deleting really removes the picture too.
+ * A workout or a personal record one participant shared — a *snapshot*, and a
+ * claim: the server checks its shape, not its truth, so nothing on the web may
+ * count or rank these (docs/chat/83 §2.3). `kind` is typed as the known union
+ * plus `string`, because a card from a newer app must still parse; the tile
+ * falls back to "update the app" for a kind it does not know.
+ */
+export interface MessageCardResponse {
+  kind: MessageCardKind | (string & {});
+  /** The main API's workout-session id; null when it had not synced. The web has no per-session page to open it on yet. */
+  sessionId: number | null;
+  occurredAt: string;
+  workout: MessageCardWorkout | null;
+  pr: MessageCardPr | null;
+}
+
+/**
+ * Text, an image (with an optional caption in `body`), a result card (same
+ * optional caption), or a tombstone. `body`
+ * `attachment` and `card` are all null only when `deletedAt` is set — the
+ * tombstone text is ours to localize, and deleting really removes the picture
+ * and the card too.
  */
 export interface MessageResponse {
   id: number;
@@ -38,6 +81,7 @@ export interface MessageResponse {
   createdAt: string;
   deletedAt: string | null;
   attachment: MessageAttachmentResponse | null;
+  card: MessageCardResponse | null;
 }
 
 export interface ConversationResponse {

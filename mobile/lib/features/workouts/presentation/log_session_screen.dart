@@ -19,9 +19,12 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/ds/lifey_header.dart';
+import '../../../core/sync/sync_engine_provider.dart';
+import '../../chat/presentation/widgets/share_to_chat_buttons.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/exercise_controller.dart';
+import '../application/workout_share.dart';
 import '../application/workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
 import '../data/workout_template_repository.dart';
@@ -1759,15 +1762,37 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     final l10n = AppLocalizations.of(context)!;
     final progress = computeWorkoutProgress(_blocks, l10n);
     if (!progress.isSuccess) return;
-    final startedAt = _startedAt;
     await showWorkoutSuccessSheet(
       context,
       progress,
-      summary: WorkoutSummary(
-        title: widget.session?.templateName ?? widget.template?.name,
-        duration: startedAt == null ? null : (_finishedAt ?? DateTime.now()).difference(startedAt),
-        volume: computeWorkoutVolume(_blocks),
-      ),
+      summary: _shareSummary(),
+      share: _sessionClientId == null ? null : WorkoutShareConfig(resolveSessionId: _resolveSessionId),
+    );
+  }
+
+  /// The session as the celebration sheet and a shared chat card describe it
+  /// (docs/chat/83-chat-result-card-plan.md §4).
+  WorkoutSummary _shareSummary() {
+    final startedAt = _startedAt;
+    return WorkoutSummary(
+      title: widget.session?.templateName ?? widget.template?.name,
+      duration: startedAt == null ? null : (_finishedAt ?? DateTime.now()).difference(startedAt),
+      volume: computeWorkoutVolume(_blocks),
+      startedAt: startedAt,
+      exerciseCount: _blocks.where((b) => b.rows.any((r) => r.isDone)).length,
+      sessionClientId: _sessionClientId,
+    );
+  }
+
+  /// The session's server id for a card being sent: it may not exist yet right
+  /// after finishing, so this nudges the outbox and looks again — and a null
+  /// answer still sends the card, just not tappable (§2.6).
+  Future<int?> _resolveSessionId() {
+    final clientId = _sessionClientId;
+    if (clientId == null) return Future.value();
+    return pollSessionServerId(
+      lookup: () async => (await ref.read(workoutSessionRepositoryProvider).findByClientId(clientId))?.id,
+      flush: () => ref.read(syncEngineProvider).sync(),
     );
   }
 
@@ -2027,6 +2052,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
           icon: Icons.local_fire_department_rounded,
           iconColor: mc.calories,
           text: '${_watchActiveCalories!.round()}',
+        ),
+      // A finished session with something done in it can be shared as a card
+      // (docs/chat/83). Hidden, not disabled, when there is nobody to send it to.
+      if (_finishedAt != null && _sessionClientId != null && _blocks.any((b) => b.rows.any((r) => r.isDone)))
+        ShareToChatIconButton(
+          buildCard: () => workoutShareCard(
+            summary: _shareSummary(),
+            result: computeWorkoutProgress(_blocks, l10n),
+          ),
+          resolveSessionId: _resolveSessionId,
         ),
     ];
   }

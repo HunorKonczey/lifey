@@ -9,6 +9,7 @@ import { useFormat } from "@/lib/format/useFormat";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { ChatAvatar } from "./ChatAvatar";
+import { cardPreviewKey } from "../card";
 import { filterConversations, hasMixedPeerRoles, isMuted } from "../thread";
 import type { ConversationResponse } from "../types";
 
@@ -71,10 +72,12 @@ function ConversationRow({ conversation, selected, showRoleLabel, ownUserId, onS
   const ownPrefix = lastMessage && lastMessage.senderId === ownUserId ? t("ownMessagePrefix") : "";
   // A picture with no caption still needs words in the list, and the marker stays in front of a caption so the row says what kind of message it was.
   const imageMarker = lastMessage?.attachment ? `${t("imagePreview")} ` : "";
+  // A card has no text of its own, so its kind is the preview — never the "deleted" wording (docs/chat/83 §8 risk 2).
+  const cardMarker = lastMessage?.card ? `${t(cardPreviewKey(lastMessage.card))} · ` : "";
   const preview = lastMessage
     ? lastMessage.deletedAt
       ? `${ownPrefix}${t("deletedMessage")}`
-      : `${ownPrefix}${imageMarker}${lastMessage.body ?? ""}`.trimEnd()
+      : `${ownPrefix}${imageMarker}${cardMarker}${lastMessage.body ?? ""}`.trimEnd().replace(/ ·$/, "")
     : t("noMessagesYet");
 
   // Today → the clock, this week → the weekday, older → the date.

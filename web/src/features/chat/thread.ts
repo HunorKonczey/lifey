@@ -94,6 +94,14 @@ export function hasImage(message: ThreadMessage): boolean {
 }
 
 /**
+ * Whether this message is a result card — a card has no `body`, so "no body" must
+ * not read as "deleted" or "empty" anywhere (docs/chat/83 §8 risk 2).
+ */
+export function hasCard(message: Pick<ThreadMessage, "card" | "deletedAt">): boolean {
+  return message.deletedAt === null && message.card != null;
+}
+
+/**
  * Turn one already-held message into a tombstone: the row stays so the other
  * side keeps the context of their replies, the text goes.
  *
@@ -111,7 +119,9 @@ export function applyDeletion(
     return messages;
   }
   return messages.map((message) =>
-    message.id === messageId ? { ...message, body: null, deletedAt } : message,
+    // The card goes with the text: left in the cache, a deleted workout's numbers
+    // would stay readable in this browser (docs/chat/83 §8 risk 3).
+    message.id === messageId ? { ...message, body: null, card: null, deletedAt } : message,
   );
 }
 

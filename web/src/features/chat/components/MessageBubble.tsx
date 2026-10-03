@@ -5,7 +5,8 @@ import { IconButton } from "@/components/ds";
 import { useFormat } from "@/lib/format/useFormat";
 import { ChatAvatar } from "./ChatAvatar";
 import { ChatAttachment } from "./ChatAttachment";
-import { hasImage } from "../thread";
+import { ChatCardTile } from "./ChatCardTile";
+import { hasCard, hasImage } from "../thread";
 import type { ChatReceiptState, ThreadMessage } from "../types";
 
 /**
@@ -65,6 +66,7 @@ export function MessageBubble({
   const time = fmt.time(new Date(message.createdAt));
   const stateLabel = own ? t(`state.${receiptState}`) : "";
   const image = !deleted && hasImage(message);
+  const card = hasCard(message) ? message.card : null;
   const text = deleted ? t("deletedMessage") : message.body ?? "";
   // A picture with no caption gets no empty text bubble under it, but the
   // screen reader still needs to hear that a picture is what arrived.
@@ -98,6 +100,17 @@ export function MessageBubble({
             line, and aligning to that pushes the icon visibly low. */}
         <div className={`flex items-center gap-2 max-w-full ${own ? "flex-row-reverse" : ""}`}>
           <div className={`min-w-0 flex flex-col gap-1 ${own ? "items-end" : "items-start"}`}>
+            {/* A result card is a surface of its own; its caption is drawn inside it. */}
+            {card && (
+              <ChatCardTile
+                card={card}
+                own={own}
+                caption={text || null}
+                ariaLabel={(spoken) =>
+                  t("bubbleA11y", { sender: own ? t("you") : peerName, time, text: spoken, state: stateLabel })
+                }
+              />
+            )}
             {image && (
               <div
                 aria-label={t("bubbleA11y", {
@@ -111,7 +124,7 @@ export function MessageBubble({
               </div>
             )}
             {/* No empty bubble under a caption-less picture — the image is the message. */}
-            {(text || !image) && (
+            {!card && (text || !image) && (
               <p
                 className="px-4 py-2.5 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words"
                 style={{

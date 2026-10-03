@@ -160,7 +160,7 @@ void main() {
     });
 
     test('a comment written on an adopted session shows on it', () async {
-      final repo = _FakeRepository(pages: [ClientSessionPage(sessions: const [], isLast: true)]);
+      final repo = _FakeRepository(pages: [const ClientSessionPage(sessions: [], isLast: true)]);
       final container = _containerWith(repo);
       await _settled(container, 5);
       final controller = container.read(clientSessionsControllerProvider(5).notifier);
@@ -187,7 +187,7 @@ void main() {
     });
 
     test('a session that is gone surfaces the error and adopts nothing', () async {
-      final repo = _FakeRepository(pages: [ClientSessionPage(sessions: const [], isLast: true)])
+      final repo = _FakeRepository(pages: [const ClientSessionPage(sessions: [], isLast: true)])
         ..byIdFailure = DioException(
           requestOptions: RequestOptions(path: '/x'),
           response: Response(requestOptions: RequestOptions(path: '/x'), statusCode: 404),

@@ -19,9 +19,14 @@ import '../../../shared/widgets/charts/pace_bar_chart.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/ds/tinted_chip.dart';
+import '../../../core/sync/sync_engine_provider.dart';
+import '../../chat/domain/chat_card.dart';
+import '../../chat/presentation/widgets/share_to_chat_buttons.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/game_setup_preferences.dart';
+import '../application/workout_share.dart';
+import '../data/workout_session_repository.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/cardio_personal_record.dart';
@@ -742,6 +747,31 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     if (navigator.canPop()) navigator.pop();
   }
 
+  /// The finished session as a shared card: its name, how long and how far, and
+  /// how many cardio records it broke. The session id is resolved when the card
+  /// is sent (docs/chat/83 §2.6).
+  WorkoutChatCard _shareCard(AppLocalizations l10n) {
+    final session = widget.session;
+    final seconds = session.effectiveDuration?.inSeconds ?? 0;
+    final distance = session.cardio?.distanceMeters ?? 0;
+    return WorkoutChatCard(
+      occurredAt: session.startedAt ?? DateTime.now(),
+      workoutKind: ChatWorkoutKind.cardio,
+      title: activityTypeLabel(l10n, _activityType),
+      durationSeconds: seconds > 0 ? seconds : null,
+      distanceMeters: distance > 0 ? distance : null,
+      recordCount: widget.newRecords.isEmpty ? null : widget.newRecords.length,
+    );
+  }
+
+  Future<int?> _resolveSessionId() {
+    final clientId = widget.session.clientId;
+    return pollSessionServerId(
+      lookup: () async => (await ref.read(workoutSessionRepositoryProvider).findByClientId(clientId))?.id,
+      flush: () => ref.read(syncEngineProvider).sync(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -770,6 +800,13 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.s4),
               child: TintedChip(label: watchLabel, color: context.metricColors.protein, icon: Icons.watch_rounded),
+            ),
+          // Share the finished session as a chat card (docs/chat/83). Hidden
+          // when there is nobody to send it to.
+          if (widget.session.finishedAt != null)
+            ShareToChatIconButton(
+              buildCard: () => _shareCard(l10n),
+              resolveSessionId: _resolveSessionId,
             ),
         ],
       ),

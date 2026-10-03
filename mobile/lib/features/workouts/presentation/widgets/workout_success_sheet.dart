@@ -6,6 +6,8 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/app_type.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/ds/list_group.dart';
+import '../../../chat/domain/chat_card.dart';
+import '../../../chat/presentation/widgets/share_to_chat_buttons.dart';
 import '../../domain/personal_record.dart';
 import 'exercise_session_card.dart';
 
@@ -126,7 +128,14 @@ class WorkoutProgressResult {
 
 /// The line under the sheet's title: what the session was.
 class WorkoutSummary {
-  const WorkoutSummary({this.title, this.duration, this.volume = 0});
+  const WorkoutSummary({
+    this.title,
+    this.duration,
+    this.volume = 0,
+    this.startedAt,
+    this.exerciseCount = 0,
+    this.sessionClientId,
+  });
 
   /// The template's name, when the session came from one.
   final String? title;
@@ -134,6 +143,72 @@ class WorkoutSummary {
 
   /// Σ weight × reps of the done sets (kg).
   final double volume;
+
+  /// What a shared card says and points at (docs/chat/83): when the session
+  /// started, how many exercises had a done set, and the local id to look the
+  /// server id up by. Absent for a summary that is only displayed.
+  final DateTime? startedAt;
+  final int exerciseCount;
+  final String? sessionClientId;
+}
+
+/// What the end-of-workout sheet needs to offer sharing; absent means no share
+/// buttons at all (a sheet shown in a test, or for a session with no identity).
+class WorkoutShareConfig {
+  const WorkoutShareConfig({required this.resolveSessionId});
+
+  /// Finds the session's server id at send time — see `pollSessionServerId`.
+  final Future<int?> Function() resolveSessionId;
+}
+
+/// The shared-workout card for a strength session
+/// (docs/chat/83-chat-result-card-plan.md §4). The session id is left out on
+/// purpose: it is resolved when the card is *sent*, once the outbox has had a
+/// moment to create the session. Zero and empty values become null, so the card
+/// drops the line rather than printing "0 exercises".
+WorkoutChatCard workoutShareCard({
+  required WorkoutSummary summary,
+  required WorkoutProgressResult result,
+  DateTime? now,
+}) {
+  final title = summary.title?.trim();
+  final seconds = summary.duration?.inSeconds ?? 0;
+  final records = result.recordEntryCount;
+  return WorkoutChatCard(
+    occurredAt: summary.startedAt ?? now ?? DateTime.now(),
+    workoutKind: ChatWorkoutKind.strength,
+    title: title == null || title.isEmpty ? null : title,
+    durationSeconds: seconds > 0 ? seconds : null,
+    volumeKg: summary.volume > 0 ? double.parse(summary.volume.toStringAsFixed(1)) : null,
+    exerciseCount: summary.exerciseCount > 0 ? summary.exerciseCount : null,
+    recordCount: records > 0 ? records : null,
+  );
+}
+
+/// The shared-record card for one record of the sheet.
+///
+/// `previousValue` is the old record, reconstructed from the delta the sheet
+/// already shows — null for an exercise's first record, so the card claims no
+/// improvement it cannot name.
+PrChatCard recordShareCard({
+  required String exerciseName,
+  required WorkoutRecordEntry entry,
+  required DateTime occurredAt,
+}) {
+  final delta = entry.delta;
+  return PrChatCard(
+    occurredAt: occurredAt,
+    exerciseName: exerciseName,
+    prKind: switch (entry.type) {
+      PrType.maxWeight => ChatPrKind.maxWeight,
+      PrType.repsAtWeight => ChatPrKind.repsAtWeight,
+      PrType.estimatedOneRm => ChatPrKind.estimatedOneRm,
+    },
+    value: double.parse(entry.value.toStringAsFixed(2)),
+    previousValue: delta == null ? null : double.parse((entry.value - delta).toStringAsFixed(2)),
+    weightKg: entry.weight,
+    reps: entry.reps,
+  );
 }
 
 /// Σ weight × reps of the done sets of [blocks] (kg).
@@ -314,10 +389,14 @@ WorkoutRecordEntry _recordEntry(
 /// entrance plays once: the trophy pops, then the rows follow 60 ms apart;
 /// under reduced motion everything is already in place.
 class WorkoutSuccessSheet extends StatefulWidget {
-  const WorkoutSuccessSheet({super.key, required this.result, this.summary});
+  const WorkoutSuccessSheet({super.key, required this.result, this.summary, this.share});
 
   final WorkoutProgressResult result;
   final WorkoutSummary? summary;
+
+  /// When set, the sheet offers "Share in chat" for the workout and for each
+  /// record (docs/chat/83) — each button hides itself if there is nobody to send to.
+  final WorkoutShareConfig? share;
 
   @override
   State<WorkoutSuccessSheet> createState() => _WorkoutSuccessSheetState();
@@ -461,6 +540,13 @@ class _WorkoutSuccessSheetState extends State<WorkoutSuccessSheet>
             ),
           ),
           const SizedBox(height: AppSpacing.s16),
+          if (widget.share != null && widget.summary != null) ...[
+            ShareToChatButton(
+              buildCard: () => workoutShareCard(summary: widget.summary!, result: result),
+              resolveSessionId: widget.share!.resolveSessionId,
+            ),
+            const SizedBox(height: AppSpacing.s8),
+          ],
           SizedBox(
             height: 56,
             child: FilledButton(
@@ -524,6 +610,7 @@ class _WorkoutSuccessSheetState extends State<WorkoutSuccessSheet>
     required String subtitle,
     required String value,
     String? delta,
+    Widget? action,
   }) {
     final p = context.palette;
     final mc = context.metricColors;
@@ -534,28 +621,34 @@ class _WorkoutSuccessSheetState extends State<WorkoutSuccessSheet>
         leading: ListIconHolder(icon: icon, color: color, size: 40),
         title: title,
         subtitle: subtitle,
-        trailing: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 132),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(value, style: AppType.number(20, color: p.text).copyWith(height: 1)),
-                if (delta != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      delta,
-                      style: AppType.number(12, weight: FontWeight.w700, color: mc.improvement)
-                          .copyWith(height: 1.4),
-                    ),
-                  ),
-              ],
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 132),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(value, style: AppType.number(20, color: p.text).copyWith(height: 1)),
+                    if (delta != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(
+                          delta,
+                          style: AppType.number(12, weight: FontWeight.w700, color: mc.improvement)
+                              .copyWith(height: 1.4),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          ),
+            if (action != null) action,
+          ],
         ),
       ),
     );
@@ -581,6 +674,17 @@ class _WorkoutSuccessSheetState extends State<WorkoutSuccessSheet>
       delta: delta == null || delta <= 0
           ? null
           : '+${isReps ? delta.round().toString() : weightFormat.format(double.parse(delta.toStringAsFixed(1)))} $unit',
+      action: widget.share == null
+          ? null
+          : ShareToChatIconButton(
+              tooltip: l10n.shareRecordTooltip,
+              buildCard: () => recordShareCard(
+                exerciseName: record.exerciseName,
+                entry: entry,
+                occurredAt: widget.summary?.startedAt ?? DateTime.now(),
+              ),
+              resolveSessionId: widget.share!.resolveSessionId,
+            ),
     );
   }
 
@@ -609,6 +713,7 @@ Future<void> showWorkoutSuccessSheet(
   BuildContext context,
   WorkoutProgressResult result, {
   WorkoutSummary? summary,
+  WorkoutShareConfig? share,
 }) async {
   if (!result.isSuccess) return;
   final duration = AppMotion.of(context, AppMotion.sheet);
@@ -624,6 +729,6 @@ Future<void> showWorkoutSuccessSheet(
       curve: AppMotion.enter,
       reverseCurve: AppMotion.exit,
     ),
-    builder: (_) => WorkoutSuccessSheet(result: result, summary: summary),
+    builder: (_) => WorkoutSuccessSheet(result: result, summary: summary, share: share),
   );
 }
