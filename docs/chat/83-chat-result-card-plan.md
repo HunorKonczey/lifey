@@ -242,4 +242,5 @@ existing message), so they can ship ahead of the clients.
 
 ## 9. Step log
 
-*(filled in as steps land)*
+- **S1 (chat service) — done.** `V1001__chat_message_cards.sql` (`card_kind`, `card_data`, the all-or-nothing check, the re-created content check), `dto/MessageCard` (kind + typed `workout` / `pr` sub-records, bean-validation bounds), `MessageCards` (cross-field rules, trim, the JSON text format on this module's Jackson 2 mapper with ISO instants), `SendMessageRequest.card` with `body` optional, `MessageResponse.card`, the tombstone clearing the card, push markers ("🏋️ Shared a workout" / "🏆 Shared a record", HU), metric kind `card`. Verified against real Postgres in `ChatFlowIntegrationTest` (card-only message, caption, replay, wrong shape → 400 with no row, delete clears the columns, the table's checks agree with the service rule). Two fixes found on the way: `ChatTypingThrottle` decided by `Instant` equality (failed on Windows' coarse clock; now `compute()` + a flag) and `ChatMetricsTest` learning the third series.
+- **S2 (backend) — done.** `GET /api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}` → `WorkoutSessionService.findByIdForUser` (not-deleted, started, that user's; everything else is a 404). Controller + service tests incl. the 403 that never reaches the service.

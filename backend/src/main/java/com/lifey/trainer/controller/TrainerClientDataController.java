@@ -136,6 +136,16 @@ public class TrainerClientDataController {
         return workoutSessionService.findPageForUser(clientId, pageable);
     }
 
+    @Operation(summary = "One of the client's workout sessions, by id",
+            description = "What a chat result card opens (docs/chat/83 section 2.8): the same row the paged "
+                    + "list returns, for a session of any age. 404 when it is not this client's, was deleted "
+                    + "or never started; 403 when the caller is not this client's trainer.")
+    @GetMapping("/workout-sessions/{sessionId}")
+    public WorkoutSessionResponse workoutSession(@PathVariable Long clientId, @PathVariable Long sessionId) {
+        requireActiveClient(clientId);
+        return workoutSessionService.findByIdForUser(clientId, sessionId);
+    }
+
     @Operation(summary = "Create or edit the trainer's comment on a client's session",
             description = "Upsert semantics: writes the comment whether one already exists or not, "
                     + "stamping the timestamp and this trainer as the author.")
