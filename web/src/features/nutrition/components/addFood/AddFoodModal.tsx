@@ -4,11 +4,17 @@ import { createContext, useContext, useMemo, useRef, useState, type ReactNode } 
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Modal } from "@/components/ds/overlay/Modal";
+import { SegmentedControl } from "@/components/ds/SegmentedControl";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { foodApi, mealApi, recipeApi } from "../../api";
 import { buildSearchItems, searchItems, usageByKey, type ItemUsage, type SearchFilter, type SearchItem } from "../../foodSearch";
+import { EMPTY_MACRO_DRAFT, type MacroDraft } from "../../macroEntry";
 import { computeFoodUsage, computeRecipeUsage } from "../../usage";
 import { FoodSearchPane } from "./FoodSearchPane";
+import { MacroEntryForm } from "./MacroEntryForm";
+
+/** Search the user's foods and recipes, or type the macros of something that is in neither. */
+export type AddFoodMode = "search" | "macros";
 
 /** What the right-hand pane gets to work with. */
 export interface AddFoodPreviewContext {
@@ -22,6 +28,11 @@ export interface AddFoodPreviewContext {
   setCommit: (commit: (() => void) | null) => void;
   /** Back to the search field, keeping the query. */
   focusSearch: () => void;
+  mode: AddFoodMode;
+  /** What is typed in the "Enter macros" form (only meaningful in that mode). */
+  macroDraft: MacroDraft;
+  /** After an add the dialog stays open for the next one: clears the search (or the macro form) and refocuses it. */
+  reset: () => void;
 }
 
 const AddFoodContext = createContext<AddFoodPreviewContext | null>(null);
@@ -59,6 +70,8 @@ export function AddFoodModalView({ open, onClose, items, usage, initialQuery = "
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<SearchFilter>("all");
   const [pickedKey, setPickedKey] = useState<string | null>(initialKey ?? null);
+  const [mode, setMode] = useState<AddFoodMode>("search");
+  const [macroDraft, setMacroDraft] = useState<MacroDraft>(EMPTY_MACRO_DRAFT);
   const quantityInput = useRef<HTMLInputElement | null>(null);
   const commitRef = useRef<(() => void) | null>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);
@@ -77,6 +90,17 @@ export function AddFoodModalView({ open, onClose, items, usage, initialQuery = "
       commitRef.current = commit;
     },
     focusSearch: () => searchWrapRef.current?.querySelector("input")?.focus(),
+    mode,
+    macroDraft,
+    reset: () => {
+      if (mode === "macros") setMacroDraft(EMPTY_MACRO_DRAFT);
+      else {
+        setQuery("");
+        setPickedKey(null);
+      }
+      // The field is already mounted in both modes; focus it once the cleared value is rendered.
+      queueMicrotask(() => searchWrapRef.current?.querySelector("input")?.focus());
+    },
   };
 
   return (
@@ -84,19 +108,33 @@ export function AddFoodModalView({ open, onClose, items, usage, initialQuery = "
       <div className="grid md:grid-cols-[400px_minmax(0,1fr)]" style={{ minHeight: 540 }}>
         <div ref={searchWrapRef} className="flex min-h-0 flex-col gap-4 p-5 md:max-h-[85vh]" style={{ borderRight: "1px solid var(--hairline)" }}>
           <h2 className="type-title-l">{t("title")}</h2>
-          <FoodSearchPane
-            results={results}
-            usage={usage}
-            query={query}
-            onQueryChange={setQuery}
-            filter={filter}
-            onFilterChange={setFilter}
-            activeKey={active?.key ?? null}
-            onActiveChange={setPickedKey}
-            onCommit={() => commitRef.current?.()}
-            onFocusQuantity={() => quantityInput.current?.focus()}
-            onCreate={onCreate}
+          <SegmentedControl<AddFoodMode>
+            aria-label={t("modeLabel")}
+            fullWidth
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "search", label: t("modeSearch"), icon: "search" },
+              { value: "macros", label: t("modeMacros"), icon: "edit_note" },
+            ]}
           />
+          {mode === "search" ? (
+            <FoodSearchPane
+              results={results}
+              usage={usage}
+              query={query}
+              onQueryChange={setQuery}
+              filter={filter}
+              onFilterChange={setFilter}
+              activeKey={active?.key ?? null}
+              onActiveChange={setPickedKey}
+              onCommit={() => commitRef.current?.()}
+              onFocusQuantity={() => quantityInput.current?.focus()}
+              onCreate={onCreate}
+            />
+          ) : (
+            <MacroEntryForm draft={macroDraft} onChange={setMacroDraft} onCommit={() => commitRef.current?.()} />
+          )}
         </div>
         <div className="p-6">
           <AddFoodContext.Provider value={ctx}>{children}</AddFoodContext.Provider>

@@ -47,7 +47,7 @@ const RECIPES: RecipeResponse[] = [
 /**
  * The add-food dialog (W2.5 + W2.6) on fixture data: the search pane, the
  * preview pane (macros, "left after this", meal type) and the submit, which here
- * only logs what would be added. Type, ↓, Tab, a quantity, Enter.
+ * only logs what would be added (the dialog stays open, like the real one). Type, ↓, Tab, a quantity, Enter.
  */
 export function AddFoodModalSection() {
   const [open, setOpen] = useState(false);
@@ -91,11 +91,15 @@ export function AddFoodModalSection() {
             initialMealType="DINNER"
             consumed={{ calories: 1041, protein: 68 }}
             goals={{ dailyCalorieGoal: 1900, dailyProteinGoal: 120 }}
-            onSubmit={({ item, quantity, mealType }) => {
-              setAdded((a) => [...a, `${item.name} ${quantity} ${item.kind === "recipe" ? "servings" : "g"} ${mealType}`]);
-              setOpen(false);
+            onSubmit={(req) => {
+              // The real dialog stays open after an add; so does this one.
+              const what =
+                req.kind === "macros"
+                  ? `${req.entry.name || "Custom entry"} ${req.entry.totals.calories} kcal / ${req.entry.grams} g`
+                  : `${req.item.name} ${req.quantity} ${req.item.kind === "recipe" ? "servings" : "g"}`;
+              setAdded((a) => [...a, `${what} ${req.mealType}`]);
             }}
-            onCancel={() => setOpen(false)}
+            onDone={() => setOpen(false)}
           />
         </AddFoodModalView>
       )}

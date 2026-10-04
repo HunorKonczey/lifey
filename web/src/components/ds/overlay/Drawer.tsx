@@ -96,7 +96,7 @@ export function Drawer({
         <h2 className="type-title-l truncate">{title}</h2>
         {badge && <div className="mt-1.5">{badge}</div>}
       </div>
-      <IconButton icon="close" label={common("close")} size={40} onClick={() => guard.requestClose()} />
+      <IconButton icon="close" label={common("close")} size={40} tooltipPlacement="below-end" onClick={() => guard.requestClose()} />
     </div>
   );
   const body = <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>;

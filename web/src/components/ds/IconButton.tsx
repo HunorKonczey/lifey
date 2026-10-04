@@ -10,6 +10,8 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   /** Visual box, 32–40px (D-W0.7). Default 36. */
   size?: number;
   shortcut?: string;
+  /** See `Tooltip` — `below-end` for a button in a panel's top-right corner. */
+  tooltipPlacement?: "above" | "below-end";
   fill?: 0 | 1;
 }
 
@@ -18,9 +20,9 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
  * 768px (D-W0.18: desktop icon buttons need only a ≥32px hit area, touch
  * needs ≥44px) and a mandatory tooltip/`aria-label` from `label`.
  */
-export function IconButton({ icon, label, size = 36, shortcut, fill = 0, className, style, ...rest }: IconButtonProps) {
+export function IconButton({ icon, label, size = 36, shortcut, tooltipPlacement, fill = 0, className, style, ...rest }: IconButtonProps) {
   return (
-    <Tooltip label={label} shortcut={shortcut}>
+    <Tooltip label={label} shortcut={shortcut} placement={tooltipPlacement}>
       <button
         type="button"
         aria-label={label}

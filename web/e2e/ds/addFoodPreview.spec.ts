@@ -68,12 +68,47 @@ test("the meal type starts at the caller's and renames the submit button", async
   await expect(dialog(page).getByRole("button", { name: "Add to snack" })).toBeVisible();
 });
 
-test("submitting sends the row, the quantity and the chosen meal", async ({ page }) => {
+test("submitting sends the row, the quantity and the chosen meal — and the dialog stays open for more", async ({ page }) => {
   await page.keyboard.type("kefir");
   await dialog(page).getByRole("radio", { name: "Lunch" }).click();
   await dialog(page).getByRole("button", { name: "Add to lunch" }).click();
-  await expect(dialog(page)).toHaveCount(0);
   await expect(page.getByTestId("added-log")).toHaveText("Added: Kefir 200 g LUNCH");
+  await expect(dialog(page)).toBeVisible();
+  // Second food, same meal type still selected.
+  await page.keyboard.type("skyr");
+  await dialog(page).getByRole("button", { name: "Add to lunch" }).click();
+  await expect(page.getByTestId("added-log")).toHaveText("Added: Kefir 200 g LUNCH, Skyr natúr 100 g LUNCH");
+});
+
+test("Enter macros: typed totals replace the search, the preview shows them, add keeps the dialog open and clears the form", async ({ page }) => {
+  await dialog(page).getByRole("radio", { name: "Enter macros" }).click();
+  await expect(dialog(page).getByRole("button", { name: /^Add to/ })).toBeDisabled();
+  await expect(dialog(page).getByText("Enter the calories to add it.")).toBeVisible();
+
+  await dialog(page).getByLabel("Name (optional)").fill("Lunch at the restaurant");
+  await dialog(page).getByLabel("Portion (g)").fill("250");
+  await dialog(page).getByLabel("Calories (kcal)").fill("600");
+  await dialog(page).getByLabel("Protein (g)").fill("40");
+  await dialog(page).getByLabel("Carbs (g)").fill("50");
+  await dialog(page).getByLabel("Fat (g)").fill("20");
+
+  await expect(page.getByTestId("preview-title")).toHaveText("Lunch at the restaurant");
+  await expect(tile(page, "kcal")).toContainText("600");
+  await expect(tile(page, "protein")).toContainText("40 g");
+  await expect(dialog(page).getByTestId("preview-remaining")).toContainText("259 kcal left after this"); // 1 900 − 1 041 − 600
+
+  await dialog(page).getByLabel("Fat (g)").press("Enter");
+  await expect(page.getByTestId("added-log")).toHaveText("Added: Lunch at the restaurant 600 kcal / 250 g DINNER");
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).getByLabel("Calories (kcal)")).toHaveValue("");
+  await expect(dialog(page).getByLabel("Name (optional)")).toBeFocused();
+});
+
+test("only calories are required: the rest defaults to 100 g and zero", async ({ page }) => {
+  await dialog(page).getByRole("radio", { name: "Enter macros" }).click();
+  await dialog(page).getByLabel("Calories (kcal)").fill("250");
+  await dialog(page).getByRole("button", { name: "Add to dinner" }).click();
+  await expect(page.getByTestId("added-log")).toHaveText("Added: Custom entry 250 kcal / 100 g DINNER");
 });
 
 test("a recipe is logged by servings: servings unit, 0.5 / 1 / 2 chips, kcal per serving", async ({ page }) => {
@@ -87,8 +122,8 @@ test("a recipe is logged by servings: servings unit, 0.5 / 1 / 2 chips, kcal per
   await expect(tile(page, "kcal")).toContainText("824");
 });
 
-test("Cancel closes without adding", async ({ page }) => {
-  await dialog(page).getByRole("button", { name: "Cancel" }).click();
+test("Done closes without adding", async ({ page }) => {
+  await dialog(page).getByRole("button", { name: "Done" }).click();
   await expect(dialog(page)).toHaveCount(0);
   await expect(page.getByTestId("added-log")).toHaveText("Added: —");
 });

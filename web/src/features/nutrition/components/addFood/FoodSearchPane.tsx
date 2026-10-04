@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Icon } from "@/components/ds";
+import { Button, Icon, KeyHint } from "@/components/ds";
 import { TextField } from "@/components/ds/field/TextField";
 import { useFormat } from "@/lib/format/useFormat";
 import { SEARCH_FILTERS, type ItemUsage, type SearchFilter, type SearchItem } from "../../foodSearch";
@@ -98,12 +98,7 @@ export function FoodSearchPane({
           placeholder={t("searchPlaceholder")}
           leadingIcon="search"
         />
-        <kbd
-          className="type-label pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-          style={{ color: "var(--text-3)", background: "var(--control)", borderRadius: "var(--r-tag)", padding: "2px 6px" }}
-        >
-          esc
-        </kbd>
+        {query === "" && <KeyHint className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">esc</KeyHint>}
       </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label={t("filtersLabel")}>
