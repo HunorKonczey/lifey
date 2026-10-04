@@ -2,7 +2,7 @@
 
 import type { RefObject } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Fab, Icon, IconButton, SegmentedControl, Tabs } from "@/components/ds";
+import { Button, Fab, Icon, IconButton, KeyHint, SegmentedControl, Tabs } from "@/components/ds";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import type { NutritionTab } from "../nutritionTab";
 
@@ -86,7 +86,7 @@ export function NutritionHeader({ tab, onTabChange, counts, copying, onToggleCop
         <Button variant={tab === "recipes" ? "secondary" : "primary"} onClick={onAddFood}>
           <Icon name="add" size={20} />
           {t("addFood")}
-          <kbd className="type-label ml-1 opacity-70">N</kbd>
+          <KeyHint tone="onPrimary">N</KeyHint>
         </Button>
       </div>
     </div>

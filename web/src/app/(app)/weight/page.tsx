@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, ConfirmModal, Fab, GridItem, Icon, PageGrid, SegmentedControl } from "@/components/ds";
+import { Button, ConfirmModal, Fab, GridItem, Icon, KeyHint, PageGrid, SegmentedControl } from "@/components/ds";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
@@ -85,7 +85,7 @@ export default function WeightPage() {
           <Button onClick={openNew}>
             <Icon name="add" size={20} />
             {t("logTitle")}
-            <kbd className="type-label ml-1 opacity-70">N</kbd>
+            <KeyHint tone="onPrimary">N</KeyHint>
           </Button>
         </div>
       )}

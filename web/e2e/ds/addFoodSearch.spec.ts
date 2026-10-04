@@ -55,8 +55,11 @@ test("keyboard only: type, ↓, Tab to the quantity, type 150, Enter adds exactl
   await page.keyboard.type("150");
   await page.keyboard.press("Enter");
 
-  await expect(dialog(page)).toHaveCount(0);
   await expect(page.getByTestId("added-log")).toHaveText(`Added: ${picked} 150 g DINNER`);
+  // The dialog stays for the next one, with a clean, focused search.
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).getByRole("combobox")).toHaveValue("");
+  await expect(dialog(page).getByRole("combobox")).toBeFocused();
 });
 
 test("Enter in the search field adds the active row with the preview's quantity", async ({ page }) => {

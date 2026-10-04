@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Button, Fab, Icon, SegmentedControl, Tabs } from "@/components/ds";
+import { Button, Fab, Icon, KeyHint, SegmentedControl, Tabs } from "@/components/ds";
 import { SessionsView } from "@/features/workouts/components/SessionsView";
 import { TemplatesView } from "@/features/workouts/components/TemplatesView";
 import { ExercisesView } from "@/features/workouts/components/ExercisesView";
@@ -74,7 +74,7 @@ export default function WorkoutsPage() {
           <Button onClick={openStart}>
             <Icon name="play_arrow" size={20} />
             {t("startWorkout")}
-            <kbd className="type-label ml-1 opacity-70">N</kbd>
+            <KeyHint tone="onPrimary">N</KeyHint>
           </Button>
         </div>
       )}

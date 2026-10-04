@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { Button } from "@/components/ds";
 import { NumberField } from "@/components/ds/field/NumberField";
@@ -14,6 +14,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { logTimestampFor } from "@/lib/utils/logTime";
 import { foodApi, mealApi } from "../../api";
 import { remainingAfter, type Nutrients } from "../../budget";
+import { parseMacroDraft, per100g, type ParsedMacroEntry } from "../../macroEntry";
 import { MEAL_TYPE_ORDER } from "../../mealTypeStyle";
 import { buildEntries } from "../../logRecipePortion";
 import { foodPortion, recipePortion, type Macros } from "../../recipeMacros";
@@ -23,12 +24,15 @@ import { useAddFoodContext } from "./AddFoodModal";
 
 const MEAL_KEY = { BREAKFAST: "breakfast", LUNCH: "lunch", SNACK: "snack", DINNER: "dinner" } as const;
 
-export interface AddRequest {
-  item: SearchItem;
-  /** Grams for a food, servings for a recipe. */
-  quantity: number;
-  mealType: MealType;
-}
+export type AddRequest =
+  | {
+      kind: "item";
+      item: SearchItem;
+      /** Grams for a food, servings for a recipe. */
+      quantity: number;
+      mealType: MealType;
+    }
+  | { kind: "macros"; entry: ParsedMacroEntry; mealType: MealType };
 
 export interface FoodPreviewPaneViewProps {
   foodsById: ReadonlyMap<number, FoodResponse>;
@@ -37,8 +41,10 @@ export interface FoodPreviewPaneViewProps {
   consumed: Nutrients;
   goals: { dailyCalorieGoal: number | null; dailyProteinGoal: number | null };
   pending?: boolean;
-  onSubmit: (req: AddRequest) => void;
-  onCancel: () => void;
+  /** Resolves once it is saved (the dialog then clears itself for the next one) and rejects when it failed. */
+  onSubmit: (req: AddRequest) => Promise<unknown> | void;
+  /** "Done" — the dialog stays open after an add, so this is the way out. */
+  onDone: () => void;
 }
 
 function defaultQuantity(item: SearchItem | null, lastGrams: number | undefined): number {
@@ -57,16 +63,18 @@ function macrosOf(item: SearchItem | null, qty: number, foodsById: ReadonlyMap<n
  * and last-used chips, the meal type (defaulting by the clock), a four-tile
  * macro preview, "Utána marad 749 kcal · fehérje még 37 g" and Mégse / a submit
  * that names the meal it goes to. Enter in the search field or in the quantity
- * adds; Tab from the search field lands here. Presentational — the data and the
- * save are `FoodPreviewPane`.
+ * adds; Tab from the search field lands here. An add does not close the dialog
+ * — the search clears for the next food, "Kész" closes it. In the "Enter macros"
+ * mode the preview shows the typed totals instead. Presentational — the data and
+ * the save are `FoodPreviewPane`.
  */
-export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goals, pending, onSubmit, onCancel }: FoodPreviewPaneViewProps) {
+export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goals, pending, onSubmit, onDone }: FoodPreviewPaneViewProps) {
   const t = useTranslations("nutrition.addFoodModal");
   const n = useTranslations("nutrition");
   const d = useTranslations("dashboard");
-  const common = useTranslations("common");
   const fmt = useFormat();
-  const { active, usage, registerQuantity, setCommit } = useAddFoodContext();
+  const locale = useLocale();
+  const { active, usage, registerQuantity, setCommit, mode, macroDraft, reset } = useAddFoodContext();
 
   const lastGrams = active ? usage.get(active.key)?.lastGrams : undefined;
   const [mealType, setMealType] = useState<MealType>(initialMealType);
@@ -78,13 +86,29 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     setQty(defaultQuantity(active, lastGrams));
   }
 
-  const isRecipe = active?.kind === "recipe";
-  const macros = macrosOf(active, qty, foodsById);
+  const inMacros = mode === "macros";
+  const entry = inMacros ? parseMacroDraft(macroDraft, locale) : null;
+  const isRecipe = !inMacros && active?.kind === "recipe";
+  const macros = inMacros
+    ? (entry?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 })
+    : macrosOf(active, qty, foodsById);
   const left = remainingAfter(consumed, goals, { calories: macros.calories, protein: macros.protein });
-  const canSubmit = !!active && qty > 0 && !pending;
+  const canSubmit = !pending && (inMacros ? !!entry : !!active && qty > 0);
 
   const submit = () => {
-    if (active && qty > 0 && !pending) onSubmit({ item: active, quantity: qty, mealType });
+    if (!canSubmit) return;
+    const req: AddRequest | null = inMacros
+      ? entry && { kind: "macros", entry, mealType }
+      : active && { kind: "item", item: active, quantity: qty, mealType };
+    if (!req) return;
+    Promise.resolve(onSubmit(req)).then(
+      () => {
+        // Stay open for the next one: a fresh search, and a fresh default quantity even when the same row is first again.
+        reset();
+        setForKey("");
+      },
+      () => {}, // already reported by the caller; the typed values stay
+    );
   };
   // Enter in the search field adds with whatever the quantity currently is.
   useEffect(() => {
@@ -92,7 +116,7 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     return () => setCommit(null);
   });
 
-  if (!active) {
+  if (!inMacros && !active) {
     return (
       <div className="flex h-full min-h-[300px] items-center justify-center text-center">
         <p className="type-body-s" style={{ color: "var(--text-3)", maxWidth: 220 }}>
@@ -103,9 +127,12 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
   }
 
   const chips = isRecipe ? [0.5, 1, 2] : [100, ...(lastGrams && Math.round(lastGrams) !== 100 ? [Math.round(lastGrams)] : [])];
-  const source = isRecipe
-    ? t("previewSourceRecipe", { n: active.recipe.servings })
-    : t("previewSourceFood", { kcal: fmt.integer(active.food.caloriesPer100g) });
+  const title = inMacros ? entry?.name || macroDraft.name.trim() || t("customEntry") : active!.name;
+  const source = inMacros
+    ? t("previewSourceMacros", { g: fmt.integer(entry?.grams ?? 100) })
+    : active!.kind === "recipe"
+      ? t("previewSourceRecipe", { n: active!.recipe.servings })
+      : t("previewSourceFood", { kcal: fmt.integer(active!.food.caloriesPer100g) });
 
   const tiles: { key: string; label: string; value: string; color: string; hero?: boolean }[] = [
     { key: "kcal", label: t("previewCalories"), value: fmt.integer(macros.calories), color: "var(--m-kcal)", hero: true },
@@ -128,13 +155,14 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     >
       <div className="pr-8">
         <h3 data-testid="preview-title" style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", overflowWrap: "anywhere" }}>
-          {active.name}
+          {title}
         </h3>
         <p className="type-body-s" style={{ color: "var(--text-3)" }}>
           {source}
         </p>
       </div>
 
+      {!inMacros && (
       <div>
         <div className="flex flex-wrap items-end gap-3">
           <NumberField
@@ -175,6 +203,7 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
           </div>
         </div>
       </div>
+      )}
 
       <SegmentedControl<MealType>
         aria-label={t("meal")}
@@ -204,6 +233,12 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
         ))}
       </div>
 
+      {inMacros && !entry && (
+        <p className="type-body-s" style={{ color: "var(--text-3)" }}>
+          {t("macroNeedsCalories")}
+        </p>
+      )}
+
       {(left.calories != null || left.protein != null) && (
         <div className="flex flex-col gap-2" data-testid="preview-remaining">
           <p className="type-body-s" style={{ color: "var(--text-2)" }}>
@@ -225,8 +260,8 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
       )}
 
       <div className="mt-auto flex items-center justify-end gap-3 pt-2">
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          {common("cancel")}
+        <Button type="button" variant="ghost" onClick={onDone}>
+          {t("done")}
         </Button>
         <Button type="submit" disabled={!canSubmit}>
           {t("submitTo", { meal: mealType })}
@@ -269,41 +304,58 @@ export function FoodPreviewPane({
     { calories: 0, protein: 0 },
   );
 
+  // A food goes into the day's latest plain meal of that type, else starts one; a recipe meal
+  // (it has a name) is never extended with loose foods.
+  const addFoodEntry = async (foodId: number, grams: number, mealType: MealType) => {
+    const target = dayMeals
+      .filter((m): m is MealResponse => m.mealType === mealType && m.name == null)
+      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())[0];
+    const entry = { foodId, quantityInGrams: grams };
+    if (target) {
+      await mealApi.update(target.id, {
+        dateTime: target.dateTime,
+        mealType,
+        name: null,
+        entries: [...target.entries.map((e) => ({ foodId: e.foodId, quantityInGrams: e.quantityInGrams })), entry],
+      });
+    } else {
+      await mealApi.create({ dateTime: logTimestampFor(date), mealType, name: null, entries: [entry] });
+    }
+  };
+
   const add = useMutation({
-    mutationFn: async ({ item, quantity, mealType }: AddRequest): Promise<MealType> => {
-      if (item.kind === "recipe") {
+    mutationFn: async (req: AddRequest): Promise<MealType> => {
+      const { mealType } = req;
+      if (req.kind === "macros") {
+        // Typed totals become a hidden one-off food (per 100 g back-calculated), so the meal keeps its normal shape.
+        const p = per100g(req.entry.totals, req.entry.grams);
+        const food = await foodApi.create({
+          name: req.entry.name || t("customEntry"),
+          caloriesPer100g: p.calories,
+          proteinPer100g: p.protein,
+          carbsPer100g: p.carbs,
+          fatPer100g: p.fat,
+          hidden: true,
+        });
+        await addFoodEntry(food.id, req.entry.grams, mealType);
+      } else if (req.item.kind === "recipe") {
         // A logged recipe is its own meal, named after it (`LogRecipeDialog` does the same).
-        const servings = Math.max(item.recipe.servings, 1);
+        const servings = Math.max(req.item.recipe.servings, 1);
         await mealApi.create({
           dateTime: logTimestampFor(date),
           mealType,
-          name: item.recipe.name,
-          entries: buildEntries(item.recipe.ingredients, servings / quantity, {}),
-        });
-        return mealType;
-      }
-      // A food goes into the day's latest plain meal of that type, else starts one; a recipe meal
-      // (it has a name) is never extended with loose foods.
-      const target = dayMeals
-        .filter((m): m is MealResponse => m.mealType === mealType && m.name == null)
-        .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())[0];
-      const entry = { foodId: item.food.id, quantityInGrams: quantity };
-      if (target) {
-        await mealApi.update(target.id, {
-          dateTime: target.dateTime,
-          mealType,
-          name: null,
-          entries: [...target.entries.map((e) => ({ foodId: e.foodId, quantityInGrams: e.quantityInGrams })), entry],
+          name: req.item.recipe.name,
+          entries: buildEntries(req.item.recipe.ingredients, servings / req.quantity, {}),
         });
       } else {
-        await mealApi.create({ dateTime: logTimestampFor(date), mealType, name: null, entries: [entry] });
+        await addFoodEntry(req.item.food.id, req.quantity, mealType);
       }
       return mealType;
     },
     onSuccess: (mealType) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
       show(t("added", { meal: n(MEAL_KEY[mealType]) }), "success");
-      onClose();
+      // Waited for: the dialog stays open, and the next add must see this meal (and the new "left") to extend it, not start a second one.
+      return queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
     },
     onError: () => show(t("addFailed"), "error"),
   });
@@ -315,8 +367,8 @@ export function FoodPreviewPane({
       consumed={consumed}
       goals={{ dailyCalorieGoal: settings?.dailyCalorieGoal ?? null, dailyProteinGoal: settings?.dailyProteinGoal ?? null }}
       pending={add.isPending}
-      onSubmit={(req) => add.mutate(req)}
-      onCancel={onClose}
+      onSubmit={(req) => add.mutateAsync(req)}
+      onDone={onClose}
     />
   );
 }

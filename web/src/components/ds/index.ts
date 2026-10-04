@@ -28,6 +28,8 @@ export { Fab } from "./Fab";
 export type { FabProps } from "./Fab";
 export { IconButton } from "./IconButton";
 export type { IconButtonProps } from "./IconButton";
+export { KeyHint } from "./KeyHint";
+export type { KeyHintProps } from "./KeyHint";
 export { Tooltip } from "./Tooltip";
 export type { TooltipProps } from "./Tooltip";
 export { SegmentedControl } from "./SegmentedControl";
