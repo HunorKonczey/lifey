@@ -68,6 +68,27 @@ async function refreshOnce(): Promise<string | null> {
   return refreshPromise;
 }
 
+/**
+ * Endpoints whose 401 is about the credentials sent *to them* (a wrong password, a refresh token that is
+ * revoked or expired), never about an expired access token. Sending one of these through the refresh path
+ * is worse than pointless for `/auth/refresh`: the refresher is itself waiting on that very request, so
+ * the request would wait on the refresh it is part of and neither would ever settle — every request after it
+ * queued behind the same in-flight refresh, and the tab froze instead of going back to the login page.
+ */
+const NO_REFRESH_PATHS = [
+  "/auth/refresh",
+  "/auth/login",
+  "/auth/register",
+  "/auth/social/google",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+];
+
+function skipsRefresh(path: string): boolean {
+  const pathname = path.split("?")[0];
+  return NO_REFRESH_PATHS.includes(pathname);
+}
+
 interface RequestConfig {
   retry?: boolean;
   /** "blob" for binary responses (e.g. the profile picture) — skips JSON parsing. */
@@ -112,7 +133,7 @@ async function request<T>(
 
   // Only attempt refresh if we had an active token that may have expired.
   // A 401 without an active token means bad credentials, not an expired session.
-  if (res.status === 401 && retry && accessToken) {
+  if (res.status === 401 && retry && accessToken && !skipsRefresh(path)) {
     const newToken = await refreshOnce();
     if (newToken) {
       setAccessToken(newToken);

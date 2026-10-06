@@ -1,11 +1,11 @@
 "use client";
 
 import { create } from "zustand";
-import { setAccessToken, registerTokenRefresher } from "@/lib/api/client";
+import { ApiError, setAccessToken, registerTokenRefresher } from "@/lib/api/client";
 import { queryClient } from "@/lib/queryClient";
 import { decodeJwt } from "@/lib/utils/jwt";
 import { authApi } from "./api";
-import type { SessionUser } from "./types";
+import type { AuthResponse, SessionUser } from "./types";
 
 const RT_KEY = "lifey-rt";
 
@@ -17,6 +17,44 @@ function saveRefreshToken(token: string) {
 }
 function clearRefreshToken() {
   try { localStorage.removeItem(RT_KEY); } catch { /* ignore */ }
+}
+
+/** What exchanging the stored refresh token for a new pair came to. */
+type Exchange = { status: "ok"; auth: AuthResponse } | { status: "rejected" } | { status: "unavailable" };
+
+/**
+ * Exchanges the stored refresh token. It is single-use, and several things share it: this tab's page load,
+ * its 401 handling, and every other tab of the app (the token lives in localStorage). So:
+ *
+ * - a refusal (4xx) clears the stored token only if it is still the one we sent — if another tab rotated it
+ *   in the meantime the stored value is newer, and it is the one to try (not to delete: clearing it signed
+ *   the user out of every tab at the next load);
+ * - a failure that says nothing about the token (no connection, a 5xx while the API restarts) keeps it, so a
+ *   server hiccup does not end the session.
+ */
+async function exchangeStoredRefreshToken(): Promise<Exchange> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const stored = getStoredRefreshToken();
+    if (!stored) return { status: "rejected" };
+    try {
+      return { status: "ok", auth: await authApi.refresh(stored) };
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status >= 500) return { status: "unavailable" };
+      if (getStoredRefreshToken() !== stored) continue;
+      clearRefreshToken();
+      return { status: "rejected" };
+    }
+  }
+  return { status: "rejected" };
+}
+
+/** Everything that refreshes shares one exchange at a time, so one tab never spends its own token twice. */
+let exchanging: Promise<Exchange> | null = null;
+function exchangeOnce(): Promise<Exchange> {
+  exchanging ??= exchangeStoredRefreshToken().finally(() => {
+    exchanging = null;
+  });
+  return exchanging;
 }
 
 /** Build the display user from the access-token JWT claims. */
@@ -94,48 +132,43 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       set({ isLoading: false });
       return;
     }
-    const stored = getStoredRefreshToken();
-    if (!stored) {
+    if (!getStoredRefreshToken()) {
       set({ user: null, isLoading: false, initFailed: true });
       return;
     }
-    try {
-      const res = await authApi.refresh(stored);
-      setAccessToken(res.accessToken);
-      saveRefreshToken(res.refreshToken); // rotate stored token
-      set({ user: userFromAccessToken(res.accessToken), isLoading: false, initFailed: false });
-    } catch {
-      setAccessToken(null);
-      clearRefreshToken();
-      set({ user: null, isLoading: false, initFailed: true });
+    const exchange = await exchangeOnce();
+    if (exchange.status === "ok") {
+      setAccessToken(exchange.auth.accessToken);
+      saveRefreshToken(exchange.auth.refreshToken); // rotate stored token
+      set({ user: userFromAccessToken(exchange.auth.accessToken), isLoading: false, initFailed: false });
+      return;
     }
+    // Rejected: the token is gone for good. Unavailable: it is kept, so the next load can still sign in.
+    setAccessToken(null);
+    set({ user: null, isLoading: false, initFailed: true });
   },
 
   refreshUser: async () => {
-    const stored = getStoredRefreshToken();
-    if (!stored) return false;
-    try {
-      const res = await authApi.refresh(stored);
-      setAccessToken(res.accessToken);
-      saveRefreshToken(res.refreshToken);
-      set({ user: userFromAccessToken(res.accessToken), isLoading: false, initFailed: false });
-      return true;
-    } catch {
-      return false;
-    }
+    if (!getStoredRefreshToken()) return false;
+    const exchange = await exchangeOnce();
+    if (exchange.status !== "ok") return false;
+    setAccessToken(exchange.auth.accessToken);
+    saveRefreshToken(exchange.auth.refreshToken);
+    set({ user: userFromAccessToken(exchange.auth.accessToken), isLoading: false, initFailed: false });
+    return true;
   },
 }));
 
 // Single-flight refresh for 401 interception.
 registerTokenRefresher(async () => {
-  const stored = getStoredRefreshToken();
-  if (!stored) return null;
-  try {
-    const res = await authApi.refresh(stored);
-    useSessionStore.getState().applyAccessToken(res.accessToken, res.refreshToken);
-    return res.accessToken;
-  } catch {
-    clearRefreshToken();
-    return null;
+  if (!getStoredRefreshToken()) return null;
+  const exchange = await exchangeOnce();
+  if (exchange.status === "ok") {
+    useSessionStore.getState().applyAccessToken(exchange.auth.accessToken, exchange.auth.refreshToken);
+    return exchange.auth.accessToken;
   }
+  // Rejected: the session is over (null). Unavailable: not knowing is not the same, so the request fails
+  // with the network error and the in-memory session survives to try again.
+  if (exchange.status === "unavailable") throw new Error("Could not reach the server to refresh the session");
+  return null;
 });
