@@ -27,6 +27,9 @@ class _FakeAdapter implements HttpClientAdapter {
   /// simulated, since the repository must treat any failure the same way.
   final Set<String> failing = {};
 
+  /// Paths that answer with this HTTP status (and an error body) instead of 200.
+  final Map<String, int> errorStatus = {};
+
   @override
   void close({bool force = false}) {}
 
@@ -47,7 +50,7 @@ class _FakeAdapter implements HttpClientAdapter {
     final body = builders[key]?.call(options) ?? responses[key] ?? const <String, dynamic>{};
     return ResponseBody.fromString(
       jsonEncode(body),
-      200,
+      errorStatus[options.path] ?? 200,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
@@ -200,6 +203,50 @@ void main() {
       expect(messages.single.state, ChatMessageState.failed);
       expect(messages.single.body, 'written offline');
       expect(messages.single.isUnsent, isTrue);
+    });
+
+    test('a message the server rejected is shown as failed and is not replayed by flushPending', () async {
+      await seedConversation();
+      adapter.errorStatus['/chat/conversations/$_conversationId/messages'] = 409;
+
+      await repo.send(_conversationId, 'to an archived thread');
+      final sendsAfterFirstAttempt = adapter.requests.where((r) => r.method == 'POST').length;
+      await repo.flushPending();
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.state, ChatMessageState.failed);
+      expect(adapter.requests.where((r) => r.method == 'POST').length, sendsAfterFirstAttempt,
+          reason: 'the same bytes would only get the same answer');
+    });
+
+    test('a message that failed for a gateway error is replayed by flushPending', () async {
+      await seedConversation();
+      adapter.errorStatus['/chat/conversations/$_conversationId/messages'] = 503;
+      await repo.send(_conversationId, 'while the server restarts');
+      final sendsAfterFirstAttempt = adapter.requests.where((r) => r.method == 'POST').length;
+
+      adapter.errorStatus.clear();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] = (options) =>
+          _messageJson(id: 4400, clientMessageId: (options.data as Map)['clientMessageId'] as String, senderId: _meId);
+      await repo.flushPending();
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.state, ChatMessageState.sent);
+      expect(adapter.requests.where((r) => r.method == 'POST').length, sendsAfterFirstAttempt + 1);
+    });
+
+    test('retry sends a rejected message again when the user asks', () async {
+      await seedConversation();
+      adapter.errorStatus['/chat/conversations/$_conversationId/messages'] = 400;
+      await repo.send(_conversationId, 'too long?');
+      final rejected = (await repo.watchMessages(_conversationId).first).single;
+
+      adapter.errorStatus.clear();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] = (options) =>
+          _messageJson(id: 4401, clientMessageId: (options.data as Map)['clientMessageId'] as String, senderId: _meId);
+      await repo.retry(_conversationId, rejected.clientId);
+
+      expect((await repo.watchMessages(_conversationId).first).single.state, ChatMessageState.sent);
     });
 
     test('an empty or whitespace-only body is not sent at all', () async {
