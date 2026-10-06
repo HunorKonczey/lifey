@@ -68,6 +68,19 @@ class FrameworkErrorStatusTest {
     }
 
     @Test
+    void aRationingFoodDatabase_is429() throws Exception {
+        mockMvc.perform(get("/probe/off-limited"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").value("The food database is busy, try again in a moment"));
+    }
+
+    @Test
+    void anUnreachableFoodDatabase_is503() throws Exception {
+        mockMvc.perform(get("/probe/off-down"))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
     void anythingElse_isStill500() throws Exception {
         mockMvc.perform(get("/probe/boom"))
                 .andExpect(status().isInternalServerError())
@@ -95,6 +108,16 @@ class FrameworkErrorStatusTest {
         @GetMapping("/probe/sorted")
         String sorted() {
             throw new PropertyReferenceException("nope", TypeInformation.of(String.class), List.<PropertyPath>of());
+        }
+
+        @GetMapping("/probe/off-limited")
+        String offLimited() {
+            throw new com.lifey.nutrition.openfoodfacts.exception.OffRateLimitedException("429");
+        }
+
+        @GetMapping("/probe/off-down")
+        String offDown() {
+            throw new com.lifey.nutrition.openfoodfacts.exception.OffUnavailableException("down");
         }
 
         @GetMapping("/probe/boom")

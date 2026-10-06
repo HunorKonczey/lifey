@@ -40,14 +40,31 @@ class OpenFoodFactsClientImpl implements OpenFoodFactsClient {
 
     @Override
     public Optional<OffProduct> findByBarcode(String barcode) {
-        OffApiResponse response = restClient.get()
-                .uri("/api/v2/product/{barcode}.json", barcode)
-                // OFF returns a JSON body with status 0 even for unknown products,
-                // but a hard 404 is possible too — swallow it and treat as "no data".
-                .retrieve()
-                .onStatus(status -> status.value() == 404, (request, clientResponse) -> {
-                })
-                .body(OffApiResponse.class);
+        OffApiResponse response;
+        try {
+            response = restClient.get()
+                    .uri("/api/v2/product/{barcode}.json", barcode)
+                    // OFF returns a JSON body with status 0 even for unknown products,
+                    // but a hard 404 is possible too — swallow it and treat as "no data".
+                    .retrieve()
+                    .onStatus(status -> status.value() == 404, (request, clientResponse) -> {
+                    })
+                    // The same two answers as the name search: rationed (429, or the 503 OFF answers when its
+                    // global limits are hit) versus simply not answering. Unmapped, either one surfaced as a
+                    // 500 "unexpected error" with a stack trace in the log, for something that is OFF's state.
+                    .onStatus(status -> status.value() == 429 || status.value() == 503, (request, clientResponse) -> {
+                        throw new OffRateLimitedException("OpenFoodFacts barcode lookup rate-limited (HTTP "
+                                + clientResponse.getStatusCode().value() + ")");
+                    })
+                    .onStatus(status -> status.isError(), (request, clientResponse) -> {
+                        throw new OffUnavailableException("OpenFoodFacts barcode lookup failed (HTTP "
+                                + clientResponse.getStatusCode().value() + ")");
+                    })
+                    .body(OffApiResponse.class);
+        } catch (RestClientException e) {
+            // Timeout, connection failure, or a body that could not be read.
+            throw new OffUnavailableException("OpenFoodFacts barcode lookup unavailable", e);
+        }
 
         if (response == null || response.status() == 0 || response.product() == null) {
             return Optional.empty();

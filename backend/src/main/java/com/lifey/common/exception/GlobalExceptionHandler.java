@@ -8,6 +8,8 @@ import com.lifey.billing.exception.InvalidReceiptException;
 import com.lifey.progressphoto.exception.InvalidProgressPhotoException;
 import com.lifey.billing.exception.SeatLimitExceededException;
 import com.lifey.billing.exception.SubscriptionAlreadyLinkedException;
+import com.lifey.nutrition.openfoodfacts.exception.OffRateLimitedException;
+import com.lifey.nutrition.openfoodfacts.exception.OffUnavailableException;
 import com.lifey.nutrition.recipe.generation.exception.InvalidGenerationRequestException;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
@@ -308,6 +310,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "No endpoint " + request.getMethod() + " " + request.getRequestURI(),
                 request, List.of(), ex);
+    }
+
+    /**
+     * An external food database that is rationing us or not answering is neither the caller's fault nor a bug
+     * here: 429 / 503 say so, with a plain message (the name search never gets here — it turns the same
+     * exceptions into a status in its own response body).
+     */
+    @ExceptionHandler(OffRateLimitedException.class)
+    public ResponseEntity<ApiError> handleOffRateLimited(OffRateLimitedException ex, HttpServletRequest request) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, "The food database is busy, try again in a moment", request, List.of(), ex);
+    }
+
+    @ExceptionHandler(OffUnavailableException.class)
+    public ResponseEntity<ApiError> handleOffUnavailable(OffUnavailableException ex, HttpServletRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, "The food database is not available right now", request, List.of(), ex);
     }
 
     /** {@code ?sort=nope}: a sort property the entity does not have is the client's error, not a 500. */
