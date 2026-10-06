@@ -7,12 +7,14 @@ import com.lifey.billing.entity.TrainerPlan;
 import com.lifey.billing.service.SubscriptionWriter;
 import com.stripe.exception.EventDataObjectDeserializationException;
 import com.stripe.exception.SignatureVerificationException;
+import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
 import com.stripe.model.Event;
 import com.stripe.model.Invoice;
 import com.stripe.model.StripeObject;
 import com.stripe.model.SubscriptionItem;
 import com.stripe.model.checkout.Session;
+import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -123,10 +125,39 @@ public class StripeWebhookController {
             return;
         }
         subscriptionWriter.linkCheckoutSession(userId, SubscriptionProvider.STRIPE, session.getCustomer(), session.getSubscription());
+        syncFromStripe(session.getSubscription());
+    }
+
+    /**
+     * Stripe does not promise to deliver events in the order it generated them, and the
+     * {@code customer.subscription.created} / {@code .updated} that carry the plan, the period end and the
+     * trial end are not rarely the first to arrive - before this checkout event has told us whose subscription
+     * it is. That sync finds no local row, is skipped, and is recorded as processed, so the paying trainer kept
+     * the plan of their trial (and its seat limit) until some later subscription event, a month away at worst
+     * (the nightly reconciliation corrects the status only). Now that the link exists, the subscription's
+     * current state is read from Stripe and applied the same way a webhook would have.
+     *
+     * <p>Best effort: nothing here may fail the webhook - a failure only means the old behaviour, the next
+     * event or the reconciliation fixing it.
+     */
+    private void syncFromStripe(String subscriptionId) {
+        String secretKey = stripeProperties.secretKey();
+        if (subscriptionId == null || secretKey == null || secretKey.isBlank()) {
+            return;
+        }
+        try {
+            RequestOptions options = RequestOptions.builder().setApiKey(secretKey).build();
+            applySubscription(com.stripe.model.Subscription.retrieve(subscriptionId, options));
+        } catch (StripeException | RuntimeException e) {
+            log.warn("Could not read Stripe subscription {} after its checkout, waiting for a later event", subscriptionId, e);
+        }
     }
 
     private void handleSubscriptionUpsert(Event event) {
-        com.stripe.model.Subscription subscription = (com.stripe.model.Subscription) dataObject(event);
+        applySubscription((com.stripe.model.Subscription) dataObject(event));
+    }
+
+    private void applySubscription(com.stripe.model.Subscription subscription) {
         if (subscription == null) {
             return;
         }
