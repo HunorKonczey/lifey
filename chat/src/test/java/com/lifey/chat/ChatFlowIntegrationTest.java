@@ -101,6 +101,28 @@ class ChatFlowIntegrationTest {
                 .andExpect(jsonPath("$.hasMore").value(false));
     }
 
+    /**
+     * An SseEmitter that completes or times out makes the container dispatch the request again (ASYNC), with
+     * no bearer token on that dispatch. It must pass the authorization filter - the stream was authorised when
+     * it opened - or every ended stream logged an AuthorizationDeniedException with a stack trace.
+     */
+    @Test
+    void anAsyncDispatchIsNotAuthorisedAgain_butARequestStillIs() throws Exception {
+        mockMvc.perform(post("/api/v1/chat/typing")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .with(r -> {
+                            r.setDispatcherType(jakarta.servlet.DispatcherType.ASYNC);
+                            return r;
+                        }))
+                .andExpect(status().isBadRequest()); // past security, rejected by the body's own validation
+
+        mockMvc.perform(post("/api/v1/chat/typing")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
     @Test
     void bothSidesSeeTheSameThreadWithTheirOwnPeerLabel() throws Exception {
         long conversationId = openConversation();

@@ -2,6 +2,7 @@ package com.lifey.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -61,6 +62,14 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // The stream (an SseEmitter) is authorised once, on the request that opens it. When it
+                        // completes or times out the container dispatches the request again (ASYNC), and that
+                        // dispatch no longer has the bearer token's authentication: without this it was denied,
+                        // and since the response was already committed that surfaced as four ERROR entries with
+                        // stack traces every time a stream ended - one stream per open chat, every
+                        // lifey.chat.stream-timeout. ERROR dispatches (the error page of an already-answered
+                        // request) are the same case.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         // /actuator/health stays public above (the deploy probe
                         // needs it); everything else actuator exposes is
