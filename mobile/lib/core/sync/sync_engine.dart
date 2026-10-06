@@ -8,6 +8,21 @@ import 'client_ref.dart';
 import 'entity_sync_config.dart';
 import 'sync_lock.dart';
 
+/// HTTP answers that say "not now" rather than "no": the gateway in front of
+/// the API answers 502/503/504 while it deploys or wakes from a cold start,
+/// and 408/429 are asks to come back later. Retrying these is always right,
+/// unlike a 400/404/409/500, which a blind retry will only repeat.
+const _transientStatuses = {408, 425, 429, 502, 503, 504};
+
+/// Whether [e] is worth retrying by itself on a later sync pass: no response
+/// at all (timeout, connection error, DNS failure) or a transient gateway
+/// status. Such a failure is parked as `[network]` and picked up again by the
+/// next drain; anything else waits for a manual retry.
+bool isTransientFailure(DioException e) {
+  final status = e.response?.statusCode;
+  return status == null || _transientStatuses.contains(status);
+}
+
 /// Drains the `pending_operations` outbox: sends each queued create/update/
 /// delete to the backend, in dependency order, and reconciles local state
 /// (serverId, deletes) on success.
@@ -172,7 +187,7 @@ class SyncEngine {
       // No response at all (timeout/connection error/DNS failure, etc.) is
       // the connectivity case; anything with a response is a real backend
       // answer (4xx/5xx) and won't fix itself by retrying blindly.
-      await _markFailed(op, _describeError(e), isNetworkError: e.response == null);
+      await _markFailed(op, _describeError(e), isNetworkError: isTransientFailure(e));
       return false;
     } catch (e) {
       await _markFailed(op, e.toString(), isNetworkError: false);
