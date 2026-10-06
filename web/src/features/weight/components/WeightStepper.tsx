@@ -36,9 +36,7 @@ export function WeightStepper({
   }
 
   function commit(raw: string) {
-    // Accept either separator: normalise to the locale's own before parsing.
-    const own = locale.startsWith("hu") ? "," : ".";
-    const parsed = parseLocaleNumber(raw.replace(/[.,]/, own), locale);
+    const parsed = parseLocaleNumber(raw);
     const next = parsed == null ? value : clampWeight(parsed);
     onChange(next);
     setText(formatLocaleNumber(next, locale, 1));

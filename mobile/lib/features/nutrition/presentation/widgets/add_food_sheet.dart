@@ -10,6 +10,7 @@ import '../../application/food_controller.dart';
 import '../../domain/barcode_lookup_result.dart';
 import '../../domain/food.dart';
 import '../barcode_scanner_screen.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Bottom sheet form to create a food, or edit one when [food] is provided.
 ///
@@ -86,7 +87,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
   }
 
   double? _parse(String text) =>
-      double.tryParse(text.replaceAll(',', '.').trim());
+      parseDecimal(text);
 
   String? _validateRequiredNumber(String? value) {
     final l10n = AppLocalizations.of(context)!;

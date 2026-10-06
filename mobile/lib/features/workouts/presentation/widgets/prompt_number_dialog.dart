@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// A single-field numeric-entry dialog — shared by every manual cardio
 /// metric edit, live (`CardioSessionScreen`, C2.2/C2.3) or after finishing
@@ -37,7 +38,7 @@ Future<double?> promptNumber(
         ),
         FilledButton(
           onPressed: () {
-            final parsed = double.tryParse(enteredText.replaceAll(',', '.').trim());
+            final parsed = parseDecimal(enteredText);
             Navigator.of(dialogContext).pop(parsed);
           },
           child: Text(l10n.saveButton),

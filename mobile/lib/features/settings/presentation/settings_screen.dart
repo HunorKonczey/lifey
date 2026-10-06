@@ -38,6 +38,7 @@ import 'widgets/settings_kit.dart';
 import 'widgets/settings_my_trainers.dart';
 import 'widgets/settings_profile_card.dart';
 import 'widgets/subscription_tile.dart';
+import '../../../core/format/parse_decimal.dart';
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -370,7 +371,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               initialText: _waterGoal?.toString() ?? '',
               decimal: true,
               onSave: (text) => setState(
-                () => _waterGoal = text.trim().isEmpty ? null : double.parse(text.replaceAll(',', '.').trim()),
+                () => _waterGoal = text.trim().isEmpty ? null : parseDecimal(text)!,
               ),
             ),
         };

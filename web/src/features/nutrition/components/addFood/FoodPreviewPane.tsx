@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { Button } from "@/components/ds";
 import { NumberField } from "@/components/ds/field/NumberField";
@@ -73,7 +73,6 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
   const n = useTranslations("nutrition");
   const d = useTranslations("dashboard");
   const fmt = useFormat();
-  const locale = useLocale();
   const { active, usage, registerQuantity, setCommit, mode, macroDraft, reset } = useAddFoodContext();
 
   const lastGrams = active ? usage.get(active.key)?.lastGrams : undefined;
@@ -87,7 +86,7 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
   }
 
   const inMacros = mode === "macros";
-  const entry = inMacros ? parseMacroDraft(macroDraft, locale) : null;
+  const entry = inMacros ? parseMacroDraft(macroDraft) : null;
   const isRecipe = !inMacros && active?.kind === "recipe";
   const macros = inMacros
     ? (entry?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 })

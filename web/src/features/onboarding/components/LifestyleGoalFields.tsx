@@ -8,6 +8,7 @@ import { lbToKg } from "@/lib/utils/units";
 import type { UnitSystem } from "@/features/settings/types";
 import type { OnboardingFormValues } from "../schemas";
 import type { ActivityLevel, PrimaryGoal } from "../types";
+import { parseLocaleNumber } from "@/components/ds/field/numberFormat";
 
 const ACTIVITY_LEVELS: { value: ActivityLevel; icon: string }[] = [
   { value: "SEDENTARY", icon: "weekend" },
@@ -40,10 +41,10 @@ export function LifestyleGoalFields({ register, watch, setValue, errors, unitSys
 
   const applyTargetImperial = (lbVal: string) => {
     setTargetLb(lbVal);
-    const v = Number(lbVal);
-    if (lbVal !== "" && !Number.isNaN(v)) {
+    const v = parseLocaleNumber(lbVal);
+    if (v !== null) {
       setValue("targetWeightKg", lbToKg(v), { shouldValidate: true });
-    } else if (lbVal === "") {
+    } else if (lbVal.trim() === "") {
       setValue("targetWeightKg", undefined, { shouldValidate: true });
     }
   };
@@ -96,14 +97,14 @@ export function LifestyleGoalFields({ register, watch, setValue, errors, unitSys
             data-ring-frame>
             {isImperial ? (
               <input
-                type="number" step="0.1" value={targetLb} aria-label={t("targetWeightOptional")}
+                type="text" inputMode="decimal" value={targetLb} aria-label={t("targetWeightOptional")}
                 onChange={(e) => applyTargetImperial(e.target.value)}
                 className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
               />
             ) : (
               <input
-                {...register("targetWeightKg", { setValueAs: (v) => (v === "" || v == null || Number.isNaN(Number(v)) ? undefined : Number(v)) })}
-                type="number" step="0.1" aria-label={t("targetWeightOptional")}
+                {...register("targetWeightKg", { setValueAs: (v) => parseLocaleNumber(String(v ?? "")) ?? undefined })}
+                type="text" inputMode="decimal" aria-label={t("targetWeightOptional")}
                 className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
               />
             )}

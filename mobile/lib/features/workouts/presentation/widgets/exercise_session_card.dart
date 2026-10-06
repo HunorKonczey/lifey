@@ -9,6 +9,7 @@ import '../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../../../shared/widgets/ds/list_group.dart';
 import '../../data/workout_session_repository.dart';
 import '../../domain/personal_record.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 // ---------------------------------------------------------------------------
 // Presentation-layer models — screen state only, never persisted directly.
@@ -752,7 +753,7 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final weight = double.tryParse(_weight.text.trim().replaceAll(',', '.'));
+    final weight = parseDecimal(_weight.text);
     final reps = int.tryParse(_reps.text.trim());
     Navigator.of(context).pop<({double? weight, int? reps})>((weight: weight, reps: reps));
   }
@@ -781,7 +782,7 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
                     if (v == null || v.trim().isEmpty) {
                       return l10n.enterANumberError;
                     }
-                    final n = double.tryParse(v.trim().replaceAll(',', '.'));
+                    final n = parseDecimal(v);
                     if (n == null) return l10n.enterANumberError;
                     if (n < 0) return l10n.mustBeZeroOrMoreError;
                     return null;

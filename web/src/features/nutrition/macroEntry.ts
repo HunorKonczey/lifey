@@ -22,9 +22,9 @@ export interface ParsedMacroEntry {
 }
 
 /** A non-negative number from a field; `fallback` when it is empty, `null` when it is not a number. */
-function amount(text: string, locale: string, fallback: number | null): number | null {
+function amount(text: string, fallback: number | null): number | null {
   if (text.trim() === "") return fallback;
-  const n = parseLocaleNumber(text, locale);
+  const n = parseLocaleNumber(text);
   return n !== null && n >= 0 ? n : null;
 }
 
@@ -33,12 +33,12 @@ function amount(text: string, locale: string, fallback: number | null): number |
  * required, protein / carbs / fat default to 0, the quantity to 100 g (never
  * below 1 g), and anything that is not a non-negative number blocks it.
  */
-export function parseMacroDraft(draft: MacroDraft, locale: string): ParsedMacroEntry | null {
-  const calories = amount(draft.calories, locale, null);
-  const protein = amount(draft.protein, locale, 0);
-  const carbs = amount(draft.carbs, locale, 0);
-  const fat = amount(draft.fat, locale, 0);
-  const grams = amount(draft.grams, locale, 100);
+export function parseMacroDraft(draft: MacroDraft): ParsedMacroEntry | null {
+  const calories = amount(draft.calories, null);
+  const protein = amount(draft.protein, 0);
+  const carbs = amount(draft.carbs, 0);
+  const fat = amount(draft.fat, 0);
+  const grams = amount(draft.grams, 100);
   if (calories === null || protein === null || carbs === null || fat === null || grams === null) return null;
   return { name: draft.name.trim(), grams: Math.max(1, grams), totals: { calories, protein, carbs, fat } };
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/exercise_controller.dart';
 import '../../domain/exercise.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Result of adding a set: an exercise with reps and weight.
 typedef SetDraft = ({Exercise exercise, int reps, double weight});
@@ -68,7 +69,7 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
     Navigator.of(context).pop<SetDraft>((
       exercise: _exercise!,
       reps: int.parse(_reps.text.trim()),
-      weight: double.parse(_weight.text.replaceAll(',', '.')),
+      weight: parseDecimal(_weight.text)!,
     ));
   }
 
@@ -177,7 +178,7 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
                         ),
                         validator: (v) {
                           final parsed =
-                              double.tryParse((v ?? '').replaceAll(',', '.'));
+                              parseDecimal(v);
                           if (parsed == null) return l10n.enterANumberError;
                           if (parsed < 0) return l10n.mustBeZeroOrMoreError;
                           return null;

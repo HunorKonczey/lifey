@@ -7,6 +7,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/ds/lifey_card.dart';
 import '../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../domain/user_settings.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// The six daily goals as small tiles — a metric dot, the name, the value
 /// (canvas: "DAILY GOALS"). Three to a row; every tile opens its own editor.
@@ -199,9 +200,9 @@ class _GoalEditBodyState extends State<_GoalEditBody> {
             keyboardType: widget.decimal ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.number,
             decoration: InputDecoration(suffixText: widget.suffix, hintText: l10n.leaveBlankForNoGoal),
             validator: (value) {
-              final text = (value ?? '').replaceAll(',', '.').trim();
+              final text = (value ?? '').trim();
               if (text.isEmpty) return null;
-              final parsed = widget.decimal ? double.tryParse(text) : int.tryParse(text);
+              final parsed = widget.decimal ? parseDecimal(text) : int.tryParse(text);
               if (parsed == null || parsed < 0) return widget.decimal ? decimalError : intError;
               return null;
             },
@@ -212,7 +213,7 @@ class _GoalEditBodyState extends State<_GoalEditBody> {
             child: FilledButton(
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
-                  widget.onSave(_controller.text.replaceAll(',', '.').trim());
+                  widget.onSave(_controller.text.trim());
                   Navigator.of(context).pop();
                 }
               },

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/food_controller.dart';
 import 'add_meal_entry_sheet.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Bottom sheet for logging a macro entry directly, without picking a food
 /// from the catalog. Creates a hidden food in the background and pops with
@@ -45,7 +46,7 @@ class _AddMacrosSheetState extends ConsumerState<AddMacrosSheet> {
   }
 
   double? _parse(String text) =>
-      double.tryParse(text.replaceAll(',', '.').trim());
+      parseDecimal(text);
 
   String? _validateRequiredNonNegative(String? value) {
     final l10n = AppLocalizations.of(context)!;

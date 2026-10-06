@@ -6,6 +6,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../application/water_source_controller.dart';
 import '../../domain/water_source.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Opens the water-source form as a design-system sheet: "New water source",
 /// or "Edit water source" when [initial] is given (docs/redesign/77-mobile-
@@ -65,7 +66,7 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
     if (_submitting) return; // guard against a fast double-tap saving twice
     if (!_formKey.currentState!.validate()) return;
     final name = _name.text.trim();
-    final volume = double.parse(_volume.text.replaceAll(',', '.'));
+    final volume = parseDecimal(_volume.text)!;
 
     setState(() {
       _submitting = true;
@@ -122,7 +123,7 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
               suffixText: 'L',
             ),
             validator: (v) {
-              final parsed = double.tryParse((v ?? '').replaceAll(',', '.'));
+              final parsed = parseDecimal(v);
               if (parsed == null) return l10n.enterANumberError;
               if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
               return null;

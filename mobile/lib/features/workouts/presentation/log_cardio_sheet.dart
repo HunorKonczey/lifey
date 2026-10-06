@@ -13,6 +13,7 @@ import '../domain/weather_condition.dart';
 import 'widgets/box_score_stepper.dart';
 import '../domain/workout_session.dart';
 import 'widgets/rpe_selector.dart';
+import '../../../core/format/parse_decimal.dart';
 
 /// Bottom sheet to manually (after the fact) log a cardio workout — all
 /// three families (docs/cardio/59-cardio-implementation-plan.md C1.8/C1.9):
@@ -86,7 +87,7 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
 
   double? _parseDouble(String text) {
     if (text.trim().isEmpty) return null;
-    return double.tryParse(text.replaceAll(',', '.').trim());
+    return parseDecimal(text);
   }
 
   int? _parseInt(String text) {

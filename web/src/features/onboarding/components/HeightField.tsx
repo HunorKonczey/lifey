@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { feetInchesToCm } from "@/lib/utils/units";
 import type { UnitSystem } from "@/features/settings/types";
 import type { OnboardingFormValues } from "../schemas";
+import { parseLocaleNumber } from "@/components/ds/field/numberFormat";
 
 interface Props {
   register: UseFormRegister<OnboardingFormValues>;
@@ -63,8 +64,8 @@ export function HeightField({ register, setValue, errors, unitSystem }: Props) {
       ) : (
         <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-control)] w-40" style={inputStyle} data-ring-frame>
           <input
-            {...register("heightCm", { valueAsNumber: true })}
-            type="number" step="0.1" aria-label={t("height")}
+            {...register("heightCm", { setValueAs: (v) => parseLocaleNumber(String(v ?? "")) ?? Number.NaN })}
+            type="text" inputMode="decimal" aria-label={t("height")}
             className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
           />
           <span className="text-sm" style={{ color: "var(--text-2)" }}>cm</span>

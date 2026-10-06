@@ -13,6 +13,7 @@ import '../../../settings/application/settings_controller.dart';
 import '../../application/water_source_controller.dart';
 import '../../data/water_entry_repository.dart';
 import '../../domain/water_source.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Opens the "Add water" sheet (canvas "BOTTOM SHEET": the title with today's
 /// "0.99 / 2.60 L" in the water colour, then three tinted 64 px amount tiles;
@@ -104,8 +105,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
   }
 
   Future<void> _logCustomAmount() async {
-    final text = _amountController.text.replaceAll(',', '.').trim();
-    final parsed = double.tryParse(text);
+    final parsed = parseDecimal(_amountController.text);
     if (parsed == null || parsed <= 0) {
       setState(() => _error = AppLocalizations.of(context)!.enterValidAmountError);
       return;

@@ -1,11 +1,10 @@
-import { isHuLocale } from "@/lib/format/lifeyFormat";
 
-/** "166,7" (HU) or "166.7" (EN) → 166.7. `null` for anything that isn't a
- *  number once the locale's decimal separator is normalised to a dot —
- *  never throws, so a field can revert to the last good value on blur. */
-export function parseLocaleNumber(text: string, locale: string): number | null {
-  const decimalSep = isHuLocale(locale) ? "," : ".";
-  const normalized = text.trim().replace(decimalSep, ".");
+/** "166,7" and "166.7" are both 166.7, whatever the UI language: a comma or a
+ *  point is always the decimal separator (there are no thousands separators in
+ *  what people type into these fields). `null` for anything that isn't a
+ *  number — never throws, so a field can revert to the last good value on blur. */
+export function parseLocaleNumber(text: string): number | null {
+  const normalized = text.replace(/\s/g, "").replace(",", ".");
   if (normalized === "" || normalized === "-") return null;
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;

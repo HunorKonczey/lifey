@@ -39,8 +39,8 @@ export interface NumberFieldProps {
 
 /**
  * A number field with the unit inside it, −/+ steppers, and the locale's own
- * decimal separator on both display and input (D-W0.9) — "166,7 g" typed
- * with a comma in Hungarian, never "166.68". Arrow keys step by `step`,
+ * decimal separator on display (D-W0.9: "166,7 g" in Hungarian, never "166.68")
+ * while input takes either: a comma and a point both mean the decimal. Arrow keys step by `step`,
  * Shift+arrow by 10×.
  */
 export function NumberField({
@@ -90,7 +90,7 @@ export function NumberField({
   }
 
   function commit(raw: string): number {
-    const parsed = parseLocaleNumber(raw, locale);
+    const parsed = parseLocaleNumber(raw);
     if (parsed === null) {
       setText(formatLocaleNumber(value, locale, maxDecimals));
       return value;
@@ -131,7 +131,7 @@ export function NumberField({
         onChange={(e) => {
           setText(e.target.value);
           if (liveUpdate) {
-            const parsed = parseLocaleNumber(e.target.value, locale);
+            const parsed = parseLocaleNumber(e.target.value);
             if (parsed !== null) onChange(roundToDecimals(parsed, maxDecimals));
           }
         }}

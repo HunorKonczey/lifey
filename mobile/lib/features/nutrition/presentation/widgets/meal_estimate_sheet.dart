@@ -9,6 +9,7 @@ import '../../application/food_controller.dart';
 import '../../application/meal_estimation_controller.dart';
 import '../../domain/meal_estimate.dart';
 import 'add_meal_entry_sheet.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Sends [imagePath] to the AI estimate and lets the user review the result
 /// (docs/23-ai-calorie-estimation-plan.md "Mobile"): every item's name,
@@ -221,7 +222,7 @@ class _MealEstimateSheetState extends ConsumerState<MealEstimateSheet> {
   }
 }
 
-double? _parse(String text) => double.tryParse(text.replaceAll(',', '.').trim());
+double? _parse(String text) => parseDecimal(text);
 
 /// Whole numbers without a trailing ".0"; otherwise one decimal.
 String _format(double value) {

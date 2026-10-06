@@ -5,31 +5,31 @@ const draft = (over: Partial<typeof EMPTY_MACRO_DRAFT>) => ({ ...EMPTY_MACRO_DRA
 
 describe("parseMacroDraft", () => {
   it("needs calories", () => {
-    expect(parseMacroDraft(EMPTY_MACRO_DRAFT, "en")).toBeNull();
-    expect(parseMacroDraft(draft({ protein: "20" }), "en")).toBeNull();
+    expect(parseMacroDraft(EMPTY_MACRO_DRAFT)).toBeNull();
+    expect(parseMacroDraft(draft({ protein: "20" }))).toBeNull();
   });
 
   it("defaults the rest: 100 g, no protein / carbs / fat", () => {
-    expect(parseMacroDraft(draft({ calories: "250" }), "en")).toEqual({
+    expect(parseMacroDraft(draft({ calories: "250" }))).toEqual({
       name: "",
       grams: 100,
       totals: { calories: 250, protein: 0, carbs: 0, fat: 0 },
     });
   });
 
-  it("reads the locale's decimal separator and trims the name", () => {
-    const hu = parseMacroDraft(draft({ name: "  Lecsó ", calories: "312,5", protein: "11,2", carbs: "20", fat: "4", grams: "250" }), "hu");
+  it("reads a decimal comma or point and trims the name", () => {
+    const hu = parseMacroDraft(draft({ name: "  Lecsó ", calories: "312,5", protein: "11,2", carbs: "20", fat: "4", grams: "250" }));
     expect(hu).toEqual({ name: "Lecsó", grams: 250, totals: { calories: 312.5, protein: 11.2, carbs: 20, fat: 4 } });
   });
 
   it("blocks text and negative numbers instead of guessing", () => {
-    expect(parseMacroDraft(draft({ calories: "abc" }), "en")).toBeNull();
-    expect(parseMacroDraft(draft({ calories: "100", protein: "-3" }), "en")).toBeNull();
-    expect(parseMacroDraft(draft({ calories: "100", fat: "x" }), "en")).toBeNull();
+    expect(parseMacroDraft(draft({ calories: "abc" }))).toBeNull();
+    expect(parseMacroDraft(draft({ calories: "100", protein: "-3" }))).toBeNull();
+    expect(parseMacroDraft(draft({ calories: "100", fat: "x" }))).toBeNull();
   });
 
   it("never goes below 1 g", () => {
-    expect(parseMacroDraft(draft({ calories: "10", grams: "0" }), "en")?.grams).toBe(1);
+    expect(parseMacroDraft(draft({ calories: "10", grams: "0" }))?.grams).toBe(1);
   });
 });
 

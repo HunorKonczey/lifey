@@ -19,6 +19,7 @@ import '../domain/user_details.dart';
 import 'widgets/confirm_save_details_dialog.dart';
 import 'widgets/date_row.dart';
 import 'widgets/option_card.dart';
+import '../../../core/format/parse_decimal.dart';
 
 /// Settings > "Body & goals": edits the same `/user-details` fields the
 /// onboarding wizard collects, reusing [OptionCard] for the selection
@@ -277,7 +278,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
               controller: _heightCmController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(suffixIcon: UnitSuffix('cm'), suffixIconConstraints: BoxConstraints()),
-              onChanged: (v) => setState(() => _heightCm = double.tryParse(v.replaceAll(',', '.'))),
+              onChanged: (v) => setState(() => _heightCm = parseDecimal(v)),
             ),
           const SizedBox(height: 24),
           SectionLabel(l10n.onboardingActivityLevelLabel),
@@ -320,7 +321,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(suffixIcon: UnitSuffix('lb'), suffixIconConstraints: BoxConstraints()),
                 onChanged: (v) {
-                  final lb = double.tryParse(v.replaceAll(',', '.'));
+                  final lb = parseDecimal(v);
                   setState(() => _targetWeightKg = lb == null ? null : lbToKg(lb));
                 },
               )
@@ -330,7 +331,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(suffixIcon: UnitSuffix('kg'), suffixIconConstraints: BoxConstraints()),
                 onChanged: (v) => setState(
-                  () => _targetWeightKg = v.trim().isEmpty ? null : double.tryParse(v.replaceAll(',', '.')),
+                  () => _targetWeightKg = v.trim().isEmpty ? null : parseDecimal(v),
                 ),
               ),
           ],

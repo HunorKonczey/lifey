@@ -7,6 +7,7 @@ import { lbToKg } from "@/lib/utils/units";
 import { HeightField } from "./HeightField";
 import type { UnitSystem } from "@/features/settings/types";
 import type { OnboardingFormValues } from "../schemas";
+import { parseLocaleNumber } from "@/components/ds/field/numberFormat";
 
 interface Props {
   register: UseFormRegister<OnboardingFormValues>;
@@ -27,8 +28,8 @@ export function BodyFields({ register, setValue, errors, unitSystem }: Props) {
 
   const applyWeightImperial = (lbVal: string) => {
     setLb(lbVal);
-    const v = Number(lbVal);
-    if (lbVal !== "" && !Number.isNaN(v)) {
+    const v = parseLocaleNumber(lbVal);
+    if (v !== null) {
       setValue("currentWeightKg", lbToKg(v), { shouldValidate: true });
     }
   };
@@ -42,7 +43,7 @@ export function BodyFields({ register, setValue, errors, unitSystem }: Props) {
         {isImperial ? (
           <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-control)] w-40" style={inputStyle} data-ring-frame>
             <input
-              type="number" step="0.1" value={lb} aria-label={t("currentWeight")}
+              type="text" inputMode="decimal" value={lb} aria-label={t("currentWeight")}
               onChange={(e) => applyWeightImperial(e.target.value)}
               className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
             />
@@ -51,8 +52,8 @@ export function BodyFields({ register, setValue, errors, unitSystem }: Props) {
         ) : (
           <div className="flex items-center gap-1 px-3 h-11 rounded-[var(--r-control)] w-40" style={inputStyle} data-ring-frame>
             <input
-              {...register("currentWeightKg", { valueAsNumber: true })}
-              type="number" step="0.1" aria-label={t("currentWeight")}
+              {...register("currentWeightKg", { setValueAs: (v) => parseLocaleNumber(String(v ?? "")) ?? Number.NaN })}
+              type="text" inputMode="decimal" aria-label={t("currentWeight")}
               className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
             />
             <span className="text-sm" style={{ color: "var(--text-2)" }}>kg</span>

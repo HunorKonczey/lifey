@@ -28,6 +28,7 @@ import '../domain/plan_shares.dart';
 import '../domain/user_details.dart';
 import 'widgets/date_row.dart';
 import 'widgets/option_card.dart';
+import '../../../core/format/parse_decimal.dart';
 
 // Welcome, About you, Body, Lifestyle & goal, Suggested plan, [Apple Health — iOS only]
 const int _suggestedPlanIndex = 4;
@@ -677,7 +678,7 @@ class _BodyStep extends StatelessWidget {
               controller: heightCmController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(suffixIcon: UnitSuffix('cm'), suffixIconConstraints: BoxConstraints()),
-              onChanged: (v) => onHeightChanged(double.tryParse(v.replaceAll(',', '.'))),
+              onChanged: (v) => onHeightChanged(parseDecimal(v)),
             ),
           const SizedBox(height: 24),
           SectionLabel(l10n.onboardingCurrentWeightLabel),
@@ -688,7 +689,7 @@ class _BodyStep extends StatelessWidget {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(suffixIcon: UnitSuffix('lb'), suffixIconConstraints: BoxConstraints()),
               onChanged: (v) {
-                final lb = double.tryParse(v.replaceAll(',', '.'));
+                final lb = parseDecimal(v);
                 onWeightChanged(lb == null ? null : lbToKg(lb));
               },
             )
@@ -697,7 +698,7 @@ class _BodyStep extends StatelessWidget {
               controller: weightKgController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(suffixIcon: UnitSuffix('kg'), suffixIconConstraints: BoxConstraints()),
-              onChanged: (v) => onWeightChanged(double.tryParse(v.replaceAll(',', '.'))),
+              onChanged: (v) => onWeightChanged(parseDecimal(v)),
             ),
         ],
       ),
@@ -815,7 +816,7 @@ class _LifestyleStep extends StatelessWidget {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(suffixIcon: UnitSuffix('lb'), suffixIconConstraints: BoxConstraints()),
                 onChanged: (v) {
-                  final lb = double.tryParse(v.replaceAll(',', '.'));
+                  final lb = parseDecimal(v);
                   onTargetWeightChanged(lb == null ? null : lbToKg(lb));
                 },
               )
@@ -825,7 +826,7 @@ class _LifestyleStep extends StatelessWidget {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(suffixIcon: UnitSuffix('kg'), suffixIconConstraints: BoxConstraints()),
                 onChanged: (v) => onTargetWeightChanged(
-                  v.trim().isEmpty ? null : double.tryParse(v.replaceAll(',', '.')),
+                  v.trim().isEmpty ? null : parseDecimal(v),
                 ),
               ),
           ],

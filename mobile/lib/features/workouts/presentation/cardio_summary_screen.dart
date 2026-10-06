@@ -48,6 +48,7 @@ import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
 import 'widgets/rpe_selector.dart';
 import 'workouts_screen.dart';
+import '../../../core/format/parse_decimal.dart';
 
 /// The cardio summary screen (docs/cardio/59-cardio-implementation-plan.md
 /// C2.8, M14/M15) — reached two ways, always the same widget:
@@ -684,7 +685,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     );
     if (saved != true || !mounted) return;
 
-    double? parse(String text) => double.tryParse(text.replaceAll(',', '.').trim());
+    double? parse(String text) => parseDecimal(text);
     final tempInput = parse(tempText);
     final weatherTempC = tempInput == null ? null : (imperial ? (tempInput - 32) * 5 / 9 : tempInput);
     final windInput = parse(windText);

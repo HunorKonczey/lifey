@@ -9,6 +9,7 @@ import '../../../nutrition/application/meal_controller.dart';
 import '../../../nutrition/data/meal_repository.dart';
 import '../../../nutrition/domain/meal.dart';
 import '../../domain/recipe.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Bottom sheet to log a whole recipe as a meal: pick the meal type and time,
 /// and its ingredients become the meal's entries. The per-portion amount of
@@ -129,7 +130,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
   }
 
   void _onGramsChanged(int index, String text) {
-    final parsed = double.tryParse(text.replaceAll(',', '.').trim());
+    final parsed = parseDecimal(text);
     if (parsed == null || parsed < 0) return; // keep last valid value
     setState(() => _overrides[index] = parsed);
   }

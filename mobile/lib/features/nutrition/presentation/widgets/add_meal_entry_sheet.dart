@@ -17,6 +17,7 @@ import '../../domain/food_usage.dart';
 import '../../domain/meal_days.dart';
 import '../barcode_scanner_screen.dart';
 import 'add_food_sheet.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Result of picking a food + quantity for a meal entry.
 typedef MealEntryDraft = ({Food food, double grams});
@@ -147,7 +148,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
     _gramsFocus.requestFocus();
   }
 
-  double? get _gramsValue => double.tryParse(_grams.text.replaceAll(',', '.'));
+  double? get _gramsValue => parseDecimal(_grams.text);
 
   /// Puts [grams] into the field as the user's own choice (a − / + press or a
   /// quick chip), so a later recent-chip tap never overwrites it.
@@ -197,7 +198,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
     final foodPicked = _food != null;
     setState(() => _foodError = foodPicked ? null : AppLocalizations.of(context)!.pickAFoodError);
     if (!formValid || !foodPicked) return;
-    final grams = double.parse(_grams.text.replaceAll(',', '.'));
+    final grams = parseDecimal(_grams.text)!;
     Navigator.of(context).pop<MealEntryDraft>((food: _food!, grams: grams));
   }
 
@@ -548,7 +549,7 @@ class _SelectedFoodCard extends ConsumerWidget {
                                 decoration: decoration,
                                 onChanged: (_) => onTyped(),
                                 validator: (v) {
-                                  final parsed = double.tryParse((v ?? '').replaceAll(',', '.'));
+                                  final parsed = parseDecimal(v);
                                   if (parsed == null) return l10n.enterANumberError;
                                   if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
                                   return null;
@@ -578,7 +579,7 @@ class _SelectedFoodCard extends ConsumerWidget {
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: grams,
               builder: (context, _, __) {
-                final current = double.tryParse(grams.text.replaceAll(',', '.'));
+                final current = parseDecimal(grams.text);
                 return Wrap(
                   alignment: WrapAlignment.center,
                   spacing: AppSpacing.s8,
@@ -602,7 +603,7 @@ class _SelectedFoodCard extends ConsumerWidget {
               ValueListenableBuilder<TextEditingValue>(
                 valueListenable: grams,
                 builder: (context, _, __) {
-                  final amount = double.tryParse(grams.text.replaceAll(',', '.'));
+                  final amount = parseDecimal(grams.text);
                   if (amount == null || amount <= 0) return const SizedBox(height: 40);
                   final kcal = food.caloriesPer100g * amount / 100;
                   final protein = food.proteinPer100g * amount / 100;

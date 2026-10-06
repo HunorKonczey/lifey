@@ -1,3 +1,5 @@
+import '../../../core/format/parse_decimal.dart';
+
 /// The value of the log-weight sheet, held as **whole grams**.
 ///
 /// Stepping ±0.1 kg on a `double` drifts (64.5 + 0.1 + 0.1 + … ends at
@@ -24,7 +26,7 @@ class WeightAmount {
   /// From what the user typed — "64.5", "64,5", "64" — or null when it is not
   /// a weight this sheet accepts (not a number, ≤ 0, over 500 kg).
   static WeightAmount? tryParse(String text) {
-    final kg = double.tryParse(text.trim().replaceAll(',', '.'));
+    final kg = parseDecimal(text);
     if (kg == null || !kg.isFinite) return null;
     final grams = (kg * 1000).round();
     if (grams < minGrams || grams > maxGrams) return null;

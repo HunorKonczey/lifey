@@ -3,26 +3,39 @@ import { clampNumber, formatLocaleNumber, parseLocaleNumber, roundToDecimals } f
 
 describe("parseLocaleNumber", () => {
   it("parses the Hungarian comma decimal", () => {
-    expect(parseLocaleNumber("166,7", "hu")).toBe(166.7);
+    expect(parseLocaleNumber("166,7")).toBe(166.7);
   });
 
   it("parses the English dot decimal", () => {
-    expect(parseLocaleNumber("166.7", "en")).toBe(166.7);
+    expect(parseLocaleNumber("166.7")).toBe(166.7);
+  });
+
+  it("takes a comma or a point as the decimal, whatever the UI language", () => {
+    expect(parseLocaleNumber("0,5")).toBe(0.5);
+    expect(parseLocaleNumber("0.5")).toBe(0.5);
+    expect(parseLocaleNumber(" 1 234,5 ")).toBe(1234.5);
+    expect(parseLocaleNumber(",5")).toBe(0.5);
+  });
+
+  it("is null when there are two separators", () => {
+    expect(parseLocaleNumber("1,2,3")).toBeNull();
+    expect(parseLocaleNumber("1.2.3")).toBeNull();
+    expect(parseLocaleNumber("1,234.5")).toBeNull();
   });
 
   it("is null for empty input or a bare minus, not NaN", () => {
-    expect(parseLocaleNumber("", "en")).toBeNull();
-    expect(parseLocaleNumber("   ", "en")).toBeNull();
-    expect(parseLocaleNumber("-", "en")).toBeNull();
+    expect(parseLocaleNumber("")).toBeNull();
+    expect(parseLocaleNumber("   ")).toBeNull();
+    expect(parseLocaleNumber("-")).toBeNull();
   });
 
   it("is null for garbage", () => {
-    expect(parseLocaleNumber("abc", "en")).toBeNull();
+    expect(parseLocaleNumber("abc")).toBeNull();
   });
 
   it("parses negatives and whole numbers", () => {
-    expect(parseLocaleNumber("-3", "en")).toBe(-3);
-    expect(parseLocaleNumber("68", "hu")).toBe(68);
+    expect(parseLocaleNumber("-3")).toBe(-3);
+    expect(parseLocaleNumber("68")).toBe(68);
   });
 });
 

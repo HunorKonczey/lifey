@@ -12,6 +12,7 @@ import '../application/generated_recipe_saver.dart';
 import '../application/recipe_generation_controller.dart';
 import '../domain/generated_recipe.dart';
 import '../domain/recipe_wizard.dart';
+import '../../../../core/format/parse_decimal.dart';
 
 /// Runs the generation for [answers] and shows the proposal
 /// (docs/23-ai-calorie-estimation-plan.md Phase 2): name and servings are
@@ -85,7 +86,7 @@ class _GeneratedRecipeScreenState extends ConsumerState<GeneratedRecipeScreen> {
               for (var index = 0; index < recipe.ingredients.length; index++)
                 index: _removed.contains(index)
                     ? null
-                    : double.tryParse(_quantities[index]!.text.replaceAll(',', '.').trim()),
+                    : parseDecimal(_quantities[index]!.text),
             },
           );
       if (!mounted) return;
@@ -108,7 +109,7 @@ class _GeneratedRecipeScreenState extends ConsumerState<GeneratedRecipeScreen> {
     var kept = 0;
     for (var index = 0; index < recipe.ingredients.length; index++) {
       if (_removed.contains(index)) continue;
-      final grams = double.tryParse(_quantities[index]!.text.replaceAll(',', '.').trim());
+      final grams = parseDecimal(_quantities[index]!.text);
       if (grams != null && grams > 0) kept++;
     }
     return kept;

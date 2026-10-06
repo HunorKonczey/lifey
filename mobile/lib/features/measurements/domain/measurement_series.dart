@@ -1,5 +1,6 @@
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import 'body_measurement.dart';
+import '../../../core/format/parse_decimal.dart';
 
 /// Smallest and largest value the add sheet accepts, in centimetres. The
 /// backend allows (0, 300]; the floor here is 1 cm so a stray "0.5" typo is
@@ -10,7 +11,7 @@ const double maxMeasurementCm = 300;
 /// Parses what the user typed — "82.5", "82,5", "82" — into centimetres,
 /// rounded to one decimal, or null when it is not a value the sheet accepts.
 double? parseMeasurementCm(String text) {
-  final raw = double.tryParse(text.trim().replaceAll(',', '.'));
+  final raw = parseDecimal(text);
   if (raw == null || !raw.isFinite) return null;
   final cm = (raw * 10).round() / 10;
   if (cm < minMeasurementCm || cm > maxMeasurementCm) return null;
