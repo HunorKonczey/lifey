@@ -102,11 +102,13 @@ public class FoodServiceImpl implements FoodService {
      * Foods are matched by name (case-insensitive) when logging meals and recipes,
      * so two entries with the same name would be indistinguishable in those pickers.
      * Hidden foods (recipe/meal ingredient shadows) are excluded: they are never
-     * shown in pickers, so a hidden "Egg" must not block a visible food named "Egg".
+     * shown in pickers, so a hidden "Egg" must not block a visible food named "Egg" — and,
+     * because any number of them may share a name, only the visible rows are looked up (the
+     * {@code foods_name_unique_idx} guarantees at most one): a lookup across hidden rows too
+     * could return several and fail with a 500 instead of answering "created" or "duplicate".
      */
     private void requireUniqueName(String name, Long ignoreId) {
-        repository.findByUserIdAndNameIgnoreCase(currentUserProvider.getUserId(), name)
-                .filter(existing -> !existing.isHidden())
+        repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(currentUserProvider.getUserId(), name)
                 .filter(existing -> !existing.getId().equals(ignoreId))
                 .ifPresent(_ -> {
                     throw new DuplicateResourceException("A food named '" + name + "' already exists");

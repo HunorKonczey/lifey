@@ -183,7 +183,7 @@ class FoodServiceImplTest {
     @Test
     void create_savesAndReturnsResponse() {
         FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, false);
-        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.empty());
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.empty());
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 7L));
 
@@ -197,7 +197,7 @@ class FoodServiceImplTest {
     @Test
     void create_throwsWhenNameAlreadyExists() {
         FoodRequest request = new FoodRequest(" Rice ", 130.0, 2.7, null, null, null, false);
-        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(food(1L, "Rice", 130, 2.7)));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.of(food(1L, "Rice", 130, 2.7)));
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(DuplicateResourceException.class);
@@ -208,7 +208,7 @@ class FoodServiceImplTest {
     void update_appliesChangesToExistingFood() {
         Food existing = food(3L, "Old", 100, 10);
         when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
-        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "New")).thenReturn(Optional.empty());
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "New")).thenReturn(Optional.empty());
         FoodRequest request = new FoodRequest("New", 200.0, 25.0, 5.0, 1.0, null, false);
 
         FoodResponse result = service.update(3L, request);
@@ -223,7 +223,7 @@ class FoodServiceImplTest {
     void update_allowsKeepingItsOwnName() {
         Food existing = food(3L, "Rice", 100, 10);
         when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
-        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(existing));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.of(existing));
         FoodRequest request = new FoodRequest("Rice", 110.0, 10.0, null, null, null, false);
 
         FoodResponse result = service.update(3L, request);
@@ -235,7 +235,7 @@ class FoodServiceImplTest {
     void update_throwsWhenNameTakenByAnotherFood() {
         Food existing = food(3L, "Old", 100, 10);
         when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
-        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(food(9L, "Rice", 130, 2.7)));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.of(food(9L, "Rice", 130, 2.7)));
         FoodRequest request = new FoodRequest("Rice", 200.0, 25.0, null, null, null, false);
 
         assertThatThrownBy(() -> service.update(3L, request))
@@ -280,15 +280,14 @@ class FoodServiceImplTest {
         FoodResponse result = service.create(request);
 
         assertThat(result.id()).isEqualTo(8L);
-        verify(repository, never()).findByUserIdAndNameIgnoreCase(any(), any());
+        verify(repository, never()).findByUserIdAndNameIgnoreCaseAndHiddenFalse(any(), any());
     }
 
     @Test
     void create_hiddenExistingFoodDoesNotBlock() {
+        // Any number of hidden shadows may share the name; the visible-only lookup never sees them.
         FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, false);
-        Food hiddenRice = food(1L, "Rice", 130, 2.7);
-        hiddenRice.setHidden(true);
-        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(hiddenRice));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.empty());
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
 
@@ -305,7 +304,7 @@ class FoodServiceImplTest {
 
         service.update(3L, request);
 
-        verify(repository, never()).findByUserIdAndNameIgnoreCase(any(), any());
+        verify(repository, never()).findByUserIdAndNameIgnoreCaseAndHiddenFalse(any(), any());
     }
 
     private static Food food(Long id, String name, double cal, double protein) {

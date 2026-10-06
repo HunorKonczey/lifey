@@ -37,8 +37,6 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
      */
     Page<Food> findByUserIdAndUpdatedAtGreaterThanEqual(Long userId, Instant since, Pageable pageable);
 
-    Optional<Food> findByUserIdAndNameIgnoreCase(Long userId, String name);
-
     /**
      * Matches the {@code foods_name_unique_idx} conflict check (visible foods
      * only) for the trainer content-assignment deep copy — see
