@@ -33,11 +33,13 @@ import com.lifey.workout.session.cardio.InvalidCardioRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -308,8 +310,18 @@ public class GlobalExceptionHandler {
                 request, List.of(), ex);
     }
 
+    /** {@code ?sort=nope}: a sort property the entity does not have is the client's error, not a 500. */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiError> handleUnknownProperty(PropertyReferenceException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Unknown property '" + ex.getPropertyName() + "'", request, List.of(), ex);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
+        if (ex instanceof ErrorResponse errorResponse) {
+            // Wrong method, unsupported media type, ...: Spring already knows the right status.
+            return ApiErrorResponses.framework(errorResponse, request, ex);
+        }
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request, List.of(), ex);
     }
 

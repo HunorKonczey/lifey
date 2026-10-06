@@ -9,9 +9,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -110,8 +112,21 @@ public class GlobalExceptionHandler {
                 request, List.of(), ex);
     }
 
+    /** A query parameter that cannot be converted (`?before=abc`, `?limit=x`): the client's error, not a 500. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                       HttpServletRequest request) {
+        return ApiErrorResponses.build(HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + ex.getName() + "'",
+                request, List.of(), ex);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
+        if (ex instanceof ErrorResponse errorResponse) {
+            // Wrong method, unsupported media type, a missing parameter or part, ...: Spring already
+            // knows the right status.
+            return ApiErrorResponses.framework(errorResponse, request, ex);
+        }
         return ApiErrorResponses.build(HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred", request, List.of(), ex);
     }

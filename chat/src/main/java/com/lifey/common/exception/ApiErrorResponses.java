@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,6 +22,23 @@ import java.util.List;
 public final class ApiErrorResponses {
 
     private ApiErrorResponses() {
+    }
+
+    /**
+     * A failure Spring MVC itself raised — wrong HTTP method (405), unsupported or
+     * unacceptable media type (415 / 406), ... — already knows its own status and
+     * the headers that go with it ({@code Allow}, {@code Accept}). Without this the
+     * catch-all turns every one of them into a 500 "unexpected error".
+     */
+    public static ResponseEntity<ApiError> framework(ErrorResponse error, HttpServletRequest request, Exception ex) {
+        HttpStatus status = HttpStatus.resolve(error.getStatusCode().value());
+        if (status == null) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
+        String detail = error.getBody().getDetail();
+        ResponseEntity<ApiError> built =
+                build(status, detail == null || detail.isBlank() ? status.getReasonPhrase() : detail, request, List.of(), ex);
+        return ResponseEntity.status(status).headers(error.getHeaders()).body(built.getBody());
     }
 
     public static ResponseEntity<ApiError> build(HttpStatus status, String message,
