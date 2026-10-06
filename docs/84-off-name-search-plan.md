@@ -702,8 +702,7 @@ plan commits go with the first PR) — or merging the one branch if a single rev
 ## Non-goals (deferred)
 - **AI estimation as a fallback when OFF finds nothing.** It already exists as its own feature
   (docs/23); this plan does not link, offer or trigger it.
-- Searching OFF from the mobile **create-food form** (`add_food_sheet.dart`) or the web **Foods tab
-  editor** — v1 covers the two logging surfaces only.
+- ~~Searching OFF from the mobile create-food form or the web Foods tab editor~~ — done as a follow-up, see "Follow-up" at the end.
 - Paging / "load more" of OFF results (20 is the cap).
 - Showing per-serving values, nutriscore, images, allergens.
 - Deriving kcal from kJ when a product only has `energy_100g` (it is dropped today, same as the
@@ -780,3 +779,40 @@ Prompt 0 has no PR of its own: its findings land as a commit to this doc ahead o
   coverage count. The manual walk must read the first five rows per term, not count hits (D12).
 - **Debounce missing on one client:** a keystroke-per-request client would burn the shared limit in
   minutes. Both clients have a debounce test.
+
+## Follow-up (2026-10-06): the food forms, and a clearer label — branch `feature/off-search-in-food-forms`
+
+**Why.** First use showed two gaps: the option existed only where a food is added *to a meal*, not in the plain "new food" forms
+(the Foods tab's editor on the web, the create-food sheet on mobile) — and it was not obvious that the results come from an
+external database.
+
+**What changed.**
+- **The plain food forms have the option too, on both surfaces.** Web: `FoodEditor` (new food only) gets the checkbox, the hint
+  and `OffResultsList`; mobile: `AddFoodSheet` (new food only) gets `OffSearchToggle` and `OffResultsBody`. With the box ticked
+  and 3+ letters typed in the **name** field, a list of products appears under it. **Choosing one only fills the form** — name,
+  calories, protein, carbs, fat (web: a missing carbs/fat as 0; mobile: left blank) and the barcode — closes the list and says
+  "Filled in from the OpenFoodFacts database — check the values, then save."; nothing is saved until the user saves as usual.
+  Editing the name again brings the list back. Editing an *existing* food is unchanged. Unticked, nothing is requested.
+- **One shared choice.** The checkbox is the same preference as in the add-food dialog / sheet (per device, off by default), so
+  ticking it in one place ticks it in the other.
+- **It is clear the data comes from the OpenFoodFacts database.** Label: "Also search the OpenFoodFacts food database" (hu:
+  "Keresés az OpenFoodFacts ételadatbázisban is"); group title "From the OpenFoodFacts database"; and once ticked a one-line hint:
+  OpenFoodFacts is a public volunteer-run food database, what you type is sent to it, its values can be incomplete — check them.
+  (This replaces the earlier "Search OpenFoodFacts too" / "From OpenFoodFacts" wording everywhere.)
+- Structure: web `useOffSearchForLocale` / `useNoOffSearch` are shared hooks, the gallery fixture lives in `gallery/offFixture.ts`;
+  mobile `off_search_option.dart` holds the checkbox, a result row and the results block used by both sheets (the meal sheet
+  was moved onto it). The mobile create-food form now scrolls (the list made it taller than a phone).
+
+**Does a product added as a meal end up in the user's foods, with its barcode? Yes** (Prompts 7 and 10): it is saved as an
+ordinary, visible food — name, per-100 g macros and **the barcode** — through `POST /foods` (web) or the offline-first outbox
+(mobile), then logged. It appears in the Foods tab and, being owned, is dropped from later OpenFoodFacts results. Two exceptions:
+a name already used by another food gets "Name (Brand)"; and on the web, if the barcode is still held by a *deleted* food, the
+food is saved without the barcode (mobile finds out at sync, see Known gaps).
+
+**Tests.** Web: 9 e2e cases for the editor (`foodEditorOff.spec.ts`) + 1 for the wording; the existing foods and add-food specs
+and the unit suite are green. Mobile: 11 widget tests for the create-food sheet; the meal-sheet tests moved onto the shared
+widgets unchanged; full suite 3062, `flutter analyze` clean. Looked at in a real browser (editor at 1440). **Not run on an
+emulator, and not against the real backend / OpenFoodFacts** — same owed items as the main close-out.
+
+**Not changed:** the header's "Add food **N**" button still opens the add-to-meal dialog on every tab (the "N" is its keyboard
+shortcut hint — press N to open it); the Foods tab's own "New food" is the form that got the option.
