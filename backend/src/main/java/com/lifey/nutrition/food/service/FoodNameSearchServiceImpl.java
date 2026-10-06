@@ -6,6 +6,7 @@ import com.lifey.nutrition.food.dto.OffSearchItem;
 import com.lifey.nutrition.food.dto.OffSearchResponse;
 import com.lifey.nutrition.food.dto.OffSearchStatus;
 import com.lifey.nutrition.openfoodfacts.OffSearchHit;
+import com.lifey.nutrition.openfoodfacts.OffSearchQuery;
 import com.lifey.nutrition.openfoodfacts.OpenFoodFactsProperties;
 import com.lifey.nutrition.openfoodfacts.client.OpenFoodFactsClient;
 import com.lifey.nutrition.openfoodfacts.exception.OffRateLimitedException;
@@ -17,12 +18,14 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
- * docs/84 D4 + D6. Deliberately <b>not</b> {@code @Transactional}: the OpenFoodFacts calls can
+ * docs/84 D4 + D6 + D7. Deliberately <b>not</b> {@code @Transactional}: the OpenFoodFacts calls can
  * take seconds and must not hold a database connection; the one repository call is its own
- * short read-only transaction.
+ * short read-only transaction. Each OFF call goes through {@link OffSearchCache} (per-pass, user-independent
+ * results) and {@link OffSearchLimiter} (the app-wide cap).
  */
 @Slf4j
 @Service
@@ -39,6 +42,8 @@ public class FoodNameSearchServiceImpl implements FoodNameSearchService {
     private final OpenFoodFactsProperties properties;
     private final FoodRepository foodRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final OffSearchCache cache;
+    private final OffSearchLimiter limiter;
 
     @Override
     public OffSearchResponse search(String query, String lang) {
@@ -68,9 +73,28 @@ public class FoodNameSearchServiceImpl implements FoodNameSearchService {
         }
     }
 
-    /** One OFF call, quality-filtered and de-duplicated by barcode, in OFF's order. May be empty. */
+    /**
+     * One search pass, quality-filtered and de-duplicated by barcode, in OFF order; may be empty. Served from the
+     * cache when it can be (no OFF call, no permit). Otherwise it takes a permit from the app-wide limiter — none
+     * left throws {@link OffRateLimitedException} without calling OFF — calls OFF, and caches the answer. A failed
+     * call throws before anything is cached.
+     */
     private List<OffSearchItem> searchPass(String query, String lang, String countryTag) {
-        List<OffSearchHit> hits = openFoodFactsClient.searchByName(query, lang, countryTag, RESULT_LIMIT);
+        String text = OffSearchQuery.sanitize(query);
+        if (text.isEmpty()) {
+            return List.of(); // nothing searchable: no OFF call, so no permit and nothing to cache
+        }
+        String key = lang + "|" + text;
+        Optional<List<OffSearchItem>> cached = cache.get(key);
+        if (cached.isPresent()) {
+            return cached.get();
+        }
+        if (!limiter.tryAcquire()) {
+            throw new OffRateLimitedException("the app-wide cap of " + limiter.perMinute()
+                    + " OpenFoodFacts searches per minute is used up");
+        }
+
+        List<OffSearchHit> hits = openFoodFactsClient.searchByName(text, lang, countryTag, RESULT_LIMIT);
         Map<String, OffSearchItem> byBarcode = new LinkedHashMap<>();
         for (OffSearchHit hit : hits) {
             OffSearchItem item = toItem(hit);
@@ -78,7 +102,9 @@ public class FoodNameSearchServiceImpl implements FoodNameSearchService {
                 byBarcode.putIfAbsent(item.barcode(), item);
             }
         }
-        return List.copyOf(byBarcode.values());
+        List<OffSearchItem> items = List.copyOf(byBarcode.values());
+        cache.put(key, items);
+        return items;
     }
 
     /**

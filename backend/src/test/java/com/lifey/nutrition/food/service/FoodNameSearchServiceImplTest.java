@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -46,15 +48,22 @@ class FoodNameSearchServiceImplTest {
     @Mock
     CurrentUserProvider currentUserProvider;
 
+    MutableClock clock;
     FoodNameSearchServiceImpl service;
 
     @BeforeEach
     void setUp() {
         lenient().when(currentUserProvider.getUserId()).thenReturn(USER_ID);
         lenient().when(foodRepository.findOwnedBarcodes(eq(USER_ID), any())).thenReturn(Set.of());
-        service = new FoodNameSearchServiceImpl(client,
-                new OpenFoodFactsProperties("http://product", "ua", "http://search", 8, HU_TAG),
-                foodRepository, currentUserProvider);
+        clock = new MutableClock();
+        service = serviceWithCap(1000); // the cap is out of the way unless a test is about it
+    }
+
+    private FoodNameSearchServiceImpl serviceWithCap(int perMinute) {
+        return new FoodNameSearchServiceImpl(client,
+                new OpenFoodFactsProperties("http://product", "ua", "http://search", perMinute, HU_TAG),
+                foodRepository, currentUserProvider,
+                new OffSearchCache(clock), new OffSearchLimiter(perMinute, clock));
     }
 
     private static OffSearchHit hit(String code, String name) {
@@ -252,6 +261,159 @@ class FoodNameSearchServiceImplTest {
         OffSearchItem item = FoodNameSearchServiceImpl.toItem(new OffSearchHit("4056489827702", "Csirkemell", null, "Pikok, Aldi", 110.0, 14.0, 2.4, 4.9));
 
         assertThat(item).isEqualTo(new OffSearchItem("4056489827702", "Csirkemell", "Pikok, Aldi", 110.0, 14.0, 2.4, 4.9));
+    }
+
+    // ---- D7: the cache
+
+    @Test
+    void theSameSearchTwice_secondIsServedFromTheCache() {
+        when(client.searchByName("tej", "hu", HU_TAG, 20)).thenReturn(List.of(hit("1", "Tej")));
+
+        OffSearchResponse first = service.search("tej", "hu");
+        OffSearchResponse second = service.search("  TEJ ", "hu"); // same sanitised text
+
+        assertThat(second).isEqualTo(first);
+        verify(client, times(1)).searchByName(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void aFallbackCachesBothPasses_theRepeatCallsOffNoMore() {
+        when(client.searchByName("pumpkin", "hu", HU_TAG, 20)).thenReturn(List.of());
+        when(client.searchByName("pumpkin", "en", null, 20)).thenReturn(List.of(hit("9", "Pumpkin")));
+
+        OffSearchResponse first = service.search("pumpkin", "hu");
+        OffSearchResponse second = service.search("pumpkin", "hu");
+
+        assertThat(first.fellBackToEnglish()).isTrue();
+        assertThat(second).isEqualTo(first);
+        verify(client, times(2)).searchByName(any(), any(), any(), anyInt()); // one Hungarian, one English — once
+    }
+
+    @Test
+    void anEmptyPassIsCachedToo() {
+        when(client.searchByName("sütőtök", "en", null, 20)).thenReturn(List.of());
+
+        service.search("sütőtök", "en");
+        service.search("sütőtök", "en");
+
+        verify(client, times(1)).searchByName(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void theSameTextInAnotherLanguageIsNotServedFromTheCache() {
+        when(client.searchByName("pasta", "en", null, 20)).thenReturn(List.of(hit("1", "Pasta (en)")));
+        when(client.searchByName("pasta", "hu", HU_TAG, 20)).thenReturn(List.of(hit("2", "Pasta (hu)")));
+
+        assertThat(service.search("pasta", "en").items()).extracting(OffSearchItem::name).containsExactly("Pasta (en)");
+        assertThat(service.search("pasta", "hu").items()).extracting(OffSearchItem::name).containsExactly("Pasta (hu)");
+    }
+
+    @Test
+    void aFailureIsNotCached_theNextAttemptCallsOffAgain() {
+        when(client.searchByName("tej", "hu", HU_TAG, 20))
+                .thenThrow(new OffUnavailableException("timeout"))
+                .thenReturn(List.of(hit("1", "Tej")));
+
+        assertThat(service.search("tej", "hu").status()).isEqualTo(OffSearchStatus.UNAVAILABLE);
+        OffSearchResponse retry = service.search("tej", "hu");
+
+        assertThat(retry.status()).isEqualTo(OffSearchStatus.OK);
+        assertThat(retry.items()).hasSize(1);
+        verify(client, times(2)).searchByName(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void theCachedResultIsUserIndependent_ownershipIsAppliedPerCaller() {
+        when(client.searchByName("tej", "hu", HU_TAG, 20)).thenReturn(List.of(hit("1", "Tej")));
+        when(foodRepository.findOwnedBarcodes(eq(USER_ID), any())).thenReturn(Set.of("1"));
+        when(foodRepository.findOwnedBarcodes(eq(7L), any())).thenReturn(Set.of());
+
+        assertThat(service.search("tej", "hu").items()).isEmpty(); // user 42 owns it
+        when(currentUserProvider.getUserId()).thenReturn(7L);
+        assertThat(service.search("tej", "hu").items()).hasSize(1); // user 7 does not — from the cache
+
+        verify(client, times(1)).searchByName(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void aCachedResultExpiresAfterTheTtl() {
+        when(client.searchByName("tej", "hu", HU_TAG, 20)).thenReturn(List.of(hit("1", "Tej")));
+
+        service.search("tej", "hu");
+        clock.advance(Duration.ofMinutes(11));
+        service.search("tej", "hu");
+
+        verify(client, times(2)).searchByName(any(), any(), any(), anyInt());
+    }
+
+    // ---- D7: the app-wide cap
+
+    @Test
+    void overTheCap_isRateLimitedWithoutCallingOff() {
+        FoodNameSearchServiceImpl capped = serviceWithCap(1);
+        when(client.searchByName("tej", "hu", HU_TAG, 20)).thenReturn(List.of(hit("1", "Tej")));
+
+        assertThat(capped.search("tej", "hu").status()).isEqualTo(OffSearchStatus.OK);
+        OffSearchResponse second = capped.search("sajt", "hu"); // a different text: no cache, no permit left
+
+        assertThat(second.status()).isEqualTo(OffSearchStatus.RATE_LIMITED);
+        assertThat(second.items()).isEmpty();
+        verify(client, times(1)).searchByName(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void aCacheHitTakesNoPermit() {
+        FoodNameSearchServiceImpl capped = serviceWithCap(1);
+        when(client.searchByName("tej", "hu", HU_TAG, 20)).thenReturn(List.of(hit("1", "Tej")));
+
+        assertThat(capped.search("tej", "hu").status()).isEqualTo(OffSearchStatus.OK);
+        assertThat(capped.search("tej", "hu").status()).isEqualTo(OffSearchStatus.OK);
+        assertThat(capped.search("tej", "hu").status()).isEqualTo(OffSearchStatus.OK);
+    }
+
+    @Test
+    void aHungarianSearchThatFallsBackCostsTwoPermits() {
+        FoodNameSearchServiceImpl capped = serviceWithCap(2);
+        when(client.searchByName("pumpkin", "hu", HU_TAG, 20)).thenReturn(List.of());
+        when(client.searchByName("pumpkin", "en", null, 20)).thenReturn(List.of(hit("9", "Pumpkin")));
+
+        assertThat(capped.search("pumpkin", "hu").fellBackToEnglish()).isTrue();
+
+        assertThat(capped.search("tej", "hu").status()).isEqualTo(OffSearchStatus.RATE_LIMITED);
+        verify(client, times(2)).searchByName(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void theCapFrees_aMinuteLater() {
+        FoodNameSearchServiceImpl capped = serviceWithCap(1);
+        when(client.searchByName("tej", "hu", HU_TAG, 20)).thenReturn(List.of(hit("1", "Tej")));
+        when(client.searchByName("sajt", "hu", HU_TAG, 20)).thenReturn(List.of(hit("2", "Sajt")));
+        capped.search("tej", "hu");
+        assertThat(capped.search("sajt", "hu").status()).isEqualTo(OffSearchStatus.RATE_LIMITED);
+
+        clock.advance(Duration.ofSeconds(60));
+
+        assertThat(capped.search("sajt", "hu").status()).isEqualTo(OffSearchStatus.OK);
+    }
+
+    @Test
+    void aCapOfZeroIsAnOffSwitch() {
+        FoodNameSearchServiceImpl off = serviceWithCap(0);
+
+        assertThat(off.search("tej", "hu").status()).isEqualTo(OffSearchStatus.RATE_LIMITED);
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    void anUnsearchableQueryCostsNoPermitAndNoCall() {
+        FoodNameSearchServiceImpl capped = serviceWithCap(1);
+        when(client.searchByName("tej", "hu", HU_TAG, 20)).thenReturn(List.of(hit("1", "Tej")));
+
+        OffSearchResponse nothing = capped.search("  :\"* ", "hu");
+
+        assertThat(nothing.status()).isEqualTo(OffSearchStatus.OK);
+        assertThat(nothing.items()).isEmpty();
+        assertThat(capped.search("tej", "hu").status()).isEqualTo(OffSearchStatus.OK); // the permit was still there
     }
 
     // ---- dedupe and ownership

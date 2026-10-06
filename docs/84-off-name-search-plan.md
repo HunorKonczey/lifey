@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–2 (backend client, search service) built, Prompts 3–11 not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–3 (backend client, search service, cache + limiter) built, Prompts 4–11 not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -368,12 +368,44 @@ not see that food any more), but saving it will answer 409, and "re-fetch foods 
 nothing. Prompt 7 must decide how to handle it (likely: let `POST /foods` revive a tombstoned food with the same
 barcode instead of failing — a small backend change — or save without the barcode).
 
-## Prompt 3 — Backend: cache and global limiter
+## Prompt 3 — Backend: cache and global limiter ✅ (2026-10-06)
 - `OffSearchCache` (bounded LRU + TTL, key `lang|normalised query`), `OffSearchLimiter`; wired into the
   service. Normalise like the web (`normalizeForSearch`: trim, lowercase, accents folded).
 Verification: unit tests — second identical call is a cache hit (stub client called once); different
 `lang` is a miss; `UNAVAILABLE` is not cached; limiter over the limit answers `RATE_LIMITED` without a
 client call; TTL expiry with an injected clock.
+
+*As built:* `OffSearchCache` (bounded LRU, 500 entries, 10 min TTL, access order, `Clock` injected) and
+`OffSearchLimiter` (sliding window of call times over the last 60 s, size `search-per-minute`) are package-private
+components in `nutrition/food/service/`, used by `FoodNameSearchServiceImpl.searchPass`. Decisions made while building:
+- **The cache sits at the pass, not around the whole response.** What is stored is the quality-filtered pass result
+  *before* the user's own foods are dropped — the same for everyone — and ownership is applied afterwards for the
+  caller. (A cache around the finished response would have served user A's "you already own this" filtering to
+  user B; a test pins it.) Key: `<lang>|<sanitised text>`; the Hungary restriction follows the language, so it is
+  implied.
+- **The key keeps accents.** The plan said "accents folded like the web"; that is only safe if OFF itself treats
+  "turo" and "túró" alike, which the spike did not check, so a folded key could serve the wrong answer. Revisit if
+  the hit rate proves low.
+- **An empty pass is cached** (a repeated "sütőtök" does not call OFF again); a failed call is not.
+- **A cache hit takes no permit; a real call takes one; a Hungarian search that falls back takes two.** Over the cap
+  the pass throws `OffRateLimitedException` and the service answers `RATE_LIMITED` without calling OFF. A cap of
+  `0` (or less) allows nothing — usable as an off switch via `OPENFOODFACTS_SEARCH_PER_MINUTE=0`.
+- An unsearchable text (nothing left after sanitising) returns empty before the cache and the limiter: no call,
+  no permit, nothing cached.
+- The service now hands OFF the **sanitised** text (the client sanitises again, which is idempotent), so the cache
+  key and the request cannot disagree.
+
+Tests (all without Docker): `OffSearchCacheTest` 8 (miss/hit, language in the key, empty is an answer, TTL
+boundary to the millisecond, replacing an expired entry, LRU eviction, copy-in and read-only-out),
+`OffSearchLimiterTest` 5 (limit then refusal, a refusal is not a call, the window slides at exactly 60 s, 0 and
+negative allow nothing, **64 threads on a limit of 8 get exactly 8**), and 13 more cases in
+`FoodNameSearchServiceImplTest` (now 32): second identical search served from cache, a fallback caches both
+passes, per-user ownership on a cached result, TTL expiry, over the cap without an OFF call, hits take no permit,
+fallback costs two, the cap frees after a minute, cap 0, unsearchable text costs nothing.
+
+Not covered here: the Spring wiring of the two components (a context test needs Postgres, as every
+`@SpringBootTest` here does). Both have a single `@Autowired` constructor and take the existing `Clock` bean
+(`ClockConfig`); the first CI run of the integration tests is the check.
 
 ## Prompt 4 — Backend: the endpoint
 - `FoodController`: `GET /off-search` (`@RequestParam q` min length 3 → 400 otherwise, `lang`),
