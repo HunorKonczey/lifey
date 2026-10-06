@@ -68,13 +68,7 @@ class AuthInterceptor extends Interceptor {
       // Shared across both Dio clients: the refresh token is single-use, so two
       // simultaneous rotations would spend it twice and sign the user out.
       await _refresher.refresh();
-      final token = await _tokenStorage.readAccessToken();
-      final retryOptions = err.requestOptions
-        ..extra = {...err.requestOptions.extra, 'retried': true}
-        ..headers = {...err.requestOptions.headers, 'Authorization': 'Bearer $token'};
-      final response = await _retryDio().fetch<dynamic>(retryOptions);
-      handler.resolve(response);
-    } catch (_) {
+    } catch (refreshError) {
       // A request that started before the user was signed in (e.g. a
       // resume-triggered background sync fired by the OS UI overlay during
       // Google sign-in) can still land here *after* a fresh login has
@@ -82,12 +76,39 @@ class AuthInterceptor extends Interceptor {
       // different token than the one this stale request failed with, a
       // newer session is already active — don't tear it down over it.
       final currentToken = await _tokenStorage.readAccessToken();
-      if (currentToken == null || currentToken == requestToken) {
+      final stillTheSameSession = currentToken == null || currentToken == requestToken;
+      // And only a *refusal* of the refresh token ends a session. A refresh that failed for want of a
+      // connection, a timeout or a 5xx (the API restarting, a cold start behind the gateway) says
+      // nothing about the token: signing the user out then made every flaky moment a forced sign-in.
+      if (stillTheSameSession && _isRefreshRefusal(refreshError)) {
         await _tokenStorage.clear();
         _onSessionExpired();
       }
       handler.next(err);
+      return;
     }
+
+    try {
+      final token = await _tokenStorage.readAccessToken();
+      final retryOptions = err.requestOptions
+        ..extra = {...err.requestOptions.extra, 'retried': true}
+        ..headers = {...err.requestOptions.headers, 'Authorization': 'Bearer $token'};
+      final response = await _retryDio().fetch<dynamic>(retryOptions);
+      handler.resolve(response);
+    } catch (retryError) {
+      // The session is fine now (the refresh worked); what failed is the request itself, and its own
+      // answer — a validation error, a conflict — is what the caller needs, not the stale 401.
+      handler.next(retryError is DioException ? retryError : err);
+    }
+  }
+
+  /// The refresh endpoint answered with a 4xx (the refresh token is invalid, expired or revoked), or there
+  /// was no refresh token to send at all.
+  static bool _isRefreshRefusal(Object error) {
+    if (error is StateError) return true;
+    if (error is! DioException) return false;
+    final status = error.response?.statusCode;
+    return status != null && status >= 400 && status < 500;
   }
 
   String? _bearerToken(String? header) {
