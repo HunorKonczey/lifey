@@ -23,7 +23,7 @@ public class BarcodeLookupServiceImpl implements BarcodeLookupService {
 
     @Override
     public BarcodeLookupResponse lookup(String barcode) {
-        return foodRepository.findByUserIdAndBarcode(currentUserProvider.getUserId(), barcode)
+        return foodRepository.findByUserIdAndBarcodeAndDeletedAtIsNull(currentUserProvider.getUserId(), barcode)
                 .map(this::toLocalResponse)
                 .orElseGet(() -> lookupOnOpenFoodFacts(barcode));
     }
