@@ -112,19 +112,24 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   logout: async () => {
+    // Read before it is cleared: the refresh token is what the server revokes, and on a cross-site setup the
+    // httpOnly cookie is not always sent along, so the request carries it itself.
+    const refreshToken = getStoredRefreshToken() ?? undefined;
     setAccessToken(null);
     clearRefreshToken();
     queryClient.clear();
     set({ user: null, initFailed: false });
-    try { await authApi.logout(); } catch { /* ignore */ }
+    try { await authApi.logout(refreshToken); } catch { /* ignore */ }
   },
 
   logoutAll: async () => {
+    // Asked *before* the access token is dropped: this endpoint identifies the user by it, and with the token
+    // already cleared the request was a 401 - "log out of every device" revoked nothing on the server.
+    try { await authApi.logoutAll(); } catch { /* signed out here either way */ }
     setAccessToken(null);
     clearRefreshToken();
     queryClient.clear();
     set({ user: null, initFailed: false });
-    try { await authApi.logoutAll(); } catch { /* ignore */ }
   },
 
   initialize: async () => {

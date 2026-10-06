@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -17,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -57,6 +59,23 @@ class RoleBasedAccessControlTest {
     void offSearch_withoutAToken_isUnauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/foods/off-search").param("q", "csirkemell").param("lang", "hu"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    /**
+     * Both clients clear their access token before calling logout (it is the refresh token in the body that
+     * authorises the revoke), so the endpoint must answer without a bearer — a 401 here meant nothing was
+     * ever revoked server-side.
+     */
+    @Test
+    void logout_withoutAnAccessToken_isNotRejectedAsUnauthenticated() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"a-token-the-server-never-issued\"}"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void logoutAll_stillNeedsAnAccessToken() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout-all")).andExpect(status().isUnauthorized());
     }
 
     @Test

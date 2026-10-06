@@ -31,11 +31,16 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @EnableConfigurationProperties({JwtProperties.class, GoogleOAuthProperties.class})
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_ENDPOINTS = {
+    static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/register",
             "/api/v1/auth/login",
             "/api/v1/auth/social/google",
             "/api/v1/auth/refresh",
+            // Authorised by the refresh token in its own body/cookie, which is exactly what it revokes: both
+            // clients clear their tokens *before* calling it (the access token is gone by then, or expired),
+            // so requiring a bearer meant every logout answered 401 and no refresh token was ever revoked
+            // server-side - a copied one stayed good for its whole 30 days.
+            "/api/v1/auth/logout",
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
             // Public accept/decline links from the trainer invite email (see

@@ -132,3 +132,53 @@ describe("initialize", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("logout", () => {
+  it("tells the server which refresh token to revoke, and clears it locally", async () => {
+    storage.set(RT_KEY, "T1");
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await useSessionStore.getState().logout();
+
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/auth\/logout$/);
+    expect(sentRefreshToken(0)).toBe("T1");
+    expect(storage.has(RT_KEY)).toBe(false);
+    expect(useSessionStore.getState().user).toBeNull();
+  });
+
+  it("signs out locally even when the server cannot be reached", async () => {
+    storage.set(RT_KEY, "T1");
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    await useSessionStore.getState().logout();
+
+    expect(storage.has(RT_KEY)).toBe(false);
+    expect(useSessionStore.getState().user).toBeNull();
+  });
+});
+
+describe("logoutAll", () => {
+  it("asks the server while the access token is still there, then signs out locally", async () => {
+    storage.set(RT_KEY, "T1");
+    setAccessToken("A1");
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await useSessionStore.getState().logoutAll();
+
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/auth\/logout-all$/);
+    expect((fetchMock.mock.calls[0][1]?.headers as Record<string, string>).Authorization).toBe("Bearer A1");
+    expect(storage.has(RT_KEY)).toBe(false);
+    expect(useSessionStore.getState().user).toBeNull();
+  });
+
+  it("signs out locally even when the server cannot be reached", async () => {
+    storage.set(RT_KEY, "T1");
+    setAccessToken("A1");
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    await useSessionStore.getState().logoutAll();
+
+    expect(storage.has(RT_KEY)).toBe(false);
+    expect(useSessionStore.getState().user).toBeNull();
+  });
+});
