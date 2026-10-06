@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// "Today" / "Yesterday" / "1 Aug" chip separating days in the stream.
 class DayDivider extends StatelessWidget {
@@ -20,7 +21,7 @@ class DayDivider extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final that = DateTime(day.year, day.month, day.day);
-    final difference = today.difference(that).inDays;
+    final difference = calendarDaysBetween(that, today);
     if (difference == 0) return l10n.chatToday;
     if (difference == 1) return l10n.chatYesterday;
     final locale = Localizations.localeOf(context).languageCode;

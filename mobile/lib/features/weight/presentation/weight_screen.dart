@@ -33,6 +33,7 @@ import '../domain/weight_entry.dart';
 import 'widgets/add_weight_sheet.dart';
 import 'widgets/weight_goal_band.dart';
 import 'widgets/weight_hero_header.dart';
+import '../../../core/utils/date_math.dart';
 
 /// Weight (canvas Lifey 4 › 4.1; docs/redesign/77-mobile-redesign-plan.md R4):
 /// one hero card — the current weight at 64 px with its two changes, the goal
@@ -314,7 +315,7 @@ class _HistoryRow extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final d = entry.date.toLocal();
-    final diff = today.difference(DateTime(d.year, d.month, d.day)).inDays;
+    final diff = calendarDaysBetween(d, today);
     if (diff == 0) return l10n.weightHistoryTodayLabel;
     if (diff == 1) return l10n.weightHistoryYesterdayLabel;
     return '${f.weekdayShort(d)}, ${f.shortDate(d)}';

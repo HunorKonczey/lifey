@@ -4,6 +4,7 @@ import '../../onboarding/data/user_details_repository.dart';
 import '../domain/weight_entry.dart';
 import 'weight_controller.dart';
 import 'weight_trend_data.dart';
+import '../../../core/utils/date_math.dart';
 
 /// The numbers under the weight screen's hero: how the latest weigh-in moved
 /// since the one before it and over the last 30 days, and how far along the
@@ -105,10 +106,10 @@ WeightHeadline? computeWeightHeadline(
   final sinceLast = days.length > 1 ? latestDay.value - days[days.length - 2].value : null;
 
   double? change30d;
-  final windowStart = latestDay.date.subtract(const Duration(days: WeightHeadline.changeWindowDays));
+  final windowStart = addDays(latestDay.date, -WeightHeadline.changeWindowDays);
   final inWindow = days.where((d) => !d.date.isBefore(windowStart)).toList();
   if (inWindow.length > 1) {
-    final span = latestDay.date.difference(inWindow.first.date).inDays;
+    final span = calendarDaysBetween(inWindow.first.date, latestDay.date);
     if (span >= WeightHeadline.minChangeSpanDays) change30d = latestDay.value - inWindow.first.value;
   }
 

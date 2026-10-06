@@ -15,6 +15,35 @@ List<TimeSeriesPoint> _daily(int days, {double from = 90, double kgPerDay = 0}) 
     [for (var i = 0; i < days; i++) _p(i, from + kgPerDay * i)];
 
 void main() {
+  group('across a clock change', () {
+    // Dates as the app has them: local midnights built from the calendar (a weigh-in is "2026-10-26"),
+    // not 24 h steps from a start.
+    TimeSeriesPoint day(int month, int dayOfMonth, double value) =>
+        TimeSeriesPoint(date: DateTime(2026, month, dayOfMonth), value: value);
+
+    test('the seven-day window still holds seven days after the night the clocks go back', () {
+      // Oct 20..26 are seven calendar days, 145 hours between the first midnight and the last: a window
+      // cut 144 h back started at 01:00 on the 20th and dropped that day's weigh-in.
+      final points = [for (var d = 20; d <= 26; d++) day(10, d, d.toDouble())];
+
+      final trend = movingAverage(points);
+
+      expect(trend.last, closeTo((20 + 21 + 22 + 23 + 24 + 25 + 26) / 7, 1e-9));
+    });
+
+    test('the goal projection measures the same span over the spring change', () {
+      // 28 daily points, Mar 10 .. Apr 6, a steady -0.1 kg/day: the slope must come out as exactly that,
+      // whatever the 23-hour day does to a difference in hours.
+      final points = [
+        for (var i = 0; i < 28; i++) TimeSeriesPoint(date: DateTime(2026, 3, 10 + i), value: 90 - 0.1 * i),
+      ];
+
+      final projection = projectGoal(points: points, trend: List<double?>.generate(28, (i) => 90 - 0.1 * i), goalKg: 80)!;
+
+      expect(projection.kgPerWeek, closeTo(-0.7, 1e-9));
+    });
+  });
+
   group('movingAverage', () {
     test('averages the trailing 7 days, not the trailing 7 entries', () {
       // Two entries three weeks apart: the later one has an empty window

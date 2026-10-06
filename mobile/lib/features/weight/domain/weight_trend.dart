@@ -1,4 +1,5 @@
 import '../../../shared/widgets/charts/time_series_chart.dart';
+import '../../../core/utils/date_math.dart';
 
 /// The 7-day moving average and the goal projection behind it
 /// (docs/76-smarter-weight-trend-plan.md). Pure functions over points the
@@ -35,7 +36,7 @@ const int maxProjectionDays = 730;
 List<double?> movingAverage(List<TimeSeriesPoint> points, {int windowDays = trendWindowDays}) {
   final trend = List<double?>.filled(points.length, null);
   for (var i = 0; i < points.length; i++) {
-    final windowStart = points[i].date.subtract(Duration(days: windowDays - 1));
+    final windowStart = addDays(points[i].date, -(windowDays - 1));
     var sum = 0.0;
     var count = 0;
     // Points are oldest-first, so walking back stops as soon as we leave the
@@ -126,7 +127,7 @@ WeightProjection? projectGoal({
   final recent = _lastDays(series, rateWindowDays);
   final spanDays = recent.isEmpty
       ? 0
-      : recent.last.date.difference(recent.first.date).inDays;
+      : calendarDaysBetween(recent.first.date, recent.last.date);
   if (recent.length < minProjectionPoints || spanDays < minProjectionSpanDays) {
     return WeightProjection(
       state: WeightProjectionState.notEnoughData,
@@ -172,14 +173,14 @@ WeightProjection? projectGoal({
 }
 
 List<TimeSeriesPoint> _lastDays(List<TimeSeriesPoint> series, int days) {
-  final from = series.last.date.subtract(Duration(days: days - 1));
+  final from = addDays(series.last.date, -(days - 1));
   return series.where((p) => !p.date.isBefore(from)).toList();
 }
 
 /// Least-squares slope in kg/day (D-W5) — x is days since the first point.
 double _slopePerDay(List<TimeSeriesPoint> series) {
   final origin = series.first.date;
-  final xs = [for (final p in series) p.date.difference(origin).inDays.toDouble()];
+  final xs = [for (final p in series) calendarDaysBetween(origin, p.date).toDouble()];
   final meanX = xs.reduce((a, b) => a + b) / xs.length;
   final meanY = series.map((p) => p.value).reduce((a, b) => a + b) / series.length;
 

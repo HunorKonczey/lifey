@@ -12,3 +12,12 @@ DateTime addDays(DateTime date, int days) => date.isUtc
         date.second, date.millisecond, date.microsecond)
     : DateTime(date.year, date.month, date.day + days, date.hour, date.minute,
         date.second, date.millisecond, date.microsecond);
+
+/// Whole calendar days from [from] to [to] (negative when [to] is earlier), ignoring the time of day.
+///
+/// `to.difference(from).inDays` counts 24-hour blocks and truncates, so across the night the clocks go
+/// forward (a 23-hour day) one day apart reads as 0 — "yesterday" labelled "today", a 30-day trial with
+/// 29 days left. Comparing the two dates as UTC midnights has no daylight-saving change in it.
+int calendarDaysBetween(DateTime from, DateTime to) => DateTime.utc(to.year, to.month, to.day)
+    .difference(DateTime.utc(from.year, from.month, from.day))
+    .inDays;

@@ -13,6 +13,7 @@ import '../../../../shared/widgets/ds/list_group.dart';
 import '../../../../shared/widgets/ds/section_label.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../subscription/application/subscription_controller.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// Settings subscription tile (`docs/landing_page/67-mobile-free-pro-plan.md`
 /// §4.4, `69` frame P14). Renders the *resolved* `source` — never a merge of
@@ -60,7 +61,7 @@ class SubscriptionTile extends ConsumerWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final endDay = DateTime(trialEndsAt.year, trialEndsAt.month, trialEndsAt.day);
-    final days = endDay.difference(today).inDays;
+    final days = calendarDaysBetween(today, endDay);
     return days < 0 ? 0 : days;
   }
 

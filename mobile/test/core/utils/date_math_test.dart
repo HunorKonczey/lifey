@@ -44,4 +44,29 @@ void main() {
       expect(moved, DateTime.utc(2026, 10, 25, 22));
     });
   });
+
+  group('calendarDaysBetween', () {
+    test('adjacent days are one apart, also over the night the clocks go forward', () {
+      // `difference().inDays` of those two midnights is 0 where the day has 23 hours.
+      expect(calendarDaysBetween(DateTime(2026, 3, 29), DateTime(2026, 3, 30)), 1);
+      expect(calendarDaysBetween(DateTime(2026, 3, 28), DateTime(2026, 3, 29)), 1);
+    });
+
+    test('and over the night they go back', () {
+      expect(calendarDaysBetween(DateTime(2026, 10, 24), DateTime(2026, 10, 25)), 1);
+      expect(calendarDaysBetween(DateTime(2026, 10, 25), DateTime(2026, 10, 26)), 1);
+    });
+
+    test('a span that crosses a change counts its calendar days', () {
+      expect(calendarDaysBetween(DateTime(2026, 3, 24), DateTime(2026, 3, 30)), 6);
+      expect(calendarDaysBetween(DateTime(2026, 3, 10), DateTime(2026, 4, 9)), 30);
+      expect(calendarDaysBetween(DateTime(2026, 10, 20), DateTime(2026, 10, 26)), 6);
+    });
+
+    test('ignores the time of day and is negative backwards', () {
+      expect(calendarDaysBetween(DateTime(2026, 10, 5, 23, 59), DateTime(2026, 10, 6, 0, 1)), 1);
+      expect(calendarDaysBetween(DateTime(2026, 10, 6), DateTime(2026, 10, 1)), -5);
+      expect(calendarDaysBetween(DateTime(2026, 10, 6, 8), DateTime(2026, 10, 6, 20)), 0);
+    });
+  });
 }

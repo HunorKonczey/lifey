@@ -9,6 +9,7 @@ import '../../../../shared/widgets/ds/sparkline.dart';
 import '../../../settings/domain/user_settings.dart';
 import '../../../weight/domain/weight_entry.dart';
 import '../../domain/daily_stats.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// The change between the two most recent weigh-ins, signed: negative = lost.
 /// Null when there are fewer than two entries, or the weight didn't change.
@@ -139,7 +140,7 @@ class DashboardTiles extends StatelessWidget {
     final clock = now ?? DateTime.now();
     final today = DateTime(clock.year, clock.month, clock.day);
     final day = DateTime(date.year, date.month, date.day);
-    final diff = today.difference(day).inDays;
+    final diff = calendarDaysBetween(day, today);
     if (diff == 0) return l10n.dashboardDayToday;
     if (diff == 1) return l10n.dashboardDayYesterday;
     return f.shortDate(day);
