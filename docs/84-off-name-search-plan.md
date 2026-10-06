@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–10 (backend, web and mobile complete) built, Prompt 11 (close) not started
+Status: built (2026-10-06) on branch `feature/off-name-search` — backend, web and mobile, Prompts 0–11. Owed before it ships: the CI run of the Docker-dependent tests, one manual run against the real backend and the real OpenFoodFacts, and the emulator walk (see "Close-out" under Prompt 11). Not yet merged; the three PRs of the split are still to be cut
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -657,9 +657,43 @@ suffix, a double tap creates one food). 231 nutrition tests green, `flutter anal
 **Not run on an emulator/device** (no offline-airplane-mode walk): the offline guarantee is shown by the database test
 (no request while the adapter is "offline"), not by switching a real network off.
 
-## Prompt 11 — Close
+## Prompt 11 — Close ✅ (2026-10-06)
 - Status here → built; the `docs/README.md` row (added with this plan) updated; note in
   docs/11-v2-pland.md pointing to this plan; Postman updated; the spike table kept.
+
+### Close-out (2026-10-06)
+**What exists.** One branch, `feature/off-name-search`, one commit per prompt (plan, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, close):
+the backend endpoint `GET /foods/off-search` (client, language-first search with the Hungary-restricted Hungarian pass and
+the English backoff, filter, cache, app-wide limiter), and on both web (Add food dialog) and mobile (add-food-to-meal sheet)
+an opt-in checkbox "Search OpenFoodFacts too", a "From OpenFoodFacts" group, and save-as-own-food-then-log. AI estimation is
+not involved (Non-goals).
+
+**Verified (numbers from the last run).** Backend: 1107 tests, every failure is one of the 35 Docker-dependent classes,
+81 of them new without Docker (client + sanitiser + config 27, service 32, cache 8, limiter 5, controller 9) plus the two Docker-dependent ones below. Web: 1135 unit tests, 36
+add-food e2e cases (gallery fixture), `tsc` and `eslint` clean. Mobile: 3051 tests (75 more than before this plan), `flutter
+analyze` clean.
+
+**Owed before it ships — none of these could be done in the build environment:**
+1. **CI run of the Docker tests**: `FoodOwnedBarcodesRepositoryTest` (user scope, tombstones excluded from the owned
+   list), `RoleBasedAccessControlTest.offSearch_withoutAToken_isUnauthorized` (401), and the first Spring start-up that
+   wires `OffSearchCache`, `OffSearchLimiter` and the second `RestClient` (a JPQL or wiring mistake would show there).
+2. **A manual run against the real stack** (backend + Postgres + the real search.openfoodfacts.org): the endpoint with
+   `csirkemell` (hu) / `pumpkin` (hu → English) / `snickers` (en); the web dialog logging an OFF product, then the same product
+   again (it must now be in the own list, not the OFF group); the real 409 behaviour of `POST /foods` for a name clash. Watch
+   the backend log for 429/503 from OFF and tune `OPENFOODFACTS_SEARCH_PER_MINUTE` (D7: the search-a-licious limit is
+   undocumented). Read the first five rows per term, do not count hits (risk list).
+3. **The mobile emulator walk**: tick, type, pick, log; then airplane mode (checkbox disabled, own foods fine, a picked OFF
+   product already saved locally still logs); 1.0× and 1.3× text. Widget tests and a real in-memory database stand in for it.
+
+**Known gaps, none blocking.** (a) Mobile cannot see, offline, that a *deleted* food still holds the barcode on the server; the
+create then fails at sync like a scanned barcode does today (the web saves it without the barcode in that case). (b) A
+Hungarian-language user abroad searches Hungarian products first (D12's accepted cost). (c) Products with kJ only are dropped
+(Non-goals). (d) The cache key keeps accents; folding them is only safe once OFF's own accent handling is known.
+
+**Suggested merge order** (the PR split above): backend first (the endpoint can be exercised with curl / Postman on its own),
+then web, then mobile. Everything is on one branch, so cutting the three PRs means taking the commits in that order
+(`ac787642`…`ac5ccb9b` the plan, `026a183e`…`6f04908e` backend, `a9ac76ab`…`5c9baa6e` web, `0a1b3261`…`104c04cd` mobile; the
+plan commits go with the first PR) — or merging the one branch if a single review is preferred.
 
 ## 5. After implementation
 - Update this doc's Status and the README row; add the spike results permanently.

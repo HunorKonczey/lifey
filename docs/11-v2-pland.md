@@ -1,5 +1,8 @@
 # V2 Plan — Barcode Scanner + OpenFoodFacts
 
+> **See also:** [84 – Food search by name in OpenFoodFacts](84-off-name-search-plan.md) — the same OpenFoodFacts proxy,
+> now also searchable by product name (opt-in in the add-food dialog / sheet, Hungarian first, English backoff).
+
 ## Goal
 
 The user scans a barcode → the app looks up the product → the nutrition values
