@@ -5,7 +5,11 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.dto.BarcodeLookupResponse;
 import com.lifey.nutrition.food.dto.BarcodeSource;
 import com.lifey.nutrition.food.dto.FoodResponse;
+import com.lifey.nutrition.food.dto.OffSearchItem;
+import com.lifey.nutrition.food.dto.OffSearchResponse;
+import com.lifey.nutrition.food.dto.OffSearchStatus;
 import com.lifey.nutrition.food.service.BarcodeLookupService;
+import com.lifey.nutrition.food.service.FoodNameSearchService;
 import com.lifey.nutrition.food.service.FoodService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +42,9 @@ class FoodControllerTest {
 
     @MockitoBean
     BarcodeLookupService barcodeLookupService;
+
+    @MockitoBean
+    FoodNameSearchService foodNameSearchService;
 
     @Test
     void list_returnsOkWithJson() throws Exception {
@@ -205,5 +212,113 @@ class FoodControllerTest {
         mockMvc.perform(get("/api/v1/foods/barcode/0000000000000"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    // ---- GET /foods/off-search (docs/84)
+
+    private static OffSearchResponse found(String language, boolean fellBack) {
+        return new OffSearchResponse(OffSearchStatus.OK, language, fellBack,
+                List.of(new OffSearchItem("4056489827702", "Csirkemell", "Pikok", 110.0, 14.0, 2.4, 4.9)));
+    }
+
+    @Test
+    void offSearch_returnsTheResponseShape() throws Exception {
+        when(foodNameSearchService.search("csirkemell", "hu")).thenReturn(found("hu", false));
+
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "csirkemell").param("lang", "hu"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OK"))
+                .andExpect(jsonPath("$.language").value("hu"))
+                .andExpect(jsonPath("$.fellBackToEnglish").value(false))
+                .andExpect(jsonPath("$.items[0].barcode").value("4056489827702"))
+                .andExpect(jsonPath("$.items[0].name").value("Csirkemell"))
+                .andExpect(jsonPath("$.items[0].brand").value("Pikok"))
+                .andExpect(jsonPath("$.items[0].caloriesPer100g").value(110.0))
+                .andExpect(jsonPath("$.items[0].proteinPer100g").value(14.0))
+                .andExpect(jsonPath("$.items[0].carbsPer100g").value(2.4))
+                .andExpect(jsonPath("$.items[0].fatPer100g").value(4.9));
+    }
+
+    @Test
+    void offSearch_reportsAnEnglishFallback() throws Exception {
+        when(foodNameSearchService.search("pumpkin", "hu")).thenReturn(found("en", true));
+
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "pumpkin").param("lang", "hu"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.language").value("en"))
+                .andExpect(jsonPath("$.fellBackToEnglish").value(true));
+    }
+
+    @Test
+    void offSearch_languageDefaultsToEnglish() throws Exception {
+        when(foodNameSearchService.search("snickers", "en")).thenReturn(found("en", false));
+
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "snickers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.language").value("en"));
+
+        verify(foodNameSearchService).search("snickers", "en");
+    }
+
+    @Test
+    void offSearch_handsTheTextOnAsTyped_sanitisingIsTheServicesJob() throws Exception {
+        when(foodNameSearchService.search(eq("Túró Rudi"), eq("hu"))).thenReturn(found("hu", false));
+
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "Túró Rudi").param("lang", "hu"))
+                .andExpect(status().isOk());
+
+        verify(foodNameSearchService).search("Túró Rudi", "hu");
+    }
+
+    @Test
+    void offSearch_anOpenFoodFactsProblemIsStillHttp200WithAStatus() throws Exception {
+        when(foodNameSearchService.search("tej", "hu"))
+                .thenReturn(new OffSearchResponse(OffSearchStatus.UNAVAILABLE, "hu", false, List.of()));
+        when(foodNameSearchService.search("sajt", "hu"))
+                .thenReturn(new OffSearchResponse(OffSearchStatus.RATE_LIMITED, "hu", false, List.of()));
+
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "tej").param("lang", "hu"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UNAVAILABLE"))
+                .andExpect(jsonPath("$.items").isEmpty());
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "sajt").param("lang", "hu"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RATE_LIMITED"));
+    }
+
+    @Test
+    void offSearch_exactlyThreeLettersIsEnough() throws Exception {
+        when(foodNameSearchService.search("tej", "en")).thenReturn(found("en", false));
+
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "tej")).andExpect(status().isOk());
+    }
+
+    @Test
+    void offSearch_tooShortIs400_andOffIsNotAsked() throws Exception {
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "ab"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("at least 3")));
+
+        verifyNoInteractions(foodNameSearchService);
+    }
+
+    @Test
+    void offSearch_theMinimumCountsLettersAndDigitsAfterSanitising() throws Exception {
+        for (String q : new String[]{"   ", ":::", "---", "\"a\"", "a b", "  ab  ", "ab:*", ""}) {
+            mockMvc.perform(get("/api/v1/foods/off-search").param("q", q))
+                    .andExpect(status().isBadRequest());
+        }
+
+        verifyNoInteractions(foodNameSearchService);
+    }
+
+    @Test
+    void offSearch_aMissingQIs400() throws Exception {
+        mockMvc.perform(get("/api/v1/foods/off-search"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Missing required parameter: q"));
+
+        verifyNoInteractions(foodNameSearchService);
     }
 }

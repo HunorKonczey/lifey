@@ -52,6 +52,13 @@ class RoleBasedAccessControlTest {
     @Autowired
     JwtService jwtService;
 
+    /** The OpenFoodFacts name search (docs/84) is rationed; it must not be reachable without a login. */
+    @Test
+    void offSearch_withoutAToken_isUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/foods/off-search").param("q", "csirkemell").param("lang", "hu"))
+                .andExpect(status().isUnauthorized());
+    }
+
     @Test
     void plainUser_isForbiddenFromTrainerEndpoints() throws Exception {
         mockMvc.perform(get("/api/v1/trainer/clients").header("Authorization", "Bearer " + tokenFor(1L, Role.ROLE_USER)))

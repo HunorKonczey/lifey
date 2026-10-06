@@ -11,6 +11,7 @@ const options = (page: Page) => dialog(page).getByRole("option");
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/dev/design");
+  await page.evaluate(() => window.localStorage.removeItem("lifey.addFood.offSearch")); // each test starts with the box off
   await page.getByRole("heading", { name: "Add food dialog", exact: true }).scrollIntoViewIfNeeded();
   await page.getByTestId("open-add-food").click();
   await expect(dialog(page)).toBeVisible();
@@ -103,4 +104,171 @@ test("an empty result offers to create the food under the typed name", async ({ 
 test("Escape closes the dialog", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(dialog(page)).toHaveCount(0);
+});
+
+// ── "Search OpenFoodFacts too" (docs/84): the gallery replaces the backend with canned answers ──
+
+const offBox = (page: Page) => dialog(page).getByRole("checkbox", { name: "Search OpenFoodFacts too" });
+const offSection = (page: Page) => dialog(page).getByTestId("off-section");
+const offRequests = (page: Page) => page.getByTestId("off-requests");
+
+test("the OpenFoodFacts box is off by default: typing makes no request and shows no section", async ({ page }) => {
+  await expect(offBox(page)).toHaveAttribute("aria-checked", "false");
+  await page.keyboard.type("csirkemell");
+  await expect(offSection(page)).toHaveCount(0);
+  await expect(offRequests(page)).toHaveText("OpenFoodFacts requests: 0");
+});
+
+test("ticked: a 'From OpenFoodFacts' section under the own results, with name, brand, OFF tag and kcal / 100 g", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("csirkemell");
+
+  await expect(offSection(page).getByText("From OpenFoodFacts")).toBeVisible();
+  const rows = offSection(page).getByRole("option");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText("Csirkemell");
+  await expect(rows.nth(0)).toContainText("Pikok");
+  await expect(rows.nth(0)).toContainText("OFF");
+  await expect(rows.nth(0)).toContainText("110 kcal / 100 g");
+  await expect(rows.nth(2)).toContainText("Nádudvari");
+  await expect(offRequests(page)).toHaveText("OpenFoodFacts requests: 1");
+});
+
+test("the own results and their count are not touched by OpenFoodFacts rows", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("joghurt");
+  await expect(dialog(page).getByText("4 results")).toBeVisible();
+  // none of the fixture's OpenFoodFacts products matches "joghurt": the section says so, the own rows stay
+  await expect(offSection(page)).toContainText("Nothing found on OpenFoodFacts.");
+  await expect(dialog(page).getByRole("option")).toHaveCount(4);
+});
+
+test("own results empty but OpenFoodFacts has some: both the empty message and the section show", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("csirkemell");
+  await expect(dialog(page).getByText("Nothing matches that.")).toBeVisible();
+  await expect(offSection(page).getByRole("option")).toHaveCount(3);
+});
+
+test("↓ lands on the first OpenFoodFacts row when there are no own rows, and the preview shows its macros", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("túró");
+  await expect(offSection(page).getByRole("option")).toHaveCount(1); // the answer has arrived
+  // no own row, so ↓ must land on the FIRST OpenFoodFacts row, not skip it
+  await page.keyboard.press("ArrowDown");
+  await expect(offSection(page).getByRole("option").nth(0)).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("preview-title")).toHaveText("Túró Rudi");
+  await expect(dialog(page).getByText("OpenFoodFacts · 400 kcal / 100 g")).toBeVisible();
+  await expect(dialog(page).getByTestId("preview-macros").locator('[data-tile="kcal"]')).toContainText("400");
+});
+
+test("an OpenFoodFacts row is logged like a food: quantity, meal, Add — and the dialog stays for the next one", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("csirkemell");
+  await expect(offSection(page).getByRole("option")).toHaveCount(3);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Tab");
+  await expect(dialog(page).getByRole("textbox", { name: "Quantity" })).toBeFocused();
+  await page.keyboard.type("250");
+  await dialog(page).getByRole("radio", { name: "Lunch" }).click();
+  await expect(page.getByTestId("preview-macros").locator('[data-tile="kcal"]')).toContainText("275"); // 110 × 2.5
+
+  await dialog(page).getByRole("button", { name: "Add to lunch" }).click();
+
+  await expect(page.getByTestId("added-log")).toHaveText("Added: Csirkemell 250 g LUNCH");
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).getByRole("combobox")).toHaveValue(""); // a clean search for the next one
+  await expect(offSection(page)).toHaveCount(0);
+  await expect(offBox(page)).toHaveAttribute("aria-checked", "true"); // the option stays on
+});
+
+test("Enter in the search field adds the highlighted OpenFoodFacts row with the default 100 g", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("túró");
+  await expect(offSection(page).getByRole("option")).toHaveCount(1);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByTestId("added-log")).toHaveText("Added: Túró Rudi 100 g DINNER");
+});
+
+test("↓ from the last own row continues into the OpenFoodFacts rows, and ↑ goes back", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("skyr"); // one own row (Skyr natúr) and one OpenFoodFacts row
+  await expect(options(page)).toHaveCount(2);
+  await expect(options(page).nth(0)).toHaveAttribute("aria-selected", "true");
+
+  await page.keyboard.press("ArrowDown");
+  await expect(options(page).nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(offSection(page).getByRole("option")).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("preview-title")).toHaveText("Skyr vaníliás");
+
+  await page.keyboard.press("ArrowDown"); // already last: stays put
+  await expect(options(page).nth(1)).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("ArrowUp");
+  await expect(options(page).nth(0)).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("preview-title")).toHaveText("Skyr natúr");
+});
+
+test("a row's source line names the brand, or OpenFoodFacts when there is none", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("túró");
+  await expect(offSection(page).getByRole("option").nth(0)).toContainText("OpenFoodFacts"); // no brand
+});
+
+test("the English fallback, unavailable and rate-limited each get their one line", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("pumpkin");
+  await expect(offSection(page).getByRole("note")).toHaveText("Nothing found among products sold in Hungary — showing English-language results from everywhere.");
+  await expect(offSection(page).getByRole("option")).toHaveCount(1);
+
+  await dialog(page).getByRole("combobox").fill("unavail");
+  await expect(offSection(page).getByRole("note")).toHaveText("OpenFoodFacts isn't answering right now.");
+  await expect(offSection(page).getByRole("option")).toHaveCount(0);
+
+  await dialog(page).getByRole("combobox").fill("limited");
+  await expect(offSection(page).getByRole("note")).toHaveText("Too many searches — try again in a minute.");
+
+  await dialog(page).getByRole("combobox").fill("boom");
+  await expect(offSection(page).getByRole("note")).toHaveText("OpenFoodFacts isn't answering right now.");
+});
+
+test("while OpenFoodFacts is still answering, one 'Searching…' line, not a spinner over the list", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("slowpoke");
+  await expect(offSection(page).getByRole("status")).toHaveText("Searching OpenFoodFacts…");
+});
+
+test("under 3 letters the section asks for more and makes no request", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("cs");
+  await expect(offSection(page)).toContainText("Type at least 3 letters to search OpenFoodFacts.");
+  await expect(offRequests(page)).toHaveText("OpenFoodFacts requests: 0");
+  await page.keyboard.type("i");
+  await expect(offRequests(page)).toHaveText("OpenFoodFacts requests: 1");
+});
+
+test("unticking removes the section; the choice is remembered on this device", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("csirkemell");
+  await expect(offSection(page)).toBeVisible();
+  await offBox(page).click();
+  await expect(offSection(page)).toHaveCount(0);
+  await offBox(page).click();
+
+  await page.reload();
+  await page.getByRole("heading", { name: "Add food dialog", exact: true }).scrollIntoViewIfNeeded();
+  await page.getByTestId("open-add-food").click();
+  await expect(offBox(page)).toHaveAttribute("aria-checked", "true");
+});
+
+test("on a phone the checkbox is in the sheet and nothing scrolls sideways", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await offBox(page).scrollIntoViewIfNeeded();
+  await expect(offBox(page)).toBeVisible();
+  await offBox(page).click();
+  await page.keyboard.type("csirkemell");
+  await expect(offSection(page).getByRole("option").first()).toBeVisible();
+  const overflow = await dialog(page).evaluate((el) => el.scrollWidth - el.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });

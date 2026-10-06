@@ -18,7 +18,8 @@ import { parseMacroDraft, per100g, type ParsedMacroEntry } from "../../macroEntr
 import { MEAL_TYPE_ORDER } from "../../mealTypeStyle";
 import { buildEntries } from "../../logRecipePortion";
 import { foodPortion, recipePortion, type Macros } from "../../recipeMacros";
-import type { SearchItem } from "../../foodSearch";
+import { offPortion, type ListItem } from "../../offSearch";
+import { ensureOwnFood } from "../../offSave";
 import type { FoodResponse, MealResponse, MealType } from "../../types";
 import { useAddFoodContext } from "./AddFoodModal";
 
@@ -27,8 +28,8 @@ const MEAL_KEY = { BREAKFAST: "breakfast", LUNCH: "lunch", SNACK: "snack", DINNE
 export type AddRequest =
   | {
       kind: "item";
-      item: SearchItem;
-      /** Grams for a food, servings for a recipe. */
+      item: ListItem;
+      /** Grams for a food or an OpenFoodFacts product, servings for a recipe. */
       quantity: number;
       mealType: MealType;
     }
@@ -47,13 +48,14 @@ export interface FoodPreviewPaneViewProps {
   onDone: () => void;
 }
 
-function defaultQuantity(item: SearchItem | null, lastGrams: number | undefined): number {
+function defaultQuantity(item: ListItem | null, lastGrams: number | undefined): number {
   if (!item) return 100;
   return item.kind === "recipe" ? 1 : (lastGrams ?? 100);
 }
 
-function macrosOf(item: SearchItem | null, qty: number, foodsById: ReadonlyMap<number, FoodResponse>): Macros {
+function macrosOf(item: ListItem | null, qty: number, foodsById: ReadonlyMap<number, FoodResponse>): Macros {
   if (!item || qty <= 0) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  if (item.kind === "off") return offPortion(item.off, qty);
   return item.kind === "food" ? foodPortion(item.food, qty) : recipePortion(item.recipe, foodsById, qty);
 }
 
@@ -131,7 +133,11 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     ? t("previewSourceMacros", { g: fmt.integer(entry?.grams ?? 100) })
     : active!.kind === "recipe"
       ? t("previewSourceRecipe", { n: active!.recipe.servings })
-      : t("previewSourceFood", { kcal: fmt.integer(active!.food.caloriesPer100g) });
+      : active!.kind === "off"
+        ? active!.off.brand
+          ? t("previewSourceOffBrand", { brand: active!.off.brand, kcal: fmt.integer(active!.off.caloriesPer100g) })
+          : t("previewSourceOff", { kcal: fmt.integer(active!.off.caloriesPer100g) })
+        : t("previewSourceFood", { kcal: fmt.integer(active!.food.caloriesPer100g) });
 
   const tiles: { key: string; label: string; value: string; color: string; hero?: boolean }[] = [
     { key: "kcal", label: t("previewCalories"), value: fmt.integer(macros.calories), color: "var(--m-kcal)", hero: true },
@@ -346,6 +352,11 @@ export function FoodPreviewPane({
           name: req.item.recipe.name,
           entries: buildEntries(req.item.recipe.ingredients, servings / req.quantity, {}),
         });
+      } else if (req.item.kind === "off") {
+        // An OpenFoodFacts product becomes one of the user's own foods first (a 409 — product or name already
+        // there — is walked through in `ensureOwnFood`), then it is logged like any food (docs/84 D8).
+        const food = await ensureOwnFood(req.item.off, { create: foodApi.create, list: foodApi.list });
+        await addFoodEntry(food.id, req.quantity, mealType);
       } else {
         await addFoodEntry(req.item.food.id, req.quantity, mealType);
       }
@@ -354,7 +365,11 @@ export function FoodPreviewPane({
     onSuccess: (mealType) => {
       show(t("added", { meal: n(MEAL_KEY[mealType]) }), "success");
       // Waited for: the dialog stays open, and the next add must see this meal (and the new "left") to extend it, not start a second one.
-      return queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
+      // The foods too: an OpenFoodFacts product has just become one, and the own list and the recipe macros read them.
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() }),
+      ]);
     },
     onError: () => show(t("addFailed"), "error"),
   });

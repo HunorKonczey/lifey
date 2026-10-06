@@ -128,6 +128,13 @@ lifey:
     # OpenFoodFacts requires a descriptive User-Agent identifying the app and a
     # contact. Override the contact in deployments via OPENFOODFACTS_USER_AGENT.
     user-agent: ${OPENFOODFACTS_USER_AGENT:Lifey/1.0 (hunorkonczey@gmail.com)}
+    # Name search (docs/84) uses OFF's full-text search-a-licious service, not the
+    # product API above. search-per-minute is the app-wide cap on those calls (OFF
+    # documents 10/min/IP for search; one user request can cost two calls).
+    # hu-country-tag restricts a Hungarian-language search to products sold there.
+    search-base-url: ${OPENFOODFACTS_SEARCH_BASE_URL:https://search.openfoodfacts.org}
+    search-per-minute: ${OPENFOODFACTS_SEARCH_PER_MINUTE:8}
+    hu-country-tag: en:hungary
   ai:
     # Anthropic Console API key (not a claude.ai subscription — see
     # docs/23-ai-calorie-estimation-plan.md "API access & costs"). Left empty,

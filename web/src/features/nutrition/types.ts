@@ -34,6 +34,32 @@ export interface BarcodeLookupResponse {
   source: BarcodeSource;
 }
 
+// ─── OpenFoodFacts name search (docs/84) ───
+export type OffSearchStatus = "OK" | "UNAVAILABLE" | "RATE_LIMITED";
+/** The languages the backend searches in; it treats anything else as English. */
+export type OffSearchLang = "hu" | "en";
+
+/** A product found by name — not saved anywhere; it becomes a food when the user logs it. */
+export interface OffSearchItem {
+  barcode: string;
+  name: string;
+  brand: string | null;
+  caloriesPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number | null;
+  fatPer100g: number | null;
+}
+
+export interface OffSearchResponse {
+  /** Anything but OK comes with no items: an OpenFoodFacts problem is not an HTTP error. */
+  status: OffSearchStatus;
+  /** The language the items were searched in. */
+  language: OffSearchLang;
+  /** True only when the user's-language search found nothing and the English one did. */
+  fellBackToEnglish: boolean;
+  items: OffSearchItem[];
+}
+
 // ─── Meals ───
 export interface MealEntryResponse {
   foodId: number;

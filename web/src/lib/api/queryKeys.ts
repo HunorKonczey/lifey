@@ -23,6 +23,9 @@ export const queryKeys = {
     barcode: (barcode: string) => ["foods", "barcode", barcode] as const,
     detail: (id: number) => ["foods", id] as const,
   },
+  /** OpenFoodFacts name search (docs/84). Deliberately **not** under `foods`: saving or editing a food invalidates
+   *  `foods.all`, and that must not re-run (and spend the shared OpenFoodFacts budget on) the open search. */
+  offSearch: (lang: string, text: string) => ["off-search", lang, text] as const,
   meals: {
     all: () => ["meals"] as const,
     byDate: (date: string) => ["meals", "date", date] as const,

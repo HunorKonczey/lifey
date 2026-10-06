@@ -54,7 +54,8 @@ only from within their own subpackage can stay package-private; anything reached
 `mail/` follows the same idea: `MailConfig`, `MailLanguage`, `MailLanguageResolver`, `MailProperties`,
 `MailTemplateRenderer` stay flat; `MailService`/`ResendMailService` live in `mail/service/`.
 
-`nutrition/openfoodfacts/` groups `OpenFoodFactsClient`/`Impl` into `nutrition/openfoodfacts/client/`.
+`nutrition/openfoodfacts/` groups `OpenFoodFactsClient`/`Impl` into `nutrition/openfoodfacts/client/` and its
+`OffUnavailableException`/`OffRateLimitedException` into `nutrition/openfoodfacts/exception/`.
 
 ## Conventions
 

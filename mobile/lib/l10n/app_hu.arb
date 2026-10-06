@@ -1541,5 +1541,15 @@
   "shareToChatNoteHint": "Megjegyzés (opcionális)",
   "shareToChatSend": "Küldés",
   "shareToChatSent": "Megosztva: {name}",
-  "shareToChatOpenChat": "Chat megnyitása"
+  "shareToChatOpenChat": "Chat megnyitása",
+  "offSearchLabel": "Keresés az OpenFoodFactsben is",
+  "offSearchSection": "Az OpenFoodFactsből",
+  "offSearchTag": "OFF",
+  "offSearchSearching": "Keresés az OpenFoodFactsben…",
+  "offSearchNoResults": "Nincs találat az OpenFoodFactsben.",
+  "offSearchTypeMore": "Írj be legalább 3 betűt az OpenFoodFacts kereséséhez.",
+  "offSearchFellBack": "Magyarországon árusított termékek között nincs találat — angol nyelvű találatokat mutatunk, bárhonnan.",
+  "offSearchUnavailable": "Az OpenFoodFacts most nem válaszol.",
+  "offSearchRateLimited": "Túl sok keresés — próbáld újra egy perc múlva.",
+  "offSearchOffline": "Nincs kapcsolat — az OpenFoodFacts-keresés internetet igényel."
 }

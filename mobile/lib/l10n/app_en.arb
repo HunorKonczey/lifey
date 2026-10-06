@@ -6979,5 +6979,45 @@
   "shareToChatOpenChat": "Open chat",
   "@shareToChatOpenChat": {
     "description": "Action on the snackbar after sharing a card: opens the thread it was sent to"
+  },
+  "offSearchLabel": "Search OpenFoodFacts too",
+  "@offSearchLabel": {
+    "description": "Checkbox under the food search field in the add-food-to-meal sheet: also search OpenFoodFacts by name"
+  },
+  "offSearchSection": "From OpenFoodFacts",
+  "@offSearchSection": {
+    "description": "Header of the OpenFoodFacts results group under the user's own foods in the search suggestions"
+  },
+  "offSearchTag": "OFF",
+  "@offSearchTag": {
+    "description": "Small tag on an OpenFoodFacts result row (short for OpenFoodFacts)"
+  },
+  "offSearchSearching": "Searching OpenFoodFacts…",
+  "@offSearchSearching": {
+    "description": "Shown while the OpenFoodFacts search is running"
+  },
+  "offSearchNoResults": "Nothing found on OpenFoodFacts.",
+  "@offSearchNoResults": {
+    "description": "Shown when the OpenFoodFacts search returned nothing"
+  },
+  "offSearchTypeMore": "Type at least 3 letters to search OpenFoodFacts.",
+  "@offSearchTypeMore": {
+    "description": "Hint while fewer than 3 letters are typed and the OpenFoodFacts option is ticked"
+  },
+  "offSearchFellBack": "Nothing found among products sold in Hungary — showing English-language results from everywhere.",
+  "@offSearchFellBack": {
+    "description": "Note when the Hungarian OpenFoodFacts search found nothing and the English one is shown"
+  },
+  "offSearchUnavailable": "OpenFoodFacts isn't answering right now.",
+  "@offSearchUnavailable": {
+    "description": "Note when OpenFoodFacts could not be reached or failed"
+  },
+  "offSearchRateLimited": "Too many searches — try again in a minute.",
+  "@offSearchRateLimited": {
+    "description": "Note when the OpenFoodFacts search is rate-limited"
+  },
+  "offSearchOffline": "You're offline — OpenFoodFacts search needs a connection.",
+  "@offSearchOffline": {
+    "description": "Hint next to the disabled OpenFoodFacts checkbox when the device is offline"
   }
 }
