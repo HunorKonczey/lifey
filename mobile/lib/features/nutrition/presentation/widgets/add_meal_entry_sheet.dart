@@ -17,6 +17,7 @@ import '../../application/selected_meal_day_provider.dart';
 import '../../domain/food.dart';
 import '../../domain/food_usage.dart';
 import '../../domain/meal_days.dart';
+import '../../domain/off_food_plan.dart';
 import '../../domain/off_search.dart';
 import '../barcode_scanner_screen.dart';
 import 'add_food_sheet.dart';
@@ -175,8 +176,41 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
     ref.read(offSearchControllerProvider.notifier).queryChanged(text, lang);
   }
 
-  /// A tap on an OpenFoodFacts row. Saving it as a food and picking it is the next step (docs/84 Prompt 10).
-  void _pickOff(OffSearchItem item) {}
+  bool _savingOff = false;
+
+  /// A tap on an OpenFoodFacts row (docs/84 Prompt 10): the food to log is the user own one for this product — found by
+  /// barcode or name among their foods, or created now through the offline-first stack (a local row plus an outbox entry,
+  /// so it works without a connection and syncs later) — and is then picked exactly like an own suggestion.
+  Future<void> _pickOff(OffSearchItem item) async {
+    // Also ignored while that very product is already the picked food: a second tap in the same frame must not create it twice.
+    if (_savingOff || (_food?.barcode != null && _food!.barcode == item.barcode)) return;
+    _savingOff = true;
+    try {
+      final plan = planOffFood(item, ref.read(foodSearchProvider).value ?? const <Food>[]);
+      final food = switch (plan) {
+        UseExistingFood(:final food) => food,
+        CreateOffFood(:final name) => await ref.read(foodControllerProvider.notifier).addFood(
+              name: name,
+              calories: item.caloriesPer100g,
+              protein: item.proteinPer100g,
+              carbs: item.carbsPer100g,
+              fat: item.fatPer100g,
+              barcode: item.barcode,
+            ),
+      };
+      if (!mounted) return;
+      _foodFieldController?.text = food.name;
+      setState(() {
+        _food = food;
+        _foodError = null;
+      });
+      _gramsFocus.requestFocus();
+    } catch (_) {
+      if (mounted) setState(() => _foodError = AppLocalizations.of(context)!.couldNotSaveFoodMessage);
+    } finally {
+      _savingOff = false;
+    }
+  }
 
   /// Puts [grams] into the field as the user's own choice (a − / + press or a
   /// quick chip), so a later recent-chip tap never overwrites it.

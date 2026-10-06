@@ -71,15 +71,41 @@ const _noBrand = OffSearchItem(barcode: '5997000000001', name: 'Túró Rudi', ca
 OffSearchResult _answer(List<OffSearchItem> items, {OffSearchStatus status = OffSearchStatus.ok, bool fellBack = false}) =>
     OffSearchResult(status: status, language: 'en', fellBackToEnglish: fellBack, items: items);
 
+/// Records what the sheet creates; nothing touches a database.
+class _FakeFoodController extends FoodController {
+  _FakeFoodController(this.created);
+  final List<Map<String, Object?>> created;
+
+  @override
+  Stream<List<Food>> build() => Stream.value(const []);
+
+  @override
+  Future<Food> addFood({
+    required String name,
+    required double calories,
+    required double protein,
+    double? carbs,
+    double? fat,
+    String? barcode,
+    bool hidden = false,
+  }) async {
+    created.add({'name': name, 'calories': calories, 'protein': protein, 'carbs': carbs, 'fat': fat, 'barcode': barcode, 'hidden': hidden});
+    return Food(clientId: 'new-${created.length}', name: name, caloriesPer100g: calories, proteinPer100g: protein, carbsPer100g: carbs, fatPer100g: fat, barcode: barcode);
+  }
+}
+
 late _FakeRepo _repo;
+final _created = <Map<String, Object?>>[];
 
 Future<void> _pump(WidgetTester tester,
-    {bool stored = false, bool offline = false, Food? initialFood, double textScale = 1.0}) async {
+    {bool stored = false, bool offline = false, Food? initialFood, double textScale = 1.0, List<Food>? foods}) async {
   _repo = _FakeRepo();
+  _created.clear();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        foodSearchProvider.overrideWith((ref) => Stream.value([_food('chicken', 'Chicken'), _food('rice', 'Rice')])),
+        foodSearchProvider.overrideWith((ref) => Stream.value(foods ?? [_food('chicken', 'Chicken'), _food('rice', 'Rice')])),
+        foodControllerProvider.overrideWith(() => _FakeFoodController(_created)),
         foodUsageProvider.overrideWith((ref) => Stream.value(const {})),
         settingsControllerProvider.overrideWith(_NoGoal.new),
         mealsOnDayProvider.overrideWith((ref, day) => Stream.value(const <Meal>[])),
@@ -300,6 +326,80 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(_sectionTitle(), findsOneWidget);
+  });
+
+  group('picking an OpenFoodFacts row (Prompt 10)', () {
+    Future<void> openFoundRows(WidgetTester tester, {List<Food>? foods, List<OffSearchItem> items = const [_csirke]}) async {
+      await _pump(tester, foods: foods);
+      await _tick(tester);
+      await _type(tester, 'csirkemell');
+      await _debounce(tester);
+      await _answerLast(tester, _answer(items));
+    }
+
+    testWidgets('creates the food through the food controller and picks it: name in the field, quantity card shown', (tester) async {
+      await openFoundRows(tester);
+
+      await tester.tap(find.textContaining('Csirkemell'));
+      await tester.pumpAndSettle();
+
+      expect(_created, hasLength(1));
+      expect(_created.single, {
+        'name': 'Csirkemell',
+        'calories': 110.0,
+        'protein': 14.0,
+        'carbs': 2.4,
+        'fat': 4.9,
+        'barcode': '4056489827702',
+        'hidden': false,
+      });
+      expect(tester.widget<TextFormField>(_searchField()).controller!.text, 'Csirkemell');
+      expect(find.byKey(const Key('quantityField')), findsOneWidget);
+      expect(_sectionTitle(), findsNothing); // the list is closed
+    });
+
+    testWidgets('a missing carbs or fat stays null — nothing is invented', (tester) async {
+      await openFoundRows(tester, items: [_noBrand]);
+
+      await tester.tap(find.textContaining('Túró Rudi'));
+      await tester.pumpAndSettle();
+
+      expect(_created.single['carbs'], isNull);
+      expect(_created.single['fat'], isNull);
+    });
+
+    testWidgets('a food the user already has for that barcode is picked, and nothing is created', (tester) async {
+      const mine = Food(clientId: 'mine', name: 'My chicken', caloriesPer100g: 100, proteinPer100g: 10, barcode: '4056489827702');
+      await openFoundRows(tester, foods: [mine]);
+
+      await tester.tap(find.textContaining('Csirkemell'));
+      await tester.pumpAndSettle();
+
+      expect(_created, isEmpty);
+      expect(tester.widget<TextFormField>(_searchField()).controller!.text, 'My chicken');
+      expect(find.byKey(const Key('quantityField')), findsOneWidget);
+    });
+
+    testWidgets('a name already used by another food is created as "Name (Brand)"', (tester) async {
+      await openFoundRows(tester, foods: [_food('n', 'Csirkemell')]);
+
+      await tester.tap(find.textContaining('Csirkemell').last);
+      await tester.pumpAndSettle();
+
+      expect(_created.single['name'], 'Csirkemell (Pikok)');
+      expect(tester.widget<TextFormField>(_searchField()).controller!.text, 'Csirkemell (Pikok)');
+    });
+
+    testWidgets('tapping the same row twice quickly creates one food', (tester) async {
+      await openFoundRows(tester);
+
+      final row = find.text('Pikok'); // the brand line is unique to the row (the name also matches the typed text)
+      await tester.tap(row);
+      await tester.tap(row, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(_created, hasLength(1));
+    });
   });
 
   testWidgets('picking an own suggestion still works with the option ticked', (tester) async {

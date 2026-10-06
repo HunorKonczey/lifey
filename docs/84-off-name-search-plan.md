@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–9 (backend complete, web done, mobile data layer and sheet UI) built, Prompts 10–11 not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–10 (backend, web and mobile complete) built, Prompt 11 (close) not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -620,13 +620,42 @@ suggestion still works; **360×640 at 1.3× text with a long note and brand — 
 the 202 nutrition tests are green, `flutter analyze` clean.
 **Not run on an emulator or device** — only widget tests; the owed emulator walk (like earlier plans) covers this and Prompt 10.
 
-## Prompt 10 — Mobile: pick → save through the offline-first stack → log
+## Prompt 10 — Mobile: pick → save through the offline-first stack → log ✅ (2026-10-06)
 - Choosing an OFF row creates the `Food` via `FoodRepository.create` (outbox, new `clientId`, barcode
   set), selects it in the sheet, and the rest of the sheet is untouched. Duplicate barcode locally →
   select the existing food.
 Verification: repository/widget test that exactly one outbox entry is enqueued and a second pick of the
 same barcode enqueues none; emulator: pick online, kill the network, log works; then reconnect and check
 the food reaches the backend (docs/15-delta-sync.md).
+
+*As built:* a tap on an OpenFoodFacts row (`_pickOff` in `add_meal_entry_sheet.dart`) decides from the user's local foods
+(`domain/off_food_plan.dart`, `planOffFood`) and then picks the result like an own suggestion: the name goes into the
+search field, `_food` is set, the quantity card appears and the grams field is focused; "Add to meal" is the unchanged
+existing path. The plan, in order: (1) a visible food of the user with this barcode → use it, create nothing; (2) the product
+name is free → create it under that name; (3) the name is taken by a different food → create "Name (Brand)" ("(OpenFoodFacts)"
+without a brand); (4) even that is taken → use that food (the same product saved before). Names compare case-insensitively
+and trimmed, like the backend's unique index; hidden one-off macro foods neither block nor get reused. Creating is
+`FoodController.addFood` → `FoodRepository.create`: a local row and one outbox entry, so it **works offline** and syncs later.
+Decisions:
+- **The web's third fallback ("save without the barcode") is not built here.** Offline, a deleted food still holding the barcode
+  on the server cannot be known; that conflict surfaces when the create syncs — exactly as it does today for a barcode that
+  was scanned and saved. Prompt 7's web handling is online and could see the 409; the mobile one is deliberately the same as
+  its existing barcode flow. Listed as a known gap below.
+- Carbs/fat that OpenFoodFacts lacks stay `null` on the food (the web has to send 0 because its request type requires
+  numbers; the mobile `Food` allows null, so nothing is invented).
+- A tap is ignored while a pick is being saved and while that very product is already the picked food, so a double tap in one
+  frame cannot create it twice (a test caught the first version, which only guarded the async gap).
+- A failed create shows the sheet's existing "Couldn't save the food. Please try again." under the field.
+
+Tests: `off_food_plan_test.dart` 11 (each rule and their order, barcode before name, case/space-insensitive clash, brandless
+suffix, the suffixed name taken, hidden foods, trimming); `off_food_save_test.dart` 4 **against a real in-memory Drift database**
+(first pick = one food row + one `food` outbox entry with the barcode and **no network request while offline**; the same product
+again = the same food, still one row and one entry; it syncs later as exactly one `POST /foods` with the barcode and gets its
+server id; a different product with the same name becomes "Name (Brand)"); and 5 widget tests (creates through the controller
+with the exact fields, a missing carbs/fat stays null, an owned barcode is picked with nothing created, a taken name gets the
+suffix, a double tap creates one food). 231 nutrition tests green, `flutter analyze` clean.
+**Not run on an emulator/device** (no offline-airplane-mode walk): the offline guarantee is shown by the database test
+(no request while the adapter is "offline"), not by switching a real network off.
 
 ## Prompt 11 — Close
 - Status here → built; the `docs/README.md` row (added with this plan) updated; note in
