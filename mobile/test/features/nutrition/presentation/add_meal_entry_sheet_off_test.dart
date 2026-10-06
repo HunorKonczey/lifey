@@ -154,7 +154,7 @@ void main() {
   testWidgets('the checkbox is above the search field, off by default; edit mode has no search and no checkbox', (tester) async {
     await _pump(tester);
     expect(_toggle(), findsOneWidget);
-    expect(find.text('Search OpenFoodFacts too'), findsOneWidget);
+    expect(find.text('Also search the OpenFoodFacts food database'), findsOneWidget);
     expect(tester.widget<CheckboxListTile>(_toggle()).value, isFalse);
     expect(tester.getTopLeft(_toggle()).dy, lessThan(tester.getTopLeft(_searchField()).dy)); // the list opens below the field and must not cover it
 
@@ -194,7 +194,7 @@ void main() {
     await _answerLast(tester, _answer([_csirke, _noBrand]));
 
     expect(_sectionTitle(), findsOneWidget);
-    expect(find.text('FROM OPENFOODFACTS'), findsOneWidget);
+    expect(find.text('FROM THE OPENFOODFACTS DATABASE'), findsOneWidget);
     expect(find.textContaining('Csirkemell'), findsOneWidget);
     expect(find.text('Pikok'), findsOneWidget); // the brand
     expect(find.text('OpenFoodFacts'), findsOneWidget); // no brand: the source instead

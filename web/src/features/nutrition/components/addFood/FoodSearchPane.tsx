@@ -214,6 +214,11 @@ export function FoodSearchPane({
           label={t("offLabel")}
         />
       )}
+      {off?.checked && (
+        <p className="type-body-s" data-testid="off-hint" style={{ color: "var(--text-3)" }}>
+          {t("offHint")}
+        </p>
+      )}
 
       <p className="type-section" style={{ color: "var(--text-3)" }} aria-live="polite">
         {t("results", { count: results.length })}

@@ -2,16 +2,16 @@
 
 import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Modal } from "@/components/ds/overlay/Modal";
 import { SegmentedControl } from "@/components/ds/SegmentedControl";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { foodApi, mealApi, recipeApi } from "../../api";
 import { buildSearchItems, searchItems, usageByKey, type ItemUsage, type SearchFilter, type SearchItem } from "../../foodSearch";
 import { EMPTY_MACRO_DRAFT, type MacroDraft } from "../../macroEntry";
-import { offSearchLang, readOffSearchPreference, writeOffSearchPreference, type ListItem } from "../../offSearch";
+import { readOffSearchPreference, writeOffSearchPreference, type ListItem } from "../../offSearch";
 import { computeFoodUsage, computeRecipeUsage } from "../../usage";
-import { useOffSearch, type UseOffSearchResult } from "../../useOffSearch";
+import { useNoOffSearch, useOffSearchForLocale, type UseOffSearchResult } from "../../useOffSearch";
 import { FoodSearchPane } from "./FoodSearchPane";
 import { MacroEntryForm } from "./MacroEntryForm";
 
@@ -70,11 +70,7 @@ export interface AddFoodModalViewProps {
   onOffCheckedChange?: (checked: boolean) => void;
 }
 
-/** What the OpenFoodFacts hook says when there is none: nothing active, nothing pending. */
-const NO_OFF: UseOffSearchResult = { active: false, pending: false, items: [], response: undefined, failed: false };
-function useNoOff(): UseOffSearchResult {
-  return NO_OFF;
-}
+
 
 /**
  * The add-food dialog's shell (W2.5, client-005): an 880 px `Modal`, a
@@ -102,7 +98,7 @@ export function AddFoodModalView({
   const [mode, setMode] = useState<AddFoodMode>("search");
   const [macroDraft, setMacroDraft] = useState<MacroDraft>(EMPTY_MACRO_DRAFT);
   const [offChecked, setOffChecked] = useState(initialOffChecked);
-  const off = (useOff ?? useNoOff)({ query, checked: offChecked && !!useOff });
+  const off = (useOff ?? useNoOffSearch)({ query, checked: offChecked && !!useOff });
   const quantityInput = useRef<HTMLInputElement | null>(null);
   const commitRef = useRef<(() => void) | null>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);
@@ -190,12 +186,6 @@ export function AddFoodModalView({
 
 export type AddFoodModalProps = Omit<AddFoodModalViewProps, "items" | "usage" | "useOff" | "initialOffChecked" | "onOffCheckedChange">;
 
-/** The connected OpenFoodFacts hook: the UI language picks the search language. A stable module-level function. */
-function useConnectedOff(args: { query: string; checked: boolean }): UseOffSearchResult {
-  const lang = offSearchLang(useLocale());
-  return useOffSearch({ ...args, lang });
-}
-
 /**
  * The connected dialog: the user's foods and recipes, and the usage derived from their meals — and the
  * OpenFoodFacts option, remembered per device (docs/84 D10).
@@ -218,7 +208,7 @@ export function AddFoodModal(props: AddFoodModalProps) {
       {...props}
       items={items}
       usage={usage}
-      useOff={useConnectedOff}
+      useOff={useOffSearchForLocale}
       initialOffChecked={offChecked}
       onOffCheckedChange={writeOffSearchPreference}
     />

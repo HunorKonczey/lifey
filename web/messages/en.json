@@ -1167,7 +1167,8 @@
       "macroLine": "The macros add up to {computed} kcal — that is {diff} kcal off.",
       "nameRequired": "Give the food a name",
       "duplicateName": "You already have a food with this name",
-      "closeAria": "Close the editor"
+      "closeAria": "Close the editor",
+      "offFilled": "Filled in from the OpenFoodFacts database — check the values, then save."
     },
     "addMealDialog": {
       "editTitle": "Edit {meal}",
@@ -1308,9 +1309,10 @@
       "macroKeyHint": "Enter add · Tab next field",
       "customEntry": "Custom entry",
       "previewSourceMacros": "Entered macros · for {g} g",
-      "offLabel": "Search OpenFoodFacts too",
-      "offSection": "From OpenFoodFacts",
+      "offLabel": "Also search the OpenFoodFacts food database",
+      "offSection": "From the OpenFoodFacts database",
       "offTag": "OFF",
+      "offHint": "OpenFoodFacts is a public food database run by volunteers. What you type is sent to it, and its values can be incomplete — check them.",
       "offSearching": "Searching OpenFoodFacts…",
       "offNoResults": "Nothing found on OpenFoodFacts.",
       "offTypeMore": "Type at least 3 letters to search OpenFoodFacts.",

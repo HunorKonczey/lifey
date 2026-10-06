@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useLocale } from "next-intl";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
@@ -11,6 +12,7 @@ import {
   isOffSearchable,
   offItemToSearchItem,
   offSearchEnabled,
+  offSearchLang,
   sanitizeOffQuery,
   type OffItem,
 } from "./offSearch";
@@ -56,4 +58,19 @@ export function useOffSearch({ query, lang, checked }: { query: string; lang: Of
   const pending = settling || (active && isFetching);
 
   return { active, pending, items, response, failed: active && isError };
+}
+
+/**
+ * `useOffSearch` for the app's UI language (Hungarian searches Hungarian, everything else English). One stable module-level
+ * function, so it can be handed to a component as its `useOff` prop (add-food dialog, food editor).
+ */
+export function useOffSearchForLocale(args: { query: string; checked: boolean }): UseOffSearchResult {
+  return useOffSearch({ ...args, lang: offSearchLang(useLocale()) });
+}
+
+const NO_OFF: UseOffSearchResult = { active: false, pending: false, items: [], response: undefined, failed: false };
+
+/** What the OpenFoodFacts hook says when there is none: nothing active, nothing pending. */
+export function useNoOffSearch(): UseOffSearchResult {
+  return NO_OFF;
 }

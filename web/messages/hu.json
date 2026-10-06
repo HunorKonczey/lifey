@@ -1167,7 +1167,8 @@
       "macroLine": "A makrók {computed} kcal-t adnak ki — ez {diff} kcal-lal tér el.",
       "nameRequired": "Adj nevet az ételnek",
       "duplicateName": "Már van ilyen nevű ételed",
-      "closeAria": "Szerkesztő bezárása"
+      "closeAria": "Szerkesztő bezárása",
+      "offFilled": "Az OpenFoodFacts adatbázisából kitöltve — ellenőrizd az értékeket, aztán mentsd."
     },
     "addMealDialog": {
       "editTitle": "Szerkesztés: {meal}",
@@ -1308,9 +1309,10 @@
       "macroKeyHint": "Enter hozzáadás · Tab következő mező",
       "customEntry": "Egyedi tétel",
       "previewSourceMacros": "Megadott makrók · {g} g-ra",
-      "offLabel": "Keresés az OpenFoodFactsben is",
-      "offSection": "Az OpenFoodFactsből",
+      "offLabel": "Keresés az OpenFoodFacts ételadatbázisban is",
+      "offSection": "Az OpenFoodFacts adatbázisából",
       "offTag": "OFF",
+      "offHint": "Az OpenFoodFacts önkéntesek által épített nyilvános ételadatbázis. Amit beírsz, oda is elküldjük, az adatai pedig hiányosak lehetnek — ellenőrizd őket.",
       "offSearching": "Keresés az OpenFoodFactsben…",
       "offNoResults": "Nincs találat az OpenFoodFactsben.",
       "offTypeMore": "Írj be legalább 3 betűt az OpenFoodFacts kereséséhez.",

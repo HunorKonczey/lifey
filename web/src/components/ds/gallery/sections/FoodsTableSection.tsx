@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FoodEditor } from "@/features/nutrition/components/FoodEditor";
+import { readGalleryOffPreference, useFixtureOff, useFixtureOffRequestCount, writeGalleryOffPreference } from "../offFixture";
 import { FoodsTable } from "@/features/nutrition/components/FoodsTable";
 import type { FoodUsage } from "@/features/nutrition/usage";
 import type { FoodResponse } from "@/features/nutrition/types";
@@ -55,11 +56,15 @@ const USAGE = new Map<number, FoodUsage>([
 export function FoodsTableSection() {
   const [editing, setEditing] = useState<{ food: FoodResponse | null; key: string } | null>(null);
   const [log, setLog] = useState("—");
+  const offRequests = useFixtureOffRequestCount();
 
   return (
     <div className="flex flex-col gap-3">
       <p data-testid="foods-log" className="type-body-s">
         Last action: {log}
+      </p>
+      <p data-testid="foods-off-requests" className="type-body-s">
+        OpenFoodFacts requests: {offRequests}
       </p>
       <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
         <div className="min-w-0 flex-1">
@@ -86,6 +91,9 @@ export function FoodsTableSection() {
               }}
               onCancel={() => setEditing(null)}
               onLookupBarcode={(b) => setLog(`lookup ${b}`)}
+              useOff={useFixtureOff}
+              initialOffChecked={readGalleryOffPreference()}
+              onOffCheckedChange={writeGalleryOffPreference}
             />
           </div>
         )}
