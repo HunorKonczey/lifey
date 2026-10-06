@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–3 (backend client, search service, cache + limiter) built, Prompts 4–11 not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–4 (backend complete: client, search service, cache + limiter, endpoint) built, Prompts 5–11 not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -407,11 +407,39 @@ Not covered here: the Spring wiring of the two components (a context test needs 
 `@SpringBootTest` here does). Both have a single `@Autowired` constructor and take the existing `Clock` bean
 (`ClockConfig`); the first CI run of the integration tests is the check.
 
-## Prompt 4 — Backend: the endpoint
+## Prompt 4 — Backend: the endpoint ✅ (2026-10-06)
 - `FoodController`: `GET /off-search` (`@RequestParam q` min length 3 → 400 otherwise, `lang`),
   OpenAPI `@Operation` text as the barcode endpoint has; docs/postman collection entry.
 Verification: `FoodControllerTest` — 200 shape, 400 on a 2-character query, 401 without a token, user
 scoping (another user's owned barcode is not dropped for me). `./mvnw -q test` green.
+
+*As built:* `GET /api/v1/foods/off-search?q=&lang=` in `FoodController` (`searchOpenFoodFacts`), `lang` optional
+(default `en`), the body is the `OffSearchResponse` of D2. The OpenAPI `@Operation` text and two Postman requests
+("Search OpenFoodFacts by name" and a too-short example, in *Nutrition - Foods*) describe it. Decisions and a find:
+- **The minimum is 3 *letters or digits* after sanitising**, not 3 characters: `a b`, `:::`, `---`, `"a"` and
+  `  ab  ` are all 400, `tej` is fine. A new `InvalidSearchQueryException` (`common/exception/`) maps to a 400
+  `ApiError` (`Search text must contain at least 3 letters or digits`), and the service is not called.
+- **Found while testing: a missing required query parameter answered 500.** `GlobalExceptionHandler`'s catch-all
+  swallowed `MissingServletRequestParameterException`. Added a handler that answers 400
+  (`Missing required parameter: q`) — a small, **global** behaviour change: every endpoint with a required query
+  parameter now answers 400 instead of 500 when it is absent. No existing test depended on the 500.
+- The controller hands `q` on **as typed**; sanitising stays the service's and client's job (one place each, tested).
+
+Tests: `FoodControllerTest` +9 (23 now, `@WebMvcTest`, no Docker): response shape field by field, the fallback
+flag, `lang` defaulting to `en`, the text passed on unchanged, `UNAVAILABLE` and `RATE_LIMITED` as HTTP 200,
+exactly three letters accepted, eight too-short/punctuation-only inputs all 400 with the service never called,
+a missing `q` 400. Full backend run: 1107 tests, no failure other than the 35 classes that need Docker.
+
+**Not verified here (needs Docker):** (a) *401 without a token* — `RoleBasedAccessControlTest` got
+`offSearch_withoutAToken_isUnauthorized`, the one test that loads the real security chain; the `@WebMvcTest`
+slice never loads `SecurityConfig`, so no controller test can show it. The rule itself is
+`anyRequest().authenticated()` (`SecurityConfig`), which this path falls under. (b) *User scoping* — the
+"another user's owned barcode is not dropped for me" case is covered in the service test with a mocked
+repository and, for the query itself, in `FoodOwnedBarcodesRepositoryTest` (Prompt 2); both are unrun here.
+Both run in CI.
+
+**Milestone 1 (backend) is complete:** the endpoint can be exercised with `curl` / Postman against a running
+backend. Nothing in the web or mobile apps calls it yet.
 
 ## Prompt 5 — Web data: API, types, hook
 - `api.ts`, `types.ts`, `queryKeys.ts`, and `useOffSearch(query, lang, enabled)` (debounce, min length,

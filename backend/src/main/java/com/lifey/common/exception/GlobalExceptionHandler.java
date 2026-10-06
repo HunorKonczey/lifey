@@ -41,6 +41,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
@@ -74,6 +75,12 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .toList();
         return build(HttpStatus.BAD_REQUEST, "Validation failed", request, details, ex);
+    }
+
+    @ExceptionHandler(InvalidSearchQueryException.class)
+    public ResponseEntity<ApiError> handleInvalidSearchQuery(InvalidSearchQueryException ex,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -136,6 +143,14 @@ public class GlobalExceptionHandler {
                                                          HttpServletRequest request) {
         return build(HttpStatus.CONTENT_TOO_LARGE,
                 "Uploaded file exceeds the maximum allowed size", request, List.of(), ex);
+    }
+
+    /** A required query parameter is absent: the client's error, not the catch-all 500. */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException ex,
+                                                           HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Missing required parameter: " + ex.getParameterName(),
+                request, List.of(), ex);
     }
 
     @ExceptionHandler(MissingServletRequestPartException.class)

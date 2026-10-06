@@ -3,8 +3,12 @@ package com.lifey.nutrition.food;
 import com.lifey.nutrition.food.dto.BarcodeLookupResponse;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
+import com.lifey.nutrition.food.dto.OffSearchResponse;
 import com.lifey.nutrition.food.service.BarcodeLookupService;
+import com.lifey.nutrition.food.service.FoodNameSearchService;
 import com.lifey.nutrition.food.service.FoodService;
+import com.lifey.common.exception.InvalidSearchQueryException;
+import com.lifey.nutrition.openfoodfacts.OffSearchQuery;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +31,10 @@ public class FoodController {
 
     private final FoodService foodService;
     private final BarcodeLookupService barcodeLookupService;
+    private final FoodNameSearchService foodNameSearchService;
+
+    /** Fewer searchable characters than this is a 400: OpenFoodFacts search is rationed (docs/84 D7). */
+    static final int MIN_OFF_SEARCH_LENGTH = 3;
 
     @Operation(summary = "List all foods",
             description = "Unpaged: always returns the full catalog. Kept for backward compatibility "
@@ -81,6 +89,28 @@ public class FoodController {
     @GetMapping("/barcode/{barcode}")
     public BarcodeLookupResponse findByBarcode(@PathVariable String barcode) {
         return barcodeLookupService.lookup(barcode);
+    }
+
+    @Operation(summary = "Search OpenFoodFacts by product name",
+            description = "Full-text search of OpenFoodFacts for the add-food dialog's \"search OpenFoodFacts too\" "
+                    + "option (docs/84). Searches in `lang` (`hu` or `en`, default `en`) first — for `hu` only "
+                    + "products sold in Hungary — and only when that finds nothing usable, once more in English. "
+                    + "`language` / `fellBackToEnglish` in the response say which search the items come from. "
+                    + "Results are not saved and never include a barcode the user already has as a food; "
+                    + "POST /foods to save one. `q` needs at least 3 letters or digits after punctuation is "
+                    + "dropped (400 otherwise). An OpenFoodFacts problem is still HTTP 200: `status` is "
+                    + "`UNAVAILABLE` or `RATE_LIMITED` with no items.")
+    @GetMapping("/off-search")
+    public OffSearchResponse searchOpenFoodFacts(
+            @Parameter(description = "What the user typed; at least 3 letters or digits")
+            @RequestParam String q,
+            @Parameter(description = "`hu` or `en`; anything else is searched as `en`")
+            @RequestParam(defaultValue = "en") String lang) {
+        if (OffSearchQuery.sanitize(q).codePoints().filter(Character::isLetterOrDigit).count() < MIN_OFF_SEARCH_LENGTH) {
+            throw new InvalidSearchQueryException(
+                    "Search text must contain at least " + MIN_OFF_SEARCH_LENGTH + " letters or digits");
+        }
+        return foodNameSearchService.search(q, lang);
     }
 
     @Operation(summary = "Delete a food")

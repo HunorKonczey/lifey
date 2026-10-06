@@ -786,6 +786,68 @@
           "response": []
         },
         {
+          "name": "Search OpenFoodFacts by name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/foods/off-search?q=csirkemell&lang=hu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "foods",
+                "off-search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "csirkemell"
+                },
+                {
+                  "key": "lang",
+                  "value": "hu"
+                }
+              ]
+            },
+            "description": "Name search in OpenFoodFacts for the add-food dialog (docs/84). Searches in `lang` (`hu` or `en`, default `en`) first — for `hu` only products sold in Hungary — and only if that finds nothing usable, once more in English (`language` and `fellBackToEnglish` in the response say which search the items come from). Items are not saved and never include a barcode you already have as a food; POST /foods to save one. `q` needs at least 3 letters or digits (400 otherwise). An OpenFoodFacts problem is still HTTP 200: `status` is `UNAVAILABLE` or `RATE_LIMITED` with no items. The app limits real OpenFoodFacts calls to `OPENFOODFACTS_SEARCH_PER_MINUTE` (8) per minute, and repeated searches are cached for 10 minutes."
+          },
+          "response": []
+        },
+        {
+          "name": "Search OpenFoodFacts by name - too short (example)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/foods/off-search?q=ab&lang=hu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "foods",
+                "off-search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "ab"
+                },
+                {
+                  "key": "lang",
+                  "value": "hu"
+                }
+              ]
+            },
+            "description": "Fewer than 3 letters or digits after punctuation is dropped: 400 `Search text must contain at least 3 letters or digits`, and OpenFoodFacts is not called."
+          },
+          "response": []
+        },
+        {
           "name": "Create food - validation error (example)",
           "request": {
             "method": "POST",
