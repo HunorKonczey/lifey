@@ -1,3 +1,5 @@
+import '../../../../core/format/first_character.dart';
+
 /// One of the trainer's active clients, exactly as `GET /trainer/clients`
 /// returns it (`TrainerClientResponse` on the backend).
 ///
@@ -69,8 +71,8 @@ class TrainerClient {
   String get monogram {
     final words =
         displayName.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (words.isEmpty) return email.isEmpty ? '?' : email[0].toUpperCase();
-    return words.take(2).map((w) => w[0].toUpperCase()).join();
+    if (words.isEmpty) return email.isEmpty ? '?' : firstCharacterUpper(email);
+    return words.take(2).map(firstCharacterUpper).join();
   }
 
   factory TrainerClient.fromJson(Map<String, dynamic> json) {
