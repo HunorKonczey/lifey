@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); no code written yet
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompt 1 (backend client) built, Prompts 2–11 not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -304,7 +304,7 @@ search-a-licious limit (an IP ban would also take the barcode scanner down).
 - whether `langs=hu,en` in one call is worth anything (it returned a set that overlapped the Hungarian
   one on a single product); not used.
 
-## Prompt 1 — Backend: OFF name-search client
+## Prompt 1 — Backend: OFF name-search client ✅ (2026-10-06)
 - `OpenFoodFactsProperties`: add `searchBaseUrl`; `application.yml`: `search-base-url`,
   `search-per-minute` (default 8); `OpenFoodFactsConfig`: `openFoodFactsSearchRestClient` (connect 2 s, read 3 s).
 - `OpenFoodFactsClient`: add `List<OffSearchHit> searchByName(String query, String lang, String countryTag, int limit)`
@@ -318,6 +318,21 @@ Verification: `OpenFoodFactsClientImplTest` with a stub server (200 with hits, 2
 appended verbatim and a query like `x countries_tags:"en:fr"` cannot replace it (the sanitiser removes the
 colon and quotes). `OpenFoodFactsProperties` also gets `huCountryTag` (default `en:hungary`).
 Mergeable alone: nothing calls it yet.
+
+*As built:* `OpenFoodFactsClient.searchByName(query, lang, countryTag, limit)` returns `OffSearchHit`s
+(code, `product_name`, the searched language's name, distinct brands, kcal/protein/carbs/fat);
+`OffSearchQuery.sanitize` is the D11 sanitiser (lower-cases — which also defuses upper-case `OR`/`AND`/`NOT` —
+keeps accents, drops everything but letters, digits, spaces, apostrophes and hyphens *inside* a word).
+Failures: `OffRateLimitedException` (429, 503) and `OffUnavailableException` (any other error status, timeout,
+connection failure, unreadable body) in `nutrition/openfoodfacts/exception/`. `OpenFoodFactsConfig` has the
+second `RestClient` (`openFoodFactsSearchRestClient`, connect 2 s / read 3 s); `OpenFoodFactsProperties` gained
+`searchBaseUrl`, `searchPerMinute` (8) and `huCountryTag` (`en:hungary`), env `OPENFOODFACTS_SEARCH_BASE_URL` /
+`OPENFOODFACTS_SEARCH_PER_MINUTE`. Tests (27 new, none needs Docker): `OffSearchQueryTest` 8,
+`OpenFoodFactsClientImplTest` 16 (mapping, brand de-duplication, hu/en name choice, request parameters
+asserted *decoded* and checked to be percent-encoded, the country clause appended and not replaceable by typed
+text, limit clamp, no call for an unsearchable query, empty vs. failed, 429/503/500/400, timeout, bad body),
+`OpenFoodFactsConfigTest` 3 (binding from the real `application.yml`, two distinct beans, env override).
+Not done here, by design: the `searchPerMinute` value is only bound — the limiter that reads it is Prompt 3.
 
 ## Prompt 2 — Backend: language-first search with English backoff and filtering
 - `FoodNameSearchService` + `Impl` (package `nutrition/food/service/`): D4 flow, D6 filter as one
