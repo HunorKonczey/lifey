@@ -19,6 +19,7 @@ import { MEAL_TYPE_ORDER } from "../../mealTypeStyle";
 import { buildEntries } from "../../logRecipePortion";
 import { foodPortion, recipePortion, type Macros } from "../../recipeMacros";
 import { offPortion, type ListItem } from "../../offSearch";
+import { ensureOwnFood } from "../../offSave";
 import type { FoodResponse, MealResponse, MealType } from "../../types";
 import { useAddFoodContext } from "./AddFoodModal";
 
@@ -93,8 +94,7 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     ? (entry?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 })
     : macrosOf(active, qty, foodsById);
   const left = remainingAfter(consumed, goals, { calories: macros.calories, protein: macros.protein });
-  // An OpenFoodFacts product is previewed here; saving it as a food and logging it is the next step (docs/84 Prompt 7).
-  const canSubmit = !pending && (inMacros ? !!entry : !!active && active.kind !== "off" && qty > 0);
+  const canSubmit = !pending && (inMacros ? !!entry : !!active && qty > 0);
 
   const submit = () => {
     if (!canSubmit) return;
@@ -353,8 +353,10 @@ export function FoodPreviewPane({
           entries: buildEntries(req.item.recipe.ingredients, servings / req.quantity, {}),
         });
       } else if (req.item.kind === "off") {
-        // Never reached: the submit is disabled for these rows until the save-and-log step (docs/84 Prompt 7).
-        throw new Error("OpenFoodFacts products cannot be logged yet");
+        // An OpenFoodFacts product becomes one of the user's own foods first (a 409 — product or name already
+        // there — is walked through in `ensureOwnFood`), then it is logged like any food (docs/84 D8).
+        const food = await ensureOwnFood(req.item.off, { create: foodApi.create, list: foodApi.list });
+        await addFoodEntry(food.id, req.quantity, mealType);
       } else {
         await addFoodEntry(req.item.food.id, req.quantity, mealType);
       }
@@ -363,7 +365,11 @@ export function FoodPreviewPane({
     onSuccess: (mealType) => {
       show(t("added", { meal: n(MEAL_KEY[mealType]) }), "success");
       // Waited for: the dialog stays open, and the next add must see this meal (and the new "left") to extend it, not start a second one.
-      return queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
+      // The foods too: an OpenFoodFacts product has just become one, and the own list and the recipe macros read them.
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() }),
+      ]);
     },
     onError: () => show(t("addFailed"), "error"),
   });

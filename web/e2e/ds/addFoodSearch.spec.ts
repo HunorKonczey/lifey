@@ -150,7 +150,7 @@ test("own results empty but OpenFoodFacts has some: both the empty message and t
   await expect(offSection(page).getByRole("option")).toHaveCount(3);
 });
 
-test("↓ walks from the last own row into the OpenFoodFacts rows, and the preview shows its macros (submit waits for the next step)", async ({ page }) => {
+test("↓ lands on the first OpenFoodFacts row when there are no own rows, and the preview shows its macros", async ({ page }) => {
   await offBox(page).click();
   await page.keyboard.type("túró");
   await expect(offSection(page).getByRole("option")).toHaveCount(1); // the answer has arrived
@@ -160,7 +160,36 @@ test("↓ walks from the last own row into the OpenFoodFacts rows, and the previ
   await expect(page.getByTestId("preview-title")).toHaveText("Túró Rudi");
   await expect(dialog(page).getByText("OpenFoodFacts · 400 kcal / 100 g")).toBeVisible();
   await expect(dialog(page).getByTestId("preview-macros").locator('[data-tile="kcal"]')).toContainText("400");
-  await expect(dialog(page).getByRole("button", { name: /^Add to/ })).toBeDisabled();
+});
+
+test("an OpenFoodFacts row is logged like a food: quantity, meal, Add — and the dialog stays for the next one", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("csirkemell");
+  await expect(offSection(page).getByRole("option")).toHaveCount(3);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Tab");
+  await expect(dialog(page).getByRole("textbox", { name: "Quantity" })).toBeFocused();
+  await page.keyboard.type("250");
+  await dialog(page).getByRole("radio", { name: "Lunch" }).click();
+  await expect(page.getByTestId("preview-macros").locator('[data-tile="kcal"]')).toContainText("275"); // 110 × 2.5
+
+  await dialog(page).getByRole("button", { name: "Add to lunch" }).click();
+
+  await expect(page.getByTestId("added-log")).toHaveText("Added: Csirkemell 250 g LUNCH");
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).getByRole("combobox")).toHaveValue(""); // a clean search for the next one
+  await expect(offSection(page)).toHaveCount(0);
+  await expect(offBox(page)).toHaveAttribute("aria-checked", "true"); // the option stays on
+});
+
+test("Enter in the search field adds the highlighted OpenFoodFacts row with the default 100 g", async ({ page }) => {
+  await offBox(page).click();
+  await page.keyboard.type("túró");
+  await expect(offSection(page).getByRole("option")).toHaveCount(1);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByTestId("added-log")).toHaveText("Added: Túró Rudi 100 g DINNER");
 });
 
 test("↓ from the last own row continues into the OpenFoodFacts rows, and ↑ goes back", async ({ page }) => {

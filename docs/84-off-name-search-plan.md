@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–6 (backend complete, web data layer and search UI) built, Prompts 7–11 not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–7 (backend complete, web done) built, Prompts 8–11 (mobile, close) not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -449,8 +449,8 @@ Verification: Vitest for the mapper and the "disabled below 3 characters / when 
 
 *As built:* in `web/src/features/nutrition/`: `types.ts` (`OffSearchItem`, `OffSearchResponse`, `OffSearchStatus`,
 `OffSearchLang`), `api.ts` (`foodApi.offSearch(q, lang, signal)` — the abort signal lets a newer keystroke cancel
-the request in flight), `queryKeys.foods.offSearch(lang, text)` (under `foods.all`, so saving a food refreshes the
-open results and the saved one drops out), `offSearch.ts` (the pure rules) and `useOffSearch.ts` (the hook), plus a
+the request in flight), `queryKeys.offSearch(lang, text)` (a top-level key — see Prompt 7: it was first put under `foods.all`, which would
+have re-run the open search on every food save), `offSearch.ts` (the pure rules) and `useOffSearch.ts` (the hook), plus a
 generic `lib/hooks/useDebouncedValue.ts`. Decisions made while building:
 - **The mapper's row type is not in the `SearchItem` union yet.** `offItemToSearchItem` returns an `OffItem`
   (`kind: "off"`, key `off:<barcode>`); adding it to the union changes every place that tells a food from a recipe
@@ -516,7 +516,7 @@ All 34 add-food e2e cases and the full web suite (1124) are green; `tsc` and `es
 browser (headless screenshot) at 1440 and 390, dark/light follow the existing tokens.
 **Not run against the real backend yet** — that is the manual run at the end of Prompt 7.
 
-## Prompt 7 — Web: pick, save as own food, log
+## Prompt 7 — Web: pick, save as own food, log ✅ (2026-10-06)
 - `FoodPreviewPane.tsx` `kind === "off"`: create the food, then `addFoodEntry`; the dialog stays open
   afterwards (it does since the web add-food fix: an add no longer closes it) and the new food shows in own
   results.
@@ -525,6 +525,34 @@ browser (headless screenshot) at 1440 and 390, dark/light follow the existing to
 Verification: e2e in the gallery with stubbed submit; against the real backend by hand: log one OFF
 food, see it in the Foods tab with its barcode, log it a second time from own results (no second
 `POST /foods`).
+
+*As built:* picking an OFF row and pressing Add (or Enter in the search field / the quantity) now saves it as one of
+the user's foods and logs it. `offSave.ts` holds the pure part, `ensureOwnFood(item, { create, list })`, used by the
+mutation in `FoodPreviewPane` before the unchanged `addFoodEntry`. The backend answers **409 for two different
+reasons** (a taken name, a taken barcode) and a third case exists (a *deleted* food still holding the barcode, Prompt 2's
+known gap), so a 409 is walked through, not shown: (1) create as is; (2) on 409 look for a food of the user with that
+barcode and use it — no second create; (3) else create it as "Name (Brand)" (or "(OpenFoodFacts)") with the barcode;
+(4) on a second 409 create it **without** the barcode, which loses nothing the app uses. Any other error is thrown at
+once (no retry under another name hiding a real failure); a third 409 is thrown too. **No backend change was needed** —
+the "revive a tombstoned food" idea from Prompt 2's note is not required.
+Other decisions:
+- **The OFF query key moved out of `foods`** to a top-level `queryKeys.offSearch`: after a save the pane invalidates
+  `foods.all` (the new food must appear in the own list and the recipe macros), and with the key under `foods` that
+  would have refetched the open OpenFoodFacts search — a wasted call from the small shared budget. (Prompt 5's note
+  is corrected.) The dialog clears the search after an add anyway.
+- After a successful add both `meals` and `foods` are invalidated and awaited, so the dialog's next add sees the saved
+  food (and does not start a second meal).
+- The added food keeps the OFF name, per-100 g macros (missing carbs/fat as 0), the barcode, `hidden: false` — so the next
+  time the product is found by name it is dropped from the OFF list (Prompt 2) and found in the own list instead.
+
+Tests: `offSave.test.ts` 10 (the request fields, name suffix with/without brand, first-try success, 409 → existing barcode
+reused with exactly one create, 409 → renamed with barcode, 409 twice → no barcode, third 409 thrown, a 500 thrown at once
+at either step, a network failure thrown as is). E2E +2 in the gallery (quantity + meal + Add logs "Csirkemell 250 g LUNCH",
+the dialog stays with a clean search and the box still ticked; Enter adds with 100 g). Web suite 1135, add-food e2e 36,
+`tsc` clean, `eslint` no errors.
+**Not run against a real backend:** the Docker daemon was not available, so Postgres and the backend could not start; the
+real `POST /foods` 409 behaviour (name vs barcode) is as read from `FoodServiceImpl` and the V25/V40 indexes, not observed.
+That manual run, and the real OpenFoodFacts call, are still owed before the web PR is merged.
 
 ## Prompt 8 — Mobile data: repository and controller
 - `off_search_repository.dart`, `off_search_controller.dart`, `ApiEndpoints.foodsOffSearch`, the

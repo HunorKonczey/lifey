@@ -41,7 +41,7 @@ export function useOffSearch({ query, lang, checked }: { query: string; lang: Of
   const active = offSearchEnabled(checked, typed, settled);
 
   const { data, isFetching, isError } = useQuery({
-    queryKey: queryKeys.foods.offSearch(lang, settled),
+    queryKey: queryKeys.offSearch(lang, settled),
     queryFn: ({ signal }) => foodApi.offSearch(settled, lang, signal),
     enabled: active,
     staleTime: OFF_SEARCH_STALE_MS,
