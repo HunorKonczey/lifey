@@ -48,7 +48,7 @@ class SessionCard extends StatelessWidget {
                     Text(sessionTitle(l10n, session), maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
                     const SizedBox(height: 2),
                     Text(
-                      summaryLine(l10n, session),
+                      summaryLine(l10n, f, session),
                       style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
                     ),
                   ],
@@ -96,12 +96,12 @@ String sessionTitle(AppLocalizations l10n, ClientWorkoutSession session) => sess
         ? session.templateName!
         : l10n.trainerFreeWorkoutLabel;
 
-String summaryLine(AppLocalizations l10n, ClientWorkoutSession session) {
+String summaryLine(AppLocalizations l10n, LifeyFormat f, ClientWorkoutSession session) {
   final parts = <String>[];
   if (session.isCardio) {
     final distance = session.distanceMeters;
     if (distance != null && distance > 0) {
-      parts.add(l10n.trainerKmValue((distance / 1000).toStringAsFixed(2)));
+      parts.add(l10n.trainerKmValue(f.decimal(distance / 1000, 2)));
     }
     final movingSeconds = session.movingSeconds;
     if (movingSeconds != null && movingSeconds > 0) {
