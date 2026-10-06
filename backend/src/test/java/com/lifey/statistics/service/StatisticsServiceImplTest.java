@@ -76,7 +76,22 @@ class StatisticsServiceImplTest {
         assertThat(result.workoutCount()).isEqualTo(1);
         assertThat(result.latestWeight()).isEqualTo(78.4);
         assertThat(result.totalWater()).isEqualTo(1.5);
-        assertThat(capturedFrom()).isEqualTo(LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant());
+        assertThat(capturedFrom()).isEqualTo(LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant());
+    }
+
+    @Test
+    void daily_withoutADate_anchorsOnTheUsersOwnToday_notTheServers() {
+        // UTC+14: from 10:00 UTC the user's calendar day is one ahead of the server's.
+        User user = new User();
+        user.setId(USER_ID);
+        user.setUtcOffsetMinutes(14 * 60);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        stubAggregates(0.0, 0.0, 0L, null);
+
+        service.daily();
+
+        ZoneOffset zone = ZoneOffset.ofHours(14);
+        assertThat(capturedFrom()).isEqualTo(LocalDate.now(zone).atStartOfDay(zone).toInstant());
     }
 
     @Test
@@ -86,7 +101,7 @@ class StatisticsServiceImplTest {
         service.weekly();
 
         assertThat(capturedFrom())
-                .isEqualTo(LocalDate.now().minusDays(6).atStartOfDay(ZoneOffset.UTC).toInstant());
+                .isEqualTo(LocalDate.now(ZoneOffset.UTC).minusDays(6).atStartOfDay(ZoneOffset.UTC).toInstant());
     }
 
     @Test
@@ -96,7 +111,7 @@ class StatisticsServiceImplTest {
         service.monthly();
 
         assertThat(capturedFrom())
-                .isEqualTo(LocalDate.now().minusDays(29).atStartOfDay(ZoneOffset.UTC).toInstant());
+                .isEqualTo(LocalDate.now(ZoneOffset.UTC).minusDays(29).atStartOfDay(ZoneOffset.UTC).toInstant());
     }
 
     @Test

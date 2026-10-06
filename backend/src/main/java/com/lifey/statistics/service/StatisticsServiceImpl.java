@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 /**
@@ -37,7 +36,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse daily() {
-        return daily(LocalDate.now(ZoneId.systemDefault()));
+        return dailyForUser(currentUserProvider.getUserId());
     }
 
     @Override
@@ -47,7 +46,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse weekly() {
-        return weekly(LocalDate.now(ZoneId.systemDefault()));
+        return weeklyForUser(currentUserProvider.getUserId());
     }
 
     @Override
@@ -57,12 +56,32 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse monthly() {
-        return monthly(LocalDate.now(ZoneId.systemDefault()));
+        return monthlyForUser(currentUserProvider.getUserId());
     }
 
     @Override
     public StatisticsResponse monthly(LocalDate today) {
         return monthlyForUser(currentUserProvider.getUserId(), today);
+    }
+
+    @Override
+    public StatisticsResponse dailyForUser(Long userId) {
+        return dailyForUser(userId, todayFor(userId));
+    }
+
+    @Override
+    public StatisticsResponse weeklyForUser(Long userId) {
+        return weeklyForUser(userId, todayFor(userId));
+    }
+
+    @Override
+    public StatisticsResponse monthlyForUser(Long userId) {
+        return monthlyForUser(userId, todayFor(userId));
+    }
+
+    /** Today's date on the user's own clock (their stored UTC offset), not the server's. */
+    private LocalDate todayFor(Long userId) {
+        return LocalDate.now(zoneForUser(userId));
     }
 
     @Override

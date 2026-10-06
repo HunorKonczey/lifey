@@ -109,7 +109,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void dailyStatistics_returnsStatsForTheClient() throws Exception {
-        when(statisticsService.dailyForUser(eq(CLIENT_ID), any())).thenReturn(
+        when(statisticsService.dailyForUser(CLIENT_ID)).thenReturn(
                 new StatisticsResponse(2000.0, 150.0, 200.0, 60.0, 1, 80.0, 2.0, 1, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/daily", CLIENT_ID))
@@ -129,7 +129,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void weeklyStatistics_returnsStatsForTheClient() throws Exception {
-        when(statisticsService.weeklyForUser(eq(CLIENT_ID), any())).thenReturn(
+        when(statisticsService.weeklyForUser(CLIENT_ID)).thenReturn(
                 new StatisticsResponse(10000.0, 500.0, 900.0, 300.0, 3, 80.0, 10.0, 3, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/weekly", CLIENT_ID))
@@ -139,7 +139,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void monthlyStatistics_returnsStatsForTheClient() throws Exception {
-        when(statisticsService.monthlyForUser(eq(CLIENT_ID), any())).thenReturn(
+        when(statisticsService.monthlyForUser(CLIENT_ID)).thenReturn(
                 new StatisticsResponse(40000.0, 2000.0, 3600.0, 1200.0, 12, 80.0, 40.0, 12, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/monthly", CLIENT_ID))
