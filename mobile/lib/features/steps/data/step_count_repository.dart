@@ -41,8 +41,13 @@ class StepCountRepository {
     final dayStart = DateTime(date.year, date.month, date.day);
     final dayEnd = addDays(dayStart, 1);
 
+    // A day can briefly have two local rows (one created here while offline, one pulled from another
+    // device) until the server answers the first with the other's id; take the first rather than
+    // letting "too many elements" fail the import for that day every time it runs.
     final existing = await (_db.select(_db.dailyStepCounts)
-          ..where((t) => t.date.isBiggerOrEqualValue(dayStart) & t.date.isSmallerThanValue(dayEnd)))
+          ..where((t) => t.date.isBiggerOrEqualValue(dayStart) & t.date.isSmallerThanValue(dayEnd))
+          ..orderBy([(t) => OrderingTerm.asc(t.clientId)])
+          ..limit(1))
         .getSingleOrNull();
 
     if (existing == null) {

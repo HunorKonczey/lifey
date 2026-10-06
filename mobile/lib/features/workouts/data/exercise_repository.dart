@@ -66,8 +66,14 @@ class ExerciseRepository {
   /// exercise (the `standaloneSessionTitle` text) without duplicating it on
   /// every synced session (docs/watch/44-watch-f6-standalone-plan.md D-F6.3).
   Future<String> getOrCreateByName(String name) async {
-    final existing =
-        await (_db.select(_db.exercises)..where((t) => t.name.equals(name))).getSingleOrNull();
+    // First match, not "the only one": a second device that created the same placeholder offline
+    // leaves two rows with this name after a pull, and "too many elements" here would fail every
+    // standalone session the watch sends from then on.
+    final existing = await (_db.select(_db.exercises)
+          ..where((t) => t.name.equals(name))
+          ..orderBy([(t) => OrderingTerm.asc(t.clientId)])
+          ..limit(1))
+        .getSingleOrNull();
     if (existing != null) return existing.clientId;
     return create(name);
   }
