@@ -1,17 +1,17 @@
 package com.lifey.bodymeasurement.dto;
 
 import com.lifey.bodymeasurement.MeasurementSite;
+import com.lifey.common.validation.NotFutureDate;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
 
 import java.time.LocalDate;
 
 public record BodyMeasurementRequest(
 
         @NotNull
-        @PastOrPresent
+        @NotFutureDate
         LocalDate date,
 
         @NotNull

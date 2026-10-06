@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<validation-config xmlns="https://jakarta.ee/xml/ns/validation/configuration"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="https://jakarta.ee/xml/ns/validation/configuration https://jakarta.ee/xml/ns/validation/validation-configuration-3.1.xsd"
+                   version="3.1">
+    <!--
+      @PastOrPresent on an Instant a phone sends ("I started this set now") compares it with the
+      server's clock, so a phone whose clock runs a few seconds ahead had its set, workout or glass
+      of water refused with a 400. Five minutes of slack; a timestamp that far ahead is still rejected.
+    -->
+    <property name="hibernate.validator.temporal_validation_tolerance">300000</property>
+</validation-config>

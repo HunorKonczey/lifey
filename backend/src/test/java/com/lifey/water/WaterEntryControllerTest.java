@@ -68,6 +68,26 @@ class WaterEntryControllerTest {
     }
 
     @Test
+    void create_aPhoneClockAMinuteAheadOfTheServerIsAccepted() throws Exception {
+        // META-INF/validation.xml's temporal tolerance, through the application's own validator.
+        when(waterEntryService.create(any())).thenReturn(
+                new WaterEntryResponse(4L, Instant.now(), 0.5, null, null, Instant.now(), null));
+
+        mockMvc.perform(post("/api/v1/water-entries").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"consumedAt\":\"" + Instant.now().plusSeconds(60) + "\",\"volumeLiters\":0.5}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void create_aTimestampAnHourAheadIsStillRefused() throws Exception {
+        mockMvc.perform(post("/api/v1/water-entries").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"consumedAt\":\"" + Instant.now().plusSeconds(3600) + "\",\"volumeLiters\":0.5}"))
+                .andExpect(status().isBadRequest());
+
+        verify(waterEntryService, never()).create(any());
+    }
+
+    @Test
     void create_missingVolumeReturnsBadRequest() throws Exception {
         mockMvc.perform(post("/api/v1/water-entries").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"consumedAt\":\"2026-06-18T08:00:00Z\"}"))
