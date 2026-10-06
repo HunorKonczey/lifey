@@ -11,7 +11,7 @@ import { buildSearchItems, searchItems, usageByKey, type ItemUsage, type SearchF
 import { EMPTY_MACRO_DRAFT, type MacroDraft } from "../../macroEntry";
 import { readOffSearchPreference, writeOffSearchPreference, type ListItem } from "../../offSearch";
 import { computeFoodUsage, computeRecipeUsage } from "../../usage";
-import { useOffSearchForLocale, type UseOffSearchResult } from "../../useOffSearch";
+import { useNoOffSearch, useOffSearchForLocale, type UseOffSearchResult } from "../../useOffSearch";
 import { FoodSearchPane } from "./FoodSearchPane";
 import { MacroEntryForm } from "./MacroEntryForm";
 
@@ -70,11 +70,7 @@ export interface AddFoodModalViewProps {
   onOffCheckedChange?: (checked: boolean) => void;
 }
 
-/** What the OpenFoodFacts hook says when there is none: nothing active, nothing pending. */
-const NO_OFF: UseOffSearchResult = { active: false, pending: false, items: [], response: undefined, failed: false };
-function useNoOff(): UseOffSearchResult {
-  return NO_OFF;
-}
+
 
 /**
  * The add-food dialog's shell (W2.5, client-005): an 880 px `Modal`, a
@@ -102,7 +98,7 @@ export function AddFoodModalView({
   const [mode, setMode] = useState<AddFoodMode>("search");
   const [macroDraft, setMacroDraft] = useState<MacroDraft>(EMPTY_MACRO_DRAFT);
   const [offChecked, setOffChecked] = useState(initialOffChecked);
-  const off = (useOff ?? useNoOff)({ query, checked: offChecked && !!useOff });
+  const off = (useOff ?? useNoOffSearch)({ query, checked: offChecked && !!useOff });
   const quantityInput = useRef<HTMLInputElement | null>(null);
   const commitRef = useRef<(() => void) | null>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);

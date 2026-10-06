@@ -18,6 +18,8 @@ import { foodApi, mealApi } from "../api";
 import { duplicateName, fieldsFromFood, foodRequest } from "../foodEdit";
 import { computeFoodUsage } from "../usage";
 import type { FoodRequest, FoodResponse } from "../types";
+import { readOffSearchPreference, writeOffSearchPreference } from "../offSearch";
+import { useOffSearchForLocale } from "../useOffSearch";
 import { FoodEditor } from "./FoodEditor";
 import { FoodsTable } from "./FoodsTable";
 import { AddFoodFlow } from "./addFood/AddFoodFlow";
@@ -171,6 +173,10 @@ export function FoodsView() {
       lookupPending={barcodeLoading}
       bare={!sidePanel}
       onDirtyChange={setEditorDirty}
+      useOff={useOffSearchForLocale}
+      // Read when the editor opens (always after a click or a link, so on the client), shared with the add-food dialog.
+      initialOffChecked={readOffSearchPreference()}
+      onOffCheckedChange={writeOffSearchPreference}
     />
   );
 

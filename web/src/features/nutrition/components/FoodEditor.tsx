@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Card, Icon, IconButton, NumberField, ReadOnlyField, TextField } from "@/components/ds";
+import { Button, Card, Checkbox, Icon, IconButton, NumberField, ReadOnlyField, TextField } from "@/components/ds";
 import { EMPTY_FOOD, FOOD_DECIMALS, fieldsFromFood, foodRequest, isFoodDirty, type FoodFields } from "../foodEdit";
 import { macroCheck } from "../macroCheck";
-import type { FoodRequest, FoodResponse } from "../types";
+import type { FoodRequest, FoodResponse, OffSearchItem } from "../types";
+import { useNoOffSearch, type UseOffSearchResult } from "../useOffSearch";
+import { OffResultsList } from "./addFood/OffResultsList";
 
 export interface FoodEditorProps {
   /** The food being edited; null = a new one. The caller remounts the editor (`key`) to switch food. */
@@ -25,6 +27,16 @@ export interface FoodEditorProps {
   bare?: boolean;
   /** Tells the container whether there are unsaved changes (the drawer's discard guard). */
   onDirtyChange?: (dirty: boolean) => void;
+  /**
+   * OpenFoodFacts search by name for a **new** food (docs/84 follow-up): a hook turning the typed name and the checkbox into
+   * results. Given, a new food gets the "Also search the OpenFoodFacts food database" checkbox and, when it is ticked, a list
+   * to pick from; picking fills the form. Absent (or editing an existing food) the editor is as before. It is called on
+   * every render, so it must be the same function every time (a module-level hook).
+   */
+  useOff?: (args: { query: string; checked: boolean }) => UseOffSearchResult;
+  /** Whether the checkbox starts ticked (the device's remembered choice). */
+  initialOffChecked?: boolean;
+  onOffCheckedChange?: (checked: boolean) => void;
 }
 
 /**
@@ -33,15 +45,49 @@ export interface FoodEditorProps {
  * small gap, a warning above 10 % (it never blocks saving). "Mentés" stays disabled until something really
  * changed (see `isFoodDirty`).
  */
-export function FoodEditor({ food, prefill, pending, nameError, onNameEdit, onSave, onCancel, onLookupBarcode, lookupPending, bare, onDirtyChange }: FoodEditorProps) {
+export function FoodEditor({
+  food,
+  prefill,
+  pending,
+  nameError,
+  onNameEdit,
+  onSave,
+  onCancel,
+  onLookupBarcode,
+  lookupPending,
+  bare,
+  onDirtyChange,
+  useOff,
+  initialOffChecked = false,
+  onOffCheckedChange,
+}: FoodEditorProps) {
   const t = useTranslations("nutrition.foodEditor");
   const fv = useTranslations("nutrition.foodsView");
+  const od = useTranslations("nutrition.addFoodModal");
   const common = useTranslations("common");
   const formRef = useRef<HTMLFormElement>(null);
 
   const baseline: FoodFields = food ? fieldsFromFood(food) : EMPTY_FOOD;
   const [fields, setFields] = useState<FoodFields>(() => fieldsFromFood(food, prefill));
   const [triedSave, setTriedSave] = useState(false);
+  // OpenFoodFacts (docs/84): only for a new food. `offPicked` hides the list once a result has filled the form, until the name is edited again.
+  const offAvailable = !food && !!useOff;
+  const [offChecked, setOffChecked] = useState(initialOffChecked);
+  const [offPicked, setOffPicked] = useState(false);
+  const off = (useOff ?? useNoOffSearch)({ query: fields.name, checked: offAvailable && offChecked && !offPicked });
+  const pickOff = (item: OffSearchItem) => {
+    setFields((f) => ({
+      ...f,
+      name: item.name,
+      kcal: item.caloriesPer100g,
+      protein: item.proteinPer100g,
+      carbs: item.carbsPer100g ?? 0,
+      fat: item.fatPer100g ?? 0,
+      barcode: item.barcode,
+    }));
+    setOffPicked(true);
+    onNameEdit?.();
+  };
   const set = <K extends keyof FoodFields>(key: K, value: FoodFields[K]) => setFields((f) => ({ ...f, [key]: value }));
 
   const nameMissing = fields.name.trim() === "";
@@ -100,12 +146,40 @@ export function FoodEditor({ food, prefill, pending, nameError, onNameEdit, onSa
           value={fields.name}
           onChange={(e) => {
             set("name", e.target.value);
+            setOffPicked(false);
             onNameEdit?.();
           }}
           error={nameError ?? (triedSave && nameMissing ? t("nameRequired") : undefined)}
           autoFocus={!food}
           required
         />
+
+        {offAvailable && (
+          <div className="flex flex-col gap-2" data-testid="off-option">
+            <Checkbox
+              checked={offChecked}
+              onChange={(next) => {
+                setOffChecked(next);
+                onOffCheckedChange?.(next);
+              }}
+              label={od("offLabel")}
+            />
+            {offChecked && (
+              <p className="type-body-s" data-testid="off-hint" style={{ color: "var(--text-3)" }}>
+                {od("offHint")}
+              </p>
+            )}
+            {offChecked && !offPicked && fields.name.trim() !== "" && (
+              <OffResultsList state={off} query={fields.name} onPick={pickOff} />
+            )}
+            {offChecked && offPicked && (
+              <p className="type-body-s flex items-start gap-2" role="status" data-testid="off-filled" style={{ color: "var(--text-2)" }}>
+                <Icon name="info" size={18} className="mt-px shrink-0" />
+                <span>{t("offFilled")}</span>
+              </p>
+            )}
+          </div>
+        )}
 
         <ReadOnlyField label={t("basis")} value={t("basisValue")} />
 

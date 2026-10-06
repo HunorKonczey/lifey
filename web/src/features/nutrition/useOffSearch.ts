@@ -67,3 +67,10 @@ export function useOffSearch({ query, lang, checked }: { query: string; lang: Of
 export function useOffSearchForLocale(args: { query: string; checked: boolean }): UseOffSearchResult {
   return useOffSearch({ ...args, lang: offSearchLang(useLocale()) });
 }
+
+const NO_OFF: UseOffSearchResult = { active: false, pending: false, items: [], response: undefined, failed: false };
+
+/** What the OpenFoodFacts hook says when there is none: nothing active, nothing pending. */
+export function useNoOffSearch(): UseOffSearchResult {
+  return NO_OFF;
+}

@@ -1167,7 +1167,8 @@
       "macroLine": "A makrók {computed} kcal-t adnak ki — ez {diff} kcal-lal tér el.",
       "nameRequired": "Adj nevet az ételnek",
       "duplicateName": "Már van ilyen nevű ételed",
-      "closeAria": "Szerkesztő bezárása"
+      "closeAria": "Szerkesztő bezárása",
+      "offFilled": "Az OpenFoodFacts adatbázisából kitöltve — ellenőrizd az értékeket, aztán mentsd."
     },
     "addMealDialog": {
       "editTitle": "Szerkesztés: {meal}",
