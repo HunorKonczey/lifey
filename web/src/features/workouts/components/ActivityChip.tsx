@@ -26,7 +26,7 @@ export function ActivityChip({
       className="flex items-center justify-center rounded-full flex-none"
       style={{ width: size, height: size, background: `color-mix(in srgb, ${color} 16%, transparent)` }}
     >
-      <span
+      <span aria-hidden="true"
         className="material-symbols-rounded"
         style={{ fontSize: Math.round(size * 0.54), color, fontVariationSettings: "'FILL' 1" }}
       >

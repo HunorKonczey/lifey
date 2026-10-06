@@ -19,7 +19,7 @@ export function ThemeToggle() {
       aria-label={label}
       title={label}
     >
-      <span className="material-symbols-rounded text-xl">{icon}</span>
+      <span aria-hidden="true" className="material-symbols-rounded text-xl">{icon}</span>
     </button>
   );
 }

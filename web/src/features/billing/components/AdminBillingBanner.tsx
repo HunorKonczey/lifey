@@ -58,7 +58,7 @@ export function AdminBillingBanner() {
       className="rounded-[var(--r-card)] p-4.5 mb-3.5 flex items-start gap-3"
       style={{ background: tone.background, color: tone.color }}
     >
-      <span className="material-symbols-rounded text-2xl shrink-0">{tone.icon}</span>
+      <span aria-hidden="true" className="material-symbols-rounded text-2xl shrink-0">{tone.icon}</span>
       <div className="flex-1">
         <p className="text-sm font-extrabold">
           {state.kind === "overLimit"
@@ -89,7 +89,7 @@ export function AdminBillingBanner() {
           aria-label={t("bannerDismiss")}
           className="shrink-0 p-1 rounded-full hover:bg-black/10"
         >
-          <span className="material-symbols-rounded text-lg">close</span>
+          <span aria-hidden="true" className="material-symbols-rounded text-lg">close</span>
         </button>
       )}
     </div>

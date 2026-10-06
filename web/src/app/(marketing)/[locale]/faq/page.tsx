@@ -134,7 +134,7 @@ export default async function FaqPage({
                     >
                       <summary className="flex items-center gap-4 cursor-pointer list-none">
                         <span className="text-base font-bold flex-1">{item.q}</span>
-                        <span
+                        <span aria-hidden="true"
                           className="material-symbols-rounded text-2xl shrink-0 transition-transform duration-150 group-open:rotate-180"
                           style={{ color: "var(--primary)" }}
                         >

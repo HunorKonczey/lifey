@@ -63,7 +63,7 @@ export async function StoreBadges({
               className={`rounded-md border border-outline flex items-center font-bold ${sizeClasses}`}
               style={{ color: "var(--text-3)", opacity: 0.6 }}
             >
-              <span className={`material-symbols-rounded ${iconSize}`}>{b.icon}</span>
+              <span aria-hidden="true" className={`material-symbols-rounded ${iconSize}`}>{b.icon}</span>
               {b.label}
             </div>
           ))}
@@ -84,7 +84,7 @@ export async function StoreBadges({
           page={page}
           className={`rounded-md border border-outline flex items-center font-bold ${sizeClasses}`}
         >
-          <span className={`material-symbols-rounded ${iconSize}`}>{b.icon}</span>
+          <span aria-hidden="true" className={`material-symbols-rounded ${iconSize}`}>{b.icon}</span>
           {b.label}
         </TrackedStoreBadge>
       ))}

@@ -61,7 +61,7 @@ export async function ProgramMock() {
           <div className="flex flex-col gap-2 mt-3.5">
             <div className="rounded-md p-3" style={{ background: "var(--nested)" }}>
               <div className="flex items-center gap-2">
-                <span className="material-symbols-rounded text-base" style={{ color: "var(--text-3)" }}>drag_indicator</span>
+                <span aria-hidden="true" className="material-symbols-rounded text-base" style={{ color: "var(--text-3)" }}>drag_indicator</span>
                 <div className="text-[12.5px] font-extrabold flex-1">{t("mockMonday")}</div>
                 <span className="text-[11px]" style={{ color: "var(--text-3)" }}>{t("mockExerciseCount")}</span>
               </div>
@@ -77,7 +77,7 @@ export async function ProgramMock() {
             {otherDays.map((day) => (
               <div key={day} className="rounded-md p-3" style={{ background: "var(--nested)" }}>
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-rounded text-base" style={{ color: "var(--text-3)" }}>drag_indicator</span>
+                  <span aria-hidden="true" className="material-symbols-rounded text-base" style={{ color: "var(--text-3)" }}>drag_indicator</span>
                   <div className="text-[12.5px] font-extrabold flex-1">{day}</div>
                   <span className="text-[11px]" style={{ color: "var(--text-3)" }}>{t("mockExerciseCount")}</span>
                 </div>

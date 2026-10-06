@@ -24,7 +24,7 @@ export async function SponsoredMock() {
           className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"
           style={{ background: "var(--role)", color: "var(--bg)" }}
         >
-          <span className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
             workspace_premium
           </span>
         </span>
@@ -41,11 +41,11 @@ export async function SponsoredMock() {
           { icon: "smart_toy", label: t("mockRowAi") },
         ].map((row) => (
           <div key={row.label} className="flex items-center gap-2.5 rounded-md px-3 py-2.5" style={{ background: "var(--nested)" }}>
-            <span className="material-symbols-rounded text-lg" style={{ color: "var(--role)" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ color: "var(--role)" }}>
               {row.icon}
             </span>
             <span className="text-[12.5px] font-bold flex-1">{row.label}</span>
-            <span className="material-symbols-rounded text-lg" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>
               check_circle
             </span>
           </div>

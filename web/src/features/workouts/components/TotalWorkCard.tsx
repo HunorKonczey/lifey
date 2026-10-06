@@ -28,7 +28,7 @@ export function TotalWorkCard({ totalWorkKj, avgWatts, maxWatts, accent }: Total
     <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--card)" }}>
       <div className="flex items-start gap-4">
         <div className="flex-1 min-w-0">
-          <span className="material-symbols-rounded text-lg" style={{ color: accent }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ color: accent }}>
             bolt
           </span>
           <p className="text-[32px] font-extrabold tabular leading-tight" style={{ color: "var(--text)" }}>
@@ -42,7 +42,7 @@ export function TotalWorkCard({ totalWorkKj, avgWatts, maxWatts, accent }: Total
           </p>
         </div>
         <div className="flex-1 min-w-0">
-          <span className="material-symbols-rounded text-lg" style={{ color: "var(--text-2)" }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ color: "var(--text-2)" }}>
             speed
           </span>
           <p className="text-[32px] font-extrabold tabular leading-tight" style={{ color: "var(--text)" }}>

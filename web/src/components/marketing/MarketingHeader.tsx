@@ -39,7 +39,7 @@ export async function MarketingHeader() {
             className="w-[34px] h-[34px] rounded-md flex items-center justify-center"
             style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
-            <span
+            <span aria-hidden="true"
               className="material-symbols-rounded text-[21px]"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >

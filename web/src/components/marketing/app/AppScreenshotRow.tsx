@@ -112,7 +112,7 @@ export async function AppScreenshotRow() {
 
         <PhoneFrame label={t("offlineLabel")}>
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-rounded text-base" style={{ color: "var(--text-3)" }}>cloud_off</span>
+            <span aria-hidden="true" className="material-symbols-rounded text-base" style={{ color: "var(--text-3)" }}>cloud_off</span>
             <div className="text-[10.5px] font-bold" style={{ color: "var(--text-3)" }}>{t("offlineBadge")}</div>
           </div>
           <div className="rounded-md p-2 mt-2.5" style={{ background: "var(--nested)" }}>

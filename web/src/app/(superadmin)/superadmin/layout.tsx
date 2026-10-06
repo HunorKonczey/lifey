@@ -43,7 +43,7 @@ function SuperAdminGate({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg">
-        <span className="material-symbols-rounded text-4xl animate-pulse" style={{ color: "var(--text-2)" }}>
+        <span aria-hidden="true" className="material-symbols-rounded text-4xl animate-pulse" style={{ color: "var(--text-2)" }}>
           eco
         </span>
       </div>

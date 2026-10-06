@@ -46,7 +46,7 @@ export async function HowItWorks() {
                   className="rounded-md border border-outline p-3.5 mt-4 flex gap-2.5"
                   style={{ background: "var(--bg)" }}
                 >
-                  <span
+                  <span aria-hidden="true"
                     className="material-symbols-rounded text-xl shrink-0"
                     style={{ color: "var(--role)" }}
                   >

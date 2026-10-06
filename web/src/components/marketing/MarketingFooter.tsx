@@ -18,7 +18,7 @@ export async function MarketingFooter() {
                 className="w-8 h-8 rounded-md flex items-center justify-center"
                 style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
-                <span
+                <span aria-hidden="true"
                   className="material-symbols-rounded text-xl"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >

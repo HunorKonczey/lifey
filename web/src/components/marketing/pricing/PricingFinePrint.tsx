@@ -25,7 +25,7 @@ export async function PricingFinePrint() {
 
       <div className="order-1 md:order-2 rounded-lg p-5.5" style={{ background: "var(--nested)" }}>
         <div className="flex items-center gap-2">
-          <span className="material-symbols-rounded text-xl" style={{ color: "var(--role)", fontVariationSettings: "'FILL' 1" }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-xl" style={{ color: "var(--role)", fontVariationSettings: "'FILL' 1" }}>
             smartphone
           </span>
           <div className="text-[13px] font-extrabold tracking-wide" style={{ color: "var(--role)" }}>

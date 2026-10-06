@@ -48,7 +48,7 @@ export function MobileMenu({
         aria-label={menuLabels.openMenu}
         aria-expanded={open}
       >
-        <span className="material-symbols-rounded text-[26px]">menu</span>
+        <span aria-hidden="true" className="material-symbols-rounded text-[26px]">menu</span>
       </button>
 
       {open && (
@@ -67,7 +67,7 @@ export function MobileMenu({
                 className="w-[30px] h-[30px] rounded-[9px] flex items-center justify-center"
                 style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
-                <span
+                <span aria-hidden="true"
                 className="material-symbols-rounded text-[18px]"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
@@ -82,7 +82,7 @@ export function MobileMenu({
               className="ml-auto w-11 h-11 flex items-center justify-center"
               aria-label={menuLabels.closeMenu}
             >
-              <span className="material-symbols-rounded text-[26px]">close</span>
+              <span aria-hidden="true" className="material-symbols-rounded text-[26px]">close</span>
             </button>
           </div>
           <div className="px-4 pt-2 pb-6 overflow-auto">

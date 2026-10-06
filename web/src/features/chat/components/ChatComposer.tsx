@@ -217,7 +217,7 @@ export function ArchivedComposerNotice() {
       className="flex items-center gap-2.5 mx-5 mb-4 px-4 py-3.5 rounded-[var(--r-control)] shrink-0"
       style={{ background: "var(--nested)", color: "var(--text-2)" }}
     >
-      <span className="material-symbols-rounded text-[20px]">lock</span>
+      <span aria-hidden="true" className="material-symbols-rounded text-[20px]">lock</span>
       <span className="text-[12.5px] font-semibold">{t("archivedNotice")}</span>
     </div>
   );

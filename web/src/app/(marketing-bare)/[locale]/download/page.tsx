@@ -47,7 +47,7 @@ export default async function DownloadPage({
             className="w-9 h-9 rounded-md flex items-center justify-center"
             style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
-            <span className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
               eco
             </span>
           </span>

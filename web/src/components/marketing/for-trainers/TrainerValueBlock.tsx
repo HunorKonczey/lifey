@@ -55,7 +55,7 @@ export function TrainerValueBlock({
         <ul className="flex flex-col gap-2 mt-4">
           {bullets.map((b) => (
             <li key={b} className="flex gap-2.5 items-start">
-              <span
+              <span aria-hidden="true"
                 className="material-symbols-rounded text-lg mt-0.5"
                 style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
               >

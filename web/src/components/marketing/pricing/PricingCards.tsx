@@ -169,7 +169,7 @@ export function PricingCards({
               <ul className="flex flex-col gap-2.5 mt-5.5">
                 {plan.bullets.map((b) => (
                   <li key={b} className="flex gap-2.5 items-start text-[14.5px]">
-                    <span
+                    <span aria-hidden="true"
                       className="material-symbols-rounded text-lg mt-0.5"
                       style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
                     >

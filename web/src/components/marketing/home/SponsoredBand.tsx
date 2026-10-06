@@ -5,10 +5,10 @@ import { TrackedCta } from "../TrackedCta";
 function BottomNav() {
   return (
     <div className="flex justify-around border-t border-outline py-2.5" style={{ background: "var(--card)" }}>
-      <span className="material-symbols-rounded text-[22px]" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>home</span>
-      <span className="material-symbols-rounded text-[22px]" style={{ color: "var(--text-3)" }}>restaurant</span>
-      <span className="material-symbols-rounded text-[22px]" style={{ color: "var(--text-3)" }}>fitness_center</span>
-      <span className="material-symbols-rounded text-[22px]" style={{ color: "var(--text-3)" }}>insights</span>
+      <span aria-hidden="true" className="material-symbols-rounded text-[22px]" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>home</span>
+      <span aria-hidden="true" className="material-symbols-rounded text-[22px]" style={{ color: "var(--text-3)" }}>restaurant</span>
+      <span aria-hidden="true" className="material-symbols-rounded text-[22px]" style={{ color: "var(--text-3)" }}>fitness_center</span>
+      <span aria-hidden="true" className="material-symbols-rounded text-[22px]" style={{ color: "var(--text-3)" }}>insights</span>
     </div>
   );
 }
@@ -31,7 +31,7 @@ export async function SponsoredBand() {
             className="inline-flex items-center gap-2 h-8 px-3.5 rounded-pill text-xs font-extrabold tracking-wide"
             style={{ background: "var(--bg)", color: "var(--role)" }}
           >
-            <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
               volunteer_activism
             </span>
             {t("eyebrow").toUpperCase()}
@@ -133,7 +133,7 @@ function PhoneDashboard({
               className="h-6.5 flex items-center gap-1.5 px-2.5 rounded-pill text-[10.5px] font-extrabold"
               style={{ background: "var(--role)", color: "var(--bg)" }}
             >
-              <span className="material-symbols-rounded text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+              <span aria-hidden="true" className="material-symbols-rounded text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
               PRO
             </div>
           ) : (
@@ -141,7 +141,7 @@ function PhoneDashboard({
               className="w-8.5 h-8.5 rounded-pill flex items-center justify-center"
               style={{ background: "var(--nested)" }}
             >
-              <span className="material-symbols-rounded text-[19px]" style={{ color: "var(--text-3)" }}>notifications</span>
+              <span aria-hidden="true" className="material-symbols-rounded text-[19px]" style={{ color: "var(--text-3)" }}>notifications</span>
             </div>
           )}
         </div>
@@ -178,7 +178,7 @@ function PhoneDashboard({
         <div className="mt-3.5 border-t border-outline px-3 pt-2 pb-2.5" style={{ background: "var(--nested)" }}>
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold" style={{ color: "var(--text-3)" }}>{t("ad")}</span>
-            <span className="material-symbols-rounded text-[22px]" style={{ color: "var(--text-3)" }}>block</span>
+            <span aria-hidden="true" className="material-symbols-rounded text-[22px]" style={{ color: "var(--text-3)" }}>block</span>
           </div>
           <div
             className="h-12.5 rounded-md flex items-center justify-center text-[11px] mt-1.5"

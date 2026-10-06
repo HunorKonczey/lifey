@@ -48,7 +48,7 @@ export function HeaderAuthActions({
               : "h-12 rounded-pill border-[1.5px] border-outline flex items-center gap-2 px-5.5 text-[15px] font-bold"
           }
         >
-          <span className="material-symbols-rounded text-xl">arrow_back</span>
+          <span aria-hidden="true" className="material-symbols-rounded text-xl">arrow_back</span>
           {labels.backToApp}
         </Link>
         {variant === "desktop" && (

@@ -51,7 +51,7 @@ export function HrZonePanel({ breakdown }: HrZonePanelProps) {
           className="flex items-center gap-1 px-2.5 py-1 rounded-[var(--r-pill)] text-xs font-extrabold"
           style={{ background: `color-mix(in srgb, ${verdictColor} 16%, transparent)`, color: "var(--text)" }}
         >
-          <span className="material-symbols-rounded text-xs" style={{ color: verdictColor }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-xs" style={{ color: verdictColor }}>
             local_fire_department
           </span>
           {t(VERDICT_KEY[breakdown.intensity])}
@@ -89,7 +89,7 @@ export function HrZonePanel({ breakdown }: HrZonePanelProps) {
 
       {breakdown.isPartial && (
         <div className="flex items-center gap-1.5 mt-2.5 text-[10.5px]" style={{ color: "var(--text-3)" }}>
-          <span className="material-symbols-rounded text-xs">timelapse</span>
+          <span aria-hidden="true" className="material-symbols-rounded text-xs">timelapse</span>
           {t("hrZonePartialCoverage", { percent: Math.round(breakdown.coverageFraction * 100) })}
         </div>
       )}

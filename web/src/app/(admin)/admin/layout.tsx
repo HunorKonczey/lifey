@@ -59,7 +59,7 @@ function AdminGate({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg">
-        <span
+        <span aria-hidden="true"
           className="material-symbols-rounded text-4xl animate-pulse"
           style={{ color: "var(--role)" }}
         >
