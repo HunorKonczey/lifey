@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06, results below and folded into the decisions; no code written yet. One open decision: §2 D12
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); no code written yet
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -14,9 +14,9 @@ food **by typing its name** and log it, on web and on mobile.
    entry sheet** (`AddMealEntrySheet`) — there is a **checkbox "Search OpenFoodFacts too"**. It is
    **off by default**, and remembered per device once ticked.
 2. With the checkbox on and at least 3 characters typed, the client asks the backend, which searches
-   OFF **in the user's language first (HU or EN, from the language setting)**. If that search
-   returns **nothing usable**, the backend searches again **in English** and says so
-   (`fellBackToEnglish`).
+   OFF **in the user's language first (HU or EN, from the language setting)** — for a Hungarian
+   user **restricted to products sold in Hungary**. If that search returns **nothing usable**, the backend
+   searches again **in English, without the country restriction**, and says so (`fellBackToEnglish`).
 3. OFF results appear in their own **"From OpenFoodFacts" section below the user's own foods and
    recipes**; own results are never pushed down or replaced. A row shows name, brand, kcal / 100 g.
 4. Picking an OFF row works like picking a food: quantity, meal type, macro preview, "left after
@@ -67,27 +67,29 @@ browser, which only the client knows. Web sends `useLocale()`, mobile sends the 
 locale (`AppLocalizations.of(context).localeName`). Rejected: reading `Accept-Language` — the
 Flutter client's header does not follow the in-app language override.
 
-### D4 Language-first, then English — and only on "nothing usable", never on an error
+### D4 Language-first (Hungary-restricted for `hu`), then English — only on "nothing usable", never on an error
 Flow in a new `FoodNameSearchService` (package `nutrition/food/service/`):
 
-1. `lang == en` → one search.
-2. Otherwise search `lang`; if the **filtered** result (D6) is empty → search `en` once, set
-   `fellBackToEnglish=true`, `language="en"`.
+1. `lang == en` → one search, `langs=en`, no country restriction.
+2. `lang == hu` → search `langs=hu` **restricted to Hungary** (D12). If the **filtered** result (D6) is
+   empty → search `langs=en`, **no country restriction**, once; set `fellBackToEnglish=true`,
+   `language="en"`.
 3. If a search **fails** (timeout, 5xx, 429) → return `status=UNAVAILABLE` / `RATE_LIMITED` with
    whatever is already known. **Do not** run the English search as a retry: showing English hits
-   because the Hungarian call timed out would look like "no Hungarian results" and is a silent lie.
+   because the Hungarian call timed out would look like "nothing from Hungary" and is a silent lie.
 
-The English pass is the **same query with `langs=en`**. Spike finding: `langs` is not a filter, it picks
-which language subfields are searched, so `hu` and `en` return almost disjoint sets (1 shared product of
-14–20 for "csirkemell"), and a Hungarian search is **rarely empty** (1 of 20 test terms) — the backoff
-will mostly fire for a Hungarian-language user who types an English product or brand ("pumpkin",
-"snickers"). A Hungarian word typed in the English pass finds nothing ("sütőtök" → 0 hits both ways).
-That is what was asked for; the section note (§3.1) says which language the results are from.
+Spike findings behind it: `langs` is not a filter, it picks which language subfields are searched, so
+`hu` and `en` return almost disjoint sets (1 shared product of 14–20 for "csirkemell"). With the Hungary
+restriction a Hungarian search is empty for **2 of 20** test terms (tojás, sütőtök); the English pass
+mostly pays off for a Hungarian-language user who types an English product or brand ("pumpkin",
+"snickers") — and a Hungarian word typed in the English pass finds nothing ("sütőtök" → 0 hits both ways).
+That is what was asked for; the section note (§3.1) says what the shown results are.
 
 Rejected: merging both languages into one list (doubles the calls, duplicates every product that
-exists in both; `langs=hu,en` in one call was **not** shown to combine usefully and is not used) and falling
+exists in both; `langs=hu,en` in one call was **not** shown to combine usefully and is not used), falling
 back whenever there are fewer than N results (the requirement is "nothing came back"; a threshold is an
-invented rule).
+invented rule), and a third "hu without the country" step (option C of D12 — one more OFF call per miss
+for results D12 exists to remove).
 
 ### D5 Which OFF endpoint: search-a-licious, behind a second base URL
 Probed live on 2026-10-06 with "csirkemell": both `GET /cgi/search.pl` (v1, `world.openfoodfacts.org`)
@@ -169,16 +171,22 @@ works as a filter, and `tej:`, `"tej`, `a OR`, `tej*` are all accepted without a
 colon or a quote would silently change what is searched. The service keeps letters, digits, spaces,
 `-` and `'`, drops everything else, collapses spaces, then applies the 3-character minimum. Rejected:
 passing the text through (surprising results, and a user could address any indexed field), and escaping
-each special character (more code for the same outcome here).
+each special character (more code for the same outcome here). The Hungary restriction (D12) is appended
+**after** the sanitised text as a fixed clause, so a user can never alter or drop it.
 
-### D12 OPEN — a Hungary filter for Hungarian users (decide before Prompt 2)
-Not asked for, found in the spike. Adding `countries_tags:"en:hungary"` to the Hungarian pass works
-(`alma` → only Hungarian products: Topjoy apple-pear, Dr. Oetker, efko… instead of the German salad;
-`csirkemell` → 13 hits, all Hungarian) and removes most of the brand/foreign noise. Cost: a product sold
-in Hungary but not tagged so is missed, and it changes the flow to three steps (hu+Hungary → hu → en) or
-two (hu+Hungary → en). Options: **A** keep the plan as written (language only); **B** hu+Hungary → en;
-**C** hu+Hungary → hu → en. Recommendation: **B** for `hu`, nothing for `en` — but it is the user's call,
-because it changes what "no result" means in D4.
+### D12 For `hu`, search only products sold in Hungary — decided: option B
+Decided 2026-10-06 (options were: A language only; **B Hungarian + Hungary, then English**; C Hungarian +
+Hungary, then Hungarian without the country, then English). The Hungarian pass appends the clause
+`countries_tags:"en:hungary"` (a constant `en:hungary`, in `OpenFoodFactsProperties` as
+`hu-country-tag` so it is not buried in code). It acts as a **filter**, not a boost: re-measured on the
+same 20 terms (Spike results) every one of 263 returned hits is tagged Hungary, and the usable share is
+unchanged (73 %). It removes the brand/foreign noise (`alma` → only Hungarian products instead of the
+German salad). The English pass and `lang == en` have **no** country restriction.
+
+Accepted costs: a product sold in Hungary but not tagged so is missed (it can still be found by barcode
+or in the English pass); a Hungarian-language user travelling abroad searches Hungarian products only
+(the checkbox is the off-switch, and the English pass is unrestricted); the country is tied to the
+language, not to a country setting — a user setting would be a later change (Non-goals).
 
 ## 3. UI spec
 
@@ -187,7 +195,7 @@ because it changes what "no result" means in D4.
   too". Below the own results a section label "From OpenFoodFacts" and rows in the same shape as own
   rows (name, `Brand · kcal / 100 g`, a small "OFF" tag). While loading: a one-line skeleton, not a
   spinner over the list. Notes under the section, one at a time:
-  `fellBackToEnglish` → "No Hungarian results — showing English ones." (they are English *search* results; the rows' names are what OFF stores); `UNAVAILABLE` → "OpenFoodFacts
+  `fellBackToEnglish` → "Nothing found among products sold in Hungary — showing English-language results from everywhere."; `UNAVAILABLE` → "OpenFoodFacts
   isn't answering right now."; `RATE_LIMITED` → "Too many searches — try again in a minute.".
 - `foodSearch.ts`: `SearchItem` gains a third kind `"off"` (`key: off:<barcode>`, carries the item).
   `searchItems()` is **not** changed — OFF rows are appended by the pane, never ranked into own rows.
@@ -240,7 +248,7 @@ Questions asked, answers in "Spike results" below: what `langs` does; which fiel
 nutriments; the rate limit; how many real Hungarian/English terms survive the D6 filter; v1 vs
 search-a-licious. Verification gate "stop if the Hungarian survival rate is poor": **passed** (73 %, 19 of
 20 terms had at least one usable hit); D1, D4, D5, D6, D7 were edited from the findings, D11 added, D12
-opened.
+opened and then decided (option B).
 
 ### Spike results (all numbers from live calls on 2026-10-06, `User-Agent: Lifey-planning/1.0 (…)`)
 
@@ -272,6 +280,13 @@ carries `energy-kcal_100g`, `energy-kj_100g`, `proteins_100g`, `carbohydrates_10
   brand *Joghurt*), foreign products with Hungarian-looking brands, products whose only name is another
   language. A Hungary country filter fixes most of it (D12).
 
+**Hungary restriction (D12), re-measured the same day on the same 20 terms** with
+`<term> countries_tags:"en:hungary"`, `langs=hu`: 263 raw hits (vs 280 without), **193 usable = 73 %**
+(vs 205 = 73 %), **every hit tagged `en:hungary`**; empty terms: **tojás** (2 raw, 0 usable) and
+**sütőtök** (0) — so 2 of 20 go to the English pass; the others keep 4–18 usable. The first two rows are
+now plausible products for the term (`alma` → Meggy Szilva Alma, Alma-málna gyümölcspüré; `túró` → Túró
+Rudi, félzsíros túró).
+
 **Query syntax.** Lucene: field filters work in `q` (`categories_tags:"en:beverages" tej` → 4 hits);
 malformed input (`tej:`, `"tej`, `a OR`) does not error, it just searches something else → D11.
 
@@ -292,23 +307,26 @@ search-a-licious limit (an IP ban would also take the barcode scanner down).
 ## Prompt 1 — Backend: OFF name-search client
 - `OpenFoodFactsProperties`: add `searchBaseUrl`; `application.yml`: `search-base-url`,
   `search-per-minute` (default 8); `OpenFoodFactsConfig`: `openFoodFactsSearchRestClient` (connect 2 s, read 3 s).
-- `OpenFoodFactsClient`: add `List<OffSearchHit> searchByName(String query, String lang, int limit)`;
+- `OpenFoodFactsClient`: add `List<OffSearchHit> searchByName(String query, String lang, String countryTag, int limit)`
+  (`countryTag` nullable; when set, the client appends ` countries_tags:"<tag>"` after the sanitised query);
   implement in `OpenFoodFactsClientImpl` with a new raw response record next to `OffApiResponse`
   (`@JsonIgnoreProperties(ignoreUnknown = true)`).
 - The query sanitiser (D11) is a small pure function next to the client and unit-tested here.
 - A transport failure is a typed exception (`OffUnavailableException`; `OffRateLimitedException` for 429 **and 503**, which is what OFF
   returns on its global limit), not an empty list — D4 depends on telling "nothing" from "failed".
-Verification: `OpenFoodFactsClientImplTest` with a stub server (200 with hits, 200 empty, 429, 503, timeout) and the sanitiser cases from D11 (`tej:`, `"tej`, `a OR`, accents kept).
+Verification: `OpenFoodFactsClientImplTest` with a stub server (200 with hits, 200 empty, 429, 503, timeout) and the sanitiser cases from D11 (`tej:`, `"tej`, `a OR`, accents kept), and that the country clause is
+appended verbatim and a query like `x countries_tags:"en:fr"` cannot replace it (the sanitiser removes the
+colon and quotes). `OpenFoodFactsProperties` also gets `huCountryTag` (default `en:hungary`).
 Mergeable alone: nothing calls it yet.
 
 ## Prompt 2 — Backend: language-first search with English backoff and filtering
 - `FoodNameSearchService` + `Impl` (package `nutrition/food/service/`): D4 flow, D6 filter as one
   package-private function, dedupe against `FoodRepository.findByUserIdAndBarcode`.
 - DTOs in `nutrition/food/dto/`: `OffSearchResponse`, `OffSearchItem`, `OffSearchStatus`.
-Verification: `FoodNameSearchServiceImplTest` — hu hit (no fallback); hu empty → en hit
-(`fellBackToEnglish`); hu timeout → `UNAVAILABLE` **and the English client is never called**; en request
-makes one call; each D6 rule has a test (including the name rule: `product_name_hu` wins over `product_name`); an owned
-barcode is dropped. The D12 decision is implemented here, whichever option is chosen.
+Verification: `FoodNameSearchServiceImplTest` — hu hit (client called once, **with** the Hungary tag, no
+fallback); hu empty → en hit (second call **without** a country tag, `fellBackToEnglish`); hu timeout →
+`UNAVAILABLE` **and the English client is never called**; en request makes one call, no country tag; each D6 rule has a test (including the name rule: `product_name_hu` wins over `product_name`); an owned
+barcode is dropped. The Hungary restriction (D12, option B) is implemented here.
 
 ## Prompt 3 — Backend: cache and global limiter
 - `OffSearchCache` (bounded LRU + TTL, key `lang|normalised query`), `OffSearchLimiter`; wired into the
@@ -382,8 +400,8 @@ the food reaches the backend (docs/15-delta-sync.md).
 - Showing per-serving values, nutriscore, images, allergens.
 - Deriving kcal from kJ when a product only has `energy_100g` (it is dropped today, same as the
   barcode flow). Revisit after the spike shows how many Hungarian products this costs.
-- Countries beyond language: no "only products sold in Hungary" filter (the spike decides whether it is
-  worth adding).
+- A country setting: the Hungary restriction follows the language (D12); other countries, or a user choice
+  of country, are a later change.
 - A shared server-side product table; per-user OFF quotas.
 - Languages other than `hu`/`en`.
 
@@ -404,6 +422,11 @@ the food reaches the backend (docs/15-delta-sync.md).
   cached results are keyed by language (D7).
 - 429 / timeout → status note; own results unaffected; no automatic retry loop.
 - Offline on mobile → checkbox disabled; own offline search unchanged.
+- Hungarian-language user abroad: the Hungarian pass still shows only Hungarian products; the English pass
+  (no restriction) is the way out, and so is the checkbox.
+- A Hungarian term that has products only outside Hungary (tojás: 2 raw, 0 usable inside Hungary) goes to
+  the English pass, where the Hungarian word usually finds nothing → "no results" line; the user then
+  uses own foods, the barcode scanner or the macro entry.
 - Server restart empties the cache — harmless.
 
 ## Test plan
@@ -441,6 +464,10 @@ Prompt 0 has no PR of its own: its findings land as a commit to this doc ahead o
 - **Limiter too tight or too loose:** too tight and the feature seems dead after a few users, too loose
   and OFF blocks our IP for everyone including the barcode scanner (same host family). The limit is
   configuration, and the spike's rate-limit finding sets its default.
+- **The country clause silently missing or editable:** if it were dropped, Hungarian users would see the
+  brand/foreign noise again with no error; if a user could alter it they could search other countries.
+  Tests: it is present on the first `hu` call, absent on the English call and for `en`, and cannot be
+  replaced by typed text (D11).
 - **Relevance noise mistaken for coverage:** a list full of brand-matched, foreign products looks like "it works" in a
   coverage count. The manual walk must read the first five rows per term, not count hits (D12).
 - **Debounce missing on one client:** a keystroke-per-request client would burn the shared limit in
