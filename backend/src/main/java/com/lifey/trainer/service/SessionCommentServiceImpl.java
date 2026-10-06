@@ -81,9 +81,15 @@ public class SessionCommentServiceImpl implements SessionCommentService {
         return new PushMessage(title, body, data);
     }
 
-    private static String truncate(String comment) {
-        return comment.length() > PUSH_BODY_MAX_LENGTH
-                ? comment.substring(0, PUSH_BODY_MAX_LENGTH - 1) + "…"
-                : comment;
+    static String truncate(String comment) {
+        if (comment.length() <= PUSH_BODY_MAX_LENGTH) {
+            return comment;
+        }
+        int end = PUSH_BODY_MAX_LENGTH - 1;
+        // Never cut an emoji in half: a lone high surrogate reaches the phone as a "?".
+        if (Character.isHighSurrogate(comment.charAt(end - 1))) {
+            end--;
+        }
+        return comment.substring(0, end) + "…";
     }
 }

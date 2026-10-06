@@ -383,6 +383,20 @@ class ChatNotificationServiceImplTest {
         return new ChatPushPrefs(pushEnabled, utcOffsetMinutes, quietStart, quietEnd, hungarian);
     }
 
+    @Test
+    void truncate_neverSplitsAnEmojiAtTheCut() {
+        // The 119th char (the cut) would be the first half of a surrogate pair.
+        String body = "a".repeat(118) + new String(Character.toChars(0x1F4AA)) + "tail";
+
+        assertThat(ChatNotificationServiceImpl.truncate(body)).isEqualTo("a".repeat(118) + "…");
+    }
+
+    @Test
+    void truncate_keepsAShortBodyAndIsNullSafe() {
+        assertThat(ChatNotificationServiceImpl.truncate("ok")).isEqualTo("ok");
+        assertThat(ChatNotificationServiceImpl.truncate(null)).isEmpty();
+    }
+
     /**
      * Real meters over a {@code SimpleMeterRegistry} rather than a mock: the
      * counters are pre-registered in {@link ChatMetrics}' constructor, and a
