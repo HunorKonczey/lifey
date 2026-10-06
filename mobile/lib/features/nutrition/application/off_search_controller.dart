@@ -75,7 +75,12 @@ class OffSearchController extends Notifier<OffSearchState> {
   }
 
   Future<void> _loadPreference() async {
-    final saved = await ref.read(offSearchPreferencesProvider).isEnabled();
+    final bool saved;
+    try {
+      saved = await ref.read(offSearchPreferencesProvider).isEnabled();
+    } catch (_) {
+      return; // storage unavailable: the box simply starts off
+    }
     // A choice made while the preference was still loading wins over the stored one.
     if (_disposed || _touched) return;
     state = state.copyWith(enabled: saved);
@@ -85,7 +90,8 @@ class OffSearchController extends Notifier<OffSearchState> {
   void setEnabled(bool enabled) {
     _touched = true;
     state = state.copyWith(enabled: enabled);
-    ref.read(offSearchPreferencesProvider).setEnabled(enabled);
+    // Not remembered if the write fails; the box still works for this sheet.
+    unawaited(ref.read(offSearchPreferencesProvider).setEnabled(enabled).catchError((Object _) {}));
     if (enabled) {
       queryChanged(_query, _lang);
     } else {

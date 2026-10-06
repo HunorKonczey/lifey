@@ -8,13 +8,16 @@ import '../../../../core/theme/app_type.dart';
 import '../../../../core/utils/search_normalize.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/ds/lifey_card.dart';
+import '../../../../core/sync/connectivity_status_provider.dart';
 import '../../../settings/application/settings_controller.dart';
 import '../../application/food_controller.dart';
 import '../../application/food_usage_provider.dart';
+import '../../application/off_search_controller.dart';
 import '../../application/selected_meal_day_provider.dart';
 import '../../domain/food.dart';
 import '../../domain/food_usage.dart';
 import '../../domain/meal_days.dart';
+import '../../domain/off_search.dart';
 import '../barcode_scanner_screen.dart';
 import 'add_food_sheet.dart';
 import '../../../../core/format/parse_decimal.dart';
@@ -58,6 +61,22 @@ class AddMealEntrySheet extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<AddMealEntrySheet> createState() => _AddMealEntrySheetState();
+}
+
+/// What the suggestion list holds: one of the user own foods, or [_OffGroupOption] — a stand-in that keeps the list
+/// open while only the OpenFoodFacts group (docs/84) has something to show. The group itself is drawn from the
+/// OpenFoodFacts controller state, not from the options (a list of options is computed on typing, an answer arrives later).
+sealed class _Option {
+  const _Option();
+}
+
+class _OwnOption extends _Option {
+  const _OwnOption(this.food);
+  final Food food;
+}
+
+class _OffGroupOption extends _Option {
+  const _OffGroupOption();
 }
 
 /// Cap on how many matching foods are shown at once, so the suggestion list
@@ -150,6 +169,15 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
 
   double? get _gramsValue => parseDecimal(_grams.text);
 
+  /// Tells the OpenFoodFacts search what is typed (it does nothing unless the checkbox is ticked and enough is typed).
+  void _offQueryChanged(String text) {
+    final lang = offSearchLang(Localizations.localeOf(context).languageCode);
+    ref.read(offSearchControllerProvider.notifier).queryChanged(text, lang);
+  }
+
+  /// A tap on an OpenFoodFacts row. Saving it as a food and picking it is the next step (docs/84 Prompt 10).
+  void _pickOff(OffSearchItem item) {}
+
   /// Puts [grams] into the field as the user's own choice (a − / + press or a
   /// quick chip), so a later recent-chip tap never overwrites it.
   void _setGrams(double grams) {
@@ -206,6 +234,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   Widget build(BuildContext context) {
     final foodsState = ref.watch(foodSearchProvider);
     final usage = ref.watch(foodUsageProvider).value ?? const <String, FoodUsage>{};
+    final offState = ref.watch(offSearchControllerProvider);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final l10n = AppLocalizations.of(context)!;
     final t = Theme.of(context).textTheme;
@@ -266,19 +295,31 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.s12),
+                const SizedBox(height: AppSpacing.s4),
+                // Above the field, not under it: the suggestion list opens right below the field and would cover it.
+                if (!_isEditing) _OffSearchToggle(state: offState),
+                const SizedBox(height: AppSpacing.s8),
                 if (!_isEditing)
                   LayoutBuilder(
-                    builder: (context, constraints) => Autocomplete<Food>(
-                      displayStringForOption: (f) => f.name,
+                    builder: (context, constraints) => Autocomplete<_Option>(
+                      displayStringForOption: (o) => switch (o) {
+                        _OwnOption(:final food) => food.name,
+                        // Choosing the stand-in must not rewrite what was typed.
+                        _OffGroupOption() => _foodFieldController?.text ?? '',
+                      },
                       initialValue: _isPreselected ? TextEditingValue(text: widget.preselectedFood!.name) : null,
                       optionsBuilder: (textEditingValue) {
                         final query = normalizeForSearch(textEditingValue.text.trim());
                         // Nothing until the user types: the recent chips are
                         // the empty-field shortcut, and an open list would sit
                         // on top of them (and on the picked food's card).
-                        if (query.isEmpty) return const Iterable<Food>.empty();
-                        return ranked.where((f) => normalizeForSearch(f.name).contains(query)).take(_maxSuggestions);
+                        if (query.isEmpty) return const Iterable<_Option>.empty();
+                        return [
+                          for (final f in ranked.where((f) => normalizeForSearch(f.name).contains(query)).take(_maxSuggestions))
+                            _OwnOption(f),
+                          // Always present once something is typed; the list draws nothing for it while the option is off.
+                          const _OffGroupOption(),
+                        ];
                       },
                       fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
                         _foodFieldController = controller;
@@ -301,20 +342,27 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                                     onPressed: () {
                                       controller.clear();
                                       setState(() => _food = null);
+                                      _offQueryChanged('');
                                     },
                                   ),
                           ),
-                          onChanged: (_) {
+                          onChanged: (text) {
                             if (_food != null) setState(() => _food = null);
+                            _offQueryChanged(text);
                           },
                         );
                       },
                       optionsViewBuilder: (context, onSelected, options) => _FoodOptions(
-                        options: options.toList(),
+                        own: [for (final o in options) if (o is _OwnOption) o.food],
+                        typed: _foodFieldController?.text ?? '',
                         width: constraints.maxWidth,
-                        onSelected: onSelected,
+                        onSelected: (food) => onSelected(_OwnOption(food)),
+                        onPickOff: _pickOff,
                       ),
-                      onSelected: (food) {
+                      onSelected: (option) {
+                        // The stand-in is not a choice.
+                        if (option is! _OwnOption) return;
+                        final food = option.food;
                         setState(() {
                           _food = food;
                           _foodError = null;
@@ -381,20 +429,116 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   }
 }
 
-/// The autocomplete's suggestion list: a card of name + kcal per 100 g rows,
-/// as wide as the search field.
-class _FoodOptions extends StatelessWidget {
-  const _FoodOptions({required this.options, required this.width, required this.onSelected});
+/// The autocomplete's suggestion list: a card of name + kcal per 100 g rows, as wide as the search field — and, with the
+/// OpenFoodFacts option ticked (docs/84), a "From OpenFoodFacts" group under the user's own foods: rows with an "OFF" tag
+/// and the brand, one line saying what is going on (searching / nothing found / the English fallback / unavailable /
+/// rate-limited), or the hint to type 3 letters. The own rows are never reordered by it.
+class _FoodOptions extends ConsumerWidget {
+  const _FoodOptions({
+    required this.own,
+    required this.typed,
+    required this.width,
+    required this.onSelected,
+    required this.onPickOff,
+  });
 
-  final List<Food> options;
+  final List<Food> own;
+
+  /// The text in the search field, for the "type 3 letters" hint.
+  final String typed;
   final double width;
   final ValueChanged<Food> onSelected;
+  final ValueChanged<OffSearchItem> onPickOff;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watched here, not handed down: the list is drawn by the autocomplete overlay, which does not necessarily rebuild
+    // with the sheet, and an answer from OpenFoodFacts (or the box being unticked) must show at once.
+    final off = ref.watch(offSearchControllerProvider);
+    final showOff = off.enabled && typed.trim().isNotEmpty;
+    // Nothing of its own and the option off: the stand-in option alone keeps the list "open", so draw nothing.
+    if (own.isEmpty && !showOff) return const SizedBox.shrink();
+
     final p = context.palette;
     final f = LifeyFormat.of(context);
     final t = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    Widget row({required String name, required String second, required num kcal, String? tag, required VoidCallback onTap}) {
+      return InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text.rich(TextSpan(children: [
+                        TextSpan(text: name, style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text)),
+                        if (tag != null)
+                          TextSpan(text: '  $tag', style: t.labelSmall!.copyWith(color: p.text2, fontWeight: FontWeight.w700)),
+                      ])),
+                      if (second.isNotEmpty) Text(second, style: t.bodySmall!.copyWith(color: p.text3)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s8),
+                Text('${f.kcal(kcal)} kcal', style: t.bodySmall!.copyWith(color: p.text2)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget line(String text, {String? key}) => Padding(
+          key: key == null ? null : ValueKey(key),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+          child: Text(text, style: t.bodySmall!.copyWith(color: p.text3)),
+        );
+
+    final note = off.note;
+    final children = <Widget>[
+      for (final food in own)
+        row(name: food.name, second: '', kcal: food.caloriesPer100g, onTap: () => onSelected(food)),
+      if (showOff) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s12, AppSpacing.s16, AppSpacing.s4),
+          child: Text(l10n.offSearchSection.toUpperCase(),
+              key: const ValueKey('off-section-title'), style: t.labelSmall!.copyWith(color: p.text3, fontWeight: FontWeight.w700)),
+        ),
+        if (!isOffSearchable(typed))
+          line(l10n.offSearchTypeMore, key: 'off-type-more')
+        else ...[
+          for (final item in off.items)
+            row(
+              name: item.name,
+              second: item.brand ?? 'OpenFoodFacts',
+              kcal: item.caloriesPer100g,
+              tag: l10n.offSearchTag,
+              onTap: () => onPickOff(item),
+            ),
+          if (off.pending)
+            line(l10n.offSearchSearching, key: 'off-searching')
+          else if (note != null)
+            line(
+              switch (note) {
+                OffNote.fellBack => l10n.offSearchFellBack,
+                OffNote.unavailable => l10n.offSearchUnavailable,
+                OffNote.rateLimited => l10n.offSearchRateLimited,
+              },
+              key: 'off-note-${note.name}',
+            )
+          else if (off.items.isEmpty)
+            line(l10n.offSearchNoResults, key: 'off-no-results'),
+        ],
+      ],
+    ];
+
     return Align(
       alignment: Alignment.topLeft,
       child: Padding(
@@ -406,39 +550,36 @@ class _FoodOptions extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.control),
           clipBehavior: Clip.antiAlias,
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: 240, maxWidth: width, minWidth: width),
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              itemCount: options.length,
-              itemBuilder: (context, i) {
-                final food = options[i];
-                return InkWell(
-                  onTap: () => onSelected(food),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 48),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(food.name, style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text)),
-                          ),
-                          const SizedBox(width: AppSpacing.s8),
-                          Text(
-                            '${f.kcal(food.caloriesPer100g)} kcal',
-                            style: t.bodySmall!.copyWith(color: p.text2),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+            constraints: BoxConstraints(maxHeight: showOff ? 320 : 240, maxWidth: width, minWidth: width),
+            child: ListView(padding: EdgeInsets.zero, shrinkWrap: true, children: children),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// "Search OpenFoodFacts too" under the search field (docs/84): off until ticked, then remembered per device. Online
+/// only — offline it is disabled with a hint, because the rest of the sheet is offline-first and must stay so.
+class _OffSearchToggle extends ConsumerWidget {
+  const _OffSearchToggle({required this.state});
+
+  final OffSearchState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final p = context.palette;
+    final offline = ref.watch(isOfflineProvider).value ?? false;
+    return CheckboxListTile(
+      key: const ValueKey('off-search-toggle'),
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+      value: state.enabled,
+      onChanged: offline ? null : (v) => ref.read(offSearchControllerProvider.notifier).setEnabled(v ?? false),
+      title: Text(l10n.offSearchLabel),
+      subtitle: offline ? Text(l10n.offSearchOffline, style: TextStyle(color: p.text3)) : null,
     );
   }
 }

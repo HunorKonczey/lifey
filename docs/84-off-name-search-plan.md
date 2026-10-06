@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–8 (backend complete, web done, mobile data layer) built, Prompts 9–11 not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–9 (backend complete, web done, mobile data layer and sheet UI) built, Prompts 10–11 not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -588,10 +588,37 @@ incl. language in the key, expiry at ten minutes and never caching a non-OK answ
 searches what is typed / unticking cancels and forgets / choice-while-loading; dispose). 42 green, `flutter analyze` clean.
 Nothing is mounted yet — Prompt 9 is the sheet.
 
-## Prompt 9 — Mobile UI: the checkbox and the OFF group in the sheet
+## Prompt 9 — Mobile UI: the checkbox and the OFF group in the sheet ✅ (2026-10-06)
 - `add_meal_entry_sheet.dart`, `_FoodOptions`; ARB strings (en + hu). Selecting is wired in Prompt 10.
 Verification: widget tests — off by default and no call; ticked + 3 characters shows the group under
 own foods; offline disables the checkbox; `flutter analyze` clean. Emulator check at 1.0 and 1.3 text scale.
+
+*As built* (`add_meal_entry_sheet.dart`, `app_en.arb` / `app_hu.arb`): a `CheckboxListTile` "Search OpenFoodFacts too"
+(`_OffSearchToggle`), and in the existing suggestion list a "FROM OPENFOODFACTS" group under the user's own foods — rows with
+the name, an "OFF" tag, the brand or "OpenFoodFacts", "110 kcal" — and one line under it: "Searching OpenFoodFacts…", "Nothing found
+on OpenFoodFacts.", the fallback / unavailable / rate-limited note, or "Type at least 3 letters…". The sheet feeds every
+keystroke to `OffSearchController.queryChanged` (the controller ignores it unless the box is ticked). Deviations and findings:
+- **The group is not made of the autocomplete's options.** `Autocomplete` computes its options when the text changes, while an
+  OpenFoodFacts answer arrives later. So the options are `_Option` = `_OwnOption(food)` or a single `_OffGroupOption` stand-in
+  (present once something is typed) that only keeps the list open when there is no own match; the group itself is drawn by
+  `_FoodOptions`, which is now a `ConsumerWidget` that watches `offSearchControllerProvider` — handed-down state did not reach the
+  overlay when the box was unticked (a test caught it). With the option off and no own match the list draws nothing.
+- **The checkbox is above the search field, not under it** (the plan said "above/below"): the suggestion list opens right
+  below the field and covered a checkbox placed there, so it could not be unticked while suggestions were showing.
+- Offline (`isOfflineProvider`) the checkbox is disabled with "You're offline — OpenFoodFacts search needs a connection."; the
+  rest of the sheet is untouched and offline-first. The controller also survives storage failures (`shared_preferences`
+  unavailable in widget tests, say): the box simply starts off.
+- A tap on an OpenFoodFacts row is a stub (`_pickOff`) until Prompt 10; the box is off by default and this is not merged on its own.
+- 10 new ARB keys (`offSearchLabel` … `offSearchOffline`), en + hu with descriptions in the template; key parity was checked
+  by script (`check_arb_sync.sh` hangs in this shell, see the project notes).
+
+Tests: `add_meal_entry_sheet_off_test.dart` 13 (checkbox position/default, none in edit mode, stored choice applied; box off →
+no request and no group; ticked → request after the debounce with the cleaned text and app language, then the group below
+the own rows with brand/tag/kcal; no own match still opens the list; the three notes, a failed request, empty answer,
+under-3-letters hint; ticking after typing searches, unticking removes the group; offline disables the box; picking an own
+suggestion still works; **360×640 at 1.3× text with a long note and brand — no overflow**). All 124 presentation tests and
+the 202 nutrition tests are green, `flutter analyze` clean.
+**Not run on an emulator or device** — only widget tests; the owed emulator walk (like earlier plans) covers this and Prompt 10.
 
 ## Prompt 10 — Mobile: pick → save through the offline-first stack → log
 - Choosing an OFF row creates the `Food` via `FoodRepository.create` (outbox, new `clientId`, barcode
