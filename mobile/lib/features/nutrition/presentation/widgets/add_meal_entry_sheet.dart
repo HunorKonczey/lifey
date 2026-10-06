@@ -613,7 +613,12 @@ class _OffSearchToggle extends ConsumerWidget {
       value: state.enabled,
       onChanged: offline ? null : (v) => ref.read(offSearchControllerProvider.notifier).setEnabled(v ?? false),
       title: Text(l10n.offSearchLabel),
-      subtitle: offline ? Text(l10n.offSearchOffline, style: TextStyle(color: p.text3)) : null,
+      // What this is and where the results come from: offline why it is off, ticked what is being searched.
+      subtitle: offline
+          ? Text(l10n.offSearchOffline, style: TextStyle(color: p.text3))
+          : state.enabled
+              ? Text(l10n.offSearchHint, key: const ValueKey('off-search-hint'), style: TextStyle(color: p.text3))
+              : null,
     );
   }
 }

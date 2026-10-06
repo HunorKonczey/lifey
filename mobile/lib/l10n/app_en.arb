@@ -6980,17 +6980,21 @@
   "@shareToChatOpenChat": {
     "description": "Action on the snackbar after sharing a card: opens the thread it was sent to"
   },
-  "offSearchLabel": "Search OpenFoodFacts too",
+  "offSearchLabel": "Also search the OpenFoodFacts food database",
   "@offSearchLabel": {
     "description": "Checkbox under the food search field in the add-food-to-meal sheet: also search OpenFoodFacts by name"
   },
-  "offSearchSection": "From OpenFoodFacts",
+  "offSearchSection": "From the OpenFoodFacts database",
   "@offSearchSection": {
     "description": "Header of the OpenFoodFacts results group under the user's own foods in the search suggestions"
   },
   "offSearchTag": "OFF",
   "@offSearchTag": {
     "description": "Small tag on an OpenFoodFacts result row (short for OpenFoodFacts)"
+  },
+  "offSearchHint": "OpenFoodFacts is a public food database run by volunteers. What you type is sent to it, and its values can be incomplete — check them.",
+  "@offSearchHint": {
+    "description": "Short explanation shown under the OpenFoodFacts checkbox once it is ticked: where the results come from and that the data can be incomplete"
   },
   "offSearchSearching": "Searching OpenFoodFacts…",
   "@offSearchSearching": {

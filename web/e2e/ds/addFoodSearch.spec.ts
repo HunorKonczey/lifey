@@ -108,7 +108,7 @@ test("Escape closes the dialog", async ({ page }) => {
 
 // ── "Search OpenFoodFacts too" (docs/84): the gallery replaces the backend with canned answers ──
 
-const offBox = (page: Page) => dialog(page).getByRole("checkbox", { name: "Search OpenFoodFacts too" });
+const offBox = (page: Page) => dialog(page).getByRole("checkbox", { name: "Also search the OpenFoodFacts food database" });
 const offSection = (page: Page) => dialog(page).getByTestId("off-section");
 const offRequests = (page: Page) => page.getByTestId("off-requests");
 
@@ -123,7 +123,7 @@ test("ticked: a 'From OpenFoodFacts' section under the own results, with name, b
   await offBox(page).click();
   await page.keyboard.type("csirkemell");
 
-  await expect(offSection(page).getByText("From OpenFoodFacts")).toBeVisible();
+  await expect(offSection(page).getByText("From the OpenFoodFacts database")).toBeVisible();
   const rows = offSection(page).getByRole("option");
   await expect(rows).toHaveCount(3);
   await expect(rows.nth(0)).toContainText("Csirkemell");
@@ -271,4 +271,12 @@ test("on a phone the checkbox is in the sheet and nothing scrolls sideways", asy
   await expect(offSection(page).getByRole("option").first()).toBeVisible();
   const overflow = await dialog(page).evaluate((el) => el.scrollWidth - el.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("it is clear the results come from the OpenFoodFacts database: the label, the hint once ticked, the section title", async ({ page }) => {
+  await expect(dialog(page).getByTestId("off-hint")).toHaveCount(0);
+  await offBox(page).click();
+  await expect(dialog(page).getByTestId("off-hint")).toContainText("public food database run by volunteers");
+  await page.keyboard.type("csirkemell");
+  await expect(offSection(page).getByText("From the OpenFoodFacts database")).toBeVisible();
 });
