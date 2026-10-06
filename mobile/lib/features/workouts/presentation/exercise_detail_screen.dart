@@ -13,6 +13,7 @@ import '../domain/exercise.dart';
 import '../domain/exercise_enums.dart';
 import '../domain/personal_record.dart';
 import 'widgets/add_exercise_sheet.dart';
+import '../../../core/utils/date_math.dart';
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -150,7 +151,7 @@ class _DetailBody extends StatelessWidget {
     // Recent sets — take 10, group by calendar day
     final recentVisible = sets.take(10).toList();
     final todayDate = DateTime(now.year, now.month, now.day);
-    final yesterdayDate = todayDate.subtract(const Duration(days: 1));
+    final yesterdayDate = addDays(todayDate, -1);
 
     final dayGroupKeys = <String>[];
     final dayGroupMap = <String, List<ExerciseSetRow>>{};

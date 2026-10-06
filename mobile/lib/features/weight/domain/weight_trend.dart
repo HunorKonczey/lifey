@@ -167,7 +167,7 @@ WeightProjection? projectGoal({
     currentKg: current,
     remainingKg: remaining,
     kgPerWeek: kgPerWeek,
-    etaDate: DateTime(from.year, from.month, from.day).add(Duration(days: days)),
+    etaDate: DateTime(from.year, from.month, from.day + days),
   );
 }
 

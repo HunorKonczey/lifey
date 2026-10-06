@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../l10n/app_localizations.dart';
 import 'nav_collapse_controller.dart';
+import '../../core/utils/date_math.dart';
 
 /// A date-range filter for time-ordered lists (meals, sessions).
 ///
@@ -29,7 +30,7 @@ enum DateRangeFilter {
     return switch (this) {
       DateRangeFilter.today => day == today,
       DateRangeFilter.week =>
-        !day.isBefore(today.subtract(const Duration(days: 6))),
+        !day.isBefore(addDays(today, -6)),
       DateRangeFilter.all => true,
     };
   }

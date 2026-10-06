@@ -16,6 +16,7 @@ import '../../domain/client_data.dart';
 import '../widgets/client_tab_body.dart';
 import '../widgets/nutrition_goals_sheet.dart';
 import '../widgets/read_only_badge.dart';
+import '../../../../../core/utils/date_math.dart';
 
 /// One day of the client's food log, against their goals.
 ///
@@ -163,7 +164,7 @@ class _DayNavigator extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.chevron_left, size: 20),
             tooltip: l10n.trainerPreviousDayTooltip,
-            onPressed: () => onChange(day.subtract(const Duration(days: 1))),
+            onPressed: () => onChange(addDays(day, -1)),
           ),
           Expanded(
             child: Text(
@@ -181,7 +182,7 @@ class _DayNavigator extends StatelessWidget {
             // walk into empty days would look like missing data.
             onPressed: isToday
                 ? null
-                : () => onChange(day.add(const Duration(days: 1))),
+                : () => onChange(addDays(day, 1)),
           ),
         ],
       ),

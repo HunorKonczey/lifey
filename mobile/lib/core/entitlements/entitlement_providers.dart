@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'entitlement.dart';
 import 'entitlement_repository.dart';
+import '../utils/date_math.dart';
 
 /// Streams the resolved entitlement (D-P4) — the single source every gate
 /// and every derived provider below reads from. Wraps
@@ -39,7 +40,7 @@ final historyCutoffProvider = Provider<DateTime?>((ref) {
   if (historyDays == null) return null;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  return today.subtract(Duration(days: historyDays));
+  return addDays(today, -historyDays);
 });
 
 /// `null` means unlimited — both while unresolved/loading (open, D-P4) and

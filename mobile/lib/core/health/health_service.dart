@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:health/health.dart';
 
 import 'health_workout.dart';
+import '../utils/date_math.dart';
 
 /// The health data types the integration reads. Listed centrally so the
 /// permission request (Phase 0) and the per-phase read helpers stay in sync.
@@ -147,7 +148,7 @@ class HealthService {
     return _guarded(null, () async {
       await _ensureConfigured();
       final start = DateTime(day.year, day.month, day.day);
-      final end = start.add(const Duration(days: 1));
+      final end = addDays(start, 1);
       return _health.getTotalStepsInInterval(start, end);
     });
   }
@@ -159,7 +160,7 @@ class HealthService {
     final result = <DateTime, int>{};
     final today = DateTime.now();
     for (var i = 0; i < lastDays; i++) {
-      final day = today.subtract(Duration(days: i));
+      final day = addDays(today, -i);
       final steps = await stepsForDay(day);
       if (steps != null && steps > 0) {
         result[DateTime(day.year, day.month, day.day)] = steps;

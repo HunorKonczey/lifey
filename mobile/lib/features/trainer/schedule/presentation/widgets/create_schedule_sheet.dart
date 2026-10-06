@@ -17,6 +17,7 @@ import '../../application/recurrence_text.dart';
 import '../../data/schedule_repository.dart';
 import '../../domain/occurrence_generator.dart';
 import '../../domain/schedule.dart';
+import '../../../../../core/utils/date_math.dart';
 
 /// Book a client in (frame F4).
 ///
@@ -52,7 +53,7 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
     DateTime.now().month,
     DateTime.now().day,
   );
-  late DateTime _endDate = _startDate.add(const Duration(days: 27));
+  late DateTime _endDate = addDays(_startDate, 27);
   ScheduleTime? _time;
 
   bool _submitting = false;

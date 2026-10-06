@@ -9,6 +9,7 @@ import '../../../core/sync/outbox_writer.dart';
 import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
 import '../domain/daily_step_count.dart';
+import '../../../core/utils/date_math.dart';
 
 /// Local-first access to daily step counts. One row per calendar day;
 /// calling [upsertForDay] rewrites the day's total rather than creating a
@@ -38,7 +39,7 @@ class StepCountRepository {
   /// engine sends a PUT to the already-created server row.
   Future<void> upsertForDay({required DateTime date, required int steps}) async {
     final dayStart = DateTime(date.year, date.month, date.day);
-    final dayEnd = dayStart.add(const Duration(days: 1));
+    final dayEnd = addDays(dayStart, 1);
 
     final existing = await (_db.select(_db.dailyStepCounts)
           ..where((t) => t.date.isBiggerOrEqualValue(dayStart) & t.date.isSmallerThanValue(dayEnd)))

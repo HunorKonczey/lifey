@@ -415,7 +415,7 @@ class NotificationService {
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     if (skipToday || scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
+      scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day + 1, hour, minute);
     }
     return scheduled;
   }

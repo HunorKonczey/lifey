@@ -17,6 +17,7 @@ import '../application/weekly_recap_provider.dart';
 import '../data/recap_preferences.dart';
 import '../domain/streak.dart';
 import '../domain/weekly_recap.dart';
+import '../../../core/utils/date_math.dart';
 
 /// "Your week in review" — workouts, nutrition, weight trend and goal
 /// consistency for a Monday–Sunday week, paged backwards from the most
@@ -45,12 +46,12 @@ class _WeeklyRecapScreenState extends ConsumerState<WeeklyRecapScreen> {
   }
 
   void _goToPreviousWeek() {
-    setState(() => _weekStart = _weekStart.subtract(const Duration(days: 7)));
+    setState(() => _weekStart = addDays(_weekStart, -7));
   }
 
   void _goToNextWeek() {
     if (_weekStart == _latestWeekStart) return;
-    setState(() => _weekStart = _weekStart.add(const Duration(days: 7)));
+    setState(() => _weekStart = addDays(_weekStart, 7));
   }
 
   @override
@@ -111,7 +112,7 @@ class _WeekHeader extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context)!;
     final f = LifeyFormat.of(context);
-    final weekEnd = weekStart.add(const Duration(days: 6));
+    final weekEnd = addDays(weekStart, 6);
     final rangeLabel = '${f.shortDate(weekStart)} – ${f.shortDate(weekEnd)}';
 
     return Row(
@@ -255,7 +256,7 @@ class _DotStrip extends StatelessWidget {
                 const SizedBox(height: 6),
                 FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(f.weekdayNarrow(monday.add(Duration(days: i))), style: label),
+                  child: Text(f.weekdayNarrow(addDays(monday, i)), style: label),
                 ),
               ],
             ),
@@ -321,7 +322,7 @@ class _NutritionSection extends StatelessWidget {
             bars: [
               for (var i = 0; i < recap.dailyCalories.length; i++)
                 BarDatum(
-                  label: f.weekdayNarrow(monday.add(Duration(days: i))),
+                  label: f.weekdayNarrow(addDays(monday, i)),
                   value: recap.dailyCalories[i],
                   highlighted: true,
                 ),
