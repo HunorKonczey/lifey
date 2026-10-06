@@ -18,7 +18,7 @@ import { parseMacroDraft, per100g, type ParsedMacroEntry } from "../../macroEntr
 import { MEAL_TYPE_ORDER } from "../../mealTypeStyle";
 import { buildEntries } from "../../logRecipePortion";
 import { foodPortion, recipePortion, type Macros } from "../../recipeMacros";
-import type { SearchItem } from "../../foodSearch";
+import { offPortion, type ListItem } from "../../offSearch";
 import type { FoodResponse, MealResponse, MealType } from "../../types";
 import { useAddFoodContext } from "./AddFoodModal";
 
@@ -27,8 +27,8 @@ const MEAL_KEY = { BREAKFAST: "breakfast", LUNCH: "lunch", SNACK: "snack", DINNE
 export type AddRequest =
   | {
       kind: "item";
-      item: SearchItem;
-      /** Grams for a food, servings for a recipe. */
+      item: ListItem;
+      /** Grams for a food or an OpenFoodFacts product, servings for a recipe. */
       quantity: number;
       mealType: MealType;
     }
@@ -47,13 +47,14 @@ export interface FoodPreviewPaneViewProps {
   onDone: () => void;
 }
 
-function defaultQuantity(item: SearchItem | null, lastGrams: number | undefined): number {
+function defaultQuantity(item: ListItem | null, lastGrams: number | undefined): number {
   if (!item) return 100;
   return item.kind === "recipe" ? 1 : (lastGrams ?? 100);
 }
 
-function macrosOf(item: SearchItem | null, qty: number, foodsById: ReadonlyMap<number, FoodResponse>): Macros {
+function macrosOf(item: ListItem | null, qty: number, foodsById: ReadonlyMap<number, FoodResponse>): Macros {
   if (!item || qty <= 0) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  if (item.kind === "off") return offPortion(item.off, qty);
   return item.kind === "food" ? foodPortion(item.food, qty) : recipePortion(item.recipe, foodsById, qty);
 }
 
@@ -92,7 +93,8 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     ? (entry?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 })
     : macrosOf(active, qty, foodsById);
   const left = remainingAfter(consumed, goals, { calories: macros.calories, protein: macros.protein });
-  const canSubmit = !pending && (inMacros ? !!entry : !!active && qty > 0);
+  // An OpenFoodFacts product is previewed here; saving it as a food and logging it is the next step (docs/84 Prompt 7).
+  const canSubmit = !pending && (inMacros ? !!entry : !!active && active.kind !== "off" && qty > 0);
 
   const submit = () => {
     if (!canSubmit) return;
@@ -131,7 +133,11 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     ? t("previewSourceMacros", { g: fmt.integer(entry?.grams ?? 100) })
     : active!.kind === "recipe"
       ? t("previewSourceRecipe", { n: active!.recipe.servings })
-      : t("previewSourceFood", { kcal: fmt.integer(active!.food.caloriesPer100g) });
+      : active!.kind === "off"
+        ? active!.off.brand
+          ? t("previewSourceOffBrand", { brand: active!.off.brand, kcal: fmt.integer(active!.off.caloriesPer100g) })
+          : t("previewSourceOff", { kcal: fmt.integer(active!.off.caloriesPer100g) })
+        : t("previewSourceFood", { kcal: fmt.integer(active!.food.caloriesPer100g) });
 
   const tiles: { key: string; label: string; value: string; color: string; hero?: boolean }[] = [
     { key: "kcal", label: t("previewCalories"), value: fmt.integer(macros.calories), color: "var(--m-kcal)", hero: true },
@@ -346,6 +352,9 @@ export function FoodPreviewPane({
           name: req.item.recipe.name,
           entries: buildEntries(req.item.recipe.ingredients, servings / req.quantity, {}),
         });
+      } else if (req.item.kind === "off") {
+        // Never reached: the submit is disabled for these rows until the save-and-log step (docs/84 Prompt 7).
+        throw new Error("OpenFoodFacts products cannot be logged yet");
       } else {
         await addFoodEntry(req.item.food.id, req.quantity, mealType);
       }

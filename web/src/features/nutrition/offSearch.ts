@@ -1,5 +1,7 @@
 import { isHuLocale } from "@/lib/format/lifeyFormat";
-import type { OffSearchItem, OffSearchLang } from "./types";
+import type { SearchItem } from "./foodSearch";
+import type { Macros } from "./recipeMacros";
+import type { OffSearchItem, OffSearchLang, OffSearchResponse } from "./types";
 
 /**
  * The rules of the add-food dialog's "Search OpenFoodFacts too" option (docs/84), kept pure so they can be
@@ -56,9 +58,64 @@ export interface OffItem {
 }
 
 /**
- * The row for a result. Not part of the `SearchItem` union yet: adding it there is the UI step (it changes
- * every place that tells a food from a recipe), and until then nothing renders it.
+ * The row for a result. Deliberately **not** in `SearchItem`: that union is what `searchItems()` ranks and
+ * filters (the user's own foods and recipes), and OpenFoodFacts rows must never be ranked into it (docs/84 §3.1).
  */
 export function offItemToSearchItem(item: OffSearchItem): OffItem {
   return { kind: "off", key: `off:${item.barcode}`, name: item.name, off: item };
+}
+
+/** Anything the dialog can highlight and preview: an own food or recipe, or an OpenFoodFacts result. */
+export type ListItem = SearchItem | OffItem;
+
+/** A product's macros for `grams`; carbs and fat that OpenFoodFacts lacks count as 0, as the barcode flow does. */
+export function offPortion(item: OffSearchItem, grams: number): Macros {
+  const k = grams / 100;
+  return {
+    calories: item.caloriesPer100g * k,
+    protein: item.proteinPer100g * k,
+    carbs: (item.carbsPer100g ?? 0) * k,
+    fat: (item.fatPer100g ?? 0) * k,
+  };
+}
+
+/** The one line to show under the OpenFoodFacts rows, if any (docs/84 §3.1). A failed request reads as unavailable. */
+export type OffNote = "fellBack" | "unavailable" | "rateLimited";
+
+export function offSearchNote(response: OffSearchResponse | undefined, failed: boolean): OffNote | null {
+  if (failed) return "unavailable";
+  if (!response) return null;
+  if (response.status === "UNAVAILABLE") return "unavailable";
+  if (response.status === "RATE_LIMITED") return "rateLimited";
+  return response.fellBackToEnglish ? "fellBack" : null;
+}
+
+/** Per-device memory of the checkbox (docs/84 D10): off until the user ticks it, then remembered. */
+export const OFF_SEARCH_PREF_KEY = "lifey.addFood.offSearch";
+
+type KeyValueStorage = Pick<Storage, "getItem" | "setItem">;
+
+function defaultStorage(): KeyValueStorage | undefined {
+  try {
+    return typeof localStorage === "undefined" ? undefined : localStorage;
+  } catch {
+    return undefined; // blocked site data: the accessor itself can throw
+  }
+}
+
+/** Never throws: private windows and blocked storage just mean "off". */
+export function readOffSearchPreference(storage: KeyValueStorage | undefined = defaultStorage()): boolean {
+  try {
+    return storage?.getItem(OFF_SEARCH_PREF_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeOffSearchPreference(on: boolean, storage: KeyValueStorage | undefined = defaultStorage()): void {
+  try {
+    storage?.setItem(OFF_SEARCH_PREF_KEY, on ? "1" : "0");
+  } catch {
+    // not remembered; the checkbox still works for this session
+  }
 }

@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–5 (backend complete, web data layer) built, Prompts 6–11 not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–6 (backend complete, web data layer and search UI) built, Prompts 7–11 not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -475,12 +475,46 @@ colliding with `food:` / `recipe:` keys). Full web suite 1115 green, `tsc` and `
 unit environment has no DOM (`vitest` runs in `node`), so the first real exercise is Prompt 6's e2e against the
 gallery and a manual run against the backend.
 
-## Prompt 6 — Web UI: the checkbox and the "From OpenFoodFacts" section
+## Prompt 6 — Web UI: the checkbox and the "From OpenFoodFacts" section ✅ (2026-10-06)
 - `FoodSearchPane.tsx`, `AddFoodModal.tsx` (preference + passing results down), messages en/hu, gallery
   fixture. Rows are selectable and the preview shows the macros; submit is wired in Prompt 7.
 Verification: `web/e2e/ds/addFoodSearch.spec.ts` additions — box off: no OFF section and no request;
 box on: section under own rows; the three status notes; `fellBackToEnglish` note; preference survives a
 reload (localStorage). Check at 1440 and 390 (the Modal is a bottom sheet below 768 px).
+
+*As built:* `FoodSearchPane` has the `Checkbox` ("Search OpenFoodFacts too") under the filter chips and, when it is
+ticked and something is typed, a `data-testid="off-section"` under the own rows: a `SectionLabel`, the rows (name +
+an "OFF" tag, the brand or "OpenFoodFacts" as the second line, "110 kcal / 100 g"), and exactly one line below them —
+"Searching OpenFoodFacts…", "Nothing found on OpenFoodFacts.", the fallback / unavailable / rate-limited note (en + hu
+strings), or "Type at least 3 letters…" before the minimum is reached. The own list, its "N results" count and its
+empty state are untouched; both lists share one scroll area. `AddFoodModalView` takes the option as a **hook prop**
+(`useOff`, `initialOffChecked`, `onOffCheckedChange`): the connected `AddFoodModal` passes `useConnectedOff`
+(`useOffSearch` + the UI language) and the device's remembered choice (`localStorage`, read once when the dialog
+opens — it mounts only on a click, never during server rendering); the gallery passes a fixture hook with canned
+answers, so the e2e project needs no backend. Without `useOff` the dialog is exactly the old one (no checkbox).
+Decisions and deviations while building:
+- **`SearchItem` was not extended; a `ListItem = SearchItem | OffItem` was added** (in `offSearch.ts`) and is what the
+  highlighted row, the context's `active` and `AddRequest.item` carry. §3.1 planned a third `SearchItem` kind, but
+  that union is what `searchItems()` ranks — OFF rows must never be ranked into own rows, and keeping the types apart
+  makes that impossible by construction. `searchItems()`, `buildSearchItems()` and their tests are unchanged.
+- **↑ ↓ walk the own rows and then the OFF rows as one list** (`navKeys`); with no own results ↓ lands on the first OFF
+  row (a first version skipped it). The count stays the own results' count.
+- **Ticking the box hands the focus back to the search field** — otherwise the next keystrokes went to the checkbox,
+  which the e2e tests caught as a real usability bug, not a test artefact.
+- **The preview shows an OFF row completely** (name, "OpenFoodFacts · Arla · 66 kcal / 100 g", grams with the
+  "100 g" chip, the four macro tiles, "left after this", meal type) **but its submit is disabled**; saving it as a
+  food and logging it is Prompt 7. The mutation has a defensive throw for that branch.
+- The fixture hook debounces (150 ms) like the real one, so "an unticked box / under 3 letters makes no request" and
+  "typing a word is one request" are testable (`data-testid="off-requests"` counts the fixture's "requests").
+
+Tests: `offSearch.test.ts` 27 (+9: the portion, the note per status/failure, the remembered choice incl. missing and
+throwing storage), and 12 new e2e cases in `addFoodSearch.spec.ts` (off by default and no request; section content;
+own results/count untouched; own empty + OFF present; ↓ into the OFF rows and back, preview and disabled submit; source
+line with/without brand; fallback / unavailable / rate-limited / failed notes; the loading line; the 3-letter hint
+and request count; unticking and the remembered choice across a reload; 390 px sheet without sideways scroll).
+All 34 add-food e2e cases and the full web suite (1124) are green; `tsc` and `eslint` clean. Looked at in a real
+browser (headless screenshot) at 1440 and 390, dark/light follow the existing tokens.
+**Not run against the real backend yet** — that is the manual run at the end of Prompt 7.
 
 ## Prompt 7 — Web: pick, save as own food, log
 - `FoodPreviewPane.tsx` `kind === "off"`: create the food, then `addFoodEntry`; the dialog stays open

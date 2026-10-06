@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   OFF_SEARCH_MIN_LENGTH,
+  OFF_SEARCH_PREF_KEY,
   isOffSearchable,
   offItemToSearchItem,
+  offPortion,
   offSearchEnabled,
   offSearchLang,
+  offSearchNote,
+  readOffSearchPreference,
   sanitizeOffQuery,
+  writeOffSearchPreference,
 } from "./offSearch";
-import type { OffSearchItem } from "./types";
+import type { OffSearchItem, OffSearchResponse } from "./types";
 
 // The same cases as the backend's OffSearchQueryTest: the two sides must clean text alike (docs/84 D11).
 describe("sanitizeOffQuery — parity with the backend's OffSearchQuery.sanitize", () => {
@@ -141,5 +146,80 @@ describe("offItemToSearchItem", () => {
 
   it("can not collide with an own food or recipe row key", () => {
     expect(offItemToSearchItem(item).key).not.toMatch(/^(food|recipe):/);
+  });
+});
+
+describe("offPortion", () => {
+  it("scales per-100 g values to the grams, a missing carbs or fat counting as 0", () => {
+    const item: OffSearchItem = { barcode: "1", name: "X", brand: null, caloriesPer100g: 110, proteinPer100g: 14, carbsPer100g: null, fatPer100g: 4.9 };
+
+    const p = offPortion(item, 150);
+    expect(p.calories).toBeCloseTo(165);
+    expect(p.protein).toBeCloseTo(21);
+    expect(p.carbs).toBe(0);
+    expect(p.fat).toBeCloseTo(7.35);
+    expect(offPortion(item, 0)).toEqual({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  });
+});
+
+describe("offSearchNote — the one line under the OpenFoodFacts rows", () => {
+  const ok = (over: Partial<OffSearchResponse> = {}): OffSearchResponse => ({
+    status: "OK", language: "hu", fellBackToEnglish: false, items: [], ...over,
+  });
+
+  it("is none for a plain answer, and before there is one", () => {
+    expect(offSearchNote(ok(), false)).toBeNull();
+    expect(offSearchNote(undefined, false)).toBeNull();
+  });
+
+  it("names the English fallback", () => {
+    expect(offSearchNote(ok({ language: "en", fellBackToEnglish: true }), false)).toBe("fellBack");
+  });
+
+  it("says unavailable or rate-limited for those statuses", () => {
+    expect(offSearchNote(ok({ status: "UNAVAILABLE" }), false)).toBe("unavailable");
+    expect(offSearchNote(ok({ status: "RATE_LIMITED" }), false)).toBe("rateLimited");
+  });
+
+  it("reads a failed request as unavailable, whatever an older answer said", () => {
+    expect(offSearchNote(undefined, true)).toBe("unavailable");
+    expect(offSearchNote(ok({ language: "en", fellBackToEnglish: true }), true)).toBe("unavailable");
+  });
+});
+
+describe("the remembered checkbox", () => {
+  const memory = () => {
+    const data = new Map<string, string>();
+    return { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v), data };
+  };
+  const broken = {
+    getItem: () => { throw new Error("blocked"); },
+    setItem: () => { throw new Error("blocked"); },
+  };
+
+  it("is off until ticked", () => {
+    expect(readOffSearchPreference(memory())).toBe(false);
+  });
+
+  it("remembers on and off", () => {
+    const m = memory();
+    writeOffSearchPreference(true, m);
+    expect(m.data.get(OFF_SEARCH_PREF_KEY)).toBe("1");
+    expect(readOffSearchPreference(m)).toBe(true);
+    writeOffSearchPreference(false, m);
+    expect(readOffSearchPreference(m)).toBe(false);
+  });
+
+  it("treats anything but 1 as off", () => {
+    const m = memory();
+    m.setItem(OFF_SEARCH_PREF_KEY, "true");
+    expect(readOffSearchPreference(m)).toBe(false);
+  });
+
+  it("never throws when storage is missing or blocked", () => {
+    expect(readOffSearchPreference(undefined)).toBe(false);
+    expect(() => writeOffSearchPreference(true, undefined)).not.toThrow();
+    expect(readOffSearchPreference(broken)).toBe(false);
+    expect(() => writeOffSearchPreference(true, broken)).not.toThrow();
   });
 });

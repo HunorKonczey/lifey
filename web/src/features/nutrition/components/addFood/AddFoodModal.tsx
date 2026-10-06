@@ -2,14 +2,16 @@
 
 import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Modal } from "@/components/ds/overlay/Modal";
 import { SegmentedControl } from "@/components/ds/SegmentedControl";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { foodApi, mealApi, recipeApi } from "../../api";
 import { buildSearchItems, searchItems, usageByKey, type ItemUsage, type SearchFilter, type SearchItem } from "../../foodSearch";
 import { EMPTY_MACRO_DRAFT, type MacroDraft } from "../../macroEntry";
+import { offSearchLang, readOffSearchPreference, writeOffSearchPreference, type ListItem } from "../../offSearch";
 import { computeFoodUsage, computeRecipeUsage } from "../../usage";
+import { useOffSearch, type UseOffSearchResult } from "../../useOffSearch";
 import { FoodSearchPane } from "./FoodSearchPane";
 import { MacroEntryForm } from "./MacroEntryForm";
 
@@ -18,8 +20,8 @@ export type AddFoodMode = "search" | "macros";
 
 /** What the right-hand pane gets to work with. */
 export interface AddFoodPreviewContext {
-  /** The row currently highlighted in the search pane (null when nothing matches). */
-  active: SearchItem | null;
+  /** The row currently highlighted in the search pane (null when nothing matches) — an own food or recipe, or an OpenFoodFacts result. */
+  active: ListItem | null;
   usage: Map<string, ItemUsage>;
   /** Attach to the preview's quantity input (`ref={ctx.registerQuantity}`) — Tab in the search field
    *  and a click on a row then focus it. */
@@ -57,6 +59,21 @@ export interface AddFoodModalViewProps {
   onCreate: (name: string) => void;
   /** The right-hand pane (W2.6's preview + submit); reads the dialog through `useAddFoodContext`. */
   children: ReactNode;
+  /**
+   * OpenFoodFacts search (docs/84): a **hook** that turns the typed text and the checkbox into results. Given, the pane
+   * shows the "Search OpenFoodFacts too" checkbox; absent, the dialog is the plain own-foods search. It is called on
+   * every render, so it must be the same function every time (a module-level hook, not one made inline).
+   */
+  useOff?: (args: { query: string; checked: boolean }) => UseOffSearchResult;
+  /** Whether the checkbox starts ticked (the device's remembered choice). */
+  initialOffChecked?: boolean;
+  onOffCheckedChange?: (checked: boolean) => void;
+}
+
+/** What the OpenFoodFacts hook says when there is none: nothing active, nothing pending. */
+const NO_OFF: UseOffSearchResult = { active: false, pending: false, items: [], response: undefined, failed: false };
+function useNoOff(): UseOffSearchResult {
+  return NO_OFF;
 }
 
 /**
@@ -65,20 +82,35 @@ export interface AddFoodModalViewProps {
  * renders as the preview on the right. Below 768px the `Modal` itself becomes
  * the bottom sheet (W0.12). Presentational — `AddFoodModal` below wires the data.
  */
-export function AddFoodModalView({ open, onClose, items, usage, initialQuery = "", initialKey, onCreate, children }: AddFoodModalViewProps) {
+export function AddFoodModalView({
+  open,
+  onClose,
+  items,
+  usage,
+  initialQuery = "",
+  initialKey,
+  onCreate,
+  children,
+  useOff,
+  initialOffChecked = false,
+  onOffCheckedChange,
+}: AddFoodModalViewProps) {
   const t = useTranslations("nutrition.addFoodModal");
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<SearchFilter>("all");
   const [pickedKey, setPickedKey] = useState<string | null>(initialKey ?? null);
   const [mode, setMode] = useState<AddFoodMode>("search");
   const [macroDraft, setMacroDraft] = useState<MacroDraft>(EMPTY_MACRO_DRAFT);
+  const [offChecked, setOffChecked] = useState(initialOffChecked);
+  const off = (useOff ?? useNoOff)({ query, checked: offChecked && !!useOff });
   const quantityInput = useRef<HTMLInputElement | null>(null);
   const commitRef = useRef<(() => void) | null>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);
 
   const results = useMemo(() => searchItems({ items, query, filter, usage }), [items, query, filter, usage]);
-  // The highlighted row is the picked one while it is still in the list, else the first.
-  const active = results.find((r) => r.key === pickedKey) ?? results[0] ?? null;
+  // The highlighted row is the picked one while it is still in a list (own rows, then OpenFoodFacts rows), else the first own row.
+  const offRows = offChecked ? off.items : [];
+  const active: ListItem | null = results.find((r) => r.key === pickedKey) ?? offRows.find((r) => r.key === pickedKey) ?? results[0] ?? null;
 
   const ctx: AddFoodPreviewContext = {
     active,
@@ -131,6 +163,18 @@ export function AddFoodModalView({ open, onClose, items, usage, initialQuery = "
               onCommit={() => commitRef.current?.()}
               onFocusQuantity={() => quantityInput.current?.focus()}
               onCreate={onCreate}
+              off={
+                useOff
+                  ? {
+                      checked: offChecked,
+                      onCheckedChange: (next) => {
+                        setOffChecked(next);
+                        onOffCheckedChange?.(next);
+                      },
+                      state: off,
+                    }
+                  : undefined
+              }
             />
           ) : (
             <MacroEntryForm draft={macroDraft} onChange={setMacroDraft} onCommit={() => commitRef.current?.()} />
@@ -144,10 +188,21 @@ export function AddFoodModalView({ open, onClose, items, usage, initialQuery = "
   );
 }
 
-export type AddFoodModalProps = Omit<AddFoodModalViewProps, "items" | "usage">;
+export type AddFoodModalProps = Omit<AddFoodModalViewProps, "items" | "usage" | "useOff" | "initialOffChecked" | "onOffCheckedChange">;
 
-/** The connected dialog: the user's foods and recipes, and the usage derived from their meals. */
+/** The connected OpenFoodFacts hook: the UI language picks the search language. A stable module-level function. */
+function useConnectedOff(args: { query: string; checked: boolean }): UseOffSearchResult {
+  const lang = offSearchLang(useLocale());
+  return useOffSearch({ ...args, lang });
+}
+
+/**
+ * The connected dialog: the user's foods and recipes, and the usage derived from their meals — and the
+ * OpenFoodFacts option, remembered per device (docs/84 D10).
+ */
 export function AddFoodModal(props: AddFoodModalProps) {
+  // Mounted only when the dialog opens (never during server rendering), so reading the device's choice here is safe.
+  const [offChecked] = useState(readOffSearchPreference);
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list, enabled: props.open });
   const { data: recipes } = useQuery({ queryKey: queryKeys.recipes.all(), queryFn: recipeApi.list, enabled: props.open });
   const { data: meals } = useQuery({ queryKey: queryKeys.meals.all(), queryFn: mealApi.list, enabled: props.open });
@@ -158,5 +213,14 @@ export function AddFoodModal(props: AddFoodModalProps) {
     [meals, recipes],
   );
 
-  return <AddFoodModalView {...props} items={items} usage={usage} />;
+  return (
+    <AddFoodModalView
+      {...props}
+      items={items}
+      usage={usage}
+      useOff={useConnectedOff}
+      initialOffChecked={offChecked}
+      onOffCheckedChange={writeOffSearchPreference}
+    />
+  );
 }
