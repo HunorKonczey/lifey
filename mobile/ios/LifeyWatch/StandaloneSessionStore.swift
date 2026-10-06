@@ -25,6 +25,15 @@ enum WatchUnitSystem: String {
 /// access funnels through a private serial queue so a background-thread ack
 /// (arriving on `WCSessionDelegate`'s callback queue) can't race a
 /// foreground write from `WorkoutManager`.
+/// One element of the pending queue that may not decode — `nil` instead of failing the whole array.
+private struct LossyPayload: Decodable {
+  let payload: StandaloneSessionPayload?
+
+  init(from decoder: Decoder) throws {
+    payload = try? StandaloneSessionPayload(from: decoder)
+  }
+}
+
 final class StandaloneSessionStore {
   static let shared = StandaloneSessionStore()
 
@@ -76,7 +85,24 @@ final class StandaloneSessionStore {
 
   private func readPending() -> [StandaloneSessionPayload] {
     guard let data = try? Data(contentsOf: pendingURL) else { return [] }
-    return (try? JSONDecoder().decode([StandaloneSessionPayload].self, from: data)) ?? []
+    if let payloads = try? JSONDecoder().decode([StandaloneSessionPayload].self, from: data) {
+      return payloads
+    }
+    // This queue holds workouts that exist nowhere else until the phone acks them, and `append` / `remove`
+    // write back whatever this returns. A queue that fails to decode as a whole (one payload from another
+    // app version, a half-written file) used to read as empty, so the next append or ack overwrote every
+    // queued session with an empty list. Keep a copy of the original file, and keep every element that does
+    // decode.
+    preserveUndecodablePending()
+    let lossy = (try? JSONDecoder().decode([LossyPayload].self, from: data)) ?? []
+    return lossy.compactMap { $0.payload }
+  }
+
+  private func preserveUndecodablePending() {
+    let backupURL = pendingURL.deletingLastPathComponent()
+      .appendingPathComponent("standalone_sessions_pending.undecodable.json")
+    guard !FileManager.default.fileExists(atPath: backupURL.path) else { return }
+    try? FileManager.default.copyItem(at: pendingURL, to: backupURL)
   }
 
   private func writePending(_ pending: [StandaloneSessionPayload]) {

@@ -27,12 +27,13 @@ object StandaloneSessionStore {
     private const val KEY_TEMPLATES = "templates"
     private const val KEY_ALL_CARDIO = "allCardio"
     private const val KEY_UNIT_SYSTEM = "unitSystem"
+    private const val KEY_PENDING_UNREADABLE = "pendingUnreadable"
 
     /** Queues a just-closed standalone session for delivery — `ExerciseService`
      * (S15) sends it and calls [remove] once the phone acks. */
     fun add(context: Context, standaloneSessionJson: String) {
         val prefs = prefs(context)
-        val array = JSONArray(prefs.getString(KEY_PENDING, "[]"))
+        val array = readPending(prefs)
         array.put(JSONObject(standaloneSessionJson))
         prefs.edit().putString(KEY_PENDING, array.toString()).apply()
     }
@@ -40,7 +41,7 @@ object StandaloneSessionStore {
     /** Every not-yet-acked session, oldest first — sent in this order (§4.1:
      * "a szinkron sorban küldi őket"). */
     fun all(context: Context): List<JSONObject> {
-        val array = JSONArray(prefs(context).getString(KEY_PENDING, "[]"))
+        val array = readPending(prefs(context))
         return (0 until array.length()).map { array.getJSONObject(it) }
     }
 
@@ -48,7 +49,7 @@ object StandaloneSessionStore {
      * phone's `standaloneSessionAck` arrives for it (§4.2). A no-op if
      * already removed. */
     fun remove(context: Context, standaloneSessionId: String) {
-        val array = JSONArray(prefs(context).getString(KEY_PENDING, "[]"))
+        val array = readPending(prefs(context))
         val remaining = JSONArray()
         for (i in 0 until array.length()) {
             val item = array.getJSONObject(i)
@@ -148,6 +149,25 @@ object StandaloneSessionStore {
      * account gets, and the safe answer for a watch that has never synced. */
     fun isImperial(context: Context): Boolean =
         prefs(context).getString(KEY_UNIT_SYSTEM, null) == "IMPERIAL"
+
+    /**
+     * The pending queue as an array. It holds workouts that exist nowhere else until the phone acks them,
+     * and [add] / [remove] write back whatever this returns - so a stored string that no longer parses
+     * (a half-written preference) must neither throw out of the service at the moment a session ends, which
+     * lost the session being closed, nor be silently replaced by an empty queue. The unreadable text is kept
+     * under its own key (once) and the queue starts again from empty.
+     */
+    private fun readPending(prefs: android.content.SharedPreferences): JSONArray {
+        val raw = prefs.getString(KEY_PENDING, "[]") ?: "[]"
+        return try {
+            JSONArray(raw)
+        } catch (e: Exception) {
+            if (!prefs.contains(KEY_PENDING_UNREADABLE)) {
+                prefs.edit().putString(KEY_PENDING_UNREADABLE, raw).apply()
+            }
+            JSONArray()
+        }
+    }
 
     private fun readRows(context: Context, key: String): List<JSONObject> {
         val raw = prefs(context).getString(key, null) ?: return emptyList()
