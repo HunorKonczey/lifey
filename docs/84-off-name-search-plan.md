@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompt 1 (backend client) built, Prompts 2–11 not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–2 (backend client, search service) built, Prompts 3–11 not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -334,7 +334,7 @@ text, limit clamp, no call for an unsearchable query, empty vs. failed, 429/503/
 `OpenFoodFactsConfigTest` 3 (binding from the real `application.yml`, two distinct beans, env override).
 Not done here, by design: the `searchPerMinute` value is only bound — the limiter that reads it is Prompt 3.
 
-## Prompt 2 — Backend: language-first search with English backoff and filtering
+## Prompt 2 — Backend: language-first search with English backoff and filtering ✅ (2026-10-06)
 - `FoodNameSearchService` + `Impl` (package `nutrition/food/service/`): D4 flow, D6 filter as one
   package-private function, dedupe against `FoodRepository.findByUserIdAndBarcode`.
 - DTOs in `nutrition/food/dto/`: `OffSearchResponse`, `OffSearchItem`, `OffSearchStatus`.
@@ -342,6 +342,31 @@ Verification: `FoodNameSearchServiceImplTest` — hu hit (client called once, **
 fallback); hu empty → en hit (second call **without** a country tag, `fellBackToEnglish`); hu timeout →
 `UNAVAILABLE` **and the English client is never called**; en request makes one call, no country tag; each D6 rule has a test (including the name rule: `product_name_hu` wins over `product_name`); an owned
 barcode is dropped. The Hungary restriction (D12, option B) is implemented here.
+
+*As built:* `FoodNameSearchService.search(query, lang)` (`nutrition/food/service/`) returns an
+`OffSearchResponse(status, language, fellBackToEnglish, items)` (`nutrition/food/dto/`: `OffSearchStatus` OK /
+UNAVAILABLE / RATE_LIMITED, `OffSearchItem`). It is deliberately **not** `@Transactional` — the OFF calls take
+seconds and must not hold a connection. Three decisions made while building, none changes the plan's behaviour:
+- **"Usable" is judged before the ownership drop.** A Hungarian result whose every hit the user already owns is
+  still a Hungarian result (OK, empty list, no English pass); only a result with nothing usable *by the D6 filter*
+  falls back. Tested explicitly.
+- **`fellBackToEnglish` is true only when the English pass actually returned items.** If both passes find nothing
+  the answer is OK / empty / `language: "hu"` / `fellBackToEnglish: false`, so the client shows "no results", not
+  "showing English results" over an empty list.
+- **Ownership is one query, not one per hit:** new `FoodRepository.findOwnedBarcodes(userId, barcodes)` (live
+  foods only — `deletedAt IS NULL`) instead of 20 × `findByUserIdAndBarcode`.
+
+Tests: `FoodNameSearchServiceImplTest` 19 (the D4 flows incl. both errors never reaching the English client, the
+D6 bounds at 900 kcal / 100 g on both sides, name rule, carbs/fat absent, de-duplication, ownership) — all green
+without Docker. `FoodOwnedBarcodesRepositoryTest` (real Postgres: user scope, tombstone excluded) compiles but
+**has not been run here — Docker was unavailable**; it runs in CI. A JPQL error in the new query would also show
+at application start-up.
+
+**Known gap, for Prompt 7:** a *tombstoned* food still holds its barcode in the `(user_id, barcode)` unique
+index. An OFF hit for that product is shown (the ownership query ignores tombstones, on purpose — the user does
+not see that food any more), but saving it will answer 409, and "re-fetch foods and use the existing one" finds
+nothing. Prompt 7 must decide how to handle it (likely: let `POST /foods` revive a tombstoned food with the same
+barcode instead of failing — a small backend change — or save without the barcode).
 
 ## Prompt 3 — Backend: cache and global limiter
 - `OffSearchCache` (bounded LRU + TTL, key `lang|normalised query`), `OffSearchLimiter`; wired into the
@@ -374,7 +399,7 @@ reload (localStorage). Check at 1440 and 390 (the Modal is a bottom sheet below 
   afterwards (it does since the web add-food fix: an add no longer closes it) and the new food shows in own
   results.
   If the create returns 409 (`DuplicateResourceException`, barcode already owned) re-fetch foods and use
-  the existing one instead of failing.
+  the existing one instead of failing. **Also the tombstone case from Prompt 2's known gap.**
 Verification: e2e in the gallery with stubbed submit; against the real backend by hand: log one OFF
 food, see it in the Foods tab with its barcode, log it a second time from own results (no second
 `POST /foods`).

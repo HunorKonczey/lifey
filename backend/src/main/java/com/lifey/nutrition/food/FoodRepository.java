@@ -7,8 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface FoodRepository extends JpaRepository<Food, Long> {
 
@@ -47,6 +49,13 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
     Optional<Food> findByIdAndUserId(Long id, Long userId);
 
     Optional<Food> findByUserIdAndBarcode(Long userId, String barcode);
+
+    /**
+     * Which of these barcodes the user already has as a food (tombstoned rows excluded) — one
+     * query for a whole OpenFoodFacts result list instead of one per hit (docs/84 D6).
+     */
+    @Query("SELECT f.barcode FROM Food f WHERE f.user.id = :userId AND f.deletedAt IS NULL AND f.barcode IN :barcodes")
+    Set<String> findOwnedBarcodes(@Param("userId") Long userId, @Param("barcodes") Collection<String> barcodes);
 
     /** Dedupe lookup for the trainer content-assignment deep copy (see ContentAssignmentServiceImpl). */
     Optional<Food> findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
