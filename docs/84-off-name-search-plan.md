@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–7 (backend complete, web done) built, Prompts 8–11 (mobile, close) not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–8 (backend complete, web done, mobile data layer) built, Prompts 9–11 not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -554,11 +554,39 @@ the dialog stays with a clean search and the box still ticked; Enter adds with 1
 real `POST /foods` 409 behaviour (name vs barcode) is as read from `FoodServiceImpl` and the V25/V40 indexes, not observed.
 That manual run, and the real OpenFoodFacts call, are still owed before the web PR is merged.
 
-## Prompt 8 — Mobile data: repository and controller
+## Prompt 8 — Mobile data: repository and controller ✅ (2026-10-06)
 - `off_search_repository.dart`, `off_search_controller.dart`, `ApiEndpoints.foodsOffSearch`, the
   preference store, the `OffSearchResult` domain model.
 Verification: `flutter test` unit tests with a fake Dio — statuses map to states, debounce coalesces
 keystrokes, the preference is read/written, offline (`DioException` connection error) → `unavailable`.
+
+*As built* (`mobile/lib/features/nutrition/`): `domain/off_search.dart` (the model — `OffSearchItem`, `OffSearchResult`,
+`OffSearchStatus` — and the pure rules: `sanitizeOffQuery`, `isOffSearchable`, `offSearchLang`, `offSearchNote`),
+`data/off_search_repository.dart` (online-only Dio call with a `CancelToken`, pattern `barcode_lookup_repository.dart`),
+`data/off_search_preferences.dart` (the checkbox, `shared_preferences`), `application/off_search_controller.dart`
+(`OffSearchController`, an auto-disposed `Notifier<OffSearchState>`), and `ApiEndpoints.foodsOffSearch`. Decisions:
+- **The checkbox preference uses `shared_preferences`, not secure storage** (the plan said "the same pattern as
+  `weigh_in_reminder_preferences.dart`", which uses secure storage "because it is already wired up"): `pubspec.yaml`
+  says plain `shared_preferences` is for exactly this kind of non-sensitive per-device flag, and `InterstitialPreferences`
+  is the model. It is not cleared at logout — it is a convenience, not account data.
+- **The same cleaning and 3-letter rule as the backend and the web**, with the same test table in all three, so a request the
+  backend would refuse is never sent. **A choice made while the stored one is still loading wins** (the box can be unticked
+  before the async read returns).
+- **The controller keeps a ten-minute in-memory cache** (key `lang|text`, only OK answers) like the web's query cache, because the
+  mobile has no equivalent of react-query; unavailable / rate-limited answers are never remembered.
+- A failed request (no connectivity, timeout, unreadable body) is `failed` → shown as "unavailable" and the old answer is dropped;
+  a **cancelled** request is silently ignored, and so is a late answer to an older text (a generation counter). Disposing
+  the sheet cancels the request and the late answer does not touch the disposed state.
+
+Tests (all `flutter test`, no emulator): `off_search_test.dart` 18 (the parity table, the 3-letter rule, JSON incl. ints as
+doubles / null brand / unknown or missing status → unavailable, the note), `off_search_repository_test.dart` 4 (the request
+and its query, a status answer is not an exception, an HTTP 400 is thrown, a cancel is recognisable),
+`off_search_controller_test.dart` 20 (off by default; pending at once and the request only after the 400 ms debounce; typing a
+word is one request; under 3 letters / deleting cancels the wait; a newer text cancels the old request and a late answer is
+ignored; the previous answer stays while loading; failure and unreadable answers; rate-limited and fallback notes; the cache
+incl. language in the key, expiry at ten minutes and never caching a non-OK answer; the checkbox read / write / ticking
+searches what is typed / unticking cancels and forgets / choice-while-loading; dispose). 42 green, `flutter analyze` clean.
+Nothing is mounted yet — Prompt 9 is the sheet.
 
 ## Prompt 9 — Mobile UI: the checkbox and the OFF group in the sheet
 - `add_meal_entry_sheet.dart`, `_FoodOptions`; ARB strings (en + hu). Selecting is wired in Prompt 10.
