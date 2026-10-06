@@ -64,7 +64,7 @@ void main() {
         payload: {'weight': 80.0},
       );
 
-  for (final status in [408, 429, 502, 503, 504]) {
+  for (final status in [401, 408, 429, 502, 503, 504]) {
     test('a $status is parked as a network failure and retried on the next drain', () async {
       final adapter = _ScriptedAdapter([status, 200]);
       dio.httpClientAdapter = adapter;
@@ -82,7 +82,7 @@ void main() {
     });
   }
 
-  for (final status in [400, 404, 409, 500]) {
+  for (final status in [400, 403, 404, 409, 500]) {
     test('a $status stays parked until someone retries it', () async {
       final adapter = _ScriptedAdapter([status, 200]);
       dio.httpClientAdapter = adapter;

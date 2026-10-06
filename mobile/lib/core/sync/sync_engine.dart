@@ -10,9 +10,12 @@ import 'sync_lock.dart';
 
 /// HTTP answers that say "not now" rather than "no": the gateway in front of
 /// the API answers 502/503/504 while it deploys or wakes from a cold start,
-/// and 408/429 are asks to come back later. Retrying these is always right,
-/// unlike a 400/404/409/500, which a blind retry will only repeat.
-const _transientStatuses = {408, 425, 429, 502, 503, 504};
+/// and 408/429 are asks to come back later. A 401 gets here only after the auth
+/// interceptor's refresh failed too: that is the session, not the data, so once
+/// the user signs in again the write should go out without a manual retry.
+/// Retrying these is always right, unlike a 400/404/409/500, which a blind
+/// retry will only repeat.
+const _transientStatuses = {401, 408, 425, 429, 502, 503, 504};
 
 /// Whether [e] is worth retrying by itself on a later sync pass: no response
 /// at all (timeout, connection error, DNS failure) or a transient gateway
