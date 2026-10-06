@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed (planning only — no code written; the Prompt 0 spike must run first)
+Status: proposed — Prompt 0 (spike) done 2026-10-06, results below and folded into the decisions; no code written yet. One open decision: §2 D12
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -33,7 +33,11 @@ food **by typing its name** and log it, on web and on mobile.
 Same reasoning as docs/11 §1: OFF requires an identifying `User-Agent`, the egress IP is shared (the
 rate limit applies to us, not per user), and one proxy lets us cache, filter and change the OFF
 endpoint without a mobile release. Rejected: calling OFF from the browser/phone — no cache, no shared
-limiter, a User-Agent we cannot set from a browser.
+limiter, a User-Agent we cannot set from a browser. **Cost, found in the spike:** OFF's API page says that
+when requests come from the users directly (a mobile app) "the rate limits apply per user", while through
+our proxy every Lifey user shares one budget. So the proxy is only the right call if cache + limiter (D7)
+keep us well under the limit; if the real traffic proves otherwise, calling OFF from the client is the
+escape hatch (the endpoint's response shape would stay the same, the client would build it).
 
 ### D2 New endpoint `GET /api/v1/foods/off-search?q=…&lang=hu|en`
 Next to the existing `GET /foods/barcode/{barcode}` in `FoodController`. Rejected: overloading
@@ -48,13 +52,14 @@ source into it would make sync and caching ambiguous) and `/foods/search` (colli
   "fellBackToEnglish": false,
   "items": [
     { "barcode": "4056489827702", "name": "Csirkemell", "brand": "Pikok",
-      "caloriesPer100g": 110, "proteinPer100g": 14, "carbsPer100g": 2.4, "fatPer100g": 4.9,
-      "nameLanguage": "hu" }
+      "caloriesPer100g": 110, "proteinPer100g": 14, "carbsPer100g": 2.4, "fatPer100g": 4.9 }
   ]
 }
 ```
 
-At most 20 items; no paging in v1. `lang` is only `hu` or `en` (anything else → `en`).
+At most 20 items; no paging in v1. `lang` is only `hu` or `en` (anything else → `en`). There is no
+per-item "name language": OFF's own `lang` field is unreliable (Hungarian products are often tagged `en`,
+see Spike results), so the response only says which language the **search** ran in.
 
 ### D3 The client sends the language; the backend does not guess it
 `LanguagePreference` is `SYSTEM | ENGLISH | HUNGARIAN`; `SYSTEM` is resolved from the device or
@@ -72,9 +77,17 @@ Flow in a new `FoodNameSearchService` (package `nutrition/food/service/`):
    whatever is already known. **Do not** run the English search as a retry: showing English hits
    because the Hungarian call timed out would look like "no Hungarian results" and is a silent lie.
 
+The English pass is the **same query with `langs=en`**. Spike finding: `langs` is not a filter, it picks
+which language subfields are searched, so `hu` and `en` return almost disjoint sets (1 shared product of
+14–20 for "csirkemell"), and a Hungarian search is **rarely empty** (1 of 20 test terms) — the backoff
+will mostly fire for a Hungarian-language user who types an English product or brand ("pumpkin",
+"snickers"). A Hungarian word typed in the English pass finds nothing ("sütőtök" → 0 hits both ways).
+That is what was asked for; the section note (§3.1) says which language the results are from.
+
 Rejected: merging both languages into one list (doubles the calls, duplicates every product that
-exists in both) and falling back whenever there are fewer than N results (the requirement is
-"nothing came back"; a threshold is an invented rule).
+exists in both; `langs=hu,en` in one call was **not** shown to combine usefully and is not used) and falling
+back whenever there are fewer than N results (the requirement is "nothing came back"; a threshold is an
+invented rule).
 
 ### D5 Which OFF endpoint: search-a-licious, behind a second base URL
 Probed live on 2026-10-06 with "csirkemell": both `GET /cgi/search.pl` (v1, `world.openfoodfacts.org`)
@@ -83,16 +96,20 @@ and `GET https://search.openfoodfacts.org/search?q=…&langs=hu` (search-a-licio
 `fields=`). New property `lifey.openfoodfacts.search-base-url` (default
 `https://search.openfoodfacts.org`, env `OPENFOODFACTS_SEARCH_BASE_URL`) in `OpenFoodFactsProperties`,
 and a second `RestClient` bean (`openFoodFactsSearchRestClient`) in `OpenFoodFactsConfig` with the same
-User-Agent but its own timeout (search is slower than a barcode hit; start at 5 s, tune in the spike).
-The barcode client keeps `world.openfoodfacts.org`. Rejected: v1 `search.pl` — older, slower, and the
-page-size/field behaviour is less predictable; kept as the documented fallback if the spike finds
-search-a-licious unsuitable.
+User-Agent and the timeouts above.
+The barcode client keeps `world.openfoodfacts.org`. **Spike confirmed:** search-a-licious answered every
+one of ~50 requests (spaced 7 s) with 200 in ~0.2 s, while v1 `search.pl` returned **503 on 4 of 5**
+requests at a lower rate than OFF's documented limit — so v1 is rejected, not just "older". Request:
+`GET /search?q=<sanitised>&langs=<hu|en>&page_size=20&fields=code,product_name,product_name_hu,product_name_en,brands,lang,countries_tags,nutriments`.
+Timeout: **connect 2 s / read 3 s** per call (typical latency is 0.2 s); the Hungarian + English passes
+are sequential, so the worst case for one user request is ~6 s, which the client's own timeout must allow.
 
 ### D6 Filtering lives in the backend, one function, and is strict
 An OFF hit becomes an item only if **all** hold:
 
-- it has a non-blank product name — in the requested language if OFF has one, else the product's own
-  `product_name` (then `nameLanguage` says which language it is);
+- it has a non-blank product name: **`product_name_<lang>` if present, else `product_name`** (the
+  product's main-language name; verified: `product_name_hu` is set on 15 of 20 "tej" hits, including an
+  English-tagged product whose Hungarian name is "Magyar Tej 1,5%");
 - it has `energy-kcal_100g` **and** `proteins_100g` (same rule as `hasUsableNutrition` in
   `BarcodeLookupServiceImpl`, so a name hit and a barcode hit are interchangeable);
 - the numbers are **plausible**: kcal ≤ 900, and each of protein / carbs / fat ≤ 100 per 100 g
@@ -102,16 +119,25 @@ An OFF hit becomes an item only if **all** hold:
   `V40__foods_exercises_ownership.sql`.
 
 Carbs and fat may be `null` (OFF often lacks them); clients treat `null` as 0, as the barcode flow
-does today. The "usable" check of D4 runs on this filtered list.
+does today. The "usable" check of D4 runs on this filtered list. Measured on 30 terms (Spike results):
+73–78 % of hits survive; the drops are "no kcal/protein" (15–17 %), "kJ only" (5–8 %), "no name" (≤2 %)
+and "implausible" (≤1 %). **The filter does not fix relevance:** OFF also matches the brand field, so
+"alma" returns a German salad from the brand *Alma*, and Hungarian terms return French/Dutch products
+with Hungarian-sounding brands (see D12).
 
 ### D7 A small hand-rolled cache and a global limiter — no new dependency
-OFF asks clients not to hammer search (and not to use it for type-ahead; the figure of ~10 search
-requests per minute per IP is to be confirmed in the spike). Every Lifey user shares one egress IP, so:
+OFF's API page (read 2026-10-06) sets **10 requests/min/IP for search (`/api/v*/search`, `/cgi/search.pl`)**,
+15/min/IP for product reads, says not to use search for search-as-you-type ("you would be blocked very
+quickly"), reserves an IP ban, and returns 503 on its global limits. It does **not** state a limit for
+the search-a-licious host (`search.openfoodfacts.org`) — we did not try to find it by exceeding it. We
+assume the same order of magnitude. Note the barcode lookup already shares the 15/min product-read budget
+through the same proxy. Every Lifey user shares one egress IP, so:
 
 - `OffSearchCache`: bounded LRU with TTL (e.g. 500 entries, 10 min), key = `lang + normalised query`
   (**the language is part of the key** — a Hungarian result must never answer an English request).
   Only `OK` results are cached; `UNAVAILABLE` is not.
-- `OffSearchLimiter`: one global limit (configurable, `lifey.openfoodfacts.search-per-minute`); over it
+- `OffSearchLimiter`: one global limit (configurable, `lifey.openfoodfacts.search-per-minute`, **default
+  8** — under the documented 10, and one user request can cost two OFF calls because of D4); over it
   the endpoint answers `status=RATE_LIMITED` immediately without calling OFF.
 
 Rejected: Spring Cache + Caffeine (CLAUDE.md: no new framework without justification — ~60 lines of
@@ -137,6 +163,23 @@ user turned it on: typing into the search is otherwise a purely local act.
   online-only — offline the checkbox is disabled with a hint, because the rest of the sheet is
   offline-first and must stay so.
 
+### D11 The typed text is sanitised before it becomes the OFF query
+search-a-licious takes **Lucene query syntax**: the spike showed `categories_tags:"en:beverages" tej`
+works as a filter, and `tej:`, `"tej`, `a OR`, `tej*` are all accepted without an error. A user typing a
+colon or a quote would silently change what is searched. The service keeps letters, digits, spaces,
+`-` and `'`, drops everything else, collapses spaces, then applies the 3-character minimum. Rejected:
+passing the text through (surprising results, and a user could address any indexed field), and escaping
+each special character (more code for the same outcome here).
+
+### D12 OPEN — a Hungary filter for Hungarian users (decide before Prompt 2)
+Not asked for, found in the spike. Adding `countries_tags:"en:hungary"` to the Hungarian pass works
+(`alma` → only Hungarian products: Topjoy apple-pear, Dr. Oetker, efko… instead of the German salad;
+`csirkemell` → 13 hits, all Hungarian) and removes most of the brand/foreign noise. Cost: a product sold
+in Hungary but not tagged so is missed, and it changes the flow to three steps (hu+Hungary → hu → en) or
+two (hu+Hungary → en). Options: **A** keep the plan as written (language only); **B** hu+Hungary → en;
+**C** hu+Hungary → hu → en. Recommendation: **B** for `hu`, nothing for `en` — but it is the user's call,
+because it changes what "no result" means in D4.
+
 ## 3. UI spec
 
 ### 3.1 Web — `web/src/features/nutrition/components/addFood/`
@@ -144,7 +187,7 @@ user turned it on: typing into the search is otherwise a purely local act.
   too". Below the own results a section label "From OpenFoodFacts" and rows in the same shape as own
   rows (name, `Brand · kcal / 100 g`, a small "OFF" tag). While loading: a one-line skeleton, not a
   spinner over the list. Notes under the section, one at a time:
-  `fellBackToEnglish` → "No Hungarian results — showing English ones."; `UNAVAILABLE` → "OpenFoodFacts
+  `fellBackToEnglish` → "No Hungarian results — showing English ones." (they are English *search* results; the rows' names are what OFF stores); `UNAVAILABLE` → "OpenFoodFacts
   isn't answering right now."; `RATE_LIMITED` → "Too many searches — try again in a minute.".
 - `foodSearch.ts`: `SearchItem` gains a third kind `"off"` (`key: off:<barcode>`, carries the item).
   `searchItems()` is **not** changed — OFF rows are appended by the pane, never ranked into own rows.
@@ -192,28 +235,70 @@ been used for a while.
 ### Milestone 4 — Close
 - Prompt 11.
 
-## Prompt 0 — Spike: confirm what OFF really does (research, result goes into this doc)
-Run against `search.openfoodfacts.org` and note the findings under a new "Spike results" heading here:
-1. Does `langs=hu` restrict matching or only the returned name fields? Is `product_name` returned in the
-   requested language when the product has one (`product_name_hu`)? Which `fields=` give us name, brand,
-   `energy-kcal_100g`, `proteins_100g`, `carbohydrates_100g`, `fat_100g`, `lang`, `countries_tags`?
-2. Real rate limit and the response when exceeded (status code, headers). Is it OK for us to call it
-   from a server that debounced clients hit? If not, D7's numbers change.
-3. 20 Hungarian terms (csirkemell, tej, kenyér, túró, paradicsom, …) and 10 English brand/product
-   terms: how many hits survive the D6 filter? How often is a kJ-only product dropped (see Non-goals)?
-4. The same term through `search.pl` for comparison; settle D5.
-Verification: the findings table is in the doc and D5/D7 are edited to match. **If the survival rate for
-Hungarian terms is poor, stop and revisit the plan before Prompt 1.**
+## Prompt 0 — Spike: confirm what OFF really does ✅ (2026-10-06)
+Questions asked, answers in "Spike results" below: what `langs` does; which fields give a usable name and
+nutriments; the rate limit; how many real Hungarian/English terms survive the D6 filter; v1 vs
+search-a-licious. Verification gate "stop if the Hungarian survival rate is poor": **passed** (73 %, 19 of
+20 terms had at least one usable hit); D1, D4, D5, D6, D7 were edited from the findings, D11 added, D12
+opened.
+
+### Spike results (all numbers from live calls on 2026-10-06, `User-Agent: Lifey-planning/1.0 (…)`)
+
+**What `langs` does.** Per OpenAPI (`/openapi.json`): "language-specific subfields to choose in which
+subfields we're searching in", default `['en']`. It is a **search-field selector, not a result filter**.
+"csirkemell": `hu` → 14 hits, `en` → 20, only 1 shared. Products from any country can appear in either.
+
+**Fields.** `product_name` is the product's main-language name; `product_name_hu` / `product_name_en`
+exist when someone entered them (15 of 20 for "tej"). `lang` is the *product's* main language and cannot
+be trusted for "is this Hungarian": "Milk 1,5%" (Alföldi Tej, sold in Hungary) is `lang: en`. `nutriments`
+carries `energy-kcal_100g`, `energy-kj_100g`, `proteins_100g`, `carbohydrates_100g`, `fat_100g`;
+`countries_tags` carries `en:hungary` etc.
+
+**Survival under the D6 filter** (page_size 20, one request per term, 7 s apart):
+
+| | terms | raw hits | usable | no kcal/protein | kJ only | no name | implausible |
+|---|---|---|---|---|---|---|---|
+| Hungarian, `langs=hu` | 20 | 280 | 205 (73 %) | 47 (17 %) | 22 (8 %) | 5 (2 %) | 1 |
+| English, `langs=en` | 10 | 200 | 157 (78 %) | 30 (15 %) | 10 (5 %) | 1 | 2 |
+
+- Hungarian terms: csirkemell, tej, kenyér, túró, paradicsom, sajt, tojás, rizs, burgonya, alma, banán,
+  joghurt, kolbász, sonka, tészta, olaj, vaj, zabpehely, lazac, sütőtök. Fewest raw hits: tojás 3,
+  burgonya 3, banán 6, zabpehely 6, lazac 7; **sütőtök 0** (and 0 in English too; "pumpkin" gives 20).
+- English terms: snickers, coca cola, nutella, greek yogurt, oatmeal, peanut butter, whey protein, olive
+  oil, almond milk, chicken breast — each at least 9 usable.
+- kJ-only products are the single biggest *avoidable* loss (up to 5 of 20 for "sonka"); deriving kcal
+  from kJ stays a Non-goal for v1.
+- **Relevance, not coverage, is the weak side:** brand-field matches ("alma" → brand *Alma*, "joghurt" →
+  brand *Joghurt*), foreign products with Hungarian-looking brands, products whose only name is another
+  language. A Hungary country filter fixes most of it (D12).
+
+**Query syntax.** Lucene: field filters work in `q` (`categories_tags:"en:beverages" tej` → 4 hits);
+malformed input (`tej:`, `"tej`, `a OR`) does not error, it just searches something else → D11.
+
+**Latency / limits.** Every search-a-licious call: 200 in 0.2–1.2 s, no rate-limit headers in the response
+(`nginx`, no `Retry-After`), none refused in ~50 requests at ~8/min. v1 `world.openfoodfacts.org/cgi/search.pl`
+returned **503 on 4 of 5** calls at the same pace (the OFF docs say 503 is also what its global limit
+returns) — rejected. Documented limits (OFF API page): 10 req/min/IP for search, 15 req/min/IP for product
+reads, "don't use it for a search-as-you-type feature", "if your requests come from your users directly (ex:
+mobile app), the rate limits apply per user" → D1 and D7. **Not tested on purpose:** exceeding the
+search-a-licious limit (an IP ban would also take the barcode scanner down).
+
+**Not answered by the spike (carry into the prompts):**
+- the actual search-a-licious rate limit (undocumented) — watch for 429/503 in Prompt 1's tests against
+  a stub and in the first real use, and tune `search-per-minute`;
+- whether `langs=hu,en` in one call is worth anything (it returned a set that overlapped the Hungarian
+  one on a single product); not used.
 
 ## Prompt 1 — Backend: OFF name-search client
 - `OpenFoodFactsProperties`: add `searchBaseUrl`; `application.yml`: `search-base-url`,
-  `search-per-minute`; `OpenFoodFactsConfig`: `openFoodFactsSearchRestClient`.
+  `search-per-minute` (default 8); `OpenFoodFactsConfig`: `openFoodFactsSearchRestClient` (connect 2 s, read 3 s).
 - `OpenFoodFactsClient`: add `List<OffSearchHit> searchByName(String query, String lang, int limit)`;
   implement in `OpenFoodFactsClientImpl` with a new raw response record next to `OffApiResponse`
   (`@JsonIgnoreProperties(ignoreUnknown = true)`).
-- A transport failure is a typed exception (`OffUnavailableException`, `OffRateLimitedException` for 429),
-  not an empty list — D4 depends on telling "nothing" from "failed".
-Verification: `OpenFoodFactsClientImplTest` with a stub server (200 with hits, 200 empty, 429, timeout).
+- The query sanitiser (D11) is a small pure function next to the client and unit-tested here.
+- A transport failure is a typed exception (`OffUnavailableException`; `OffRateLimitedException` for 429 **and 503**, which is what OFF
+  returns on its global limit), not an empty list — D4 depends on telling "nothing" from "failed".
+Verification: `OpenFoodFactsClientImplTest` with a stub server (200 with hits, 200 empty, 429, 503, timeout) and the sanitiser cases from D11 (`tej:`, `"tej`, `a OR`, accents kept).
 Mergeable alone: nothing calls it yet.
 
 ## Prompt 2 — Backend: language-first search with English backoff and filtering
@@ -222,7 +307,8 @@ Mergeable alone: nothing calls it yet.
 - DTOs in `nutrition/food/dto/`: `OffSearchResponse`, `OffSearchItem`, `OffSearchStatus`.
 Verification: `FoodNameSearchServiceImplTest` — hu hit (no fallback); hu empty → en hit
 (`fellBackToEnglish`); hu timeout → `UNAVAILABLE` **and the English client is never called**; en request
-makes one call; each D6 rule has a test; an owned barcode is dropped.
+makes one call; each D6 rule has a test (including the name rule: `product_name_hu` wins over `product_name`); an owned
+barcode is dropped. The D12 decision is implemented here, whichever option is chosen.
 
 ## Prompt 3 — Backend: cache and global limiter
 - `OffSearchCache` (bounded LRU + TTL, key `lang|normalised query`), `OffSearchLimiter`; wired into the
@@ -307,12 +393,13 @@ the food reaches the backend (docs/15-delta-sync.md).
   ignored (`useQuery` key / controller token).
 - Same product returned twice (two OFF records with one barcode) → deduplicate by barcode in the service.
 - A product the user already owns → dropped from OFF results (D6), it is in the own list.
-- Product in `fellBackToEnglish` mode: name is English; row still shows `nameLanguage` implicitly through
-  the section note — and the saved food keeps that English name (the user can rename it).
+- Product in `fellBackToEnglish` mode: the name is whatever OFF stores for it (usually English); the
+  section note says the search ran in English, and the saved food keeps that name (the user can rename it).
 - Beverages: OFF values are per 100 **ml** and we store per 100 g, so the "grams" of a drink are ml.
   Accepted for v1 (the barcode flow does the same today); the row does not say "ml".
-- Typed Hungarian term in the English backoff will usually find nothing; the section then shows the
-  "no results" line, not an error. The backoff pays off for brand and English product names.
+- Typed Hungarian term in the English backoff finds nothing (spike: "sütőtök" → 0 hits both ways); the
+  section then shows the "no results" line, not an error. The backoff pays off for brand and English
+  product names ("pumpkin", "snickers").
 - The user changes language in Settings with the dialog closed → next open uses the new language;
   cached results are keyed by language (D7).
 - 429 / timeout → status note; own results unaffected; no automatic retry loop.
@@ -354,5 +441,7 @@ Prompt 0 has no PR of its own: its findings land as a commit to this doc ahead o
 - **Limiter too tight or too loose:** too tight and the feature seems dead after a few users, too loose
   and OFF blocks our IP for everyone including the barcode scanner (same host family). The limit is
   configuration, and the spike's rate-limit finding sets its default.
+- **Relevance noise mistaken for coverage:** a list full of brand-matched, foreign products looks like "it works" in a
+  coverage count. The manual walk must read the first five rows per term, not count hits (D12).
 - **Debounce missing on one client:** a keystroke-per-request client would burn the shared limit in
   minutes. Both clients have a debounce test.
