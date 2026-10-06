@@ -6992,6 +6992,10 @@
   "@offSearchTag": {
     "description": "Small tag on an OpenFoodFacts result row (short for OpenFoodFacts)"
   },
+  "offSearchFilled": "Filled in from the OpenFoodFacts database — check the values, then save.",
+  "@offSearchFilled": {
+    "description": "Note in the create-food form after a product from OpenFoodFacts filled it in"
+  },
   "offSearchHint": "OpenFoodFacts is a public food database run by volunteers. What you type is sent to it, and its values can be incomplete — check them.",
   "@offSearchHint": {
     "description": "Short explanation shown under the OpenFoodFacts checkbox once it is ticked: where the results come from and that the data can be incomplete"

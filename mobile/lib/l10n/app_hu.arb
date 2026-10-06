@@ -1545,6 +1545,7 @@
   "offSearchLabel": "Keresés az OpenFoodFacts ételadatbázisban is",
   "offSearchSection": "Az OpenFoodFacts adatbázisából",
   "offSearchTag": "OFF",
+  "offSearchFilled": "Az OpenFoodFacts adatbázisából kitöltve — ellenőrizd az értékeket, aztán mentsd.",
   "offSearchHint": "Az OpenFoodFacts önkéntesek által épített nyilvános ételadatbázis. Amit beírsz, oda is elküldjük, az adatai pedig hiányosak lehetnek — ellenőrizd őket.",
   "offSearchSearching": "Keresés az OpenFoodFactsben…",
   "offSearchNoResults": "Nincs találat az OpenFoodFactsben.",
