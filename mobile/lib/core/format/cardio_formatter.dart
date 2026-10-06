@@ -80,8 +80,10 @@ abstract final class CardioFormatter {
     final unitMeters = unitSystem == UnitSystem.imperial ? _metersPerMile : _metersPerKm;
     final secondsPerUnit = duration.inSeconds / (meters / unitMeters);
     if (!secondsPerUnit.isFinite) return null;
-    final minutes = secondsPerUnit ~/ 60;
-    final seconds = (secondsPerUnit % 60).round();
+    // Rounded as a whole first: rounding only the remainder turns 5:59.6 into "5:60".
+    final totalSeconds = secondsPerUnit.round();
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
     final suffix = unitSystem == UnitSystem.imperial ? '/mi' : '/km';
     return '$minutes:${seconds.toString().padLeft(2, '0')} $suffix';
   }

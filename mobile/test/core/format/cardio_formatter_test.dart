@@ -79,6 +79,12 @@ void main() {
       expect(pace, '8:22 /mi');
     });
 
+    test('a pace just under a whole minute rolls over instead of showing :60', () {
+      // 360 s over 1001 m is 359.64 s/km: the seconds part rounds up to 60.
+      final pace = CardioFormatter.pace(1001, const Duration(seconds: 360), UnitSystem.metric);
+      expect(pace, '6:00 /km');
+    });
+
     test('returns null when distance is zero', () {
       expect(CardioFormatter.pace(0, const Duration(minutes: 10), UnitSystem.metric), isNull);
     });
