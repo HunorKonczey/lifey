@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–4 (backend complete: client, search service, cache + limiter, endpoint) built, Prompts 5–11 not started
+Status: proposed — Prompt 0 (spike) done 2026-10-06 and D12 decided (option B: Hungarian + Hungary, then English); Prompts 1–5 (backend complete, web data layer) built, Prompts 6–11 not started
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -441,11 +441,39 @@ Both run in CI.
 **Milestone 1 (backend) is complete:** the endpoint can be exercised with `curl` / Postman against a running
 backend. Nothing in the web or mobile apps calls it yet.
 
-## Prompt 5 — Web data: API, types, hook
+## Prompt 5 — Web data: API, types, hook ✅ (2026-10-06)
 - `api.ts`, `types.ts`, `queryKeys.ts`, and `useOffSearch(query, lang, enabled)` (debounce, min length,
   `staleTime`) in `web/src/features/nutrition/`; a pure `offItemToSearchItem` mapper.
 Verification: Vitest for the mapper and the "disabled below 3 characters / when unchecked" rule; `tsc`,
 `eslint`.
+
+*As built:* in `web/src/features/nutrition/`: `types.ts` (`OffSearchItem`, `OffSearchResponse`, `OffSearchStatus`,
+`OffSearchLang`), `api.ts` (`foodApi.offSearch(q, lang, signal)` — the abort signal lets a newer keystroke cancel
+the request in flight), `queryKeys.foods.offSearch(lang, text)` (under `foods.all`, so saving a food refreshes the
+open results and the saved one drops out), `offSearch.ts` (the pure rules) and `useOffSearch.ts` (the hook), plus a
+generic `lib/hooks/useDebouncedValue.ts`. Decisions made while building:
+- **The mapper's row type is not in the `SearchItem` union yet.** `offItemToSearchItem` returns an `OffItem`
+  (`kind: "off"`, key `off:<barcode>`); adding it to the union changes every place that tells a food from a recipe
+  (`FoodSearchPane`, `FoodPreviewPane`), which is Prompt 6's work — doing it here would have broken `tsc` or made
+  this step touch the UI. **Prompt 6 adds `OffItem` to `SearchItem`.**
+- **The web cleans the text the same way the backend does** (`sanitizeOffQuery`, lower case, accents kept, only
+  letters/digits/spaces/apostrophes/in-word hyphens) and applies the 3-letters-or-digits rule to the *cleaned* text,
+  so a request the backend would answer 400 is never sent, and "Tej" / "tej" are one cache entry. The tests repeat
+  the backend's `OffSearchQueryTest` table to keep the two in step.
+- **Enabled = ticked AND what is typed now AND the debounced text are both searchable.** Deleting letters below 3
+  stops the request at once instead of 400 ms later; typing on keeps the older settled answer visible
+  (`placeholderData: keepPreviousData`) so the list does not flash empty on every letter.
+- `pending` is true while the typing settles as well as while the request runs, so the UI can show one skeleton line
+  for both. `failed` is a network-level failure of our own API (not an OFF problem, which arrives as a status).
+  `retry: false` — a failed search is shown, not repeated behind the user's back (the OFF budget is small).
+- The checkbox preference (`localStorage`, D10) is **not** here — it is UI state and lands with Prompt 6.
+
+Tests: `offSearch.test.ts` 18 (sanitiser parity table, the 3-letter rule incl. spaces/hyphens/punctuation and the
+cleaned-text subtlety, the enabled rule's four cases, hu/en language choice, the mapper keeping nulls and not
+colliding with `food:` / `recipe:` keys). Full web suite 1115 green, `tsc` and `eslint` clean.
+**Not verified at runtime:** `useOffSearch` and the real request — the hook is not mounted anywhere yet and the
+unit environment has no DOM (`vitest` runs in `node`), so the first real exercise is Prompt 6's e2e against the
+gallery and a manual run against the backend.
 
 ## Prompt 6 — Web UI: the checkbox and the "From OpenFoodFacts" section
 - `FoodSearchPane.tsx`, `AddFoodModal.tsx` (preference + passing results down), messages en/hu, gallery

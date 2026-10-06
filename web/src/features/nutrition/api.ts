@@ -1,6 +1,6 @@
 import { api, ApiError, type Page } from "@/lib/api/client";
 import type {
-  FoodResponse, FoodRequest, BarcodeLookupResponse,
+  FoodResponse, FoodRequest, BarcodeLookupResponse, OffSearchLang, OffSearchResponse,
   MealResponse, MealRequest,
   RecipeResponse, RecipeRequest,
 } from "./types";
@@ -27,6 +27,9 @@ export const foodApi = {
   delete: (id: number) => api.delete(`/foods/${id}`),
   barcode: (barcode: string) =>
     api.get<BarcodeLookupResponse>(`/foods/barcode/${encodeURIComponent(barcode)}`),
+  /** OpenFoodFacts by name (docs/84). `q` needs 3+ letters or digits or the backend answers 400. */
+  offSearch: (q: string, lang: OffSearchLang, signal?: AbortSignal) =>
+    api.get<OffSearchResponse>(`/foods/off-search?${new URLSearchParams({ q, lang }).toString()}`, { signal }),
 };
 
 export const mealApi = {

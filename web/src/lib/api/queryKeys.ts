@@ -21,6 +21,8 @@ export const queryKeys = {
     page: (params: { page: number; size?: number; search?: string; sort?: string }) =>
       ["foods", "page", params] as const,
     barcode: (barcode: string) => ["foods", "barcode", barcode] as const,
+    /** Under `all`, so saving a food refreshes the open OpenFoodFacts results (the saved one drops out). */
+    offSearch: (lang: string, text: string) => ["foods", "off-search", lang, text] as const,
     detail: (id: number) => ["foods", id] as const,
   },
   meals: {
