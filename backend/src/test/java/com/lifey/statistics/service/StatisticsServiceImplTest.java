@@ -115,6 +115,28 @@ class StatisticsServiceImplTest {
     }
 
     @Test
+    void aPastDate_endsItsPeriodAfterThatDay_insteadOfRunningOnToTheEndOfTime() {
+        stubAggregates(0.0, 0.0, 0L, null);
+        LocalDate day = LocalDate.of(2026, 3, 10);
+
+        service.daily(day);
+
+        assertThat(capturedFrom()).isEqualTo(day.atStartOfDay(ZoneOffset.UTC).toInstant());
+        assertThat(capturedToExclusive()).isEqualTo(day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+    }
+
+    @Test
+    void weeklyAndMonthly_endAfterTheGivenDay() {
+        stubAggregates(0.0, 0.0, 0L, null);
+        LocalDate day = LocalDate.of(2026, 3, 10);
+
+        service.weekly(day);
+
+        assertThat(capturedFrom()).isEqualTo(day.minusDays(6).atStartOfDay(ZoneOffset.UTC).toInstant());
+        assertThat(capturedToExclusive()).isEqualTo(day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+    }
+
+    @Test
     void latestWeight_isNullWhenNoEntries() {
         stubAggregates(0.0, 0.0, 0L, null);
 
@@ -169,20 +191,21 @@ class StatisticsServiceImplTest {
 
     private void stubAggregates(double calories, double protein, long workouts, Double weight,
             long cardioWorkouts, long movingSeconds, double distanceMeters, double elevationMeters) {
-        when(mealRepository.sumCaloriesSince(eq(USER_ID), any())).thenReturn(calories);
-        when(mealRepository.sumProteinSince(eq(USER_ID), any())).thenReturn(protein);
-        when(mealRepository.sumCarbsSince(eq(USER_ID), any())).thenReturn(30.0);
-        when(mealRepository.sumFatSince(eq(USER_ID), any())).thenReturn(10.0);
-        when(workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(eq(USER_ID), any(Instant.class)))
+        when(mealRepository.sumCaloriesBetween(eq(USER_ID), any(), any())).thenReturn(calories);
+        when(mealRepository.sumProteinBetween(eq(USER_ID), any(), any())).thenReturn(protein);
+        when(mealRepository.sumCarbsBetween(eq(USER_ID), any(), any())).thenReturn(30.0);
+        when(mealRepository.sumFatBetween(eq(USER_ID), any(), any())).thenReturn(10.0);
+        when(workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThan(
+                eq(USER_ID), any(Instant.class), any(Instant.class)))
                 .thenReturn(workouts);
-        lenient().when(workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(
-                        eq(USER_ID), any(Instant.class), eq(SessionKind.CARDIO)))
+        lenient().when(workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndSessionKind(
+                        eq(USER_ID), any(Instant.class), any(Instant.class), eq(SessionKind.CARDIO)))
                 .thenReturn(cardioWorkouts);
-        lenient().when(workoutSessionRepository.sumMovingSecondsSince(eq(USER_ID), any(Instant.class)))
+        lenient().when(workoutSessionRepository.sumMovingSecondsBetween(eq(USER_ID), any(Instant.class), any(Instant.class)))
                 .thenReturn(movingSeconds);
-        lenient().when(workoutSessionRepository.sumDistanceMetersSince(eq(USER_ID), any(Instant.class)))
+        lenient().when(workoutSessionRepository.sumDistanceMetersBetween(eq(USER_ID), any(Instant.class), any(Instant.class)))
                 .thenReturn(distanceMeters);
-        lenient().when(workoutSessionRepository.sumElevationGainMetersSince(eq(USER_ID), any(Instant.class)))
+        lenient().when(workoutSessionRepository.sumElevationGainMetersBetween(eq(USER_ID), any(Instant.class), any(Instant.class)))
                 .thenReturn(elevationMeters);
         if (weight == null) {
             when(weightEntryRepository.findFirstByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(USER_ID))
@@ -193,13 +216,19 @@ class StatisticsServiceImplTest {
             when(weightEntryRepository.findFirstByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(USER_ID))
                     .thenReturn(Optional.of(e));
         }
-        lenient().when(waterEntryRepository.sumVolumeLitersSince(eq(USER_ID), any(Instant.class)))
+        lenient().when(waterEntryRepository.sumVolumeLitersBetween(eq(USER_ID), any(Instant.class), any(Instant.class)))
                 .thenReturn(1.5);
     }
 
     private Instant capturedFrom() {
         ArgumentCaptor<Instant> captor = ArgumentCaptor.forClass(Instant.class);
-        verify(mealRepository).sumCaloriesSince(eq(USER_ID), captor.capture());
+        verify(mealRepository).sumCaloriesBetween(eq(USER_ID), captor.capture(), any());
+        return captor.getValue();
+    }
+
+    private Instant capturedToExclusive() {
+        ArgumentCaptor<Instant> captor = ArgumentCaptor.forClass(Instant.class);
+        verify(mealRepository).sumCaloriesBetween(eq(USER_ID), any(), captor.capture());
         return captor.getValue();
     }
 }

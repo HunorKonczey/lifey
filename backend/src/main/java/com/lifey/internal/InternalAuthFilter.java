@@ -86,6 +86,7 @@ public class InternalAuthFilter extends OncePerRequestFilter {
                 request.getRequestURI(), List.of());
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
         objectMapper.writeValue(response.getWriter(), body);
     }
 }

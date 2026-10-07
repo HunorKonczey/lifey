@@ -46,6 +46,7 @@ class WorkoutSessionStatisticsQueriesRepositoryTest {
 
     Long userId;
     Instant from;
+    Instant to;
 
     @BeforeEach
     void seedMixedHistory() {
@@ -57,6 +58,7 @@ class WorkoutSessionStatisticsQueriesRepositoryTest {
         userId = userRepository.save(user).getId();
 
         from = Instant.now().minus(Duration.ofHours(3));
+        to = Instant.now().plus(Duration.ofHours(1));
 
         // One STRENGTH session in range — movingSeconds stays null, no CardioDetails,
         // exactly like a real pre-cardio row.
@@ -71,6 +73,9 @@ class WorkoutSessionStatisticsQueriesRepositoryTest {
 
         // A CARDIO session before `from` — must not contribute to any sum/count.
         saveCardioSession(user, Instant.now().minus(Duration.ofHours(10)), 3600, 9999.0, 999.0);
+
+        // A CARDIO session after `to` (a later day than the period asked for) — must not contribute either.
+        saveCardioSession(user, Instant.now().plus(Duration.ofHours(5)), 7200, 8888.0, 888.0);
 
         // A soft-deleted CARDIO session in range — must not contribute either.
         WorkoutSession deleted = new WorkoutSession();
@@ -101,11 +106,11 @@ class WorkoutSessionStatisticsQueriesRepositoryTest {
     @Test
     void cardioCount_countsOnlyInRangeCardioSessions() {
         long cardioCount = workoutSessionRepository
-                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(userId, from, SessionKind.CARDIO);
+                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndSessionKind(userId, from, to, SessionKind.CARDIO);
         long strengthCount = workoutSessionRepository
-                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(userId, from, SessionKind.STRENGTH);
+                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndSessionKind(userId, from, to, SessionKind.STRENGTH);
         long totalCount = workoutSessionRepository
-                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(userId, from);
+                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThan(userId, from, to);
 
         assertThat(cardioCount).isEqualTo(2);
         assertThat(strengthCount).isEqualTo(1);
@@ -114,15 +119,15 @@ class WorkoutSessionStatisticsQueriesRepositoryTest {
 
     @Test
     void movingSeconds_sumsOnlyInRangeCardioSessions() {
-        long movingSeconds = workoutSessionRepository.sumMovingSecondsSince(userId, from);
+        long movingSeconds = workoutSessionRepository.sumMovingSecondsBetween(userId, from, to);
 
         assertThat(movingSeconds).isEqualTo(1800 + 900);
     }
 
     @Test
     void distanceAndElevation_sumOnlyInRangeCardioSessions() {
-        double distance = workoutSessionRepository.sumDistanceMetersSince(userId, from);
-        double elevation = workoutSessionRepository.sumElevationGainMetersSince(userId, from);
+        double distance = workoutSessionRepository.sumDistanceMetersBetween(userId, from, to);
+        double elevation = workoutSessionRepository.sumElevationGainMetersBetween(userId, from, to);
 
         assertThat(distance).isEqualTo(5000.0 + 2000.0);
         assertThat(elevation).isEqualTo(50.0 + 10.0);
@@ -132,11 +137,12 @@ class WorkoutSessionStatisticsQueriesRepositoryTest {
     void emptyWindow_coalescesToZeroInsteadOfNull() {
         Instant future = Instant.now().plus(Duration.ofDays(1));
 
-        assertThat(workoutSessionRepository.sumMovingSecondsSince(userId, future)).isZero();
-        assertThat(workoutSessionRepository.sumDistanceMetersSince(userId, future)).isZero();
-        assertThat(workoutSessionRepository.sumElevationGainMetersSince(userId, future)).isZero();
+        assertThat(workoutSessionRepository.sumMovingSecondsBetween(userId, future, future.plus(Duration.ofDays(1)))).isZero();
+        assertThat(workoutSessionRepository.sumDistanceMetersBetween(userId, future, future.plus(Duration.ofDays(1)))).isZero();
+        assertThat(workoutSessionRepository.sumElevationGainMetersBetween(userId, future, future.plus(Duration.ofDays(1)))).isZero();
         assertThat(workoutSessionRepository
-                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(userId, future, SessionKind.CARDIO))
+                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndSessionKind(
+                        userId, future, future.plus(Duration.ofDays(1)), SessionKind.CARDIO))
                 .isZero();
     }
 }

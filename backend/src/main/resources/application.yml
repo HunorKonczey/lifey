@@ -292,7 +292,7 @@ lifey:
       cron: ${JOB_TRAINER_CLIENT_CLEANUP_CRON:0 30 3 * * *}
     workout-reminder:
       # Per-user-local-time workout reminder tick, every 15 minutes (WorkoutReminderJob).
-      cron: ${JOB_WORKOUT_REMINDER_CRON:0 0 * * * *}
+      cron: ${JOB_WORKOUT_REMINDER_CRON:0 */15 * * * *}
     billing-reconciliation:
       # Daily billing safety net, 03:30 Europe/Budapest — trial expiry (64
       # Prompt 7) plus the provider re-fetch/diff/metrics sweep (64 Prompt 11).
