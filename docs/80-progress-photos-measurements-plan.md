@@ -1,6 +1,6 @@
 # 80 – Progress Photos and Body Measurements
 
-Status: built (2026-10-02, branch `feature/progress-photos-measurements`) — P1–P8 done; emulator walk and a Docker `mvnw verify` still owed (step log in §12)
+Status: built (2026-10-02, branch `feature/progress-photos-measurements`) — P1–P8 done; Docker `mvnw verify` (2026-10-03) and the Android emulator walk (2026-10-07) done, iOS/tablet still open (step log in §12)
 Scope: roadmap item #10 (`docs/05-improvement-roadmap.md`) — backend + mobile
 Depends on: `docs/22-profile-picture-plan.md` (`ImageReencoder`, multipart limits, the
 online-only thumbnail cache), `docs/16-delta-sync-rollout.md` (synced-entity recipe),
@@ -222,8 +222,18 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
 
 ### Still owed
 
-1. Emulator walk: Weight → Body → add a measurement (offline, then reconnect), add a photo from the gallery
-   and the camera, viewer edit/delete, compare, light theme and Hungarian.
+1. ~~Emulator walk: Weight → Body → add a measurement (offline, then reconnect), add a photo from the gallery
+   and the camera, viewer edit/delete, compare, light theme and Hungarian.~~ — **done 2026-10-07 (LIF-88)** on the
+   Pixel 10 emulator (Android 17, debug build against the local backend). All of it passed: a waist measurement
+   logged with Wi-Fi and data off showed up at once and reached `body_measurements` after reconnecting; a photo
+   from the gallery and one from the camera (permission prompt included) both uploaded; the viewer's pose edit
+   persisted (`BACK` in `progress_photos`); Compare shows Before/After with dates; delete removed the row from
+   `progress_photos` and `progress_photo_images`; light theme + Hungarian render correctly (decimal comma, translated
+   chips and dialogs). Not covered: iOS (needs an Apple device) and tablet layouts (LIF-94). Seen on the way, not fixed:
+   the add-measurement sheet with the keyboard open at 411 dp leaves the lower half of Save behind the keyboard (the
+   sheet scrolls and Save is still tappable); the photo-details preview and the Compare panes `cover`-crop, so a
+   photo that does not match the frame shows only a slice of itself.
 2. ~~`cd backend && ./mvnw -B verify` with Docker running~~ — **done 2026-10-03** (during plan 82): the whole suite, 1159 tests, ran green against Postgres 16, V78 and V79 included.
-3. Consider before release: the photo list is unpaged (fine for hundreds, revisit with a cap), and the
-   Weight header now has two action buttons — check the title still fits at large text scale.
+3. Consider before release: the photo list is unpaged (fine for hundreds, revisit with a cap). The Weight header
+   turned out to have a single action button (Body), and at a 1.5× system font scale the title, tabs and chips all
+   fit; the only casualty is the timeline tile caption, which truncates to "okt. 7. · …" and drops the pose name.
