@@ -99,7 +99,7 @@ is ott oldódott meg: a metrikaszínek AA-k a saját 12 / 16 %-os tintájukon, a
 | Edzői kliensnézet: cél a fejlécben | a canvas „Goal: build muscle" sora mögött nincs tárolt cél | `77` R6.7 |
 | `showModalBottomSheet` → `showLifeySheet` | 40 hívás használja még a nyers API-t (témázott lap, de egyedi görgetéssel / `DraggableScrollableSheet`-tel); az egységes keret az összetett lapokra külön kört kér | `77` R7.2 |
 | Design-audit a CI-ban | ✅ kész (2026-10-03): a `mobile-ci.yml` futtatja a `dart run tool/design_audit.dart --strict`-et | `77` R7.1 |
-| Emulátoros végpróbák | a chat-szolgáltatást igénylő edzői folyamatok (üzenet / ütemezés lapok, kommentelés), a naptár hónapnézete, a tablet világos / magyar módja eszközön még nem látott | `77` §12 R6 |
+| Emulátoros végpróbák | az edzői folyamatok, a hónapnézet és a tablet világos / magyar módja eszközön lefutott 2026-10-07-én (LIF-94, `77` §12 „R6 follow-up”); nyitva: tablet sötét HU, kiosztott / programok panel, offline állapotok, iOS | `77` §12 R6 |
 
 
 ### 2.2 A web-redesign (`78`) után
