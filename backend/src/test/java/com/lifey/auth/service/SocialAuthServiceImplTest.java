@@ -154,6 +154,28 @@ class SocialAuthServiceImplTest {
     }
 
     @Test
+    void loginWithGoogle_linkingAPasswordAccount_dropsThePasswordAndRevokesOpenSessions() {
+        // Registration never verified this mailbox: whoever registered it knows the password and may hold a session.
+        User existing = existingUser(3L, "user@example.com");
+        existing.setPasswordHash("$2a$10$registrant-chose-this");
+        com.lifey.auth.entity.RefreshToken openSession = new com.lifey.auth.entity.RefreshToken();
+
+        when(googleIdTokenVerifier.verify(ID_TOKEN))
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, null, "Jane", "Doe"));
+        when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
+                .thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(existing));
+        when(refreshTokenRepository.findAllByUserIdAndRevokedFalse(3L)).thenReturn(java.util.List.of(openSession));
+        when(userIdentityRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubTokenIssuance();
+
+        socialAuthService.loginWithGoogle(ID_TOKEN, null);
+
+        assertThat(existing.getPasswordHash()).isNull();
+        assertThat(openSession.isRevoked()).isTrue();
+    }
+
+    @Test
     void loginWithGoogle_noIdentityUnverifiedEmailMatchesExistingUser_rejectsWithoutLinking() {
         User existing = existingUser(3L, "user@example.com");
 
@@ -168,6 +190,7 @@ class SocialAuthServiceImplTest {
 
         verify(userIdentityRepository, never()).save(any());
         verify(refreshTokenRepository, never()).save(any());
+        verify(refreshTokenRepository, never()).findAllByUserIdAndRevokedFalse(any());
     }
 
     private User existingUser(Long id, String email) {

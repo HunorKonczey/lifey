@@ -58,13 +58,13 @@ SessionRowPlan planSessionRows({
 /// (`docs/cardio/design/Lifey Cardio Design.dc.html` §2: "a szobabicikli
 /// negyven perc, nem tizennyolc kilométer"). Null only when the session has
 /// neither a distance nor a duration yet (still starting), or isn't cardio.
-String? cardioCardPrimaryMetric(WorkoutSession session, UnitSystem unitSystem) {
+String? cardioCardPrimaryMetric(WorkoutSession session, UnitSystem unitSystem, {String locale = 'en'}) {
   final family = session.family;
   if (family == null) return null;
   if (family == ActivityFamily.distance) {
     final meters = session.cardio?.distanceMeters;
     if (meters != null && meters > 0) {
-      return CardioFormatter.distance(meters, unitSystem);
+      return CardioFormatter.distance(meters, unitSystem, locale: locale);
     }
   }
   final duration = session.effectiveDuration;

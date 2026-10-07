@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 import '../../features/settings/domain/user_settings.dart';
 
 /// Formats cardio metrics (distance, pace, speed, elevation, duration) for
@@ -20,12 +22,20 @@ abstract final class CardioFormatter {
   static const double _kphPerMph = 1.609344;
   static const double _mmPerInch = 25.4;
 
-  /// "5.23 km" or "3.25 mi".
-  static String distance(double meters, UnitSystem unitSystem) {
+  /// [value] at a fixed number of [digits] with [locale]'s decimal separator
+  /// ("5.23" / "5,23") and no digit grouping. `toStringAsFixed` always
+  /// printed a point, which reads wrong in Hungarian, next to the comma
+  /// `LifeyFormat` shows everywhere else. The default `en` keeps the
+  /// context-free callers (Live Activity payloads) as they were.
+  static String _fixed(double value, int digits, String locale) =>
+      (NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: digits)..turnOffGrouping()).format(value);
+
+  /// "5.23 km" or "3.25 mi" ("5,23 km" for a Hungarian [locale]).
+  static String distance(double meters, UnitSystem unitSystem, {String locale = 'en'}) {
     if (unitSystem == UnitSystem.imperial) {
-      return '${(meters / _metersPerMile).toStringAsFixed(2)} mi';
+      return '${_fixed(meters / _metersPerMile, 2, locale)} mi';
     }
-    return '${(meters / _metersPerKm).toStringAsFixed(2)} km';
+    return '${_fixed(meters / _metersPerKm, 2, locale)} km';
   }
 
   /// "42 m" or "138 ft" — whole units only, elevation is never precise
@@ -39,11 +49,11 @@ abstract final class CardioFormatter {
 
   /// "8.5 kg" or "18.7 lb" — a backpack's weight (docs/cardio/60 C8.5), one
   /// decimal since a whole kg is coarse enough to matter for gear.
-  static String weight(double kg, UnitSystem unitSystem) {
+  static String weight(double kg, UnitSystem unitSystem, {String locale = 'en'}) {
     if (unitSystem == UnitSystem.imperial) {
-      return '${(kg / _kgPerLb).toStringAsFixed(1)} lb';
+      return '${_fixed(kg / _kgPerLb, 1, locale)} lb';
     }
-    return '${kg.toStringAsFixed(1)} kg';
+    return '${_fixed(kg, 1, locale)} kg';
   }
 
   /// "7 °C" or "45 °F" — a hike-start weather snapshot (docs/cardio/60 C8.6).
@@ -66,9 +76,9 @@ abstract final class CardioFormatter {
   /// "0 mm" or "0.02 in" — never negative (docs/cardio/60 C8.6). Imperial
   /// keeps two decimals since a whole inch would round away any real hike's
   /// rainfall.
-  static String precipitation(double mm, UnitSystem unitSystem) {
+  static String precipitation(double mm, UnitSystem unitSystem, {String locale = 'en'}) {
     if (unitSystem == UnitSystem.imperial) {
-      return '${(mm / _mmPerInch).toStringAsFixed(2)} in';
+      return '${_fixed(mm / _mmPerInch, 2, locale)} in';
     }
     return '${mm.round()} mm';
   }
@@ -91,13 +101,13 @@ abstract final class CardioFormatter {
   /// "11.4 km/h" or "7.1 mph" — the DISTANCE/MACHINE alternative to pace,
   /// used for walking/hiking/the indoor bike (docs/cardio/51 §3). Null when
   /// there's no elapsed time to derive a speed from.
-  static String? speed(double meters, Duration duration, UnitSystem unitSystem) {
+  static String? speed(double meters, Duration duration, UnitSystem unitSystem, {String locale = 'en'}) {
     if (duration.inSeconds <= 0) return null;
     final hours = duration.inSeconds / 3600;
     if (unitSystem == UnitSystem.imperial) {
-      return '${((meters / _metersPerMile) / hours).toStringAsFixed(1)} mph';
+      return '${_fixed((meters / _metersPerMile) / hours, 1, locale)} mph';
     }
-    return '${((meters / _metersPerKm) / hours).toStringAsFixed(1)} km/h';
+    return '${_fixed((meters / _metersPerKm) / hours, 1, locale)} km/h';
   }
 
   /// Total mechanical work in kilojoules — average power over the time it was

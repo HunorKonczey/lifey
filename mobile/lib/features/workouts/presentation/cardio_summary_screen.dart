@@ -887,7 +887,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         final isCycling = _activityType == 'CYCLING';
         final pace = hasDistance && _duration != null
             ? (isCycling
-                ? CardioFormatter.speed(_distanceMeters!, _duration, unitSystem)
+                ? CardioFormatter.speed(_distanceMeters!, _duration, unitSystem, locale: Localizations.localeOf(context).toLanguageTag())
                 : CardioFormatter.pace(_distanceMeters!, _duration, unitSystem))
             : null;
         // Canvas 3.3: the distance is the hero (52 px) with the duration beside
@@ -932,7 +932,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
           if (_activityType == 'HIKING')
             _MetricTile(
               label: l10n.backpackWeightFieldLabel,
-              value: _backpackWeightKg == null ? '—' : CardioFormatter.weight(_backpackWeightKg!, unitSystem),
+              value: _backpackWeightKg == null ? '—' : CardioFormatter.weight(_backpackWeightKg!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
               edited: _backpackWeightKg != null,
               editedLabel: l10n.handEnteredBadgeLabel,
               onTap: _busy ? null : _editBackpackWeightKg,
@@ -947,7 +947,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         ];
         return [
           CardioDetailHero(
-            distance: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
+            distance: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()) : '—',
             duration: durationValue,
             durationLabel: labelCase(context, l10n.durationSectionLabel),
             edited: hasDistance && _distanceSource == 'MANUAL',
@@ -993,7 +993,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
               inner: [
                 _InnerMetric(
                   label: l10n.distanceFieldLabel,
-                  value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
+                  value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()) : '—',
                   edited: _distanceSource == 'MANUAL',
                   onTap: _busy ? null : _editDistance,
                 ),
@@ -1019,7 +1019,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   icon: Icons.straighten,
                   iconColor: accent,
                   label: l10n.distanceFieldLabel,
-                  value: CardioFormatter.distance(_distanceMeters!, unitSystem),
+                  value: CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
                   edited: _distanceSource == 'MANUAL',
                   editedLabel: l10n.manuallyEditedBadgeLabel,
                   onTap: _busy ? null : _editDistance,
@@ -1128,7 +1128,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   icon: Icons.straighten,
                   iconColor: accent,
                   label: l10n.distanceFieldLabel,
-                  value: CardioFormatter.distance(_distanceMeters!, unitSystem),
+                  value: CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
                 ),
               if (_scorePoints != null)
                 _MetricTile(
@@ -1280,7 +1280,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             // Only this is comparable across the three rows — a longer
             // distance always takes more absolute time (M34).
             pace: isCycling
-                ? CardioFormatter.speed(meters, Duration(seconds: seconds), unitSystem)
+                ? CardioFormatter.speed(meters, Duration(seconds: seconds), unitSystem, locale: Localizations.localeOf(context).toLanguageTag())
                 : CardioFormatter.pace(meters, Duration(seconds: seconds), unitSystem),
             isRecord: widget.newRecords.contains(type),
           ),
@@ -1521,6 +1521,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   totalLabel: CardioFormatter.distance(
                     splits.fold<double>(0, (sum, s) => sum + (s.distanceMeters ?? 0)),
                     unitSystem,
+                    locale: Localizations.localeOf(context).toLanguageTag(),
                   ),
                 ),
               ],
@@ -1578,7 +1579,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     final seconds = fullSplits.fold<int>(0, (sum, s) => sum + s.durationSeconds);
     final duration = Duration(seconds: seconds);
     final pace = _activityType == 'CYCLING'
-        ? CardioFormatter.speed(meters, duration, unitSystem)
+        ? CardioFormatter.speed(meters, duration, unitSystem, locale: Localizations.localeOf(context).toLanguageTag())
         : CardioFormatter.pace(meters, duration, unitSystem);
     return pace == null ? null : l10n.paceChartAverageLabel(pace);
   }
@@ -1887,8 +1888,8 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
 
   /// Each type's own unit — a distance record reads in km, a time record in
   /// minutes, an elevation record in metres.
-  String _format(CardioPrType type, double value) => switch (type) {
-        CardioPrType.longestDistance => CardioFormatter.distance(value, unitSystem),
+  String _format(CardioPrType type, double value, String locale) => switch (type) {
+        CardioPrType.longestDistance => CardioFormatter.distance(value, unitSystem, locale: locale),
         CardioPrType.greatestElevationGain ||
         CardioPrType.greatestMaxAltitude =>
           CardioFormatter.elevation(value, unitSystem),
@@ -1905,14 +1906,14 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
   /// The improvement, always written as a gain: a best-effort record moves
   /// *down*, so its delta is shown as seconds saved rather than as a negative
   /// number the reader has to interpret.
-  String? _delta(CardioPrType type, double value, double previous) {
+  String? _delta(CardioPrType type, double value, double previous, String locale) {
     if (type.lowerIsBetter) {
       final saved = (previous - value).round();
       return saved <= 0 ? null : '−${CardioFormatter.duration(Duration(seconds: saved))}';
     }
     final gained = value - previous;
     if (gained <= 0) return null;
-    return '+${_format(type, gained)}';
+    return '+${_format(type, gained, locale)}';
   }
 
   @override
@@ -1920,6 +1921,7 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final locale = Localizations.localeOf(context).toLanguageTag();
 
     return AlertDialog(
       icon: Icon(Icons.emoji_events_rounded, color: context.metricColors.record, size: 32),
@@ -1938,7 +1940,7 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
                 final value = type.valueIn(session);
                 final previous = previousBests[type];
                 if (value == null) return const SizedBox.shrink();
-                final delta = previous == null ? null : _delta(type, value, previous.value);
+                final delta = previous == null ? null : _delta(type, value, previous.value, locale);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: Row(
@@ -1956,7 +1958,7 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
                             if (previous != null)
                               Text(
                                 l10n.cardioRecordPrevious(
-                                  _format(type, previous.value),
+                                  _format(type, previous.value, locale),
                                   _previousDate.format(previous.at),
                                 ),
                                 style: theme.textTheme.bodySmall
@@ -1970,7 +1972,7 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            _format(type, value),
+                            _format(type, value, locale),
                             style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()]),
                           ),
                           if (delta != null)
@@ -2432,7 +2434,7 @@ class _SplitRow extends StatelessWidget {
               // A full km split's duration *is* its pace, so one number does
               // both jobs; a partial split shows how far it actually got.
               partial
-                  ? CardioFormatter.distance(split.distanceMeters ?? 0, unitSystem)
+                  ? CardioFormatter.distance(split.distanceMeters ?? 0, unitSystem, locale: Localizations.localeOf(context).toLanguageTag())
                   : CardioFormatter.duration(duration),
               style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w800, color: selected ? accent : (partial ? scheme.outline : scheme.onSurface), fontFeatures: const [FontFeature.tabularFigures()]),
             ),
@@ -2874,7 +2876,7 @@ class _WeatherCard extends StatelessWidget {
                           child: _WeatherReadout(
                             value: precipMm == null
                                 ? '—'
-                                : CardioFormatter.precipitation(precipMm!, unitSystem),
+                                : CardioFormatter.precipitation(precipMm!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
                             label: l10n.weatherPrecipReadoutLabel,
                           ),
                         ),
@@ -2964,7 +2966,7 @@ class _WaypointRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final distance = matched.distanceMeters == null
         ? '—'
-        : CardioFormatter.distance(matched.distanceMeters!, unitSystem);
+        : CardioFormatter.distance(matched.distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag());
     final altitude = matched.altitudeMeters == null
         ? '—'
         : CardioFormatter.elevation(matched.altitudeMeters!, unitSystem);
@@ -3146,7 +3148,7 @@ class _ElevationProfileCard extends StatelessWidget {
       trailingWidget: selected != null
           ? _SelectedPointChip(
               label: l10n.elevationProfileSelectedPointChip(
-                CardioFormatter.distance(selected.cumulativeDistanceMeters, unitSystem),
+                CardioFormatter.distance(selected.cumulativeDistanceMeters, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
               ),
               accent: scheme.primary,
             )
@@ -3167,7 +3169,7 @@ class _ElevationProfileCard extends StatelessWidget {
           Text(
             l10n.elevationProfilePeakCaption(
               CardioFormatter.elevation(peak.altitudeMeters, unitSystem),
-              CardioFormatter.distance(peak.cumulativeDistanceMeters, unitSystem),
+              CardioFormatter.distance(peak.cumulativeDistanceMeters, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
             ),
             style: Theme.of(context).textTheme.labelSmall!.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
           ),
@@ -3184,7 +3186,7 @@ class _ElevationProfileCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: _ElevationReadout(
-                    value: CardioFormatter.distance(selected.cumulativeDistanceMeters, unitSystem),
+                    value: CardioFormatter.distance(selected.cumulativeDistanceMeters, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
                     label: l10n.elevationProfileDistanceReadoutLabel,
                   ),
                 ),

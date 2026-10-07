@@ -1039,14 +1039,14 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         return CardioLiveMetrics(
           primaryLabel: hasDistance ? l10n.distanceFieldLabel : l10n.movingTimeLabel,
           primaryValue: hasDistance
-              ? CardioFormatter.distance(_distanceMeters!, unitSystem)
+              ? CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag())
               : CardioFormatter.duration(movingDuration),
           secondaryLabel: hasDistance ? l10n.movingTimeLabel : l10n.distanceFieldLabel,
           secondaryValue: hasDistance ? CardioFormatter.duration(movingDuration) : '—',
           tertiaryLabel: isCycling ? l10n.speedLabel : l10n.paceLabel,
           tertiaryValue: hasDistance
               ? ((isCycling
-                      ? CardioFormatter.speed(_distanceMeters!, movingDuration, unitSystem)
+                      ? CardioFormatter.speed(_distanceMeters!, movingDuration, unitSystem, locale: Localizations.localeOf(context).toLanguageTag())
                       : CardioFormatter.pace(_distanceMeters!, movingDuration, unitSystem)) ??
                   '—')
               : '—',
@@ -1719,7 +1719,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     final unitSystem =
         (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
     final parts = <String>[
-      if ((_distanceMeters ?? 0) > 0) CardioFormatter.distance(_distanceMeters!, unitSystem),
+      if ((_distanceMeters ?? 0) > 0) CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
       if (waypoint.altitudeMeters != null)
         CardioFormatter.elevation(waypoint.altitudeMeters!, unitSystem),
       CardioFormatter.duration(Duration(seconds: _liveMovingSeconds)),
@@ -1826,7 +1826,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         ? (isCycling ? '—' : '—:—') // speed has no M:SS shape to blank into
         : (hasDistance
             ? ((isCycling
-                    ? CardioFormatter.speed(_distanceMeters!, duration, unitSystem)
+                    ? CardioFormatter.speed(_distanceMeters!, duration, unitSystem, locale: Localizations.localeOf(context).toLanguageTag())
                     : CardioFormatter.pace(_distanceMeters!, duration, unitSystem)) ??
                 '—')
             : '—');
@@ -1870,7 +1870,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                     big: true,
                     label: l10n.distanceFieldLabel,
                     badge: (hasDistance && weakSignal) ? l10n.distanceEstimatedBadgeLabel : null,
-                    value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
+                    value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()) : '—',
                     // M11: with no distance source the empty tile is the
                     // call to action — "type it in" affordance.
                     outlined: !hasDistance,
@@ -1962,7 +1962,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                     label: l10n.distanceFieldLabel,
                     value: _distanceMeters == null
                         ? '—'
-                        : CardioFormatter.distance(_distanceMeters!, unitSystem),
+                        : CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
                     outlined: _distanceMeters == null,
                     onTap: _busy || _isFinished ? null : _editDistance,
                   ),
@@ -2352,11 +2352,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     // 62-cardio-cycling-plan.md §2.2. Every other DISTANCE type unchanged.
     final paceOrSpeed = hasDistance && _family == ActivityFamily.distance
         ? (_activityType == 'CYCLING'
-            ? CardioFormatter.speed(_distanceMeters!, duration, unitSystem)
+            ? CardioFormatter.speed(_distanceMeters!, duration, unitSystem, locale: Localizations.localeOf(context).toLanguageTag())
             : CardioFormatter.pace(_distanceMeters!, duration, unitSystem))
         : null;
     final parts = <String>[
-      if (hasDistance) CardioFormatter.distance(_distanceMeters!, unitSystem),
+      if (hasDistance) CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
       CardioFormatter.duration(duration),
       if (paceOrSpeed != null) paceOrSpeed,
     ];

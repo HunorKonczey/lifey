@@ -61,7 +61,7 @@ class ChatCardText {
     }
     final distance = card.distanceMeters;
     if (card.isCardio && distance != null && distance > 0) {
-      parts.add(CardioFormatter.distance(distance, unitSystem));
+      parts.add(CardioFormatter.distance(distance, unitSystem, locale: fmt.locale));
     }
     final volume = card.volumeKg;
     if (!card.isCardio && volume != null && volume > 0) {

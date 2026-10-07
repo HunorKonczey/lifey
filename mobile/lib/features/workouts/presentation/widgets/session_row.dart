@@ -108,7 +108,7 @@ class SessionRow extends StatelessWidget {
             final pace = CardioFormatter.pace(meters, duration, unitSystem);
             if (pace != null) add(pace);
           } else if (activity == 'CYCLING') {
-            final speed = CardioFormatter.speed(meters, duration, unitSystem);
+            final speed = CardioFormatter.speed(meters, duration, unitSystem, locale: Localizations.localeOf(context).toLanguageTag());
             if (speed != null) add(speed);
           }
         }
