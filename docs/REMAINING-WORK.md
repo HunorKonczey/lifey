@@ -127,8 +127,10 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 
 - **[`75`](75-log-food-from-foods-tab-plan.md)** — a webes rész (Prompts 4–7) implementálva,
   böngészős ellenőrzés hátravan.
-- **[`watch/50`](watch/50-watch-f6c-session-plan-sync-plan.md) (F6c)** — kód kész, eszközös
-  végpróba hátravan.
+- **[`watch/50`](watch/50-watch-f6c-session-plan-sync-plan.md) (F6c)** — kód kész; a telefonról indított
+  edzés fele Android emulátoron végigpróbálva 2026-10-07-én (LIF-90, §8: a telefonon hozzáadott gyakorlat megjelenik
+  az órán, az óra választása átáll a telefonon). Nyitva: az óra főlapja nem követi a saját választását, az órán
+  indított ág, a törlés, az offline óra és az iOS.
 - **Edzés üres szettsorai** — **Android emulátoron ellenőrizve (2026-10-07, LIF-91): a hiba nem reprodukálható.** Kódszinten
   (2026-10-03) a képernyő `targetSets: rows.length`-et ment (`_buildPlanned`), a `planSessionRows` ebből építi újra a sorokat,
   a pull nem írja felül, és a szerver is tárolja (`pull_engine_workout_session_target_sets_test`, `session_row_plan_test`).
