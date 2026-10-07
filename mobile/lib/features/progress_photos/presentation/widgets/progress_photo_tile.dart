@@ -25,9 +25,11 @@ class ProgressPhotoTile extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final bytes = ref.watch(progressPhotoThumbnailProvider(photo.id)).value;
 
-    final caption = photo.pose == PhotoPose.other
-        ? f.shortDate(photo.takenOn)
-        : '${f.shortDate(photo.takenOn)} · ${poseLabel(l10n, photo.pose)}';
+    final date = f.shortDate(photo.takenOn);
+    final pose = photo.pose == PhotoPose.other ? null : poseLabel(l10n, photo.pose);
+    final caption = pose == null ? date : '$date · $pose';
+    final captionStyle = t.labelMedium!.copyWith(color: Colors.white, fontWeight: FontWeight.w700);
+    const captionPadding = EdgeInsets.fromLTRB(AppSpacing.s8, AppSpacing.s16, AppSpacing.s8, AppSpacing.s8);
 
     return Semantics(
       button: true,
@@ -60,12 +62,26 @@ class ProgressPhotoTile extends ConsumerWidget {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(AppSpacing.s8, AppSpacing.s16, AppSpacing.s8, AppSpacing.s8),
-                    child: Text(
-                      caption,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: t.labelMedium!.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                    padding: captionPadding,
+                    // The tile is a third of the screen, so at a large text size
+                    // "Oct 7 · Front" no longer fits one line and the pose used
+                    // to be cut off (LIF-124): then the pose gets its own line.
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final oneLine = TextPainter(
+                          text: TextSpan(text: caption, style: captionStyle),
+                          textDirection: Directionality.of(context),
+                          textScaler: MediaQuery.textScalerOf(context),
+                          maxLines: 1,
+                        )..layout();
+                        final stack = pose != null && oneLine.width > constraints.maxWidth;
+                        return Text(
+                          stack ? '$date\n$pose' : caption,
+                          maxLines: stack ? 2 : 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: captionStyle,
+                        );
+                      },
                     ),
                   ),
                 ),

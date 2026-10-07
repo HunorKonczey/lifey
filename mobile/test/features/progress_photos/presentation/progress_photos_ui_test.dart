@@ -76,6 +76,7 @@ Future<_FakePhotos> _pump(
   Widget home, {
   bool failAdd = false,
   GoRouter? router,
+  double textScale = 1,
 }) async {
   tester.view.physicalSize = const Size(411 * 2.625, 923 * 2.625);
   tester.view.devicePixelRatio = 2.625;
@@ -107,6 +108,10 @@ Future<_FakePhotos> _pump(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: home,
       ),
     ));
@@ -114,6 +119,14 @@ Future<_FakePhotos> _pump(
   await tester.pumpAndSettle();
   return fake;
 }
+
+/// A tile caption, whether it is one line ("Jun 20 · Front") or, when the tile
+/// is too narrow for that, the pose on a second line (LIF-124). The test font is
+/// wider than the real one, so which of the two a tile gets here is not the
+/// point of the test that uses this.
+Finder _caption(String text) => find.byWidgetPredicate(
+      (w) => w is Text && w.data != null && w.data!.replaceAll('\n', ' · ') == text,
+    );
 
 void main() {
   testWidgets('empty timeline says photos are private and offers no grid', (tester) async {
@@ -132,8 +145,8 @@ void main() {
     );
 
     expect(find.byType(Image), findsNWidgets(2));
-    expect(find.text('Jun 20 · Front'), findsOneWidget);
-    expect(find.text('Jun 1 · Side'), findsOneWidget);
+    expect(_caption('Jun 20 · Front'), findsOneWidget);
+    expect(_caption('Jun 1 · Side'), findsOneWidget);
   });
 
   testWidgets('tapping a tile opens that photo in the viewer', (tester) async {
@@ -317,10 +330,56 @@ void main() {
     await tester.tap(find.text('Jun 1 · Front'));
     await tester.pumpAndSettle();
     expect(find.text('Choose a photo'), findsOneWidget);
-    await tester.tap(find.text('Jun 10 · Side').last);
+    await tester.tap(_caption('Jun 10 · Side').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Jun 10 · Side'), findsOneWidget);
     expect(find.text('5 days apart'), findsOneWidget);
+  });
+
+  // LIF-124
+  testWidgets('a large text size puts the pose on its own line instead of cutting it off', (tester) async {
+    await _pump(
+      tester,
+      [_photo(1, DateTime(2026, 6, 20))],
+      const Scaffold(body: ProgressPhotosTab()),
+      textScale: 2.0,
+    );
+
+    expect(find.text('Jun 20\nFront'), findsOneWidget);
+    expect(find.textContaining('…'), findsNothing);
+  });
+
+  testWidgets('the compare panes show each photo whole, not a cropped slice', (tester) async {
+    await _pump(
+      tester,
+      [_photo(1, DateTime(2026, 6, 1)), _photo(2, DateTime(2026, 6, 15))],
+      const PhotoCompareScreen(),
+    );
+
+    final images = tester.widgetList<Image>(find.byType(Image)).toList();
+    expect(images, hasLength(2));
+    expect(images.map((i) => i.fit), everyElement(BoxFit.contain));
+  });
+
+  testWidgets('the details preview shows the whole photo, not a cropped slice', (tester) async {
+    await _pump(
+      tester,
+      const [],
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showPhotoDetailsSheet(context, file: File('does-not-exist.jpg')),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.contain);
   });
 }

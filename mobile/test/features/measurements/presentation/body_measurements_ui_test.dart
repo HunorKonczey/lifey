@@ -164,4 +164,54 @@ void main() {
     expect(find.text('Enter a value between 1 and 300 cm'), findsOneWidget);
     expect(fake.added, isEmpty);
   });
+
+  // LIF-124: with the keyboard up on a 411 dp phone the lower half of Save sat
+  // behind it. The test keyboard is Android's usual ~300 dp tall.
+  for (final (label, locale, scale) in [
+    ('English', const Locale('en'), 1.0),
+    ('Hungarian', const Locale('hu'), 1.0),
+    ('Hungarian at 1.3', const Locale('hu'), 1.3),
+    // Tall enough that the content cannot fit above the keyboard: the sheet
+    // has to scroll Save into view by itself.
+    ('Hungarian at 2.0', const Locale('hu'), 2.0),
+  ]) {
+    testWidgets('Save stays above the keyboard in the sheet ($label)', (tester) async {
+      tester.view.physicalSize = const Size(411 * 2.625, 923 * 2.625);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [bodyMeasurementControllerProvider.overrideWith(() => _FakeMeasurements(const []))],
+        child: MaterialApp(
+          theme: AppTheme.dark,
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
+          ),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => showAddMeasurementSheet(context, initialSite: MeasurementSite.waist),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 2.625);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+
+      final keyboardTop = 923.0 - 300;
+      final save = tester.getRect(find.byType(FilledButton));
+      expect(save.bottom, lessThanOrEqualTo(keyboardTop), reason: "Save runs into the keyboard");
+    });
+  }
 }
