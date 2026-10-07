@@ -32,6 +32,10 @@ describe("formatPace", () => {
     // 8420m in 45:16 (2716s) → ~5:23/km
     expect(formatPace(8420, 2716)).toBe("5:23 /km");
   });
+  it("rolls a pace just under a whole minute over instead of showing :60", () => {
+    // 360 s over 1001 m is 359.64 s/km: the seconds part rounds up to 60.
+    expect(formatPace(1001, 360)).toBe("6:00 /km");
+  });
   it("returns null for zero or negative distance (avoids divide-by-zero)", () => {
     expect(formatPace(0, 100)).toBeNull();
     expect(formatPace(-5, 100)).toBeNull();

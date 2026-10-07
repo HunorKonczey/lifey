@@ -79,6 +79,12 @@ void main() {
       expect(pace, '8:22 /mi');
     });
 
+    test('a pace just under a whole minute rolls over instead of showing :60', () {
+      // 360 s over 1001 m is 359.64 s/km: the seconds part rounds up to 60.
+      final pace = CardioFormatter.pace(1001, const Duration(seconds: 360), UnitSystem.metric);
+      expect(pace, '6:00 /km');
+    });
+
     test('returns null when distance is zero', () {
       expect(CardioFormatter.pace(0, const Duration(minutes: 10), UnitSystem.metric), isNull);
     });
@@ -141,6 +147,22 @@ void main() {
 
     test('pads seconds under 10 with a leading zero', () {
       expect(CardioFormatter.duration(const Duration(minutes: 3, seconds: 4)), '3:04');
+    });
+  });
+
+  group('Hungarian decimal comma', () {
+    test('every decimal metric follows the locale, with no digit grouping', () {
+      expect(CardioFormatter.distance(5230.5, UnitSystem.metric, locale: 'hu'), '5,23 km');
+      expect(CardioFormatter.distance(1234567.0, UnitSystem.metric, locale: 'hu'), '1234,57 km');
+      expect(CardioFormatter.distance(5230.5, UnitSystem.imperial, locale: 'hu-HU'), '3,25 mi');
+      expect(CardioFormatter.weight(8.5, UnitSystem.metric, locale: 'hu'), '8,5 kg');
+      expect(CardioFormatter.speed(5000, const Duration(minutes: 25), UnitSystem.metric, locale: 'hu'), '12,0 km/h');
+      expect(CardioFormatter.precipitation(1.0, UnitSystem.imperial, locale: 'hu'), '0,04 in');
+    });
+
+    test('the default stays a point, for context-free callers', () {
+      expect(CardioFormatter.distance(5230.5, UnitSystem.metric), '5.23 km');
+      expect(CardioFormatter.speed(5000, const Duration(minutes: 25), UnitSystem.metric), '12.0 km/h');
     });
   });
 }

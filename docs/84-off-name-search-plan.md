@@ -368,6 +368,11 @@ not see that food any more), but saving it will answer 409, and "re-fetch foods 
 nothing. Prompt 7 must decide how to handle it (likely: let `POST /foods` revive a tombstoned food with the same
 barcode instead of failing — a small backend change — or save without the barcode).
 
+*Resolved (bug sweep, 2026-10-06):* `V82__food_barcode_unique_live_only.sql` makes `foods_barcode_idx` a partial unique index over live rows
+(`where deleted_at is null`), so a tombstoned food no longer holds its barcode; the barcode lookup asks for the live food only
+(`findByUserIdAndBarcodeAndDeletedAtIsNull`). The web's walk-through of a 409 stays as a harmless safety net; on mobile the same
+conflict used to park the food's create as a permanent failure and block every meal logged with it.
+
 ## Prompt 3 — Backend: cache and global limiter ✅ (2026-10-06)
 - `OffSearchCache` (bounded LRU + TTL, key `lang|normalised query`), `OffSearchLimiter`; wired into the
   service. Normalise like the web (`normalizeForSearch`: trim, lowercase, accents folded).

@@ -1,3 +1,5 @@
+import '../../../core/format/first_character.dart';
+
 /// What the other side of a thread is *to the current user*. Not a global
 /// role: a trainer who also has their own trainer sees both kinds in one
 /// list, and this is what tells the rows apart
@@ -26,8 +28,8 @@ class ChatPeer {
   String get monogram {
     final words =
         displayName.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (words.isEmpty) return email.isEmpty ? '?' : email[0].toUpperCase();
-    return words.take(2).map((w) => w[0].toUpperCase()).join();
+    if (words.isEmpty) return email.isEmpty ? '?' : firstCharacterUpper(email);
+    return words.take(2).map(firstCharacterUpper).join();
   }
 
   factory ChatPeer.fromJson(Map<String, dynamic> json) {

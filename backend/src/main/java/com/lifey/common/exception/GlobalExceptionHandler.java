@@ -8,6 +8,8 @@ import com.lifey.billing.exception.InvalidReceiptException;
 import com.lifey.progressphoto.exception.InvalidProgressPhotoException;
 import com.lifey.billing.exception.SeatLimitExceededException;
 import com.lifey.billing.exception.SubscriptionAlreadyLinkedException;
+import com.lifey.nutrition.openfoodfacts.exception.OffRateLimitedException;
+import com.lifey.nutrition.openfoodfacts.exception.OffUnavailableException;
 import com.lifey.nutrition.recipe.generation.exception.InvalidGenerationRequestException;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
@@ -33,11 +35,13 @@ import com.lifey.workout.session.cardio.InvalidCardioRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -308,8 +312,33 @@ public class GlobalExceptionHandler {
                 request, List.of(), ex);
     }
 
+    /**
+     * An external food database that is rationing us or not answering is neither the caller's fault nor a bug
+     * here: 429 / 503 say so, with a plain message (the name search never gets here — it turns the same
+     * exceptions into a status in its own response body).
+     */
+    @ExceptionHandler(OffRateLimitedException.class)
+    public ResponseEntity<ApiError> handleOffRateLimited(OffRateLimitedException ex, HttpServletRequest request) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, "The food database is busy, try again in a moment", request, List.of(), ex);
+    }
+
+    @ExceptionHandler(OffUnavailableException.class)
+    public ResponseEntity<ApiError> handleOffUnavailable(OffUnavailableException ex, HttpServletRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, "The food database is not available right now", request, List.of(), ex);
+    }
+
+    /** {@code ?sort=nope}: a sort property the entity does not have is the client's error, not a 500. */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiError> handleUnknownProperty(PropertyReferenceException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Unknown property '" + ex.getPropertyName() + "'", request, List.of(), ex);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
+        if (ex instanceof ErrorResponse errorResponse) {
+            // Wrong method, unsupported media type, ...: Spring already knows the right status.
+            return ApiErrorResponses.framework(errorResponse, request, ex);
+        }
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request, List.of(), ex);
     }
 

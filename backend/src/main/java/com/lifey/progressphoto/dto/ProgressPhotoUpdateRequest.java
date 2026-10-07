@@ -1,8 +1,8 @@
 package com.lifey.progressphoto.dto;
 
+import com.lifey.common.validation.NotFutureDate;
 import com.lifey.progressphoto.PhotoPose;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 public record ProgressPhotoUpdateRequest(
 
         @NotNull
-        @PastOrPresent
+        @NotFutureDate
         LocalDate takenOn,
 
         @NotNull

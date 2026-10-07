@@ -18,7 +18,7 @@ export async function Fork() {
             className="w-11 h-11 md:w-13 md:h-13 rounded-md flex items-center justify-center"
             style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
-            <span className="material-symbols-rounded text-[26px] md:text-[30px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-[26px] md:text-[30px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               groups
             </span>
           </div>
@@ -52,7 +52,7 @@ export async function Fork() {
             className="w-11 h-11 md:w-13 md:h-13 rounded-md flex items-center justify-center"
             style={{ background: "var(--role)", color: "var(--bg)" }}
           >
-            <span className="material-symbols-rounded text-[26px] md:text-[30px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-[26px] md:text-[30px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               fitness_center
             </span>
           </div>

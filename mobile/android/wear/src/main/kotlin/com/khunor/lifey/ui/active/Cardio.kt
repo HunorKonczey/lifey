@@ -310,8 +310,10 @@ internal fun formatPace(meters: Double, seconds: Int, imperial: Boolean): String
     val unitMeters = if (imperial) 1609.344 else 1000.0
     val secondsPerUnit = seconds / (meters / unitMeters)
     if (!secondsPerUnit.isFinite()) return null
-    val minutes = (secondsPerUnit / 60).toInt()
-    val rest = (secondsPerUnit % 60).roundToInt()
+    // Rounded as a whole first: rounding only the remainder turns 5:59.6 into "5:60".
+    val totalSeconds = secondsPerUnit.roundToInt()
+    val minutes = totalSeconds / 60
+    val rest = totalSeconds % 60
     val suffix = if (imperial) "/mi" else "/km"
     return "$minutes:${rest.toString().padStart(2, '0')} $suffix"
 }

@@ -31,7 +31,7 @@ export function CalorieCard({ activeCalories, machineCalories, machineEdited, ac
       <div className="flex items-start">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-rounded text-sm" style={{ color: accent }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-sm" style={{ color: accent }}>
               local_fire_department
             </span>
             <span className="text-[10px] font-extrabold tracking-wide uppercase" style={{ color: accent }}>
@@ -50,7 +50,7 @@ export function CalorieCard({ activeCalories, machineCalories, machineEdited, ac
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-rounded text-sm" style={{ color: "var(--text-2)" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-sm" style={{ color: "var(--text-2)" }}>
               monitor
             </span>
             <span
@@ -78,7 +78,7 @@ export function CalorieCard({ activeCalories, machineCalories, machineEdited, ac
       </div>
 
       <div className="flex items-start gap-2 mt-3.5">
-        <span className="material-symbols-rounded text-sm" style={{ color: "var(--text-2)" }}>
+        <span aria-hidden="true" className="material-symbols-rounded text-sm" style={{ color: "var(--text-2)" }}>
           info
         </span>
         <p className="text-[11px] leading-snug" style={{ color: "var(--text-2)" }}>

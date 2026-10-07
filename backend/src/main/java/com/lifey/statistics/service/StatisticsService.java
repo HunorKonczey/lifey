@@ -37,4 +37,15 @@ public interface StatisticsService {
     StatisticsResponse weeklyForUser(Long userId, LocalDate today);
 
     StatisticsResponse monthlyForUser(Long userId, LocalDate today);
+
+    /**
+     * The same, anchored on today's date <em>in that user's own timezone</em> (their stored UTC offset)
+     * rather than the server's: just after midnight local time the server's date can still be yesterday,
+     * which made "today" reach back to the start of yesterday.
+     */
+    StatisticsResponse dailyForUser(Long userId);
+
+    StatisticsResponse weeklyForUser(Long userId);
+
+    StatisticsResponse monthlyForUser(Long userId);
 }

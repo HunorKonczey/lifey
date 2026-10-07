@@ -2521,8 +2521,10 @@ func formatPace(meters: Double, seconds: Int, units: WatchUnitSystem) -> String?
   let unitMeters = units == .imperial ? 1609.344 : 1000.0
   let secondsPerUnit = Double(seconds) / (meters / unitMeters)
   guard secondsPerUnit.isFinite else { return nil }
-  let minutes = Int(secondsPerUnit) / 60
-  let rest = Int((secondsPerUnit.truncatingRemainder(dividingBy: 60)).rounded())
+  // Rounded as a whole first: rounding only the remainder turns 5:59.6 into "5:60".
+  let totalSeconds = Int(secondsPerUnit.rounded())
+  let minutes = totalSeconds / 60
+  let rest = totalSeconds % 60
   let suffix = units == .imperial ? "/mi" : "/km"
   return "\(minutes):" + String(format: "%02d", rest) + " " + suffix
 }

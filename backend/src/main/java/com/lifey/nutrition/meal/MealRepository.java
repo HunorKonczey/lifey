@@ -41,14 +41,7 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
     @Query("select max(m.dateTime) from Meal m where m.user.id = :userId and m.deletedAt is null")
     Optional<Instant> findMaxDateTimeByUserId(@Param("userId") Long userId);
 
-    @Query("""
-            select coalesce(sum(f.caloriesPer100g * e.quantityInGrams / 100.0), 0)
-            from MealEntry e join e.food f
-            where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.deletedAt is null
-            """)
-    double sumCaloriesSince(@Param("userId") Long userId, @Param("from") Instant from);
-
-    /** Same as {@link #sumCaloriesSince} with an upper bound — weekly trainer report (docs/33), one call per client-day. */
+    /** Calories in {@code [from, toExclusive)} — the statistics periods and the weekly trainer report (docs/33). */
     @Query("""
             select coalesce(sum(f.caloriesPer100g * e.quantityInGrams / 100.0), 0)
             from MealEntry e join e.food f
@@ -60,21 +53,24 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
     @Query("""
             select coalesce(sum(f.proteinPer100g * e.quantityInGrams / 100.0), 0)
             from MealEntry e join e.food f
-            where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.deletedAt is null
+            where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.dateTime < :toExclusive
+              and e.meal.deletedAt is null
             """)
-    double sumProteinSince(@Param("userId") Long userId, @Param("from") Instant from);
+    double sumProteinBetween(@Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
 
     @Query("""
             select coalesce(sum(coalesce(f.carbsPer100g, 0) * e.quantityInGrams / 100.0), 0)
             from MealEntry e join e.food f
-            where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.deletedAt is null
+            where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.dateTime < :toExclusive
+              and e.meal.deletedAt is null
             """)
-    double sumCarbsSince(@Param("userId") Long userId, @Param("from") Instant from);
+    double sumCarbsBetween(@Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
 
     @Query("""
             select coalesce(sum(coalesce(f.fatPer100g, 0) * e.quantityInGrams / 100.0), 0)
             from MealEntry e join e.food f
-            where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.deletedAt is null
+            where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.dateTime < :toExclusive
+              and e.meal.deletedAt is null
             """)
-    double sumFatSince(@Param("userId") Long userId, @Param("from") Instant from);
+    double sumFatBetween(@Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
 }

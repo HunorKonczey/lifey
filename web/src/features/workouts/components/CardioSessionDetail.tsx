@@ -138,7 +138,7 @@ export function CardioSessionDetail({
           </span>
         )}
         <div className="flex items-center gap-1 rounded-[var(--r-pill)] px-3 py-1.5 flex-none" style={{ background: "var(--nested)" }}>
-          <span className="material-symbols-rounded text-sm" style={{ color: "var(--text-3)" }}>lock</span>
+          <span aria-hidden="true" className="material-symbols-rounded text-sm" style={{ color: "var(--text-3)" }}>lock</span>
           <span className="text-xs font-bold" style={{ color: "var(--text-3)" }}>{t("readOnly")}</span>
         </div>
       </Card>

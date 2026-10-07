@@ -67,7 +67,7 @@ public class SocialAuthServiceImpl implements SocialAuthService {
 
     private User linkOrCreateUser(GoogleIdentity identity) {
         User user = userRepository.findByEmailIgnoreCase(identity.email())
-                .map(existing -> requireVerified(existing, identity))
+                .map(existing -> claimForProvider(existing, identity))
                 .orElseGet(() -> createUser(identity));
 
         UserIdentity link = new UserIdentity();
@@ -81,9 +81,23 @@ public class SocialAuthServiceImpl implements SocialAuthService {
         return user;
     }
 
-    private User requireVerified(User existing, GoogleIdentity identity) {
+    /**
+     * Registration with a password does not verify the mailbox, so a password account is only as trustworthy
+     * as whoever typed the email: someone could register {@code victim@x.com} with a password they know and
+     * wait for the victim to sign in with Google, which finds the account by email and links to it - after
+     * which the registrant still holds a working password and any session they opened, inside the victim's
+     * account. The provider has just proven the mailbox, so the first link is where that foreign claim is
+     * cut: the password is dropped (the owner sets their own through "forgot password") and every open
+     * session is revoked.
+     */
+    private User claimForProvider(User existing, GoogleIdentity identity) {
         if (!identity.emailVerified()) {
             throw new UnverifiedEmailException("Email is not verified by the provider");
+        }
+        if (existing.getPasswordHash() != null) {
+            existing.setPasswordHash(null);
+            refreshTokenRepository.findAllByUserIdAndRevokedFalse(existing.getId())
+                    .forEach(token -> token.setRevoked(true));
         }
         return existing;
     }

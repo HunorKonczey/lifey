@@ -23,9 +23,9 @@ export const authApi = {
   refresh: (refreshToken?: string) =>
     api.post<AuthResponse>("/auth/refresh", refreshToken ? { refreshToken } : undefined),
 
-  // Reads + clears the refresh cookie server-side.
-  logout: () =>
-    api.post<void>("/auth/logout"),
+  // Revokes the given refresh token (or the httpOnly cookie's, when none is passed) and clears the cookie.
+  logout: (refreshToken?: string) =>
+    api.post<void>("/auth/logout", refreshToken ? { refreshToken } : undefined),
 
   // Revokes all tokens for the authenticated user (uses access token) + clears cookie.
   logoutAll: () =>

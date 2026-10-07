@@ -48,7 +48,7 @@ export function RecipeThumbnail({ recipeId, hasImage, size = 80 }: RecipeThumbna
         // eslint-disable-next-line @next/next/no-img-element
         <img src={objectUrl} alt="" className="w-full h-full object-cover" />
       ) : (
-        <span className="material-symbols-rounded" style={{ color: "var(--role)", fontSize: size * 0.5 }}>
+        <span aria-hidden="true" className="material-symbols-rounded" style={{ color: "var(--role)", fontSize: size * 0.5 }}>
           menu_book
         </span>
       )}

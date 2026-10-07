@@ -205,7 +205,7 @@ export function LiveSession({
                   {rpe}
                 </div>
               ) : (
-                <span className="material-symbols-rounded text-xl flex-none" style={{ color: "var(--text-2)" }}>
+                <span aria-hidden="true" className="material-symbols-rounded text-xl flex-none" style={{ color: "var(--text-2)" }}>
                   mood
                 </span>
               )}
@@ -217,7 +217,7 @@ export function LiveSession({
                   </p>
                 )}
               </div>
-              <span className="material-symbols-rounded text-lg flex-none" style={{ color: "var(--text-2)" }}>
+              <span aria-hidden="true" className="material-symbols-rounded text-lg flex-none" style={{ color: "var(--text-2)" }}>
                 chevron_right
               </span>
             </button>

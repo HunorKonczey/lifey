@@ -14,6 +14,7 @@ import '../../../../shared/widgets/ds/metric_value.dart';
 import '../../application/weight_controller.dart';
 import '../../domain/weight_amount.dart';
 import '../../domain/weight_entry.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// Opens the log-weight sheet over the shell (root navigator).
 Future<void> showAddWeightSheet(BuildContext context) => showLifeySheet<void>(
@@ -141,7 +142,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
   /// or, without one, "Last 64.9 kg · Mon, Sep 21"; null with no earlier entry.
   String? _reference(AppLocalizations l10n, LifeyFormat f, List<WeightEntry> entries) {
     final day = DateTime(_date.year, _date.month, _date.day);
-    final before = day.subtract(const Duration(days: 1));
+    final before = addDays(day, -1);
     // Ordered date desc, recordedAt desc: the first match is the day's latest.
     for (final e in entries) {
       if (_isSameDay(e.date.toLocal(), before)) {

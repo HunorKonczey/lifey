@@ -2,11 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/schedule_repository.dart';
 import '../domain/schedule.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// Monday of the week [date] falls in, at local midnight.
 DateTime weekStartOf(DateTime date) {
   final day = DateTime(date.year, date.month, date.day);
-  return day.subtract(Duration(days: day.weekday - DateTime.monday));
+  return addDays(day, -(day.weekday - DateTime.monday));
 }
 
 /// A date with the time stripped, so two "same day" values compare equal.
@@ -36,9 +37,9 @@ class CalendarWeekController extends Notifier<DateTime> {
 
   void showWeekOf(DateTime date) => state = weekStartOf(date);
 
-  void previousWeek() => state = state.subtract(const Duration(days: 7));
+  void previousWeek() => state = addDays(state, -7);
 
-  void nextWeek() => state = state.add(const Duration(days: 7));
+  void nextWeek() => state = addDays(state, 7);
 
   void today() => state = weekStartOf(DateTime.now());
 }

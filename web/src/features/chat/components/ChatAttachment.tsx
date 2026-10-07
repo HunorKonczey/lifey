@@ -94,7 +94,7 @@ export function ChatAttachment({ message, uploading }: ChatAttachmentProps) {
             className="absolute inset-0 flex items-center justify-center"
             style={{ color: "var(--text)" }}
           >
-            <span className="material-symbols-rounded text-[26px] animate-spin">progress_activity</span>
+            <span aria-hidden="true" className="material-symbols-rounded text-[26px] animate-spin">progress_activity</span>
           </span>
         )}
       </button>
@@ -147,10 +147,10 @@ function ImageLightbox({ messageId, onClose }: { messageId: number; onClose: () 
         className="lifey-button absolute top-5 right-6 w-11 h-11 rounded-full flex items-center justify-center"
         style={{ background: "rgba(255,255,255,.14)", color: "#fff" }}
       >
-        <span className="material-symbols-rounded text-[22px]">close</span>
+        <span aria-hidden="true" className="material-symbols-rounded text-[22px]">close</span>
       </button>
       {isLoading || !url ? (
-        <span className="material-symbols-rounded text-[32px] animate-spin" style={{ color: "#fff" }}>
+        <span aria-hidden="true" className="material-symbols-rounded text-[32px] animate-spin" style={{ color: "#fff" }}>
           progress_activity
         </span>
       ) : (

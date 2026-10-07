@@ -202,4 +202,19 @@ class SessionCommentServiceImplTest {
 
         verify(pushService, never()).sendToUser(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
+
+    @Test
+    void truncate_neverSplitsAnEmojiAtTheCut() {
+        // The 119th char (the cut) would be the first half of a surrogate pair.
+        String comment = "a".repeat(118) + new String(Character.toChars(0x1F4AA)) + "tail";
+
+        String truncated = SessionCommentServiceImpl.truncate(comment);
+
+        assertThat(truncated).isEqualTo("a".repeat(118) + "…");
+    }
+
+    @Test
+    void truncate_keepsAShortCommentAsIs() {
+        assertThat(SessionCommentServiceImpl.truncate("ok")).isEqualTo("ok");
+    }
 }

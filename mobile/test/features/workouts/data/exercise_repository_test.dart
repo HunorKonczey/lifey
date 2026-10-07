@@ -58,6 +58,15 @@ void main() {
     expect(rows, hasLength(2));
     expect(rows.map((r) => r.clientId), contains(otherId));
   });
+  test('getOrCreateByName copes with two rows that share the name (a second device made it too)', () async {
+    final first = await repo.create('Gyors erőedzés');
+    final second = await repo.create('Gyors erőedzés');
+
+    final resolvedId = await repo.getOrCreateByName('Gyors erőedzés');
+
+    expect([first, second], contains(resolvedId));
+    expect(await db.select(db.exercises).get(), hasLength(2));
+  });
 }
 
 /// Prevents OutboxWriter's fire-and-forget kick from touching the network —

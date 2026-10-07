@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/schedule_repository.dart';
 import '../domain/schedule.dart';
 import 'calendar_controller.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// How far ahead the client's schedule tab looks. Comfortably inside the
 /// backend's 62-day cap, and long enough to cover a typical block.
@@ -25,7 +26,7 @@ final clientUpcomingOccurrencesProvider =
       await ref.watch(scheduleRepositoryProvider).findOccurrencesForClient(
             clientId,
             from: today,
-            to: today.add(const Duration(days: clientUpcomingHorizonDays)),
+            to: addDays(today, clientUpcomingHorizonDays),
           );
   return [...occurrences]..sort((a, b) {
       final byDate = a.scheduledFor.compareTo(b.scheduledFor);

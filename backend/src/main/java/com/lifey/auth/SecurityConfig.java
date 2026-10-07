@@ -6,7 +6,10 @@ import com.lifey.auth.properties.GoogleOAuthProperties;
 import com.lifey.auth.properties.JwtProperties;
 import com.lifey.auth.service.CustomUserDetailsService;
 import com.lifey.auth.service.JwtService;
+import com.lifey.idempotency.IdempotencyFilter;
+import com.lifey.idempotency.service.IdempotencyService;
 import com.lifey.user.UserActivityTracker;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,11 +34,16 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @EnableConfigurationProperties({JwtProperties.class, GoogleOAuthProperties.class})
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_ENDPOINTS = {
+    static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/register",
             "/api/v1/auth/login",
             "/api/v1/auth/social/google",
             "/api/v1/auth/refresh",
+            // Authorised by the refresh token in its own body/cookie, which is exactly what it revokes: both
+            // clients clear their tokens *before* calling it (the access token is gone by then, or expired),
+            // so requiring a bearer meant every logout answered 401 and no refresh token was ever revoked
+            // server-side - a copied one stayed good for its whole 30 days.
+            "/api/v1/auth/logout",
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
             // Public accept/decline links from the trainer invite email (see
@@ -98,7 +106,8 @@ public class SecurityConfig {
                                            UserActivityTracker activityTracker,
                                            JwtAuthenticationEntryPoint entryPoint,
                                            JwtAccessDeniedHandler accessDeniedHandler,
-                                           CorsConfigurationSource corsConfigurationSource) {
+                                           CorsConfigurationSource corsConfigurationSource,
+                                           ObjectProvider<IdempotencyService> idempotencyService) {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 // Safe: auth is a bearer token in the Authorization header (see
@@ -132,6 +141,13 @@ public class SecurityConfig {
                 // Not a bean (see JwtAuthenticationFilter's Javadoc) — constructed
                 // directly so Spring Boot doesn't also auto-register it globally.
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService, activityTracker), UsernamePasswordAuthenticationFilter.class);
+
+        // Needs the authenticated user, hence after the JWT filter. Absent in the web-slice tests that import this
+        // configuration without the service, where a repeated POST simply is not deduplicated.
+        IdempotencyService idempotency = idempotencyService.getIfAvailable();
+        if (idempotency != null) {
+            http.addFilterAfter(new IdempotencyFilter(idempotency), JwtAuthenticationFilter.class);
+        }
 
         return http.build();
     }

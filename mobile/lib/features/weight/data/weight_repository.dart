@@ -9,6 +9,7 @@ import '../../../core/sync/outbox_writer.dart';
 import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
 import '../domain/weight_entry.dart';
+import '../../../core/utils/date_math.dart';
 
 /// Local-first access to weight entries. Reads stream from the on-device
 /// cache; writes land there immediately and queue an outbox operation for
@@ -58,7 +59,7 @@ class WeightRepository {
   Future<bool> hasEntryForToday() async {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
+    final endOfDay = addDays(startOfDay, 1);
     final rows = await (_db.select(_db.weightEntries)
           ..where((t) => t.date.isBiggerOrEqualValue(startOfDay) & t.date.isSmallerThanValue(endOfDay)))
         .get();

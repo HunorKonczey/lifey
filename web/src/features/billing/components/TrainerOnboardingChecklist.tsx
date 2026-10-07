@@ -102,7 +102,7 @@ export function TrainerOnboardingChecklist() {
             className="shrink-0 p-1 rounded-full hover:bg-black/10"
             style={{ color: "var(--text-2)" }}
           >
-            <span className="material-symbols-rounded text-lg">close</span>
+            <span aria-hidden="true" className="material-symbols-rounded text-lg">close</span>
           </button>
         )}
       </div>
@@ -133,7 +133,7 @@ export function TrainerOnboardingChecklist() {
                   }}
                 >
                   {step.done && (
-                    <span className="material-symbols-rounded text-[13px]" style={{ color: "var(--bg)" }}>
+                    <span aria-hidden="true" className="material-symbols-rounded text-[13px]" style={{ color: "var(--bg)" }}>
                       check
                     </span>
                   )}
@@ -147,7 +147,7 @@ export function TrainerOnboardingChecklist() {
                   }}
                 >
                   {step.done && (
-                    <span className="material-symbols-rounded text-[13px]" style={{ color: "var(--bg)" }}>
+                    <span aria-hidden="true" className="material-symbols-rounded text-[13px]" style={{ color: "var(--bg)" }}>
                       check
                     </span>
                   )}

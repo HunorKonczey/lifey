@@ -41,7 +41,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -75,30 +74,30 @@ public class TrainerClientDataController {
     @GetMapping("/statistics/daily")
     public StatisticsResponse dailyStatistics(
             @PathVariable Long clientId,
-            @Parameter(description = "Anchor date; defaults to the server's current date")
+            @Parameter(description = "Anchor date; defaults to today on the client's own clock")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         requireActiveClient(clientId);
-        return statisticsService.dailyForUser(clientId, date != null ? date : LocalDate.now(ZoneId.systemDefault()));
+        return date != null ? statisticsService.dailyForUser(clientId, date) : statisticsService.dailyForUser(clientId);
     }
 
     @Operation(summary = "Client's stats for the last 7 days")
     @GetMapping("/statistics/weekly")
     public StatisticsResponse weeklyStatistics(
             @PathVariable Long clientId,
-            @Parameter(description = "Anchor date; defaults to the server's current date")
+            @Parameter(description = "Anchor date; defaults to today on the client's own clock")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         requireActiveClient(clientId);
-        return statisticsService.weeklyForUser(clientId, date != null ? date : LocalDate.now(ZoneId.systemDefault()));
+        return date != null ? statisticsService.weeklyForUser(clientId, date) : statisticsService.weeklyForUser(clientId);
     }
 
     @Operation(summary = "Client's stats for the last 30 days")
     @GetMapping("/statistics/monthly")
     public StatisticsResponse monthlyStatistics(
             @PathVariable Long clientId,
-            @Parameter(description = "Anchor date; defaults to the server's current date")
+            @Parameter(description = "Anchor date; defaults to today on the client's own clock")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         requireActiveClient(clientId);
-        return statisticsService.monthlyForUser(clientId, date != null ? date : LocalDate.now(ZoneId.systemDefault()));
+        return date != null ? statisticsService.monthlyForUser(clientId, date) : statisticsService.monthlyForUser(clientId);
     }
 
     @Operation(summary = "Client's daily step count history",

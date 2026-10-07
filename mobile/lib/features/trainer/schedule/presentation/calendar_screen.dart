@@ -29,6 +29,7 @@ import 'widgets/month_overview.dart';
 import 'widgets/occurrence_status_chip.dart';
 import 'widgets/session_peek_sheet.dart';
 import 'widgets/week_strip.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// The trainer's calendar: who is training, when (docs/chat/41 T5, frame F).
 ///
@@ -78,7 +79,7 @@ class _TrainerCalendarScreenState extends ConsumerState<TrainerCalendarScreen> {
             from: DateTime(month.year, month.month),
             to: DateTime(month.year, month.month + 1, 0),
           )
-        : (from: weekStart, to: weekStart.add(const Duration(days: 6)));
+        : (from: weekStart, to: addDays(weekStart, 6));
 
     final sessions = ref.watch(calendarSessionsProvider(range));
     final clients = ref.watch(trainerClientsControllerProvider).value ?? const [];

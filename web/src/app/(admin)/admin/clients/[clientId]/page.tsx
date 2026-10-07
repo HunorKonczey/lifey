@@ -78,7 +78,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
           className="w-[42px] h-[42px] rounded-2xl flex items-center justify-center shrink-0"
           style={{ background: "color-mix(in srgb, var(--heart) 16%, transparent)", color: "var(--heart)" }}
         >
-          <span className="material-symbols-rounded text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
             link_off
           </span>
         </div>
@@ -95,7 +95,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
           className="flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[13px] font-bold shrink-0"
           style={{ background: "var(--control)", color: "var(--text)" }}
         >
-          <span className="material-symbols-rounded text-lg" style={{ color: "var(--primary)" }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ color: "var(--primary)" }}>
             arrow_back
           </span>
           {t("backToList")}

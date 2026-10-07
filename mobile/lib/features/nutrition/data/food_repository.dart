@@ -30,9 +30,14 @@ class FoodRepository {
 
   /// Looks up a locally-cached food by its exact barcode, if one exists.
   Future<Food?> findByBarcode(String barcode) async {
-    final row = await (_db.select(_db.foods)..where((t) => t.barcode.equals(barcode)))
-        .getSingleOrNull();
-    return row == null ? null : _toDomain(row);
+    final rows = await (_db.select(_db.foods)..where((t) => t.barcode.equals(barcode))).get();
+    if (rows.isEmpty) return null;
+    // A deleted food stays in the table until the server confirms the delete, so for a moment it can
+    // share the barcode with the food that replaced it: that one is gone as far as the user is concerned,
+    // and must neither be returned nor make this lookup fail for finding two rows.
+    final blocked = blockedByActiveDelete(await _db.select(_db.pendingOperations).get());
+    final live = rows.where((r) => !blocked.contains(r.clientId));
+    return live.isEmpty ? null : _toDomain(live.first);
   }
 
   /// Looks up a locally-cached food by the server's id — the form an id takes

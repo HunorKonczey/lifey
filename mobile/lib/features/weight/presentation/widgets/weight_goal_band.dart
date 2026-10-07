@@ -57,7 +57,7 @@ class WeightGoalBand extends ConsumerWidget {
     // "−0.3 kg/week · At this rate, around March 12, 2027"
     final note = message == null
         ? null
-        : rate == null ? message : '${l10n.weightGoalRateValue(_formatRate(rate))} · $message';
+        : rate == null ? message : '${l10n.weightGoalRateValue(_formatRate(f, rate))} · $message';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,9 +109,9 @@ class WeightGoalBand extends ConsumerWidget {
 
   /// Signed, because "+0.3 kg/week" and "−0.3" mean opposite things and the
   /// line is read at a glance.
-  String _formatRate(double kgPerWeek) {
+  String _formatRate(LifeyFormat f, double kgPerWeek) {
     final rounded = (kgPerWeek * 10).round() / 10;
     final sign = rounded > 0 ? '+' : rounded < 0 ? '−' : '';
-    return '$sign${rounded.abs().toStringAsFixed(1)}';
+    return '$sign${f.decimal(rounded.abs(), 1)}';
   }
 }

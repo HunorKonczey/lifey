@@ -57,7 +57,7 @@ export async function PlanParityMock() {
           <Fragment key={feature}>
             <span className="text-[12.5px] font-bold">{feature}</span>
             {PLANS.map((plan) => (
-              <span
+              <span aria-hidden="true"
                 key={plan.id}
                 className="material-symbols-rounded text-lg justify-self-center"
                 style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}

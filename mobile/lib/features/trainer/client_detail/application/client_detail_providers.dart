@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/client_detail_repository.dart';
 import '../domain/client_data.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// Reads behind the client detail tabs (docs/chat/41 T2).
 ///
@@ -67,5 +68,5 @@ DateTime dayKey(DateTime date) => DateTime(date.year, date.month, date.day);
 
 DateTime _daysAgo(int days) {
   final today = dayKey(DateTime.now());
-  return today.subtract(Duration(days: days));
+  return addDays(today, -days);
 }

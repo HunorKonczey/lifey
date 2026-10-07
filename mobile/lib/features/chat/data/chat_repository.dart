@@ -255,7 +255,7 @@ class ChatRepository {
   /// restore and on app resume.
   Future<void> flushPending() async {
     final rows = await (_db.select(_db.chatMessages)
-          ..where((t) => t.serverId.isNull())
+          ..where((t) => t.serverId.isNull() & t.syncState.equals('rejected').not())
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
         .get();
     for (final row in rows) {
@@ -483,11 +483,23 @@ class ChatRepository {
       // The server has the bytes now; the staged copy is dead weight, and the
       // server echo has already cleared the path column.
       await _discardStagedAttachment(attachmentPath);
-    } catch (_) {
-      await _setState(conversationId, clientId, 'failed');
+    } catch (error) {
+      await _setState(conversationId, clientId, _isDefiniteRejection(error) ? 'rejected' : 'failed');
     } finally {
       _publishProgress(clientId, null);
     }
+  }
+
+  /// The server read the message and said no — an archived thread, an invalid body, a picture it cannot
+  /// decode. Sending the same bytes again can only get the same answer, so [flushPending] leaves such a
+  /// message to the user's own retry instead of re-uploading it every minute (and, for a picture the
+  /// server cannot decode, spending the sender's rate-limit budget each time). A dropped connection, a
+  /// timeout, a gateway error, a busy server or an expired session says nothing about the message.
+  static bool _isDefiniteRejection(Object error) {
+    if (error is! DioException) return false;
+    final status = error.response?.statusCode;
+    if (status == null) return false;
+    return status >= 400 && status < 500 && !const {401, 408, 425, 429}.contains(status);
   }
 
   // --- attachments (I6) ---------------------------------------------------
@@ -837,7 +849,7 @@ class ChatRepository {
       card: row.cardJson == null ? null : _parseCard(row.cardJson!),
       state: switch (row.syncState) {
         'pending' => ChatMessageState.pending,
-        'failed' => ChatMessageState.failed,
+        'failed' || 'rejected' => ChatMessageState.failed,
         _ => ChatMessageState.sent,
       },
     );

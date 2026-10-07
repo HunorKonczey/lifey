@@ -43,7 +43,7 @@ export function ValueSection({
           <ul className="flex flex-col gap-3 mt-6.5">
             {bullets.map((b) => (
               <li key={b} className="flex gap-3 items-start">
-                <span
+                <span aria-hidden="true"
                   className="material-symbols-rounded text-xl mt-0.5"
                   style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
                 >

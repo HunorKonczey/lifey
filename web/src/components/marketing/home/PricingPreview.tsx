@@ -83,7 +83,7 @@ export async function PricingPreview({ page = "home" }: { page?: string }) {
                 <ul className="flex flex-col gap-2.5 mt-5">
                   {[t("bulletAllFeatures"), bullet2, t("bulletScheduling")].map((b) => (
                     <li key={b} className="flex gap-2 items-start text-sm">
-                      <span
+                      <span aria-hidden="true"
                         className="material-symbols-rounded text-lg mt-0.5"
                         style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
                       >

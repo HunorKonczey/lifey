@@ -37,8 +37,6 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
      */
     Page<Food> findByUserIdAndUpdatedAtGreaterThanEqual(Long userId, Instant since, Pageable pageable);
 
-    Optional<Food> findByUserIdAndNameIgnoreCase(Long userId, String name);
-
     /**
      * Matches the {@code foods_name_unique_idx} conflict check (visible foods
      * only) for the trainer content-assignment deep copy — see
@@ -48,7 +46,12 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
 
     Optional<Food> findByIdAndUserId(Long id, Long userId);
 
-    Optional<Food> findByUserIdAndBarcode(Long userId, String barcode);
+    /**
+     * The user's live food with this barcode. Not a plain {@code findByUserIdAndBarcode}: a deleted
+     * food keeps its barcode, and since V82 a live food may share it, so without the filter this
+     * could match two rows (or answer with the deleted one).
+     */
+    Optional<Food> findByUserIdAndBarcodeAndDeletedAtIsNull(Long userId, String barcode);
 
     /**
      * Which of these barcodes the user already has as a food (tombstoned rows excluded) — one

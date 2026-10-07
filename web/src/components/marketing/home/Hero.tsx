@@ -32,7 +32,7 @@ export async function Hero() {
             className="inline-flex items-center gap-2 h-8 px-3.5 rounded-pill text-[12.5px] font-extrabold tracking-wide"
             style={{ background: "var(--nested)", color: "var(--primary)" }}
           >
-            <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
               workspace_premium
             </span>
             {t("eyebrow").toUpperCase()}
@@ -81,7 +81,7 @@ export async function Hero() {
             className="flex items-center gap-2.5 mt-4 md:mt-5 text-sm font-semibold"
             style={{ color: "var(--text-3)" }}
           >
-            <span className="material-symbols-rounded text-lg" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>
               check_circle
             </span>
             <span className="hidden md:inline">
@@ -110,15 +110,15 @@ export async function Hero() {
                       className="w-[30px] h-[30px] rounded-md flex items-center justify-center"
                       style={{ background: "var(--primary)", color: "var(--bg)" }}
                     >
-                      <span className="material-symbols-rounded text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
                         eco
                       </span>
                     </span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>groups</span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>assignment</span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>calendar_month</span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>chat</span>
-                    <span className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>insights</span>
+                    <span aria-hidden="true" className="material-symbols-rounded text-[21px]" style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}>groups</span>
+                    <span aria-hidden="true" className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>assignment</span>
+                    <span aria-hidden="true" className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>calendar_month</span>
+                    <span aria-hidden="true" className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>chat</span>
+                    <span aria-hidden="true" className="material-symbols-rounded text-[21px]" style={{ color: "var(--text-3)" }}>insights</span>
                   </div>
                   <div className="flex-1 p-4">
                     <div className="flex items-center justify-between">

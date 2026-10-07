@@ -133,7 +133,7 @@ class RecentWorkoutsSection extends StatelessWidget {
   }
 
   String _distance(LifeyFormat f, double meters) => unitSystem == UnitSystem.imperial
-      ? CardioFormatter.distance(meters, unitSystem)
+      ? CardioFormatter.distance(meters, unitSystem, locale: f.locale)
       : '${f.distance(meters / 1000)} km';
 }
 

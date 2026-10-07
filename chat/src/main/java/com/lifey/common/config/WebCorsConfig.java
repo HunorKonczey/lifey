@@ -7,6 +7,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -22,7 +23,7 @@ public class WebCorsConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        List<String> origins = List.of(allowedOriginsRaw.split(","));
+        List<String> origins = parseOrigins(allowedOriginsRaw);
 
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(origins);
@@ -34,5 +35,18 @@ public class WebCorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         return source;
+    }
+
+    /**
+     * The comma-separated origin list as the browser will send each one: trimmed (a space after the
+     * comma in the environment variable would otherwise make that origin silently never match), without
+     * a trailing slash (an `Origin` header never has one) and without empty entries.
+     */
+    static List<String> parseOrigins(String raw) {
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .map(origin -> origin.endsWith("/") ? origin.substring(0, origin.length() - 1) : origin)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
     }
 }

@@ -41,7 +41,7 @@ export function WeatherCard({ condition, tempC, windKph, precipMm, startedAt }: 
           className="w-[52px] h-[52px] rounded-[18px] flex items-center justify-center flex-none"
           style={{ background: "color-mix(in srgb, var(--role) 14%, transparent)" }}
         >
-          <span className="material-symbols-rounded text-[28px]" style={{ color: "var(--role)" }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-[28px]" style={{ color: "var(--role)" }}>
             {weatherConditionIcon(condition)}
           </span>
         </div>

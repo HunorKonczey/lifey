@@ -1,5 +1,6 @@
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import 'stat_metric.dart';
+import '../../../core/utils/date_math.dart';
 
 /// What the statistics screen says about one [StatMetric] over a range: one
 /// hero number, its trend against the period before, and up to three side
@@ -296,7 +297,7 @@ MetricSummary summaryFor(
       ? rangeDays / 7
       : (current.points.isEmpty
               ? 0
-              : (current.points.last.date.difference(current.points.first.date).inDays + 1) / 7)
+              : (calendarDaysBetween(current.points.first.date, current.points.last.date) + 1) / 7)
           .toDouble();
   double? perWeek(double total) => weeks > 0 ? total / weeks : null;
 

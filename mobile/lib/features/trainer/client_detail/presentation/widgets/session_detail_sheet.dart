@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/network/error_message.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
@@ -65,7 +66,7 @@ class SessionDetailSheet extends ConsumerWidget {
       children: [
         Text(
           '${DateFormat.yMMMEd(locale).format(session.startedAt.toLocal())}'
-          ' · ${summaryLine(l10n, session)}',
+          ' · ${summaryLine(l10n, LifeyFormat.of(context), session)}',
           style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
         ),
         const SizedBox(height: AppSpacing.s16),
@@ -169,7 +170,7 @@ class _ExerciseBlock extends StatelessWidget {
                       Text(
                         l10n.trainerSetLabel(
                           sets[i].reps ?? 0,
-                          (sets[i].weight ?? 0).toStringAsFixed(1),
+                          LifeyFormat.of(context).decimal(sets[i].weight ?? 0, 1),
                         ),
                         style: theme.textTheme.bodySmall,
                       ),

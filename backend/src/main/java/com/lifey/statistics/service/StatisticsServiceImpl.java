@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 /**
@@ -37,7 +36,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse daily() {
-        return daily(LocalDate.now(ZoneId.systemDefault()));
+        return dailyForUser(currentUserProvider.getUserId());
     }
 
     @Override
@@ -47,7 +46,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse weekly() {
-        return weekly(LocalDate.now(ZoneId.systemDefault()));
+        return weeklyForUser(currentUserProvider.getUserId());
     }
 
     @Override
@@ -57,7 +56,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse monthly() {
-        return monthly(LocalDate.now(ZoneId.systemDefault()));
+        return monthlyForUser(currentUserProvider.getUserId());
     }
 
     @Override
@@ -66,42 +65,68 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
+    public StatisticsResponse dailyForUser(Long userId) {
+        return dailyForUser(userId, todayFor(userId));
+    }
+
+    @Override
+    public StatisticsResponse weeklyForUser(Long userId) {
+        return weeklyForUser(userId, todayFor(userId));
+    }
+
+    @Override
+    public StatisticsResponse monthlyForUser(Long userId) {
+        return monthlyForUser(userId, todayFor(userId));
+    }
+
+    /** Today's date on the user's own clock (their stored UTC offset), not the server's. */
+    private LocalDate todayFor(Long userId) {
+        return LocalDate.now(zoneForUser(userId));
+    }
+
+    @Override
     public StatisticsResponse dailyForUser(Long userId, LocalDate today) {
-        return forPeriodSinceForUser(userId, today);
+        return forPeriodForUser(userId, today, today.plusDays(1));
     }
 
     @Override
     public StatisticsResponse weeklyForUser(Long userId, LocalDate today) {
-        return forPeriodSinceForUser(userId, today.minusDays(6));
+        return forPeriodForUser(userId, today.minusDays(6), today.plusDays(1));
     }
 
     @Override
     public StatisticsResponse monthlyForUser(Long userId, LocalDate today) {
-        return forPeriodSinceForUser(userId, today.minusDays(29));
+        return forPeriodForUser(userId, today.minusDays(29), today.plusDays(1));
     }
 
-    private StatisticsResponse forPeriodSinceForUser(Long userId, LocalDate fromDate) {
+    /**
+     * The period is {@code [fromDate, toExclusiveDate)} in the user's own zone. It used to be "since
+     * {@code fromDate}" with no end, so asking for a past date (the web dashboard follows a date picker)
+     * answered with the totals of everything after it, as if they were that day's.
+     */
+    private StatisticsResponse forPeriodForUser(Long userId, LocalDate fromDate, LocalDate toExclusiveDate) {
         ZoneOffset zone = zoneForUser(userId);
         Instant fromInstant = fromDate.atStartOfDay(zone).toInstant();
+        Instant toInstant = toExclusiveDate.atStartOfDay(zone).toInstant();
 
-        double totalCalories = mealRepository.sumCaloriesSince(userId, fromInstant);
-        double totalProtein = mealRepository.sumProteinSince(userId, fromInstant);
-        double totalCarbs = mealRepository.sumCarbsSince(userId, fromInstant);
-        double totalFat = mealRepository.sumFatSince(userId, fromInstant);
-        long workoutCount = workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(userId, fromInstant);
+        double totalCalories = mealRepository.sumCaloriesBetween(userId, fromInstant, toInstant);
+        double totalProtein = mealRepository.sumProteinBetween(userId, fromInstant, toInstant);
+        double totalCarbs = mealRepository.sumCarbsBetween(userId, fromInstant, toInstant);
+        double totalFat = mealRepository.sumFatBetween(userId, fromInstant, toInstant);
+        long workoutCount = workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThan(userId, fromInstant, toInstant);
         Double latestWeight = weightEntryRepository.findFirstByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(userId)
                 .map(WeightEntry::getWeight)
                 .orElse(null);
-        double totalWater = waterEntryRepository.sumVolumeLitersSince(userId, fromInstant);
+        double totalWater = waterEntryRepository.sumVolumeLitersBetween(userId, fromInstant, toInstant);
 
         // Additive fajta-bontás (docs/cardio/56-cardio-statistics-plan.md D-C3.2)
         // — workoutCount above keeps its exact pre-cardio meaning and value.
         long cardioWorkoutCount = workoutSessionRepository
-                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(userId, fromInstant, SessionKind.CARDIO);
+                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndSessionKind(userId, fromInstant, toInstant, SessionKind.CARDIO);
         long strengthWorkoutCount = workoutCount - cardioWorkoutCount;
-        long movingSeconds = workoutSessionRepository.sumMovingSecondsSince(userId, fromInstant);
-        double totalDistanceMeters = workoutSessionRepository.sumDistanceMetersSince(userId, fromInstant);
-        double totalElevationGainMeters = workoutSessionRepository.sumElevationGainMetersSince(userId, fromInstant);
+        long movingSeconds = workoutSessionRepository.sumMovingSecondsBetween(userId, fromInstant, toInstant);
+        double totalDistanceMeters = workoutSessionRepository.sumDistanceMetersBetween(userId, fromInstant, toInstant);
+        double totalElevationGainMeters = workoutSessionRepository.sumElevationGainMetersBetween(userId, fromInstant, toInstant);
 
         return new StatisticsResponse(totalCalories, totalProtein, totalCarbs, totalFat,
                 (int) workoutCount, latestWeight, totalWater,

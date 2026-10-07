@@ -87,7 +87,7 @@ export function AvatarUploader() {
             className="absolute inset-0 flex items-center justify-center"
             style={{ background: "rgba(0,0,0,.35)" }}
           >
-            <span className="material-symbols-rounded animate-spin text-white text-lg">
+            <span aria-hidden="true" className="material-symbols-rounded animate-spin text-white text-lg">
               progress_activity
             </span>
           </div>

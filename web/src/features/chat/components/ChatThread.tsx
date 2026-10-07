@@ -369,7 +369,7 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onIn
             {onInfo && <IconButton icon="info" label={t("clientInfo")} onClick={onInfo} />}
             {conversation.peer.role === "CLIENT" && !onInfo && (
               <Link href={`/admin/clients/${conversation.peer.userId}`} title={t("openClient")} aria-label={t("openClient")} className="inline-flex h-9 w-9 items-center justify-center" style={{ borderRadius: "var(--r-control)", color: "var(--text-2)" }}>
-                <span className="material-symbols-rounded text-[21px]">person</span>
+                <span aria-hidden="true" className="material-symbols-rounded text-[21px]">person</span>
               </Link>
             )}
           </>

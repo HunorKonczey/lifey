@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/format/first_character.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
@@ -137,7 +138,7 @@ class _CardContent extends StatelessWidget {
                         backgroundColor: scheme.tertiaryContainer,
                         child: Text(
                           invite.trainerEmail.isNotEmpty
-                              ? invite.trainerEmail[0].toUpperCase()
+                              ? firstCharacterUpper(invite.trainerEmail)
                               : '?',
                           style: TextStyle(
                             fontWeight: FontWeight.w800,

@@ -8,6 +8,7 @@ import '../../../../shared/widgets/ds/list_group.dart';
 import '../../../../shared/widgets/ds/section_label.dart';
 import '../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../domain/workout_session.dart';
+import '../../../../core/utils/date_math.dart';
 
 /// A trainer-scheduled session within the client's 7-day visibility window
 /// (docs/personal_trainer/08-utemezett-edzesek-koncepcio.md §"Az egyhetes
@@ -18,7 +19,7 @@ bool isWithinUpcomingWindow(WorkoutSession session) {
   if (!session.isUpcoming) return false;
   final day = _dateOnly(session.scheduledFor!.toLocal());
   final today = _dateOnly(DateTime.now());
-  final horizon = today.add(const Duration(days: 6));
+  final horizon = addDays(today, 6);
   return !day.isBefore(today) && !day.isAfter(horizon);
 }
 
@@ -92,7 +93,7 @@ class UpcomingSessionsSection extends StatelessWidget {
   static String _dayLabel(DateTime day, AppLocalizations l10n) {
     final today = _dateOnly(DateTime.now());
     if (day == today) return l10n.todayGroupLabel;
-    if (day == today.add(const Duration(days: 1))) return l10n.tomorrowGroupLabel;
+    if (day == addDays(today, 1)) return l10n.tomorrowGroupLabel;
     return DateFormat('EEEE').format(day);
   }
 }

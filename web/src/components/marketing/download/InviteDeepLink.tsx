@@ -66,7 +66,7 @@ export function InviteDeepLinkOverlay() {
       style={{ background: "var(--bg)" }}
     >
       <div className="flex flex-col items-center gap-4">
-        <span
+        <span aria-hidden="true"
           className="material-symbols-rounded text-5xl animate-pulse"
           style={{ color: "var(--role)" }}
         >

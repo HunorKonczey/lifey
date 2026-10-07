@@ -35,8 +35,10 @@ export function formatPace(meters: number, durationSeconds: number): string | nu
   if (meters <= 0) return null;
   const secondsPerKm = durationSeconds / (meters / METERS_PER_KM);
   if (!Number.isFinite(secondsPerKm)) return null;
-  const minutes = Math.floor(secondsPerKm / 60);
-  const seconds = Math.round(secondsPerKm % 60);
+  // Rounded as a whole first: rounding only the remainder turns 5:59.6 into "5:60".
+  const totalSeconds = Math.round(secondsPerKm);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")} /km`;
 }
 

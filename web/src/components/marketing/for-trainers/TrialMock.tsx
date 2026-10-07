@@ -22,11 +22,11 @@ export async function TrialMock() {
 
       <div className="flex flex-col gap-2 mt-4">
         <div className="flex items-center gap-2.5 rounded-md px-3 py-2.5" style={{ background: "var(--nested)" }}>
-          <span className="material-symbols-rounded text-lg" style={{ color: "var(--primary)" }}>credit_card_off</span>
+          <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ color: "var(--primary)" }}>credit_card_off</span>
           <span className="text-[12.5px] font-bold">{t("mockNoCard")}</span>
         </div>
         <div className="flex items-center gap-2.5 rounded-md px-3 py-2.5" style={{ background: "var(--nested)" }}>
-          <span className="material-symbols-rounded text-lg" style={{ color: "var(--primary)" }}>how_to_reg</span>
+          <span aria-hidden="true" className="material-symbols-rounded text-lg" style={{ color: "var(--primary)" }}>how_to_reg</span>
           <span className="text-[12.5px] font-bold">{t("mockYouChoose")}</span>
         </div>
       </div>

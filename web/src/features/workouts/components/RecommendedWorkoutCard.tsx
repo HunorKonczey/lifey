@@ -32,7 +32,7 @@ export function RecommendedWorkoutCard({
         className="flex items-center justify-center w-11 h-11 rounded-[var(--r-control)] shrink-0"
         style={{ background: "color-mix(in srgb, var(--primary) 18%, transparent)" }}
       >
-        <span className="material-symbols-rounded text-2xl" style={{ color: "var(--primary)" }}>
+        <span aria-hidden="true" className="material-symbols-rounded text-2xl" style={{ color: "var(--primary)" }}>
           bolt
         </span>
       </div>
@@ -42,7 +42,7 @@ export function RecommendedWorkoutCard({
         </p>
         <p className="text-base font-extrabold truncate">{template.name}</p>
       </div>
-      <span className="material-symbols-rounded text-3xl shrink-0" style={{ color: "var(--primary)" }}>
+      <span aria-hidden="true" className="material-symbols-rounded text-3xl shrink-0" style={{ color: "var(--primary)" }}>
         {starting ? "hourglass_empty" : "play_circle"}
       </span>
     </button>

@@ -38,7 +38,7 @@ export async function AppFeatureGrid() {
               className="rounded-lg border border-outline p-4 md:p-6 flex md:block gap-3"
               style={{ background: "var(--bg)" }}
             >
-              <span
+              <span aria-hidden="true"
                 className="material-symbols-rounded text-2xl md:text-[28px] shrink-0"
                 style={{ color: "var(--role)", fontVariationSettings: "'FILL' 1" }}
               >

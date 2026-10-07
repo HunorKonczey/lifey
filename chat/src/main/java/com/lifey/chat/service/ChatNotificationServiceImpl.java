@@ -218,12 +218,18 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
         return hungarian ? unread + " új üzenet" : unread + " new messages";
     }
 
-    private static String truncate(String body) {
+    static String truncate(String body) {
         if (body == null) {
             return "";
         }
-        return body.length() > PUSH_BODY_MAX_LENGTH
-                ? body.substring(0, PUSH_BODY_MAX_LENGTH - 1) + "…"
-                : body;
+        if (body.length() <= PUSH_BODY_MAX_LENGTH) {
+            return body;
+        }
+        int end = PUSH_BODY_MAX_LENGTH - 1;
+        // Never cut an emoji in half: a lone high surrogate reaches the phone as a "?".
+        if (Character.isHighSurrogate(body.charAt(end - 1))) {
+            end--;
+        }
+        return body.substring(0, end) + "…";
     }
 }

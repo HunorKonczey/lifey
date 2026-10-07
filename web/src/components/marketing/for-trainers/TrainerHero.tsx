@@ -22,7 +22,7 @@ export async function TrainerHero() {
           className="inline-flex items-center gap-2 h-8 px-3.5 rounded-pill text-[12.5px] font-extrabold tracking-wide"
           style={{ background: "var(--nested)", color: "var(--primary)" }}
         >
-          <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <span aria-hidden="true" className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
             groups
           </span>
           {t("eyebrow").toUpperCase()}
@@ -69,7 +69,7 @@ export async function TrainerHero() {
           className="flex items-center justify-center gap-2.5 mt-4 md:mt-5 text-sm font-semibold"
           style={{ color: "var(--text-3)" }}
         >
-          <span
+          <span aria-hidden="true"
             className="material-symbols-rounded text-lg"
             style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
           >

@@ -34,6 +34,12 @@ void main() {
       expect(_peer(displayName: '').monogram, 'A');
     });
 
+    test('keeps an emoji whole when the name starts with one', () {
+      // `name[0]` would be half of the surrogate pair, which Text refuses to lay out.
+      final muscle = String.fromCharCode(0x1F4AA);
+      expect(_peer(displayName: '$muscle Fit Joe').monogram, '${muscle}F');
+    });
+
     test('never throws when there is nothing to work with', () {
       expect(_peer(displayName: '', email: '').monogram, '?');
     });

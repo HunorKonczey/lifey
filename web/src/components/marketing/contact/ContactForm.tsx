@@ -67,7 +67,7 @@ export function ContactForm({
         className="rounded-lg p-6 md:p-7 flex items-center gap-3"
         style={{ background: "var(--card)", border: "1px solid var(--outline)" }}
       >
-        <span
+        <span aria-hidden="true"
           className="material-symbols-rounded text-2xl"
           style={{ color: "var(--primary)", fontVariationSettings: "'FILL' 1" }}
         >

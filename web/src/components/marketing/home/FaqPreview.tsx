@@ -28,7 +28,7 @@ export async function FaqPreview() {
             >
               <summary className="flex items-center gap-4 cursor-pointer list-none">
                 <span className="text-base md:text-[19px] font-bold flex-1">{item.q}</span>
-                <span
+                <span aria-hidden="true"
                   className="material-symbols-rounded text-2xl md:text-[26px] shrink-0 transition-transform duration-150 group-open:rotate-180"
                   style={{ color: "var(--primary)" }}
                 >

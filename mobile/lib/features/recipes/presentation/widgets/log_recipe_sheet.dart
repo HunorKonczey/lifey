@@ -350,9 +350,9 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
             Text(
               l10n.recipeMacrosPreviewLabel(
                 _scaledTotal((i) => i.calories).round().toString(),
-                _scaledTotal((i) => i.protein).toStringAsFixed(1),
-                _scaledTotal((i) => i.carbs).toStringAsFixed(1),
-                _scaledTotal((i) => i.fat).toStringAsFixed(1),
+                LifeyFormat.of(context).decimal(_scaledTotal((i) => i.protein), 1),
+                LifeyFormat.of(context).decimal(_scaledTotal((i) => i.carbs), 1),
+                LifeyFormat.of(context).decimal(_scaledTotal((i) => i.fat), 1),
               ),
               style: Theme.of(context).textTheme.bodyMedium,
             ),

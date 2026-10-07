@@ -284,6 +284,9 @@ lifey:
     password-reset-cleanup:
       # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).
       cron: ${JOB_PASSWORD_RESET_CLEANUP_CRON:0 0 3 * * *}
+    idempotency-cleanup:
+      # Daily sweep removing replay records of the Idempotency-Key header (IdempotencyKeyCleanupJob).
+      cron: ${JOB_IDEMPOTENCY_CLEANUP_CRON:0 15 3 * * *}
     trainer-weekly-report:
       # Weekly trainer report email, every Monday (TrainerWeeklyReportJob).
       cron: ${JOB_TRAINER_WEEKLY_REPORT_CRON:0 0 5 * * MON}
@@ -292,7 +295,7 @@ lifey:
       cron: ${JOB_TRAINER_CLIENT_CLEANUP_CRON:0 30 3 * * *}
     workout-reminder:
       # Per-user-local-time workout reminder tick, every 15 minutes (WorkoutReminderJob).
-      cron: ${JOB_WORKOUT_REMINDER_CRON:0 0 * * * *}
+      cron: ${JOB_WORKOUT_REMINDER_CRON:0 */15 * * * *}
     billing-reconciliation:
       # Daily billing safety net, 03:30 Europe/Budapest — trial expiry (64
       # Prompt 7) plus the provider re-fetch/diff/metrics sweep (64 Prompt 11).

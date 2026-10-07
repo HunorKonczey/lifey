@@ -68,6 +68,27 @@ async function refreshOnce(): Promise<string | null> {
   return refreshPromise;
 }
 
+/**
+ * Endpoints whose 401 is about the credentials sent *to them* (a wrong password, a refresh token that is
+ * revoked or expired), never about an expired access token. Sending one of these through the refresh path
+ * is worse than pointless for `/auth/refresh`: the refresher is itself waiting on that very request, so
+ * the request would wait on the refresh it is part of and neither would ever settle — every request after it
+ * queued behind the same in-flight refresh, and the tab froze instead of going back to the login page.
+ */
+const NO_REFRESH_PATHS = [
+  "/auth/refresh",
+  "/auth/login",
+  "/auth/register",
+  "/auth/social/google",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+];
+
+function skipsRefresh(path: string): boolean {
+  const pathname = path.split("?")[0];
+  return NO_REFRESH_PATHS.includes(pathname);
+}
+
 interface RequestConfig {
   retry?: boolean;
   /** "blob" for binary responses (e.g. the profile picture) — skips JSON parsing. */
@@ -112,7 +133,7 @@ async function request<T>(
 
   // Only attempt refresh if we had an active token that may have expired.
   // A 401 without an active token means bad credentials, not an expired session.
-  if (res.status === 401 && retry && accessToken) {
+  if (res.status === 401 && retry && accessToken && !skipsRefresh(path)) {
     const newToken = await refreshOnce();
     if (newToken) {
       setAccessToken(newToken);
@@ -166,32 +187,43 @@ function chatRequest<T>(path: string, init: RequestInit = {}, config: RequestCon
  * behaves like an ordinary fetch.
  */
 export function keepaliveDelete(path: string): Promise<void> {
-  const headers: Record<string, string> = {};
-  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-  return fetch(`${env.NEXT_PUBLIC_API_BASE_URL}${path}`, {
-    method: "DELETE",
-    headers,
-    credentials: "include",
-    keepalive: true,
-  }).then((res) => {
-    if (!res.ok) throw new ApiError(res.status, "UNKNOWN", res.statusText);
-  });
+  return keepaliveRequest("DELETE", path);
 }
 
 /** `keepaliveDelete`'s sibling for an edit that is deferred behind an undo toast — e.g. removing one
  *  item from a meal is a PUT of the shortened list, sent once the undo window closes. */
 export function keepalivePut(path: string, body: unknown): Promise<void> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-  return fetch(`${env.NEXT_PUBLIC_API_BASE_URL}${path}`, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify(body),
-    credentials: "include",
-    keepalive: true,
-  }).then((res) => {
-    if (!res.ok) throw new ApiError(res.status, "UNKNOWN", res.statusText);
-  });
+  return keepaliveRequest("PUT", path, body);
+}
+
+/**
+ * The deferred write goes out on whatever access token the tab holds, and a tab left idle for longer than the
+ * token's life holds an expired one: the delete after "undo" ran out was refused with a 401 and reported as a
+ * failure, so the item came back and the user had to do it all again. Like the normal client, one refresh and
+ * one retry on a 401.
+ */
+async function keepaliveRequest(method: "DELETE" | "PUT", path: string, body?: unknown): Promise<void> {
+  const send = () => {
+    const headers: Record<string, string> = body === undefined ? {} : { "Content-Type": "application/json" };
+    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    return fetch(`${env.NEXT_PUBLIC_API_BASE_URL}${path}`, {
+      method,
+      headers,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      credentials: "include",
+      keepalive: true,
+    });
+  };
+
+  let res = await send();
+  if (res.status === 401 && accessToken) {
+    const newToken = await refreshOnce();
+    if (newToken) {
+      setAccessToken(newToken);
+      res = await send();
+    }
+  }
+  if (!res.ok) throw new ApiError(res.status, "UNKNOWN", res.statusText);
 }
 
 export const api = {

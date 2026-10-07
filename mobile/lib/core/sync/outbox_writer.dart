@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../local_db/app_database.dart';
 import '../local_db/database_provider.dart';
 import 'entity_sync_config.dart';
+import 'outbox_dependencies.dart';
 import 'sync_engine.dart';
 import 'sync_engine_provider.dart';
 
@@ -114,9 +115,16 @@ class OutboxWriter {
   /// Resets every failed operation for [clientId] back to `pending` (and
   /// clears [PendingOperationRow.lastError]), then kicks the engine so the
   /// retry happens immediately rather than waiting for the next trigger.
+  ///
+  /// Failed operations of everything [clientId] waits on are reset too: an
+  /// entity stuck behind a rejected create shows as failed itself (see
+  /// `syncStatusByClientIdProvider`), and retrying only its own, never-sent
+  /// operation would change nothing.
   Future<void> retry(String clientId) async {
+    final ops = await _db.select(_db.pendingOperations).get();
+    final ids = {clientId, ...outboxAncestors(clientId, ops)};
     await (_db.update(_db.pendingOperations)
-          ..where((t) => t.clientId.equals(clientId) & t.status.equals('failed')))
+          ..where((t) => t.clientId.isIn(ids) & t.status.equals('failed')))
         .write(const PendingOperationsCompanion(
       status: Value('pending'),
       lastError: Value(null),

@@ -29,7 +29,7 @@ export async function ClientsMock() {
             className="h-8.5 rounded-pill flex items-center gap-2 px-3 text-xs mb-3"
             style={{ background: "var(--nested)", color: "var(--text-3)" }}
           >
-            <span className="material-symbols-rounded text-base">search</span>
+            <span aria-hidden="true" className="material-symbols-rounded text-base">search</span>
             {t("mockSearch")}
           </div>
           <div className="flex flex-col gap-1.5">
@@ -129,7 +129,7 @@ export async function ClientsMock() {
                 { icon: "directions_run", name: "Futás · 6,2 km", meta: "aug. 21. · 34 perc", color: "var(--m-water)" },
               ].map((w) => (
                 <div key={w.name} className="flex items-center gap-2.5">
-                  <span className="material-symbols-rounded text-base" style={{ color: w.color, fontVariationSettings: "'FILL' 1" }}>
+                  <span aria-hidden="true" className="material-symbols-rounded text-base" style={{ color: w.color, fontVariationSettings: "'FILL' 1" }}>
                     {w.icon}
                   </span>
                   <span className="text-[11.5px] font-bold flex-1">{w.name}</span>

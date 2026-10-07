@@ -71,19 +71,23 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
 
     long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(Long userId, Instant from);
 
+    /** Sessions started in {@code [from, toExclusive)} — the statistics periods. */
+    long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThan(
+            Long userId, Instant from, Instant toExclusive);
+
     /**
-     * Same as {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual},
+     * Same as {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThan},
      * scoped to one {@link SessionKind} — the statistics fajta-bontás
      * (docs/cardio/56-cardio-statistics-plan.md §2, D-C3.2). Only the CARDIO
      * count is queried; strengthWorkoutCount is derived as
      * {@code workoutCount - cardioWorkoutCount} in the service, since every
      * session has exactly one of the two {@link SessionKind} values.
      */
-    long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(
-            Long userId, Instant from, SessionKind kind);
+    long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndSessionKind(
+            Long userId, Instant from, Instant toExclusive, SessionKind kind);
 
     /**
-     * Σ moving_seconds over the same "since" window — the mozgásidő the
+     * Σ moving_seconds over the same window — the mozgásidő the
      * statistics `movingMinutes` field uses for cardio
      * (docs/cardio/56-cardio-statistics-plan.md D-C3.3), not the wall-clock
      * startedAt/finishedAt span. {@link WorkoutSession#movingSeconds} is
@@ -93,9 +97,10 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
      */
     @Query("""
             select coalesce(sum(w.movingSeconds), 0) from WorkoutSession w
-            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            where w.user.id = :userId and w.deletedAt is null
+              and w.startedAt >= :from and w.startedAt < :toExclusive
             """)
-    long sumMovingSecondsSince(@Param("userId") Long userId, @Param("from") Instant from);
+    long sumMovingSecondsBetween(@Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
 
     /**
      * Σ distance_meters over the same window, joined through
@@ -109,16 +114,18 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
      */
     @Query("""
             select coalesce(sum(c.distanceMeters), 0) from WorkoutSession w join w.cardioDetails c
-            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            where w.user.id = :userId and w.deletedAt is null
+              and w.startedAt >= :from and w.startedAt < :toExclusive
             """)
-    double sumDistanceMetersSince(@Param("userId") Long userId, @Param("from") Instant from);
+    double sumDistanceMetersBetween(@Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
 
-    /** Same as {@link #sumDistanceMetersSince}, for elevation gain. */
+    /** Same as {@link #sumDistanceMetersBetween}, for elevation gain. */
     @Query("""
             select coalesce(sum(c.elevationGainMeters), 0) from WorkoutSession w join w.cardioDetails c
-            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            where w.user.id = :userId and w.deletedAt is null
+              and w.startedAt >= :from and w.startedAt < :toExclusive
             """)
-    double sumElevationGainMetersSince(@Param("userId") Long userId, @Param("from") Instant from);
+    double sumElevationGainMetersBetween(@Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
 
     /**
      * Completed (not just started) sessions in a range — weekly trainer report
@@ -134,7 +141,7 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
      * strength/cardio breakdown line (docs/cardio/56-cardio-statistics-plan.md
      * §6 ST9). Only the CARDIO count is queried; the strength count is derived
      * as {@code completedWorkouts - cardioWorkouts} in the service, mirroring
-     * {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind}.
+     * {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndSessionKind}.
      */
     long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNullAndSessionKind(
             Long userId, Instant from, Instant toExclusive, SessionKind kind);
