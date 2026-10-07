@@ -1,6 +1,6 @@
 # 50 – F6c terv: a session élő gyakorlatlistája az órán
 
-Státusz: **kód kész (2026-08-05), eszközös végpróba hátravan.** Két lépésben: az id-alapú session-terv (§1–§5), majd a rá épülő **gyakorlat-választó a telefonról indított edzésben** is (§6). `flutter test` 508 zöld, `flutter analyze` tiszta, `:app:` + `:wear:compileDebugKotlin` és a teljes `LifeyWatch` típusellenőrzés hibátlan.
+Státusz: **kód kész (2026-08-05); a telefonról indított edzés fele Android emulátoron végigpróbálva 2026-10-07-én (LIF-90, §8) — a watch-ről indított (standalone) ág, a törlés és az iOS hátravan.** Két lépésben: az id-alapú session-terv (§1–§5), majd a rá épülő **gyakorlat-választó a telefonról indított edzésben** is (§6). `flutter test` 508 zöld, `flutter analyze` tiszta, `:app:` + `:wear:compileDebugKotlin` és a teljes `LifeyWatch` típusellenőrzés hibátlan.
 
 Kapcsolódó dokumentumok:
 - [49-watch-f6b-template-sync-plan.md](49-watch-f6b-template-sync-plan.md) — a template-sync és a gyakorlat-lista (§3.5, D-F6b.8), plusz az „Utólagos kiegészítés: gyakorlat-lista és a telefonon szerkesztett terv" szakasz, ami az F6c előtti félmegoldást (elrejtés) írja le.
@@ -113,3 +113,23 @@ Ami ehhez bekerült:
 
 - A gyakorlatok **sorrendjének** átrendezése a telefonon: az id-alapú attribúció bírná, de a telefon UI-ja ma nem kínálja.
 - Eszközös végpróba (mindkét platform): hozzáadás/törlés a telefonon futó edzés közben, kézi váltás az órán **mindkét indítási módban**, a metrikák-lapról nyitott lista, offline óra, régi/új build párosítás.
+
+---
+
+## 8. Eszközös végpróba — 2026-10-07 (LIF-90)
+
+Pixel 10 (telefon) + Wear OS Large Round emulátor (454 × 454, API 36), a telefon Google Play services-ével párosítva (`adb forward tcp:5601 tcp:5601` + a Wear companion app; a telefon a `LifeyWatchBridge` logban „1 target node”-ot lát). Debug build a helyi backenddel; a Wear APK `./gradlew :wear:installDebug` (`ANDROID_SERIAL` az óra, `JAVA_HOME` az Android Studio JBR-je).
+
+**Működött**
+- Telefonról indított edzés (a kliens „Upper A” sablonja, Bench Press + Barbell Row): az óra magától elindítja a saját session-jét (STRENGTH → „UPPER A”, óraidő, pulzus, kcal), a telefon fejlécén megjelennek az élő óra-adatok (♥ 75, 🔥 1).
+- **Session-terv a telefonról (§1–§3, §6):** a telefonon az edzés közben hozzáadott **Bicep Curl** megjelenik az órán a „Exercises” listában (Bench Press · Barbell Row · Bicep Curl, mind „0/3 sets”) — ez a F6c eredeti bejelentése.
+- A gyakorlat-lista a **főlapon a gyakorlat-kártyára koppintva** nyílik (§6 vége), nem csak szünetelve.
+- **Választás órán → telefon:** a lista egy elemére koppintva az órán a lista pipával jelöli a választást, és a telefon **ongoing értesítése átáll** a kiválasztott gyakorlatra („Bicep Curl · 0/3”) — vagyis a `exerciseSelected` üzenet megérkezett, és a telefon `_watchCurrentExerciseClientId`-ja átállt.
+
+**Eltérés / nyitott megfigyelések (nem javítva)**
+- **Az óra főlapja a saját választását nem mutatja.** A választás után az óra főlapja („Bench Press 0/3”) percekig a **Bench Press**-t mutatta, miközben a lista a másikat jelölte és a telefon már a Bicep Curl-re állt. A kód alapján (`SessionStateHolder.currentExerciseId` → `phoneSelectedExerciseId ?: phoneCurrentExerciseId`) a lokális választásnak itt győznie kellene; az okot nem derítettem ki — lehet, hogy a főlap nevét a telefon `exerciseName` mezője hajtja (a telefon state-push-a a tervezettnél lassabban érkezik, vagy a választás előtti nevet viszi).
+- **A telefon fejléce élő óra-adatokkal:** a cím („Upper A · 1 of 3 exercises”) olvashatatlanul apróra zsugorodik a pulzus- és kcal-chipek mellett, és három számjegyű kcal-nál debug módban „RIGHT OVERFLOWED BY 1.9 PIXELS” sáv jelenik meg a sorban.
+- **Az első kísérletben** a már telepített óra-build szünetelve sem kínált gyakorlat-listát; a jelenlegi build újratelepítése (`:wear:installDebug`) után működött. Nem derítettem ki, hogy a régi build F6c előtti volt-e.
+
+**Nem lefedett:** az órán indított (standalone, telefon által átvett) edzés; gyakorlat **törlése** a telefonon; óra szettnaplózása és annak gyakorlathoz rendelése phone-mastered edzésben (ezen a lapon az óra nem kínál naplózó gombot); offline óra; régi/új build párosítás; Apple Watch / iOS (`Mac` kell).
+
