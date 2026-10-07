@@ -147,9 +147,15 @@ class _Pane extends ConsumerWidget {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadius.control),
-              child: bytes == null
-                  ? ColoredBox(color: p.nested, child: Icon(Icons.photo_outlined, color: p.text3))
-                  : Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true),
+              // `contain`, not `cover`: two photos are only comparable when each
+              // is whole, and a frame of another shape must not hide a slice
+              // of the body (LIF-124).
+              child: ColoredBox(
+                color: p.nested,
+                child: bytes == null
+                    ? Icon(Icons.photo_outlined, color: p.text3)
+                    : Image.memory(bytes, fit: BoxFit.contain, gaplessPlayback: true),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.s8),

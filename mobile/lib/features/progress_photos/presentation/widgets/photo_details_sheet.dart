@@ -110,7 +110,12 @@ class _PhotoDetailsSheetState extends ConsumerState<PhotoDetailsSheet> {
               height: 160,
               child: ClipRRect(
                 borderRadius: AppRadius.cardAll,
-                child: Image.file(file, fit: BoxFit.cover, errorBuilder: (_, __, ___) => ColoredBox(color: p.nested)),
+                // `contain`: the preview is for checking the shot, so it shows
+                // the whole photo instead of a slice of it (LIF-124).
+                child: ColoredBox(
+                  color: p.nested,
+                  child: Image.file(file, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.s16),

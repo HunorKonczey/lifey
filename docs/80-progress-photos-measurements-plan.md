@@ -237,3 +237,9 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
 3. Consider before release: the photo list is unpaged (fine for hundreds, revisit with a cap). The Weight header
    turned out to have a single action button (Body), and at a 1.5× system font scale the title, tabs and chips all
    fit; the only casualty is the timeline tile caption, which truncates to "okt. 7. · …" and drops the pose name.
+   **The three small things from the LIF-88 walk are fixed (LIF-124):** the tile caption puts the pose on a second
+   line when "date · pose" does not fit the tile (measured, not a fixed scale); the add-measurement sheet scrolls
+   Save back into view as the keyboard comes up (checked on the Pixel 10 at 1.5× with the keyboard and its banner
+   up); the photo-details preview and both Compare panes use `contain` on the neutral surface, so a photo is shown
+   whole (the grid thumbnails stay `cover`). The tile caption and the photo fits are covered by widget tests only,
+   not re-walked on the emulator (no photos in that cache).

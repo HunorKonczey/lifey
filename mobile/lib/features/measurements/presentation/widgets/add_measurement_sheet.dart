@@ -34,7 +34,7 @@ class AddMeasurementSheet extends ConsumerStatefulWidget {
   ConsumerState<AddMeasurementSheet> createState() => _AddMeasurementSheetState();
 }
 
-class _AddMeasurementSheetState extends ConsumerState<AddMeasurementSheet> {
+class _AddMeasurementSheetState extends ConsumerState<AddMeasurementSheet> with WidgetsBindingObserver {
   late MeasurementSite _site = widget.initialSite;
   final _now = DateTime.now();
   late DateTime _date = _now;
@@ -42,11 +42,33 @@ class _AddMeasurementSheetState extends ConsumerState<AddMeasurementSheet> {
   bool _invalid = false;
   bool _submitting = false;
   String? _submitError;
+  final _saveKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _text.dispose();
     super.dispose();
+  }
+
+  /// The sheet is as tall as its content, so with the keyboard up on a phone
+  /// the lower part of Save used to sit behind it until the person scrolled
+  /// (LIF-124). Each step of the keyboard's animation, scroll Save back into
+  /// the room that is left.
+  @override
+  void didChangeMetrics() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final saveContext = _saveKey.currentContext;
+      if (saveContext == null || MediaQuery.viewInsetsOf(context).bottom == 0) return;
+      Scrollable.ensureVisible(saveContext, duration: Duration.zero);
+    });
   }
 
   Future<void> _pickDate() async {
@@ -145,6 +167,7 @@ class _AddMeasurementSheetState extends ConsumerState<AddMeasurementSheet> {
         ],
         const SizedBox(height: AppSpacing.s24),
         SizedBox(
+          key: _saveKey,
           height: 56,
           child: FilledButton(
             onPressed: _submitting ? null : _submit,
