@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,6 +59,16 @@ class _FakeTemplateController extends WorkoutTemplateController {
 
   @override
   Stream<List<WorkoutTemplate>> build() => Stream.value(_templates);
+}
+
+/// A template list the test can re-emit, the way the 60 s foreground sync does.
+class _LiveTemplateController extends WorkoutTemplateController {
+  _LiveTemplateController(this._source);
+
+  final StreamController<List<WorkoutTemplate>> _source;
+
+  @override
+  Stream<List<WorkoutTemplate>> build() => _source.stream;
 }
 
 /// The tab also reads the client's program runs (T6), so a test of it needs
@@ -158,6 +170,7 @@ Future<void> _pump(
   double textScale = 1,
   ThemeData? theme,
   Size size = const Size(420, 1000),
+  StreamController<List<WorkoutTemplate>>? liveTemplates,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -170,7 +183,9 @@ Future<void> _pump(
         programsRepositoryProvider
             .overrideWithValue(programs ?? _FakeProgramsRepository()),
         workoutTemplateControllerProvider
-            .overrideWith(() => _FakeTemplateController(templates)),
+            .overrideWith(() => liveTemplates == null
+                ? _FakeTemplateController(templates)
+                : _LiveTemplateController(liveTemplates)),
       ],
       child: MaterialApp(
         theme: theme ?? AppTheme.dark,
@@ -421,7 +436,7 @@ void main() {
 
       await tester.tap(find.text('Schedule'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(DropdownButtonFormField<WorkoutTemplate>));
+      await tester.tap(find.byType(DropdownButtonFormField<int>));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Push day').last);
       await tester.pumpAndSettle();
@@ -432,6 +447,71 @@ void main() {
       expect(repo.lastCreate!['clientId'], 7);
       expect(repo.lastCreate!['templateId'], 100);
       expect(repo.lastCreate!['recurrence'], ScheduleRecurrence.once);
+    });
+
+    // LIF-127: the foreground sync re-emits the list as fresh instances.
+    // WorkoutTemplate has no `==`, so a dropdown holding the instance threw.
+    testWidgets('keeps the chosen template when the list is re-emitted',
+        (tester) async {
+      final repo = _FakeScheduleRepository();
+      final live = StreamController<List<WorkoutTemplate>>();
+      addTearDown(live.close);
+      live.add(const [template]);
+      await _pump(tester, repo: repo, liveTemplates: live);
+
+      await tester.tap(find.text('Schedule'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<int>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Push day').last);
+      await tester.pumpAndSettle();
+
+      // Not const: a const twin would be the very same instance and hide it.
+      live.add([
+        // ignore: prefer_const_constructors
+        WorkoutTemplate(
+          clientId: 'local-1',
+          id: 100,
+          name: 'Push day',
+          exercises: <TemplateExercise>[],
+        ),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Push day'), findsWidgets);
+      await tester.tap(find.text('Create schedule'));
+      await tester.pumpAndSettle();
+      expect(repo.lastCreate!['templateId'], 100);
+    });
+
+    testWidgets('drops the choice when the template leaves the list',
+        (tester) async {
+      final live = StreamController<List<WorkoutTemplate>>();
+      addTearDown(live.close);
+      live.add(const [
+        template,
+        WorkoutTemplate(clientId: 'local-2', id: 101, name: 'Pull day', exercises: []),
+      ]);
+      await _pump(tester, repo: _FakeScheduleRepository(), liveTemplates: live);
+
+      await tester.tap(find.text('Schedule'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<int>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Push day').last);
+      await tester.pumpAndSettle();
+
+      live.add(const [
+        WorkoutTemplate(clientId: 'local-2', id: 101, name: 'Pull day', exercises: []),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final button = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Create schedule'),
+      );
+      expect(button.onPressed, isNull);
     });
 
     testWidgets('explains itself when there is no template to schedule',
