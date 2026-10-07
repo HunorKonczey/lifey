@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../local_db/app_database.dart';
 import '../local_db/database_provider.dart';
+import 'outbox_dependencies.dart';
 
 enum SyncState { pending, syncing, failed }
 
@@ -38,6 +39,15 @@ final syncStatusByClientIdProvider = Provider<Map<String, EntitySyncStatus>>((re
     if (current == null || (state == SyncState.failed && current.state != SyncState.failed)) {
       result[op.clientId] = EntitySyncStatus(state: state, lastError: op.lastError);
     }
+  }
+  // An operation waiting on a create that failed for good never goes out and
+  // never says so: its own row stays a neutral `pending`, so a meal logged
+  // with a food that was rejected looked like it was syncing for ever. It is
+  // surfaced as failed with the root cause, and its retry retries the cause
+  // ([OutboxWriter.retry]).
+  for (final entry in blockedByFailure(ops).entries) {
+    if (result[entry.key]?.state == SyncState.failed) continue;
+    result[entry.key] = EntitySyncStatus(state: SyncState.failed, lastError: entry.value);
   }
   return result;
 });

@@ -16,6 +16,7 @@ class _ScriptedAdapter implements HttpClientAdapter {
 
   final List<int> statuses;
   int calls = 0;
+  final sentHeaders = <Map<String, dynamic>>[];
 
   @override
   void close({bool force = false}) {}
@@ -28,6 +29,7 @@ class _ScriptedAdapter implements HttpClientAdapter {
   ) async {
     final status = statuses[calls < statuses.length ? calls : statuses.length - 1];
     calls++;
+    sentHeaders.add(Map.of(options.headers));
     return ResponseBody.fromString(
       status == 200 ? '{"id": 7}' : '{"message": "boom"}',
       status,
@@ -81,6 +83,21 @@ void main() {
       expect(await db.select(db.pendingOperations).get(), isEmpty);
     });
   }
+
+  test('a create carries its clientId as Idempotency-Key on every attempt, so a retry cannot duplicate it', () async {
+    // The first attempt may have reached the server with only the answer lost: the retry must be
+    // recognisable as the same operation.
+    final adapter = _ScriptedAdapter([504, 200]);
+    dio.httpClientAdapter = adapter;
+    final engine = SyncEngine(db, dio);
+    await enqueueWeight();
+
+    await engine.sync();
+    await engine.sync();
+
+    expect(adapter.calls, 2);
+    expect(adapter.sentHeaders.map((h) => h['Idempotency-Key']), ['c1', 'c1']);
+  });
 
   for (final status in [400, 403, 404, 409, 500]) {
     test('a $status stays parked until someone retries it', () async {

@@ -8,6 +8,9 @@ import 'client_ref.dart';
 import 'entity_sync_config.dart';
 import 'sync_lock.dart';
 
+/// The header the backend deduplicates creates by (`IdempotencyFilter`).
+const idempotencyKeyHeader = 'Idempotency-Key';
+
 /// HTTP answers that say "not now" rather than "no": the gateway in front of
 /// the API answers 502/503/504 while it deploys or wakes from a cold start,
 /// and 408/429 are asks to come back later. A 401 gets here only after the auth
@@ -208,7 +211,14 @@ class SyncEngine {
     }
     switch (op.operation) {
       case 'create':
-        return _dio.post<dynamic>(config.basePath, data: payload);
+        // The entity's own clientId, stable across every retry of this op: when an attempt reached the server
+        // but its answer was lost (timeout, gateway 502/503/504), the retry is answered with the first
+        // response instead of creating the entity a second time.
+        return _dio.post<dynamic>(
+          config.basePath,
+          data: payload,
+          options: Options(headers: {idempotencyKeyHeader: op.clientId}),
+        );
       case 'update':
         final serverId = await _requireServerId(config, op.clientId);
         return _dio.put<dynamic>('${config.basePath}/$serverId', data: payload);
