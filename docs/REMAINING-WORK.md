@@ -137,8 +137,10 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
   mind a 4 sor megmaradt, a szerveren `target_sets = 4` (Bench press) / `3` (Dips). Nyitva csak az iOS Live Activity koppintás
   (Apple-eszköz kell hozzá).
 - **[`80`](80-progress-photos-measurements-plan.md)** — testméretek + progress fotók: kód és tesztek kész, a Docker-es
-  `mvnw verify` lefutott (2026-10-03, 1159 teszt, zöld — V78–V81 Flyway ↔ entitás `validate` is). Hátravan az emulátoros
-  végigpróba (Body képernyő, kamera/galéria, összehasonlítás).
+  `mvnw verify` lefutott (2026-10-03, 1159 teszt, zöld — V78–V81 Flyway ↔ entitás `validate` is). Az Android emulátoros
+  végigpróba **lefutott (2026-10-07, LIF-88)**: offline mérés → szinkron, fotó galériából és kamerából, szerkesztés,
+  összehasonlítás, törlés, világos téma + magyar nyelv — mind rendben (részletek: `80` §12). Nyitva: iOS (Apple-eszköz)
+  és a tablet-elrendezés (LIF-94).
 
 ---
 
