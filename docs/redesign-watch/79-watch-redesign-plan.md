@@ -1657,3 +1657,22 @@ Bugs: none open from the comparison. **Open for the emulator pass (could not be 
 
 ### X4.fix-1 — 2026-10-02 (from the geometry check above)
 Commit `a1560e0`; the three fixes are listed under "X4 review".
+
+### Wear emulator pass — 2026-10-07 (LIF-95) — `Wear_OS_Large_Round` (454 × 454 px, 227 dp, API 36)
+
+**Setup and method.** The current debug Wear APK built and installed (`./gradlew :wear:installDebug`, `JAVA_HOME` = Android Studio's JBR, `ANDROID_SERIAL` = the watch) — so the "whole X3 / X4 compile" the two cloud reviews left open is closed. Every fixture in `galleryFrames` (40 ids: W1.1–W1.16, W1.4, W2.1–W2.14b, W2.16–W2.19, W2.22, W2.2b) was opened with `am start -n com.khunor.lifey/.debug.DesignGalleryActivity --es frame <id>` and captured with `screencap` under five conditions: 227 dp EN, 227 dp HU, 227 dp EN at font scale 1.3, **192 dp** EN and 192 dp HU (`--ei width 192`, the gallery's compact dial drawn inside the 227 dp AVD — there is **no 192 dp AVD**, so TimeText and the round mask stay those of the large dial). Contact sheets were read by eye; no canvas renders were put next to them, so "matches the canvas" is **not** claimed. The phone-driven strength flow was also walked on a paired Pixel 10 during LIF-90 (`watch/50` §8): short names ("Bench Press") rendered fine there.
+
+**Bugs (open, none fixed in this pass — each still needs an `X<n>.fix-<k>`):**
+1. **Metrics page (W1.1–W1.4, W2.16), every dial / language / scale: the exercise name breaks mid-word and collides with the heart-rate row.** "Fekvenyomás" (11 characters) wraps as "Fekvenyom / ás" beside "2/4"; at 227 dp the "bpm" of "128 bpm" overlaps the name's first line (W1.2), at 1.3× the "Heart rate off — allow sensors" pill sits on top of the name (W1.3) and at 192 dp the same. This is the Wear twin of the Apple bug fixed in `watch/79` §4 ("Quick strength" breaking mid-word). Note the real LIF-90 flow showed "Bench Press 0/3" (same length) on one line, so the cause may be the fixture's `2/4` + segment-bar layout rather than the name alone — not isolated.
+2. **Standalone metrics (W2.5): "Gyors erőedzés / Set 3 · 24 reps total" is drawn on top of the heart-rate row** ("128 bpm", "87 kcal") at both dials.
+3. **Workout-already-running error (W2.4): the body text runs under the OK EdgeButton** — at 227 dp the last line ("an exercise. Finish it first.") is cut, at 192 dp one line is visible.
+4. **Standalone log page (W2.7): the secondary "Exercises" EdgeButton overlaps the +1 / Adjust circles** at both dials (the canvas draws it below them).
+5. **Template list title (W2.6b): the first letter is clipped at the top arc** ("ʼush nap — mell és vál.").
+6. **Summary at 192 dp (W2.8, W2.9): the lower stat tiles ("avg bpm", "kcal") are cut by the bottom of the dial** while the sync row above takes three lines.
+7. **Font scale 1.3 (227 dp):** the "Couldn't log — try again" pill shows only "Couldn't log —" (W1.7b), the calorie reading is cut to "87 kca" (W1.1, W2.16), and the log page context line becomes "Fekvenyomás · S…" (W1.5–W1.7c).
+8. **Cycling (W2.11) at 227 dp:** the "ÁTLAG TELJESÍTMÉNY" label is clipped at the right edge.
+9. **On-bench game frames (W2.12, W2.13):** the heart icon touches / appears to clip at the left edge of the dial, and "Back to …" is truncated on the pill.
+
+**Looked right:** idle (W2.1), the picker (W2.2, W2.3, W2.2b), rest (W1.10, W1.11 — the last five seconds in the calories colour), the "Go!" flash, controls (W1.13, W1.14), the exercise list (W1.15), the effort scale (W1.16), adjust (W1.8, W1.9), the log states (W1.5–W1.7c), running / cycling cardio and the ambient frames (W2.17–W2.19, W2.22) in both languages. One capture (192 dp W1.3) caught the app's launch splash and was retaken.
+
+**Not done in this pass:** a real Always-on display (`KEYCODE_SLEEP`) and animations-off pass (§4.2 step 1), real flows with a long exercise name, the TimeText-overlap and 20 % chord checks against the canvas (the clock sits on the rest and "Go!" rings in W1.10–W1.12 — not compared to the canvas), a 192 dp AVD, a physical watch (§10 Q5), and the whole Apple side (needs a Mac).
