@@ -80,6 +80,11 @@ class ListRow extends StatelessWidget {
   final VoidCallback? onLongPress;
   final int subtitleMaxLines;
 
+  /// The title's style. Public so a row that has to anticipate how the title
+  /// lays out (a wide control beside it) measures what is actually drawn.
+  static TextStyle titleStyle(BuildContext context) =>
+      Theme.of(context).textTheme.titleMedium!.copyWith(fontSize: 15, height: 1.3, color: context.palette.text);
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
@@ -96,7 +101,7 @@ class ListRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title, style: t.titleMedium!.copyWith(fontSize: 15, height: 1.3, color: p.text)),
+                  Text(title, style: titleStyle(context)),
                   if (subtitle != null) ...[
                     const SizedBox(height: 3),
                     Text(

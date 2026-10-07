@@ -64,13 +64,9 @@ class SettingsChoiceRow extends StatelessWidget {
   /// 40 dp icon holder with its 14 dp gap, and the 12 dp before the trailing.
   static const double _sideChrome = 2 * AppSpacing.s16 + 40 + 14 + AppSpacing.s12;
 
-  /// The title style [ListRow] draws with, so the measurement is of what is shown.
-  static TextStyle _titleStyle(BuildContext context) =>
-      Theme.of(context).textTheme.titleMedium!.copyWith(fontSize: 15, height: 1.3);
-
   bool _titleFits(BuildContext context, double maxWidth) {
     final painter = TextPainter(
-      text: TextSpan(text: title, style: _titleStyle(context)),
+      text: TextSpan(text: title, style: ListRow.titleStyle(context)),
       textDirection: Directionality.of(context),
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
@@ -97,7 +93,7 @@ class SettingsChoiceRow extends StatelessWidget {
                 children: [
                   ListIconHolder(icon: icon, color: p.text, size: 40),
                   const SizedBox(width: 14),
-                  Expanded(child: Text(title, style: _titleStyle(context).copyWith(color: p.text))),
+                  Expanded(child: Text(title, style: ListRow.titleStyle(context))),
                 ],
               ),
               const SizedBox(height: AppSpacing.s12),
