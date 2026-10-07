@@ -45,7 +45,10 @@ class CreateScheduleSheet extends ConsumerStatefulWidget {
 }
 
 class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
-  WorkoutTemplate? _template;
+  /// The chosen template's server id. Held as an id, not the entity: the 60 s
+  /// foreground sync re-emits the template list as fresh instances, and a
+  /// dropdown value that is no longer `==` to any item throws (LIF-127).
+  int? _templateId;
   ScheduleRecurrence _recurrence = ScheduleRecurrence.once;
   final Set<ScheduleWeekday> _days = {};
   late DateTime _startDate = DateTime(
@@ -66,8 +69,13 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
         endDate: _endDate,
       );
 
-  bool get _canSubmit =>
-      _template?.id != null && _preview.isValid && !_submitting;
+  /// The chosen id, or null when it is not in [templates] any more (the
+  /// template was deleted or unassigned while the sheet was open).
+  int? _selectedIn(List<WorkoutTemplate> templates) =>
+      templates.any((t) => t.id == _templateId) ? _templateId : null;
+
+  bool _canSubmit(int? selectedId) =>
+      selectedId != null && _preview.isValid && !_submitting;
 
   Future<void> _pickDate({required bool start}) async {
     final today = DateTime(
@@ -106,7 +114,9 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
   }
 
   Future<void> _submit() async {
-    if (!_canSubmit) return;
+    final templates = ref.read(workoutTemplateControllerProvider).value ?? const [];
+    final templateId = _selectedIn(templates);
+    if (templateId == null || !_canSubmit(templateId)) return;
     setState(() {
       _submitting = true;
       _error = null;
@@ -114,7 +124,7 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
     try {
       await ref.read(scheduleRepositoryProvider).createSchedule(
             clientId: widget.clientId,
-            templateId: _template!.id!,
+            templateId: templateId,
             recurrence: _recurrence,
             daysOfWeek: _days.toList(),
             startDate: _startDate,
@@ -141,6 +151,7 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
     final f = LifeyFormat.of(context);
     final templates = ref.watch(workoutTemplateControllerProvider).value ?? const [];
     final assignable = templates.where((t) => t.id != null).toList();
+    final selectedId = _selectedIn(assignable);
 
     String recurrenceLabel(ScheduleRecurrence recurrence) => switch (recurrence) {
           ScheduleRecurrence.once => l10n.trainerRecurrenceOnceLabel,
@@ -161,18 +172,21 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
             style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
           )
         else
-          DropdownButtonFormField<WorkoutTemplate>(
-            initialValue: _template,
+          DropdownButtonFormField<int>(
+            // The field keeps its own value after the first build, so a
+            // selection that vanished from the list has to rebuild it.
+            key: ValueKey(selectedId),
+            initialValue: selectedId,
             isExpanded: true,
             decoration: InputDecoration(labelText: l10n.trainerScheduleTemplateLabel),
             items: [
               for (final template in assignable)
                 DropdownMenuItem(
-                  value: template,
+                  value: template.id,
                   child: Text(template.name, overflow: TextOverflow.ellipsis),
                 ),
             ],
-            onChanged: (value) => setState(() => _template = value),
+            onChanged: (value) => setState(() => _templateId = value),
           ),
         const SizedBox(height: AppSpacing.s16),
 
@@ -250,7 +264,7 @@ class _CreateScheduleSheetState extends ConsumerState<CreateScheduleSheet> {
               child: SizedBox(
                 height: 56,
                 child: FilledButton(
-                  onPressed: _canSubmit ? _submit : null,
+                  onPressed: _canSubmit(selectedId) ? _submit : null,
                   child: Text(l10n.trainerScheduleCreateButton),
                 ),
               ),
