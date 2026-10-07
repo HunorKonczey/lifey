@@ -112,7 +112,7 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 | Súly napszak / jegyzet, étel-adagok, rost / cukor, kedvenc ételek | a `WeightResponse` csak dátumos; az étel-modell nem ismeri az adagot | `78` §6 |
 | „Az edződtől" jelölés a kiosztott recepten | a másolat nem őrzi a származást | `78` §6 |
 | Edzői étkezés-komment, edzői lépéscél | új végpont / adat | `78` §6 |
-| Chat jelenlét, megosztott étkezés kártya | chat-szolgáltatás munka; az edzés / PR kártya kész ([`chat/83`](chat/83-chat-result-card-plan.md)), a `kind` bővíthető | `78` §6 |
+| Chat jelenlét, megosztott étkezés kártya | chat-szolgáltatás munka; az edzés / PR kártya kész és kétkészülékes emulátoron végigpróbálva 2026-10-07-én (LIF-92; nyitva: web csempe, iOS, offline megosztás hibaüzenete — [`chat/83`](chat/83-chat-result-card-plan.md)), a `kind` bővíthető | `78` §6 |
 | Edzői kérelem „végzettség" | nem gyűjtjük | `78` §6 |
 | Sablon időtartam, ismétlésszám | a sablon csak szettszámot tárol; az idő becslés | `78` W9.1 |
 | Sablonhasználat ütemezésből | a „Használja" csak a kiosztottakat számolja; az ütemezésekhez kliensenként külön lekérés kell | `78` W9.1 |
