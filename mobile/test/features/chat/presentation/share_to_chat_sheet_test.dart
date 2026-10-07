@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -187,7 +188,31 @@ void main() {
 
     expect(find.text('Share in chat'), findsOneWidget);
     expect(find.text('Send'), findsOneWidget);
-    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('Something went wrong.'), findsOneWidget);
+  });
+
+  // LIF-126: a snackbar raised from inside the sheet lands on the page below
+  // the modal, so offline the Send button looked dead. The reason has to be on
+  // the sheet itself, and it clears once the person tries again.
+  testWidgets('offline: the reason is on the sheet, not hidden behind it', (tester) async {
+    final share = _RecordingShare()
+      ..failure = DioException(requestOptions: RequestOptions(), type: DioExceptionType.connectionError);
+    await _pump(tester, targets: [_target(60, 'Új Edző')], share: share);
+
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Can't reach the server. Is the backend running?"), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+    // Sending again is possible, and the old message does not linger while it runs.
+    share.failure = null;
+    share.gate = Completer<int>();
+    await tester.tap(find.text('Send'));
+    await tester.pump();
+    expect(find.text("Can't reach the server. Is the backend running?"), findsNothing);
+    share.gate!.complete(7);
+    await tester.pumpAndSettle();
+    expect(find.text('Share in chat'), findsNothing);
   });
 
   group('the entry-point buttons', () {
