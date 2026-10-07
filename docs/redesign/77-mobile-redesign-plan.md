@@ -2362,7 +2362,26 @@ Walked: the clients list, the client detail (Overview, Statistics, Workouts, Nut
 - The first card / week strip / month grid touched the large-title header on the calendar and programs; the header subtitle "Kliensed 2026. márc. 1…" ended in an ellipsis at Hungarian × 1.3; Bence's "Utoljára 3 napja volt …" was cut beside the sparkline; on the tablet a cutout on the left edge ate the rail's 96 dp so the labels wrapped letter by letter → **R6.fix-4** (8 dp above the first item; subtitle shrinks like the title; the status wraps to two lines; the rail grows by the inset).
 - Found by tests before the review: the daily-goals value and a meal-type header overflowed at × 1.3 (R6.6); the month grid's day cells overflowed by 2 px at × 1.3 (R6.8).
 
-**Not exercised on the emulator**: Message / Schedule sheets and the session comment flow (no chat service was running; the create-schedule sheet, the session sheets and the assign flows are covered by widget tests, incl. × 1.3 in EN / HU), the month view and the client filter on a device, the tablet in light / Hungarian (covered by the 1184 × 800 × 1.3 matrix in `trainer_tablet_layout_test`), tablet calendar / assigned / programs panes, the offline states, and dark HU. The emulator's guest clock stalled once and the AVD was cold-booted; a "Pixel Watch keeps stopping" system dialog on the AVD was disabled with `pm disable-user`.
+**Not exercised on the emulator** (walked 2026-10-07, see "R6 follow-up" below): Message / Schedule sheets and the session comment flow (no chat service was running; the create-schedule sheet, the session sheets and the assign flows are covered by widget tests, incl. × 1.3 in EN / HU), the month view and the client filter on a device, the tablet in light / Hungarian (covered by the 1184 × 800 × 1.3 matrix in `trainer_tablet_layout_test`), tablet calendar / assigned / programs panes, the offline states, and dark HU. The emulator's guest clock stalled once and the AVD was cold-booted; a "Pixel Watch keeps stopping" system dialog on the AVD was disabled with `pm disable-user`.
+
+### R6 follow-up — 2026-10-07 (LIF-94) — Pixel Tablet AVD (2560 × 1600, 320 dpi = **1280 × 800 dp**, API 37) beside the Pixel_10 as the client
+
+Closes the "not exercised on the emulator" list above, against the local backend and the real `chat/` service, a fresh trainer (`lif92-trainer`) with one client.
+
+**Worked**
+- Trainer view from the avatar menu → the intro sheet ("This is your trainer view") → rail 96 · list 400 · detail; "Pick a client" placeholder until one is chosen; picking a client rings the row and fills the pane in place (wide header with Message / Schedule, seven tabs on one line, four KPI tiles in a row, Weight trend beside Upcoming).
+- **Schedule sheet:** with no template it says so; once a template exists the picker lists it; Once / Every day / Weekly, the weekday chips with the "Pick at least one day of the week." notice until one is chosen, "This creates 8 sessions, Oct 7 – Oct 30" for Wed + Fri over four weeks, Create. The schedule reached `workout_schedules` (WEEKLY, WED,FRI) and Upcoming on the overview and both calendar views filled at once.
+- **Calendar:** week strip with dots on the days with sessions and the agenda under it; **month view** (header icon) with the sessions as chips on the right days, today ringed; tapping a day returns to the week strip with that day picked.
+- **Message** opens the client's thread; the **session comment** flow (open a shared card → Add comment → Save) was walked end to end with the client's phone (see `chat/83`).
+- **Light + Hungarian on the tablet** (app locale switched with `adb shell cmd locale set-app-locales com.khunor.lifey --locales hu-HU`): rail labels (Kliensek / Naptár / Kiosztott / Programok), "Klienseim", "Ügyfél keresése", the tab row, the KPI tiles, "Következő alkalmak", the calendar and the month title ("2026. október"), the chat cards ("EDZÉS", "SZEMÉLYES REKORD", "Legnehezebb szett") — nothing truncated.
+- **Breakpoint:** 900 dp (`wm size 1800x1125`) keeps two panes, and the detail pane correctly shows the phone layout (⋮ menu, Message / Schedule as a row, two-column KPIs); 870 dp (`wm size 1740x1087`) is the single pane with the bottom bar and the full client card ("2 PR ezen a héten").
+
+**Found, not fixed**
+- **The schedule sheet crashes when the template list refreshes while it is open** (the red debug error "There should be exactly one item with [DropdownButton]'s value"). `WorkoutTemplate` has no value equality and `create_schedule_sheet.dart` keeps the chosen instance in `_template`; the 60 s foreground sync re-emits the list with new instances, so the picked one is no longer among the items. It reproduced twice in a row on the tablet right after a template had been pulled, and not when the sheet was opened on a stable list. In a release build the assertion is off, so the likely symptom is an empty-looking picker next to an enabled Create button.
+- The client's own dashboard on the tablet is one very wide column (full-width cards, the macro rows with their labels and values at opposite edges). Not part of R6, but it is what a trainer sees after the avatar menu's "My own log".
+- Android's "Try out your stylus" dialog shows on the tablet image at the first text field — a system feature, not the app.
+
+**Not covered:** dark HU on the tablet, the assigned / programs panes, the offline states, iOS.
 
 ### R7 — 2026-09-26 — Pixel_10 AVD (1080 × 2424, 420 dpi = 411 × 923 dp, API 37)
 
