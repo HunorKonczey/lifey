@@ -60,6 +60,11 @@ class _ShareToChatSheetState extends ConsumerState<ShareToChatSheet> {
   int _selected = 0;
   bool _sending = false;
 
+  /// Why the last send failed. Shown **in** the sheet: a snackbar from here
+  /// lands on the page below the modal and stays out of sight until the sheet
+  /// is gone (LIF-126).
+  String? _error;
+
   /// What the body of a card note allows; the server's own bound is far higher,
   /// this is only about a caption staying a caption.
   static const _captionMax = 280;
@@ -73,7 +78,10 @@ class _ShareToChatSheetState extends ConsumerState<ShareToChatSheet> {
   Future<void> _send(List<ChatShareTarget> targets) async {
     if (_sending) return;
     final target = targets[_selected.clamp(0, targets.length - 1)];
-    setState(() => _sending = true);
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
     try {
       final conversationId = await ref.read(chatShareServiceProvider).share(
             target: target,
@@ -84,8 +92,10 @@ class _ShareToChatSheetState extends ConsumerState<ShareToChatSheet> {
       if (mounted) Navigator.of(context).pop((target: target, conversationId: conversationId));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _sending = false);
-      AppSnackbar.showError(context, title: friendlyError(e));
+      setState(() {
+        _sending = false;
+        _error = friendlyError(e);
+      });
     }
   }
 
@@ -150,6 +160,13 @@ class _ShareToChatSheetState extends ConsumerState<ShareToChatSheet> {
                       ),
                   ],
                 ),
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.s12),
+              Text(
+                _error!,
+                style: t.bodySmall!.copyWith(color: Theme.of(context).colorScheme.error),
               ),
             ],
             const SizedBox(height: AppSpacing.s20),
