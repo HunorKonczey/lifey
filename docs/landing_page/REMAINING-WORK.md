@@ -89,7 +89,7 @@ re-measured — it needs `lhci` against a deployed URL — so its thresholds in 
 | Item | Needs |
 |---|---|
 | `72` W9 — structured data validated with Google's Rich Results tool | a deployed URL |
-| `72` W13 — `lifey://invite/<token>` checked on a device with the app installed | a physical device |
+| `72` W13 — `lifey://invite/<token>` on iOS | an Apple device (the Android side was checked on an emulator on 2026-10-07, LIF-99: see `72` §3.1 W13) |
 | `72` W12 — hero/value-block visuals are reproduced UI, not real captures | a seeded demo backend to capture from |
 | `72` D3 — never drawn: for-trainers page, app page, download page, the web state frames, the motion + open-questions addendum (`68` §13) | design time |
 | `72` D4 — never drawn: the sponsorship-ended card, the price-loading skeleton (both built in code from the spec text) (`69` §13) | design time |

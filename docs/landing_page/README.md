@@ -72,8 +72,8 @@ commit `1c252fd` swept the rest of the palette in both products. `72` F1 then ra
 all 12 marketing routes in both themes and at mobile width, found the last two (on
 `/hu/alkalmazas`), fixed them, and wired that sweep into CI so the next one cannot ship — the
 suite is green at zero violations today; and the download page's `lifey://invite/<token>` deep
-link has not been checked against a real device with the app installed (`65` Prompt 7's own *Verify* line asks
-for this, and nothing in this environment can register that URL scheme to test it). The
+link was checked on the Android emulator on 2026-10-07 (LIF-99: the page opens the installed app, which lands on the
+dashboard or the login screen; see `72` W13) — only the iOS side still needs an Apple device. The
 for-trainers, pricing, app and download pages all shipped without their own design frames for
 some or all of their content — each reuses the home page's own components rather than inventing
 new ones, and the download page needed a second, chrome-free route group
