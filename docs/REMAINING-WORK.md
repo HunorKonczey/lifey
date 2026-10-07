@@ -129,10 +129,13 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
   böngészős ellenőrzés hátravan.
 - **[`watch/50`](watch/50-watch-f6c-session-plan-sync-plan.md) (F6c)** — kód kész, eszközös
   végpróba hátravan.
-- **Edzés üres szettsorai** — kódszinten átnézve (2026-10-03) nincs nyoma: a képernyő `targetSets: rows.length`-et ment
-  (`_buildPlanned`), a `planSessionRows` ebből építi újra a sorokat, a pull nem írja felül, és a szerver már maga is tárolja
-  (`pull_engine_workout_session_target_sets_test`). A körforgást most teszt is rögzíti (`session_row_plan_test`). Nyitva csak
-  az eszközös ellenőrzés: üres sor hozzáadása → kilépés → visszatérés, illetve Live Activity / értesítés koppintás.
+- **Edzés üres szettsorai** — **Android emulátoron ellenőrizve (2026-10-07, LIF-91): a hiba nem reprodukálható.** Kódszinten
+  (2026-10-03) a képernyő `targetSets: rows.length`-et ment (`_buildPlanned`), a `planSessionRows` ebből építi újra a sorokat,
+  a pull nem írja felül, és a szerver is tárolja (`pull_engine_workout_session_target_sets_test`, `session_row_plan_test`).
+  Az emulátoros próba (Pixel 10, Push day sablon, Bench press 1 kitöltött + 3 üres sor): üres sor hozzáadása → kilépés →
+  visszatérés, majd az app teljes leállítása és hideg indítása, majd az ongoing értesítésre koppintás — mindháromszor
+  mind a 4 sor megmaradt, a szerveren `target_sets = 4` (Bench press) / `3` (Dips). Nyitva csak az iOS Live Activity koppintás
+  (Apple-eszköz kell hozzá).
 - **[`80`](80-progress-photos-measurements-plan.md)** — testméretek + progress fotók: kód és tesztek kész, a Docker-es
   `mvnw verify` lefutott (2026-10-03, 1159 teszt, zöld — V78–V81 Flyway ↔ entitás `validate` is). Hátravan az emulátoros
   végigpróba (Body képernyő, kamera/galéria, összehasonlítás).
