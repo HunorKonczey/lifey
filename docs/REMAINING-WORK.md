@@ -7,6 +7,10 @@ nem ismétli meg.
 
 Utolsó átnézés: **2026-10-03** (a chat-eredménykártya — edzés / PR megosztása — lezárása után; korábban 2026-10-02, a progress fotók + testméretek lezárása után; korábban 2026-09-26 a teljes `docs/` alapján).
 
+**Jira (2026-10-07-től):** a státuszt a Jira követi — `hunorkonczey.atlassian.net`, projekt `LIF`. Minden alábbi
+tételhez tartozik Story a megfelelő epic alatt (LIF-20…LIF-28); új tételnél a Jira-jegyet is fel kell venni.
+Ez a fájl marad a részletes, dokumentumokra hivatkozó leírás.
+
 **Használat:** ha egy tételt felveszel, csináld meg, **töröld a sorát**, és a landolt állapotot
 a hozzá tartozó számozott tervbe írd.
 
