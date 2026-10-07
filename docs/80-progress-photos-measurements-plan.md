@@ -233,6 +233,9 @@ plan table, Postman collection. Record deviations from this plan in a §12 "As b
    the add-measurement sheet with the keyboard open at 411 dp leaves the lower half of Save behind the keyboard (the
    sheet scrolls and Save is still tappable); the photo-details preview and the Compare panes `cover`-crop, so a
    photo that does not match the frame shows only a slice of itself.
+   The Settings "Mértékegységek" row also broke mid-word ("Mértékegy / ségek") in Hungarian at 1.0 text scale on a
+   411 dp phone — **fixed in LIF-125**: `SettingsChoiceRow` measures the title against the room the pill leaves and
+   drops the pill under it when it does not fit (not only above 1.15× text scale); checked on the Pixel 10 in Hungarian.
 2. ~~`cd backend && ./mvnw -B verify` with Docker running~~ — **done 2026-10-03** (during plan 82): the whole suite, 1159 tests, ran green against Postgres 16, V78 and V79 included.
 3. Consider before release: the photo list is unpaged (fine for hundreds, revisit with a cap). The Weight header
    turned out to have a single action button (Body), and at a 1.5× system font scale the title, tabs and chips all
