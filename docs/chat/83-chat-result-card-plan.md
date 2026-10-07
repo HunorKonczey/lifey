@@ -1,6 +1,6 @@
 # 83 – Chat result card: sharing a workout or a PR as a message
 
-Status: built (2026-10-03, branch `feature/chat-result-card`) — S1–S7 done; chat 218, backend, mobile 2,972 and web 1,089 tests green; an emulator / two-device walk is owed (log in §9)
+Status: built (2026-10-03, branch `feature/chat-result-card`) — S1–S7 done; chat 218, backend, mobile 2,972 and web 1,089 tests green; two-device emulator walk done 2026-10-07 (LIF-92, §9); web tile in a browser, the client-side "cannot open a trainer's card" rule and iOS still unchecked
 Scope: chat service · backend (monolith) · mobile · web (read-only)
 Depends on: `docs/chat/40-trainer-chat-plan.md` (messages, attachments §18, push §5),
 `docs/chat/44-chat-service-extraction-plan.md` (the chat is its own service with its own migrations),
@@ -267,4 +267,19 @@ existing message), so they can ship ahead of the clients.
 - **Mobile:** `flutter analyze` clean; the whole `flutter test` suite green (2,972 tests), incl. the repository's offline replay, the card in both themes and locales, the share sheet, the opt-in sheet buttons, the open rules and `openById`.
 - **Web:** vitest 1,089 tests, `tsc --noEmit` and eslint clean.
 - **Found on the way and fixed:** `ChatTypingThrottle` decided by `Instant` equality (two signals in one clock tick on Windows were both let through) → `compute()` + a flag; a `Future<int>` passed where `Future<int?>.timeout(onTimeout: () => null)` was called threw at runtime → re-typed with `then<int?>`.
-- **Not verified:** an emulator or two-device walk (send from a client, see it on the trainer's phone, tap it open) and the web tile in a browser against a running chat service — neither was run here. The share flow's snackbar action (`/chat/{id}`) and the session screens it opens are covered by widget tests with fakes, not by a real navigation stack.
+- **Not verified (at build time):** an emulator or two-device walk and the web tile in a browser. The emulator walk was done afterwards — see below.
+
+### Two-device emulator walk — 2026-10-07 (LIF-92)
+
+Pixel 10 as the client and Pixel Tablet as the trainer, both debug builds against the local backend + the real `chat/` service (`CHAT_PUBLIC_BASE_URL=http://10.0.2.2:8081/api/v1`), a fresh trainer–client pair.
+
+**Worked as designed:**
+- The client finishes a free workout and taps the header share icon → "Share in chat" sheet with the card preview and a note field. Send → snackbar "Shared with <trainer>" + "Open chat", and the action opens the thread with the card in it. `chat_messages` holds `card_kind = WORKOUT` with the real `sessionId` (386) and the caption in `body`.
+- The trainer's tablet got the card live (list preview "🏋️ Workout" with the unread dot, then the thread with both cards and the note). Tapping it opens the client's session (Bench Press 8 × 80.0 kg); "Add comment" saves, the card then shows "Your comment", and the client's session screen shows the "Trainer comment" block with the text and time. The read ticks on the client's cards turn green once the trainer opened the thread.
+- A record: a heavier set earned two records, the finish sheet lists them with a share icon per row and a "Share in chat" button; the row icon opens a "Personal Record · Bench Press · 100 kg +20 kg · Heaviest set" preview. The card reached the trainer's thread (`card_kind = PR`, `sessionId` 387) and tapping it opened *that* session (8 × 100.0 kg, no comment), not the earlier one.
+
+**Found, not fixed:**
+- **Sharing while offline looks like a dead button.** With Wi-Fi and data off, Send in the share sheet does nothing visible: no spinner, the sheet stays open, nothing reaches the server. The failure is only visible after dismissing the sheet — the error snackbar "Can't reach the server. Is the backend running?" is behind the modal. `ChatShareService.share` "throws only when a thread has to be created and the server cannot be reached"; the thread existed server-side, but the client had not cached it in this walk (it was created by the first share), so the offline path fell into `openConversationWith`. If that reading is right, a first-ever share offline cannot queue; either way the error must be visible where the user is looking (inside the sheet).
+- The trainer tablet's first tap into the comment field raised Android's own "Try out your stylus" dialog — a system feature of the tablet image, not the app.
+
+**Not covered:** the web tile against a running chat service, a trainer sharing a card to a client (the "a client cannot open a card from their trainer" rule), iOS.
