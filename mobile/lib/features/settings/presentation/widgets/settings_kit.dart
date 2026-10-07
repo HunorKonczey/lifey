@@ -43,9 +43,13 @@ class SettingsRow extends StatelessWidget {
   }
 }
 
-/// A row whose control is a segmented pill (Units, Theme). At large text sizes
-/// the title and the pill cannot share one line — "Mértékegységek" would be
-/// squeezed into four — so the pill drops under the title, full width.
+/// A row whose control is a segmented pill (Units, Theme). When the title and
+/// the pill cannot share one line the pill drops under the title, full width,
+/// rather than the title breaking mid-word ("Mértékegy / ségek").
+///
+/// That happens at large text sizes, and also at 1.0 on a phone when the
+/// Hungarian label is long (LIF-125) — so the title is measured against the
+/// room the pill leaves, not just the text scale.
 class SettingsChoiceRow extends StatelessWidget {
   const SettingsChoiceRow({super.key, required this.icon, required this.title, required this.control});
 
@@ -53,31 +57,55 @@ class SettingsChoiceRow extends StatelessWidget {
   final String title;
   final Widget control;
 
-  /// Above this text scale the control goes under the title.
+  /// Above this text scale the control goes under the title whatever the width.
   static const double stackAbove = 1.15;
+
+  /// What [ListRow] puts around the title: its own 16 dp side padding, the
+  /// 40 dp icon holder with its 14 dp gap, and the 12 dp before the trailing.
+  static const double _sideChrome = 2 * AppSpacing.s16 + 40 + 14 + AppSpacing.s12;
+
+  /// The title style [ListRow] draws with, so the measurement is of what is shown.
+  static TextStyle _titleStyle(BuildContext context) =>
+      Theme.of(context).textTheme.titleMedium!.copyWith(fontSize: 15, height: 1.3);
+
+  bool _titleFits(BuildContext context, double maxWidth) {
+    final painter = TextPainter(
+      text: TextSpan(text: title, style: _titleStyle(context)),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final room = maxWidth - _sideChrome - InlinePillSegment.maxWidth;
+    return painter.width <= room;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final stacked = MediaQuery.textScalerOf(context).scale(1) > stackAbove;
-    if (!stacked) return SettingsRow(icon: icon, title: title, trailing: control);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = MediaQuery.textScalerOf(context).scale(1) > stackAbove ||
+            (constraints.hasBoundedWidth && !_titleFits(context, constraints.maxWidth));
+        if (!stacked) return SettingsRow(icon: icon, title: title, trailing: control);
 
-    final p = context.palette;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+        final p = context.palette;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ListIconHolder(icon: icon, color: p.text, size: 40),
-              const SizedBox(width: AppSpacing.s16),
-              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium!.copyWith(color: p.text))),
+              Row(
+                children: [
+                  ListIconHolder(icon: icon, color: p.text, size: 40),
+                  const SizedBox(width: 14),
+                  Expanded(child: Text(title, style: _titleStyle(context).copyWith(color: p.text))),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Align(alignment: Alignment.centerRight, child: control),
             ],
           ),
-          const SizedBox(height: AppSpacing.s12),
-          Align(alignment: Alignment.centerRight, child: control),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -125,13 +153,17 @@ class InlinePillSegment<T> extends StatelessWidget {
   final T selected;
   final ValueChanged<T> onChanged;
 
+  /// The widest the pill gets before it scales down; [SettingsChoiceRow]
+  /// budgets for it.
+  static const double maxWidth = 220;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final scheme = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 220),
+      constraints: const BoxConstraints(maxWidth: maxWidth),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.centerRight,
