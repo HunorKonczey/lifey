@@ -67,14 +67,23 @@ below is the state this started from:
 `docs/23` now carries the exact call order, the transaction boundary and the status codes the
 gate must use (`72` F3 Prompt 14), so the billing side is specified rather than guessed.
 
-### 2.2 Web: first-load JS — ✅ mostly done (2026-10-03)
+### 2.2 Web: first-load JS — ✅ done (2026-10-08, LIF-117)
 
-`/hu` went from ~278 KB to **~215 KB** gzipped: `lib/env.ts` no longer imports zod (~64 KB, pulled into every
-marketing page through the header's API client), and Vercel's Analytics/Speed Insights now load behind an idle
-callback (`DeferredTelemetry`; on its own it moved nothing measurable). The CI ceiling in
-`scripts/check-js-budget.mjs` is tightened 320 → 240 KB. Still short of `65` §8's 100 KB: what remains is the shared
-React/Next baseline plus React Query and Zustand in the root layout. Lighthouse (93 / 92 / LCP 3.16 s) was **not**
-re-measured — it needs `lhci` against a deployed URL — so its thresholds in `lighthouserc.js` are unchanged.
+`/hu` went from ~278 KB to **~168 KB** gzipped. Earlier (2026-10-03): `lib/env.ts` no longer imports zod (~64 KB) and
+Vercel's Analytics/Speed Insights load behind an idle callback. LIF-117 found two more things:
+
+- **~39 KB was never a visitor's cost.** `scripts/check-js-budget.mjs` counted Next's `noModule` polyfill bundle, which only
+  browsers too old for ES modules fetch. It is excluded now, so the number is what a real first load downloads.
+- **~8 KB was query-core on pages that have no query cache.** The marketing header reads the session store, and the store
+  imported the `queryClient` singleton to clear it on logout. It goes through `lib/queryCacheClearer` now; the app's
+  `queryClient` registers itself when its providers load.
+
+`65` §8's literal **100 KB is not reachable**: React DOM plus the Next client router are ~142 KB gzipped on their own, and
+the app's own share (next-intl, the header island, the session store) is ~26 KB. The CI ceiling is tightened 240 → 190 KB.
+Lighthouse was re-measured locally against a production build (headless Chrome, mobile profile, median of the warm runs):
+performance 94 (was 93), accessibility 100, SEO 92, LCP ~2.9 s (was 3.16 s), CLS 0.005. A deployed-URL measurement is
+still open, and `lighthouserc.js` thresholds are unchanged. The first run after `next start` is a cold outlier (0.55,
+LCP 30 s) — the reason CI takes the median of three.
 
 ### 2.3 Small, self-contained
 

@@ -30,12 +30,15 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 const PORT = 4173;
 const BASE_URL = `http://localhost:${PORT}`;
-// Baseline measured on `/hu`: ~275–283 KB gzipped until docs/landing_page/72 W7 / F6,
-// then ~215 KB once `lib/env.ts` stopped importing zod (~64 KB, pulled in through the
-// header's API client) and Vercel's scripts moved behind an idle callback. 240 KB leaves
-// ~25 KB of legitimate headroom (a page's own small client island, like the pricing
-// page's ~1.4 KB) while still failing on anything zod- or recharts-sized.
-const BUDGET_BYTES = 240 * 1024;
+// Baseline measured on `/hu`: ~275-283 KB gzipped until docs/landing_page/72 W7 / F6, ~215 KB once
+// `lib/env.ts` stopped importing zod and Vercel's scripts moved behind an idle callback, and ~168 KB after LIF-117:
+// ~39 KB of that was Next's `noModule` polyfill bundle, which modern browsers never fetch (no longer counted), and
+// ~8 KB was query-core, pulled in by the session store the marketing header reads (it now clears the cache through
+// `lib/queryCacheClearer`). What is left is ~142 KB of React + the Next client router, which no app code can remove,
+// and ~26 KB of ours (next-intl, the header's island, the session store). So §8's literal 100 KB is below the floor of
+// the framework itself, not a gap to close. 190 KB leaves ~20 KB of legitimate headroom while still failing on anything
+// zod- or recharts-sized.
+const BUDGET_BYTES = 190 * 1024;
 
 const ROUTES = [
   "/hu",
@@ -71,7 +74,13 @@ async function waitForServer(url, timeoutMs = 30_000) {
 
 async function measureRoute(path) {
   const html = await fetch(`${BASE_URL}${path}`).then((r) => r.text());
-  const scriptSrcs = [...html.matchAll(/<script[^>]+src="(\/_next\/static\/[^"]+\.js)"/g)].map((m) => m[1]);
+  // `noModule` scripts (Next's ~39 KB polyfill bundle) are only fetched by browsers too old to run ES modules — a
+  // modern one never downloads them, so they are not part of what a visitor's first load costs (LIF-117).
+  const scriptSrcs = [...html.matchAll(/<script[^>]*>/g)]
+    .map((m) => m[0])
+    .filter((tag) => !/nomodule/i.test(tag))
+    .map((tag) => /src="(\/_next\/static\/[^"]+\.js)"/.exec(tag)?.[1])
+    .filter(Boolean);
   const uniqueSrcs = [...new Set(scriptSrcs)];
 
   let totalBytes = 0;

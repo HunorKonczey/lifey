@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { ApiError, setAccessToken, registerTokenRefresher } from "@/lib/api/client";
-import { queryClient } from "@/lib/queryClient";
+import { clearQueryCache } from "@/lib/queryCacheClearer";
 import { decodeJwt } from "@/lib/utils/jwt";
 import { authApi } from "./api";
 import type { AuthResponse, SessionUser } from "./types";
@@ -106,7 +106,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // settings, etc.) so they don't keep showing the previous user's data
     // until a hard refresh.
     if (previousUserId !== undefined && nextUser?.id !== previousUserId) {
-      queryClient.clear();
+      clearQueryCache();
     }
     set({ user: nextUser, isLoading: false, initFailed: false });
   },
@@ -117,7 +117,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const refreshToken = getStoredRefreshToken() ?? undefined;
     setAccessToken(null);
     clearRefreshToken();
-    queryClient.clear();
+    clearQueryCache();
     set({ user: null, initFailed: false });
     try { await authApi.logout(refreshToken); } catch { /* ignore */ }
   },
@@ -128,7 +128,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     try { await authApi.logoutAll(); } catch { /* signed out here either way */ }
     setAccessToken(null);
     clearRefreshToken();
-    queryClient.clear();
+    clearQueryCache();
     set({ user: null, initFailed: false });
   },
 

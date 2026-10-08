@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/client";
+import { registerQueryCacheClearer } from "@/lib/queryCacheClearer";
 
 /**
  * Single shared QueryClient instance. Needs to be a module-level singleton
@@ -20,3 +21,5 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+registerQueryCacheClearer(() => queryClient.clear());
