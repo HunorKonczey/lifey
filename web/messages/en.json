@@ -1159,6 +1159,7 @@
       "menuDuplicate": "Duplicate",
       "rowMenuLabel": "Actions for {name}",
       "favoriteAria": "Favorite",
+      "fromTrainer": "From your trainer",
       "deleteTitle": "Delete {name}?",
       "deleteBody": "Meals you already logged from it stay. You can undo it for {seconds} seconds afterwards.",
       "recipeDeleted": "{name} deleted",
