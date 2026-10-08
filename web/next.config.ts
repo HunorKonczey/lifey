@@ -62,6 +62,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Self-contained server bundle for Docker / non-Vercel hosting.
   output: "standalone",
+  // Every route group is its own root layout (a server-rendered <html lang> that is right per tree, LIF-142), so there
+  // is no single layout to build the last-resort 404 from — `app/global-not-found.tsx` is rendered instead.
+  experimental: { globalNotFound: true },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

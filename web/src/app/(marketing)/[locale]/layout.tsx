@@ -6,7 +6,15 @@ import { MarketingHeader } from "@/components/marketing/MarketingHeader";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { MobileStickyCta } from "@/components/marketing/MobileStickyCta";
 import { AttributionCapture } from "@/components/marketing/AttributionCapture";
-import { DocumentLang } from "@/lib/i18n/DocumentLang";
+import { RootDocument, rootMetadata } from "@/components/RootDocument";
+
+export const metadata = rootMetadata;
+
+/**
+ * Only the configured locales exist as a segment: anything else (`/de/x`, `/random`) is a routing-level 404 and is answered by
+ * `app/global-not-found.tsx`. A `notFound()` thrown from this layout would have no boundary — it is a root layout now (LIF-142).
+ */
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -46,13 +54,14 @@ export default async function MarketingLayout({
     // of *visible text* stays server-rendered and is passed into the client
     // islands as plain string props, so no messages payload ships to the
     // client and the JS budget (65 §8) is unaffected.
-    <NextIntlClientProvider locale={locale}>
-      <DocumentLang locale={locale} />
-      <AttributionCapture />
-      <MarketingHeader />
-      {children}
-      <MarketingFooter />
-      <MobileStickyCta cta={stickyCta("cta")} noCard={stickyCta("noCard")} />
-    </NextIntlClientProvider>
+    <RootDocument lang={locale}>
+      <NextIntlClientProvider locale={locale}>
+        <AttributionCapture />
+        <MarketingHeader />
+        {children}
+        <MarketingFooter />
+        <MobileStickyCta cta={stickyCta("cta")} noCard={stickyCta("noCard")} />
+      </NextIntlClientProvider>
+    </RootDocument>
   );
 }

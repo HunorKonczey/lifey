@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { AttributionCapture } from "@/components/marketing/AttributionCapture";
-import { DocumentLang } from "@/lib/i18n/DocumentLang";
+import { RootDocument, rootMetadata } from "@/components/RootDocument";
 
 /**
  * A second, sibling route group to `(marketing)` — same `[locale]`
@@ -20,6 +20,14 @@ import { DocumentLang } from "@/lib/i18n/DocumentLang";
  * layout's locale-validation block (not worth a shared abstraction for a
  * two-consumer, ~10-line block) but drops the header/footer/sticky-CTA.
  */
+export const metadata = rootMetadata;
+
+/**
+ * Only the configured locales exist as a segment: anything else (`/de/x`, `/random`) is a routing-level 404 and is answered by
+ * `app/global-not-found.tsx`. A `notFound()` thrown from this layout would have no boundary — it is a root layout now (LIF-142).
+ */
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -40,10 +48,11 @@ export default async function BareMarketingLayout({
   setRequestLocale(locale);
 
   return (
-    <NextIntlClientProvider locale={locale}>
-      <DocumentLang locale={locale} />
-      <AttributionCapture />
-      {children}
-    </NextIntlClientProvider>
+    <RootDocument lang={locale}>
+      <NextIntlClientProvider locale={locale}>
+        <AttributionCapture />
+        {children}
+      </NextIntlClientProvider>
+    </RootDocument>
   );
 }

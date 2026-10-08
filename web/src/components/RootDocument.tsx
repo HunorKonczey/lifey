@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { DeferredTelemetry } from "@/components/status/DeferredTelemetry";
 import { SITE_URL } from "@/lib/site";
-import "./globals.css";
+import "@/app/globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -11,18 +11,25 @@ const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
 });
 
-export const metadata: Metadata = {
+/** The site-wide metadata. Every root layout (one per route group) exports it as its own `metadata`. */
+export const rootMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "Lifey",
   description: "Personal fitness and nutrition tracker",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+/**
+ * The document every page renders into: `<html>`, the theme script, the icon font and `<body>`. Each route group has its
+ * own root layout that wraps its pages in this one, so `lang` is right in the server-rendered HTML — the marketing tree
+ * passes the locale of the URL, the signed-in app and its auth pages "en" (their language is decided on the client; see
+ * `DocumentLang`). Moved here from `app/layout.tsx` for LIF-142.
+ */
+export function RootDocument({ lang, children }: Readonly<{ lang: string; children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} h-full`} suppressHydrationWarning>
+    <html lang={lang} className={`${plusJakarta.variable} h-full`} suppressHydrationWarning>
       {/* FOUC prevention: set data-theme before first paint */}
+      {/* The document's own <head> (this is the root layout, not a pages-router page). */}
+      {/* eslint-disable-next-line @next/next/no-head-element */}
       <head>
         <script
           dangerouslySetInnerHTML={{
