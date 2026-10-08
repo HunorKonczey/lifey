@@ -4,8 +4,7 @@ import { Client } from "pg";
 /**
  * Program editor from the keyboard (docs/redesign-web/78 W8.5, LIF-96): pick a template in the rail with Space, Tab to a
  * week-grid cell, Enter places it; Enter on a filled cell opens its slot dialog, Escape closes it. Real key events, no
- * pointer anywhere. Not asserted, because they are known gaps: the drag grip's own keyboard drag (LIF-136) and focus
- * returning to the cell after the slot dialog closes (LIF-137).
+ * pointer anywhere. Not asserted, because it is a known gap: the drag grip's own keyboard drag (LIF-136).
  *
  * Requires the real backend + Postgres on localhost:8080/5432, same as the other specs in this folder.
  */
@@ -102,6 +101,18 @@ test.describe("Program editor keyboard", () => {
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
+      // The dialog is mounted as `<Modal open>`; closing it must still hand focus back to the cell (LIF-137).
+      await expect(filled).toBeFocused();
+    });
+
+    await test.step("the Copy week dialog gives focus back to its button too", async () => {
+      const copyWeek = page.getByRole("button", { name: "Copy week" });
+      await copyWeek.focus();
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(copyWeek).toBeFocused();
     });
   });
 });
