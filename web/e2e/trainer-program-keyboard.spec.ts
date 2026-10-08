@@ -4,7 +4,7 @@ import { Client } from "pg";
 /**
  * Program editor from the keyboard (docs/redesign-web/78 W8.5, LIF-96): pick a template in the rail with Space, Tab to a
  * week-grid cell, Enter places it; Enter on a filled cell opens its slot dialog, Escape closes it. Real key events, no
- * pointer anywhere. Not asserted, because it is a known gap: the drag grip's own keyboard drag (LIF-136).
+ * pointer anywhere. The rail's drag grip is a pointer-only handle (LIF-136): never a tab stop, hidden from assistive tech.
  *
  * Requires the real backend + Postgres on localhost:8080/5432, same as the other specs in this folder.
  */
@@ -70,6 +70,17 @@ test.describe("Program editor keyboard", () => {
     const row = page.getByTestId("program-rail-template").filter({ hasText: templateName });
     const summary = page.getByText(/\d+ weeks? · \d+ workouts?/).first();
 
+    await test.step("from the rail's search field, Tab goes straight to the template row — the drag grip is no tab stop", async () => {
+      await page.getByRole("textbox", { name: "Templates" }).focus();
+      const stops: string[] = [];
+      for (let i = 0; i < 2; i++) {
+        await page.keyboard.press("Tab");
+        stops.push(await page.evaluate(() => document.activeElement?.getAttribute("data-testid") ?? ""));
+      }
+      expect(stops[0]).toBe("program-rail-template");
+      expect(stops).not.toContain("program-rail-grip");
+    });
+
     await test.step("Space picks the template", async () => {
       await row.focus();
       await page.keyboard.press("Space");
@@ -80,6 +91,7 @@ test.describe("Program editor keyboard", () => {
       const firstCell = page.getByRole("button", { name: /Week 1, Mon: Place/ });
       for (let i = 0; i < 12 && !(await firstCell.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press("Tab");
       await expect(firstCell).toBeFocused();
+
       await page.keyboard.press("Enter");
       await expect(page.getByRole("button", { name: `Week 1, Mon: ${templateName}` })).toBeVisible();
       await expect(summary).toContainText("1 workout");
@@ -114,5 +126,39 @@ test.describe("Program editor keyboard", () => {
       await expect(page.getByRole("dialog")).toHaveCount(0);
       await expect(copyWeek).toBeFocused();
     });
+  });
+
+  test("dragging a template row's grip with the mouse still places it", async ({ page, request }) => {
+    const runId = Date.now();
+    const email = `e2e-drag-trainer-${runId}@example.com`;
+    const password = "E2eTrainer123!";
+    const templateName = `Drag ${runId}`;
+
+    const userId = await registerAndLogin(request, email, password);
+    await grantTrainerRole(userId);
+    const headers = { Authorization: `Bearer ${await login(request, email, password)}` };
+    const exRes = await request.post(`${API_BASE}/exercises`, { headers, data: { name: `Húzás ${runId}`, category: "CHEST", equipment: "BARBELL", defaultRestSeconds: 90 } });
+    expect(exRes.ok(), await exRes.text()).toBeTruthy();
+    const exercise: { id: number } = await exRes.json();
+    const tplRes = await request.post(`${API_BASE}/workout-templates`, { headers, data: { name: templateName, exercises: [{ exerciseId: exercise.id, targetSets: 3 }] } });
+    expect(tplRes.ok(), await tplRes.text()).toBeTruthy();
+
+    await page.goto("/login");
+    await page.getByPlaceholder("you@example.com").fill(email);
+    await page.getByPlaceholder("••••••••").fill(password);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL(/dashboard|admin/);
+    await page.goto("/admin/programs/new");
+
+    const grip = page.getByTestId("program-rail-template").filter({ hasText: templateName }).locator("xpath=preceding-sibling::*[@data-testid='program-rail-grip']");
+    await expect(grip).toHaveAttribute("aria-hidden", "true");
+    const cell = page.getByTestId("program-cell-2-WEDNESDAY");
+    const from = (await grip.boundingBox())!;
+    const to = (await cell.boundingBox())!;
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await expect(page.getByRole("button", { name: `Week 2, Wed: ${templateName}` })).toBeVisible();
   });
 });

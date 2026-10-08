@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { DndContext, DragOverlay, pointerWithin, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, pointerWithin, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
@@ -101,8 +101,11 @@ export function ProgramGridEditor({ initialName, initialWeeksCount, initialWorko
     setSaved({ snapshot: snapshotOf(name, weeksCount, workouts), at: new Date() });
   };
 
-  // A drag starts after 6 px of movement, so a plain click on a tile still opens it; the keyboard sensor is the grip's own.
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor));
+  // A drag starts after 6 px of movement, so a plain click on a tile still opens it. Pointer only, on purpose: the
+  // keyboard (and screen-reader) way to place a workout is to pick a template row and press Enter on a cell, which is
+  // shorter than stepping a dragged item across a 7-column grid. A KeyboardSensor with `pointerWithin` could not even
+  // drop — there is no pointer to collide with (LIF-136).
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const onDragStart = (e: DragStartEvent) => {
     const data = e.active.data.current as { kind: "template"; templateId: number } | { kind: "slot"; week: number; day: DayOfWeek } | undefined;
     if (!data) return;

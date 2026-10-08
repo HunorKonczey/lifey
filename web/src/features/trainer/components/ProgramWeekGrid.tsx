@@ -89,7 +89,7 @@ function Cell({ week, day, slot, placing, templateName, exercises, dragging, onC
   const t = useTranslations("admin.programs");
   const key = `${week}-${day}`;
   const { setNodeRef: dropRef, isOver, active } = useDroppable({ id: `cell-${key}`, data: { week, day } });
-  const { attributes, listeners, setNodeRef: dragRef } = useDraggable({ id: `slot-${key}`, data: { kind: "slot", week, day }, disabled: !slot });
+  const { listeners, setNodeRef: dragRef } = useDraggable({ id: `slot-${key}`, data: { kind: "slot", week, day }, disabled: !slot });
   const overlayName = active?.data.current?.kind === "template" ? templateName(active.data.current.templateId as number) : slot ? templateName(slot.templateId) : "";
   const label = slot
     ? `${t("weekRowLabel", { number: week })}, ${t(`days.${day}`)}: ${templateName(slot.templateId)}`
@@ -106,7 +106,6 @@ function Cell({ week, day, slot, placing, templateName, exercises, dragging, onC
         data-testid={`program-cell-${week}-${day}`}
         onClick={() => onCell(week, day)}
         onPointerDown={slot ? (listeners?.onPointerDown as React.PointerEventHandler<HTMLButtonElement> | undefined) : undefined}
-        {...(slot ? { "aria-roledescription": attributes["aria-roledescription"] } : {})}
         aria-label={label}
         className="lifey-button relative flex min-h-[72px] flex-col items-start justify-center gap-0.5 py-2 pl-3.5 pr-2 text-left touch-manipulation"
         style={{
