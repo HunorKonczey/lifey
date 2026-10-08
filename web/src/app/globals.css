@@ -553,7 +553,19 @@ input[type="number"] { -moz-appearance: textfield; }
   min-width: 0;
 }
 @media (max-width: 767px) {
-  :root { --toast-bottom: calc(92px + var(--fab-clearance, 0px)); }
+  :root {
+    --toast-bottom: calc(92px + var(--fab-clearance, 0px));
+    /* The room the fixed bottom nav (and the floating action button) takes at the foot of the page; <main>'s bottom
+       padding and the scroll padding below use the same number. */
+    --app-bottom-clearance: calc(env(safe-area-inset-bottom) + 96px + var(--fab-clearance, 0px));
+  }
+  /* Keyboard focus (and anything else scrolled into view) must land between the sticky mobile header and the fixed
+     bottom nav, not under them — WCAG 2.4.11. The page scrolls the window, so the padding belongs on <html>.
+     --app-header-h is published by MobileHeader. */
+  html {
+    scroll-padding-top: var(--app-header-h, 0px);
+    scroll-padding-bottom: var(--app-bottom-clearance);
+  }
 }
 @media (min-width: 768px) {
   .page-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); --grid-gap: 20px; }
