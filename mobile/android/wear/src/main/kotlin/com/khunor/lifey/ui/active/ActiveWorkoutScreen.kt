@@ -94,6 +94,47 @@ internal val HEART_RATE_PERMISSIONS = arrayOf(
  * sensor session, nothing the phone needs to know about.
  */
 /**
+ * The plan-backed part of [activeExerciseDisplay], with no resources in it so a
+ * unit test can drive it: what the current exercise of the session's plan (the
+ * phone's live one, else the cached template) and its set progress read, or
+ * `null` when there is no plan exercise to describe and the caller falls back
+ * to the phone's own `exerciseName`/`setsDone`/`setsTotal` or the Quick
+ * strength line.
+ *
+ * "Current" is [SessionMetadata.currentPlanIndex] — not the standalone
+ * position, which a phone-mastered session never moves (LIF-129).
+ */
+internal fun planExerciseDisplay(metadata: SessionMetadata): ActiveExerciseDisplay? {
+    val index = metadata.currentPlanIndex ?: return null
+    val currentExercise = metadata.activePlanExercises[index]
+    // Both counts include what the phone logged into this same session — see
+    // SessionMetadata.standaloneSetsDoneAt / phoneSetsTotal.
+    val setsDone = metadata.standaloneSetsDoneAt(index)
+    // `phoneSets*` only ever describe a standalone session's current exercise;
+    // a phone-mastered one gets its target from the plan entry itself.
+    val phoneCountsThisExercise = metadata.isStandalone && if (metadata.phoneSetsExerciseId != null) {
+        metadata.phoneSetsExerciseId == currentExercise.exerciseId
+    } else {
+        metadata.phoneSetsExerciseIndex == index
+    }
+    val targetSets = metadata.phoneSetsTotal.takeIf { phoneCountsThisExercise } ?: currentExercise.targetSets
+    return if (targetSets != null) {
+        ActiveExerciseDisplay(
+            name = currentExercise.name, setsDone = setsDone, setsTotal = targetSets,
+            freeFormatSets = null,
+        )
+    } else {
+        // No target to count towards: the set count still includes the phone's,
+        // but the rep total can only sum the sets this watch itself logged — it
+        // never receives the others' reps.
+        ActiveExerciseDisplay(
+            name = currentExercise.name, setsDone = null, setsTotal = null,
+            freeFormatSets = setsDone to metadata.standaloneSetsForCurrentExercise.sumOf { it.reps },
+        )
+    }
+}
+
+/**
  * See [ActiveExerciseDisplay]'s doc comment. Three branches, in priority
  * order: (1) a template exercise with a `targetSets` falls back to the
  * exact phone-mastered `setsDone`/`setsTotal` presentation (§3.4: "van
@@ -108,37 +149,7 @@ internal val HEART_RATE_PERMISSIONS = arrayOf(
  */
 @Composable
 internal fun activeExerciseDisplay(metadata: SessionMetadata): ActiveExerciseDisplay {
-    // The phone's live session plan when it has pushed one, the cached
-    // template otherwise (F6c) — same list every other decision reads.
-    val currentExercise = metadata.standaloneCurrentExercise
-    if (currentExercise != null) {
-        val setsForExercise = metadata.standaloneSetsForCurrentExercise
-        // Both counts include what the phone logged into this same session —
-        // see SessionMetadata.standaloneSetsDoneAt / phoneSetsTotal.
-        val setsDone = metadata.standaloneSetsDoneAt(metadata.standaloneExerciseIndex)
-        val phoneCountsThisExercise = if (metadata.phoneSetsExerciseId != null) {
-            metadata.phoneSetsExerciseId == currentExercise.exerciseId
-        } else {
-            metadata.phoneSetsExerciseIndex == metadata.standaloneExerciseIndex
-        }
-        val targetSets =
-            metadata.phoneSetsTotal.takeIf { phoneCountsThisExercise }
-                ?: currentExercise.targetSets
-        return if (targetSets != null) {
-            ActiveExerciseDisplay(
-                name = currentExercise.name, setsDone = setsDone, setsTotal = targetSets,
-                freeFormatSets = null,
-            )
-        } else {
-            // No target to count towards: the set count still includes the
-            // phone's, but the rep total can only sum the sets this watch
-            // itself logged — it never receives the others' reps.
-            ActiveExerciseDisplay(
-                name = currentExercise.name, setsDone = null, setsTotal = null,
-                freeFormatSets = setsDone to setsForExercise.sumOf { it.reps },
-            )
-        }
-    }
+    planExerciseDisplay(metadata)?.let { return it }
     if (metadata.isStandalone) {
         return ActiveExerciseDisplay(
             name = stringResource(R.string.standalone_quick_start), setsDone = null, setsTotal = null,

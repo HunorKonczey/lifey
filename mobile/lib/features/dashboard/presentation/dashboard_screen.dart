@@ -11,6 +11,7 @@ import '../../../core/sync/sync_engine_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/format/lifey_format.dart';
+import '../../../shared/widgets/adaptive_columns.dart';
 import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
@@ -224,7 +225,10 @@ class _DashboardBody extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).value;
     final firstName = user?.firstName?.trim();
 
-    final children = <Widget>[
+    // Two lists so a tablet can lay them out as two columns (LIF-128): what the
+    // screen leads with, then the week and the logs. On a phone they stack in
+    // this same order.
+    final primary = <Widget>[
         // ── Streak strip — right under the header ────────────────────────
         if (streaks.isNotEmpty) ...[
           StreakChipRow(streaks: streaks, onTap: () => context.push('/recap')),
@@ -267,6 +271,9 @@ class _DashboardBody extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
 
+    ];
+
+    final secondary = <Widget>[
         // ── This week — calories bar chart ──────────────────────────────────────────────────────────────
         WeeklyCaloriesCard(points: data.weeklyCalories, goal: settings.dailyCalorieGoal),
 
@@ -324,7 +331,7 @@ class _DashboardBody extends ConsumerWidget {
         ),
         SliverPadding(
           padding: EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s16, AppSpacing.s20, bottomPad),
-          sliver: SliverList(delegate: SliverChildListDelegate(children)),
+          sliver: SliverToBoxAdapter(child: AdaptiveColumns(primary: primary, secondary: secondary)),
         ),
       ],
     );
