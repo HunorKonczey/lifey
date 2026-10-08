@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { Client } from "pg";
 
 /**
@@ -49,6 +49,45 @@ async function grantSuperAdminRole(userId: number) {
   }
 }
 
+/**
+ * Opens the queue and returns the row of this applicant. The queue shows 20 pending requests a page, oldest first, so on a
+ * database that has collected requests from earlier runs the new one is on a later page: page forward until it is there
+ * (LIF-143). Fails with the page it gave up on if the row never shows up.
+ */
+async function openRequestRow(page: Page, applicantEmail: string) {
+  await page.goto("/superadmin/trainer-requests");
+  const rows = page.getByTestId("trainer-request-row");
+  const row = rows.filter({ hasText: applicantEmail });
+  const next = page.getByRole("button", { name: "Next page" });
+  for (let pageNumber = 1; ; pageNumber++) {
+    await expect(rows.first()).toBeVisible();
+    if ((await row.count()) > 0) return row;
+    // The pager only exists when there is more than one page, and its arrow is disabled on the last.
+    if ((await next.count()) === 0 || !(await next.isEnabled())) {
+      throw new Error(`no pending request of ${applicantEmail} in the queue (looked at ${pageNumber} page(s))`);
+    }
+    await next.click();
+    await expect(page.getByText(new RegExp("^" + (pageNumber + 1) + " / [0-9]+$"))).toBeVisible();
+  }
+}
+
+/**
+ * The reject test ends by submitting a fresh request on purpose, and nothing ever decides it. Left alone it would stay
+ * PENDING in the dev database and every run would add one more to the queue — resolve it directly, like the other specs do.
+ */
+async function rejectPendingRequestsOf(userId: number, decidedBy: number) {
+  const db = new Client(DB_CONFIG);
+  await db.connect();
+  try {
+    await db.query(
+      "update trainer_request set status = 'REJECTED', decided_at = now(), decided_by = $2 where user_id = $1 and status = 'PENDING'",
+      [userId, decidedBy],
+    );
+  } finally {
+    await db.end();
+  }
+}
+
 test.describe("Superadmin trainer-request queue", () => {
   test("approving a request from the queue grants the role and clears it from the list", async ({ page, request }) => {
     const runId = Date.now();
@@ -79,8 +118,7 @@ test.describe("Superadmin trainer-request queue", () => {
     });
 
     await test.step("the request appears in the queue and can be approved", async () => {
-      await page.goto("/superadmin/trainer-requests");
-      const row = page.getByTestId("trainer-request-row").filter({ hasText: applicantEmail });
+      const row = await openRequestRow(page, applicantEmail);
       await expect(row).toBeVisible();
 
       await row.getByRole("button", { name: "Approve" }).click();
@@ -104,9 +142,12 @@ test.describe("Superadmin trainer-request queue", () => {
     const applicantPassword = "E2eApplicant123!";
     const superAdminEmail = `e2e-queue-reject-admin-${runId}@example.com`;
     const superAdminPassword = "E2eSuperAdmin123!";
+    let applicantId = 0;
+    let superAdminId = 0;
 
     await test.step("register the applicant and submit a request via the API", async () => {
       const applicant = await registerAndLogin(request, applicantEmail, applicantPassword);
+      applicantId = applicant.userId;
       const createRes = await request.post(`${API_BASE}/trainer-requests`, {
         headers: { Authorization: `Bearer ${applicant.accessToken}` },
         data: { motivation: "Queue reject test", clientCount: 3 },
@@ -116,6 +157,7 @@ test.describe("Superadmin trainer-request queue", () => {
 
     await test.step("register and promote a super admin, then reject the request through the real UI", async () => {
       const superAdmin = await registerAndLogin(request, superAdminEmail, superAdminPassword);
+      superAdminId = superAdmin.userId;
       await grantSuperAdminRole(superAdmin.userId);
 
       await page.goto("/login");
@@ -124,8 +166,7 @@ test.describe("Superadmin trainer-request queue", () => {
       await page.getByRole("button", { name: "Sign in" }).click();
       await page.waitForURL("**/dashboard");
 
-      await page.goto("/superadmin/trainer-requests");
-      const row = page.getByTestId("trainer-request-row").filter({ hasText: applicantEmail });
+      const row = await openRequestRow(page, applicantEmail);
       await expect(row).toBeVisible();
       await row.getByRole("button", { name: "Reject" }).click();
       await page.getByTestId("trainer-request-confirm-decision").click();
@@ -148,6 +189,10 @@ test.describe("Superadmin trainer-request queue", () => {
       await page.getByPlaceholder(/spreadsheets/).fill("Trying again after rejection");
       await page.getByRole("button", { name: "Submit request" }).click();
       await expect(page.getByText("We're reviewing your application")).toBeVisible();
+    });
+
+    await test.step("clean up: decide the fresh request so it does not pile up in the queue", async () => {
+      await rejectPendingRequestsOf(applicantId, superAdminId);
     });
   });
 });
