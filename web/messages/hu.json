@@ -1148,6 +1148,7 @@
       "menuDuplicate": "Duplikálás",
       "rowMenuLabel": "{name} műveletei",
       "favoriteAria": "Kedvenc",
+      "fromTrainer": "Az edződtől",
       "deleteTitle": "Törlöd: {name}?",
       "deleteBody": "A belőle már naplózott étkezések megmaradnak. Utána még {seconds} másodpercig visszavonhatod.",
       "recipeDeleted": "{name} törölve",

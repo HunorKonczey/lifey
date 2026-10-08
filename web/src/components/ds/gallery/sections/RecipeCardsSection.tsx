@@ -35,8 +35,8 @@ const RICE_BOWL = recipe(1, "Csirkés rizstál brokkolival", 4, true, [
 const CARDS: { recipe: RecipeResponse; perServing: Macros }[] = [
   // carbs carry the most kcal: 38 P = 152, 58 C = 232, 14 F = 126
   { recipe: { ...RICE_BOWL, ingredients: [...RICE_BOWL.ingredients, ...fill(2)] }, perServing: { calories: 528, protein: 38, carbs: 58, fat: 14 } },
-  // protein: 32 P = 128, 30 C = 120, 12 F = 108
-  { recipe: recipe(2, "Görög joghurtos zabkása", 2, false, fill(3)), perServing: { calories: 380, protein: 32, carbs: 30, fat: 12 } },
+  // protein: 32 P = 128, 30 C = 120, 12 F = 108 — assigned by a trainer, so it carries the "from your trainer" chip
+  { recipe: { ...recipe(2, "Görög joghurtos zabkása", 2, false, fill(3)), originTrainerId: 7 }, perServing: { calories: 380, protein: 32, carbs: 30, fat: 12 } },
   // fat: 10 P = 40, 30 C = 120, 30 F = 270
   { recipe: recipe(3, "Avokádós pirítós tojással és egy nagyon hosszú névvel, ami két sorba kerül", 1, false, fill(4)), perServing: { calories: 450, protein: 10, carbs: 30, fat: 30 } },
   // nothing known about the macros: the neutral icon

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Card, Icon } from "@/components/ds";
+import { Button, Card, Icon, TintedChip } from "@/components/ds";
 import type { MenuItemDef } from "@/components/ds/Menu";
 import { RatioBar } from "@/components/ds/progress/RatioBar";
 import { RowMenuButton } from "@/components/ds/RowMenuButton";
@@ -27,7 +27,8 @@ export interface RecipeCardProps {
  * A recipe card (W2.11, client-008/009): the photo or a 56 px icon in the dominant macro's colour, the name,
  * "4 adag · 5 hozzávaló", the **kcal per serving** large, a P/C/F ratio bar (by kcal share), the macros per
  * serving in their metric colours, "Naplózás" and a "⋯". The top part opens the editor; the actions sit outside
- * that button so nothing is nested.
+ * that button so nothing is nested. A recipe the user's trainer assigned carries an "Az edződtől" chip, the web's
+ * counterpart of the phone's "Edzőtől" pill (LIF-104).
  */
 export function RecipeCard({ recipe, perServing, photo, onOpen, onLog, menu }: RecipeCardProps) {
   const t = useTranslations("nutrition.recipesView");
@@ -66,6 +67,11 @@ export function RecipeCard({ recipe, perServing, photo, onOpen, onLog, menu }: R
             <span className="type-body-s block" style={{ color: "var(--text-3)" }}>
               {t("servingsMeta", { servings: recipe.servings, count: recipe.ingredients.length })}
             </span>
+            {recipe.originTrainerId != null && (
+              <span className="mt-1.5 block" data-testid="recipe-from-trainer">
+                <TintedChip label={t("fromTrainer")} color="var(--role)" icon="school" />
+              </span>
+            )}
           </span>
         </span>
 
