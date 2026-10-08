@@ -25,7 +25,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Regression test for {@link WorkoutSessionRepository#countMissedOccurrences} — the
+ * Regression test for {@link WorkoutSessionRepository#countMissedOccurrences} and, over the same rows,
+ * {@link WorkoutSessionRepository#countScheduledOccurrences} (the planned / completed figures of the trainer's client
+ * card, LIF-101) — the
  * trainer compliance overview's missed-workout count (docs/29-compliance-overview-plan.md,
  * B2). Must agree with the MISSED branch of
  * com.lifey.trainer.service.WorkoutScheduleServiceImpl#occurrenceStatus().
@@ -86,6 +88,28 @@ class MissedOccurrenceCountRegressionTest {
                 trainerId, clientId, today.minusDays(14), today);
 
         assertThat(count).isEqualTo(1);
+    }
+
+    @Test
+    void countsWhatThisTrainerScheduledInTheLastSevenDatesAndHowMuchOfItWasStarted() {
+        LocalDate from = today.minusDays(6);
+
+        // Seed, inside [today - 6, today] under this trainer: the miss (-3) and the started one (-2). The cancelled
+        // one (-1), the one 20 days back, tomorrow's and the other trainer's do not belong to the window.
+        assertThat(workoutSessionRepository.countScheduledOccurrences(trainerId, clientId, from, today, false)).isEqualTo(2);
+        assertThat(workoutSessionRepository.countScheduledOccurrences(trainerId, clientId, from, today, true)).isEqualTo(1);
+    }
+
+    @Test
+    void aSessionPlannedForTodayCountsAsPlannedAndNotAsMissed() {
+        User client = userRepository.findById(clientId).orElseThrow();
+        Long scheduleId = workoutScheduleRepository.findAll().stream()
+                .filter(w -> w.getTrainer().getId().equals(trainerId))
+                .findFirst().orElseThrow().getId();
+        saveOccurrence(client, scheduleId, today, null, null);
+
+        assertThat(workoutSessionRepository.countScheduledOccurrences(trainerId, clientId, today.minusDays(6), today, false)).isEqualTo(3);
+        assertThat(workoutSessionRepository.countMissedOccurrences(trainerId, clientId, today.minusDays(14), today)).isEqualTo(1);
     }
 
     private User saveUser(String email) {

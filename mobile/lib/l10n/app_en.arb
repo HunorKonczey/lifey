@@ -6672,6 +6672,25 @@
     "description": "Line under the average steps KPI: how many days with recorded steps the average is taken over",
     "placeholders": {"count": {"type": "int"}}
   },
+  "trainerKpiStepGoal": "{percent} of goal",
+  "@trainerKpiStepGoal": {
+    "description": "Line under the average steps KPI: how much of the client's own daily step goal the average is, e.g. '84% of goal'",
+    "placeholders": {"percent": {"type": "String"}}
+  },
+  "trainerKpiWorkoutsPlanned": "{done} of {planned} planned",
+  "@trainerKpiWorkoutsPlanned": {
+    "description": "Line under the workouts KPI: how many of the sessions scheduled for the last 7 days the client started, e.g. '3 of 4 planned'",
+    "placeholders": {"done": {"type": "int"}, "planned": {"type": "int"}}
+  },
+  "trainerKpiWorkoutsAllDone": "all planned done",
+  "@trainerKpiWorkoutsAllDone": {
+    "description": "Line under the workouts KPI when the client started every session scheduled for the last 7 days"
+  },
+  "trainerClientSinceWithGoalLabel": "Client since {date} · Goal: {goal, select, loseWeight{lose weight} maintain{maintain} gainMuscle{build muscle} other{not set}}",
+  "@trainerClientSinceWithGoalLabel": {
+    "description": "Line under the client's name in the detail header: when the coaching relationship started, then the goal the client stated in onboarding. {date} is already formatted for the locale; {goal} is loseWeight, maintain or gainMuscle (ICU select)",
+    "placeholders": {"date": {"type": "String"}, "goal": {"type": "String"}}
+  },
   "trainerKpiRpeLight": "light effort",
   "@trainerKpiRpeLight": {
     "description": "Line under the average RPE KPI when the average is below 4"

@@ -15,14 +15,17 @@ import { trainerApi } from "../api";
 
 interface ClientStepsTabProps {
   clientId: number;
+  /** The client's own daily step goal, or null when they never set one. */
+  stepGoal: number | null;
 }
 
 /**
  * The client's steps (W7-C): the last 14 days in the client's own chart — one colour, today dashed — and the average
- * and best-day cards. The trainer cannot read the client's step goal, so there is no goal line and no "goal days"
- * card (the "Cél módosítása" action stays unbuilt, D-W0.19).
+ * and best-day cards. The goal line and the "goal days" card are the client's own step goal, which the client summary
+ * carries since LIF-101; a client who never set one gets neither, never a made-up default (the "Cél módosítása" action
+ * stays unbuilt, D-W0.19).
  */
-export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
+export function ClientStepsTab({ clientId, stepGoal }: ClientStepsTabProps) {
   const t = useTranslations("admin.clientDetail");
   const from = useMemo(() => format(subDays(new Date(), 29), "yyyy-MM-dd"), []);
   const stepsQ = useQuery({
@@ -37,14 +40,14 @@ export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
   if (entries.length === 0) return <EmptyState icon="directions_walk" title={t("noSteps")} body={t("noStepsBody")} />;
 
   const now = new Date();
-  const stats = stepsWindow(entries, 0, now, now);
+  const stats = stepsWindow(entries, stepGoal ?? 0, now, now);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-2 gap-4">
-        <StepsStats stats={stats} showGoal={false} />
+        <StepsStats stats={stats} showGoal={stepGoal != null} />
       </div>
-      <StepsTrendCard window={stats} goal={null} />
+      <StepsTrendCard window={stats} goal={stepGoal} />
     </div>
   );
 }

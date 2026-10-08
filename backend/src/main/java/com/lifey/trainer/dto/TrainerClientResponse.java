@@ -1,5 +1,7 @@
 package com.lifey.trainer.dto;
 
+import com.lifey.userdetails.PrimaryGoal;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -49,6 +51,25 @@ public record TrainerClientResponse(
          * (docs/redesign-web/78-web-redesign-plan.md W7.b1). Read-only, the same value the trainer's nutrition-goals
          * endpoint returns.
          */
-        Integer dailyCalorieGoal
+        Integer dailyCalorieGoal,
+        /**
+         * The client's own daily step goal from their settings, or null when they never set one — what lets the
+         * trainer's steps tile say "84 % of goal" (docs/redesign/77-mobile-redesign-plan.md R6.5, LIF-101). Read-only,
+         * like {@link #dailyCalorieGoal}; no default is applied here, the apps decide what a missing goal means.
+         */
+        Integer dailyStepGoal,
+        /**
+         * Occurrences the trainer scheduled for the client on the last 7 days' dates (today included, cancelled ones
+         * left out), and how many of them the client started — "3 of 4 planned" on the trainer's workouts tile
+         * (LIF-101). Zero planned means nothing was asked of the client that week, not a missing figure.
+         */
+        int plannedSessions7d,
+        int completedSessions7d,
+        /**
+         * What the client said they are training for in onboarding, or null when they have not been through it —
+         * the "Goal: build muscle" line of the trainer's client header (LIF-102). Read-only; the client changes it
+         * in their own profile.
+         */
+        PrimaryGoal primaryGoal
 ) {
 }

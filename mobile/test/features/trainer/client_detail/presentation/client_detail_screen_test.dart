@@ -7,6 +7,7 @@ import 'package:lifey/core/sync/connectivity_status_provider.dart';
 import 'package:lifey/features/auth/application/auth_controller.dart';
 import 'package:lifey/features/auth/domain/auth_user.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart' show MealType;
+import 'package:lifey/features/onboarding/domain/user_details.dart' show PrimaryGoal;
 import 'package:lifey/features/trainer/client_detail/application/client_detail_tab_preference.dart';
 import 'package:lifey/features/trainer/client_detail/data/client_detail_repository.dart';
 import 'package:lifey/features/trainer/client_detail/domain/client_data.dart';
@@ -220,6 +221,29 @@ void main() {
       expect(find.textContaining('Latest: 71.4 kg'), findsOneWidget);
     });
 
+    for (final (goal, expected) in [
+      (PrimaryGoal.gainMuscle, 'Client since 1 Mar 2026 · Goal: build muscle'),
+      (PrimaryGoal.loseWeight, 'Client since 1 Mar 2026 · Goal: lose weight'),
+      (PrimaryGoal.maintain, 'Client since 1 Mar 2026 · Goal: maintain'),
+      (null, 'Client since 1 Mar 2026'),
+    ]) {
+      testWidgets('the since line reads "$expected" for the goal ${goal ?? 'not stated'} (LIF-102)', (tester) async {
+        await _pump(tester, clients: [
+          TrainerClient(
+            userId: 42,
+            email: 'anna@example.com',
+            firstName: 'Anna',
+            lastName: 'Client',
+            activeSince: DateTime.utc(2026, 3, 1),
+            primaryGoal: goal,
+          ),
+        ]);
+
+        expect(find.text(expected), findsOneWidget);
+        if (goal == null) expect(find.textContaining('Goal'), findsNothing);
+      });
+    }
+
     testWidgets('Message and Schedule sit right under the tabs, on every tab', (tester) async {
       await _pump(tester);
 
@@ -309,6 +333,66 @@ void main() {
       expect(find.text('hard, not maximal'), findsOneWidget);
     });
 
+    for (final c in [
+      (
+        name: 'a plan partly done, against a step goal the average is 90% of',
+        planned: 4,
+        done: 3,
+        stepGoal: 10000,
+        missed: 2,
+        shown: ['3 of 4 planned', '90% of goal'],
+        hidden: ['missed', 'over 2 days'],
+      ),
+      (
+        name: 'a plan fully done, with no step goal set',
+        planned: 4,
+        done: 4,
+        stepGoal: null,
+        missed: 0,
+        shown: ['all planned done', 'over 2 days'],
+        hidden: ['of goal', 'planned,'],
+      ),
+      (
+        name: 'nothing scheduled this week, with an older miss',
+        planned: 0,
+        done: 0,
+        stepGoal: null,
+        missed: 1,
+        shown: ['1 session missed · 14 d'],
+        hidden: ['planned'],
+      ),
+    ]) {
+      testWidgets('puts the week in context for ${c.name} (LIF-101)', (tester) async {
+        await _pump(
+          tester,
+          clients: [
+            TrainerClient(
+              userId: 42,
+              email: 'anna@example.com',
+              firstName: 'Anna',
+              lastName: 'Client',
+              activeSince: DateTime.utc(2026, 3, 1),
+              plannedSessions7d: c.planned,
+              completedSessions7d: c.done,
+              dailyStepGoal: c.stepGoal,
+              missedWorkoutCount: c.missed,
+            ),
+          ],
+          repository: _FakeDetailRepository(
+            statistics: const ClientStatistics(totalCalories: 14000, workoutCount: 3),
+            steps: [_step(1, 8000), _step(0, 10000)], // average 9,000
+          ),
+        );
+
+        for (final text in c.shown) {
+          expect(find.text(text), findsOneWidget);
+        }
+        for (final text in c.hidden) {
+          expect(find.textContaining(text), findsNothing);
+        }
+      });
+    }
+
     testWidgets('a figure that does not exist is a dash and an empty line, never a zero', (tester) async {
       await _pump(tester);
 
@@ -339,6 +423,8 @@ void main() {
             lastName: 'Client',
             activeSince: DateTime.utc(2026, 3, 1),
             missedWorkoutCount: 3,
+            dailyStepGoal: 9000,
+            primaryGoal: PrimaryGoal.gainMuscle,
           );
           await _pump(
             tester,
@@ -359,6 +445,34 @@ void main() {
         });
       }
     }
+
+    testWidgets('the planned-sessions line fits 360 dp at × 1.3 in Hungarian too', (tester) async {
+      final planned = TrainerClient(
+        userId: 42,
+        email: 'anna@example.com',
+        firstName: 'Anna',
+        lastName: 'Client',
+        activeSince: DateTime.utc(2026, 3, 1),
+        plannedSessions7d: 12,
+        completedSessions7d: 11,
+        dailyStepGoal: 9000,
+        primaryGoal: PrimaryGoal.loseWeight,
+      );
+      await _pump(
+        tester,
+        clients: [planned],
+        locale: const Locale('hu'),
+        textScale: 1.3,
+        size: const Size(360, 900),
+        repository: _FakeDetailRepository(
+          statistics: const ClientStatistics(totalCalories: 17000, workoutCount: 12),
+          steps: [_step(1, 8000), _step(0, 10500)],
+        ),
+      );
+      expect(find.text('11/12 tervezett kész'), findsOneWidget);
+      expect(find.text('Cél: 103%'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('statistics tab', () {

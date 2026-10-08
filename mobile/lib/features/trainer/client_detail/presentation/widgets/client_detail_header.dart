@@ -3,10 +3,25 @@ import 'package:flutter/material.dart';
 import '../../../../../core/format/lifey_format.dart';
 import '../../../../../core/theme/app_tokens.dart';
 import '../../../../../l10n/app_localizations.dart';
+import '../../../../onboarding/domain/user_details.dart';
 import '../../../../../shared/widgets/ds/lifey_header.dart';
 import '../../../clients/domain/trainer_client.dart';
 import '../../../shared/client_avatar.dart';
 import 'client_action_bar.dart';
+
+/// "Client since 24 Sep 2026 · Goal: build muscle" — the line under the client's name (canvas Lifey 6). The goal
+/// is whatever the client stated in onboarding; without one the line is the date alone (LIF-102).
+String clientSinceLine(BuildContext context, TrainerClient client) {
+  final l10n = AppLocalizations.of(context)!;
+  final since = LifeyFormat.of(context).fullDate(client.activeSince.toLocal());
+  final goal = client.primaryGoal;
+  if (goal == null) return l10n.trainerClientSinceLabel(since);
+  return l10n.trainerClientSinceWithGoalLabel(since, switch (goal) {
+    PrimaryGoal.loseWeight => 'loseWeight',
+    PrimaryGoal.maintain => 'maintain',
+    PrimaryGoal.gainMuscle => 'gainMuscle',
+  });
+}
 
 /// The client detail screen's header (canvas Lifey 6, client overview): the
 /// subpage header — round back button, the client's monogram, their name over
@@ -47,9 +62,7 @@ class ClientDetailHeader extends StatelessWidget implements PreferredSizeWidget 
 
     return LifeySubpageHeader(
       title: client.displayName,
-      subtitle: l10n.trainerClientSinceLabel(
-        LifeyFormat.of(context).fullDate(client.activeSince.toLocal()),
-      ),
+      subtitle: clientSinceLine(context, client),
       leading: ClientAvatar(client: client, size: 48, showPhoto: true),
       showBack: showBack,
       actions: [
@@ -112,7 +125,6 @@ class ClientDetailWideHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final t = Theme.of(context).textTheme;
     final p = context.palette;
 
@@ -130,10 +142,7 @@ class ClientDetailWideHeader extends StatelessWidget {
                 children: [
                   Text(client.displayName, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.headlineSmall!.copyWith(color: p.text)),
                   const SizedBox(height: 2),
-                  Text(
-                    l10n.trainerClientSinceLabel(LifeyFormat.of(context).fullDate(client.activeSince.toLocal())),
-                    style: t.bodyMedium!.copyWith(color: p.text2),
-                  ),
+                  Text(clientSinceLine(context, client), style: t.bodyMedium!.copyWith(color: p.text2)),
                 ],
               ),
             ),

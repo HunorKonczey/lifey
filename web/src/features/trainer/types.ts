@@ -49,6 +49,8 @@ export interface TrainerClientResponse {
   prCount7d: number;
   /** The client's own daily calorie goal; null when none is set (W7.b1) — the card then shows the average only. */
   dailyCalorieGoal?: number | null;
+  /** The client's own daily step goal; null when none is set (LIF-101) — the steps tab then draws no goal line. */
+  dailyStepGoal?: number | null;
 }
 
 export type ContentType = "TEMPLATE" | "RECIPE";
