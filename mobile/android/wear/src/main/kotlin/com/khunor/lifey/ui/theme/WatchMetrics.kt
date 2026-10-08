@@ -38,6 +38,14 @@ class WatchMetrics(val widthDp: Float) {
     val buttonHeight: Dp get() = max(scaled(52f, 48f), MIN_TOUCH_TARGET_DP).dp
     val minTouchTarget: Dp get() = MIN_TOUCH_TARGET_DP.dp
 
+    /**
+     * What the bottom-arc EdgeButton takes from the page above it: the library's Small (≈ 58 dp as measured on
+     * the 227 dp dial) / ExtraSmall (≈ 46 dp) size plus a hair of air. A stack that shares the screen with
+     * one reserves this at its bottom instead of guessing a margin (LIF-131 bugs 3, 4). Wear only — the Apple
+     * button sizes differ.
+     */
+    val edgeButtonReserve: Dp get() = (if (isCompact) 48f else 62f).dp
+
     /** Side margin: 12 % of the width. */
     val sideMargin: Dp get() = (widthDp * 0.12f).roundToInt().dp
     /** Top and bottom margin: 20 % — anything there is at most one short line or an EdgeButton. */

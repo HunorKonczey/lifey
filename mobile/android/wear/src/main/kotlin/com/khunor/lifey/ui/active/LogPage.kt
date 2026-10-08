@@ -99,8 +99,10 @@ fun LogContent(
     // Standalone logs locally: the circle's own check + n/total says "logged", and the arc belongs to the list button.
     val pill = if (model.offersExerciseList) null else logPillKind(state, model.phoneUnreachable)
     val diameter = if (model.offersExerciseList) metrics.circleButtonWithEdgeButton else metrics.circleButton
-    // Four rows plus two labelled circles do not fit above a 46 dp arc button on the compact dial: no labels there.
-    val labelsFit = !(model.offersExerciseList && metrics.isCompact)
+    // Four rows plus two labelled circles do not fit above the arc button on either dial (the 58 dp button hid the
+    // labels on the regular one too, LIF-131 bug 4): no labels while the button is there — the circles' glyphs and
+    // the "+1" say what they are.
+    val labelsFit = !model.offersExerciseList
     val ghostPair = state is LogSetState.Pending || state is LogSetState.Failed || pill == PillKind.Unreachable
     val confirmed = state is LogSetState.Confirmed
     val done = model.setsDone
@@ -110,12 +112,14 @@ fun LogContent(
         model.freeFormatSets != null -> model.freeFormatSets.first.toString()
         else -> null
     }
-    // "Fekvenyomás · 3/4 szett": the set about to be logged, or — right after a tap — the one just logged.
-    val contextLine = if (done != null && total != null) {
+    // "Fekvenyomás · 3/4 szett": the set about to be logged, or — right after a tap — the one just logged. The
+    // name and the " · 3/4 szett" suffix are two texts, so a long name (or a big system font) ellipsizes the name
+    // and leaves the set number readable instead of ending the line in "S…" (LIF-131 bug 7).
+    val contextSuffix = if (done != null && total != null) {
         val shown = if (confirmed) done else (done + 1).coerceAtMost(total)
-        stringResource(R.string.log_set_context_format, model.exerciseName, shown, total)
+        stringResource(R.string.log_set_context_format, "", shown, total)
     } else {
-        model.exerciseName
+        null
     }
     // Top-down stack (the canvas lays it out the same way): header, context line, circles, then the pill on
     // the bottom chord — a flexible gap in between, so nothing can overlap on either dial size.
@@ -128,21 +132,24 @@ fun LogContent(
                 icon = Icons.Filled.Timer, label = formatElapsed(model.elapsedMs),
                 isPaused = model.isPaused, showsStandaloneMark = model.showsStandaloneMark,
             )
-            Text(
+            Row(
                 // "Fekvenyomás" in `text`, " · 3/4 szett" in `text2`.
-                text = buildAnnotatedString {
-                    append(contextLine)
-                    if (done != null && total != null) {
-                        addStyle(SpanStyle(color = LifeyColors.text2), model.exerciseName.length.coerceAtMost(contextLine.length), contextLine.length)
-                    }
-                },
-                style = LifeyType.body().copy(fontWeight = FontWeight.SemiBold), color = LifeyColors.text, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
                 modifier = Modifier
                     .padding(top = LifeySpacing.xs)
-                    .widthIn(max = (width * 0.76f).dp)
+                    .widthIn(max = (width * 0.84f).dp)
                     .let { if (onOpenExerciseList != null) it.clickable(onClick = onOpenExerciseList) else it },
-            )
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                val contextStyle = LifeyType.body().copy(fontWeight = FontWeight.SemiBold)
+                Text(
+                    model.exerciseName, style = contextStyle, color = LifeyColors.text, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (contextSuffix != null) {
+                    Text(contextSuffix, style = contextStyle, color = LifeyColors.text2, maxLines = 1, softWrap = false)
+                }
+            }
             Row(Modifier.padding(top = if (LocalWatchMetrics.current.isCompact) LifeySpacing.xs else LifeySpacing.md), horizontalArrangement = Arrangement.spacedBy(LifeySpacing.md)) {
                 CircleButton(
                     style = if (confirmed) CircleStyle.SuccessTint else CircleStyle.Primary,
@@ -187,15 +194,15 @@ fun LogContent(
                         PillKind.Unreachable -> balancedBreak(pillText)
                         else -> pillText
                     },
-                    modifier = Modifier.widthIn(max = (width * 0.62f).dp),
+                    modifier = Modifier.widthIn(max = (width * 0.74f).dp),
                 )
             }
         }
         if (model.offersExerciseList && onOpenExerciseList != null) {
             Box(Modifier.align(Alignment.BottomCenter)) {
                 LifeyEdgeButton(onClick = onOpenExerciseList, secondary = true) {
-                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, tint = LifeyColors.text, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(LifeySpacing.sm))
+                    // Text only: with the list glyph the button's text area was too narrow for "Gyakorlatok"
+                    // ("Gyakorl…", LIF-131 bug 4).
                     Text(stringResource(R.string.standalone_exercise_list_title), style = LifeyType.body(), color = LifeyColors.text, maxLines = 1)
                 }
             }

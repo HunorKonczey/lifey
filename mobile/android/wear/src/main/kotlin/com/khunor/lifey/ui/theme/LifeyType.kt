@@ -92,10 +92,10 @@ object LifeyType {
 
     /** `label` — system 700, 12 / 11 sp, +6 % tracking; CAPS only in the header chip and cardio field labels. */
     @Composable @ReadOnlyComposable
-    fun label(metrics: WatchMetrics = LocalWatchMetrics.current): TextStyle {
+    fun label(metrics: WatchMetrics = LocalWatchMetrics.current, textCap: Float = TEXT_CAP): TextStyle {
         val base = if (metrics.isCompact) 11f else 12f
         return TextStyle(
-            fontWeight = FontWeight.Bold, fontSize = cap(base, TEXT_CAP), letterSpacing = (base * 0.06f).sp,
+            fontWeight = FontWeight.Bold, fontSize = cap(base, textCap), letterSpacing = (base * 0.06f).sp,
         )
     }
 

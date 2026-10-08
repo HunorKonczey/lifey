@@ -20,10 +20,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.Text
 import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeySpacing
 import com.khunor.lifey.ui.theme.LifeyType
+import com.khunor.lifey.ui.theme.LocalWatchMetrics
 
 /**
  * Set segment bar (frame 04/03): the exercise name and "2/4" (PJS-free bold, "/4" in `text3`) over
@@ -44,14 +46,15 @@ fun SetSegmentBar(
 ) {
     val sized = if (width != null) modifier.widthIn(max = width) else modifier
     if (freeFormText != null) {
-        Text(freeFormText, modifier = sized, style = LifeyType.body(), color = LifeyColors.text2, maxLines = 2,
+        Text(freeFormText, modifier = sized, style = if (LocalWatchMetrics.current.isCompact) LifeyType.label().copy(letterSpacing = 0.sp) else LifeyType.body(), color = LifeyColors.text2, maxLines = 2,
             textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
         return
     }
     Column(sized, verticalArrangement = Arrangement.spacedBy(LifeySpacing.sm)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             if (title != null) {
-                Text(title, style = LifeyType.title(), color = LifeyColors.text, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                // One line: a second line is what used to run into the heart-rate row (LIF-131 bug 1).
+                Text(title, style = LifeyType.title(), color = LifeyColors.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false))
             }
             Text(counter(done, total), style = LifeyType.body())

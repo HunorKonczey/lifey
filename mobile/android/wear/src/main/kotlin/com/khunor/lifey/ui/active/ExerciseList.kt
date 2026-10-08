@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Text
@@ -17,6 +18,7 @@ import com.khunor.lifey.ui.components.ListRow
 import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeySpacing
 import com.khunor.lifey.ui.theme.LifeyType
+import com.khunor.lifey.ui.theme.LocalWatchMetrics
 
 /** One row of the exercise list: [index] is the plan position every logged set is attributed by. */
 data class ExerciseRow(val index: Int, val name: String, val subtitle: String, val isCurrent: Boolean)
@@ -41,7 +43,14 @@ fun ExerciseListContent(
             item {
                 Text(
                     title ?: stringResource(R.string.standalone_exercise_list_title), style = LifeyType.title(), color = LifeyColors.text,
-                    textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.fillMaxWidth().padding(bottom = LifeySpacing.md),
+                    // Below the clock and inside the chord: at the very top of the dial it is ~150 dp wide, which cut
+                    // the first letter of "Push nap — mell és váll." off (LIF-131 bug 5).
+                    textAlign = TextAlign.Center, maxLines = 2,
+                    modifier = Modifier.fillMaxWidth().padding(
+                        top = (LocalWatchMetrics.current.widthDp * 0.12f).dp,
+                        start = LocalWatchMetrics.current.sideMargin, end = LocalWatchMetrics.current.sideMargin,
+                        bottom = LifeySpacing.md,
+                    ),
                 )
             }
             rows.forEach { row ->

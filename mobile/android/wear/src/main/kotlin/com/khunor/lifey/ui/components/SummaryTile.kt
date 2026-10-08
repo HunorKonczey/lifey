@@ -68,7 +68,16 @@ fun SummaryTile(
  * 250 ms.
  */
 @Composable
-fun SyncRow(isSynced: Boolean, title: String, modifier: Modifier = Modifier, subtitle: String? = null, dense: Boolean = false) {
+fun SyncRow(
+    isSynced: Boolean,
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    dense: Boolean = false,
+    /** The compact dial: the title in the label size, at most two lines, and no queue-count line (it is the pending
+     * tint that says "not synced yet" there — the count was the third line that cost the tiles below their room). */
+    compact: Boolean = false,
+) {
     val reduced = rememberReducedMotion()
     val bg by animateColorAsState(
         if (isSynced) LifeyColors.tint(LifeyColors.success) else LifeyColors.nested,
@@ -76,14 +85,15 @@ fun SyncRow(isSynced: Boolean, title: String, modifier: Modifier = Modifier, sub
     )
     val content = if (isSynced) LifeyColors.success else LifeyColors.text
     Row(
-        modifier.fillMaxWidth().background(bg, LifeyShapes.card).padding(horizontal = LifeySpacing.lg, vertical = if (dense) LifeySpacing.xs else LifeySpacing.md),
-        horizontalArrangement = Arrangement.spacedBy(LifeySpacing.md, Alignment.CenterHorizontally),
+        modifier.fillMaxWidth().background(bg, LifeyShapes.card)
+            .padding(horizontal = if (compact) LifeySpacing.md else LifeySpacing.lg, vertical = if (dense) (if (compact) LifeySpacing.xxs else LifeySpacing.xs) else LifeySpacing.md),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) LifeySpacing.sm else LifeySpacing.md, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(if (isSynced) Icons.Filled.CloudDone else Icons.Filled.CloudUpload, contentDescription = null, tint = content, modifier = Modifier.size(18.dp))
+        Icon(if (isSynced) Icons.Filled.CloudDone else Icons.Filled.CloudUpload, contentDescription = null, tint = content, modifier = Modifier.size(if (compact) 16.dp else 18.dp))
         Column {
-            Text(title, style = LifeyType.body(), color = content, maxLines = 2)
-            if (subtitle != null && !isSynced) Text(subtitle, style = LifeyType.label(), color = LifeyColors.text2, maxLines = 2)
+            Text(title, style = if (compact) LifeyType.label() else LifeyType.body(), color = content, maxLines = 2)
+            if (subtitle != null && !isSynced && !compact) Text(subtitle, style = LifeyType.label(), color = LifeyColors.text2, maxLines = 2)
         }
     }
 }

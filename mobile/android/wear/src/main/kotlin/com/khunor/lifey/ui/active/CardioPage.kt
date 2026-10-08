@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.wear.compose.material3.Icon
@@ -79,7 +80,8 @@ fun CardioContent(
     val width = metrics.widthDp
     val (number, unit) = splitUnit(model.primaryValue)
     // Two long phone labels ("ÁTLAG / TELJESÍTMÉNY") side by side need the widest band of the dial: the stack above
-    // them tightens, and on the compact dial the primary label line goes (the header and hero say the same).
+    // them tightens and the primary label line goes on both dials (the header and the hero say the same) — that is
+    // what lifts the fields out of the narrowing bottom chord where the right label was clipped (LIF-131 bug 8).
     val twoFields = model.fields.size == 2
     Box(modifier.fillMaxSize()) {
         Column(
@@ -91,7 +93,7 @@ fun CardioContent(
                 model.activityIcon, model.headerLabel, isPaused = model.isPaused,
                 showsStandaloneMark = model.showsStandaloneMark, accent = model.accent,
             )
-            if (!(twoFields && metrics.isCompact)) {
+            if (!twoFields) {
                 Text(model.primaryLabel.uppercase(), style = LifeyType.label(), color = LifeyColors.text2, maxLines = 1)
             }
             CardioHero(number, unit)
@@ -100,10 +102,10 @@ fun CardioContent(
                 0 -> Unit
                 1 -> CardioField(model.fields[0].value, model.fields[0].label, Modifier.padding(top = LifeySpacing.xs))
                 else -> Row(
-                    Modifier.padding(top = LifeySpacing.xs).fillMaxWidth(0.86f),
-                    horizontalArrangement = Arrangement.spacedBy(LifeySpacing.md),
+                    Modifier.padding(top = LifeySpacing.xs).fillMaxWidth(0.84f),
+                    horizontalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
                 ) {
-                    model.fields.take(2).forEach { CardioField(it.value, it.label, Modifier.weight(1f)) }
+                    model.fields.take(2).forEach { CardioField(it.value, it.label, Modifier.weight(1f), tight = true) }
                 }
             }
         }
@@ -178,8 +180,11 @@ fun GameContent(
                 color = if (bench) LifeyColors.text2 else LifeyColors.text,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(LifeySpacing.lg), verticalAlignment = Alignment.CenterVertically) {
-                HeartRateSlot(model.heartRate, onRequestPermission = onRequestHeartRatePermission)
-                if (model.grossValue != null && model.grossLabel != null) CardioField(model.grossValue, model.grossLabel)
+                // "138 bpm" beside "15:40 / BRUTTÓ IDŐ" is wider than the dial's chord at this height — the heart icon
+                // touched the left edge (LIF-131 bug 9). The unit goes when a field shares the row.
+                val hasGross = model.grossValue != null && model.grossLabel != null
+                HeartRateSlot(model.heartRate, onRequestPermission = onRequestHeartRatePermission, showUnit = !hasGross)
+                if (hasGross) CardioField(model.grossValue!!, model.grossLabel!!, fill = false)
             }
         }
         Box(Modifier.align(Alignment.BottomCenter)) {
@@ -191,7 +196,8 @@ fun GameContent(
                 Spacer(Modifier.width(LifeySpacing.sm))
                 Text(
                     stringResource(if (bench) R.string.cardio_back_to_court_button else R.string.cardio_go_to_bench_button),
-                    style = LifeyType.body(), color = LifeyColors.onPrimary, maxLines = 1,
+                    // Two lines, not "Back to …": the button's text area is narrower than its label (LIF-131 bug 9).
+                    style = LifeyType.body(), color = LifeyColors.onPrimary, maxLines = 2, textAlign = TextAlign.Center,
                 )
             }
         }

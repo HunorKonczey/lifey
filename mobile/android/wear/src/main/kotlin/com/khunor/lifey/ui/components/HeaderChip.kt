@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,8 @@ import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeySpacing
 import com.khunor.lifey.ui.theme.LifeyType
 import com.khunor.lifey.ui.theme.LocalWatchMetrics
+
+private const val MARK_VISUAL_SIZE = 24
 
 /** State of the standalone mark in [HeaderChip] (24 dp visible, 48 dp touch target — W2.5). */
 enum class StandaloneMark { Idle, Tapped }
@@ -65,11 +68,22 @@ fun HeaderChip(
         if (standaloneMark != null) {
             val tapped = standaloneMark == StandaloneMark.Tapped
             Box(
-                modifier = Modifier.size(LocalWatchMetrics.current.minTouchTarget).clickable(onClick = onMarkTap),
+                modifier = Modifier
+                    // The 48 dp touch target is drawn as it is but *reports* only the mark's own 24 dp of height to
+                    // the row. As a 48 dp-tall row it pushed every standalone page's stack down ~20 dp, which is what
+                    // put the metric page's name on the heart rate and the log page's EdgeButton on the circles
+                    // (LIF-131 bugs 2, 4).
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val reported = minOf(placeable.height, MARK_VISUAL_SIZE.dp.roundToPx())
+                        layout(placeable.width, reported) { placeable.place(0, (reported - placeable.height) / 2) }
+                    }
+                    .size(LocalWatchMetrics.current.minTouchTarget)
+                    .clickable(onClick = onMarkTap),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
-                    Modifier.size(24.dp).background(if (tapped) LifeyColors.raised else LifeyColors.control, CircleShape),
+                    Modifier.size(MARK_VISUAL_SIZE.dp).background(if (tapped) LifeyColors.raised else LifeyColors.control, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

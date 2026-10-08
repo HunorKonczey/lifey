@@ -58,4 +58,15 @@ class WatchMetricsTest {
         assertEquals(m.chordWidth(40f), m.chordWidth(160f), 0.01f) // symmetric
         assertEquals(0f, m.chordWidth(-5f), 0f) // outside the dial
     }
+
+    // LIF-131: a stack that shares the screen with the bottom-arc EdgeButton reserves its height instead of
+    // guessing a margin (the status screen's text and the log page's circle labels ran under the button).
+    @Test
+    fun edgeButtonReserveCoversTheLibrarySizes() {
+        // Small ≈ 58 dp on the regular dial, ExtraSmall ≈ 46 dp on the compact one, plus a little air.
+        assertEquals(62f, WatchMetrics(227f).edgeButtonReserve.value, 0f)
+        assertEquals(48f, WatchMetrics(192f).edgeButtonReserve.value, 0f)
+        assertTrue(WatchMetrics(227f).edgeButtonReserve.value >= 58f)
+        assertTrue(WatchMetrics(192f).edgeButtonReserve.value >= 46f)
+    }
 }

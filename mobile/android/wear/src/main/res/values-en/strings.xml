@@ -61,7 +61,7 @@
     <string name="cardio_gross_time_label">GROSS TIME</string>
     <string name="cardio_pace_label">PACE</string>
     <string name="cardio_playing_time_label">PLAYING TIME</string>
-    <string name="active_sets_free_format">Set %1$d · %2$d reps total</string>
+    <string name="active_sets_free_format">Set %1$d · %2$d reps</string>
     <string name="sync_pending">Will sync to phone</string>
     <string name="sync_done">Synced to phone</string>
     <string name="sync_queue_count">%1$d sessions waiting to sync</string>

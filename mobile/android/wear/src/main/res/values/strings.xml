@@ -61,7 +61,7 @@
     <string name="cardio_gross_time_label">BRUTTÓ IDŐ</string>
     <string name="cardio_pace_label">TEMPÓ</string>
     <string name="cardio_playing_time_label">JÁTÉKIDŐ</string>
-    <string name="active_sets_free_format">%1$d. szett · összesen %2$d ismétlés</string>
+    <string name="active_sets_free_format">%1$d. szett · %2$d ism.</string>
     <string name="sync_pending">Szinkronizálás a telefonra</string>
     <string name="sync_done">Telefonra szinkronizálva</string>
     <string name="sync_queue_count">%1$d edzés vár szinkronizálásra</string>

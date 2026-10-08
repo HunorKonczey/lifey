@@ -56,6 +56,8 @@ fun StatusPill(kind: PillKind, text: String, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(kind.icon, contentDescription = null, tint = kind.content, modifier = Modifier.size(14.dp))
-        Text(text, style = LifeyType.label(), color = kind.content, maxLines = 2, textAlign = TextAlign.Center)
+        // The label is capped at 1.15 x (not the usual 1.35): at 1.3 the first line alone filled the pill and the
+        // second ("próbáld újra") was the one that got cut (LIF-131 bug 7).
+        Text(text, style = LifeyType.label(textCap = 1.15f), color = kind.content, maxLines = 2, textAlign = TextAlign.Center)
     }
 }
