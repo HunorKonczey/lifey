@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: built (2026-10-06) on branch `feature/off-name-search` — backend, web and mobile, Prompts 0–11. Owed before it ships: the CI run of the Docker-dependent tests, one manual run against the real backend and the real OpenFoodFacts, and the emulator walk (see "Close-out" under Prompt 11). Not yet merged; the three PRs of the split are still to be cut
+Status: built (2026-10-06) on branch `feature/off-name-search` — backend, web and mobile, Prompts 0–11. The three things owed before it shipped (CI Docker tests, a real-stack run, the emulator walk) were done on 2026-10-08 — see "Verification run" after the Close-out (LIF-93); three small follow-ups came out of it (LIF-132, 133, 134). Not yet merged; the three PRs of the split are still to be cut
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -699,6 +699,29 @@ Hungarian-language user abroad searches Hungarian products first (D12's accepted
 then web, then mobile. Everything is on one branch, so cutting the three PRs means taking the commits in that order
 (`ac787642`…`ac5ccb9b` the plan, `026a183e`…`6f04908e` backend, `a9ac76ab`…`5c9baa6e` web, `0a1b3261`…`104c04cd` mobile; the
 plan commits go with the first PR) — or merging the one branch if a single review is preferred.
+
+### Verification run — 2026-10-08 (LIF-93)
+
+The three "owed before it ships" items, done. Backend + Postgres + the real search.openfoodfacts.org on a dev machine, the web dialog in a browser, the Pixel 10 emulator against the same backend.
+
+**1. Docker-dependent tests — green.** `FoodOwnedBarcodesRepositoryTest` (3) and `RoleBasedAccessControlTest` (12, incl. `offSearch_withoutAToken_isUnauthorized`) pass against a real Postgres 16, and both start the whole Spring context, so the `OffSearchCache` / `OffSearchLimiter` / second `RestClient` wiring is proved. Backend CI (`./mvnw -B verify`, with Docker) had already gone green on the branch's PR (#60, 2026-10-06) and on every backend run since.
+
+**2. Real stack.** `GET /foods/off-search`, one logged-in test account:
+- `csirkemell` (hu): `OK`, 13 hits, the first five are Hungarian products ("Csirkemell Sonka" S-Budget 109 kcal, "Rántott csirkemell" Nádudvari 196, "Panírozott csirkemell" Primana 196, "Csirkemell Sonka" Aldi 119, "csirkemell sonka" Karát 98). 0.4 s cold, ~0 s from the cache.
+- `snickers` (en): `OK`, 11 hits ("Snickers" 510 kcal, "SNICKERS 52,7G" 250, …).
+- **`pumpkin` (hu) no longer falls back to English**: the Hungary-restricted pass already finds three products ("Pumpkin seed" Lidl, …), so `fellBackToEnglish` is false. The fallback does fire for `oatmeal` (hu → en, 18 hits, `fellBackToEnglish: true`) — use that as the example from now on. `lang=de` is answered as English, not rejected.
+- No token → 401. `" "` and `"a"` → 400 "Search text must contain at least 3 letters or digits". A newline inside the text, 300 characters, `<script>…</script>` and `tej OR 1=1` all answer 200 (sanitised; OFF's fuzzy matching returns unrelated products for the last two, nothing is executed or echoed).
+- **The app-wide cap does its job — and is easy to hit.** With 8 searches per minute (`OPENFOODFACTS_SEARCH_PER_MINUTE`, a Hungarian fallback takes two) one person probing with different terms got `RATE_LIMITED` on the ninth call; the log shows only our own WARN, **no 429 / 503 from OFF** in about a dozen real calls (OFF answered in 0.1–0.4 s). That is too few calls to say anything about OFF's real limit, so the default is left at 8 — it is a ceiling for the whole app, so a handful of people searching at once would meet it.
+- Save → drop → 409 (API): `POST /foods` with the OFF values and barcode → 201; the same search again no longer lists that barcode (13 → 12); the same name again → 409 "A food named 'csirkemell sonka' already exists"; the same barcode under another name → 409 with the generic "Operation violates a data integrity constraint" message; after deleting the food the product is listed again and saving it again → 201 (no 409).
+- **Web dialog** (browser, real backend): tick, type `snickers`, the "From the OpenFoodFacts database" group shows 11 rows with the "OFF" tag and kcal; picking the first and "Add to breakfast" logs 510 kcal / 100 g and creates the own food. Searching again shows it under "Own · last Today …" with 510 kcal — **but the same product is still in the OFF group** (10-minute client cache, LIF-134); picking that stale row logs against the existing own food (Foods stays at 1, no error).
+
+**3. Mobile emulator walk** (Pixel 10, EN, backend on 10.0.2.2:8080):
+- Tick "Also search the OpenFoodFacts food database" (the three-line disclaimer shows once ticked, and the choice is remembered next time), type `snickers`: "From the OpenFoodFacts database — Snickers OFF 510 kcal". Pick → "Snickers per 100 g · 510 kcal", 100 g, Add to meal → meal total 510 kcal / 10 g P / 54 g C / 28 g F, Save → the backend has the food with its barcode and 510 kcal (offline-first sync).
+- **Airplane mode:** the checkbox is greyed (still ticked) with "You're offline — OpenFoodFacts search needs a connection."; the product saved above is offered as a chip and logs (50 g → 255 kcal) with the offline banner showing.
+- **1.3× text:** the checkbox label and disclaimer wrap, nothing overflows, the own list is "Snickers 510 kcal" and the already-saved product is correctly absent from the OFF group.
+- **Findings** (own stories): a user with **no foods** gets only "Add some foods first (Foods tab)." — no checkbox, no OFF search (LIF-132); with results showing and the keyboard hidden the sheet leaves ~1.5 rows of results and the "Add to meal" button below the fold (LIF-133).
+
+Not done: iOS, a physical Android device, and anything beyond a dozen OFF calls (see the limit note above).
 
 ## 5. After implementation
 - Update this doc's Status and the README row; add the spike results permanently.
