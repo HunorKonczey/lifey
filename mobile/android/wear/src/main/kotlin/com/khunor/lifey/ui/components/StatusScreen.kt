@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.wear.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -38,17 +40,37 @@ fun StatusScreen(
     onAction: () -> Unit = {},
 ) {
     val metrics = LocalWatchMetrics.current
+    // With an action the EdgeButton owns the bottom arc: the stack centres in what is left above it instead of
+    // running its last line under the button (W2.4), and the icon gives up a few dp to make that fit.
+    val hasAction = actionLabel != null
+    val iconSize = if (hasAction) 36.dp else 44.dp
+    // On the compact dial with an action there is room for the title and the explanation, not for the glyph too —
+    // the "Rendben" button and the words are what the screen is for (LIF-131 bug 3).
+    val showsIcon = !(hasAction && metrics.isCompact)
     Box(modifier.fillMaxSize()) {
-        Column(
-            Modifier.align(Alignment.Center).padding(horizontal = metrics.sideMargin, vertical = metrics.verticalMargin),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LifeySpacing.sm),
+        // Centred when it fits; at a big system font the title alone can run to four lines, and then the stack
+        // scrolls instead of its last lines being cut by the button (LIF-131 bug 3).
+        Box(
+            Modifier.fillMaxSize().padding(
+                start = metrics.sideMargin, end = metrics.sideMargin,
+                top = (metrics.widthDp * 0.14f).dp,
+                bottom = if (hasAction) metrics.edgeButtonReserve else metrics.verticalMargin,
+            ),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(Modifier.size(44.dp).background(LifeyColors.tint(iconTint), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(24.dp))
+        Column(
+            Modifier.verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
+        ) {
+            if (showsIcon) {
+                Box(Modifier.size(iconSize).background(LifeyColors.tint(iconTint), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(if (hasAction) 20.dp else 24.dp))
+                }
             }
-            Text(title, style = LifeyType.title(), color = LifeyColors.text, maxLines = 2, textAlign = TextAlign.Center)
-            if (text != null) Text(text, style = LifeyType.body(), color = LifeyColors.text2, maxLines = 4, textAlign = TextAlign.Center)
+            Text(title, style = LifeyType.title(), color = LifeyColors.text, textAlign = TextAlign.Center)
+            if (text != null) Text(text, style = LifeyType.body(), color = LifeyColors.text2, textAlign = TextAlign.Center)
+        }
         }
         TimeText()
         if (actionLabel != null) {

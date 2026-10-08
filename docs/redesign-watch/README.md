@@ -44,6 +44,6 @@ They are written in Hungarian; the plan is in English. The design-system canvas 
 | X4 | Wear | 4 | Start, error, standalone, cardio, ambient; Material 2 removed |
 | X2.o / X4.o | both | 2 / 4 | Optional surfaces: Wear Tile + Ongoing Activity built; Apple Smart Stack widget + complication sources written, not wired |
 
-**Status (2026-10-07): done in the cloud; the Wear emulator pass ran on 2026-10-07 (LIF-95, plan §12): the module builds and every gallery fixture renders, but nine layout bugs are open (long exercise name colliding with the heart-rate row, overlaps on W2.4 / W2.5 / W2.7, 1.3× clipping, 192 dp summary) — fix them before merging to `main`. Still open: the Mac pass (Apple build + wiring the widget extension, `mobile/ios/LifeyWatchWidgets/README.md`), an Always-on / animations-off Wear pass, and the physical-device pass (plan §10 Q5).**
+**Status (2026-10-07): done in the cloud; the Wear emulator pass ran on 2026-10-07 (LIF-95, plan §12): the module builds and every gallery fixture renders, and its nine layout bugs were fixed and re-captured on 2026-10-08 (LIF-131, plan §12 "Fixed"). Still open: the Mac pass (Apple build + wiring the widget extension, `mobile/ios/LifeyWatchWidgets/README.md`), an Always-on / animations-off Wear pass, and the physical-device pass (plan §10 Q5).**
 
 Each iteration ends with a review against its canvas frames (plan §4), logged in plan §12.

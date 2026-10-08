@@ -71,10 +71,13 @@ fun SummaryContent(model: SummaryModel, modifier: Modifier = Modifier) {
         }
     }
     Box(modifier.fillMaxSize()) {
+        // On the compact dial the lower tile row sits where the chord is only ~130 dp wide, and a three-line sync
+        // row above it used to push that row off the bottom of the dial (LIF-131 bug 6): a tighter top, a narrower
+        // column, and a sync row without its second line.
         Column(
             Modifier.align(Alignment.TopCenter)
-                .padding(top = (width * 0.14f).dp)
-                .widthIn(max = (width * 0.78f).dp),
+                .padding(top = (width * (if (metrics.isCompact) 0.12f else 0.14f)).dp)
+                .widthIn(max = (width * (if (metrics.isCompact) 0.72f else 0.78f)).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(if (metrics.isCompact) LifeySpacing.xs else LifeySpacing.sm),
         ) {
@@ -87,6 +90,7 @@ fun SummaryContent(model: SummaryModel, modifier: Modifier = Modifier) {
                 title = stringResource(if (model.isSynced) R.string.sync_done else R.string.sync_pending),
                 subtitle = if (model.pendingCount > 1) stringResource(R.string.sync_queue_count, model.pendingCount) else null,
                 dense = true,
+                compact = metrics.isCompact,
             )
             tiles.chunked(2).forEach { rowTiles ->
                 Row(horizontalArrangement = Arrangement.spacedBy(LifeySpacing.xs)) {

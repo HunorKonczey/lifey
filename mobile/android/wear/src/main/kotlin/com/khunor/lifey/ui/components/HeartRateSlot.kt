@@ -53,6 +53,8 @@ fun HeartRateSlot(
     state: HeartRateState,
     modifier: Modifier = Modifier,
     onRequestPermission: () -> Unit = {},
+    /** False where the unit no longer fits beside a neighbour (large text, a field next to it) — the heart says it. */
+    showUnit: Boolean = true,
 ) {
     val metrics = LocalWatchMetrics.current
     var explaining by remember { mutableStateOf(false) }
@@ -62,7 +64,7 @@ fun HeartRateSlot(
     when (state) {
         is HeartRateState.Live -> MetricReading(
             icon = Icons.Filled.Favorite, iconTint = LifeyColors.heart, number = state.bpm.toString(),
-            unit = stringResource(R.string.active_heart_rate_unit), level = MetricLevel.Metric, modifier = slot,
+            unit = if (showUnit) stringResource(R.string.active_heart_rate_unit) else null, level = MetricLevel.Metric, modifier = slot,
         )
         HeartRateState.Missing -> Row(
             slot.clickable { explaining = true },

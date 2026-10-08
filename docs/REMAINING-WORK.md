@@ -93,7 +93,7 @@ is ott oldódott meg: a metrikaszínek AA-k a saját 12 / 16 %-os tintájukon, a
 |---|---|---|
 | Darabos adagok | „½ db", „1 db" chipek az étel hozzáadása lapon — étel-modellbe darabsúly + sync kell | `77` §6 |
 | Health Connect / HealthKit írás | a súly visszaírása; amíg nincs írási út, a „Health Connect-ben is mentve" sor rejtve marad | `77` §6 |
-| Natív felületek | iOS widget / Live Activity, Android widget színillesztése (a Watch kész: [`watch/79`](watch/79-watch-redesign-verification.md); watch-komplikáció nincs, külön terv kell). A Wear OS redesign emulátoros végpróbája 2026-10-07-én lefutott (LIF-95, [`redesign-watch/79`](redesign-watch/79-watch-redesign-plan.md) §12): kilenc nyitott elrendezési hiba, javítás nélkül nem mergelhető `main`-be | `77` §6 |
+| Natív felületek | iOS widget / Live Activity, Android widget színillesztése (a Watch kész: [`watch/79`](watch/79-watch-redesign-verification.md); watch-komplikáció nincs, külön terv kell). A Wear OS redesign emulátoros végpróbája 2026-10-07-én lefutott (LIF-95, [`redesign-watch/79`](redesign-watch/79-watch-redesign-plan.md) §12): a kilenc elrendezési hibát 2026-10-08-án javítottuk és újrafényképeztük (LIF-131, ugyanott); nyitva: 192 dp AVD, fizikai óra, Always-on, az Apple oldal | `77` §6 |
 | Material Symbols ikonfont, golden-tesztek, max-HR beállítás | tudatosan kimaradt | `77` §6 |
 | Edzői kliensnézet: lépéscél, tervezett alkalmak | a trainer API-ban nincs kliens-lépéscél és „tervezett / teljesített" darabszám, ezért a KPI-csempék sorai szerényebbek a canvasnál („7 nap átlaga", kihagyott alkalom) | `77` R6.5 |
 | Edzői kliensnézet: cél a fejlécben | a canvas „Goal: build muscle" sora mögött nincs tárolt cél | `77` R6.7 |

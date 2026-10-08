@@ -10,10 +10,13 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.em
 import androidx.wear.compose.material3.Text
 import com.khunor.lifey.LiveMetrics
 import com.khunor.lifey.R
@@ -70,41 +73,80 @@ fun MetricsContent(
 ) {
     val width = LocalWatchMetrics.current.widthDp
     val permissionDenied = model.heartRate == HeartRateState.PermissionDenied
-    Box(modifier.fillMaxSize()) {
-        Column(
-            Modifier.align(Alignment.TopCenter).padding(top = (width * 0.16f).dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs),
-        ) {
+    // At a large system font the "bpm" and "kcal" are what no longer fit side by side ("87 kca" ran off the dial);
+    // the heart and the flame say which number is which.
+    val showUnits = LocalDensity.current.fontScale <= LARGE_TEXT_SCALE
+    // One column, top to bottom: the readings, a flexible gap, then the exercise block bottom-anchored on the chord.
+    // They used to be two independently anchored stacks, so a tall one (a wrapped name, the taller standalone
+    // header) was drawn over the other — now what does not fit is clipped, never overdrawn (LIF-131 bugs 1, 2).
+    Column(
+        modifier.fillMaxSize().padding(top = (width * 0.15f).dp, bottom = (width * 0.10f).dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(LifeySpacing.xs)) {
             ActiveHeader(
                 icon = Icons.Filled.FitnessCenter, label = model.headerLabel,
                 isPaused = model.isPaused, showsStandaloneMark = model.showsStandaloneMark,
             )
-            Text(formatElapsed(model.elapsedMs), style = LifeyType.hero(), color = LifeyColors.text, maxLines = 1)
+            // Tight line height (the cardio hero's is 1.05) — what gives the exercise block its room.
+            Text(
+                formatElapsed(model.elapsedMs), style = LifeyType.hero().copy(lineHeight = 1.0.em),
+                color = LifeyColors.text, maxLines = 1,
+            )
             if (permissionDenied) {
+                // The 44 dp button plus a calories row left the exercise block no room at all (W1.3, any font size):
+                // the button is what the person has to act on, so the calories wait until the sensors are allowed.
                 HeartRateSlot(model.heartRate, onRequestPermission = onRequestHeartRatePermission)
-                KcalReading(model.kcal)
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(LifeySpacing.lg), verticalAlignment = Alignment.CenterVertically) {
-                    HeartRateSlot(model.heartRate)
-                    KcalReading(model.kcal)
+                    HeartRateSlot(model.heartRate, showUnit = showUnits)
+                    KcalReading(model.kcal, showUnits)
                 }
             }
         }
-        ExerciseBlock(
-            model = model, onOpenExerciseList = onOpenExerciseList,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = (width * 0.11f).dp),
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+            ExerciseBlock(model = model, onOpenExerciseList = onOpenExerciseList)
+        }
+    }
+}
+
+/** The system font scale above which the metric units are dropped (the text caps start at 1.15 / 1.35). */
+internal const val LARGE_TEXT_SCALE = 1.15f
+
+@Composable
+private fun KcalReading(kcal: Int?, showUnit: Boolean = true) {
+    if (kcal != null) {
+        MetricReading(
+            icon = Icons.Filled.LocalFireDepartment, iconTint = LifeyColors.calories, number = kcal.toString(),
+            unit = if (showUnit) stringResource(R.string.active_calories_unit) else null, level = MetricLevel.Value,
         )
     }
 }
 
+/**
+ * A centred column that places its children top to bottom and **stops at the first one that does not fit whole**
+ * in the height it was given: nothing is ever drawn half-cut. The metric page's exercise block lives in whatever
+ * the readings above leave, which on a compact dial or at a big font is less than the name plus the count.
+ */
 @Composable
-private fun KcalReading(kcal: Int?) {
-    if (kcal != null) {
-        MetricReading(
-            icon = Icons.Filled.LocalFireDepartment, iconTint = LifeyColors.calories, number = kcal.toString(),
-            unit = stringResource(R.string.active_calories_unit), level = MetricLevel.Value,
-        )
+private fun WholeLinesColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val placeables = measurables.map { it.measure(loose) }
+        var used = 0
+        val kept = placeables.filterIndexed { index, placeable ->
+            val fits = index == 0 || used + placeable.height <= constraints.maxHeight
+            if (fits) used += placeable.height
+            fits
+        }
+        val width = (kept.maxOfOrNull { it.width } ?: 0).coerceIn(constraints.minWidth, constraints.maxWidth)
+        layout(width, used.coerceAtMost(constraints.maxHeight)) {
+            var y = 0
+            kept.forEach { placeable ->
+                placeable.placeRelative((width - placeable.width) / 2, y)
+                y += placeable.height
+            }
+        }
     }
 }
 
@@ -114,7 +156,9 @@ private fun ExerciseBlock(model: MetricsModel, onOpenExerciseList: (() -> Unit)?
     val width = LocalWatchMetrics.current.widthDp
     // A free-form summary ("3. szett · összesen 24 ismétlés") needs two readable centred lines, so its block is
     // wider than the segment bar's (W2.5).
-    val blockWidth = (width * (if (model.freeFormatSets != null) 0.68f else 0.5f)).dp
+    // The bar's block is as wide as the chord at its bottom edge allows (the name and "2/4" share its top line:
+    // "Fekvenyomás" needs ~100 dp, which the old 0.5 × width broke mid-word).
+    val blockWidth = (width * (if (model.freeFormatSets != null) 0.68f else 0.62f)).dp
     val target = if (onOpenExerciseList != null) modifier.clickable(onClick = onOpenExerciseList) else modifier
     val done = model.setsDone
     val total = model.setsTotal
@@ -125,9 +169,11 @@ private fun ExerciseBlock(model: MetricsModel, onOpenExerciseList: (() -> Unit)?
                 done = done, total = total, title = model.exerciseName,
                 justLoggedIndex = model.justLoggedIndex, width = blockWidth,
             )
-            free != null -> {
+            free != null -> WholeLinesColumn(Modifier.widthIn(max = blockWidth)) {
+                // Name, then the count: [WholeLinesColumn] draws the second line only when it fits whole, so a tight
+                // dial or a big font shows the name rather than half of "Set 3 · 24 reps" (LIF-131 bug 2).
                 Text(model.exerciseName, style = LifeyType.title(), color = LifeyColors.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = blockWidth))
+                    textAlign = TextAlign.Center)
                 SetSegmentBar(
                     done = 0, total = 0, width = blockWidth,
                     freeFormText = stringResource(R.string.active_sets_free_format, free.first, free.second),
