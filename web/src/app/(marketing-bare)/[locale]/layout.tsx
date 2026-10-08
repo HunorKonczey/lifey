@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { AttributionCapture } from "@/components/marketing/AttributionCapture";
+import { DocumentLang } from "@/lib/i18n/DocumentLang";
 
 /**
  * A second, sibling route group to `(marketing)` — same `[locale]`
@@ -40,6 +41,7 @@ export default async function BareMarketingLayout({
 
   return (
     <NextIntlClientProvider locale={locale}>
+      <DocumentLang locale={locale} />
       <AttributionCapture />
       {children}
     </NextIntlClientProvider>
