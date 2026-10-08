@@ -129,7 +129,8 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
   böngészős ellenőrzés hátravan.
 - **[`watch/50`](watch/50-watch-f6c-session-plan-sync-plan.md) (F6c)** — kód kész; a telefonról indított
   edzés fele Android emulátoron végigpróbálva 2026-10-07-én (LIF-90, §8: a telefonon hozzáadott gyakorlat megjelenik
-  az órán, az óra választása átáll a telefonon). Nyitva: az óra főlapja nem követi a saját választását, az órán
+  az órán, az óra választása átáll a telefonon). Az óra főlapja a saját választását most követi (LIF-129: a főlap a standalone pozíció helyett a
+  `currentExerciseId` szerinti gyakorlatot írta ki; Android unit teszt, iOS még Apple órán ellenőrizendő). Nyitva: az órán
   indított ág, a törlés, az offline óra és az iOS.
 - **Edzés üres szettsorai** — **Android emulátoron ellenőrizve (2026-10-07, LIF-91): a hiba nem reprodukálható.** Kódszinten
   (2026-10-03) a képernyő `targetSets: rows.length`-et ment (`_buildPlanned`), a `planSessionRows` ebből építi újra a sorokat,

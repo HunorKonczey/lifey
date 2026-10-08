@@ -672,6 +672,21 @@ final class WorkoutManager: NSObject, ObservableObject {
     return activePlanExercises.firstIndex { $0.exerciseId == currentExerciseId }
   }
 
+  /// Where the exercise every screen describes sits in `activePlanExercises`:
+  /// the wrist's own position in standalone mode, and in a phone-mastered
+  /// session wherever `currentExerciseId` is — the user's local pick first.
+  /// `standaloneExerciseIndex` must not be read for a phone-mastered session:
+  /// nothing there ever moves it, so the main page kept describing the plan's
+  /// first exercise while the list, the next logged set and the phone had all
+  /// moved on to the pick (LIF-129). `nil` when there is no plan to point into
+  /// or the id names nothing in it.
+  var displayedPlanIndex: Int? {
+    if isStandalone {
+      return standaloneCurrentExercise == nil ? nil : standaloneExerciseIndex
+    }
+    return currentExercisePlanIndex
+  }
+
   /// Whether this watch may offer its exercise list: a plan-backed standalone
   /// session as before, and now a phone-mastered one too as soon as the phone
   /// has pushed the session's exercises (F6c §7). A single-exercise list is
@@ -1274,15 +1289,19 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// to the final `return`, which reproduces the pre-F6b code exactly —
   /// this getter is a superset, not a behavior change, for that path.
   var activeExerciseDisplay: ActiveExerciseDisplay {
-    if let currentExercise = standaloneCurrentExercise {
+    if let index = displayedPlanIndex {
+      let currentExercise = activePlanExercises[index]
       let sets = standaloneSetsForCurrentExercise
       // Both counts include what the phone logged into this same session; see
       // `standaloneSetsDone(at:)` and `phoneSetsTotal`.
-      let setsDone = standaloneSetsDone(at: standaloneExerciseIndex)
+      let setsDone = standaloneSetsDone(at: index)
+      // `phoneSets*` only ever describe a standalone session's current
+      // exercise; a phone-mastered one gets its target from the plan entry.
       let phoneCountsThisExercise =
-        phoneSetsExerciseId != nil
-        ? phoneSetsExerciseId == currentExercise.exerciseId
-        : standaloneExerciseIndex == phoneSetsExerciseIndex
+        isStandalone
+        && (phoneSetsExerciseId != nil
+          ? phoneSetsExerciseId == currentExercise.exerciseId
+          : index == phoneSetsExerciseIndex)
       let targetSets = (phoneCountsThisExercise ? phoneSetsTotal : nil) ?? currentExercise.targetSets
       if let targetSets {
         return ActiveExerciseDisplay(
