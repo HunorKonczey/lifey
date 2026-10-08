@@ -280,3 +280,22 @@ test("it is clear the results come from the OpenFoodFacts database: the label, t
   await page.keyboard.type("csirkemell");
   await expect(offSection(page).getByText("From the OpenFoodFacts database")).toBeVisible();
 });
+
+test.describe("keyboard hint line", () => {
+  test("shows under the results with a mouse and keyboard", async ({ page }) => {
+    await expect(dialog(page).getByText("↑ ↓ select · Enter add · Tab quantity")).toBeVisible();
+  });
+});
+
+test.describe("on a touch-first device", () => {
+  test.use({ hasTouch: true, isMobile: true });
+  test("the keyboard hint line is not shown (LIF-139)", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/dev/design");
+    await page.getByRole("heading", { name: "Add food dialog", exact: true }).scrollIntoViewIfNeeded();
+    await page.getByTestId("open-add-food").click();
+    await expect(dialog(page)).toBeVisible();
+    await expect(dialog(page).getByRole("combobox", { name: "Search foods and recipes" })).toBeVisible();
+    await expect(dialog(page).getByText("↑ ↓ select · Enter add · Tab quantity")).toBeHidden();
+  });
+});

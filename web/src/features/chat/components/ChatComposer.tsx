@@ -161,7 +161,7 @@ export function ChatComposer({
 
       <div className="flex items-center gap-3 mt-1.5 ml-1 min-h-[15px]">
         {focused && (
-          <span className="type-body-s" style={{ color: "var(--text-3)" }}>
+          <span className="type-body-s keyboard-only" style={{ color: "var(--text-3)" }}>
             {t("keyboardHint")}
           </span>
         )}
