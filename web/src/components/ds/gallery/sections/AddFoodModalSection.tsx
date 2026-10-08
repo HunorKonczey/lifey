@@ -30,6 +30,8 @@ const FOODS = [
   food(5, "Kefir", 52, 3.3, 4, 2.8),
   food(6, "Barna rizs (főtt)", 123, 2.7, 25.6, 1),
 ];
+// The Foods tab's "Log today" case: the user's own Túró Rudi was saved from OpenFoodFacts, so it carries that product's barcode.
+const OWN_TURO_RUDI = { ...food(7, "Túró Rudi", 400, 11, 33, 25), barcode: "5997000000001" };
 const RECIPES: RecipeResponse[] = [
   {
     id: 10,
@@ -52,10 +54,17 @@ const RECIPES: RecipeResponse[] = [
  */
 export function AddFoodModalSection() {
   const [open, setOpen] = useState(false);
+  // "Log today" from the Foods tab: the dialog opens on a food that is already picked, its own name in the search field.
+  const [logToday, setLogToday] = useState(false);
+  const close = () => {
+    setOpen(false);
+    setLogToday(false);
+  };
   const [added, setAdded] = useState<string[]>([]);
   const [created, setCreated] = useState<string | null>(null);
   const offRequests = useFixtureOffRequestCount();
   const items = useMemo(() => buildSearchItems(FOODS, RECIPES), []);
+  const itemsWithSavedProduct = useMemo(() => buildSearchItems([...FOODS, OWN_TURO_RUDI], RECIPES), []);
   const foodsById = useMemo(() => new Map(FOODS.map((f) => [f.id, f] as const)), []);
   const usage = useMemo(
     () =>
@@ -71,6 +80,16 @@ export function AddFoodModalSection() {
       <Button onClick={() => setOpen(true)} data-testid="open-add-food">
         Open the add-food dialog
       </Button>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          setLogToday(true);
+          setOpen(true);
+        }}
+        data-testid="open-add-food-log-today"
+      >
+        Open it as &ldquo;Log today&rdquo; (Kefir picked)
+      </Button>
       <p data-testid="added-log" className="type-body-s">
         Added: {added.join(", ") || "—"}
       </p>
@@ -83,15 +102,17 @@ export function AddFoodModalSection() {
       {open && (
         <AddFoodModalView
           open
-          onClose={() => setOpen(false)}
-          items={items}
+          onClose={close}
+          items={logToday ? itemsWithSavedProduct : items}
           usage={usage}
+          initialQuery={logToday ? "Kefir" : undefined}
+          initialKey={logToday ? "food:5" : undefined}
           useOff={useFixtureOff}
           onOffCheckedChange={writeGalleryOffPreference}
           initialOffChecked={readGalleryOffPreference()}
           onCreate={(name) => {
             setCreated(name);
-            setOpen(false);
+            close();
           }}
         >
           <FoodPreviewPaneView
@@ -107,7 +128,7 @@ export function AddFoodModalSection() {
                   : `${req.item.name} ${req.quantity} ${req.item.kind === "recipe" ? "servings" : "g"}`;
               setAdded((a) => [...a, `${what} ${req.mealType}`]);
             }}
-            onDone={() => setOpen(false)}
+            onDone={close}
           />
         </AddFoodModalView>
       )}

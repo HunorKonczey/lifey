@@ -68,6 +68,25 @@ export function offItemToSearchItem(item: OffSearchItem): OffItem {
 /** Anything the dialog can highlight and preview: an own food or recipe, or an OpenFoodFacts result. */
 export type ListItem = SearchItem | OffItem;
 
+/** The barcodes of the user's own foods in the add-food list. */
+export function ownedBarcodes(items: ReadonlyArray<SearchItem>): Set<string> {
+  const owned = new Set<string>();
+  for (const item of items) {
+    if (item.kind === "food" && item.food.barcode) owned.add(item.food.barcode);
+  }
+  return owned;
+}
+
+/**
+ * The OpenFoodFacts rows without the products the user already owns. The server leaves an owned barcode out of a *new*
+ * search, but an answer cached for ten minutes still lists a product that was saved a moment ago (LIF-134) — it would sit
+ * in the OpenFoodFacts group right under the same food in "Own". Filtering here costs no request, and a deleted food
+ * frees its product again at once.
+ */
+export function withoutOwnedProducts(items: OffItem[], owned: ReadonlySet<string>): OffItem[] {
+  return owned.size === 0 ? items : items.filter((item) => !owned.has(item.off.barcode));
+}
+
 /** A product's macros for `grams`; carbs and fat that OpenFoodFacts lacks count as 0, as the barcode flow does. */
 export function offPortion(item: OffSearchItem, grams: number): Macros {
   const k = grams / 100;

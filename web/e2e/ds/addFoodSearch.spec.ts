@@ -299,3 +299,53 @@ test.describe("on a touch-first device", () => {
     await expect(dialog(page).getByText("↑ ↓ select · Enter add · Tab quantity")).toBeHidden();
   });
 });
+
+// ── Opened on a food that is already picked: the Foods tab's "Log today" (LIF-135) ──
+
+async function openAsLogToday(page: Page) {
+  await page.keyboard.press("Escape");
+  await expect(dialog(page)).toHaveCount(0);
+  await page.evaluate(() => window.localStorage.setItem("lifey.addFood.offSearch", "1")); // the box is remembered as ticked
+  await page.getByTestId("open-add-food-log-today").click();
+  await expect(dialog(page)).toBeVisible();
+}
+
+test.describe("opened on a picked food (Log today)", () => {
+  test("the quantity has the focus, not the search field", async ({ page }) => {
+    await openAsLogToday(page);
+    await expect(dialog(page).getByRole("combobox", { name: "Search foods and recipes" })).toHaveValue("Kefir");
+    await expect(dialog(page).getByRole("textbox", { name: "Quantity" })).toBeFocused();
+  });
+
+  test("the prefilled name is not sent to OpenFoodFacts; the user's own typing is", async ({ page }) => {
+    await openAsLogToday(page);
+    await expect(offBox(page)).toHaveAttribute("aria-checked", "true");
+    // Longer than the 150 ms debounce: a request, if one was going to be made, has been made by now.
+    await page.waitForTimeout(600);
+    await expect(offRequests(page)).toHaveText("OpenFoodFacts requests: 0");
+    await expect(offSection(page).getByRole("status")).toHaveCount(0);
+
+    await dialog(page).getByRole("combobox", { name: "Search foods and recipes" }).fill("csirkemell");
+    await expect(offSection(page).getByRole("option")).toHaveCount(3);
+    // Exactly one request, for what was typed — not one more for the prefilled "Kefir" that the debounce had settled on.
+    await page.waitForTimeout(600);
+    await expect(offRequests(page)).toHaveText("OpenFoodFacts requests: 1");
+  });
+});
+
+// ── A product the user already saved is not offered again (LIF-134) ──
+
+test("an OpenFoodFacts product that is already one of the user's foods is left out of the OpenFoodFacts group", async ({ page }) => {
+  // The "Log today" dialog's own foods include a Túró Rudi that carries the barcode of the OpenFoodFacts fixture's Túró Rudi.
+  await openAsLogToday(page);
+  const search = dialog(page).getByRole("combobox", { name: "Search foods and recipes" });
+
+  await search.fill("túró");
+  await expect(offRequests(page)).toHaveText("OpenFoodFacts requests: 1"); // the answer has arrived (it lists the product)
+  await expect(dialog(page).getByRole("option", { name: /Túró Rudi/ })).toHaveCount(1); // own row only
+  await expect(offSection(page).getByRole("option")).toHaveCount(0);
+
+  // Nothing is over-filtered: other products still come through
+  await search.fill("csirkemell");
+  await expect(offSection(page).getByRole("option")).toHaveCount(3);
+});
