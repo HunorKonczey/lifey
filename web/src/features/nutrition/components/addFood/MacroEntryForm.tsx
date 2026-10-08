@@ -55,7 +55,7 @@ export function MacroEntryForm({ draft, onChange, onCommit }: MacroEntryFormProp
         <TextField autoComplete="off" inputMode="decimal" label={t("macroCarbs")} value={draft.carbs} onChange={set("carbs")} />
         <TextField autoComplete="off" inputMode="decimal" label={t("macroFat")} value={draft.fat} onChange={set("fat")} />
       </div>
-      <p className="type-body-s mt-auto" style={{ color: "var(--text-3)" }}>
+      <p className="type-body-s mt-auto keyboard-only" style={{ color: "var(--text-3)" }}>
         {t("macroKeyHint")}
       </p>
     </div>

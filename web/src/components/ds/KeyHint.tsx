@@ -9,13 +9,14 @@ export interface KeyHintProps {
 /**
  * A keycap for a keyboard shortcut ("N" on Add food, "esc" in a search field):
  * a small tinted rounded chip, so it reads as a key and not as part of the
- * label beside it. Never on a phone — there is no keyboard to press it on.
+ * label beside it. Never on a phone (narrow) or on any touch-first device (`.keyboard-only`) — there is no keyboard
+ * to press it on.
  */
 export function KeyHint({ children, tone = "default", className }: KeyHintProps) {
   return (
     <kbd
       aria-hidden
-      className={["type-label inline-flex shrink-0 items-center justify-center max-md:hidden", className].filter(Boolean).join(" ")}
+      className={["type-label inline-flex shrink-0 items-center justify-center max-md:hidden keyboard-only", className].filter(Boolean).join(" ")}
       style={{
         minWidth: 22,
         height: 22,
