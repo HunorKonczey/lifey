@@ -29,6 +29,13 @@
       "runtimeArgs": ["/c", "set JAVA_HOME=C:\\Users\\hunor\\.jdks\\openjdk-24.0.1&&.\\mvnw.cmd spring-boot:run"],
       "port": 8080,
       "cwd": "C:\\Users\\hunor\\Documents\\Project\\lifey\\backend"
+    },
+    {
+      "name": "backend-billing",
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/c", "set JAVA_HOME=C:\\Users\\hunor\\.jdks\\openjdk-24.0.1&&set BILLING_ENABLED=true&&.\\mvnw.cmd spring-boot:run"],
+      "port": 8080,
+      "cwd": "C:\\Users\\hunor\\Documents\\Project\\lifey\\backend"
     }
   ]
 }

@@ -15,6 +15,9 @@
     "audit:styles": "node scripts/style-debt-audit.mjs",
     "check:js-budget": "node scripts/check-js-budget.mjs",
     "lhci": "lhci autorun",
+    "test:e2e:backend": "playwright test --project=chromium",
+    "test:e2e:chat": "playwright test --project=chromium trainer-chat",
+    "test:e2e:billing": "playwright test --project=chromium billing",
     "test:e2e:marketing": "playwright test --project=marketing",
     "test:e2e:ds": "playwright test --project=ds"
   },
