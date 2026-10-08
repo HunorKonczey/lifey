@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { billingIsEnabled } from "./support/environment";
 import { Client } from "pg";
 
 /**
@@ -44,20 +45,6 @@ import { Client } from "pg";
 const API_BASE = "http://localhost:8080/api/v1";
 const DB_CONFIG = { host: "localhost", port: 5432, database: "lifey", user: "lifey", password: "lifey" };
 const PASSWORD = "E2eBanner123!";
-
-/** True only when the backend actually resolves a fresh, role-less user to FREE/NONE rather than the disabled-billing open COMP response. */
-async function billingIsEnabled(request: APIRequestContext): Promise<boolean> {
-  const email = `e2e-banner-probe-${Date.now()}@example.com`;
-  const registerRes = await request.post(`${API_BASE}/auth/register`, {
-    data: { email, password: PASSWORD, firstName: "Probe", lastName: "Test" },
-  });
-  expect(registerRes.ok(), await registerRes.text()).toBeTruthy();
-  const loginRes = await request.post(`${API_BASE}/auth/login`, { data: { email, password: PASSWORD } });
-  const { accessToken } = await loginRes.json();
-  const entRes = await request.get(`${API_BASE}/me/entitlements`, { headers: { Authorization: `Bearer ${accessToken}` } });
-  const entitlement: { source: string } = await entRes.json();
-  return entitlement.source === "NONE";
-}
 
 async function registerAndLogin(request: APIRequestContext, email: string) {
   const registerRes = await request.post(`${API_BASE}/auth/register`, {

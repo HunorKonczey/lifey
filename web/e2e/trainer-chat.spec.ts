@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { Client } from "pg";
+import { CHAT_BASE, chatServiceIsUp } from "./support/environment";
 
 /**
  * Trainer web chat (docs/chat/40-trainer-chat-plan.md I3): the trainer opens a
@@ -12,13 +13,13 @@ import { Client } from "pg";
  * itself; only the chat interaction goes through the UI.
  *
  * Requires the real backend + Postgres on localhost:8080/5432, same as the
- * other specs in this folder.
+ * other specs in this folder, **and** the chat service on :8081 plus a web started with
+ * NEXT_PUBLIC_CHAT_BASE_URL pointing at it (the `web-chat` dev config) — the chat API lives in its own service since the
+ * chat extraction (docs/chat/44). Without the service the spec skips itself; with it but a plain `web` it fails at the
+ * Message step saying so. See e2e/README.md.
  */
 
 const API_BASE = "http://localhost:8080/api/v1";
-// The chat API lives in its own service since the chat extraction (docs/chat/44); the web is started with
-// NEXT_PUBLIC_CHAT_BASE_URL pointing at it (the `web-chat` dev config).
-const CHAT_BASE = "http://localhost:8081/api/v1";
 const DB_CONFIG = {
   host: "localhost",
   port: 5432,
@@ -56,6 +57,10 @@ async function grantTrainerRole(userId: number) {
 }
 
 test.describe("Trainer web chat", () => {
+  test.beforeAll(async ({ request }) => {
+    test.skip(!(await chatServiceIsUp(request)), "requires the chat service on localhost:8081 — see e2e/README.md");
+  });
+
   test("opens a thread from the client page, sends a message, client receives it", async ({ page, request }) => {
     const runId = Date.now();
     const trainerEmail = `e2e-chat-trainer-${runId}@example.com`;
@@ -111,7 +116,12 @@ test.describe("Trainer web chat", () => {
       expect(client, "expected the accepted client on the trainer's list").toBeTruthy();
 
       await page.goto(`/admin/clients/${client!.clientId}`);
+      const firstChatRequest = page.waitForRequest((r) => r.url().includes("/chat/"));
       await page.getByRole("button", { name: "Message" }).click();
+      expect(
+        (await firstChatRequest).url(),
+        "the web must be started with NEXT_PUBLIC_CHAT_BASE_URL=" + CHAT_BASE + " (the `web-chat` dev config) — see e2e/README.md",
+      ).toContain(CHAT_BASE);
       await page.waitForURL(/\/admin\/chat\?c=\d+/);
       await expect(page.getByPlaceholder("Message…")).toBeVisible();
     });
