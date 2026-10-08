@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/ds/Avatar";
@@ -31,13 +31,31 @@ export function MobileHeader({ user, avatarUrl, onLogout, roleRing, trainerPrefs
   const t = useTranslations();
   const pathname = usePathname();
   const chipRef = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // The header is sticky, so it covers whatever keyboard focus scrolls to just beneath the top edge. Publish its height
+  // (it grows by a row on dated pages) for `scroll-padding-top` in globals.css.
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty("--app-header-h", `${header.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(header);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--app-header-h");
+    };
+  }, []);
 
   const { titleKey, hasDateStepper } = routeChrome(pathname);
   const title = titleKey ? t(titleKey) : "Lifey";
 
   return (
     <header
+      ref={headerRef}
       className="sticky top-0 z-10 flex flex-col gap-3 px-4 pt-3 pb-3"
       style={{ background: "var(--bg)", borderBottom: "1px solid var(--hairline)" }}
     >
