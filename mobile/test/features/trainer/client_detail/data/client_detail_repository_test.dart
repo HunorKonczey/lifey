@@ -310,6 +310,47 @@ void main() {
     });
   });
 
+  group('meal comment (LIF-144)', () {
+    test('PUTs the comment and returns the meal the server stored', () async {
+      adapter.body = {
+        'id': 77,
+        'dateTime': '2026-07-08T12:00:00Z',
+        'mealType': 'LUNCH',
+        'name': null,
+        'entries': <Object>[],
+        'trainerComment': 'More greens',
+        'trainerCommentAt': '2026-07-09T09:00:00Z',
+      };
+
+      final meal = await repo.putMealComment(9, 77, 'More greens');
+
+      expect(adapter.methods.single, 'PUT');
+      expect(adapter.paths.single, '/trainer/clients/9/meals/77/comment');
+      expect(adapter.bodies.single, {'comment': 'More greens'});
+      expect(meal.trainerComment, 'More greens');
+      expect(meal.trainerCommentAt, DateTime.utc(2026, 7, 9, 9));
+      expect(meal.hasTrainerComment, isTrue);
+    });
+
+    test('DELETE clears it and returns the meal without one', () async {
+      adapter.body = {
+        'id': 77,
+        'dateTime': '2026-07-08T12:00:00Z',
+        'mealType': 'LUNCH',
+        'name': null,
+        'entries': <Object>[],
+        'trainerComment': null,
+        'trainerCommentAt': null,
+      };
+
+      final meal = await repo.deleteMealComment(9, 77);
+
+      expect(adapter.methods.single, 'DELETE');
+      expect(adapter.paths.single, '/trainer/clients/9/meals/77/comment');
+      expect(meal.hasTrainerComment, isFalse);
+    });
+  });
+
   group('nutrition goals', () {
     test('nulls stay null — "no goal" is not zero', () async {
       adapter.body = {

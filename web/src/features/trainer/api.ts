@@ -80,6 +80,11 @@ export const trainerApi = {
     api.delete<WorkoutSessionResponse>(
       `/trainer/clients/${clientId}/workout-sessions/${sessionId}/comment`,
     ),
+  /** The trainer's comment on one of the client's meals (LIF-144); the response is the meal as stored. */
+  putMealComment: (clientId: number, mealId: number, comment: string) =>
+    api.put<MealResponse>(`/trainer/clients/${clientId}/meals/${mealId}/comment`, { comment }),
+  deleteMealComment: (clientId: number, mealId: number) =>
+    api.delete<MealResponse>(`/trainer/clients/${clientId}/meals/${mealId}/comment`),
   clientMeals: (clientId: number, from?: string, to?: string) => {
     const params = new URLSearchParams();
     if (from) params.set("from", from);

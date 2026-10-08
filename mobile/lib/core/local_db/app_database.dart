@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 46;
+  int get schemaVersion => 47;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -400,6 +400,12 @@ class AppDatabase extends _$AppDatabase {
             await _addColumnIfMissing(m, chatMessages, chatMessages.cardJson);
             await _addColumnIfMissing(
                 m, chatConversations, chatConversations.lastMessageCardKind);
+          }
+          // V47: the trainer's comment on a meal (LIF-144) — nullable, existing
+          // meals simply stay uncommented until the next pull says otherwise.
+          if (from < 47) {
+            await _addColumnIfMissing(m, meals, meals.trainerComment);
+            await _addColumnIfMissing(m, meals, meals.trainerCommentAt);
           }
         },
       );

@@ -54,6 +54,8 @@ class Meal {
     required this.entries,
     this.id,
     this.name,
+    this.trainerComment,
+    this.trainerCommentAt,
   });
 
   final String clientId;
@@ -62,6 +64,14 @@ class Meal {
   final MealType mealType;
   final String? name;
   final List<MealEntry> entries;
+
+  /// The trainer's comment on this meal (LIF-144); null when uncommented. Read-only here — it arrives with a pull.
+  final String? trainerComment;
+
+  /// When [trainerComment] was last written; null when uncommented.
+  final DateTime? trainerCommentAt;
+
+  bool get hasTrainerComment => trainerComment != null && trainerComment!.trim().isNotEmpty;
 
   double get totalCalories => entries.fold(0, (sum, e) => sum + e.calories);
 

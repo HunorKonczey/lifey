@@ -98,6 +98,8 @@ class ClientMeal {
     required this.mealType,
     required this.name,
     this.entries = const [],
+    this.trainerComment,
+    this.trainerCommentAt,
   });
 
   final int id;
@@ -105,6 +107,12 @@ class ClientMeal {
   final MealType mealType;
   final String name;
   final List<ClientMealEntry> entries;
+
+  /// The trainer's comment on this meal (LIF-144); null when uncommented.
+  final String? trainerComment;
+  final DateTime? trainerCommentAt;
+
+  bool get hasTrainerComment => trainerComment != null && trainerComment!.trim().isNotEmpty;
 
   double get calories => entries.fold(0, (sum, e) => sum + e.calories);
   double get protein => entries.fold(0, (sum, e) => sum + e.protein);
@@ -120,6 +128,8 @@ class ClientMeal {
       entries: ((json['entries'] as List<dynamic>?) ?? const [])
           .map((entry) => ClientMealEntry.fromJson(entry as Map<String, dynamic>))
           .toList(),
+      trainerComment: json['trainerComment'] as String?,
+      trainerCommentAt: json['trainerCommentAt'] == null ? null : parseTrainerTimestamp(json['trainerCommentAt'] as String),
     );
   }
 }

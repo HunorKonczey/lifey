@@ -84,10 +84,43 @@ class _FakeDetailRepository extends ClientDetailRepository {
     return weights;
   }
 
+  /// The day's meals as the "server" now holds them: the comments the trainer wrote are applied here.
+  late List<ClientMeal> _liveMeals = [...meals];
+
+  /// Every comment the trainer sent: (meal id, text), and (meal id, null) for a removal.
+  final mealCommentCalls = <(int, String?)>[];
+
+  ClientMeal _withComment(int mealId, String? comment) {
+    final old = _liveMeals.firstWhere((m) => m.id == mealId);
+    final updated = ClientMeal(
+      id: old.id,
+      dateTime: old.dateTime,
+      mealType: old.mealType,
+      name: old.name,
+      entries: old.entries,
+      trainerComment: comment,
+      trainerCommentAt: comment == null ? null : DateTime.utc(2026, 7, 9, 9),
+    );
+    _liveMeals = [for (final m in _liveMeals) m.id == mealId ? updated : m];
+    return updated;
+  }
+
+  @override
+  Future<ClientMeal> putMealComment(int clientId, int mealId, String comment) async {
+    mealCommentCalls.add((mealId, comment));
+    return _withComment(mealId, comment);
+  }
+
+  @override
+  Future<ClientMeal> deleteMealComment(int clientId, int mealId) async {
+    mealCommentCalls.add((mealId, null));
+    return _withComment(mealId, null);
+  }
+
   @override
   Future<List<ClientMeal>> fetchMealsForDay(int c, DateTime day) async {
     _maybeFail();
-    return meals;
+    return _liveMeals;
   }
 
   @override
@@ -121,11 +154,12 @@ ClientWeightEntry _weight(int daysAgo, double kg) => ClientWeightEntry(
       weight: kg,
     );
 
-ClientMeal _meal(MealType type, String food, double kcal) => ClientMeal(
-      id: 1,
+ClientMeal _meal(MealType type, String food, double kcal, {int id = 1, String? trainerComment}) => ClientMeal(
+      id: id,
       dateTime: DateTime.now(),
       mealType: type,
       name: '',
+      trainerComment: trainerComment,
       entries: [
         ClientMealEntry(
           foodName: food,
@@ -541,6 +575,104 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No steps recorded'), findsOneWidget);
+    });
+  });
+
+  group('meal comment (LIF-144)', () {
+    Future<_FakeDetailRepository> openNutrition(WidgetTester tester, List<ClientMeal> meals) async {
+      final repository = _FakeDetailRepository(meals: meals);
+      // Tall enough that the meal cards under the totals are on screen without scrolling.
+      await _pump(tester, repository: repository, size: const Size(800, 1600));
+      await tester.tap(find.text('Nutrition'));
+      await tester.pumpAndSettle();
+      return repository;
+    }
+
+    Future<void> openComment(WidgetTester tester, {bool last = false}) async {
+      final action = find.byKey(const ValueKey('meal-comment-action'));
+      await tester.tap(last ? action.last : action.first);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a meal without a comment offers to add one', (tester) async {
+      await openNutrition(tester, [_meal(MealType.lunch, 'Chicken', 400)]);
+
+      expect(find.text('Add comment'), findsOneWidget);
+      expect(find.byKey(const ValueKey('meal-trainer-comment')), findsNothing);
+    });
+
+    testWidgets('a commented meal shows the comment and offers to edit it', (tester) async {
+      await openNutrition(tester, [_meal(MealType.lunch, 'Chicken', 400, trainerComment: 'Add vegetables')]);
+
+      expect(find.byKey(const ValueKey('meal-trainer-comment')), findsOneWidget);
+      expect(find.text('Add vegetables'), findsOneWidget);
+      expect(find.text('Edit comment'), findsOneWidget);
+    });
+
+    testWidgets('a new comment is sent, shown on the card, and says the client was notified', (tester) async {
+      final repository = await openNutrition(tester, [_meal(MealType.lunch, 'Chicken', 400)]);
+
+      await openComment(tester);
+      await tester.enterText(find.byType(TextField), 'More vegetables please');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(repository.mealCommentCalls, [(1, 'More vegetables please')]);
+      expect(find.text('Comment saved — your client was notified.'), findsOneWidget);
+      expect(find.text('More vegetables please'), findsOneWidget);
+      expect(find.text('Edit comment'), findsOneWidget);
+    });
+
+    testWidgets('editing an existing comment claims nobody was notified', (tester) async {
+      final repository = await openNutrition(tester, [_meal(MealType.lunch, 'Chicken', 400, trainerComment: 'Add vegetables')]);
+
+      await openComment(tester);
+      await tester.enterText(find.byType(TextField), 'Add vegetables and rice');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(repository.mealCommentCalls, [(1, 'Add vegetables and rice')]);
+      expect(find.text('Comment saved.'), findsOneWidget);
+      expect(find.textContaining('notified'), findsNothing);
+    });
+
+    testWidgets('a comment can be removed', (tester) async {
+      final repository = await openNutrition(tester, [_meal(MealType.lunch, 'Chicken', 400, trainerComment: 'Add vegetables')]);
+
+      await openComment(tester);
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      expect(repository.mealCommentCalls, [(1, null)]);
+      expect(find.text('Comment removed.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('meal-trainer-comment')), findsNothing);
+      expect(find.text('Add comment'), findsOneWidget);
+    });
+
+    testWidgets('an empty comment is not sent', (tester) async {
+      final repository = await openNutrition(tester, [_meal(MealType.lunch, 'Chicken', 400)]);
+
+      await openComment(tester);
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(repository.mealCommentCalls, isEmpty);
+    });
+
+    testWidgets('each meal comments on itself, not on its neighbour', (tester) async {
+      final repository = await openNutrition(tester, [
+        _meal(MealType.breakfast, 'Oats', 300, id: 1),
+        _meal(MealType.lunch, 'Chicken', 400, id: 2),
+      ]);
+
+      await openComment(tester, last: true);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Good');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(repository.mealCommentCalls, [(2, 'Good')]);
     });
   });
 

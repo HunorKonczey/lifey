@@ -15,6 +15,13 @@ class Meals extends Table {
   TextColumn get mealType => text()(); // BREAKFAST / LUNCH / DINNER / SNACK
   TextColumn get name => text().nullable()();
 
+  /// The trainer's single editable comment on this meal (LIF-144); null when uncommented. Server-owned — this app
+  /// never sends it (the meal payloads carry only the fields above), it only arrives with a pull.
+  TextColumn get trainerComment => text().nullable()();
+
+  /// When [trainerComment] was last written; null when uncommented.
+  DateTimeColumn get trainerCommentAt => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

@@ -15,6 +15,7 @@ import '../../../core/format/lifey_format.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/trainer_comment_card.dart';
 import '../../../shared/widgets/ds/lifey_card.dart';
 import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/ds/list_group.dart';
@@ -414,6 +415,11 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
         padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8,
             AppSpacing.screen, AppSpacing.s24),
         children: [
+          // What the trainer wrote about this meal, if anything — the whole comment, above the meal's own fields.
+          if (_isEditing && widget.meal!.hasTrainerComment) ...[
+            TrainerCommentCard(comment: widget.meal!.trainerComment!.trim(), writtenAt: widget.meal!.trainerCommentAt),
+            const SizedBox(height: AppSpacing.s16),
+          ],
           // Meal type — choice chips.
           Wrap(
             spacing: AppSpacing.s8,

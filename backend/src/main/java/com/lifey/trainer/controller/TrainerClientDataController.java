@@ -17,6 +17,7 @@ import com.lifey.trainer.dto.ClientNutritionGoalsSourceResponse;
 import com.lifey.trainer.dto.ClientNutritionGoalsResponse;
 import com.lifey.trainer.dto.SessionCommentRequest;
 import com.lifey.trainer.service.ClientNutritionGoalsService;
+import com.lifey.trainer.service.MealCommentService;
 import com.lifey.trainer.service.SessionCommentService;
 import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.user.UserAvatar;
@@ -64,6 +65,7 @@ public class TrainerClientDataController {
     private final WeightService weightService;
     private final WorkoutSessionService workoutSessionService;
     private final SessionCommentService sessionCommentService;
+    private final MealCommentService mealCommentService;
     private final ClientNutritionGoalsService clientNutritionGoalsService;
     private final UserAvatarRepository userAvatarRepository;
     private final MealService mealService;
@@ -161,6 +163,23 @@ public class TrainerClientDataController {
     public WorkoutSessionResponse deleteSessionComment(
             @PathVariable Long clientId, @PathVariable Long sessionId) {
         return sessionCommentService.deleteComment(currentUserProvider.getUserId(), clientId, sessionId);
+    }
+
+    @Operation(summary = "Create or edit the trainer's comment on one of a client's meals",
+            description = "Upsert semantics, like the session comment: writes the comment whether one already exists or "
+                    + "not, stamping the timestamp and this trainer as the author. The client is pushed on the first comment.")
+    @PutMapping("/meals/{mealId}/comment")
+    public MealResponse putMealComment(
+            @PathVariable Long clientId, @PathVariable Long mealId,
+            @Valid @RequestBody SessionCommentRequest request) {
+        return mealCommentService.upsertComment(
+                currentUserProvider.getUserId(), clientId, mealId, request.comment());
+    }
+
+    @Operation(summary = "Remove the trainer's comment from one of a client's meals")
+    @DeleteMapping("/meals/{mealId}/comment")
+    public MealResponse deleteMealComment(@PathVariable Long clientId, @PathVariable Long mealId) {
+        return mealCommentService.deleteComment(currentUserProvider.getUserId(), clientId, mealId);
     }
 
     @Operation(summary = "Client's logged meals",

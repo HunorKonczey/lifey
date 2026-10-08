@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Card, Icon, IconButton } from "@/components/ds";
 import { RowMenuButton } from "@/components/ds/RowMenuButton";
@@ -61,16 +62,21 @@ interface MealCardProps {
   onDelete?: () => void;
   /** Delete one food (index into `meal.entries`); the parent asks first, and the last food takes the meal with it. */
   onDeleteItem?: (index: number) => void;
+  /**
+   * Replaces the built-in, read-only block for the trainer's comment — the trainer's own view passes the editor here
+   * (LIF-144). Without it a comment the trainer wrote is shown as plain text.
+   */
+  commentSlot?: ReactNode;
 }
 
 /**
  * One logged meal (W2.3, client-004): a 40 px tinted icon in the meal type's
  * colour, the type as the title, "07:15 · 3 tétel" (or "12:30 · recept") under
  * it, the kcal total, "＋" and a "⋯" (edit, copy, delete) in the header; the
- * foods below as `MealItemRow`s. Without any handler (the trainer's read-only
- * view of a client's day) the actions simply aren't drawn.
+ * foods below as `MealItemRow`s, then the trainer's comment when there is one. Without any handler (the trainer's
+ * read-only view of a client's day) the actions simply aren't drawn.
  */
-export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, onDeleteItem }: MealCardProps) {
+export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, onDeleteItem, commentSlot }: MealCardProps) {
   const t = useTranslations("nutrition");
   const fmt = useFormat();
   const style = MEAL_TYPE_STYLE[meal.mealType];
@@ -124,6 +130,8 @@ export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, onDeleteI
           <MealItemRow key={i} item={item} menu={rowMenu(i)} />
         ))}
       </div>
+
+      {commentSlot ?? (meal.trainerComment ? <TrainerCommentBlock comment={meal.trainerComment} at={meal.trainerCommentAt ?? null} /> : null)}
     </Card>
   );
 }
@@ -134,3 +142,23 @@ const MEAL_TYPE_KEY = {
   SNACK: "snack",
   DINNER: "dinner",
 } as const;
+
+/** The trainer's comment on a meal, as the user sees it under the foods (LIF-144). */
+function TrainerCommentBlock({ comment, at }: { comment: string; at: string | null }) {
+  const t = useTranslations("nutrition");
+  const fmt = useFormat();
+  return (
+    <div
+      data-testid="meal-trainer-comment"
+      className="mx-4 mb-4 mt-1 flex items-start gap-3 p-3"
+      style={{ borderRadius: "var(--r-control)", background: "color-mix(in srgb, var(--role) 14%, transparent)" }}
+    >
+      <Icon name="chat_bubble" size={20} fill={1} color="var(--role)" />
+      <div className="min-w-0 flex-1">
+        <p className="type-label" style={{ color: "var(--text-2)" }}>{t("trainerComment")}</p>
+        <p className="type-body" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{comment}</p>
+        {at && <p className="type-body-s" style={{ color: "var(--text-3)" }}>{fmt.shortDate(new Date(at))}</p>}
+      </div>
+    </div>
+  );
+}

@@ -39,4 +39,20 @@ public class Meal extends SyncableEntity {
 
     @OneToMany(mappedBy = "meal", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MealEntry> entries = new ArrayList<>();
+
+    /**
+     * The trainer's single, editable comment on this meal (LIF-144); null when uncommented. Written only by the trainer
+     * endpoint — the client-facing meal API never sets it, so a client re-saving the meal leaves it alone. Being a
+     * scalar on a delta-synced entity, writing it bumps {@code updatedAt} and reaches the phone with the next pull.
+     */
+    @Column(name = "trainer_comment")
+    private String trainerComment;
+
+    /** When {@link #trainerComment} was last written. */
+    @Column(name = "trainer_comment_at")
+    private Instant trainerCommentAt;
+
+    /** User id of the trainer who wrote {@link #trainerComment}; a plain id, not a relationship. */
+    @Column(name = "trainer_comment_by")
+    private Long trainerCommentBy;
 }

@@ -1402,6 +1402,8 @@ class PullEngine {
       mealDateTime: Value(DateTime.parse(json['dateTime'] as String)),
       mealType: Value(json['mealType'] as String),
       name: Value(json['name'] as String?),
+      trainerComment: Value(json['trainerComment'] as String?),
+      trainerCommentAt: Value(_parseNullableInstant(json['trainerCommentAt'] as String?)),
     );
     final entriesJson =
         (json['entries'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
@@ -1438,6 +1440,8 @@ class PullEngine {
       }
     });
   }
+
+  static DateTime? _parseNullableInstant(String? raw) => raw == null ? null : DateTime.parse(raw);
 
   Future<void> _deleteMealTombstone(int serverId) async {
     final clientId = await _localClientId('meals', serverId);

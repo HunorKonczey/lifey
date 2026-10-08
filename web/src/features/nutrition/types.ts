@@ -77,6 +77,9 @@ export interface MealResponse {
   mealType: MealType;
   name: string | null;
   entries: MealEntryResponse[];
+  /** The trainer's comment on this meal and when it was written (LIF-144); absent or null when uncommented. */
+  trainerComment?: string | null;
+  trainerCommentAt?: string | null;
 }
 
 export interface MealEntryRequest {

@@ -12,6 +12,9 @@ public record MealResponse(
         String name,
         List<MealEntryResponse> entries,
         Instant updatedAt,
-        Instant deletedAt
+        Instant deletedAt,
+        // The trainer's comment on this meal and when it was written (LIF-144); both null when uncommented.
+        String trainerComment,
+        Instant trainerCommentAt
 ) {
 }
