@@ -10,7 +10,6 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { useFormat } from "@/lib/format/useFormat";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useToast } from "@/lib/hooks/useToast";
-import { ApiError } from "@/lib/api/client";
 import { useTopBarCentre } from "@/lib/hooks/useTopBarSlot";
 import { Button, Icon, IconButton, SegmentedControl, Switch } from "@/components/ds";
 import { EmptyState } from "@/components/status/EmptyState";
@@ -23,7 +22,8 @@ import { CalendarSessionPeek } from "./CalendarSessionPeek";
 import { CalendarClientFilter } from "./CalendarClientFilter";
 import { clientDisplayName } from "./ClientAvatar";
 import { ScheduleWorkoutDrawer } from "./ScheduleWorkoutDrawer";
-import { moveBody, type DropSlot } from "../calendarGrid";
+import type { DropSlot } from "../calendarGrid";
+import { useMoveOccurrence } from "../useMoveOccurrence";
 import type { TrainerCalendarSessionResponse } from "../types";
 
 type View = "day" | "week" | "month";
@@ -99,14 +99,7 @@ export function TrainerCalendar() {
   // Drag to move (W8.5b) and Shift + drag to copy. A move is the PATCH endpoint; a copy is a new one-off schedule of the same
   // workout for the same client — which needs the schedule's template, so only an occurrence of a plain schedule can be copied.
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["trainer-calendar"] });
-  const moveMutation = useMutation({
-    mutationFn: ({ session, slot }: { session: TrainerCalendarSessionResponse; slot: DropSlot }) => trainerApi.moveOccurrence(session.sessionId, moveBody(slot)),
-    onSuccess: () => {
-      refresh();
-      show(t("moved"), "success");
-    },
-    onError: (e) => show(e instanceof ApiError && e.status === 422 ? tSchedule("horizonExceeded") : t("moveFailed"), "error"),
-  });
+  const moveMutation = useMoveOccurrence();
   const copyMutation = useMutation({
     mutationFn: async ({ session, slot }: { session: TrainerCalendarSessionResponse; slot: DropSlot }) => {
       const schedules = await trainerApi.schedulesForClient(session.clientId);

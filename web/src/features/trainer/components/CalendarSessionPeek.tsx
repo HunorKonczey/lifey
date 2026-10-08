@@ -11,6 +11,7 @@ import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { STATUS_STYLE } from "../scheduleStatus";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { MoveSessionModal } from "./MoveSessionModal";
 import { RecurrenceLabel } from "./RecurrenceLabel";
 import type { TrainerCalendarSessionResponse } from "../types";
 
@@ -37,6 +38,7 @@ export function CalendarSessionPeek({ session, anchorEl, clientName, onClose }: 
   const { show } = useToast();
   const anchorRef = useRef<HTMLElement | null>(anchorEl);
   const [confirming, setConfirming] = useState(false);
+  const [moving, setMoving] = useState(false);
 
   const schedulesQ = useQuery({
     queryKey: queryKeys.trainerSchedules.forClient(session.clientId),
@@ -63,7 +65,7 @@ export function CalendarSessionPeek({ session, anchorEl, clientName, onClose }: 
 
   return (
     <>
-      <Popover open={!confirming} onClose={onClose} anchorRef={anchorRef} width={340}>
+      <Popover open={!confirming && !moving} onClose={onClose} anchorRef={anchorRef} width={340}>
         <div role="dialog" aria-label={t("peekTitle")} className="flex flex-col gap-4 p-4">
           <div className="flex items-center gap-3">
             <ClientAvatar clientId={session.clientId} email={session.clientEmail} size={42} />
@@ -123,6 +125,12 @@ export function CalendarSessionPeek({ session, anchorEl, clientName, onClose }: 
               </Button>
             )}
             {session.status === "UPCOMING" && (
+              <Button variant="secondary" fullWidth onClick={() => setMoving(true)} data-testid="calendar-peek-move">
+                <Icon name="edit_calendar" size={18} />
+                {t("moveAction")}
+              </Button>
+            )}
+            {session.status === "UPCOMING" && (
               <Button variant="secondary" fullWidth onClick={() => setConfirming(true)}>
                 <Icon name="event_busy" size={18} color="var(--heart)" />
                 {tSchedule("cancelOccurrence")}
@@ -131,6 +139,8 @@ export function CalendarSessionPeek({ session, anchorEl, clientName, onClose }: 
           </div>
         </div>
       </Popover>
+
+      {moving && <MoveSessionModal session={session} summary={`${name} · ${session.templateName ?? tSchedule("unnamedTemplate")}`} onClose={onClose} />}
 
       <ConfirmModal
         open={confirming}

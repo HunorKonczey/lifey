@@ -464,6 +464,10 @@
     },
     "calendar": {
       "dragMove": "Áthelyezés",
+      "moveAction": "Áthelyezés…",
+      "moveTitle": "Edzés áthelyezése",
+      "moveApply": "Áthelyezés",
+      "moveCancel": "Mégse",
       "dragCopy": "Másolás",
       "moved": "Edzés áthelyezve",
       "copied": "Edzés lemásolva",
