@@ -71,7 +71,7 @@
   "mustBeGreaterThanZeroError": "Nagyobbnak kell lennie, mint 0",
   "addButton": "Hozzáadás",
   "couldNotLoadFoodsPrefix": "Nem sikerült betölteni az ételeket:",
-  "addFoodsFirstMessage": "Adj hozzá először ételeket (Ételek fül).",
+  "addFoodsFirstMessage": "Még nincs saját ételed. Keress fent (ha be van pipálva, az OpenFoodFacts-ban is), vagy vegyél fel egyet az Ételek fülön.",
   "editMealTitle": "Étkezés szerkesztése",
   "logMealTitle": "Étkezés naplózása",
   "mealTypeLabel": "Étkezés típusa",

@@ -284,9 +284,9 @@
   "@couldNotLoadFoodsPrefix": {
     "description": "Prefix before the raw error when the foods list fails to load in the add-meal-entry sheet"
   },
-  "addFoodsFirstMessage": "Add some foods first (Foods tab).",
+  "addFoodsFirstMessage": "You have no foods yet. Search above (OpenFoodFacts too, if ticked), or add one on the Foods tab.",
   "@addFoodsFirstMessage": {
-    "description": "Shown in the add-meal-entry sheet when there are no foods yet"
+    "description": "Hint under the search field of the add-meal-entry sheet when the user has no own foods yet"
   },
   "editMealTitle": "Edit meal",
   "@editMealTitle": {
