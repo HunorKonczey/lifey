@@ -2,6 +2,7 @@ package com.lifey.trainer;
 
 import com.lifey.trainer.controller.TrainerClientController;
 import com.lifey.trainer.dto.TrainerClientResponse;
+import com.lifey.userdetails.PrimaryGoal;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.trainer.service.TrainerAccessService;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class TrainerClientControllerTest {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
                 new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
                         Instant.parse("2026-06-01T00:00:00Z"),
-                        List.of(), 0, 0, null, null, 0, null, null, null)));
+                        List.of(), 0, 0, null, null, 0, null, null, null, null, 0, 0, null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())
@@ -49,13 +50,17 @@ class TrainerClientControllerTest {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
                 new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
                         Instant.parse("2026-06-01T00:00:00Z"),
-                        List.of(), 0, 6, null, null, 0, 1631, 2, 1900)));
+                        List.of(), 0, 6, null, null, 0, 1631, 2, 1900, 10000, 4, 3, PrimaryGoal.GAIN_MUSCLE)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].avgCalories7d").value(1631))
                 .andExpect(jsonPath("$[0].prCount7d").value(2))
-                .andExpect(jsonPath("$[0].dailyCalorieGoal").value(1900));
+                .andExpect(jsonPath("$[0].dailyCalorieGoal").value(1900))
+                .andExpect(jsonPath("$[0].dailyStepGoal").value(10000))
+                .andExpect(jsonPath("$[0].plannedSessions7d").value(4))
+                .andExpect(jsonPath("$[0].completedSessions7d").value(3))
+                .andExpect(jsonPath("$[0].primaryGoal").value("GAIN_MUSCLE"));
     }
 
     @Test
@@ -63,14 +68,19 @@ class TrainerClientControllerTest {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
                 new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
                         Instant.parse("2026-06-01T00:00:00Z"),
-                        List.of(), 0, 0, null, null, 0, null, 0, null)));
+                        List.of(), 0, 0, null, null, 0, null, 0, null, null, 0, 0, null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].avgCalories7d").doesNotExist())
                 .andExpect(jsonPath("$[0].prCount7d").value(0))
                 // No goal set: the field is absent (null), never 0.
-                .andExpect(jsonPath("$[0].dailyCalorieGoal").doesNotExist());
+                .andExpect(jsonPath("$[0].dailyCalorieGoal").doesNotExist())
+                // Nothing set, nothing scheduled: absent goals, and zero sessions is a real answer.
+                .andExpect(jsonPath("$[0].dailyStepGoal").doesNotExist())
+                .andExpect(jsonPath("$[0].primaryGoal").doesNotExist())
+                .andExpect(jsonPath("$[0].plannedSessions7d").value(0))
+                .andExpect(jsonPath("$[0].completedSessions7d").value(0));
     }
 
     @Test

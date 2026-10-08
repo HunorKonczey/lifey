@@ -2398,3 +2398,13 @@ Scope: the sweep touched almost every screen (233 raw text styles became theme r
 - Not a bug but worth knowing: tapping "Delete" one pixel too low in the confirmation deleted the seeded snack meal of the test account; it was recreated through the API (the flow itself — row menu, confirmation, delete, totals recomputed 623 → 383 kcal — works).
 
 **Not exercised on the emulator**: the live cardio session and a full cardio summary (no GPS / recorded route on the AVD; the seeded run has a duration only) — covered by the ×1.3 layout tests, which pass; the interval-plan editor and the music sheets; the paywall; Hungarian light on the client screens (the app language of the test account stayed English; the trainer screens were checked in Hungarian in R6).
+
+### LIF-101, LIF-102 — 2026-10-08 — the trainer's client view gets its goals
+
+The three deviations R6 recorded as "the trainer API has no ..." are closed. Nothing new is stored: the client's step goal (`user_settings.daily_step_goal`) and stated goal (`user_details.primary_goal`) already existed, and the trainer API simply did not carry them.
+
+- **Backend** (`TrainerClientResponse`): `dailyStepGoal` (null when the client never set one — no default is assumed here, the apps decide what a missing goal means), `plannedSessions7d` / `completedSessions7d` (occurrences this trainer scheduled on the last 7 dates, today included, cancelled ones left out; completed = started; same two origins as `countMissedOccurrences` — plain schedule and program assignment — via `WorkoutSessionRepository.countScheduledOccurrences`) and `primaryGoal` (null before onboarding).
+- **Mobile**: the Steps tile says "84% of goal" against the client's own goal and falls back to "over N days" without one; the Workouts tile says "3 of 4 planned" / "all planned done", and keeps "N sessions missed · 14 d" for a week with nothing scheduled; the header line reads "Client since 24 Sep 2026 · Goal: build muscle" (phone and tablet), the date alone without a stated goal. Tests: `client_detail_screen_test` (the since line for every goal, the three KPI cases, HU × 1.3 at 360 dp with the longest lines), `trainer_client_test` (parsing, older backend).
+- **Web**: the client's steps tab draws the goal line and the "Goal met" card from `dailyStepGoal`; a client without a goal gets neither. `e2e/trainer-client-goals.spec.ts` runs the whole chain against the real backend.
+- Not changed: the web overview keeps its own Monday-based planned/done figure from the calendar feed (it also covers the days ahead); the 7-day figures here are the phone's.
+- Not checked on the emulator — the layout is covered by the ×1.3 widget tests.

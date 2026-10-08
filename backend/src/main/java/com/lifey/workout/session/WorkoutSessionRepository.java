@@ -231,6 +231,36 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
             @Param("windowStart") LocalDate windowStart, @Param("today") LocalDate today);
 
     /**
+     * Occurrences this trainer scheduled for the client on a day in {@code [from, to]} (both ends included),
+     * cancelled ones left out — what the client was asked to do in that window. {@code completedOnly} narrows it to
+     * the ones actually started, the DONE branch of WorkoutScheduleServiceImpl#occurrenceStatus(). Same two origins
+     * (plain schedule, program assignment) and the same reason for native SQL as {@link #countMissedOccurrences}.
+     */
+    @Query(nativeQuery = true, value = """
+            select count(*) from (
+                select s.id from workout_sessions s
+                join workout_schedules ws on s.schedule_id = ws.id
+                where ws.trainer_id = :trainerId
+                  and s.user_id = :clientId
+                  and s.deleted_at is null
+                  and s.scheduled_for >= :from
+                  and s.scheduled_for <= :to
+                  and (:completedOnly = false or s.started_at is not null)
+                union all
+                select s.id from workout_sessions s
+                join program_assignments pa on s.program_assignment_id = pa.id
+                where pa.trainer_id = :trainerId
+                  and s.user_id = :clientId
+                  and s.deleted_at is null
+                  and s.scheduled_for >= :from
+                  and s.scheduled_for <= :to
+                  and (:completedOnly = false or s.started_at is not null)
+            ) occurrences
+            """)
+    long countScheduledOccurrences(@Param("trainerId") Long trainerId, @Param("clientId") Long clientId,
+            @Param("from") LocalDate from, @Param("to") LocalDate to, @Param("completedOnly") boolean completedOnly);
+
+    /**
      * Whether the user already started (any) workout session within a local-day
      * window — used by {@code WorkoutReminderJob} to suppress the "workout
      * today" reminder once they've already worked out that morning, even if

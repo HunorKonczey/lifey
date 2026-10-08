@@ -1,4 +1,5 @@
 import '../../../../core/format/first_character.dart';
+import '../../../onboarding/domain/user_details.dart';
 
 /// One of the trainer's active clients, exactly as `GET /trainer/clients`
 /// returns it (`TrainerClientResponse` on the backend).
@@ -23,6 +24,10 @@ class TrainerClient {
     this.missedWorkoutCount = 0,
     this.avgCalories7d,
     this.prCount7d,
+    this.dailyStepGoal,
+    this.plannedSessions7d = 0,
+    this.completedSessions7d = 0,
+    this.primaryGoal,
   });
 
   final int userId;
@@ -52,6 +57,20 @@ class TrainerClient {
   /// Strength records set in the last 7 days (R6.2). Null = unknown (an older
   /// backend); 0 is a real answer and simply draws no chip.
   final int? prCount7d;
+
+  /// The client's own daily step goal, or null when they never set one (LIF-101).
+  /// Null hides the "% of goal" line; no default is assumed on the trainer's side.
+  final int? dailyStepGoal;
+
+  /// Sessions the trainer scheduled for the client on the last 7 days' dates
+  /// (today included, cancelled ones left out) and how many of them were
+  /// started (LIF-101). 0 planned means nothing was asked of the client.
+  final int plannedSessions7d;
+  final int completedSessions7d;
+
+  /// What the client is training for, from their onboarding, or null when they
+  /// have not stated one (LIF-102).
+  final PrimaryGoal? primaryGoal;
 
   /// How the weight moved across the card's sparkline window, in kg (last
   /// minus first weigh-in), or null with fewer than two points — one reading is
@@ -92,6 +111,10 @@ class TrainerClient {
       missedWorkoutCount: (json['missedWorkoutCount'] as num?)?.toInt() ?? 0,
       avgCalories7d: (json['avgCalories7d'] as num?)?.toInt(),
       prCount7d: (json['prCount7d'] as num?)?.toInt(),
+      dailyStepGoal: (json['dailyStepGoal'] as num?)?.toInt(),
+      plannedSessions7d: (json['plannedSessions7d'] as num?)?.toInt() ?? 0,
+      completedSessions7d: (json['completedSessions7d'] as num?)?.toInt() ?? 0,
+      primaryGoal: json['primaryGoal'] == null ? null : primaryGoalFromJson(json['primaryGoal'] as String),
     );
   }
 }

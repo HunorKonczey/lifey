@@ -13,6 +13,9 @@ import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.settings.UserSettings;
 import com.lifey.settings.UserSettingsRepository;
+import com.lifey.userdetails.PrimaryGoal;
+import com.lifey.userdetails.UserDetails;
+import com.lifey.userdetails.UserDetailsRepository;
 import com.lifey.user.User;
 import com.lifey.water.WaterEntryRepository;
 import com.lifey.weight.WeightEntry;
@@ -26,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -64,6 +68,9 @@ class TrainerAccessServiceImplTest {
 
     @Mock
     UserSettingsRepository userSettingsRepository;
+
+    @Mock
+    UserDetailsRepository userDetailsRepository;
 
     @Mock
     CurrentUserProvider currentUserProvider;
@@ -182,6 +189,44 @@ class TrainerAccessServiceImplTest {
 
         assertThat(result).extracting(TrainerClientResponse::clientId, TrainerClientResponse::dailyCalorieGoal)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(CLIENT_ID, 1900), org.assertj.core.groups.Tuple.tuple(3L, null));
+        verify(userSettingsRepository, never()).save(any());
+    }
+
+    @Test
+    void findActiveClientsForTrainer_reportsTheStepGoalTheStatedGoalAndThisWeeksPlannedAndDoneSessions() {
+        when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
+        TrainerClient withEverything = relationshipFor(CLIENT_ID);
+        TrainerClient withNothing = relationshipFor(3L);
+        when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
+                .thenReturn(List.of(withEverything, withNothing));
+        when(weightEntryRepository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(any(), any()))
+                .thenReturn(List.of());
+        when(mealRepository.findMaxDateTimeByUserId(any())).thenReturn(Optional.empty());
+        when(waterEntryRepository.findMaxConsumedAtByUserId(any())).thenReturn(Optional.empty());
+        when(workoutSessionRepository.findMaxStartedAtByUserId(any())).thenReturn(Optional.empty());
+        UserSettings settings = new UserSettings();
+        settings.setDailyStepGoal(9000);
+        when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.of(settings));
+        UserDetails details = new UserDetails();
+        details.setPrimaryGoal(PrimaryGoal.GAIN_MUSCLE);
+        when(userDetailsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.of(details));
+        // The window is the trailing 7 dates, today included: today and today - 6.
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
+        when(workoutSessionRepository.countScheduledOccurrences(TRAINER_ID, CLIENT_ID, today.minusDays(6), today, false))
+                .thenReturn(4L);
+        when(workoutSessionRepository.countScheduledOccurrences(TRAINER_ID, CLIENT_ID, today.minusDays(6), today, true))
+                .thenReturn(3L);
+
+        List<TrainerClientResponse> result = service.findActiveClientsForTrainer();
+
+        assertThat(result).extracting(
+                        TrainerClientResponse::clientId, TrainerClientResponse::dailyStepGoal,
+                        TrainerClientResponse::primaryGoal, TrainerClientResponse::plannedSessions7d,
+                        TrainerClientResponse::completedSessions7d)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(CLIENT_ID, 9000, PrimaryGoal.GAIN_MUSCLE, 4, 3),
+                        // No settings row, no onboarding, nothing scheduled: absent goals and zero sessions, no failure.
+                        org.assertj.core.groups.Tuple.tuple(3L, null, null, 0, 0));
         verify(userSettingsRepository, never()).save(any());
     }
 

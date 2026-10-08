@@ -28,6 +28,9 @@ class ClientOverviewTab extends ConsumerWidget {
     required this.onOpenTab,
     required this.offline,
     this.missedWorkoutCount = 0,
+    this.plannedSessions = 0,
+    this.completedSessions = 0,
+    this.stepGoal,
     this.wide = false,
   });
 
@@ -38,6 +41,12 @@ class ClientOverviewTab extends ConsumerWidget {
   /// Planned sessions the client skipped in the last 14 days, from the client
   /// list's summary — the one place that is counted.
   final int missedWorkoutCount;
+
+  /// Sessions the trainer scheduled in the last 7 days and how many the client
+  /// started, and the client's own daily step goal — the same summary (LIF-101).
+  final int plannedSessions;
+  final int completedSessions;
+  final int? stepGoal;
 
   /// The tablet's wide pane: four KPIs in a row, and the weight trend beside
   /// the client's upcoming sessions (canvas Lifey 6 › Trainer tablet).
@@ -85,6 +94,9 @@ class ClientOverviewTab extends ConsumerWidget {
         calorieGoal: goals?.dailyCalorieGoal,
         recentSessions: sessions.sessions,
         missedWorkoutCount: missedWorkoutCount,
+        plannedSessions: plannedSessions,
+        completedSessions: completedSessions,
+        stepGoal: stepGoal,
         onOpenTab: onOpenTab,
       ),
     );
@@ -101,6 +113,9 @@ class _Content extends StatelessWidget {
     required this.calorieGoal,
     required this.recentSessions,
     required this.missedWorkoutCount,
+    required this.plannedSessions,
+    required this.completedSessions,
+    required this.stepGoal,
     required this.onOpenTab,
   });
 
@@ -112,6 +127,9 @@ class _Content extends StatelessWidget {
   final double? calorieGoal;
   final List<ClientWorkoutSession> recentSessions;
   final int missedWorkoutCount;
+  final int plannedSessions;
+  final int completedSessions;
+  final int? stepGoal;
   final ValueChanged<ClientDetailTab> onOpenTab;
 
   /// Mean of the RPEs the client gave in the last 7 days, or null when they
@@ -166,7 +184,7 @@ class _Content extends StatelessWidget {
         label: l10n.trainerKpiWorkouts,
         value: '$workouts',
         color: Theme.of(context).colorScheme.primary,
-        subline: missedWorkoutCount > 0 ? l10n.trainerKpiWorkoutsMissed(missedWorkoutCount) : null,
+        subline: _workoutsSubline(l10n),
         onTap: () => onOpenTab(ClientDetailTab.statistics),
       ),
       MetricTile(
@@ -174,7 +192,7 @@ class _Content extends StatelessWidget {
         label: l10n.trainerKpiAvgSteps,
         value: avgSteps == null ? '—' : f.integer(avgSteps),
         color: mc.steps,
-        subline: stepDays.isEmpty ? null : l10n.trainerKpiStepsDays(stepDays.length),
+        subline: _stepsSubline(l10n, f, avgSteps),
         onTap: () => onOpenTab(ClientDetailTab.steps),
       ),
       MetricTile(
@@ -237,6 +255,24 @@ class _Content extends StatelessWidget {
           weightCard,
       ],
     );
+  }
+
+  /// What was asked of the client this week and how much of it they did; when nothing was scheduled in the last 7
+  /// days, any miss from the 14 before that is still worth a line.
+  String? _workoutsSubline(AppLocalizations l10n) {
+    if (plannedSessions > 0) {
+      return completedSessions >= plannedSessions
+          ? l10n.trainerKpiWorkoutsAllDone
+          : l10n.trainerKpiWorkoutsPlanned(completedSessions, plannedSessions);
+    }
+    return missedWorkoutCount > 0 ? l10n.trainerKpiWorkoutsMissed(missedWorkoutCount) : null;
+  }
+
+  /// The average against the client's own step goal; without a goal, the days the average is taken over.
+  String? _stepsSubline(AppLocalizations l10n, LifeyFormat f, double? avgSteps) {
+    final goal = stepGoal;
+    if (avgSteps != null && goal != null && goal > 0) return l10n.trainerKpiStepGoal(f.percent(avgSteps / goal));
+    return stepDays.isEmpty ? null : l10n.trainerKpiStepsDays(stepDays.length);
   }
 
   /// The RPE scale in words, so "7.2" reads as an effort rather than a score.

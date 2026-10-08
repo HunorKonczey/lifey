@@ -1,6 +1,7 @@
 package com.lifey.trainer;
 
 import com.lifey.trainer.entity.TrainerClient;
+import com.lifey.userdetails.PrimaryGoal;
 import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;
@@ -44,7 +45,8 @@ public final class TrainerClientMapper {
     public record ClientCardStats(
             List<WeightTrendPoint> weightTrend, int assignedPlanCount, int workoutsPerWeek,
             Instant lastActivityAt, LocalDate lastWeightAt, int missedWorkoutCount,
-            Integer avgCalories7d, Integer prCount7d, Integer dailyCalorieGoal) {
+            Integer avgCalories7d, Integer prCount7d, Integer dailyCalorieGoal,
+            Integer dailyStepGoal, int plannedSessions7d, int completedSessions7d, PrimaryGoal primaryGoal) {
     }
 
     public static TrainerClientResponse toClientResponse(TrainerClient tc, ClientCardStats stats) {
@@ -62,7 +64,11 @@ public final class TrainerClientMapper {
                 stats.missedWorkoutCount(),
                 stats.avgCalories7d(),
                 stats.prCount7d(),
-                stats.dailyCalorieGoal());
+                stats.dailyCalorieGoal(),
+                stats.dailyStepGoal(),
+                stats.plannedSessions7d(),
+                stats.completedSessions7d(),
+                stats.primaryGoal());
     }
 
     public static MyTrainerResponse toMyTrainerResponse(TrainerClient tc) {

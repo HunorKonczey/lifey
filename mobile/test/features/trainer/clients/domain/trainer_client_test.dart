@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/features/onboarding/domain/user_details.dart' show PrimaryGoal;
 import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
 
 Map<String, dynamic> _json({Map<String, dynamic> extra = const {}, List<Map<String, dynamic>>? trend}) => {
@@ -66,6 +67,31 @@ void main() {
     test('one reading, or none, is not a trend', () {
       expect(TrainerClient.fromJson(_json(trend: trend([64.0]))).weightChangeKg, isNull);
       expect(TrainerClient.fromJson(_json()).weightChangeKg, isNull);
+    });
+  });
+
+  group('the goals and the plan of the week (LIF-101, LIF-102)', () {
+    test('reads the step goal, the planned and completed sessions and the stated goal', () {
+      final client = TrainerClient.fromJson(_json(extra: {
+        'dailyStepGoal': 9000,
+        'plannedSessions7d': 4,
+        'completedSessions7d': 3,
+        'primaryGoal': 'GAIN_MUSCLE',
+      }));
+
+      expect(client.dailyStepGoal, 9000);
+      expect(client.plannedSessions7d, 4);
+      expect(client.completedSessions7d, 3);
+      expect(client.primaryGoal, PrimaryGoal.gainMuscle);
+    });
+
+    test('an older backend, or a client who set nothing, leaves the goals null and the counts at zero', () {
+      final client = TrainerClient.fromJson(_json());
+
+      expect(client.dailyStepGoal, isNull);
+      expect(client.primaryGoal, isNull);
+      expect(client.plannedSessions7d, 0);
+      expect(client.completedSessions7d, 0);
     });
   });
 }

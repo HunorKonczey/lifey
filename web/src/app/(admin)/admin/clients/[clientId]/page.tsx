@@ -114,7 +114,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
       />
       {tab === "overview" && <ClientOverviewTab clientId={clientId} />}
       {tab === "statistics" && <ClientStatisticsTab clientId={clientId} />}
-      {tab === "steps" && <ClientStepsTab clientId={clientId} />}
+      {tab === "steps" && <ClientStepsTab clientId={clientId} stepGoal={client.dailyStepGoal ?? null} />}
       {tab === "nutrition" && <ClientNutritionTab clientId={clientId} />}
       {tab === "workouts" && (
         <ClientWorkoutsTab

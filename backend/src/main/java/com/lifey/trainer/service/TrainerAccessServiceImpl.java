@@ -15,10 +15,13 @@ import com.lifey.trainer.dto.TrainerClientResponse;
 import com.lifey.trainer.dto.WeightTrendPoint;
 import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.exception.NotYourClientException;
+import com.lifey.userdetails.UserDetails;
+import com.lifey.userdetails.UserDetailsRepository;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.water.WaterEntryRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
+import com.lifey.userdetails.PrimaryGoal;
 import com.lifey.workout.session.WorkoutSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,6 +37,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -62,6 +66,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
     private final MealRepository mealRepository;
     private final WaterEntryRepository waterEntryRepository;
     private final UserSettingsRepository userSettingsRepository;
+    private final UserDetailsRepository userDetailsRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -131,11 +136,23 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
         Integer avgCalories7d = averageDailyCalories(tc, clientId);
         Integer prCount7d = countRecordsThisWeek(clientId);
         // A client who never opened settings has no row yet: that is "no goal", not an error, and reading must not create one.
-        Integer dailyCalorieGoal = userSettingsRepository.findByUserId(clientId).map(UserSettings::getDailyCalorieGoal).orElse(null);
+        Optional<UserSettings> settings = userSettingsRepository.findByUserId(clientId);
+        Integer dailyCalorieGoal = settings.map(UserSettings::getDailyCalorieGoal).orElse(null);
+        Integer dailyStepGoal = settings.map(UserSettings::getDailyStepGoal).orElse(null);
+        // The same trailing 7 dates as the other card figures, today included: a session planned for today that is
+        // not done yet is still "planned", it only becomes a miss tomorrow.
+        LocalDate windowStart = today.minusDays(CARD_WINDOW_DAYS - 1);
+        int plannedSessions7d = (int) workoutSessionRepository.countScheduledOccurrences(
+                trainerId, clientId, windowStart, today, false);
+        int completedSessions7d = (int) workoutSessionRepository.countScheduledOccurrences(
+                trainerId, clientId, windowStart, today, true);
+        // Onboarding is optional for a client, so no details row means "no goal stated".
+        PrimaryGoal primaryGoal = userDetailsRepository.findByUserId(clientId).map(UserDetails::getPrimaryGoal).orElse(null);
 
         return TrainerClientMapper.toClientResponse(tc, new TrainerClientMapper.ClientCardStats(
                 weightTrend, assignedPlanCount, workoutsPerWeek, lastActivityAt, lastWeightAt, missedWorkoutCount,
-                avgCalories7d, prCount7d, dailyCalorieGoal));
+                avgCalories7d, prCount7d, dailyCalorieGoal, dailyStepGoal, plannedSessions7d, completedSessions7d,
+                primaryGoal));
     }
 
     /**
