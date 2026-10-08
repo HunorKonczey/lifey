@@ -51,10 +51,11 @@ module.exports = {
     },
     assert: {
       assertions: {
-        // Performance: measured 93 today (mobile). §8's target is ≥ 95 —
-        // not met, tied to the same >100 KB root-layout JS baseline
-        // documented since Prompt 3 as root-layout-level work, not
-        // something a CI script closes as a side effect. 85 leaves buffer
+        // Performance: measured 94 today (mobile; LIF-117, was 93). §8's
+        // target is ≥ 95 — not met: React and the Next client router alone
+        // are ~142 KB gzipped (see scripts/check-js-budget.mjs), more than
+        // §8's whole 100 KB JS budget, so this is the framework's floor
+        // rather than a regression to chase. 85 leaves buffer
         // for run-to-run noise while easily catching a real regression —
         // importing `recharts` alone dropped this to 89.
         "categories:performance": ["error", { minScore: 0.85 }],
@@ -74,8 +75,8 @@ module.exports = {
         // that risks masking a real future SEO regression — thresholded
         // instead, just below today's score.
         "categories:seo": ["error", { minScore: 0.9 }],
-        // LCP: measured ~3.16s today (mobile, throttled) — §8's target is
-        // < 2.0s, not met for the same root-layout JS reason as
+        // LCP: measured ~2.9s today (mobile, throttled; was ~3.16s) — §8's
+        // target is < 2.0s, not met for the same framework-size reason as
         // performance above. 4s leaves real regression-catching room
         // (recharts pushed this to 3.64s) without gating on work this
         // script isn't the place to do.
