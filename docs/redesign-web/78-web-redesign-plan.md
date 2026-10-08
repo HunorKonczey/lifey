@@ -513,7 +513,7 @@ Nothing new is persisted. Each gap found in the canvases, and its fate:
 | Workouts this week "4 / 4", next session, program week | W7-A | Derivable from one `calendarSessions(from, to)` call + program assignments | Derived (W7.1) |
 | Logging heatmap, activity feed | W7-B | Derivable from `clientMeals`, `clientWorkoutSessions`, `clientWeights` | Derived (W7.7) |
 | "Emlékeztető küldése", "Gratulálok", "Válasz" | W7-A/D | No reminder endpoint | Opens the chat with a prefilled draft — no new endpoint |
-| Trainer edits the client's step goal | W7-C | No endpoint | Read-only goal → §6 |
+| Trainer edits the client's step goal | W7-C | ~~No endpoint~~ done by LIF-105 (2026-10-08) | `PUT /trainer/clients/{id}/step-goal`; the steps tab has the goal card and the drawer |
 | Trainer comment on a meal | W7-C | Only workout-session comments exist | Hidden; workout comments stay → §6 |
 | Calendar drag to move / Shift+drag to copy | W8-A | No move endpoint (only cancel) | Optional **W8.b1** (`PATCH /trainer/scheduled-sessions/{id}`), needs a go-ahead (§10 Q2); without it events aren't draggable, click → peek → "Reschedule" = cancel + schedule |
 | Assign drawer "we'll shift conflicts by 1 hour" | W8-C | No auto-shift | Conflicts are **counted and named**, not shifted |
@@ -3433,7 +3433,7 @@ W0.1–W0.4 and can land before the component kit, which is why M1 is the shell.
 - **Food servings / portions ("1 pohár · 150 g"), fibre, sugar, food favourites, own vs catalogue foods**
   — food model changes (same deferral as mobile 77 §6 piece-based portions).
 - **"From your trainer" marker on assigned recipes** — the copy doesn't carry its origin to the client.
-- **Trainer meal comments; trainer-edited step goal** — new endpoints/data.
+- **Trainer meal comments** — new endpoints/data (LIF-144). ~~**Trainer-edited step goal**~~ — **done by LIF-105 (2026-10-08):** `PUT /trainer/clients/{id}/step-goal`, a push to the client on change (type `step_goal`, behind the same "trainer goal changes" switch as the nutrition goals, whose label now says goals in general), the steps tab's goal card with "Cél módosítása". No attribution ("set by your trainer") for the step goal yet: unlike the nutrition goals it has no `set_by` / `set_at` columns, so the client's app shows it as their own.
 - **Chat presence ("online")** — chat-service work. **Shared workout / PR cards** — **done by `chat/83`** (read-only tile on the web); a shared *meal* card is still open.
 - **Invite history (accepted)** — **done by `82` S2** (the rows were always kept; only an endpoint was missing). **Shareable join link, invite reminders** — still open, invite model changes.
 - **Superadmin "last login"** — **done by `82` S3** (`users.last_active_at`). **Trainer-request "qualification"** — not collected.

@@ -39,6 +39,7 @@ class ApiEndpoints {
   static String trainerClientMeals(int clientId) => '/trainer/clients/$clientId/meals';
   static String trainerClientNutritionGoals(int clientId) =>
       '/trainer/clients/$clientId/nutrition-goals';
+  static String trainerClientStepGoal(int clientId) => '/trainer/clients/$clientId/step-goal';
   static String trainerClientWorkoutSessions(int clientId) =>
       '/trainer/clients/$clientId/workout-sessions';
 

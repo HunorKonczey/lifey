@@ -15,8 +15,11 @@ import com.lifey.steps.service.DailyStepCountService;
 import com.lifey.trainer.dto.ClientNutritionGoalsRequest;
 import com.lifey.trainer.dto.ClientNutritionGoalsSourceResponse;
 import com.lifey.trainer.dto.ClientNutritionGoalsResponse;
+import com.lifey.trainer.dto.ClientStepGoalRequest;
+import com.lifey.trainer.dto.ClientStepGoalResponse;
 import com.lifey.trainer.dto.SessionCommentRequest;
 import com.lifey.trainer.service.ClientNutritionGoalsService;
+import com.lifey.trainer.service.ClientStepGoalService;
 import com.lifey.trainer.service.SessionCommentService;
 import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.user.UserAvatar;
@@ -65,6 +68,7 @@ public class TrainerClientDataController {
     private final WorkoutSessionService workoutSessionService;
     private final SessionCommentService sessionCommentService;
     private final ClientNutritionGoalsService clientNutritionGoalsService;
+    private final ClientStepGoalService clientStepGoalService;
     private final UserAvatarRepository userAvatarRepository;
     private final MealService mealService;
     private final SettingsService settingsService;
@@ -204,6 +208,14 @@ public class TrainerClientDataController {
     public ClientNutritionGoalsResponse updateNutritionGoals(
             @PathVariable Long clientId, @Valid @RequestBody ClientNutritionGoalsRequest request) {
         return clientNutritionGoalsService.updateGoals(currentUserProvider.getUserId(), clientId, request);
+    }
+
+    @Operation(summary = "Set a client's daily step goal",
+            description = "A null dailyStepGoal clears it. The current goal is part of GET /trainer/clients.")
+    @PutMapping("/step-goal")
+    public ClientStepGoalResponse updateStepGoal(
+            @PathVariable Long clientId, @Valid @RequestBody ClientStepGoalRequest request) {
+        return clientStepGoalService.updateStepGoal(currentUserProvider.getUserId(), clientId, request);
     }
 
     @Operation(summary = "Client's profile picture", description = "404 if the client has no picture set.")
