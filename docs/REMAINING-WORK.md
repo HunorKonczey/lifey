@@ -125,7 +125,7 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 
 ## 3. Félbemaradt ellenőrzések / ismert hibák
 
-- ~~**[`75`](75-log-food-from-foods-tab-plan.md)** — webes böngészős ellenőrzés~~ — **kész 2026-10-08-án (LIF-89)**: a funkció működik, de a UI-t a redesign egységes „Add food” folyamata váltotta le (⋯ → „Log today”, a szerkesztőben nincs gomb, a chip csak a következő hozzáadást állítja); a tervvel való eltéréseket a `75` „Browser verification” szakasza sorolja fel, a kis javítandó: LIF-135.
+- ~~**[`75`](75-log-food-from-foods-tab-plan.md)** — webes böngészős ellenőrzés~~ — **kész 2026-10-08-án (LIF-89)**: a funkció működik, de a UI-t a redesign egységes „Add food” folyamata váltotta le (⋯ → „Log today”, a szerkesztőben nincs gomb, a chip csak a következő hozzáadást állítja); a tervvel való eltéréseket a `75` „Browser verification” szakasza sorolja fel, a két kis javítandó (a mennyiség kapjon fókuszt, ne induljon OFF-keresés az előtöltött névre): LIF-135, javítva.
 - **[`watch/50`](watch/50-watch-f6c-session-plan-sync-plan.md) (F6c)** — kód kész; a telefonról indított
   edzés fele Android emulátoron végigpróbálva 2026-10-07-én (LIF-90, §8: a telefonon hozzáadott gyakorlat megjelenik
   az órán, az óra választása átáll a telefonon). Az óra főlapja a saját választását most követi (LIF-129: a főlap a standalone pozíció helyett a

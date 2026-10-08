@@ -8,8 +8,10 @@ import {
   offSearchEnabled,
   offSearchLang,
   offSearchNote,
+  ownedBarcodes,
   readOffSearchPreference,
   sanitizeOffQuery,
+  withoutOwnedProducts,
   writeOffSearchPreference,
 } from "./offSearch";
 import type { OffSearchItem, OffSearchResponse } from "./types";
@@ -221,5 +223,38 @@ describe("the remembered checkbox", () => {
     expect(() => writeOffSearchPreference(true, undefined)).not.toThrow();
     expect(readOffSearchPreference(broken)).toBe(false);
     expect(() => writeOffSearchPreference(true, broken)).not.toThrow();
+  });
+});
+
+describe("ownedBarcodes / withoutOwnedProducts (LIF-134)", () => {
+  const product = (barcode: string, name = "Termék"): OffSearchItem => ({
+    barcode, name, brand: null, caloriesPer100g: 100, proteinPer100g: 5, carbsPer100g: 10, fatPer100g: 2,
+  });
+  const ownFood = (id: number, barcode: string | null) => ({
+    kind: "food" as const,
+    key: `food:${id}`,
+    name: `Étel ${id}`,
+    food: { id, name: `Étel ${id}`, caloriesPer100g: 1, proteinPer100g: 1, carbsPer100g: 1, fatPer100g: 1, barcode, hidden: false },
+  });
+
+  it("collects the barcodes of the own foods, skipping foods without one and recipes", () => {
+    const recipe = { kind: "recipe" as const, key: "recipe:1", name: "Recept" } as unknown as Parameters<typeof ownedBarcodes>[0][number];
+    expect([...ownedBarcodes([ownFood(1, "111"), ownFood(2, null), ownFood(3, ""), recipe, ownFood(4, "444")])].sort()).toEqual(["111", "444"]);
+  });
+
+  it("drops the OpenFoodFacts rows whose barcode is already an own food, keeping the order of the rest", () => {
+    const rows = [product("111", "A"), product("222", "B"), product("333", "C")].map(offItemToSearchItem);
+    expect(withoutOwnedProducts(rows, new Set(["222"])).map((r) => r.name)).toEqual(["A", "C"]);
+  });
+
+  it("changes nothing when no food has a barcode (and returns the same list)", () => {
+    const rows = [product("111")].map(offItemToSearchItem);
+    expect(withoutOwnedProducts(rows, new Set())).toBe(rows);
+  });
+
+  it("a deleted food frees its product again: the same cached rows come back once its barcode is gone", () => {
+    const rows = [product("111", "A"), product("222", "B")].map(offItemToSearchItem);
+    expect(withoutOwnedProducts(rows, ownedBarcodes([ownFood(1, "111")])).map((r) => r.name)).toEqual(["B"]);
+    expect(withoutOwnedProducts(rows, ownedBarcodes([])).map((r) => r.name)).toEqual(["A", "B"]);
   });
 });

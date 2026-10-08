@@ -1,6 +1,6 @@
 # 75 – Log a Food from the Foods Tab
 
-Status: done — mobile done (Prompts 1–3 ✅); web implemented (Prompts 4–7) and walked in a browser on 2026-10-08 (LIF-89). The web UI has since been replaced by the redesign's unified Add-food flow — see "Browser verification" for what is different; one small follow-up is LIF-135
+Status: done — mobile done (Prompts 1–3 ✅); web implemented (Prompts 4–7) and walked in a browser on 2026-10-08 (LIF-89). The web UI has since been replaced by the redesign's unified Add-food flow — see "Browser verification" for what is different; the two small follow-ups (quantity focus, no OFF search on the prefilled name) were fixed the same day, LIF-135
 Scope: mobile · web — no backend, no schema change
 Depends on: docs/27-faster-meal-logging-plan.md (food usage stats, last-used
 quantity prefill — already done on both platforms)
@@ -336,7 +336,7 @@ The web part (Prompts 4–7) was walked in a browser against the real backend (a
 | Plan 75 | Now (observed) |
 |---|---|
 | Row action ⊕ (`add_circle`, "Add to meal"), `stopPropagation` so the row is not selected | A "⋯ Actions for {food}" menu per row: **Edit · Duplicate · Log today · Delete…**. Opening it and choosing "Log today" does **not** select the row or open the editor ✓ |
-| Dialog opens with the food picked, **quantity focused and selected** | The unified "Add food" dialog opens with the search prefilled with the food's name, that food highlighted and picked (the form shows "Zabpehely · Own food · 370 kcal / 100 g"). The quantity is prefilled from the last use (80 g, §2.3 ✓; empty the first time) but **focus is on the search box** — see LIF-135 |
+| Dialog opens with the food picked, **quantity focused and selected** | The unified "Add food" dialog opens with the search prefilled with the food's name, that food highlighted and picked (the form shows "Zabpehely · Own food · 370 kcal / 100 g"). The quantity is prefilled from the last use (80 g, §2.3 ✓; empty the first time) but **focus was on the search box** — fixed (LIF-135): the dialog focuses the quantity once it has opened on a picked food |
 | Meal-type chips only when opened from Foods; the Meals tab dialog has none (§2.7) | The chips are always there, preselected from the section it was opened from (Lunch's "Add" → "Add to lunch") or, from Foods, by time of day (10:4x → Breakfast ✓); the button and title follow the chip ("Add to lunch") |
 | Changing the chip **after** adding moves the meal | **No longer true**: after "Add to snack", switching to Dinner only changes where the *next* add goes ("Add to dinner"); the Snack meal stays. A wrong meal is corrected from the Meals tab |
 | The dialog logs to the top-bar date; the title says "· Sep 21" when it is not today (§2.8) | **Today, always**, and the menu item says so ("Log today"). Checked: with the top bar on Wed Oct 7, logging Csirkemell 100 g raised today's total by exactly 110 kcal and left Oct 7 at 0 |
@@ -345,7 +345,7 @@ The web part (Prompts 4–7) was walked in a browser against the real backend (a
 | `FoodEditor` has an "Add to meal" button for an existing food, none for "New food" (§2.9, Prompt 7) | **Gone** — the "Edit food" and "New food" editor panels have only Cancel / Save (and "Look up" on a new food); `onAddToMeal` was removed in `f100b848`. "Log today" in the row menu is the only entry point |
 | "The Foods table lists hidden (custom macro) foods" (edge cases) | **Wrong**: `GET /foods` and the table leave hidden foods out (the seeded hidden food is not listed, and the tab's count is 3). They are ingredient shadows, as `FoodServiceImpl` says |
 
-Also seen: with "Also search the OpenFoodFacts food database" ticked (the choice is remembered), opening "Log today" on an own food runs an **OFF search for the food's name** (and costs a permit of the app-wide cap) — LIF-135.
+Also seen: with "Also search the OpenFoodFacts food database" ticked (the choice is remembered), opening "Log today" on an own food ran an **OFF search for the food's name** (and cost a permit of the app-wide cap) — fixed (LIF-135): a prefilled search text is not sent to OpenFoodFacts, only the user's own typing is; the hook gets no text until then, so the debounce cannot send the old name once more when the first letter is typed. Checked on the real stack: 0 `/foods/off-search` requests on open, 1 after typing.
 
 Not covered: Hungarian strings and dark theme of the new flow, a hidden food reached by any path, mobile (done under Prompts 1–3, unit/widget-tested).
 

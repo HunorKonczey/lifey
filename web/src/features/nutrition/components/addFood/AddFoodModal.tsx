@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Modal } from "@/components/ds/overlay/Modal";
@@ -9,7 +9,7 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { foodApi, mealApi, recipeApi } from "../../api";
 import { buildSearchItems, searchItems, usageByKey, type ItemUsage, type SearchFilter, type SearchItem } from "../../foodSearch";
 import { EMPTY_MACRO_DRAFT, type MacroDraft } from "../../macroEntry";
-import { readOffSearchPreference, writeOffSearchPreference, type ListItem } from "../../offSearch";
+import { ownedBarcodes, readOffSearchPreference, withoutOwnedProducts, writeOffSearchPreference, type ListItem } from "../../offSearch";
 import { computeFoodUsage, computeRecipeUsage } from "../../usage";
 import { useNoOffSearch, useOffSearchForLocale, type UseOffSearchResult } from "../../useOffSearch";
 import { FoodSearchPane } from "./FoodSearchPane";
@@ -98,7 +98,16 @@ export function AddFoodModalView({
   const [mode, setMode] = useState<AddFoodMode>("search");
   const [macroDraft, setMacroDraft] = useState<MacroDraft>(EMPTY_MACRO_DRAFT);
   const [offChecked, setOffChecked] = useState(initialOffChecked);
-  const off = (useOff ?? useNoOffSearch)({ query, checked: offChecked && !!useOff });
+  // A search text that was only prefilled (the Foods tab's "Log today" opens with the food's own name) is not worth an
+  // OpenFoodFacts request — the user is logging a food they already have; it starts with their own typing (LIF-135).
+  // The hook gets no text at all until then: it debounces what it is given, and a debounce that had settled on the
+  // prefilled name would send that name once more the moment the first letter is typed.
+  const [typed, setTyped] = useState(false);
+  const offWanted = offChecked && !!useOff && (initialQuery === "" || typed);
+  const offAnswer = (useOff ?? useNoOffSearch)({ query: offWanted ? query : "", checked: offWanted });
+  // A product that is already one of the user's foods is not offered again, even from a cached answer (LIF-134).
+  const owned = useMemo(() => ownedBarcodes(items), [items]);
+  const off = { ...offAnswer, items: withoutOwnedProducts(offAnswer.items, owned) };
   const quantityInput = useRef<HTMLInputElement | null>(null);
   const commitRef = useRef<(() => void) | null>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);
@@ -131,6 +140,32 @@ export function AddFoodModalView({
     },
   };
 
+  // Opened on a food already picked ("Log today"): the next thing to enter is the quantity, not a search. The Modal's own
+  // focus trap puts the focus on the search field when it opens, and this runs after it (child effects first) — also in
+  // development's second, StrictMode pass, which is why the wish is re-armed per open rather than spent once. It keeps
+  // trying on later renders, in case the foods were still loading, and gives up for good once the user has typed or moved
+  // the focus anywhere but the search field.
+  const wantsQuantityFocus = useRef(false);
+  useEffect(() => {
+    wantsQuantityFocus.current = open && !!initialKey;
+    return () => {
+      wantsQuantityFocus.current = false;
+    };
+  }, [open, initialKey]);
+  useEffect(() => {
+    if (!wantsQuantityFocus.current) return;
+    if (typed) {
+      wantsQuantityFocus.current = false;
+      return;
+    }
+    const quantity = quantityInput.current;
+    if (!quantity) return;
+    const focused = document.activeElement;
+    const search = searchWrapRef.current?.querySelector("input");
+    if (focused === document.body || focused === search) quantity.focus();
+    wantsQuantityFocus.current = false;
+  });
+
   return (
     <Modal open={open} onClose={onClose} width={880} aria-label={t("title")}>
       <div className="grid md:grid-cols-[400px_minmax(0,1fr)]" style={{ minHeight: 540 }}>
@@ -151,7 +186,10 @@ export function AddFoodModalView({
               results={results}
               usage={usage}
               query={query}
-              onQueryChange={setQuery}
+              onQueryChange={(next) => {
+                setTyped(true);
+                setQuery(next);
+              }}
               filter={filter}
               onFilterChange={setFilter}
               activeKey={active?.key ?? null}
