@@ -123,3 +123,40 @@ export function dropAction(
 export function moveBody(slot: DropSlot): { scheduledFor: string; scheduledTime: string | null } {
   return { scheduledFor: slot.date, scheduledTime: slot.time };
 }
+
+// ─── "Move…" from the session peek (LIF-140): the keyboard / touch way to do what a drag does ───
+
+/** How far ahead the backend lets an occurrence be scheduled or moved (`WorkoutScheduleServiceImpl.moveOccurrence`). */
+export const MOVE_HORIZON_MONTHS = 3;
+
+/**
+ * Whether a day can be moved to, judged the way the backend does it: not before today, not later than today plus three
+ * calendar months (the last day itself is allowed). `null` for a date that is not (yet) a valid yyyy-MM-dd.
+ */
+export function moveDateProblem(iso: string, today: string): "invalid" | "past" | "horizon" | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "invalid";
+  const parsed = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return "invalid";
+  if (iso < today) return "past";
+  // Java's LocalDate.plusMonths clamps to the end of a shorter month (30 Nov + 3 months = 28 Feb); Date#setMonth would
+  // roll over into March, so the limit is built by hand.
+  const [y, m, d] = today.split("-").map(Number);
+  const index = y * 12 + (m - 1) + MOVE_HORIZON_MONTHS;
+  const limitYear = Math.floor(index / 12);
+  const limitMonth = (index % 12) + 1;
+  const lastDay = new Date(limitYear, limitMonth, 0).getDate();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const limitIso = `${limitYear}-${pad(limitMonth)}-${pad(Math.min(d, lastDay))}`;
+  return iso > limitIso ? "horizon" : null;
+}
+
+/** The slot a typed day and time stand for; an empty time is "no time of day". */
+export function slotFromInput(date: string, time: string): DropSlot {
+  return { date, time: time === "" ? null : time };
+}
+
+/** True when moving to this exact day and time (minutes included) would change nothing. */
+export function isSameSlot(session: Pick<TrainerCalendarSessionResponse, "scheduledFor" | "scheduledTime">, slot: DropSlot): boolean {
+  const current = session.scheduledTime ? session.scheduledTime.slice(0, 5) : null;
+  return session.scheduledFor === slot.date && current === slot.time;
+}

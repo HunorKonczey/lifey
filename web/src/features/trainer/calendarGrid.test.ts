@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bucketSessions, buildHourRows, dropAction, gapKey, moveBody, occupiedHours, sessionHour } from "./calendarGrid";
+import { bucketSessions, buildHourRows, dropAction, gapKey, isSameSlot, moveBody, moveDateProblem, occupiedHours, sessionHour, slotFromInput } from "./calendarGrid";
 import type { TrainerCalendarSessionResponse } from "./types";
 
 const s = (id: number, scheduledFor: string, scheduledTime: string | null): TrainerCalendarSessionResponse => ({
@@ -86,5 +86,45 @@ describe("dropAction / moveBody", () => {
   it("builds the move request from the slot", () => {
     expect(moveBody({ date: "2026-10-05", time: "07:00" })).toEqual({ scheduledFor: "2026-10-05", scheduledTime: "07:00" });
     expect(moveBody({ date: "2026-10-05", time: null })).toEqual({ scheduledFor: "2026-10-05", scheduledTime: null });
+  });
+});
+
+describe("moveDateProblem (the backend's window: today .. today + 3 months)", () => {
+  const today = "2026-10-08";
+  it("accepts today, a later day and the last day of the window", () => {
+    expect(moveDateProblem("2026-10-08", today)).toBeNull();
+    expect(moveDateProblem("2026-11-30", today)).toBeNull();
+    expect(moveDateProblem("2027-01-08", today)).toBeNull();
+  });
+  it("rejects the past and anything beyond three months", () => {
+    expect(moveDateProblem("2026-10-07", today)).toBe("past");
+    expect(moveDateProblem("2027-01-09", today)).toBe("horizon");
+  });
+  it("rejects a date that is not a full yyyy-MM-dd", () => {
+    expect(moveDateProblem("", today)).toBe("invalid");
+    expect(moveDateProblem("2026-10-8", today)).toBe("invalid");
+    expect(moveDateProblem("2026-13-40", today)).toBe("invalid");
+  });
+  it("counts calendar months and clamps like Java's plusMonths: 30 Nov + 3 months is 28 Feb, not 2 March", () => {
+    expect(moveDateProblem("2027-02-28", "2026-11-30")).toBeNull();
+    expect(moveDateProblem("2027-03-01", "2026-11-30")).toBe("horizon");
+    expect(moveDateProblem("2027-03-31", "2026-12-31")).toBeNull();
+    expect(moveDateProblem("2027-04-01", "2026-12-31")).toBe("horizon");
+    expect(moveDateProblem("2028-02-29", "2027-11-30")).toBeNull();
+  });
+});
+
+describe("slotFromInput / isSameSlot", () => {
+  it("an empty time is 'no time of day'", () => {
+    expect(slotFromInput("2026-10-09", "")).toEqual({ date: "2026-10-09", time: null });
+    expect(slotFromInput("2026-10-09", "17:30")).toEqual({ date: "2026-10-09", time: "17:30" });
+  });
+  it("compares the exact minutes, unlike a drop onto an hour cell", () => {
+    const session = { scheduledFor: "2026-10-09", scheduledTime: "17:30:00" };
+    expect(isSameSlot(session, { date: "2026-10-09", time: "17:30" })).toBe(true);
+    expect(isSameSlot(session, { date: "2026-10-09", time: "17:45" })).toBe(false);
+    expect(isSameSlot(session, { date: "2026-10-10", time: "17:30" })).toBe(false);
+    expect(isSameSlot(session, { date: "2026-10-09", time: null })).toBe(false);
+    expect(isSameSlot({ scheduledFor: "2026-10-09", scheduledTime: null }, { date: "2026-10-09", time: null })).toBe(true);
   });
 });

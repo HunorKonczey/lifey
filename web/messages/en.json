@@ -464,6 +464,10 @@
     },
     "calendar": {
       "dragMove": "Move",
+      "moveAction": "Move…",
+      "moveTitle": "Move workout",
+      "moveApply": "Move",
+      "moveCancel": "Cancel",
       "dragCopy": "Copy",
       "moved": "Workout moved",
       "copied": "Workout copied",
