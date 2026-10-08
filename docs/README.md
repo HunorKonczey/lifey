@@ -93,7 +93,7 @@ iterations.
 | 37 | [Streaks and weekly recap (roadmap #7)](37-streaks-weekly-recap-plan.md) | |
 | 38 | [Personal records (roadmap #3)](38-personal-records-plan.md) | |
 | 39 | [Rest timer](39-rest-timer-plan.md) | done |
-| 75 | [Log a food from the Foods tab](75-log-food-from-foods-tab-plan.md) | mobile done, web in review |
+| 75 | [Log a food from the Foods tab](75-log-food-from-foods-tab-plan.md) | done (web UI later replaced by the redesign's Add-food flow; browser-verified 2026-10-08, LIF-89) |
 | 76 | [Smarter weight trend (roadmap #11)](76-smarter-weight-trend-plan.md) | built |
 | 77 | [Mobile redesign v2](redesign/77-mobile-redesign-plan.md) (in `redesign/`) | done |
 | 78 | [Web redesign](redesign-web/78-web-redesign-plan.md) (in `redesign-web/`) | done |
