@@ -55,29 +55,29 @@ export function ProgramTemplateRail({ templates, error, onRetry, selectedId, onS
 }
 
 /**
- * One template row: the row itself picks (click / Space) for the click-to-place path, and its grip is the drag handle —
- * a separate button, so Space on the row never starts a drag and the drag keeps its own keyboard sensor.
+ * One template row: the row itself picks (click / Space) for the click-to-place path, and its grip is the pointer's drag
+ * handle. The grip is not a control for the keyboard or a screen reader (no tab stop, `aria-hidden`): picking the row and
+ * pressing Enter on a cell *is* their way to place a workout (LIF-136).
  */
 function RailRow({ tpl, selected, onSelect }: { tpl: RailTemplate; selected: boolean; onSelect: (id: number | null) => void }) {
   const t = useTranslations("admin.programs");
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `tpl-${tpl.id}`, data: { kind: "template", templateId: tpl.id } });
+  const { listeners, setNodeRef, isDragging } = useDraggable({ id: `tpl-${tpl.id}`, data: { kind: "template", templateId: tpl.id } });
   return (
     <div
       ref={setNodeRef}
       className="flex items-stretch gap-0.5"
       style={{ borderRadius: "var(--r-control)", background: selected ? "var(--primary-tint)" : "var(--nested)", boxShadow: selected ? "inset 0 0 0 2px var(--primary)" : undefined, opacity: isDragging ? 0.45 : 1 }}
     >
-      <button
-        type="button"
-        {...attributes}
+      <span
         {...listeners}
-        aria-label={t("dragTemplate", { name: tpl.name })}
+        aria-hidden
+        title={t("dragTemplate", { name: tpl.name })}
         data-testid="program-rail-grip"
-        className="lifey-button inline-flex w-9 items-center justify-center touch-none cursor-grab"
+        className="inline-flex w-9 items-center justify-center touch-none cursor-grab"
         style={{ borderRadius: "var(--r-control)", color: "var(--text-3)" }}
       >
         <Icon name="drag_indicator" size={20} />
-      </button>
+      </span>
       <button
         type="button"
         aria-pressed={selected}
