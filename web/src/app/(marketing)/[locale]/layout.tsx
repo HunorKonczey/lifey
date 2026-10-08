@@ -6,6 +6,7 @@ import { MarketingHeader } from "@/components/marketing/MarketingHeader";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { MobileStickyCta } from "@/components/marketing/MobileStickyCta";
 import { AttributionCapture } from "@/components/marketing/AttributionCapture";
+import { DocumentLang } from "@/lib/i18n/DocumentLang";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -46,6 +47,7 @@ export default async function MarketingLayout({
     // islands as plain string props, so no messages payload ships to the
     // client and the JS budget (65 §8) is unaffected.
     <NextIntlClientProvider locale={locale}>
+      <DocumentLang locale={locale} />
       <AttributionCapture />
       <MarketingHeader />
       {children}
