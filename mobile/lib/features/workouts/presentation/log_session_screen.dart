@@ -14,7 +14,6 @@ import '../../../core/notifications/notification_service.dart';
 import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/theme/app_type.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
@@ -40,6 +39,7 @@ import 'watch_set_log_decision.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/exercise_session_card.dart';
 import 'widgets/workout_action_bar.dart';
+import 'widgets/workout_header_pills.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/rest_hero_card.dart';
 import 'widgets/workout_success_sheet.dart';
@@ -2024,35 +2024,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     );
   }
 
-  /// The pills at the right of the header: the elapsed workout time, and —
-  /// while a watch is measuring — the watch, the near-live heart rate and the
-  /// calories burned (docs/40-watch-app-plan.md §12.4 B14).
+  /// The pills at the right of the header: the elapsed workout time, and the
+  /// share button of a finished session. What a watch reports while it measures
+  /// is [_liveStrip], under the header — four pills up here left the title no
+  /// room (LIF-130).
   List<Widget> _headerActions(BuildContext context, AppLocalizations l10n) {
-    final mc = context.metricColors;
     return [
       if (_startedAt != null)
-        _HeaderPill(icon: Icons.timer_outlined, iconColor: Theme.of(context).colorScheme.primary, text: _formatElapsed()),
-      // "Measuring" pill: the watch confirmed its own session started, until
-      // it ends or reachability is lost. Icon-only — the label is still
-      // exposed via the tooltip/semantics for accessibility.
-      if (_measuringOnWatch && _finishedAt == null)
-        _HeaderPill(
-          icon: Icons.watch_rounded,
-          iconColor: Theme.of(context).colorScheme.primary,
-          tooltip: l10n.watchMeasuringPillLabel,
-        ),
-      // Near-live heart rate, shown while a fresh sample is arriving.
-      if (_showHeartRate && _currentHeartRate != null)
-        _HeaderPill(icon: Icons.favorite_rounded, iconColor: mc.heart, text: '$_currentHeartRate'),
-      // Live calories burned, pushed from the watch's own session — only ever
-      // available while a connected watch is actively measuring (see
-      // [WatchLiveMetrics]).
-      if (_watchActiveCalories != null && _finishedAt == null)
-        _HeaderPill(
-          icon: Icons.local_fire_department_rounded,
-          iconColor: mc.calories,
-          text: '${_watchActiveCalories!.round()}',
-        ),
+        WorkoutHeaderPill(icon: Icons.timer_outlined, iconColor: Theme.of(context).colorScheme.primary, text: _formatElapsed()),
       // A finished session with something done in it can be shared as a card
       // (docs/chat/83). Hidden, not disabled, when there is nobody to send it to.
       if (_finishedAt != null && _sessionClientId != null && _blocks.any((b) => b.rows.any((r) => r.isDone)))
@@ -2064,6 +2043,26 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
           resolveSessionId: _resolveSessionId,
         ),
     ];
+  }
+
+  /// The watch's live readouts under the header — "measuring" while the watch
+  /// confirmed its own session started (until it ends or reachability is
+  /// lost), the near-live heart rate while a fresh sample is arriving, and the
+  /// calories burned, pushed from the watch's own session (see
+  /// [WatchLiveMetrics]). Null when there is nothing to show.
+  Widget? _liveStrip(AppLocalizations l10n) {
+    final running = _finishedAt == null;
+    final strip = WorkoutLiveStrip(
+      measuringOnWatch: _measuringOnWatch && running,
+      heartRate: _showHeartRate ? _currentHeartRate : null,
+      calories: running ? _watchActiveCalories?.round() : null,
+      measuringLabel: l10n.watchMeasuringPillLabel,
+    );
+    if (!strip.hasContent) return null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.s8, AppSpacing.screen, 0),
+      child: strip,
+    );
   }
 
   /// "2 of 3 exercises": the exercise being worked on out of all of them —
@@ -2175,6 +2174,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
         children: [
           Column(
             children: [
+              // ── Watch readouts (pinned above the list) ──
+              if (_liveStrip(l10n) case final strip?) strip,
               // ── Rest hero (pinned above the list) ──
               if (restBannerVisible)
                 Padding(
@@ -2389,43 +2390,6 @@ class _DashedBorderPainter extends CustomPainter {
       old.color != color ||
       old.strokeWidth != strokeWidth ||
       old.radius != radius;
-}
-
-// ---------------------------------------------------------------------------
-// Header pill (elapsed time, watch, heart rate, calories)
-// ---------------------------------------------------------------------------
-
-class _HeaderPill extends StatelessWidget {
-  const _HeaderPill({required this.icon, required this.iconColor, this.text, this.tooltip});
-
-  final IconData icon;
-  final Color iconColor;
-  final String? text;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final pill = Container(
-      height: 44,
-      padding: EdgeInsets.symmetric(horizontal: text == null ? 12 : 14),
-      decoration: BoxDecoration(color: p.nested, borderRadius: AppRadius.pill),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 20, color: iconColor, semanticLabel: tooltip),
-          if (text != null) ...[
-            const SizedBox(width: 6),
-            Text(
-              text!,
-              style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: p.text, fontFeatures: AppType.tabular),
-            ),
-          ],
-        ],
-      ),
-    );
-    return tooltip == null ? pill : Tooltip(message: tooltip!, child: pill);
-  }
 }
 
 // ---------------------------------------------------------------------------
