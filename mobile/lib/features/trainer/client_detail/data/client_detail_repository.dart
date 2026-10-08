@@ -105,6 +105,17 @@ class ClientDetailRepository {
     return ClientNutritionGoals.fromJson(response.data ?? const {});
   }
 
+  /// Sets the client's daily step goal; null clears it (LIF-105). Returns the goal the backend stored.
+  ///
+  /// Like the nutrition goals, the client is notified only when the value really changed.
+  Future<int?> updateStepGoal(int clientId, int? goal) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      ApiEndpoints.trainerClientStepGoal(clientId),
+      data: {'dailyStepGoal': goal},
+    );
+    return (response.data?['dailyStepGoal'] as num?)?.toInt();
+  }
+
   /// One page of the client's finished sessions, newest first — the order the
   /// backend already sorts by, so no `sort` parameter is sent.
   Future<ClientSessionPage> fetchWorkoutSessions(

@@ -39,6 +39,12 @@ test("only a favourite recipe carries the star", async ({ page }) => {
   await expect(section(page).getByRole("img", { name: "Favorite" })).toHaveCount(1);
 });
 
+test("only a recipe a trainer assigned carries the 'From your trainer' chip (LIF-104)", async ({ page }) => {
+  await expect(card(page, 1).getByTestId("recipe-from-trainer")).toContainText("From your trainer");
+  await expect(section(page).getByTestId("recipe-from-trainer")).toHaveCount(1);
+  await expect(card(page, 0).getByText("From your trainer")).toHaveCount(0);
+});
+
 test("a long name wraps onto two lines instead of pushing the card wider", async ({ page }) => {
   const long = card(page, 2);
   const box = await long.boundingBox();

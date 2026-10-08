@@ -98,6 +98,9 @@ export const trainerApi = {
     api.get<ClientNutritionGoalsSourceResponse>(`/trainer/clients/${clientId}/nutrition-goals/source`),
   updateClientNutritionGoals: (clientId: number, goals: ClientNutritionGoalsRequest) =>
     api.put<ClientNutritionGoalsResponse>(`/trainer/clients/${clientId}/nutrition-goals`, goals),
+  /** Sets the client's daily step goal; a null goal clears it (LIF-105). */
+  updateClientStepGoal: (clientId: number, dailyStepGoal: number | null) =>
+    api.put<{ dailyStepGoal: number | null }>(`/trainer/clients/${clientId}/step-goal`, { dailyStepGoal }),
   /** Returns null (not an error) when the client has no profile picture set. */
   clientAvatar: async (clientId: number): Promise<Blob | null> => {
     try {

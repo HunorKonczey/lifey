@@ -2284,11 +2284,11 @@
   "@trainerCommentPushToggleSubtitle": {
     "description": "Subtitle for the trainer-comment push notification toggle"
   },
-  "trainerGoalsPushToggleLabel": "Nutrition goal changes",
+  "trainerGoalsPushToggleLabel": "Goal changes",
   "@trainerGoalsPushToggleLabel": {
     "description": "Label for the trainer-nutrition-goals-changed push notification toggle"
   },
-  "trainerGoalsPushToggleSubtitle": "When your trainer updates your nutrition goals",
+  "trainerGoalsPushToggleSubtitle": "When your trainer updates your nutrition or step goals",
   "@trainerGoalsPushToggleSubtitle": {
     "description": "Subtitle for the trainer-nutrition-goals-changed push notification toggle"
   },
@@ -5903,6 +5903,43 @@
   "trainerGoalsSavedMessage": "Goals saved.",
   "@trainerGoalsSavedMessage": {
     "description": "Confirmation after saving goals that turned out identical. Nothing was notified, so nothing is claimed"
+  },
+  "trainerStepGoalTitle": "Daily step goal",
+  "@trainerStepGoalTitle": {
+    "description": "Title of the card and sheet where a trainer sets a client's daily step goal"
+  },
+  "trainerStepGoalValue": "{steps} steps",
+  "@trainerStepGoalValue": {
+    "description": "The client's current step goal on the trainer's steps tab. {steps} is already formatted for the locale",
+    "placeholders": {"steps": {"type": "String"}}
+  },
+  "trainerStepGoalNone": "No step goal set",
+  "@trainerStepGoalNone": {
+    "description": "Shown on the trainer's steps tab when the client has no step goal"
+  },
+  "trainerStepGoalUnit": "steps",
+  "@trainerStepGoalUnit": {
+    "description": "Suffix of the step goal field"
+  },
+  "trainerStepGoalSubtitle": "Your client sees this as their own step goal.",
+  "@trainerStepGoalSubtitle": {
+    "description": "Subtitle of the step goal editor, saying whose number this becomes"
+  },
+  "trainerStepGoalBlankHint": "Leave the field empty to set no goal.",
+  "@trainerStepGoalBlankHint": {
+    "description": "Hint in the step goal editor. Empty means no goal; zero is not accepted"
+  },
+  "trainerStepGoalInvalid": "Enter a number above zero, or leave the field empty.",
+  "@trainerStepGoalInvalid": {
+    "description": "Error in the step goal editor when the trainer typed 0"
+  },
+  "trainerStepGoalSavedNotifiedMessage": "Step goal saved — your client was notified.",
+  "@trainerStepGoalSavedNotifiedMessage": {
+    "description": "Confirmation after changing a client's step goal. The backend notifies them only on a change, so this is only said when something changed"
+  },
+  "trainerStepGoalSavedMessage": "Step goal saved.",
+  "@trainerStepGoalSavedMessage": {
+    "description": "Confirmation after saving a step goal that turned out identical. Nothing was notified, so nothing is claimed"
   },
   "deltaDownSemantics": "down {value}",
   "@deltaDownSemantics": {

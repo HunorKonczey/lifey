@@ -19,8 +19,11 @@ import com.lifey.trainer.controller.TrainerClientDataController;
 import com.lifey.trainer.dto.ClientNutritionGoalsRequest;
 import com.lifey.trainer.dto.ClientNutritionGoalsResponse;
 import com.lifey.trainer.exception.NotYourClientException;
+import com.lifey.trainer.dto.ClientStepGoalRequest;
+import com.lifey.trainer.dto.ClientStepGoalResponse;
 import com.lifey.trainer.service.ClientNutritionGoalsService;
 import com.lifey.trainer.service.MealCommentService;
+import com.lifey.trainer.service.ClientStepGoalService;
 import com.lifey.trainer.service.SessionCommentService;
 import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.user.AvatarSource;
@@ -93,6 +96,9 @@ class TrainerClientDataControllerTest {
 
     @MockitoBean
     MealCommentService mealCommentService;
+
+    @MockitoBean
+    ClientStepGoalService clientStepGoalService;
 
     @MockitoBean
     UserAvatarRepository userAvatarRepository;
@@ -457,6 +463,53 @@ class TrainerClientDataControllerTest {
         mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID)
                         .contentType(APPLICATION_JSON)
                         .content("{\"dailyCalorieGoal\":2200}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateStepGoal_setsAndReturnsTheGoal() throws Exception {
+        when(clientStepGoalService.updateStepGoal(TRAINER_ID, CLIENT_ID, new ClientStepGoalRequest(10000)))
+                .thenReturn(new ClientStepGoalResponse(10000));
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/step-goal", CLIENT_ID)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"dailyStepGoal\":10000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dailyStepGoal").value(10000));
+    }
+
+    @Test
+    void updateStepGoal_aMissingGoalClearsIt() throws Exception {
+        when(clientStepGoalService.updateStepGoal(TRAINER_ID, CLIENT_ID, new ClientStepGoalRequest(null)))
+                .thenReturn(new ClientStepGoalResponse(null));
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/step-goal", CLIENT_ID)
+                        .contentType(APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dailyStepGoal").doesNotExist());
+    }
+
+    @Test
+    void updateStepGoal_zeroOrNegativeReturns400() throws Exception {
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/step-goal", CLIENT_ID)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"dailyStepGoal\":0}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/step-goal", CLIENT_ID)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"dailyStepGoal\":-5}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateStepGoal_notYourClientReturns403() throws Exception {
+        when(clientStepGoalService.updateStepGoal(eq(TRAINER_ID), eq(CLIENT_ID), any()))
+                .thenThrow(new NotYourClientException("nope"));
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/step-goal", CLIENT_ID)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"dailyStepGoal\":10000}"))
                 .andExpect(status().isForbidden());
     }
 

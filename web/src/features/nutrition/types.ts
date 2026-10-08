@@ -112,6 +112,8 @@ export interface RecipeResponse {
   ingredients: RecipeIngredientResponse[];
   // Null if no photo is set. GET /recipes/{id}/image(/thumbnail) serves it.
   imageUpdatedAt: string | null;
+  /** The trainer whose copy this is; absent or null for a recipe the user made themselves (LIF-104). */
+  originTrainerId?: number | null;
 }
 
 export interface RecipeIngredientRequest {

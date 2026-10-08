@@ -121,6 +121,9 @@ class PushTapHandler {
     if (data['type'] == 'nutrition_goals' || data['type'] == 'meal_comment') {
       _ref.read(appRouterProvider).go('/nutrition');
     }
+    if (data['type'] == 'step_goal') {
+      _ref.read(appRouterProvider).go('/dashboard');
+    }
     if (data['type'] == 'program_assigned') {
       _ref.read(appRouterProvider).go('/workouts');
     }
