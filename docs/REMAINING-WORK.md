@@ -119,7 +119,7 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 | Számlázás: két csomagos canvas | a canvas Alap / Pro, a termékben Starter / Pro / Studio; az „utána ingyenes" mondat nincs definiálva | `78` W9.5 |
 | ~~Repository-tesztek az új JPQL-ekre~~ | **kész 2026-10-08-án (LIF-98):** `SuperAdminQueriesRepositoryTest`, 7 teszt valódi Postgres 16-on (`member of`, csoportosított darabszám, `min`, join fetch + countQuery, audit-feedek); a lekérdezések eltörése ellenőrizve | `78` W9.b1–b3 |
 | Web e2e futtatási feltételek | a backend-függő specek frissítve és zöldek (16 + 10); a chat-spec a chat-szolgáltatást és a `web-chat` webet kéri, a 10 billing-spec `BILLING_ENABLED=true` backendet — ezek nélkül kihagyják magukat / elhasalnak | `78` W10 follow-up |
-| Billentyűzetes húzás, 200 %-os nagyítás, telefon-billentyűzet | nem lettek végigpróbálva | `78` napló |
+| ~~Billentyűzetes húzás, 200 %-os nagyítás, telefon-billentyűzet~~ | **végigpróbálva 2026-10-08-án (LIF-96):** a billentyűs elhelyezés (Space → Tab → Enter) működik (új e2e: `trainer-program-keyboard.spec.ts`), a sablon-sorrendezés is; 200 %-on (36 oldal, HU + EN) nincs túlcsordulás; a telefon-billentyűzet a keresőt, a mennyiséget és a chat-composert nem takarja. Talált hibák: a sablon-fogantyú billentyűs húzása nem rak le (LIF-136), a modalok nem adják vissza a fókuszt (LIF-137), az alsó sáv eltakarja a fókuszt 200 %-on (LIF-138), asztali billentyű-súgók telefonon (LIF-139), a naptár-áthelyezés csak húzással megy (LIF-140), `<html lang>` mindig „en” (LIF-141) | `78` napló „LIF-96” |
 
 ---
 
