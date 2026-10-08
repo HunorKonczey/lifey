@@ -162,6 +162,41 @@ void main() {
     expect(_toggle(), findsNothing);
   });
 
+  group('a user with no foods yet (LIF-132)', () {
+    testWidgets('gets the whole sheet - search field and the OpenFoodFacts checkbox - and a hint, not a dead-end message', (tester) async {
+      await _pump(tester, foods: const []);
+
+      expect(_toggle(), findsOneWidget);
+      expect(_searchField(), findsOneWidget);
+      expect(find.byKey(const ValueKey('no-own-foods-hint')), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget); // "Add to meal" is there too
+    });
+
+    testWidgets('the hint is not shown once foods exist', (tester) async {
+      await _pump(tester);
+
+      expect(find.byKey(const ValueKey('no-own-foods-hint')), findsNothing);
+    });
+
+    testWidgets('ticking the box and typing searches OpenFoodFacts, and tapping a result creates the first food and picks it', (tester) async {
+      await _pump(tester, foods: const []);
+      await _tick(tester);
+      await _type(tester, 'csirkemell');
+      await _debounce(tester);
+      expect(_repo.calls.single.text, 'csirkemell');
+      await _answerLast(tester, _answer([_csirke]));
+
+      expect(_sectionTitle(), findsOneWidget);
+      await tester.tap(find.textContaining('Csirkemell'));
+      await tester.pumpAndSettle();
+
+      expect(_created, hasLength(1));
+      expect(tester.widget<TextFormField>(_searchField()).controller!.text, 'Csirkemell');
+      expect(find.byKey(const Key('quantityField')), findsOneWidget);
+      expect(find.byKey(const ValueKey('no-own-foods-hint')), findsNothing); // a food is picked now
+    });
+  });
+
   testWidgets('the stored choice is applied when the sheet opens', (tester) async {
     await _pump(tester, stored: true);
 

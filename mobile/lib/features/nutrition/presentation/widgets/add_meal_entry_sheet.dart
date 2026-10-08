@@ -293,12 +293,8 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
           child: Text('${l10n.couldNotLoadFoodsPrefix} $e'),
         ),
         data: (foods) {
-          if (foods.isEmpty) {
-            return Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(l10n.addFoodsFirstMessage),
-            );
-          }
+          // No own foods yet is not a dead end: the search and the OpenFoodFacts option are exactly what a new user needs,
+          // so the whole sheet is shown and the empty state only stands where the own results would be (LIF-132).
           final ranked = rankFoodsByUsage(foods, usage);
           // Hidden while the pre-selected food is still picked — the user
           // already chose; clearing it brings the row back.
@@ -406,6 +402,10 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                       },
                     ),
                   ),
+                if (foods.isEmpty && !_isEditing && _food == null) ...[
+                  const SizedBox(height: AppSpacing.s8),
+                  Text(l10n.addFoodsFirstMessage, key: const ValueKey('no-own-foods-hint'), style: t.bodyMedium!.copyWith(color: p.text2)),
+                ],
                 if (recents.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.s12),
                   SizedBox(
