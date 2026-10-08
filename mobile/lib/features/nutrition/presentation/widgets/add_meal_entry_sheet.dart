@@ -90,6 +90,15 @@ const _gramsStep = 10.0;
 /// The fixed quick amounts next to the last-used one (canvas: 100 g, 150 g).
 const _quickGrams = [100.0, 150.0];
 
+/// The suggestion list's height caps: without and with the OpenFoodFacts group, and the least it may shrink to (three
+/// 48 dp rows).
+const double _listCapOwn = 240;
+const double _listCapWithOff = 320;
+const double _listMinHeight = 144;
+
+/// The "Add to meal" button plus the gap above it and the sheet's bottom padding: the band the list must not reach into.
+const double _buttonBand = 56 + AppSpacing.s12 + AppSpacing.s16;
+
 class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _grams;
@@ -177,6 +186,25 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   }
 
   bool _savingOff = false;
+
+  /// The search field, to measure where its suggestion list starts.
+  final GlobalKey _fieldKey = GlobalKey();
+
+  /// Something is typed in the search field: the OpenFoodFacts explanation then folds away to leave room for the list.
+  bool _hasText = false;
+
+  /// How tall the suggestion list may be (LIF-133): its usual cap, but never more than what is visible between the
+  /// search field and the "Add to meal" button — with the keyboard up or on a small phone that is less — and never fewer
+  /// than three rows. On a screen with room, the space reserved for the list (`listRoom` in `build`) provides them.
+  double _listMaxHeight(BuildContext context) {
+    final cap = ref.read(offSearchControllerProvider).enabled ? _listCapWithOff : _listCapOwn;
+    final box = _fieldKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached) return cap;
+    final fieldBottom = box.localToGlobal(Offset(0, box.size.height)).dy;
+    final media = MediaQuery.of(context);
+    final visibleBottom = media.size.height - media.viewInsets.bottom - _buttonBand;
+    return (visibleBottom - fieldBottom - AppSpacing.s8).clamp(_listMinHeight, cap);
+  }
 
   /// A tap on an OpenFoodFacts row (docs/84 Prompt 10): the food to log is the user own one for this product — found by
   /// barcode or name among their foods, or created now through the offline-first stack (a local row plus an outbox entry,
@@ -272,6 +300,9 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
     final l10n = AppLocalizations.of(context)!;
     final t = Theme.of(context).textTheme;
     final p = context.palette;
+    // Room for the suggestion list while the OpenFoodFacts option is on and a search is possible (not when editing an entry
+    // or once a food is picked); where the screen cannot give it all, the fields scroll.
+    final listRoom = ref.watch(offSearchControllerProvider).enabled && !_isEditing && _food == null ? _listCapWithOff : 0.0;
 
     // The fields scroll; the "Add to meal" button does not. With the keyboard up
     // the sheet is short, and a button at the end of the scroll view sat under the
@@ -326,7 +357,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                 ),
                 const SizedBox(height: AppSpacing.s4),
                 // Above the field, not under it: the suggestion list opens right below the field and would cover it.
-                if (!_isEditing) const OffSearchToggle(),
+                if (!_isEditing) OffSearchToggle(compact: _hasText && _food == null),
                 const SizedBox(height: AppSpacing.s8),
                 if (!_isEditing)
                   LayoutBuilder(
@@ -353,6 +384,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                       fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
                         _foodFieldController = controller;
                         return TextFormField(
+                          key: _fieldKey,
                           controller: controller,
                           focusNode: focusNode,
                           autofocus: !_isPreselected,
@@ -370,13 +402,22 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                                     icon: const Icon(Icons.clear),
                                     onPressed: () {
                                       controller.clear();
-                                      setState(() => _food = null);
+                                      setState(() {
+                                        _food = null;
+                                        _hasText = false;
+                                      });
                                       _offQueryChanged('');
                                     },
                                   ),
                           ),
                           onChanged: (text) {
-                            if (_food != null) setState(() => _food = null);
+                            final hasText = text.trim().isNotEmpty;
+                            if (_food != null || hasText != _hasText) {
+                              setState(() {
+                                _food = null;
+                                _hasText = hasText;
+                              });
+                            }
                             _offQueryChanged(text);
                           },
                         );
@@ -385,6 +426,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                         own: [for (final o in options) if (o is _OwnOption) o.food],
                         typed: _foodFieldController?.text ?? '',
                         width: constraints.maxWidth,
+                        maxHeight: _listMaxHeight(context),
                         onSelected: (food) => onSelected(_OwnOption(food)),
                         onPickOff: _pickOff,
                       ),
@@ -402,6 +444,9 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                       },
                     ),
                   ),
+                // The suggestion list is an overlay under the field, and this sheet is only as tall as its content: with the
+                // OpenFoodFacts option on, leave the list's room free so it opens above the button, not on top of it.
+                if (listRoom > 0) SizedBox(height: listRoom),
                 if (foods.isEmpty && !_isEditing && _food == null) ...[
                   const SizedBox(height: AppSpacing.s8),
                   Text(l10n.addFoodsFirstMessage, key: const ValueKey('no-own-foods-hint'), style: t.bodyMedium!.copyWith(color: p.text2)),
@@ -470,6 +515,7 @@ class _FoodOptions extends ConsumerWidget {
     required this.own,
     required this.typed,
     required this.width,
+    required this.maxHeight,
     required this.onSelected,
     required this.onPickOff,
   });
@@ -479,6 +525,9 @@ class _FoodOptions extends ConsumerWidget {
   /// The text in the search field, for the "type 3 letters" hint.
   final String typed;
   final double width;
+
+  /// The tallest the card may be (see `_listMaxHeight`).
+  final double maxHeight;
   final ValueChanged<Food> onSelected;
   final ValueChanged<OffSearchItem> onPickOff;
 
@@ -527,7 +576,7 @@ class _FoodOptions extends ConsumerWidget {
           borderRadius: BorderRadius.circular(AppRadius.control),
           clipBehavior: Clip.antiAlias,
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: showOff ? 320 : 240, maxWidth: width, minWidth: width),
+            constraints: BoxConstraints(maxHeight: maxHeight, maxWidth: width, minWidth: width),
             child: ListView(padding: EdgeInsets.zero, shrinkWrap: true, children: children),
           ),
         ),

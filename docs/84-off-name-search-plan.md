@@ -1,6 +1,6 @@
 # 84 – Food search by name in OpenFoodFacts
 
-Status: built (2026-10-06) on branch `feature/off-name-search` — backend, web and mobile, Prompts 0–11. The three things owed before it shipped (CI Docker tests, a real-stack run, the emulator walk) were done on 2026-10-08 — see "Verification run" after the Close-out (LIF-93); three small follow-ups came out of it (LIF-132, 133, 134). Not yet merged; the three PRs of the split are still to be cut
+Status: built (2026-10-06) on branch `feature/off-name-search` — backend, web and mobile, Prompts 0–11. The three things owed before it shipped (CI Docker tests, a real-stack run, the emulator walk) were done on 2026-10-08 — see "Verification run" after the Close-out (LIF-93); three small follow-ups came out of it (LIF-132, 133, 134), all fixed the same day. Not yet merged; the three PRs of the split are still to be cut
 Scope: backend · web · mobile
 Depends on: docs/11-v2-pland.md (OpenFoodFacts proxy, barcode lookup — built), docs/12-language-plan.md (HU/EN language setting — built), docs/78 W2.5/W2.6 (web add-food dialog), docs/75 (log a food from the Foods tab)
 
@@ -720,6 +720,7 @@ The three "owed before it ships" items, done. Backend + Postgres + the real sear
 - **Airplane mode:** the checkbox is greyed (still ticked) with "You're offline — OpenFoodFacts search needs a connection."; the product saved above is offered as a chip and logs (50 g → 255 kcal) with the offline banner showing.
 - **1.3× text:** the checkbox label and disclaimer wrap, nothing overflows, the own list is "Snickers 510 kcal" and the already-saved product is correctly absent from the OFF group.
 - **Findings** (own stories): a user with **no foods** gets only "Add some foods first (Foods tab)." — no checkbox, no OFF search (LIF-132); with results showing and the keyboard hidden the sheet leaves ~1.5 rows of results and the "Add to meal" button below the fold (LIF-133).
+  - **Fixed the same day.** LIF-132: with no own foods the sheet now shows the whole thing (search field, OpenFoodFacts checkbox) and a hint under the field (`add_meal_entry_sheet.dart`, widget tests with an empty list). LIF-133: measured in a widget test with the real modal sheet, the suggestion overlay was 80 dp high and started at the "Add to meal" button's position (the sheet is only as tall as its content, the list is an overlay under the field). The sheet now reserves the list's room while the option is ticked, the list is capped to what is visible above the button (never under three rows), and once the user is typing the three-line OpenFoodFacts explanation folds away (`OffSearchToggle(compact:)`); `add_meal_entry_sheet_layout_test.dart` covers 412×915 and 360×640, 1.0× and 1.3× text, with and without a keyboard (list 287–312 dp, button on screen). Not re-run on the emulator.
 
 Not done: iOS, a physical Android device, and anything beyond a dozen OFF calls (see the limit note above).
 
