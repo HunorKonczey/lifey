@@ -3432,7 +3432,7 @@ W0.1–W0.4 and can land before the component kit, which is why M1 is the shell.
 - **Weight time of day and notes** — `WeightResponse` is date-only.
 - **Food servings / portions ("1 pohár · 150 g"), fibre, sugar, food favourites, own vs catalogue foods**
   — food model changes (same deferral as mobile 77 §6 piece-based portions).
-- **"From your trainer" marker on assigned recipes** — the copy doesn't carry its origin to the client.
+- ~~**"From your trainer" marker on assigned recipes**~~ — **done by LIF-104 (2026-10-08):** the copy always carried its origin (`Recipe.originTrainerId`, in `RecipeResponse`, behind the phone's "Edzőtől" badge); this note was out of date, and only the web did not show it. The recipe card has a "From your trainer" chip now (gallery + `e2e/ds/recipeCards.spec.ts`). Not done: naming the trainer on the web card (the phone's badge opens a sheet with their e-mail).
 - **Trainer meal comments; trainer-edited step goal** — new endpoints/data.
 - **Chat presence ("online")** — chat-service work. **Shared workout / PR cards** — **done by `chat/83`** (read-only tile on the web); a shared *meal* card is still open.
 - **Invite history (accepted)** — **done by `82` S2** (the rows were always kept; only an endpoint was missing). **Shareable join link, invite reminders** — still open, invite model changes.
