@@ -3872,6 +3872,6 @@ The three things the W10 follow-up listed as "not checked". Real stack (backend 
 - ✅ **Add food dialog**: the search field stays above the keyboard; picking a result selects the quantity (numeric keyboard, "120" selected) and the field stays visible; scrolling the dialog with the keyboard still open brings the meal chips, the macro tiles and **Done / "Add to lunch"** fully above the keyboard.
 - ✅ **Chat composer** (trainer's thread): typing raises the composer and Send above the keyboard (`visualViewport` handled), the message sends and shows. Observation: the keyboard closes after Send.
 - ⚠️ With the keyboard up the Add food results show only about one row above it (same shape as the mobile app's LIF-133) — nothing is unreachable, scrolling works.
-- ❌ The desktop hints "↑↓ select · Enter add · Tab quantity" and "Enter — send · Shift+Enter — new line" are shown on the phone too (LIF-139).
+- ✅ **Fixed the same day (LIF-139)** — the desktop hints "↑↓ select · Enter add · Tab quantity", "Enter add · Tab next field" and "Enter — send · Shift+Enter — new line" were shown on the phone too. They carry `.keyboard-only` now (`globals.css`: hidden under `(hover: none) and (pointer: coarse)`, so phones and tablets, not a narrow desktop window), `KeyHint` too; `e2e/ds/addFoodSearch.spec.ts` checks the Add food hint on an emulated touch device (it is visible there without the class).
 
 *Not done:* iOS Safari (needs a Mac), a physical Android phone, VoiceOver / TalkBack, 400 % zoom, the keyboard drag of the program grid with a screen reader.

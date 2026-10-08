@@ -281,7 +281,7 @@ export function FoodSearchPane({
         )}
       </div>
 
-      <p className="type-body-s" style={{ color: "var(--text-3)" }}>
+      <p className="type-body-s keyboard-only" style={{ color: "var(--text-3)" }}>
         {t("keyHint")}
       </p>
     </div>

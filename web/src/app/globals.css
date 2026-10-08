@@ -552,6 +552,12 @@ input[type="number"] { -moz-appearance: textfield; }
   order: var(--order-base, 0);
   min-width: 0;
 }
+/* Text that describes keyboard shortcuts ("Enter — send · Shift+Enter — new line") is noise on a device with no keyboard:
+   a phone or a tablet, where the primary pointer is a finger. Unlayered like the rest of this file, so it also beats a
+   Tailwind display utility on the same element. */
+@media (hover: none) and (pointer: coarse) {
+  .keyboard-only { display: none; }
+}
 @media (max-width: 767px) {
   :root {
     --toast-bottom: calc(92px + var(--fab-clearance, 0px));
