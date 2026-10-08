@@ -14,8 +14,13 @@ import '../../domain/off_search.dart';
 /// "Also search the OpenFoodFacts food database": off until ticked, then remembered per device. Online only — offline it is
 /// disabled with a hint, because the rest of the app is offline-first and must stay so. Ticked, a one-line hint says what it
 /// is: a public volunteer-run database, what is typed is sent to it, and its values can be incomplete.
+///
+/// [compact] drops the explanation line (LIF-133): once the user is typing and results are on screen they have already read
+/// it, and its three lines are what leave a small phone no room for the list. The results block says where they come from.
 class OffSearchToggle extends ConsumerWidget {
-  const OffSearchToggle({super.key});
+  const OffSearchToggle({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,7 +39,7 @@ class OffSearchToggle extends ConsumerWidget {
       // What this is and where the results come from: offline why it is off, ticked what is being searched.
       subtitle: offline
           ? Text(l10n.offSearchOffline, style: TextStyle(color: p.text3))
-          : state.enabled
+          : state.enabled && !compact
               ? Text(l10n.offSearchHint, key: const ValueKey('off-search-hint'), style: TextStyle(color: p.text3))
               : null,
     );
