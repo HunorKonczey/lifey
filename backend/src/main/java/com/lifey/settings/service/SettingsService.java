@@ -41,6 +41,9 @@ public interface SettingsService {
      * Who last changed a user's nutrition goals and when (docs/redesign-web/82 section 2.4); {@code UNKNOWN} when it was
      * never recorded. Read-only, for any user: the caller has authorised {@code userId} first.
      */
+    /** Sets one user's daily step goal on their behalf (a trainer, LIF-105); null clears it. */
+    SettingsResponse updateStepGoalForUser(Long userId, Integer dailyStepGoal);
+
     NutritionGoalsAttribution nutritionGoalsAttribution(Long userId);
 
     /** The same for the current user, with the trainer's display name resolved — what the client web shows. */

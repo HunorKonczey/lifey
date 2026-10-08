@@ -110,7 +110,8 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 | Meghívó: megosztható link, emlékeztető | az előzmény már kész (`82` S2); a link és az emlékeztető a meghívó-modell bővítését kéri | `78` §6 |
 | Súly napszak / jegyzet, étel-adagok, rost / cukor, kedvenc ételek | a `WeightResponse` csak dátumos; az étel-modell nem ismeri az adagot | `78` §6 |
 | „Az edződtől" jelölés a kiosztott recepten | ✅ kész (2026-10-08, LIF-104): a másolat mindig őrizte a származást (`originTrainerId`, a telefon „Edzőtől" jelvénye is ebből él), csak a web nem mutatta; a receptkártya most „Az edződtől" címkét kap | `78` §6 |
-| Edzői étkezés-komment, edzői lépéscél | új végpont / adat | `78` §6 |
+| Edzői lépéscél | ✅ kész (2026-10-08, LIF-105): `PUT /trainer/clients/{id}/step-goal` (üres = törlés, 0 nem), a kliens push-t kap változáskor; mobil: a lépés-fül tetején kártya + lap, web: „Cél módosítása" fiók | `78` §6 |
+| Edzői étkezés-komment | új végpont / adat; külön jegy: LIF-144 | `78` §6 |
 | Chat jelenlét, megosztott étkezés kártya | chat-szolgáltatás munka; az edzés / PR kártya kész és kétkészülékes emulátoron végigpróbálva 2026-10-07-én (LIF-92; nyitva: web csempe, iOS; az offline megosztás hibaüzenete a lapon belül látszik (LIF-126), de egy még nem létező szálba offline nem lehet sorba állítani — [`chat/83`](chat/83-chat-result-card-plan.md)), a `kind` bővíthető | `78` §6 |
 | Edzői kérelem „végzettség" | nem gyűjtjük | `78` §6 |
 | Sablon időtartam, ismétlésszám | a sablon csak szettszámot tárol; az idő becslés | `78` W9.1 |

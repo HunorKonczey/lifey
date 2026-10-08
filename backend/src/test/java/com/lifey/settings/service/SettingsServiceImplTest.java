@@ -86,6 +86,33 @@ class SettingsServiceImplTest {
     }
 
     @Test
+    void updateStepGoalForUser_setsOnlyTheStepGoalOfThatUser() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        existing.setDailyCalorieGoal(2200);
+        when(repository.findByUserId(77L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsResponse result = service.updateStepGoalForUser(77L, 9000);
+
+        assertThat(result.dailyStepGoal()).isEqualTo(9000);
+        // The trainer's other goals and attribution are untouched: this is the step goal alone.
+        assertThat(result.dailyCalorieGoal()).isEqualTo(2200);
+        assertThat(existing.getNutritionGoalsSetBy()).isNull();
+    }
+
+    @Test
+    void updateStepGoalForUser_nullClearsIt() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        existing.setDailyStepGoal(9000);
+        when(repository.findByUserId(77L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.updateStepGoalForUser(77L, null).dailyStepGoal()).isNull();
+    }
+
+    @Test
     void update_withNullDailyStepGoalPersistsAndReturnsNull() {
         UserSettings existing = new UserSettings();
         existing.setUser(new User());

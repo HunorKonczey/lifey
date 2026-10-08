@@ -75,6 +75,13 @@ public class SettingsServiceImpl implements SettingsService {
     }
 
     @Override
+    public SettingsResponse updateStepGoalForUser(Long userId, Integer dailyStepGoal) {
+        UserSettings settings = getOrCreate(userId);
+        settings.setDailyStepGoal(dailyStepGoal);
+        return SettingsMapper.toResponse(repository.save(settings));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public NutritionGoalsAttribution nutritionGoalsAttribution(Long userId) {
         return repository.findByUserId(userId)

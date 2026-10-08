@@ -5,7 +5,8 @@ import { format, subDays } from "date-fns";
 /**
  * What the trainer's client summary says about the client's goals and the week's plan (LIF-101, LIF-102): the step goal
  * the client set, the goal they stated in onboarding, and how many scheduled sessions fall in the last 7 days. On the
- * web the step goal is what gives the client's steps tab its goal line and its "Goal met" card.
+ * web the step goal is what gives the client's steps tab its goal line and its "Goal met" card, and the trainer can set
+ * that goal from the same tab (LIF-105) — the client's own settings then carry it.
  *
  * Requires the real backend + Postgres on localhost:8080/5432, same as the other specs in this folder.
  */
@@ -53,6 +54,7 @@ test("the client summary carries the step goal, the stated goal and the week's p
   let trainerAuth: Record<string, string> = {};
   let withGoalsId = 0;
   let bareId = 0;
+  let bareToken = "";
 
   await test.step("a trainer with two clients: one who set goals and trained for it, one who set nothing", async () => {
     const trainer = await registerAndLogin(request, trainerEmail);
@@ -62,7 +64,7 @@ test("the client summary carries the step goal, the stated goal and the week's p
     trainerAuth = { Authorization: `Bearer ${trainerToken}` };
 
     const withGoals = await connect(request, trainerToken, withGoalsEmail);
-    await connect(request, trainerToken, bareEmail);
+    bareToken = (await connect(request, trainerToken, bareEmail)).accessToken;
     const auth = { Authorization: `Bearer ${withGoals.accessToken}` };
 
     const detailsRes = await request.put(`${API_BASE}/user-details`, {
@@ -126,5 +128,36 @@ test("the client summary carries the step goal, the stated goal and the week's p
     await page.getByRole("tab", { name: "Steps" }).click();
     await expect(page.getByText("Goal met")).toHaveCount(0);
     await expect(page.getByText(/goal reached/)).toHaveCount(0);
+  });
+
+  await test.step("the trainer sets the goal from the steps tab: zero is refused, a number is saved and reaches the client", async () => {
+    await page.goto(`/admin/clients/${bareId}`);
+    await page.getByRole("tab", { name: "Steps" }).click();
+    await expect(page.getByTestId("step-goal-value")).toHaveText("No step goal set");
+
+    await page.getByTestId("step-goal-edit").click();
+    const drawer = page.getByRole("dialog", { name: "Daily step goal" });
+    await drawer.getByLabel("Steps a day").fill("0");
+    await expect(drawer.getByText("Enter a whole number above zero, or leave it empty")).toBeVisible();
+    await expect(drawer.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    await drawer.getByLabel("Steps a day").fill("6500");
+    await drawer.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("Step goal updated")).toBeVisible();
+    await expect(page.getByTestId("step-goal-value")).toHaveText("6,500 steps a day");
+
+    // What the client's own app reads on its next sync.
+    const settings = await (await request.get(`${API_BASE}/settings`, { headers: { Authorization: `Bearer ${bareToken}` } })).json();
+    expect(settings.dailyStepGoal).toBe(6500);
+  });
+
+  await test.step("an empty field clears it again", async () => {
+    await page.getByTestId("step-goal-edit").click();
+    const drawer = page.getByRole("dialog", { name: "Daily step goal" });
+    await drawer.getByLabel("Steps a day").fill("");
+    await drawer.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByTestId("step-goal-value")).toHaveText("No step goal set");
+    const settings = await (await request.get(`${API_BASE}/settings`, { headers: { Authorization: `Bearer ${bareToken}` } })).json();
+    expect(settings.dailyStepGoal ?? null).toBeNull();
   });
 });

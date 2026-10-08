@@ -31,12 +31,20 @@ class _FakeAuthController extends AuthController {
 }
 
 class _FakeClientsController extends TrainerClientsController {
-  _FakeClientsController(this._clients);
+  _FakeClientsController(this._clients, {this.afterSave});
 
   final List<TrainerClient> _clients;
 
+  /// What the list looks like when the trainer pulls it again — the saved step goal is part of it.
+  final List<TrainerClient> Function(List<TrainerClient>)? afterSave;
+
   @override
   Future<List<TrainerClient>> build() async => _clients;
+
+  @override
+  Future<void> refresh() async {
+    state = AsyncData(afterSave?.call(_clients) ?? _clients);
+  }
 }
 
 /// Stands in for every read the detail tabs make. Extends the real
@@ -60,6 +68,15 @@ class _FakeDetailRepository extends ClientDetailRepository {
   final ClientNutritionGoals goals;
   final List<ClientWorkoutSession> sessions;
   final Object? failWith;
+
+  /// Every step goal the trainer saved, in order (null = cleared) — what would have gone to the backend.
+  final stepGoalCalls = <int?>[];
+
+  @override
+  Future<int?> updateStepGoal(int clientId, int? goal) async {
+    stepGoalCalls.add(goal);
+    return goal;
+  }
 
   void _maybeFail() {
     if (failWith != null) throw failWith!;
@@ -149,6 +166,7 @@ Future<void> _pump(
   Size? size,
   ThemeData? theme,
 }) async {
+  final fake = repository ?? _FakeDetailRepository();
   if (size != null) {
     tester.view.physicalSize = size * 2;
     tester.view.devicePixelRatio = 2;
@@ -158,10 +176,26 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(_FakeAuthController.new),
-        trainerClientsControllerProvider
-            .overrideWith(() => _FakeClientsController(clients ?? [_client])),
-        clientDetailRepositoryProvider
-            .overrideWithValue(repository ?? _FakeDetailRepository()),
+        trainerClientsControllerProvider.overrideWith(
+          () => _FakeClientsController(
+            clients ?? [_client],
+            afterSave: (list) => [
+              for (final c in list)
+                if (fake.stepGoalCalls.isEmpty)
+                  c
+                else
+                  TrainerClient(
+                    userId: c.userId,
+                    email: c.email,
+                    firstName: c.firstName,
+                    lastName: c.lastName,
+                    activeSince: c.activeSince,
+                    dailyStepGoal: fake.stepGoalCalls.last,
+                  ),
+            ],
+          ),
+        ),
+        clientDetailRepositoryProvider.overrideWithValue(fake),
         isOfflineProvider.overrideWith((ref) => Stream.value(offline)),
       ],
       child: MaterialApp(
@@ -529,6 +563,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Last 30 days'), findsOneWidget);
+      // The goal card pushed the history below the first screenful, so it is built only once scrolled to.
+      await tester.scrollUntilVisible(
+        find.text('HISTORY'),
+        200,
+        scrollable: find.ancestor(of: find.text('Last 30 days'), matching: find.byType(Scrollable)).first,
+      );
       expect(find.text('HISTORY'), findsOneWidget);
       expect(find.text('8,214'), findsOneWidget);
       expect(find.text('10,500'), findsOneWidget);
@@ -541,6 +581,121 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No steps recorded'), findsOneWidget);
+    });
+  });
+
+  group('step goal (LIF-105)', () {
+    TrainerClient clientWith(int? goal) => TrainerClient(
+          userId: 42,
+          email: 'anna@example.com',
+          firstName: 'Anna',
+          lastName: 'Client',
+          activeSince: DateTime.utc(2026, 3, 1),
+          dailyStepGoal: goal,
+        );
+
+    Future<_FakeDetailRepository> openSteps(WidgetTester tester, {int? goal, bool withSteps = true}) async {
+      final repository = _FakeDetailRepository(steps: withSteps ? [_step(1, 8214), _step(0, 10500)] : const []);
+      await _pump(tester, clients: [clientWith(goal)], repository: repository);
+      await tester.tap(find.text('Steps'));
+      await tester.pumpAndSettle();
+      return repository;
+    }
+
+    Future<void> saveGoal(WidgetTester tester, String text) async {
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('step-goal-field')), text);
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows the client\'s goal and offers to edit it', (tester) async {
+      await openSteps(tester, goal: 10000);
+
+      expect(find.text('Daily step goal'), findsOneWidget);
+      expect(find.text('10,000 steps'), findsOneWidget);
+      expect(find.text('Edit'), findsOneWidget);
+    });
+
+    testWidgets('a client with no goal says so and offers to set one', (tester) async {
+      await openSteps(tester);
+
+      expect(find.text('No step goal set'), findsOneWidget);
+      expect(find.text('Set'), findsOneWidget);
+    });
+
+    testWidgets('the goal can be set even when no steps have been recorded yet', (tester) async {
+      await openSteps(tester, withSteps: false);
+
+      expect(find.text('No steps recorded'), findsOneWidget);
+      expect(find.text('Set'), findsOneWidget);
+    });
+
+    testWidgets('saving a new goal sends it, tells the trainer the client was notified and shows it', (tester) async {
+      final repository = await openSteps(tester, goal: 10000);
+
+      await saveGoal(tester, '12000');
+
+      expect(repository.stepGoalCalls, [12000]);
+      expect(find.text('Step goal saved — your client was notified.'), findsOneWidget);
+      expect(find.text('12,000 steps'), findsOneWidget);
+    });
+
+    testWidgets('an empty field clears the goal', (tester) async {
+      final repository = await openSteps(tester, goal: 10000);
+
+      await saveGoal(tester, '');
+
+      expect(repository.stepGoalCalls, [null]);
+      expect(find.text('No step goal set'), findsOneWidget);
+    });
+
+    testWidgets('saving the same number back claims nobody was notified', (tester) async {
+      final repository = await openSteps(tester, goal: 10000);
+
+      await saveGoal(tester, '10000');
+
+      expect(repository.stepGoalCalls, [10000]);
+      expect(find.text('Step goal saved.'), findsOneWidget);
+      expect(find.textContaining('notified'), findsNothing);
+    });
+
+    testWidgets('zero is refused in the sheet, before anything is sent', (tester) async {
+      final repository = await openSteps(tester, goal: 10000);
+
+      await saveGoal(tester, '0');
+
+      expect(repository.stepGoalCalls, isEmpty);
+      expect(find.text('Enter a number above zero, or leave the field empty.'), findsOneWidget);
+      // The sheet stays open for a correction.
+      expect(find.byKey(const ValueKey('step-goal-field')), findsOneWidget);
+    });
+
+    testWidgets('fits 360 dp at × 1.3 in Hungarian', (tester) async {
+      final repository = _FakeDetailRepository(steps: [_step(1, 8214)]);
+      await _pump(
+        tester,
+        clients: [clientWith(10000)],
+        repository: repository,
+        locale: const Locale('hu'),
+        textScale: 1.3,
+        size: const Size(360, 900),
+      );
+      // The tab row scrolls at this width and text size, so the tab has to be brought into view first.
+      await tester.ensureVisible(find.text('Lépés'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lépés'));
+      await tester.pumpAndSettle();
+
+      // Hungarian groups thousands with a (non-breaking) space.
+      expect(
+        find.byWidgetPredicate((w) => w is Text && RegExp(r'^10\s000 lépés$').hasMatch(w.data ?? '')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
     });
   });
 
