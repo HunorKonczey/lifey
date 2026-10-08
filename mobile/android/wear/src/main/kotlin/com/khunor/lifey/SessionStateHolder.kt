@@ -496,6 +496,24 @@ data class SessionMetadata(
             phoneSelectedExerciseId ?: phoneCurrentExerciseId
         }
 
+    /** Where the exercise every screen describes sits in [activePlanExercises]:
+     * the wrist's own position in standalone mode, and in a phone-mastered
+     * session wherever [currentExerciseId] is — the user's local pick first.
+     *
+     * [standaloneExerciseIndex] must not be read for a phone-mastered session:
+     * nothing there ever moves it (it stays 0), so the main page used to keep
+     * describing the plan's first exercise while the list, the next logged set
+     * and the phone all had already moved on to the pick (LIF-129). Null when
+     * there is no plan to point into, or the id names nothing in it. */
+    val currentPlanIndex: Int?
+        get() = if (isStandalone) {
+            standaloneExerciseIndex.takeIf { it in activePlanExercises.indices }
+        } else {
+            currentExerciseId?.let { id ->
+                activePlanExercises.indexOfFirst { it.exerciseId == id }.takeIf { it >= 0 }
+            }
+        }
+
     /** Whether this watch may offer its exercise list: a plan-backed
      * standalone session as before, and now a phone-mastered one too as soon
      * as the phone has pushed the session's exercises (F6c §7). A
