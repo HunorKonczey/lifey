@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { clampWeight, initialWeight, planWeightSave, stepWeight } from "./logWeight";
+import { WEIGHT_NOTE_MAX } from "./types";
 import type { WeightResponse } from "./types";
 
 const w = (id: number, date: string, weight: number): WeightResponse => ({ id, date, weight });
@@ -67,5 +68,27 @@ describe("planWeightSave", () => {
 
   it("the weight is rounded to a tenth", () => {
     expect(planWeightSave([], null, "2026-09-27", 69.449).create.weight).toBe(69.4);
+  });
+});
+
+describe("planWeightSave — the note and the time (LIF-115)", () => {
+  it("carries a trimmed note, and none when it is blank", () => {
+    expect(planWeightSave([], null, "2026-09-27", 69.6, "  fasted  ").create.note).toBe("fasted");
+    expect(planWeightSave([], null, "2026-09-27", 69.6, "   ").create).not.toHaveProperty("note");
+    expect(planWeightSave([], null, "2026-09-27", 69.6).create).not.toHaveProperty("note");
+  });
+
+  it("caps the note at what the API accepts", () => {
+    expect(planWeightSave([], null, "2026-09-27", 69.6, "x".repeat(WEIGHT_NOTE_MAX + 40)).create.note).toHaveLength(WEIGHT_NOTE_MAX);
+  });
+
+  it("an edit on the same day keeps the time it was taken; moving it to another day does not", () => {
+    const editing: WeightResponse = { id: 3, date: "2026-09-27", weight: 69.6, recordedAt: "2026-09-27T05:02:00Z" };
+    expect(planWeightSave([editing], editing, "2026-09-27", 69.8).create.recordedAt).toBe("2026-09-27T05:02:00Z");
+    expect(planWeightSave([editing], editing, "2026-09-25", 69.8).create).not.toHaveProperty("recordedAt");
+  });
+
+  it("a new entry sends no time of its own: the server stamps it", () => {
+    expect(planWeightSave([], null, "2026-09-27", 69.6).create).not.toHaveProperty("recordedAt");
   });
 });

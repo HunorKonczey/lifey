@@ -1,4 +1,4 @@
-import type { WeightRequest, WeightResponse } from "./types";
+import { WEIGHT_NOTE_MAX, type WeightRequest, type WeightResponse } from "./types";
 
 export const MIN_WEIGHT_KG = 20;
 export const MAX_WEIGHT_KG = 500;
@@ -37,8 +37,20 @@ export interface WeightSavePlan {
  * backend allows several entries a day, anything already on the chosen date is replaced — after a confirm, which the
  * caller shows when `conflicts` is not empty.
  */
-export function planWeightSave(weights: readonly WeightResponse[], editing: WeightResponse | null, date: string, weight: number): WeightSavePlan {
+export function planWeightSave(
+  weights: readonly WeightResponse[],
+  editing: WeightResponse | null,
+  date: string,
+  weight: number,
+  note = "",
+): WeightSavePlan {
   const conflicts = weights.filter((w) => w.date === date && w.id !== editing?.id);
   const deleteIds = [...(editing ? [editing.id] : []), ...conflicts.map((c) => c.id)];
-  return { create: { date, weight: clampWeight(weight) }, deleteIds, conflicts };
+  const create: WeightRequest = { date, weight: clampWeight(weight) };
+  const text = note.trim().slice(0, WEIGHT_NOTE_MAX);
+  if (text) create.note = text;
+  // An edit is a new entry in the API's eyes, but it is still the weigh-in that was taken then: on the same day it keeps
+  // its time (and so its place among that day's entries) instead of becoming "just now".
+  if (editing?.recordedAt && editing.date === date) create.recordedAt = editing.recordedAt;
+  return { create, deleteIds, conflicts };
 }

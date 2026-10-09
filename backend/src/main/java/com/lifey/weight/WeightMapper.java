@@ -15,6 +15,7 @@ public final class WeightMapper {
         WeightEntry entry = new WeightEntry();
         entry.setDate(request.date());
         entry.setWeight(request.weight());
+        entry.setNote(request.note() == null || request.note().isBlank() ? null : request.note().trim());
         return entry;
     }
 
@@ -24,7 +25,9 @@ public final class WeightMapper {
                 entry.getDate(),
                 entry.getWeight(),
                 entry.getUpdatedAt(),
-                entry.getDeletedAt()
+                entry.getDeletedAt(),
+                entry.getRecordedAt(),
+                entry.getNote()
         );
     }
 }

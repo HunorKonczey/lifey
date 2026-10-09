@@ -114,6 +114,45 @@ class WeightServiceImplTest {
     }
 
     @Test
+    void create_keepsTheClientsOwnRecordedAt_andTrimsTheNote() {
+        Instant taken = Instant.now().minusSeconds(3 * 3600);
+        WeightRequest request = new WeightRequest(LocalDate.of(2026, Month.JUNE, 18), 80.0, taken, "  fasted, after a run  ");
+        ArgumentCaptor<WeightEntry> captor = ArgumentCaptor.forClass(WeightEntry.class);
+        when(repository.save(captor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
+
+        WeightResponse result = service.create(request);
+
+        assertThat(captor.getValue().getRecordedAt()).isEqualTo(taken);
+        assertThat(captor.getValue().getNote()).isEqualTo("fasted, after a run");
+        assertThat(result.recordedAt()).isEqualTo(taken);
+        assertThat(result.note()).isEqualTo("fasted, after a run");
+    }
+
+    @Test
+    void create_aRecordedAtInTheFuture_isClampedToNow() {
+        Instant before = Instant.now();
+        WeightRequest request = new WeightRequest(LocalDate.of(2026, Month.JUNE, 18), 80.0, before.plusSeconds(86_400), null);
+        ArgumentCaptor<WeightEntry> captor = ArgumentCaptor.forClass(WeightEntry.class);
+        when(repository.save(captor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
+
+        service.create(request);
+
+        assertThat(captor.getValue().getRecordedAt()).isBetween(before, Instant.now());
+    }
+
+    @Test
+    void create_aBlankNote_isStoredAsNone() {
+        WeightRequest request = new WeightRequest(LocalDate.of(2026, Month.JUNE, 18), 80.0, null, "   ");
+        ArgumentCaptor<WeightEntry> captor = ArgumentCaptor.forClass(WeightEntry.class);
+        when(repository.save(captor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
+
+        WeightResponse result = service.create(request);
+
+        assertThat(captor.getValue().getNote()).isNull();
+        assertThat(result.note()).isNull();
+    }
+
+    @Test
     void delete_throwsWhenMissing() {
         when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 

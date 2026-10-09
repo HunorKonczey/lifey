@@ -15,8 +15,8 @@ class WeightController extends StreamNotifier<List<WeightEntry>> {
   @override
   Stream<List<WeightEntry>> build() => _repo.watchAll();
 
-  Future<void> addEntry({required DateTime date, required double weight}) async {
-    await _repo.create(date: date, weight: weight);
+  Future<void> addEntry({required DateTime date, required double weight, DateTime? recordedAt, String? note}) async {
+    await _repo.create(date: date, weight: weight, recordedAt: recordedAt, note: note);
     // In case today's weight was just logged — skip today's weigh-in
     // reminder if it's still pending (see WeighInReminderController).
     await ref.read(weighInReminderControllerProvider).refreshForToday();

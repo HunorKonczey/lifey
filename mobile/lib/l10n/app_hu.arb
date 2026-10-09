@@ -481,6 +481,8 @@
   "currentWeightSectionTitle": "Jelenlegi súly",
   "weightHistoryLabel": "Előzmények",
   "weightHistoryTodayLabel": "Ma",
+  "weightNoteLabel": "Jegyzet (opcionális)",
+  "weightNoteHint": "pl. éhgyomorra, futás után",
   "weightHistoryYesterdayLabel": "Tegnap",
   "recentWorkoutsSectionTitle": "Legutóbbi edzések",
   "noWorkoutsLoggedYetPeriodMessage": "Még nincs naplózott edzés.",

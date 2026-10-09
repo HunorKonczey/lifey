@@ -81,8 +81,11 @@ public class WeightServiceImpl implements WeightService {
     public WeightResponse create(WeightRequest request) {
         WeightEntry entry = WeightMapper.toEntity(request);
         entry.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
-        // Stamp the recording instant server-side so same-day entries keep their order.
-        entry.setRecordedAt(Instant.now());
+        // The client's own time when it sent one (an offline weigh-in keeps when it was taken, not when it synced),
+        // never later than now; stamped server-side otherwise so same-day entries keep their order.
+        Instant now = Instant.now();
+        Instant requested = request.recordedAt();
+        entry.setRecordedAt(requested == null || requested.isAfter(now) ? now : requested);
         WeightEntry saved = repository.save(entry);
         return WeightMapper.toResponse(saved);
     }

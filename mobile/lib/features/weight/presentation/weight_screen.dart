@@ -321,6 +321,13 @@ class _HistoryRow extends StatelessWidget {
     return '${f.weekdayShort(d)}, ${f.shortDate(d)}';
   }
 
+  /// "Today · 07:02" - the time only for an entry taken on the day it is for.
+  String _dayAndTime(BuildContext context, AppLocalizations l10n) {
+    final day = _relativeDate(context, l10n);
+    final time = entry.takenAt;
+    return time == null ? day : '$day · ${LifeyFormat.of(context).time(time)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -339,9 +346,18 @@ class _HistoryRow extends StatelessWidget {
                 MetricValue(value: f.decimal(entry.weight, 1), unit: 'kg', size: 19),
                 const SizedBox(height: AppSpacing.s4),
                 Text(
-                  _relativeDate(context, l10n),
+                  _dayAndTime(context, l10n),
                   style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w500, color: p.text2),
                 ),
+                if (entry.note != null) ...[
+                  const SizedBox(height: AppSpacing.s4),
+                  Text(
+                    entry.note!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: t.bodyMedium!.copyWith(color: p.text3),
+                  ),
+                ],
               ],
             ),
           ),

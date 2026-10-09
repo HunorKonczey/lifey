@@ -51,7 +51,7 @@ class WeightHealthImporter {
 
       await _ref
           .read(weightControllerProvider.notifier)
-          .addEntry(date: sample.timestamp, weight: sample.kg);
+          .addEntry(date: sample.timestamp, weight: sample.kg, recordedAt: sample.timestamp);
       await prefs.setLastHealthWeightImportedAt(sample.timestamp);
     } catch (_) {
       // Best-effort: no connectivity, no permission, or a backend hiccup

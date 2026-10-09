@@ -83,6 +83,28 @@ class WeightControllerTest {
     }
 
     @Test
+    void create_acceptsAndReturnsTheTimeAndNote() throws Exception {
+        when(weightService.create(any()))
+                .thenReturn(new WeightResponse(5L, LocalDate.of(2026, Month.JUNE, 1), 78.4,
+                        Instant.parse("2026-06-01T08:00:00Z"), null, Instant.parse("2026-06-01T07:02:00Z"), "fasted"));
+
+        mockMvc.perform(post("/api/v1/weights").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"date\":\"2026-06-01\",\"weight\":78.4,\"recordedAt\":\"2026-06-01T07:02:00Z\",\"note\":\"fasted\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.recordedAt").value("2026-06-01T07:02:00Z"))
+                .andExpect(jsonPath("$.note").value("fasted"));
+    }
+
+    @Test
+    void create_aNoteOverTheLimitReturns400() throws Exception {
+        mockMvc.perform(post("/api/v1/weights").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"date\":\"2026-06-01\",\"weight\":78.4,\"note\":\"" + "x".repeat(281) + "\"}"))
+                .andExpect(status().isBadRequest());
+
+        verify(weightService, never()).create(any());
+    }
+
+    @Test
     void create_futureDateOrNegativeWeightReturns400() throws Exception {
         mockMvc.perform(post("/api/v1/weights").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"date\":\"2999-01-01\",\"weight\":-5}"))

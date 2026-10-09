@@ -16,6 +16,9 @@ class WeightEntries extends Table {
   RealColumn get weight => real()();
   DateTimeColumn get recordedAt => dateTime()();
 
+  /// Optional free text about the weigh-in (LIF-115), at most 280 characters.
+  TextColumn get note => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

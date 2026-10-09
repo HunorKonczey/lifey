@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
-import { Button, ConfirmModal } from "@/components/ds";
+import { Button, ConfirmModal, TextField } from "@/components/ds";
 import { CalendarPopover } from "@/components/ds/date/CalendarPopover";
 import { DateButton } from "@/components/ds/date/DateButton";
 import { Drawer } from "@/components/ds/overlay/Drawer";
@@ -14,7 +14,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { weightApi } from "../api";
 import { initialWeight, planWeightSave, type WeightSavePlan } from "../logWeight";
 import { parseLocalDate } from "../trend";
-import type { WeightResponse } from "../types";
+import { WEIGHT_NOTE_MAX, type WeightResponse } from "../types";
 import { WeightStepper } from "./WeightStepper";
 
 /**
@@ -43,10 +43,12 @@ export function LogWeightDrawer({
   const [startDate] = useState(() => (editing ? parseLocalDate(editing.date) : new Date()));
   const [weight, setWeight] = useState(startWeight);
   const [date, setDate] = useState(startDate);
+  const startNote = editing?.note ?? "";
+  const [note, setNote] = useState(startNote);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [pending, setPending] = useState<WeightSavePlan | null>(null);
   const dateText = format(date, "yyyy-MM-dd");
-  const dirty = weight !== startWeight || dateText !== format(startDate, "yyyy-MM-dd");
+  const dirty = weight !== startWeight || dateText !== format(startDate, "yyyy-MM-dd") || note !== startNote;
 
   const saveMutation = useMutation({
     mutationFn: async (plan: WeightSavePlan) => {
@@ -67,7 +69,7 @@ export function LogWeightDrawer({
   // `kg` overrides the state for Enter, which commits the typed text and saves in the same tick.
   function save(kg: number = weight) {
     if (saveMutation.isPending) return;
-    const plan = planWeightSave(weights, editing, dateText, kg);
+    const plan = planWeightSave(weights, editing, dateText, kg, note);
     if (plan.conflicts.length > 0) setPending(plan);
     else saveMutation.mutate(plan);
   }
@@ -111,6 +113,15 @@ export function LogWeightDrawer({
               />
             )}
           </div>
+
+          <TextField
+            label={t("note")}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={t("notePlaceholder")}
+            maxLength={WEIGHT_NOTE_MAX}
+            data-testid="weight-note"
+          />
         </div>
       </Drawer>
 
