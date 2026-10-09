@@ -11,6 +11,12 @@ public record OffProduct(
         Double energyKcalPer100g,
         Double proteinsPer100g,
         Double carbohydratesPer100g,
-        Double fatPer100g
+        Double fatPer100g,
+        Double fiberPer100g,
+        Double sugarPer100g
 ) {
+    public OffProduct(String name, String brands, Double energyKcalPer100g, Double proteinsPer100g,
+                      Double carbohydratesPer100g, Double fatPer100g) {
+        this(name, brands, energyKcalPer100g, proteinsPer100g, carbohydratesPer100g, fatPer100g, null, null);
+    }
 }

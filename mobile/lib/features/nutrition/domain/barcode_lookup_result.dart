@@ -13,6 +13,8 @@ class BarcodeLookupResult {
     required this.source,
     this.carbsPer100g,
     this.fatPer100g,
+    this.fiberPer100g,
+    this.sugarPer100g,
   });
 
   final String name;
@@ -20,6 +22,8 @@ class BarcodeLookupResult {
   final double proteinPer100g;
   final double? carbsPer100g;
   final double? fatPer100g;
+  final double? fiberPer100g;
+  final double? sugarPer100g;
   final String barcode;
   final BarcodeSource source;
 
@@ -30,6 +34,8 @@ class BarcodeLookupResult {
       proteinPer100g: (json['proteinPer100g'] as num).toDouble(),
       carbsPer100g: (json['carbsPer100g'] as num?)?.toDouble(),
       fatPer100g: (json['fatPer100g'] as num?)?.toDouble(),
+      fiberPer100g: (json['fiberPer100g'] as num?)?.toDouble(),
+      sugarPer100g: (json['sugarPer100g'] as num?)?.toDouble(),
       barcode: json['barcode'] as String,
       source: json['source'] == 'LOCAL' ? BarcodeSource.local : BarcodeSource.openFoodFacts,
     );

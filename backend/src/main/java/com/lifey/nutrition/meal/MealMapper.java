@@ -29,7 +29,9 @@ public final class MealMapper {
                             food.getCaloriesPer100g() * grams / 100.0,
                             food.getProteinPer100g() * grams / 100.0,
                             carbsPer100g * grams / 100.0,
-                            fatPer100g * grams / 100.0);
+                            fatPer100g * grams / 100.0,
+                            food.getFiberPer100g() == null ? null : food.getFiberPer100g() * grams / 100.0,
+                            food.getSugarPer100g() == null ? null : food.getSugarPer100g() * grams / 100.0);
                 })
                 .toList();
 

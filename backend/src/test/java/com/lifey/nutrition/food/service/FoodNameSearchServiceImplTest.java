@@ -238,6 +238,22 @@ class FoodNameSearchServiceImplTest {
     }
 
     @Test
+    void fibreAndSugarAreCarriedOver_andAnImplausibleFigureIsLeftOutNotTheHit() {
+        OffSearchItem good = FoodNameSearchServiceImpl.toItem(
+                new OffSearchHit("1", "Oats", null, null, 370.0, 13.0, 60.0, 7.0, 10.0, 1.2));
+        OffSearchItem typo = FoodNameSearchServiceImpl.toItem(
+                new OffSearchHit("2", "Oats", null, null, 370.0, 13.0, 60.0, 7.0, 400.0, -3.0));
+        OffSearchItem none = FoodNameSearchServiceImpl.toItem(hit("3", "Oats", null, 370.0, 13.0, 60.0, 7.0));
+
+        assertThat(good.fiberPer100g()).isEqualTo(10.0);
+        assertThat(good.sugarPer100g()).isEqualTo(1.2);
+        assertThat(typo).isNotNull();
+        assertThat(typo.fiberPer100g()).isNull();
+        assertThat(typo.sugarPer100g()).isNull();
+        assertThat(none.fiberPer100g()).isNull();
+    }
+
+    @Test
     void kcalBounds_900Kept_901AndNegativeDropped() {
         assertThat(FoodNameSearchServiceImpl.toItem(hit("1", "Oil", null, 900.0, 0.0, 0.0, 100.0))).isNotNull();
         assertThat(FoodNameSearchServiceImpl.toItem(hit("2", "Typo", null, 901.0, 0.0, 0.0, 10.0))).isNull();

@@ -5,6 +5,8 @@ import { AnimatedNumber, Card, MetricBar, MetricValue, ProgressRing } from "@/co
 import { useFormat } from "@/lib/format/useFormat";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { heroState, macroRowState } from "@/features/dashboard/calorieHero";
+import type { FiberSugarTotals } from "../fiberSugar";
+import { FiberSugarLine } from "./FiberSugarLine";
 
 const MACROS = [
   { key: "protein", color: "var(--m-protein)" },
@@ -18,19 +20,21 @@ export interface DaySummaryViewProps {
   kcal: number;
   goalKcal: number | null;
   macros: Record<SummaryMacroKey, { value: number; goal: number | null }>;
+  /** The day's fibre and sugars (LIF-145); a line under the macro bars when any food has a figure. */
+  fiberSugar?: FiberSugarTotals;
 }
 
 /**
  * The meals tab's "Daily summary" (W2.2, client-004): the day's budget as the
  * hero of the right-hand panel — a ring with what's left in kcal, eaten and
- * goal beside it, and three macro bars with "68 / 120 g" (no fibre or sugar).
+ * goal beside it, and three macro bars with "68 / 120 g" - fibre and sugar are not bars (no goal for them), just one line when any food has a figure (LIF-145).
  * The three states (remaining / over / no goal) are the dashboard hero's own
  * (`heroState`), so the two screens never disagree about what is left.
  *
  * Under 768 px (W2.12, client-079) it is the compact card instead: a smaller ring with what is left beside
  * three mini macro rows — no title, no eaten / goal block — so the meals start on the first screen.
  */
-export function DaySummaryView({ kcal, goalKcal, macros }: DaySummaryViewProps) {
+export function DaySummaryView({ kcal, goalKcal, macros, fiberSugar }: DaySummaryViewProps) {
   const t = useTranslations("dashboard");
   const n = useTranslations("nutrition");
   const fmt = useFormat();
@@ -103,6 +107,7 @@ export function DaySummaryView({ kcal, goalKcal, macros }: DaySummaryViewProps) 
             </div>
           );
         })}
+        {fiberSugar && <FiberSugarLine totals={fiberSugar} testId="summary-fiber-sugar" />}
       </div>
     </Card>
   );

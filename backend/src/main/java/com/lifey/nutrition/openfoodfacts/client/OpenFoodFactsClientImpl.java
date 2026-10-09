@@ -79,7 +79,9 @@ class OpenFoodFactsClientImpl implements OpenFoodFactsClient {
                 nutriments != null ? nutriments.energyKcal100g() : null,
                 nutriments != null ? nutriments.proteins100g() : null,
                 nutriments != null ? nutriments.carbohydrates100g() : null,
-                nutriments != null ? nutriments.fat100g() : null
+                nutriments != null ? nutriments.fat100g() : null,
+                nutriments != null ? nutriments.fiber100g() : null,
+                nutriments != null ? nutriments.sugars100g() : null
         ));
     }
 
@@ -135,7 +137,9 @@ class OpenFoodFactsClientImpl implements OpenFoodFactsClient {
                 n != null ? n.energyKcal100g() : null,
                 n != null ? n.proteins100g() : null,
                 n != null ? n.carbohydrates100g() : null,
-                n != null ? n.fat100g() : null
+                n != null ? n.fat100g() : null,
+                n != null ? n.fiber100g() : null,
+                n != null ? n.sugars100g() : null
         );
     }
 

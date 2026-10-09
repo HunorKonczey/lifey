@@ -12,6 +12,8 @@ class Foods extends Table {
   RealColumn get caloriesPer100g => real()();
   RealColumn get proteinPer100g => real()();
   RealColumn get carbsPer100g => real().nullable()();
+  RealColumn get fiberPer100g => real().nullable()();
+  RealColumn get sugarPer100g => real().nullable()();
   RealColumn get fatPer100g => real().nullable()();
   TextColumn get barcode => text().nullable()();
   BoolColumn get hidden => boolean().withDefault(const Constant(false))();

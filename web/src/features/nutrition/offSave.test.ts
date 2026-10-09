@@ -40,6 +40,13 @@ function writer(creates: Array<"ok" | "conflict" | "error">, existing: FoodRespo
 }
 
 describe("offFoodRequest", () => {
+  it("carries fibre and sugar when OpenFoodFacts has them, and leaves them out - not as 0 - when it has not (LIF-145)", () => {
+    expect(offFoodRequest({ ...item, fiberPer100g: 8.5, sugarPer100g: 0 })).toMatchObject({ fiberPer100g: 8.5, sugarPer100g: 0 });
+    const none = offFoodRequest({ ...item, fiberPer100g: null, sugarPer100g: undefined });
+    expect(none).not.toHaveProperty("fiberPer100g");
+    expect(none).not.toHaveProperty("sugarPer100g");
+  });
+
   it("is a visible food with the per-100 g values and the barcode", () => {
     expect(offFoodRequest(item)).toEqual({
       name: "Csirkemell",

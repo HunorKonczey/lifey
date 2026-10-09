@@ -9,6 +9,9 @@ export interface FoodResponse {
   proteinPer100g: number;
   carbsPer100g: number | null;
   fatPer100g: number | null;
+  /** Dietary fibre and sugars per 100 g (LIF-145); null / absent = not known, which is not zero. */
+  fiberPer100g?: number | null;
+  sugarPer100g?: number | null;
   barcode: string | null;
   hidden: boolean;
 }
@@ -19,6 +22,9 @@ export interface FoodRequest {
   proteinPer100g: number;
   carbsPer100g: number;
   fatPer100g: number;
+  /** Left out when not known. */
+  fiberPer100g?: number;
+  sugarPer100g?: number;
   barcode?: string | null;
   hidden: boolean;
 }
@@ -30,6 +36,8 @@ export interface BarcodeLookupResponse {
   proteinPer100g: number;
   carbsPer100g: number | null;
   fatPer100g: number | null;
+  fiberPer100g?: number | null;
+  sugarPer100g?: number | null;
   barcode: string;
   source: BarcodeSource;
 }
@@ -48,6 +56,8 @@ export interface OffSearchItem {
   proteinPer100g: number;
   carbsPer100g: number | null;
   fatPer100g: number | null;
+  fiberPer100g?: number | null;
+  sugarPer100g?: number | null;
 }
 
 export interface OffSearchResponse {
@@ -69,6 +79,9 @@ export interface MealEntryResponse {
   protein: number;
   carbs: number;
   fat: number;
+  /** This entry's fibre and sugars (LIF-145); null / absent when the food has no figure. */
+  fiber?: number | null;
+  sugar?: number | null;
 }
 
 export interface MealResponse {

@@ -75,6 +75,8 @@ class FoodRepository {
     required double protein,
     double? carbs,
     double? fat,
+    double? fiber,
+    double? sugar,
     String? barcode,
     bool hidden = false,
   }) async {
@@ -86,6 +88,8 @@ class FoodRepository {
           proteinPer100g: protein,
           carbsPer100g: Value(carbs),
           fatPer100g: Value(fat),
+          fiberPer100g: Value(fiber),
+          sugarPer100g: Value(sugar),
           barcode: Value(barcode),
           hidden: Value(hidden),
         ));
@@ -98,6 +102,8 @@ class FoodRepository {
         'proteinPer100g': protein,
         'carbsPer100g': carbs,
         'fatPer100g': fat,
+        'fiberPer100g': fiber,
+        'sugarPer100g': sugar,
         'barcode': barcode,
         'hidden': hidden,
       },
@@ -112,6 +118,8 @@ class FoodRepository {
     required double protein,
     double? carbs,
     double? fat,
+    double? fiber,
+    double? sugar,
     String? barcode,
   }) async {
     await (_db.update(_db.foods)..where((t) => t.clientId.equals(clientId))).write(
@@ -121,6 +129,8 @@ class FoodRepository {
         proteinPer100g: Value(protein),
         carbsPer100g: Value(carbs),
         fatPer100g: Value(fat),
+        fiberPer100g: Value(fiber),
+        sugarPer100g: Value(sugar),
         barcode: Value(barcode),
       ),
     );
@@ -133,6 +143,8 @@ class FoodRepository {
         'proteinPer100g': protein,
         'carbsPer100g': carbs,
         'fatPer100g': fat,
+        'fiberPer100g': fiber,
+        'sugarPer100g': sugar,
         'barcode': barcode,
         'hidden': false,
       },
@@ -159,6 +171,8 @@ class FoodRepository {
       proteinPer100g: row.proteinPer100g,
       carbsPer100g: row.carbsPer100g,
       fatPer100g: row.fatPer100g,
+      fiberPer100g: row.fiberPer100g,
+      sugarPer100g: row.sugarPer100g,
       barcode: row.barcode,
       hidden: row.hidden,
     );

@@ -395,6 +395,8 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         copy.setProteinPer100g(source.getProteinPer100g());
         copy.setCarbsPer100g(source.getCarbsPer100g());
         copy.setFatPer100g(source.getFatPer100g());
+        copy.setFiberPer100g(source.getFiberPer100g());
+        copy.setSugarPer100g(source.getSugarPer100g());
         copy.setHidden(source.isHidden());
         copy.setOriginSourceId(source.getId());
         copy.setOriginTrainerId(trainerId);
@@ -405,7 +407,9 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         return Double.compare(a.getCaloriesPer100g(), b.getCaloriesPer100g()) == 0
                 && Double.compare(a.getProteinPer100g(), b.getProteinPer100g()) == 0
                 && Objects.equals(a.getCarbsPer100g(), b.getCarbsPer100g())
-                && Objects.equals(a.getFatPer100g(), b.getFatPer100g());
+                && Objects.equals(a.getFatPer100g(), b.getFatPer100g())
+                && Objects.equals(a.getFiberPer100g(), b.getFiberPer100g())
+                && Objects.equals(a.getSugarPer100g(), b.getSugarPer100g());
     }
 
     private String disambiguatedName(String name, User client) {

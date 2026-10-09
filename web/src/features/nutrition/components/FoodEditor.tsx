@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Card, Checkbox, Icon, IconButton, NumberField, ReadOnlyField, TextField } from "@/components/ds";
-import { EMPTY_FOOD, FOOD_DECIMALS, fieldsFromFood, foodRequest, isFoodDirty, type FoodFields } from "../foodEdit";
+import { EMPTY_FOOD, FOOD_DECIMALS, fieldsFromFood, foodRequest, gramsText, isFoodDirty, parseOptionalGrams, type FoodFields } from "../foodEdit";
 import { macroCheck } from "../macroCheck";
 import type { FoodRequest, FoodResponse, OffSearchItem } from "../types";
 import { useNoOffSearch, type UseOffSearchResult } from "../useOffSearch";
@@ -83,6 +83,8 @@ export function FoodEditor({
       protein: item.proteinPer100g,
       carbs: item.carbsPer100g ?? 0,
       fat: item.fatPer100g ?? 0,
+      fiber: gramsText(item.fiberPer100g),
+      sugar: gramsText(item.sugarPer100g),
       barcode: item.barcode,
     }));
     setOffPicked(true);
@@ -91,11 +93,13 @@ export function FoodEditor({
   const set = <K extends keyof FoodFields>(key: K, value: FoodFields[K]) => setFields((f) => ({ ...f, [key]: value }));
 
   const nameMissing = fields.name.trim() === "";
+  const fiberInvalid = parseOptionalGrams(fields.fiber) === "invalid";
+  const sugarInvalid = parseOptionalGrams(fields.sugar) === "invalid";
   const dirty = isFoodDirty(fields, baseline);
   const check = macroCheck(fields);
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const submit = () => {
-    if (nameMissing) {
+    if (nameMissing || fiberInvalid || sugarInvalid) {
       setTriedSave(true);
       return;
     }
@@ -188,7 +192,34 @@ export function FoodEditor({
           {macroField("protein", t("proteinPer100g"), "g")}
           {macroField("carbs", t("carbsPer100g"), "g")}
           {macroField("fat", t("fatPer100g"), "g")}
+          <TextField
+            label={t("fiberPer100g")}
+            size="dense"
+            inputMode="decimal"
+            autoComplete="off"
+            value={fields.fiber}
+            onChange={(e) => set("fiber", e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitSoon()}
+            placeholder="—"
+            error={triedSave && fiberInvalid ? t("gramsInvalid") : undefined}
+            data-testid="food-fiber"
+          />
+          <TextField
+            label={t("sugarPer100g")}
+            size="dense"
+            inputMode="decimal"
+            autoComplete="off"
+            value={fields.sugar}
+            onChange={(e) => set("sugar", e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitSoon()}
+            placeholder="—"
+            error={triedSave && sugarInvalid ? t("gramsInvalid") : undefined}
+            data-testid="food-sugar"
+          />
         </div>
+        <p className="type-body-s -mt-2" style={{ color: "var(--text-3)" }}>
+          {t("fiberSugarHint")}
+        </p>
 
         {check.tone !== "ok" && (
           <p

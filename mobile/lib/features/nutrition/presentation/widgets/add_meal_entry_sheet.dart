@@ -223,6 +223,8 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
               protein: item.proteinPer100g,
               carbs: item.carbsPer100g,
               fat: item.fatPer100g,
+              fiber: item.fiberPer100g,
+              sugar: item.sugarPer100g,
               barcode: item.barcode,
             ),
       };

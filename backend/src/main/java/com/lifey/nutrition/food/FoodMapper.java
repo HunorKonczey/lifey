@@ -23,6 +23,8 @@ public final class FoodMapper {
         food.setProteinPer100g(request.proteinPer100g());
         food.setCarbsPer100g(request.carbsPer100g());
         food.setFatPer100g(request.fatPer100g());
+        food.setFiberPer100g(request.fiberPer100g());
+        food.setSugarPer100g(request.sugarPer100g());
         food.setBarcode(request.barcode());
         food.setHidden(request.hidden());
     }
@@ -39,7 +41,9 @@ public final class FoodMapper {
                 food.isHidden(),
                 food.getUpdatedAt(),
                 food.getDeletedAt(),
-                food.getOriginTrainerId()
+                food.getOriginTrainerId(),
+                food.getFiberPer100g(),
+                food.getSugarPer100g()
         );
     }
 }

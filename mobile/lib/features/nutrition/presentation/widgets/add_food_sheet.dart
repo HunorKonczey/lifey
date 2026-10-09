@@ -38,6 +38,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
   late final TextEditingController _protein;
   late final TextEditingController _carbs;
   late final TextEditingController _fat;
+  late final TextEditingController _fiber;
+  late final TextEditingController _sugar;
   bool _submitting = false;
   bool _scanning = false;
   String? _error;
@@ -61,6 +63,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
         text: food == null ? '' : _trim(food.proteinPer100g));
     _carbs = TextEditingController(text: num(food?.carbsPer100g));
     _fat = TextEditingController(text: num(food?.fatPer100g));
+    _fiber = TextEditingController(text: num(food?.fiberPer100g));
+    _sugar = TextEditingController(text: num(food?.sugarPer100g));
     _barcode = food?.barcode;
 
     if (_isEditing) {
@@ -69,6 +73,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       _protein.addListener(_scheduleAutoSave);
       _carbs.addListener(_scheduleAutoSave);
       _fat.addListener(_scheduleAutoSave);
+      _fiber.addListener(_scheduleAutoSave);
+      _sugar.addListener(_scheduleAutoSave);
     }
 
     if (widget.initialBarcode != null) {
@@ -89,6 +95,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     _protein.dispose();
     _carbs.dispose();
     _fat.dispose();
+    _fiber.dispose();
+    _sugar.dispose();
     super.dispose();
   }
 
@@ -129,6 +137,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       _protein.text = _trim(item.proteinPer100g);
       _carbs.text = item.carbsPer100g == null ? '' : _trim(item.carbsPer100g!);
       _fat.text = item.fatPer100g == null ? '' : _trim(item.fatPer100g!);
+      _fiber.text = item.fiberPer100g == null ? '' : _trim(item.fiberPer100g!);
+      _sugar.text = item.sugarPer100g == null ? '' : _trim(item.sugarPer100g!);
       _barcode = item.barcode;
       _offPicked = true;
     });
@@ -178,6 +188,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                 result.carbsPer100g == null ? '' : _trim(result.carbsPer100g!);
             _fat.text =
                 result.fatPer100g == null ? '' : _trim(result.fatPer100g!);
+            _fiber.text = result.fiberPer100g == null ? '' : _trim(result.fiberPer100g!);
+            _sugar.text = result.sugarPer100g == null ? '' : _trim(result.sugarPer100g!);
             _barcode = result.barcode;
           });
         case BarcodeLookupNotFound():
@@ -225,6 +237,16 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       final v = _parse(fatText);
       if (v == null || v < 0) return;
     }
+    final fiberText = _fiber.text.trim();
+    if (fiberText.isNotEmpty) {
+      final v = _parse(fiberText);
+      if (v == null || v < 0) return;
+    }
+    final sugarText = _sugar.text.trim();
+    if (sugarText.isNotEmpty) {
+      final v = _parse(sugarText);
+      if (v == null || v < 0) return;
+    }
     try {
       await ref.read(foodControllerProvider.notifier).updateFood(
             widget.food!.clientId,
@@ -233,6 +255,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             protein: protein,
             carbs: carbsText.isEmpty ? null : _parse(carbsText),
             fat: fatText.isEmpty ? null : _parse(fatText),
+            fiber: fiberText.isEmpty ? null : _parse(fiberText),
+            sugar: sugarText.isEmpty ? null : _parse(sugarText),
             barcode: _barcode,
           );
     } catch (_) {
@@ -245,6 +269,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     if (!_formKey.currentState!.validate()) return;
     final carbsText = _carbs.text.trim();
     final fatText = _fat.text.trim();
+    final fiberText = _fiber.text.trim();
+    final sugarText = _sugar.text.trim();
     final name = _name.text.trim();
 
     setState(() {
@@ -257,6 +283,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       final protein = _parse(_protein.text)!;
       final carbs = carbsText.isEmpty ? null : _parse(carbsText);
       final fat = fatText.isEmpty ? null : _parse(fatText);
+      final fiber = fiberText.isEmpty ? null : _parse(fiberText);
+      final sugar = sugarText.isEmpty ? null : _parse(sugarText);
 
       if (_isEditing) {
         await notifier.updateFood(widget.food!.clientId,
@@ -265,6 +293,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             protein: protein,
             carbs: carbs,
             fat: fat,
+            fiber: fiber,
+            sugar: sugar,
             barcode: _barcode);
       } else {
         await notifier.addFood(
@@ -273,6 +303,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             protein: protein,
             carbs: carbs,
             fat: fat,
+            fiber: fiber,
+            sugar: sugar,
             barcode: _barcode);
       }
       if (mounted) Navigator.of(context).pop();
@@ -426,9 +458,47 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                       controller: _fat,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
-                      textInputAction: TextInputAction.done,
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: l10n.fatOptionalLabel,
+                        suffixText: 'g',
+                        border: const OutlineInputBorder(),
+                      ),
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).nextFocus(),
+                      validator: _validateOptionalNumber,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _fiber,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: l10n.fiberOptionalLabel,
+                        suffixText: 'g',
+                        border: const OutlineInputBorder(),
+                      ),
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).nextFocus(),
+                      validator: _validateOptionalNumber,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _sugar,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      textInputAction: TextInputAction.done,
+                      decoration: InputDecoration(
+                        labelText: l10n.sugarOptionalLabel,
                         suffixText: 'g',
                         border: const OutlineInputBorder(),
                       ),

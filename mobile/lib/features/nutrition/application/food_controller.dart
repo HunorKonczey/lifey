@@ -71,6 +71,8 @@ class FoodController extends StreamNotifier<List<Food>> {
     required double protein,
     double? carbs,
     double? fat,
+    double? fiber,
+    double? sugar,
     String? barcode,
     bool hidden = false,
   }) async {
@@ -80,6 +82,8 @@ class FoodController extends StreamNotifier<List<Food>> {
         protein: protein,
         carbs: carbs,
         fat: fat,
+        fiber: fiber,
+        sugar: sugar,
         barcode: barcode,
         hidden: hidden);
     return Food(
@@ -89,6 +93,8 @@ class FoodController extends StreamNotifier<List<Food>> {
       proteinPer100g: protein,
       carbsPer100g: carbs,
       fatPer100g: fat,
+      fiberPer100g: fiber,
+      sugarPer100g: sugar,
       barcode: barcode,
       hidden: hidden,
     );
@@ -101,10 +107,19 @@ class FoodController extends StreamNotifier<List<Food>> {
     required double protein,
     double? carbs,
     double? fat,
+    double? fiber,
+    double? sugar,
     String? barcode,
   }) {
     return _repo.update(clientId,
-        name: name, calories: calories, protein: protein, carbs: carbs, fat: fat, barcode: barcode);
+        name: name,
+        calories: calories,
+        protein: protein,
+        carbs: carbs,
+        fat: fat,
+        fiber: fiber,
+        sugar: sugar,
+        barcode: barcode);
   }
 
   Future<void> deleteFood(String clientId) {

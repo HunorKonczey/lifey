@@ -41,7 +41,9 @@ public class BarcodeLookupServiceImpl implements BarcodeLookupService {
                 product.carbohydratesPer100g(),
                 product.fatPer100g(),
                 barcode,
-                BarcodeSource.OPENFOODFACTS
+                BarcodeSource.OPENFOODFACTS,
+                product.fiberPer100g(),
+                product.sugarPer100g()
         );
     }
 
@@ -62,7 +64,9 @@ public class BarcodeLookupServiceImpl implements BarcodeLookupService {
                 food.getCarbsPer100g(),
                 food.getFatPer100g(),
                 food.getBarcode(),
-                BarcodeSource.LOCAL
+                BarcodeSource.LOCAL,
+                food.getFiberPer100g(),
+                food.getSugarPer100g()
         );
     }
 }

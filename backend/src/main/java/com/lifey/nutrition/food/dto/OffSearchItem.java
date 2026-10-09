@@ -13,6 +13,12 @@ public record OffSearchItem(
         Double caloriesPer100g,
         Double proteinPer100g,
         Double carbsPer100g,
-        Double fatPer100g
+        Double fatPer100g,
+        Double fiberPer100g,
+        Double sugarPer100g
 ) {
+    public OffSearchItem(String barcode, String name, String brand, Double caloriesPer100g, Double proteinPer100g,
+                         Double carbsPer100g, Double fatPer100g) {
+        this(barcode, name, brand, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, null, null);
+    }
 }
