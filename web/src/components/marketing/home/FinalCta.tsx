@@ -17,7 +17,7 @@ export async function FinalCta({ page = "home" }: { page?: string }) {
   const href = page === "for-trainers" ? "/register?next=/admin/pending" : "/register";
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--nested)" }}>
+    <section className="py-16 md:py-24" style={{ background: "var(--mkt-section-alt)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8 text-center">
         <h2 className="text-[36px] md:text-[64px] font-extrabold tracking-[-0.02em] leading-[1.06] md:leading-[1.04] max-w-[18ch] mx-auto">
           {t("title")}

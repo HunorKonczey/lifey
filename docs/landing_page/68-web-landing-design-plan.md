@@ -102,6 +102,25 @@ Four tokens, defined in `globals.css` alongside the existing ones, in both theme
 
 Nothing else is added. If a section needs a fifth token, the section is wrong.
 
+**As shipped (LIF-118, 2026-10-09).** Two of the four exist, with the values the pages already used, so landing them
+changed no pixel in either theme:
+
+| `68` token | In `globals.css` | Used by |
+|---|---|---|
+| `--mkt-section-alt` | `var(--nested)` (the v2 palette has no `--surface-container`) | the 11 full-width bands, `<section style={{ background: "var(--mkt-section-alt)" }}>` |
+| `--mkt-shadow-lift` | `0 20px 44px rgba(0,0,0,.35)`, **the same in both themes** (the `.28`/`.10` and the `8px 32px` geometry above were never built) | the screenshot / phone frames in `Hero`, `AppHero`, `AppScreenshotRow` |
+| `--mkt-hairline` | not a token: the separators are Tailwind's `border-outline`, which is `--outline` | — |
+| `--mkt-hero-glow` | not built: no section draws it | — |
+
+`src/app/globalsTokens.test.ts` fails if a component reads a `--mkt-*` that `globals.css` does not define (a dangling
+`var()` does not error - the band just renders transparent).
+
+The **type scale in §2.2 is not tokens either**: the pages use Tailwind arbitrary values. What is actually in use, so the
+next page matches it: hero `text-[36px] md:text-[64px]` extrabold (home hero, final CTA; the sub-heroes `md:text-[56px]`),
+page `<h1>` `text-[32px] md:text-[44px]` bold, section `<h2>` `text-[28px] md:text-[44px]` bold, all
+`tracking-[-0.02em]`. Making them classes would touch ~30 sites for no visible change; do it the day a page needs a
+fifth size.
+
 ### 2.4 Motion
 
 `--dur-base` / `--ease` from the app. On the marketing pages, exactly one motion pattern:

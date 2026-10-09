@@ -24,7 +24,7 @@ export async function SponsoredBand() {
   const locale = await getLocale();
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--nested)" }}>
+    <section className="py-16 md:py-24" style={{ background: "var(--mkt-section-alt)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <div className="max-w-[62ch]">
           <div

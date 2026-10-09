@@ -20,7 +20,7 @@ export async function ProgramSection() {
         background="container"
       />
 
-      <section className="md:hidden py-9 px-4" style={{ background: "var(--nested)" }}>
+      <section className="md:hidden py-9 px-4" style={{ background: "var(--mkt-section-alt)" }}>
         <div className="text-[11px] font-extrabold tracking-wide" style={{ color: "var(--primary)" }}>
           {t("eyebrow").toUpperCase()}
         </div>

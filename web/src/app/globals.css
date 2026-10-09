@@ -75,6 +75,14 @@
   --r-hero:    30px;
   --r-pill:    999px;
 
+  /* ─── Marketing tokens (68 §2.3, LIF-118) — the two the shipped pages use; same values in both themes.
+     --mkt-section-alt: the alternating full-width band (--bg / --mkt-section-alt); 68 named --surface-container,
+     which the v2 palette does not have — --nested is its stand-in. --mkt-shadow-lift: the shadow on a
+     screenshot / phone frame. The other two in 68 are not tokens here: the hairline is --outline (Tailwind
+     border-outline), and the hero glow was never built. ─── */
+  --mkt-section-alt: var(--nested);
+  --mkt-shadow-lift: 0 20px 44px rgba(0, 0, 0, .35);
+
   /* ─── Elevation (D-W0.2/D-W0.4) — dark: tone carries depth, drop shadows only
      on floating layers; a 1 px top light edge on cards/hero/float instead of
      a border (mobile AppElevation.dark) ─── */
