@@ -4,6 +4,11 @@ import com.lifey.auth.CurrentUserProvider;
 import com.lifey.billing.service.SeatLimitService;
 import com.lifey.common.domain.BaseEntity;
 import com.lifey.mail.service.MailService;
+import com.lifey.push.service.PushMessage;
+import com.lifey.push.service.PushService;
+import com.lifey.settings.LanguagePreference;
+import com.lifey.settings.UserSettings;
+import com.lifey.settings.UserSettingsRepository;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.TrainerInviteProperties;
@@ -62,6 +67,12 @@ class TrainerInviteServiceImplTest {
     /** Unstubbed: void, so every seat check is a no-op — these tests aren't about billing enforcement. */
     @Mock
     SeatLimitService seatLimitService;
+
+    @Mock
+    PushService pushService;
+
+    @Mock
+    UserSettingsRepository userSettingsRepository;
 
     @InjectMocks
     TrainerInviteServiceImpl service;
@@ -349,6 +360,113 @@ class TrainerInviteServiceImplTest {
 
         assertThatThrownBy(() -> service.respondViaEmailToken("raw-token", true))
                 .isInstanceOf(InviteNotFoundException.class);
+    }
+
+    // ---- reminder (LIF-103) ----
+
+    private TrainerClient pendingInvite(Instant createdAt, Instant lastRemindedAt) {
+        TrainerClient invite = new TrainerClient();
+        invite.setId(10L);
+        User trainer = new User();
+        trainer.setId(TRAINER_ID);
+        trainer.setFirstName("Kata");
+        trainer.setLastName("Coach");
+        trainer.setEmail("kata@example.com");
+        invite.setTrainer(trainer);
+        invite.setClient(client());
+        invite.setStatus(TrainerClientStatus.PENDING);
+        invite.setCreatedAt(createdAt);
+        invite.setExpiresAt(createdAt.plusSeconds(24 * 3600));
+        invite.setLastRemindedAt(lastRemindedAt);
+        when(trainerClientRepository.findByIdAndTrainerIdAndStatus(10L, TRAINER_ID, TrainerClientStatus.PENDING))
+                .thenReturn(Optional.of(invite));
+        return invite;
+    }
+
+    @Test
+    void remind_pushesTheClientAndRecordsWhen() {
+        TrainerClient invite = pendingInvite(Instant.now().minusSeconds(5 * 3600), null);
+        when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
+
+        TrainerInviteResponse result = service.remind(10L);
+
+        assertThat(invite.getLastRemindedAt()).isNotNull();
+        assertThat(result.lastRemindedAt()).isEqualTo(invite.getLastRemindedAt());
+        ArgumentCaptor<PushMessage> captor = ArgumentCaptor.forClass(PushMessage.class);
+        verify(pushService).sendToUser(eq(CLIENT_ID), captor.capture());
+        assertThat(captor.getValue().title()).isEqualTo("A trainer is waiting for your answer");
+        assertThat(captor.getValue().body()).contains("Kata Coach");
+        assertThat(captor.getValue().data()).containsEntry("type", "trainer_invite");
+        // The email channel is off in these tests: no mail, and the invite's own expiry is untouched.
+        verifyNoInteractions(mailService);
+        assertThat(invite.getExpiresAt()).isEqualTo(invite.getCreatedAt().plusSeconds(24 * 3600));
+    }
+
+    @Test
+    void remind_speaksHungarianToAHungarianClient() {
+        pendingInvite(Instant.now().minusSeconds(5 * 3600), null);
+        UserSettings settings = new UserSettings();
+        settings.setLanguage(LanguagePreference.HUNGARIAN);
+        when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.of(settings));
+
+        service.remind(10L);
+
+        ArgumentCaptor<PushMessage> captor = ArgumentCaptor.forClass(PushMessage.class);
+        verify(pushService).sendToUser(eq(CLIENT_ID), captor.capture());
+        assertThat(captor.getValue().title()).isEqualTo("Egy edző válaszodra vár");
+    }
+
+    @Test
+    void remind_withTheEmailChannelOnSendsTheMailAgainWithFreshLinks() {
+        TrainerClient invite = pendingInvite(Instant.now().minusSeconds(5 * 3600), null);
+        invite.setEmailTokenHash("old-hash");
+        when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
+        when(trainerInviteProperties.emailEnabled()).thenReturn(true);
+        when(trainerInviteProperties.publicBaseUrl()).thenReturn("https://api.lifey.test");
+
+        service.remind(10L);
+
+        assertThat(invite.getEmailTokenHash()).isNotEqualTo("old-hash").hasSize(64);
+        ArgumentCaptor<String> accept = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> decline = ArgumentCaptor.forClass(String.class);
+        verify(mailService).sendTrainerInviteEmail(eq(invite.getClient()), eq(invite.getTrainer()), accept.capture(), decline.capture());
+        assertThat(accept.getValue()).startsWith("https://api.lifey.test/api/v1/trainer-invites/email/respond?token=")
+                .endsWith("&accept=true");
+        assertThat(decline.getValue()).endsWith("&accept=false");
+    }
+
+    @Test
+    void remind_isRefusedWithinTheCooldownOfTheInviteItself() {
+        TrainerClient invite = pendingInvite(Instant.now().minusSeconds(3600), null);
+
+        assertThatThrownBy(() -> service.remind(10L)).isInstanceOf(InviteRateLimitedException.class);
+
+        assertThat(invite.getLastRemindedAt()).isNull();
+        verifyNoInteractions(pushService, mailService);
+    }
+
+    @Test
+    void remind_isRefusedWithinTheCooldownOfTheLastReminder_andAllowedAfterIt() {
+        TrainerClient invite = pendingInvite(Instant.now().minusSeconds(10 * 3600), Instant.now().minusSeconds(3600));
+
+        assertThatThrownBy(() -> service.remind(10L)).isInstanceOf(InviteRateLimitedException.class);
+
+        invite.setLastRemindedAt(Instant.now().minusSeconds(5 * 3600));
+        when(userSettingsRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
+        service.remind(10L);
+        verify(pushService).sendToUser(eq(CLIENT_ID), any());
+    }
+
+    @Test
+    void remind_anInviteThatIsNotPendingOrHasRunOutIsNotFound() {
+        when(trainerClientRepository.findByIdAndTrainerIdAndStatus(11L, TRAINER_ID, TrainerClientStatus.PENDING))
+                .thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.remind(11L)).isInstanceOf(InviteNotFoundException.class);
+
+        TrainerClient lapsed = pendingInvite(Instant.now().minusSeconds(30 * 3600), null);
+        assertThatThrownBy(() -> service.remind(10L)).isInstanceOf(InviteNotFoundException.class);
+        assertThat(lapsed.getLastRemindedAt()).isNull();
+        verifyNoInteractions(pushService, mailService);
     }
 
     private static User client() {

@@ -1,4 +1,4 @@
-import type { InviteOutcome, TrainerInviteHistoryResponse } from "./types";
+import type { InviteOutcome, TrainerInviteHistoryResponse, TrainerInviteResponse } from "./types";
 
 export type InviteStatus = "PENDING" | "EXPIRED";
 
@@ -34,4 +34,22 @@ export function outcomeAt(row: TrainerInviteHistoryResponse): string {
     default:
       return row.expiresAt;
   }
+}
+
+/** Least time between two reminders of one invite, counted from the invite or the last reminder - the backend's own rule. */
+export const REMINDER_COOLDOWN_MS = 4 * 60 * 60 * 1000;
+
+/** When the trainer may remind the client of this invite next (LIF-103). */
+export function nextReminderAt(invite: Pick<TrainerInviteResponse, "createdAt" | "lastRemindedAt">): number {
+  return new Date(invite.lastRemindedAt ?? invite.createdAt).getTime() + REMINDER_COOLDOWN_MS;
+}
+
+/** True when a reminder would be accepted now: the invite is still pending and the cooldown has passed. */
+export function canRemind(invite: Pick<TrainerInviteResponse, "createdAt" | "lastRemindedAt" | "expiresAt">, now: number): boolean {
+  return inviteStatus(invite.expiresAt, now) === "PENDING" && nextReminderAt(invite) <= now;
+}
+
+/** The address a trainer shares for a join link: this site's own `/join/<token>`. */
+export function joinUrl(origin: string, token: string): string {
+  return `${origin}/join/${encodeURIComponent(token)}`;
 }

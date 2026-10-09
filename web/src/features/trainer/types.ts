@@ -3,6 +3,25 @@ export interface TrainerInviteResponse {
   clientEmail: string;
   createdAt: string;
   expiresAt: string;
+  /** When the trainer last reminded the client of this invite (LIF-103); absent or null if never. */
+  lastRemindedAt?: string | null;
+}
+
+/** A join link that can still be used. The token is not here: it was shown once, when the link was made (LIF-103). */
+export interface TrainerInviteLinkResponse {
+  id: number;
+  createdAt: string;
+  expiresAt: string;
+}
+
+/** A join link right after it was made: the only answer that carries its token. */
+export interface CreatedTrainerInviteLinkResponse extends TrainerInviteLinkResponse {
+  token: string;
+}
+
+/** What a visitor sees on a join link before signing in. */
+export interface InviteLinkPreviewResponse {
+  trainerName: string;
 }
 
 /** How an invite ended (docs/redesign-web/82 section 2.2). */

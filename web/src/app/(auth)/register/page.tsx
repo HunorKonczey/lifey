@@ -15,15 +15,10 @@ import { registerSchema, type RegisterFormValues } from "@/features/auth/schemas
 import { authApi } from "@/features/auth/api";
 import { useSessionStore } from "@/features/auth/store";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
+import { safeNextPath, withNext } from "@/features/auth/nextPath";
 import { ApiError } from "@/lib/api/client";
 import { extractAttribution, readAttributionCookie } from "@/lib/attribution";
 import { useValidationMessage } from "@/lib/i18n/useValidationMessage";
-
-/** A relative, same-origin path only — guards against an open-redirect via `?next=`. */
-function safeNextPath(value: string | null): string | null {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
-  return value;
-}
 
 export default function RegisterPage() {
   return (
@@ -119,7 +114,7 @@ function RegisterForm() {
         {!trainerPath && <p style={{ fontSize: 16, lineHeight: 1.5, color: "var(--text-2)" }}>{t("registerTagline")}</p>}
       </div>
 
-      {!trainerPath && <GoogleSignInButton mode="register" />}
+      {!trainerPath && <GoogleSignInButton mode="register" redirectTo={safeNextPath(searchParams.get("next")) ?? undefined} />}
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[18px] flex-1" noValidate>
         <div className="grid grid-cols-2 gap-3">{hu ? [...nameFields].reverse() : nameFields}</div>
@@ -152,7 +147,7 @@ function RegisterForm() {
 
       <p className="text-center type-body" style={{ color: "var(--text-2)" }}>
         {t("haveAccount")}{" "}
-        <Link href="/login" style={{ color: "var(--primary)", fontWeight: 700 }}>
+        <Link href={withNext("/login", searchParams.get("next"))} style={{ color: "var(--primary)", fontWeight: 700 }}>
           {t("signIn")}
         </Link>
       </p>

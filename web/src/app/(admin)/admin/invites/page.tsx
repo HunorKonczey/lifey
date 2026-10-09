@@ -6,7 +6,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { formatDistanceToNow } from "date-fns";
 import { Button, Card, ConfirmModal, Icon, TextField, TintedChip } from "@/components/ds";
 import { trainerApi } from "@/features/trainer/api";
-import { canResend, historyRows, inviteStatus, inviteUrgent, outcomeAt } from "@/features/trainer/invites";
+import { canRemind, canResend, historyRows, inviteStatus, inviteUrgent, joinUrl, nextReminderAt, outcomeAt } from "@/features/trainer/invites";
 import { queryKeys, invalidationMap } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { useLocale } from "@/lib/hooks/useLocale";
@@ -17,14 +17,17 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 import { useTrainerBillingGate } from "@/features/billing/hooks";
 import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
-import type { InviteOutcome, TrainerInviteResponse } from "@/features/trainer/types";
+import type { CreatedTrainerInviteLinkResponse, InviteOutcome, TrainerInviteResponse } from "@/features/trainer/types";
 
 /**
  * Invites with their state (W9-B): a "Kliens meghívása" card (e-mail + Küldés), then a row per invite — the e-mail, "3 napja
  * küldve", a status chip (Függő carbs tint · Lejárt neutral, from `expiresAt`) and the next step: "Visszavonás…" behind a
  * confirmation for a pending one, "Újraküldés" (a fresh invite to the same e-mail) for one that has run out. Below the live list
  * the **history** (docs/redesign-web/82 S2): every invite that has an outcome — elfogadva, elutasítva, visszavonva, lejárt — newest
- * first, "Továbbiak" for more. There is still no shareable link (D-W0.19).
+ * first, "Továbbiak" for more. A pending invite can be nudged with "Emlékeztető" (LIF-103): a push to the client, and the
+ * e-mail again where that channel is on, at most every four hours. Under the e-mail card a **join link** can be made
+ * (LIF-103): a single-use address the trainer sends anywhere; whoever opens it, signs in and accepts becomes the client. The
+ * link is shown once, right after it is made - only its hash is stored - and the live ones are listed with "Visszavonás".
  */
 const HISTORY_PAGE = 20;
 
@@ -45,6 +48,8 @@ export default function AdminInvitesPage() {
   const [error, setError] = useState<string | null>(null);
   const [blockedOpen, setBlockedOpen] = useState(false);
   const [revoking, setRevoking] = useState<TrainerInviteResponse | null>(null);
+  // The link just made: the only moment its token exists on this side.
+  const [createdLink, setCreatedLink] = useState<CreatedTrainerInviteLinkResponse | null>(null);
   const gate = useTrainerBillingGate();
   // Re-read the clock so an invite that runs out while the page is open flips to "Lejárt".
   const [now, setNow] = useState(() => Date.now());
@@ -56,6 +61,11 @@ export default function AdminInvitesPage() {
   const { data: invites, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.trainerInvites.all(),
     queryFn: trainerApi.pendingInvites,
+  });
+
+  const { data: links } = useQuery({
+    queryKey: queryKeys.trainerInvites.links(),
+    queryFn: trainerApi.inviteLinks,
   });
 
   const [historySize, setHistorySize] = useState(HISTORY_PAGE);
@@ -92,6 +102,47 @@ export default function AdminInvitesPage() {
     },
   });
 
+  const remindMutation = useMutation({
+    mutationFn: (id: number) => trainerApi.remindInvite(id),
+    onSuccess: () => {
+      refresh();
+      show(t("reminded"), "success");
+    },
+    onError: (err) => {
+      refresh();
+      show(err instanceof ApiError && err.status === 429 ? t("remindTooSoon") : t("remindFailed"), "error");
+    },
+  });
+
+  const createLinkMutation = useMutation({
+    mutationFn: () => trainerApi.createInviteLink(),
+    onSuccess: (link) => {
+      refresh();
+      setCreatedLink(link);
+      show(t("linkMade"), "success");
+    },
+    onError: (err) => show(err instanceof ApiError && err.status === 429 ? t("linkErrorCap") : t("linkErrorGeneric"), "error"),
+  });
+
+  const revokeLinkMutation = useMutation({
+    mutationFn: (id: number) => trainerApi.revokeInviteLink(id),
+    onSuccess: (_, id) => {
+      refresh();
+      if (createdLink?.id === id) setCreatedLink(null);
+      show(t("linkRevoked"), "success");
+    },
+    onError: () => show(t("linkRevokeFailed"), "error"),
+  });
+
+  const copyLink = async (link: CreatedTrainerInviteLinkResponse) => {
+    try {
+      await navigator.clipboard.writeText(joinUrl(window.location.origin, link.token));
+      show(t("linkCopied"), "success");
+    } catch {
+      show(t("linkCopyFailed"), "error");
+    }
+  };
+
   const revokeMutation = useMutation({
     mutationFn: (id: number) => trainerApi.cancelInvite(id),
     onSuccess: () => {
@@ -101,6 +152,15 @@ export default function AdminInvitesPage() {
     },
     onError: () => show(t("revokeFailed"), "error"),
   });
+
+  // The same gate as sending an invite: a link offers a seat just like one does.
+  const makeLink = () => {
+    if (gate.state !== "OK") {
+      setBlockedOpen(true);
+      return;
+    }
+    createLinkMutation.mutate();
+  };
 
   // D-T5: a blocked "Send" stays clickable and explains itself, rather than silently disabling.
   const send = (to: string) => {
@@ -145,6 +205,56 @@ export default function AdminInvitesPage() {
         </form>
       </Card>
 
+      <Card className="flex flex-col gap-3" data-testid="invite-link-card">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="type-body" style={{ fontWeight: 800 }}>{t("linkCardTitle")}</h3>
+            <p className="type-body-s" style={{ color: "var(--text-2)" }}>{t("linkCardHint")}</p>
+          </div>
+          <Button variant="secondary" onClick={makeLink} disabled={createLinkMutation.isPending} data-testid="invite-link-create">
+            <Icon name="add_link" size={20} />
+            {t("linkCreate")}
+          </Button>
+        </div>
+
+        {createdLink && (
+          <div className="flex flex-col gap-2" data-testid="invite-link-created">
+            <div className="flex items-start gap-3">
+              <TextField
+                className="flex-1"
+                readOnly
+                leadingIcon="link"
+                aria-label={t("linkField")}
+                value={joinUrl(typeof window === "undefined" ? "" : window.location.origin, createdLink.token)}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <Button onClick={() => copyLink(createdLink)} data-testid="invite-link-copy">
+                <Icon name="content_copy" size={20} />
+                {t("linkCopy")}
+              </Button>
+            </div>
+            <p className="type-body-s" style={{ color: "var(--text-3)" }}>{t("linkShownOnce")}</p>
+          </div>
+        )}
+
+        {links && links.length > 0 && (
+          <ul className="flex flex-col gap-2" aria-label={t("linksCount", { count: links.length })}>
+            {links.map((link) => (
+              <li key={link.id} data-testid="invite-link-row" className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <Icon name="link" size={18} color="var(--text-2)" />
+                <span className="type-body-s min-w-0 flex-1" style={{ color: "var(--text-2)" }}>
+                  {t("linkCreatedAt", { time: formatDistanceToNow(new Date(link.createdAt), { addSuffix: true, locale: dateLocale }) })}
+                  {` · ${t("expiresIn", { time: formatDistanceToNow(new Date(link.expiresAt), { locale: dateLocale }) })}`}
+                </span>
+                <Button variant="secondary" onClick={() => revokeLinkMutation.mutate(link.id)} disabled={revokeLinkMutation.isPending}>
+                  {t("linkRevoke")}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       {isLoading ? (
         <Skeleton variant="table" />
       ) : isError ? (
@@ -169,11 +279,23 @@ export default function AdminInvitesPage() {
                       <span className="type-body-s block" style={{ color: urgent ? "var(--heart)" : "var(--text-3)" }}>
                         {t("sentAt", { time: formatDistanceToNow(new Date(inv.createdAt), { addSuffix: true, locale: dateLocale }) })}
                         {status === "PENDING" && ` · ${t("expiresIn", { time: formatDistanceToNow(new Date(inv.expiresAt), { locale: dateLocale }) })}`}
+                        {inv.lastRemindedAt && ` · ${t("remindedAt", { time: formatDistanceToNow(new Date(inv.lastRemindedAt), { addSuffix: true, locale: dateLocale }) })}`}
                       </span>
                     </span>
                     <TintedChip label={t(status === "PENDING" ? "statusPending" : "statusExpired")} color={status === "PENDING" ? "var(--m-carbs)" : "var(--text-2)"} />
                     {status === "PENDING" ? (
-                      <Button variant="secondary" onClick={() => setRevoking(inv)}>{t("revoke")}</Button>
+                      <>
+                        <Button
+                          variant="tonal"
+                          data-testid="invite-remind"
+                          onClick={() => remindMutation.mutate(inv.id)}
+                          disabled={!canRemind(inv, now) || remindMutation.isPending}
+                          title={canRemind(inv, now) ? undefined : t("remindWait", { time: formatDistanceToNow(new Date(nextReminderAt(inv)), { locale: dateLocale }) })}
+                        >
+                          {t("remind")}
+                        </Button>
+                        <Button variant="secondary" onClick={() => setRevoking(inv)}>{t("revoke")}</Button>
+                      </>
                     ) : (
                       <Button variant="secondary" onClick={() => send(inv.clientEmail)} disabled={inviteMutation.isPending}>{t("resend")}</Button>
                     )}

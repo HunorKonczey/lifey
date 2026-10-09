@@ -25,7 +25,8 @@ public final class TrainerClientMapper {
     }
 
     public static TrainerInviteResponse toInviteResponse(TrainerClient tc) {
-        return new TrainerInviteResponse(tc.getId(), tc.getClient().getEmail(), tc.getCreatedAt(), tc.getExpiresAt());
+        return new TrainerInviteResponse(tc.getId(), tc.getClient().getEmail(), tc.getCreatedAt(), tc.getExpiresAt(),
+                tc.getLastRemindedAt());
     }
 
     public static TrainerInviteHistoryResponse toInviteHistoryResponse(TrainerClient tc, Instant now) {

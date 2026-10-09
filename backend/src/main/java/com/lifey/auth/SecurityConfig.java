@@ -50,6 +50,9 @@ public class SecurityConfig {
             // TrainerInviteEmailController) — protected by an opaque, single-use,
             // per-invite token instead of a session.
             "/api/v1/trainer-invites/email/**",
+            // The landing page of a trainer's shareable join link (LIF-103): who is inviting, before anyone signs in.
+            // One path segment only, so taking the link ("/{token}/accept") still needs an account.
+            "/api/v1/trainer-invite-links/*",
             // The marketing site's contact form (docs/landing_page/65 Prompt 8) — an
             // anonymous visitor, no account to authenticate as.
             "/api/v1/contact",

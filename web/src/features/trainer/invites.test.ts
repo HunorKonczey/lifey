@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inviteStatus, inviteUrgent, canResend, historyRows, outcomeAt } from "./invites";
+import { inviteStatus, inviteUrgent, canResend, historyRows, outcomeAt, canRemind, joinUrl, nextReminderAt } from "./invites";
 import type { TrainerInviteHistoryResponse } from "./types";
 
 const now = Date.parse("2026-10-01T12:00:00Z");
@@ -52,5 +52,38 @@ describe("invite history helpers", () => {
   it("falls back to the send time rather than crash when a stamp is missing", () => {
     expect(outcomeAt(row({ outcome: "ACCEPTED", respondedAt: null }))).toBe("2026-10-01T10:00:00Z");
     expect(outcomeAt(row({ outcome: "CANCELLED", respondedAt: null, endedAt: null }))).toBe("2026-10-01T10:00:00Z");
+  });
+});
+
+describe("reminders (LIF-103)", () => {
+  const hour = 60 * 60 * 1000;
+  const created = new Date("2026-06-01T08:00:00Z").getTime();
+  const invite = (extra: { lastRemindedAt?: string | null } = {}) => ({
+    createdAt: new Date(created).toISOString(),
+    expiresAt: new Date(created + 24 * hour).toISOString(),
+    ...extra,
+  });
+
+  it("cannot be sent in the first hours after the invite", () => {
+    expect(canRemind(invite(), created + hour)).toBe(false);
+    expect(canRemind(invite(), created + 4 * hour - 1)).toBe(false);
+  });
+
+  it("can be sent once the cooldown has passed, and counts it from the last reminder", () => {
+    expect(canRemind(invite(), created + 4 * hour)).toBe(true);
+    const reminded = invite({ lastRemindedAt: new Date(created + 5 * hour).toISOString() });
+    expect(nextReminderAt(reminded)).toBe(created + 9 * hour);
+    expect(canRemind(reminded, created + 6 * hour)).toBe(false);
+    expect(canRemind(reminded, created + 9 * hour)).toBe(true);
+  });
+
+  it("is not offered for an invite that has run out", () => {
+    expect(canRemind(invite(), created + 25 * hour)).toBe(false);
+  });
+});
+
+describe("joinUrl", () => {
+  it("is this site's own join page for the token", () => {
+    expect(joinUrl("https://app.lifey.test", "abc-DEF_123")).toBe("https://app.lifey.test/join/abc-DEF_123");
   });
 });

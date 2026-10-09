@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, PasswordField, TextField } from "@/components/ds";
@@ -11,6 +11,7 @@ import { loginSchema, type LoginFormValues } from "@/features/auth/schemas";
 import { authApi } from "@/features/auth/api";
 import { useSessionStore } from "@/features/auth/store";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
+import { safeNextPath, withNext } from "@/features/auth/nextPath";
 import { FormErrorBox } from "@/features/auth/components/FormErrorBox";
 import { ApiError } from "@/lib/api/client";
 import { useValidationMessage } from "@/lib/i18n/useValidationMessage";
@@ -21,9 +22,19 @@ import { useValidationMessage } from "@/lib/i18n/useValidationMessage";
  * észrevenni") — announced to screen readers as an alert.
  */
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const t = useTranslations("auth");
   const vm = useValidationMessage();
   const router = useRouter();
+  // Where the visitor was headed (a join link, say); only a path of this site is followed.
+  const next = safeNextPath(useSearchParams().get("next"));
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -38,7 +49,7 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(data);
       applyAccessToken(res.accessToken, res.refreshToken);
-      router.push("/dashboard");
+      router.push(next ?? "/dashboard");
     } catch (err) {
       // 401 is always bad credentials; the backend's English text must not reach a Hungarian UI.
       setFormError(err instanceof ApiError ? (err.status === 401 ? t("invalidCredentialsLong") : err.message) : t("unexpectedError"));
@@ -54,7 +65,7 @@ export default function LoginPage() {
         <p style={{ fontSize: 16, lineHeight: 1.5, color: "var(--text-2)" }}>{t("loginTagline")}</p>
       </div>
 
-      <GoogleSignInButton />
+      <GoogleSignInButton redirectTo={next ?? undefined} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[22px] flex-1" noValidate>
         <TextField
@@ -97,7 +108,7 @@ export default function LoginPage() {
 
       <p className="text-center type-body" style={{ color: "var(--text-2)" }}>
         {t("noAccountShort")}{" "}
-        <Link href="/register" style={{ color: "var(--primary)", fontWeight: 700 }}>
+        <Link href={withNext("/register", next)} style={{ color: "var(--primary)", fontWeight: 700 }}>
           {t("signUp")}
         </Link>
       </p>
