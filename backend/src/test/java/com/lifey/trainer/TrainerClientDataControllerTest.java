@@ -22,6 +22,7 @@ import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.trainer.dto.ClientStepGoalRequest;
 import com.lifey.trainer.dto.ClientStepGoalResponse;
 import com.lifey.trainer.service.ClientNutritionGoalsService;
+import com.lifey.trainer.service.MealCommentService;
 import com.lifey.trainer.service.ClientStepGoalService;
 import com.lifey.trainer.service.SessionCommentService;
 import com.lifey.trainer.service.TrainerAccessService;
@@ -92,6 +93,9 @@ class TrainerClientDataControllerTest {
 
     @MockitoBean
     ClientNutritionGoalsService clientNutritionGoalsService;
+
+    @MockitoBean
+    MealCommentService mealCommentService;
 
     @MockitoBean
     ClientStepGoalService clientStepGoalService;
@@ -349,12 +353,63 @@ class TrainerClientDataControllerTest {
     @Test
     void meals_returnsClientsLoggedMeals() throws Exception {
         MealResponse meal = new MealResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
-                MealType.BREAKFAST, "Breakfast", List.of(), Instant.now(), null);
+                MealType.BREAKFAST, "Breakfast", List.of(), Instant.now(), null, null, null);
         when(mealService.findAllForUserBetween(eq(CLIENT_ID), any(), any())).thenReturn(List.of(meal));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/meals", CLIENT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].mealType").value("BREAKFAST"));
+    }
+
+    @Test
+    void putMealComment_writesAndReturnsTheMealWithItsComment() throws Exception {
+        MealResponse commented = new MealResponse(7L, Instant.parse("2026-06-01T08:00:00Z"),
+                MealType.LUNCH, null, List.of(), Instant.now(), null, "More protein here", Instant.parse("2026-06-01T10:00:00Z"));
+        when(mealCommentService.upsertComment(TRAINER_ID, CLIENT_ID, 7L, "More protein here")).thenReturn(commented);
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/meals/{mealId}/comment", CLIENT_ID, 7L)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"More protein here\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trainerComment").value("More protein here"))
+                .andExpect(jsonPath("$.trainerCommentAt").exists());
+    }
+
+    @Test
+    void putMealComment_blankOrOverlongCommentReturns400() throws Exception {
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/meals/{mealId}/comment", CLIENT_ID, 7L)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"   \"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/meals/{mealId}/comment", CLIENT_ID, 7L)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"" + "x".repeat(2001) + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void putMealComment_unknownMealReturns404_andNotYourClientReturns403() throws Exception {
+        when(mealCommentService.upsertComment(eq(TRAINER_ID), eq(CLIENT_ID), eq(99L), any()))
+                .thenThrow(new com.lifey.common.exception.ResourceNotFoundException("Meal not found: 99"));
+        when(mealCommentService.upsertComment(eq(TRAINER_ID), eq(CLIENT_ID), eq(8L), any()))
+                .thenThrow(new NotYourClientException("nope"));
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/meals/{mealId}/comment", CLIENT_ID, 99L)
+                        .contentType(APPLICATION_JSON).content("{\"comment\":\"hi\"}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/meals/{mealId}/comment", CLIENT_ID, 8L)
+                        .contentType(APPLICATION_JSON).content("{\"comment\":\"hi\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteMealComment_returnsTheMealWithoutIt() throws Exception {
+        when(mealCommentService.deleteComment(TRAINER_ID, CLIENT_ID, 7L)).thenReturn(new MealResponse(7L,
+                Instant.parse("2026-06-01T08:00:00Z"), MealType.LUNCH, null, List.of(), Instant.now(), null, null, null));
+
+        mockMvc.perform(delete("/api/v1/trainer/clients/{clientId}/meals/{mealId}/comment", CLIENT_ID, 7L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trainerComment").doesNotExist());
     }
 
     @Test

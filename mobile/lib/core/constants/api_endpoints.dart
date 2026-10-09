@@ -50,6 +50,8 @@ class ApiEndpoints {
 
   /// The trainer's one editable comment on a client's session — PUT upserts
   /// it, DELETE clears it (docs/31-session-feedback-loop-plan.md B2).
+  static String trainerClientMealComment(int clientId, int mealId) =>
+      '/trainer/clients/$clientId/meals/$mealId/comment';
   static String trainerClientSessionComment(int clientId, int sessionId) =>
       '/trainer/clients/$clientId/workout-sessions/$sessionId/comment';
 

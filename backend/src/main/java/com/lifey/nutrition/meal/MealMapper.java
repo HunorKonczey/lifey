@@ -40,7 +40,9 @@ public final class MealMapper {
                 meal.getName(),
                 entries,
                 meal.getUpdatedAt(),
-                meal.getDeletedAt()
+                meal.getDeletedAt(),
+                meal.getTrainerComment(),
+                meal.getTrainerCommentAt()
         );
     }
 }

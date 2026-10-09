@@ -1281,6 +1281,8 @@
   "trainerDailyGoalsTitle": "Napi célok",
   "trainerMealLogTitle": "Amit evett",
   "trainerSetGoalsAction": "Beállítás",
+  "trainerMealCommentSheetSubtitle": "A kliensed magán az étkezésen látja ezt.",
+  "trainerMealCommentHint": "Mit változtatnál ezen az étkezésen?",
   "trainerEditGoalsAction": "Szerkesztés",
   "trainerNutritionGoalsTitle": "Napi célok",
   "trainerNutritionGoalsSubtitle": "A kliensed a saját céljaként látja majd ezeket.",

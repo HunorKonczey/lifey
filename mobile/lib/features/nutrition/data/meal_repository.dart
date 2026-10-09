@@ -378,6 +378,8 @@ class MealRepository {
       mealType: MealType.fromApi(row.mealType),
       name: row.name,
       entries: entries,
+      trainerComment: row.trainerComment,
+      trainerCommentAt: row.trainerCommentAt,
     );
   }
 }

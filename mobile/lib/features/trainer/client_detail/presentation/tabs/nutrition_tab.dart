@@ -12,8 +12,10 @@ import '../../../../../shared/widgets/ds/section_label.dart';
 import '../../../../nutrition/domain/meal.dart' show MealType;
 import '../../../../nutrition/presentation/widgets/meal_type_style.dart';
 import '../../application/client_detail_providers.dart';
+import '../../application/client_sessions_controller.dart' show CommentSaveOutcome;
 import '../../domain/client_data.dart';
 import '../widgets/client_tab_body.dart';
+import '../widgets/meal_comment_sheet.dart';
 import '../widgets/nutrition_goals_sheet.dart';
 import '../widgets/read_only_badge.dart';
 import '../../../../../core/utils/date_math.dart';
@@ -42,6 +44,23 @@ class _ClientNutritionTabState extends ConsumerState<ClientNutritionTab> {
   DateTime _day = dayKey(DateTime.now());
 
   bool get _isToday => _day == dayKey(DateTime.now());
+
+  /// Opens the comment editor for one meal; once the server has answered, re-reads the day so the card shows what was
+  /// stored and says what happened (the client is told only about a new comment).
+  Future<void> _commentOn(ClientMeal meal) async {
+    final outcome = await MealCommentSheet.show(context, clientId: widget.clientId, meal: meal);
+    if (outcome == null || !mounted) return;
+    ref.invalidate(clientMealsProvider((clientId: widget.clientId, day: _day)));
+    final l10n = AppLocalizations.of(context)!;
+    AppSnackbar.showSuccess(
+      context,
+      title: switch (outcome) {
+        CommentSaveOutcome.created => l10n.trainerCommentSavedNotifiedMessage,
+        CommentSaveOutcome.updated => l10n.trainerCommentSavedMessage,
+        CommentSaveOutcome.removed => l10n.trainerCommentDeletedMessage,
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +117,7 @@ class _ClientNutritionTabState extends ConsumerState<ClientNutritionTab> {
               _MealGroup(
                 type: type,
                 meals: dayMeals.where((meal) => meal.mealType == type).toList(),
+                onComment: _commentOn,
               ),
               const SizedBox(height: 14),
             ],
@@ -360,10 +380,11 @@ class _GoalRow extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _MealGroup extends StatelessWidget {
-  const _MealGroup({required this.type, required this.meals});
+  const _MealGroup({required this.type, required this.meals, required this.onComment});
 
   final MealType type;
   final List<ClientMeal> meals;
+  final ValueChanged<ClientMeal> onComment;
 
   @override
   Widget build(BuildContext context) {
@@ -402,16 +423,17 @@ class _MealGroup extends StatelessWidget {
             ),
           )
         else
-          for (final meal in meals) _MealCard(meal: meal),
+          for (final meal in meals) _MealCard(meal: meal, onComment: () => onComment(meal)),
       ],
     );
   }
 }
 
 class _MealCard extends StatelessWidget {
-  const _MealCard({required this.meal});
+  const _MealCard({required this.meal, required this.onComment});
 
   final ClientMeal meal;
+  final VoidCallback onComment;
 
   @override
   Widget build(BuildContext context) {
@@ -457,6 +479,32 @@ class _MealCard extends StatelessWidget {
                   ],
                 ),
               ),
+            if (meal.hasTrainerComment) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.chat_bubble_outline_rounded, size: 16, color: p.role),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      meal.trainerComment!.trim(),
+                      key: const ValueKey('meal-trainer-comment'),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: const ValueKey('meal-comment-action'),
+                onPressed: onComment,
+                icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                label: Text(meal.hasTrainerComment ? l10n.trainerEditCommentTitle : l10n.trainerAddCommentTitle),
+              ),
+            ),
           ],
         ),
       ),

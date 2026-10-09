@@ -17,11 +17,12 @@ MealEntry _entry(String name, double kcal, {double p = 0, double c = 0, double f
       fat: f,
     );
 
-Meal _meal({String? name, MealType type = MealType.breakfast, List<MealEntry>? entries}) => Meal(
+Meal _meal({String? name, MealType type = MealType.breakfast, List<MealEntry>? entries, String? trainerComment}) => Meal(
       clientId: 'm1',
       dateTime: DateTime(2026, 9, 24, 7, 15),
       mealType: type,
       name: name,
+      trainerComment: trainerComment,
       entries: entries ??
           [
             _entry('Rolled oats', 227, p: 8, c: 40, f: 4),
@@ -64,6 +65,36 @@ Future<void> _pump(
 }
 
 void main() {
+  testWidgets('a meal the trainer commented on shows the comment under its foods (LIF-144)', (tester) async {
+    await _pump(tester, _meal(name: 'Oats & berries', trainerComment: 'Add a spoon of nut butter'));
+
+    expect(find.text('Add a spoon of nut butter'), findsOneWidget);
+    expect(find.text('Rolled oats, Greek yogurt 2%, Blueberries'), findsOneWidget);
+  });
+
+  testWidgets('a meal without a comment, or with a blank one, shows no comment line', (tester) async {
+    await _pump(tester, _meal(name: 'Oats & berries'));
+    expect(find.byKey(const ValueKey('trainer-comment-line')), findsNothing);
+
+    await _pump(tester, _meal(name: 'Oats & berries', trainerComment: '   '));
+    expect(find.byKey(const ValueKey('trainer-comment-line')), findsNothing);
+  });
+
+  testWidgets('a long comment stops at two lines at 130 % in Hungarian on a 360 dp phone', (tester) async {
+    await _pump(
+      tester,
+      _meal(name: 'Zabkása', trainerComment: 'Nagyon jó választás reggelire, de legközelebb tegyél mellé egy kis fehérjét is, mert így hamar éhes leszel. ' * 3),
+      locale: const Locale('hu'),
+      textScale: 1.3,
+      width: 360,
+    );
+
+    expect(find.byKey(const ValueKey('trainer-comment-line')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    final text = tester.widget<Text>(find.byKey(const ValueKey('trainer-comment-line')));
+    expect(text.maxLines, 2);
+  });
+
   testWidgets('a named meal: name, "Breakfast · 07:15", kcal, P / C / F, foods', (tester) async {
     await _pump(tester, _meal(name: 'Oats & berries'));
 

@@ -5201,6 +5201,14 @@
   "@trainerCommentHint": {
     "description": "Placeholder in the comment editor's text field"
   },
+  "trainerMealCommentSheetSubtitle": "Your client sees this on the meal itself.",
+  "@trainerMealCommentSheetSubtitle": {
+    "description": "Subtitle of the sheet where a trainer comments on a client's meal"
+  },
+  "trainerMealCommentHint": "What would you change about this meal?",
+  "@trainerMealCommentHint": {
+    "description": "Hint in the trainer's meal comment field"
+  },
   "trainerCommentSavedNotifiedMessage": "Comment saved — your client was notified.",
   "@trainerCommentSavedNotifiedMessage": {
     "description": "Confirmation after writing a comment where there was none. The push is real (docs/31 B3), and the trainer should know another person's phone just rang"

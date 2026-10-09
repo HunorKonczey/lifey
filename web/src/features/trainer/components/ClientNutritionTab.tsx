@@ -14,6 +14,7 @@ import { useDateStore } from "@/lib/hooks/useDateStore";
 import { useFormat } from "@/lib/format/useFormat";
 import { trainerGoalsChip, type TrainerGoalsChip } from "@/features/settings/goalsSource";
 import { trainerApi } from "../api";
+import { MealCommentEditor } from "./MealCommentEditor";
 import { NutritionGoalsDrawer } from "./NutritionGoalsDrawer";
 
 /** The message each attribution chip uses (admin.clientDetail). */
@@ -101,7 +102,9 @@ export function ClientNutritionTab({ clientId }: ClientNutritionTabProps) {
                 )}
               </div>
               {groupMeals.length > 0 ? (
-                groupMeals.map((meal) => <MealCard key={meal.id} meal={meal} />)
+                groupMeals.map((meal) => (
+                  <MealCard key={meal.id} meal={meal} commentSlot={<MealCommentEditor clientId={clientId} meal={meal} date={dateStr} />} />
+                ))
               ) : (
                 <div className="py-3 text-center type-body-s" style={{ borderRadius: "var(--r-card)", boxShadow: "inset 0 0 0 1px var(--hairline)", color: "var(--text-3)" }}>
                   {t("noLoggedMeal")}

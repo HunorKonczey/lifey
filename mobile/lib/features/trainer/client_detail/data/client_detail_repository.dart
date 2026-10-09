@@ -166,6 +166,23 @@ class ClientDetailRepository {
     return ClientWorkoutSession.fromJson(response.data ?? const {});
   }
 
+  /// Writes the trainer's comment on one of the client's meals (LIF-144) and returns the meal as the server stored it.
+  /// No optimistic UI, like the session comment.
+  Future<ClientMeal> putMealComment(int clientId, int mealId, String comment) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      ApiEndpoints.trainerClientMealComment(clientId, mealId),
+      data: {'comment': comment},
+    );
+    return ClientMeal.fromJson(response.data ?? const {});
+  }
+
+  Future<ClientMeal> deleteMealComment(int clientId, int mealId) async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      ApiEndpoints.trainerClientMealComment(clientId, mealId),
+    );
+    return ClientMeal.fromJson(response.data ?? const {});
+  }
+
   Map<String, String> _dateRange(DateTime? from, DateTime? to) => {
         if (from != null) 'from': formatDate(from),
         if (to != null) 'to': formatDate(to),
