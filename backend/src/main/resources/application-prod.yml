@@ -12,5 +12,10 @@ springdoc:
 lifey:
   mail:
     enabled: true
+  backfill:
+    food-fiber-sugar:
+      # The first deploy after LIF-145 fills fibre and sugar of the foods saved before it, from OpenFoodFacts, once
+      # (FOOD_FIBER_SUGAR_BACKFILL_ENABLED=false switches it off without a deploy of code).
+      enabled: ${FOOD_FIBER_SUGAR_BACKFILL_ENABLED:true}
   starter-catalog:
     enabled: false
