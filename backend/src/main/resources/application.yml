@@ -123,6 +123,19 @@ lifey:
       # Google's published JWKS endpoint — override only for pointing at a
       # local mock JWKS server in a non-prod environment.
       jwks-uri: ${OAUTH_GOOGLE_JWKS_URI:https://www.googleapis.com/oauth2/v3/certs}
+  backfill:
+    # One-time jobs that must run once per database (LIF-149, table one_time_jobs). Off here, so tests and a developer's
+    # machine never call out on their own; application-prod.yml turns it on.
+    food-fiber-sugar:
+      enabled: ${FOOD_FIBER_SUGAR_BACKFILL_ENABLED:false}
+      batch-size: 100
+      # OpenFoodFacts allows about 100 product reads a minute; 700 ms between calls is about 85.
+      delay: 700ms
+      attempts: 3
+      max-consecutive-failures: 5
+      lease: 10m
+      initial-delay: PT1M
+      retry-every: PT15M
   openfoodfacts:
     base-url: ${OPENFOODFACTS_BASE_URL:https://world.openfoodfacts.org}
     # OpenFoodFacts requires a descriptive User-Agent identifying the app and a

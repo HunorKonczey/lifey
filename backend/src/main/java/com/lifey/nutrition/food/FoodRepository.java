@@ -47,6 +47,14 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
     Optional<Food> findByIdAndUserId(Long id, Long userId);
 
     /**
+     * The next foods for the one-time fibre/sugar backfill (LIF-149): live, with a barcode, missing either figure, in id order
+     * after {@code afterId}. Not user-scoped on purpose - it is a maintenance sweep over every user's foods.
+     */
+    @Query("SELECT f FROM Food f WHERE f.id > :afterId AND f.deletedAt IS NULL AND f.barcode IS NOT NULL AND f.barcode <> '' "
+            + "AND (f.fiberPer100g IS NULL OR f.sugarPer100g IS NULL) ORDER BY f.id ASC")
+    List<Food> findBackfillBatch(@Param("afterId") long afterId, Pageable pageable);
+
+    /**
      * The user's live food with this barcode. Not a plain {@code findByUserIdAndBarcode}: a deleted
      * food keeps its barcode, and since V82 a live food may share it, so without the filter this
      * could match two rows (or answer with the deleted one).
