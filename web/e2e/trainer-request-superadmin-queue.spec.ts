@@ -100,7 +100,7 @@ test.describe("Superadmin trainer-request queue", () => {
       const applicant = await registerAndLogin(request, applicantEmail, applicantPassword);
       const createRes = await request.post(`${API_BASE}/trainer-requests`, {
         headers: { Authorization: `Bearer ${applicant.accessToken}` },
-        data: { motivation: "Queue approve test", clientCount: 5 },
+        data: { motivation: "Queue approve test", qualifications: "NASM-CPT, 6 years", clientCount: 5 },
       });
       expect(createRes.ok(), await createRes.text()).toBeTruthy();
       return applicant;
@@ -120,6 +120,7 @@ test.describe("Superadmin trainer-request queue", () => {
     await test.step("the request appears in the queue and can be approved", async () => {
       const row = await openRequestRow(page, applicantEmail);
       await expect(row).toBeVisible();
+      await expect(row.getByTestId("request-qualifications")).toHaveText("NASM-CPT, 6 years");
 
       await row.getByRole("button", { name: "Approve" }).click();
       await page.getByTestId("trainer-request-confirm-decision").click();
@@ -168,6 +169,8 @@ test.describe("Superadmin trainer-request queue", () => {
 
       const row = await openRequestRow(page, applicantEmail);
       await expect(row).toBeVisible();
+      // No qualifications were given: the card says so rather than leaving a blank.
+      await expect(row.getByTestId("request-qualifications")).toHaveText("not given");
       await row.getByRole("button", { name: "Reject" }).click();
       await page.getByTestId("trainer-request-confirm-decision").click();
       await expect(page.getByText("Request rejected")).toBeVisible();

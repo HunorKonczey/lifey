@@ -35,7 +35,7 @@ public interface MailService {
      * the requester's own address as reply-to. Always sent in English (an internal-facing
      * notification, not user-facing copy), unlike every other method here.
      */
-    void sendTrainerRequestNotification(User requester, String motivation, Integer clientCount);
+    void sendTrainerRequestNotification(User requester, String motivation, String qualifications, Integer clientCount);
 
     /** The "you're in" email sent when a pending trainer request is approved (66 §2). */
     void sendTrainerRequestApproved(User user);

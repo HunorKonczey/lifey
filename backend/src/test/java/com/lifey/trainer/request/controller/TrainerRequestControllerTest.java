@@ -46,14 +46,15 @@ class TrainerRequestControllerTest {
     @Test
     void submit_returns201WithTheCreatedRequest() throws Exception {
         TrainerRequestResponse response = new TrainerRequestResponse(5L, TrainerRequestStatus.PENDING,
-                "10 clients on spreadsheets", 10, Instant.parse("2026-08-28T09:00:00Z"), null);
+                "10 clients on spreadsheets", "NASM-CPT", 10, Instant.parse("2026-08-28T09:00:00Z"), null);
         when(trainerRequestService.submit(eq(USER_ID), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/trainer-requests")
                         .contentType("application/json")
-                        .content("{\"motivation\":\"10 clients on spreadsheets\",\"clientCount\":10,\"signupSource\":\"landing-hero\"}"))
+                        .content("{\"motivation\":\"10 clients on spreadsheets\",\"qualifications\":\"NASM-CPT\",\"clientCount\":10,\"signupSource\":\"landing-hero\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(5))
+                .andExpect(jsonPath("$.qualifications").value("NASM-CPT"))
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
@@ -77,9 +78,17 @@ class TrainerRequestControllerTest {
     }
 
     @Test
+    void submit_qualificationsOverTheLimit_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/trainer-requests")
+                        .contentType("application/json")
+                        .content("{\"qualifications\":\"" + "x".repeat(501) + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void findMine_returnsTheUsersMostRecentRequest() throws Exception {
         TrainerRequestResponse response = new TrainerRequestResponse(5L, TrainerRequestStatus.APPROVED,
-                null, null, Instant.parse("2026-08-28T09:00:00Z"), Instant.parse("2026-08-28T10:00:00Z"));
+                null, null, null, Instant.parse("2026-08-28T09:00:00Z"), Instant.parse("2026-08-28T10:00:00Z"));
         when(trainerRequestService.findMine(USER_ID)).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/trainer-requests/me"))

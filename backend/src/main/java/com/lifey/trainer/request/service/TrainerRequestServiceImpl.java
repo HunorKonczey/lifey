@@ -61,12 +61,14 @@ public class TrainerRequestServiceImpl implements TrainerRequestService {
         trainerRequest.setUser(user);
         trainerRequest.setStatus(TrainerRequestStatus.PENDING);
         trainerRequest.setMotivation(request.motivation());
+        trainerRequest.setQualifications(blankToNull(request.qualifications()));
         trainerRequest.setClientCount(request.clientCount());
         trainerRequest.setSignupSource(request.signupSource());
         trainerRequest.setCreatedAt(clock.instant());
         trainerRequestRepository.save(trainerRequest);
 
-        mailService.sendTrainerRequestNotification(user, request.motivation(), request.clientCount());
+        mailService.sendTrainerRequestNotification(user, request.motivation(), trainerRequest.getQualifications(),
+                request.clientCount());
 
         return toResponse(trainerRequest);
     }
@@ -110,14 +112,18 @@ public class TrainerRequestServiceImpl implements TrainerRequestService {
         return trainerRequest;
     }
 
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     private static TrainerRequestResponse toResponse(TrainerRequest r) {
-        return new TrainerRequestResponse(r.getId(), r.getStatus(), r.getMotivation(), r.getClientCount(),
-                r.getCreatedAt(), r.getDecidedAt());
+        return new TrainerRequestResponse(r.getId(), r.getStatus(), r.getMotivation(), r.getQualifications(),
+                r.getClientCount(), r.getCreatedAt(), r.getDecidedAt());
     }
 
     private static SuperAdminTrainerRequestResponse toSuperAdminResponse(TrainerRequest r) {
         return new SuperAdminTrainerRequestResponse(r.getId(), r.getUser().getId(), r.getUser().getEmail(),
-                r.getStatus(), r.getMotivation(), r.getClientCount(), r.getSignupSource(),
+                r.getStatus(), r.getMotivation(), r.getQualifications(), r.getClientCount(), r.getSignupSource(),
                 r.getCreatedAt(), r.getDecidedAt(), r.getUser().getCreatedAt());
     }
 }

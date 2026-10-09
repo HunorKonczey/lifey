@@ -97,6 +97,8 @@ export default function SuperAdminTrainerRequestsPage() {
               )}
 
               <dl className="type-body-s grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5">
+                <dt style={{ color: "var(--text-3)" }}>{t("qualifications")}</dt>
+                <dd data-testid="request-qualifications" style={{ fontWeight: 700 }}>{req.qualifications ?? t("notGiven")}</dd>
                 <dt style={{ color: "var(--text-3)" }}>{t("expectedClients")}</dt>
                 <dd style={{ fontWeight: 700 }}>{req.clientCount != null ? req.clientCount : t("notGiven")}</dd>
                 <dt style={{ color: "var(--text-3)" }}>{t("accountLabel")}</dt>

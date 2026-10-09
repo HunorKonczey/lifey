@@ -31,6 +31,7 @@ export default function AdminPendingPage() {
   const queryClient = useQueryClient();
   const refreshUser = useSessionStore((s) => s.refreshUser);
   const [motivation, setMotivation] = useState("");
+  const [qualifications, setQualifications] = useState("");
   const [clientCount, setClientCount] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   // A ref, not state: this only guards against re-triggering the async
@@ -51,6 +52,7 @@ export default function AdminPendingPage() {
     mutationFn: () =>
       trainerRequestApi.create({
         motivation: motivation.trim() || undefined,
+        qualifications: qualifications.trim() || undefined,
         clientCount: clientCount ? Number(clientCount) : undefined,
         signupSource: currentSignupSource(),
       }),
@@ -108,12 +110,17 @@ export default function AdminPendingPage() {
           <RequestForm
             t={t}
             motivation={motivation}
+            qualifications={qualifications}
             clientCount={clientCount}
             error={formError}
             submitting={submitMutation.isPending}
             wasRejected={request?.status === "REJECTED"}
             onMotivationChange={(v) => {
               setMotivation(v);
+              setFormError(null);
+            }}
+            onQualificationsChange={(v) => {
+              setQualifications(v);
               setFormError(null);
             }}
             onClientCountChange={(v) => {
@@ -146,21 +153,25 @@ function WaitingState({ redirecting, t }: { redirecting: boolean; t: ReturnType<
 function RequestForm({
   t,
   motivation,
+  qualifications,
   clientCount,
   error,
   submitting,
   wasRejected,
   onMotivationChange,
+  onQualificationsChange,
   onClientCountChange,
   onSubmit,
 }: {
   t: ReturnType<typeof useTranslations>;
   motivation: string;
+  qualifications: string;
   clientCount: string;
   error: string | null;
   submitting: boolean;
   wasRejected: boolean;
   onMotivationChange: (v: string) => void;
+  onQualificationsChange: (v: string) => void;
   onClientCountChange: (v: string) => void;
   onSubmit: () => void;
 }) {
@@ -190,6 +201,14 @@ function RequestForm({
           onChange={(e) => onMotivationChange(e.target.value)}
           placeholder={t("motivationPlaceholder")}
           rows={4}
+        />
+        <TextArea
+          label={t("qualificationsLabel")}
+          value={qualifications}
+          onChange={(e) => onQualificationsChange(e.target.value)}
+          placeholder={t("qualificationsPlaceholder")}
+          rows={2}
+          maxLength={500}
         />
         <TextField
           label={t("clientCountLabel")}

@@ -6,4 +6,7 @@ Várható ügyfélszám: {{clientCount}}
 Indoklás:
 {{motivation}}
 
+Végzettség:
+{{qualifications}}
+
 Bíráld el a superadmin edzői kérelmek várólistáján.
