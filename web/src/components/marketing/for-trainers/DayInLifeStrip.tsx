@@ -18,7 +18,7 @@ export async function DayInLifeStrip() {
   }));
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--nested)" }}>
+    <section className="py-16 md:py-24" style={{ background: "var(--mkt-section-alt)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <h2 className="text-[28px] md:text-[44px] font-bold tracking-[-0.02em] max-w-[20ch]">{t("title")}</h2>
         <div className="grid md:grid-cols-4 gap-5 md:gap-5 mt-8 md:mt-11 relative">

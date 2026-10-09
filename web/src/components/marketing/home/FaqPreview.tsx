@@ -15,7 +15,7 @@ export async function FaqPreview() {
   }));
 
   return (
-    <section className="py-16 md:py-20" style={{ background: "var(--nested)" }}>
+    <section className="py-16 md:py-20" style={{ background: "var(--mkt-section-alt)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <h2 className="text-[28px] md:text-[44px] font-bold tracking-[-0.02em]">{t("title")}</h2>
         <div className="flex flex-col gap-3 mt-7 md:mt-9 max-w-[820px]">

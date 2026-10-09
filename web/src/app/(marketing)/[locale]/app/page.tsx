@@ -68,7 +68,7 @@ export default async function AppPage({
       <AppFeatureGrid />
       <AppScreenshotRow />
 
-      <section className="py-16 md:py-20 text-center" style={{ background: "var(--nested)" }}>
+      <section className="py-16 md:py-20 text-center" style={{ background: "var(--mkt-section-alt)" }}>
         <div className="max-w-[600px] mx-auto px-4">
           <h2 className="text-[26px] md:text-[36px] font-bold tracking-[-0.02em]">{t("title")}</h2>
           <p className="text-base md:text-lg mt-3" style={{ color: "var(--text-2)" }}>

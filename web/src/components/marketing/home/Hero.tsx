@@ -171,7 +171,7 @@ export async function Hero() {
 
             <div
               className="absolute -left-7.5 -bottom-10 w-[170px] rounded-3xl overflow-hidden border-[6px]"
-              style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
+              style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "var(--mkt-shadow-lift)" }}
             >
               <div className="h-4.5 flex items-center justify-center" style={{ background: "var(--nested)" }}>
                 <div className="w-11 h-1.5 rounded-pill" style={{ background: "var(--outline)" }} />
@@ -201,7 +201,7 @@ export async function Hero() {
           <div className="md:hidden flex justify-center mt-2">
             <div
               className="w-[220px] rounded-3xl overflow-hidden border-[6px]"
-              style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
+              style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "var(--mkt-shadow-lift)" }}
             >
               <div className="h-5 flex items-center justify-center" style={{ background: "var(--nested)" }}>
                 <div className="w-12 h-1.5 rounded-pill" style={{ background: "var(--outline)" }} />

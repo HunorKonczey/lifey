@@ -66,7 +66,7 @@ export async function AppHero() {
         <div className="md:col-span-5 flex justify-center">
           <div
             className="w-[230px] rounded-3xl overflow-hidden border-[6px]"
-            style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "0 20px 44px rgba(0,0,0,.35)" }}
+            style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "var(--mkt-shadow-lift)" }}
           >
             <div className="h-5 flex items-center justify-center" style={{ background: "var(--nested)" }}>
               <div className="w-12 h-1.5 rounded-pill" style={{ background: "var(--outline)" }} />

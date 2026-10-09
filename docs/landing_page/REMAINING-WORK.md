@@ -89,7 +89,7 @@ LCP 30 s) — the reason CI takes the median of three.
 
 | Item | What | Size |
 |---|---|---|
-| `72` D5 | `68` §2.2–2.3's marketing type scale and `--mkt-*` tokens exist in neither `globals.css` nor `docs/web/06-design-system-web.md` — the shipped pages use Tailwind arbitrary values plus the app's tokens. Either land the tokens or record the deviation | small |
+| `72` D5 | ✅ done (2026-10-09, LIF-118): `--mkt-section-alt` and `--mkt-shadow-lift` landed in `globals.css` and are used by the bands and screenshot frames; the hairline is `--outline`, the hero glow was never built, and the type scale stays Tailwind arbitrary values - all recorded in `68` §2.3 "As shipped" | done |
 
 ---
 

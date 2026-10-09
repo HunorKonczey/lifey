@@ -17,7 +17,7 @@ export async function FeatureGrid() {
   ];
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--nested)" }}>
+    <section className="py-16 md:py-24" style={{ background: "var(--mkt-section-alt)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
         <h2 className="hidden md:block text-[44px] font-bold tracking-[-0.02em]">{t("title")}</h2>
         <p className="hidden md:block text-xl mt-3.5 max-w-[62ch]" style={{ color: "var(--text-2)" }}>

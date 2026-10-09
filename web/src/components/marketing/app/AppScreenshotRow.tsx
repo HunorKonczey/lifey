@@ -5,7 +5,7 @@ function PhoneFrame({ children, label }: { children: React.ReactNode; label: str
     <div className="shrink-0 snap-center" style={{ scrollSnapAlign: "center" }}>
       <div
         className="w-[190px] h-[380px] rounded-3xl overflow-hidden border-[6px] flex flex-col"
-        style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "0 20px 44px rgba(0,0,0,.3)" }}
+        style={{ background: "var(--bg)", borderColor: "var(--control)", boxShadow: "var(--mkt-shadow-lift)" }}
       >
         <div className="h-5 flex items-center justify-center shrink-0" style={{ background: "var(--nested)" }}>
           <div className="w-11 h-1.5 rounded-pill" style={{ background: "var(--outline)" }} />

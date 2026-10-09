@@ -120,6 +120,13 @@ A dashboard/statisztika kártyák és grafikonok ezeket használják (sötét / 
 - **Minden szám/metrika `font-variant-numeric: tabular-nums`** (kártyában, táblázatban igazodjon).
 - Font betöltés: `Plus Jakarta Sans` (400–800) + `Material Symbols Rounded` (variable), `swap`.
 
+### Marketing oldalak (LIF-118)
+
+A marketing fa két saját tokent használ a fenti palettán felül (`globals.css`, mindkét témában ugyanaz az érték):
+`--mkt-section-alt` (a váltakozó, teljes szélességű sáv háttere, = `--nested`) és `--mkt-shadow-lift` (a képernyőkép- /
+telefonkeret árnyéka). A típusskála ott Tailwind arbitrary érték (hero 36/64, oldalcím 32/44, szekciócím 28/44, mind
+`tracking-[-0.02em]`). Részletek és a `68` tervtől való eltérések: `docs/landing_page/68-web-landing-design-plan.md` §2.3 „As shipped".
+
 ---
 
 ## 5. Ikonográfia

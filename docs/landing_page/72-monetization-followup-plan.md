@@ -236,7 +236,7 @@ the first paying customer · **S3** = correctness of the record, or polish.
 | D2 | ✅ **Fixed (Prompt 17), and it was a markup trap rather than a rendering defect** | the "7 nap" check was coloured to the popup's own background — invisible, but readable as a second check by anyone (or any audit) working from the source. Both instances are now empty spans | S2 |
 | D3 | Never drawn: for-trainers page, app page, download page, the web state frames (form submitting/success/error, failed image, 404), the motion + open-questions addendum | `68` §13 items 1–5 | S3 |
 | D4 | Never drawn: the sponsorship-ended card, the price-loading skeleton (built in code from the spec text) | `69` §13 items 2–3 | S3 |
-| D5 | `68` §2.2–2.3's marketing type scale and `--mkt-*` tokens exist in neither `globals.css` nor `docs/web/06-design-system-web.md` — the shipped pages use Tailwind arbitrary values plus the app's own tokens | grep: zero `--mkt-` under `web/src` | S3 |
+| D5 | ✅ **Landed in part, the rest recorded (2026-10-09, LIF-118).** `--mkt-section-alt` and `--mkt-shadow-lift` are in `globals.css` and used by the 11 bands and the screenshot frames (no visual change); `--mkt-hairline` is `--outline` (`border-outline`) and `--mkt-hero-glow` was never built; the §2.2 type scale stays Tailwind arbitrary values, with the sizes in use written down in `68` §2.3 "As shipped". `globalsTokens.test.ts` guards dangling `--mkt-*` reads | grep: zero `--mkt-` under `web/src` (before) | S3 |
 
 ### 3.5 Documentation debt
 
