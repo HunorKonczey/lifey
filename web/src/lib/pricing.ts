@@ -66,12 +66,15 @@ export const MOBILE_PRO = {
 /**
  * `Product`/`Offer` JSON-LD for the pricing page (65 §5.2), built from
  * `PLANS` so the structured data can never drift from what the page
- * renders — see pricing.test.ts, which asserts exactly that.
+ * renders — see pricing.test.ts, which asserts exactly that. `names` are the
+ * plans' display names in the page's language (the same `starterName` /
+ * `proName` / `studioName` messages the cards use), so a rich-results
+ * listing reads "Pro", not the internal id.
  */
-export function buildPricingOffers(pageUrl: string) {
+export function buildPricingOffers(pageUrl: string, names: Record<PlanId, string>) {
   return PLANS.map((plan) => ({
     "@type": "Offer" as const,
-    name: plan.id,
+    name: names[plan.id],
     price: String(plan.monthlyPriceHuf),
     priceCurrency: "HUF",
     availability: "https://schema.org/InStock",

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { PLANS, buildPricingOffers } from "@/lib/pricing";
+import { PLANS, buildPricingOffers, type PlanId } from "@/lib/pricing";
 import { SITE_URL } from "@/lib/site";
 import { buildMetadata } from "@/lib/marketingMetadata";
 import { getPathname } from "@/i18n/navigation";
@@ -45,7 +45,7 @@ export default async function PricingPage({
     t("bulletScheduling"),
   ];
 
-  const names: Record<string, string> = {
+  const names: Record<PlanId, string> = {
     starter: t("starterName"),
     pro: t("proName"),
     studio: t("studioName"),
@@ -64,11 +64,15 @@ export default async function PricingPage({
   }));
 
   const pageUrl = `${SITE_URL}${getPathname({ locale, href: "/pricing" })}`;
+  const seo = await getTranslations("seo.pricing");
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: "Lifey — edzői előfizetés",
-    offers: buildPricingOffers(pageUrl),
+    name: t("jsonLdName"),
+    description: seo("metaDescription"),
+    url: pageUrl,
+    brand: { "@type": "Brand", name: "Lifey" },
+    offers: buildPricingOffers(pageUrl, names),
   };
 
   return (

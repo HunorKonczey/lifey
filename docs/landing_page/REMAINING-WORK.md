@@ -97,7 +97,7 @@ LCP 30 s) — the reason CI takes the median of three.
 
 | Item | Needs |
 |---|---|
-| `72` W9 — structured data validated with Google's Rich Results tool | a deployed URL |
+| `72` W9 — structured data in Google's Rich Results Test | a Google sign-in (paste each page's JSON-LD into its **Code** tab) or a public URL. Already validated with schema.org's validator (0 errors / 0 warnings, LIF-119) and guarded by `e2e/marketing/structured-data.spec.ts` |
 | `72` W13 — `lifey://invite/<token>` on iOS | an Apple device (the Android side was checked on an emulator on 2026-10-07, LIF-99: see `72` §3.1 W13) |
 | `72` W12 — hero/value-block visuals are reproduced UI, not real captures | a seeded demo backend to capture from |
 | `72` D3 — never drawn: for-trainers page, app page, download page, the web state frames, the motion + open-questions addendum (`68` §13) | design time |

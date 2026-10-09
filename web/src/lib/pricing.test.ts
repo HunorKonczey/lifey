@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { PLANS, MOBILE_PRO, buildPricingOffers, formatHuf, monthlyEquivalent } from "./pricing";
 
+const NAMES = { starter: "Kezdő", pro: "Profi", studio: "Stúdió" };
+
 describe("buildPricingOffers", () => {
   it("prices come from the same PLANS constant the pricing page renders (65 §5.2)", () => {
-    const offers = buildPricingOffers("https://lifey.hu/hu/arak");
+    const offers = buildPricingOffers("https://lifey.hu/hu/arak", NAMES);
     expect(offers).toHaveLength(PLANS.length);
     offers.forEach((offer, i) => {
-      expect(offer.name).toBe(PLANS[i].id);
+      // The display name in the page's language, never the internal id (LIF-119).
+      expect(offer.name).toBe(NAMES[PLANS[i].id]);
       expect(offer.price).toBe(String(PLANS[i].monthlyPriceHuf));
       expect(offer.priceCurrency).toBe("HUF");
     });
@@ -15,7 +18,7 @@ describe("buildPricingOffers", () => {
   it("never hand-types a price a second time", () => {
     // If someone edits PLANS, the offers must move with it — not require a
     // second edit here or in the page.
-    const offers = buildPricingOffers("https://lifey.hu/hu/arak");
+    const offers = buildPricingOffers("https://lifey.hu/hu/arak", NAMES);
     expect(offers.map((o) => o.price)).toEqual(PLANS.map((p) => String(p.monthlyPriceHuf)));
   });
 });

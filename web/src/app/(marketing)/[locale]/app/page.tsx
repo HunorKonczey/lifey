@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { buildMetadata } from "@/lib/marketingMetadata";
 import { MOBILE_PRO, formatHuf } from "@/lib/pricing";
+import { SITE_URL } from "@/lib/site";
+import { getPathname } from "@/i18n/navigation";
 import { AppHero } from "@/components/marketing/app/AppHero";
 import { AppFeatureGrid } from "@/components/marketing/app/AppFeatureGrid";
 import { AppScreenshotRow } from "@/components/marketing/app/AppScreenshotRow";
@@ -32,14 +34,19 @@ export default async function AppPage({
   setRequestLocale(locale);
 
   const t = await getTranslations("app.finalCta");
+  const seo = await getTranslations("seo.app");
+  const pricing = await getTranslations("pricing");
 
   // SoftwareApplication (65 §5.2) — the free tier and Mobile Pro (63 D-M6),
   // the same MOBILE_PRO constant PricingFinePrint.tsx renders, so this and
   // the visible price can't drift apart the way §10 edge case 4 warns about.
+  const pageUrl = `${SITE_URL}${getPathname({ locale, href: "/app" })}`;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: "Lifey",
+    description: seo("metaDescription"),
+    url: pageUrl,
     applicationCategory: "HealthApplication",
     operatingSystem: "iOS, Android",
     offers: [
@@ -49,7 +56,7 @@ export default async function AppPage({
         name: "Pro",
         price: String(MOBILE_PRO.monthlyHuf),
         priceCurrency: "HUF",
-        description: formatHuf(MOBILE_PRO.monthlyHuf) + " / hó",
+        description: `${formatHuf(MOBILE_PRO.monthlyHuf)} ${pricing("perMonth")}`,
       },
     ],
   };
