@@ -73,6 +73,18 @@ class BarcodeLookupServiceImplTest {
     }
 
     @Test
+    void lookup_carriesFibreAndSugarFromOpenFoodFacts() {
+        when(foodRepository.findByUserIdAndBarcodeAndDeletedAtIsNull(USER_ID, "5901234123457")).thenReturn(Optional.empty());
+        when(openFoodFactsClient.findByBarcode("5901234123457"))
+                .thenReturn(Optional.of(new OffProduct("Muesli", "Acme", 360.0, 9.0, 62.0, 6.0, 8.5, 14.0)));
+
+        BarcodeLookupResponse result = service.lookup("5901234123457");
+
+        assertThat(result.fiberPer100g()).isEqualTo(8.5);
+        assertThat(result.sugarPer100g()).isEqualTo(14.0);
+    }
+
+    @Test
     void lookup_fallsBackToEmptyNameWhenOpenFoodFactsOmitsProductName() {
         when(foodRepository.findByUserIdAndBarcodeAndDeletedAtIsNull(USER_ID, "8586022215544")).thenReturn(Optional.empty());
         when(openFoodFactsClient.findByBarcode("8586022215544"))

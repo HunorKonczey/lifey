@@ -195,6 +195,46 @@ class FoodServiceImplTest {
     }
 
     @Test
+    void create_storesFibreAndSugar_andTheResponseCarriesThem() {
+        FoodRequest request = new FoodRequest("Oats", 370.0, 13.0, 60.0, 7.0, null, false, 10.0, 1.2);
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Oats")).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+        when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 8L));
+
+        FoodResponse result = service.create(request);
+
+        assertThat(result.fiberPer100g()).isEqualTo(10.0);
+        assertThat(result.sugarPer100g()).isEqualTo(1.2);
+    }
+
+    @Test
+    void create_withoutFibreAndSugar_leavesThemUnknown() {
+        FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, false);
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+        when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
+
+        FoodResponse result = service.create(request);
+
+        assertThat(result.fiberPer100g()).isNull();
+        assertThat(result.sugarPer100g()).isNull();
+    }
+
+    @Test
+    void update_replacesFibreAndSugar_includingClearingThem() {
+        Food existing = food(3L, "Oats", 370, 13);
+        existing.setFiberPer100g(10.0);
+        existing.setSugarPer100g(1.2);
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Oats")).thenReturn(Optional.of(existing));
+
+        service.update(3L, new FoodRequest("Oats", 370.0, 13.0, 60.0, 7.0, null, false, 9.0, null));
+
+        assertThat(existing.getFiberPer100g()).isEqualTo(9.0);
+        assertThat(existing.getSugarPer100g()).isNull();
+    }
+
+    @Test
     void create_throwsWhenNameAlreadyExists() {
         FoodRequest request = new FoodRequest(" Rice ", 130.0, 2.7, null, null, null, false);
         when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.of(food(1L, "Rice", 130, 2.7)));

@@ -605,6 +605,14 @@
   "@fatOptionalLabel": {
     "description": "Label for the optional fat field"
   },
+  "fiberOptionalLabel": "Fibre (optional)",
+  "@fiberOptionalLabel": {
+    "description": "Label for the optional dietary fibre field of a food (per 100 g)"
+  },
+  "sugarOptionalLabel": "Sugar (optional)",
+  "@sugarOptionalLabel": {
+    "description": "Label for the optional sugars field of a food (per 100 g)"
+  },
   "mustBeZeroOrMoreError": "Must be 0 or more",
   "@mustBeZeroOrMoreError": {
     "description": "Validation error for a non-negative numeric field"

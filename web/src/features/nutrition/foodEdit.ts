@@ -9,10 +9,32 @@ export interface FoodFields {
   protein: number;
   carbs: number;
   fat: number;
+  /** Fibre and sugars per 100 g as typed (LIF-145): empty = not known, which is not 0. */
+  fiber: string;
+  sugar: string;
   barcode: string;
 }
 
-export const EMPTY_FOOD: FoodFields = { name: "", kcal: 0, protein: 0, carbs: 0, fat: 0, barcode: "" };
+export const EMPTY_FOOD: FoodFields = { name: "", kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: "", sugar: "", barcode: "" };
+
+export const MAX_GRAMS_PER_100G = 100;
+
+/**
+ * An optional grams-per-100-g text: empty = not known (`null`), a number from 0 to 100 (a comma or a point), else `"invalid"`.
+ * The backend refuses a negative; more than 100 g in 100 g is a typo.
+ */
+export function parseOptionalGrams(text: string): number | null | "invalid" {
+  const t = text.trim().replace(",", ".");
+  if (t === "") return null;
+  if (!/^\d+(\.\d+)?$/.test(t)) return "invalid";
+  const value = Number(t);
+  return value <= MAX_GRAMS_PER_100G ? Math.round(value * 100) / 100 : "invalid";
+}
+
+/** A stored figure as the editor's text: empty for an unknown one. */
+export function gramsText(value: number | null | undefined): string {
+  return value == null ? "" : String(Math.round(value * 100) / 100);
+}
 
 const NUMBER_KEYS = ["kcal", "protein", "carbs", "fat"] as const;
 
@@ -31,6 +53,8 @@ export function fieldsFromFood(food: FoodResponse | null, prefill?: Partial<Food
     protein: src.proteinPer100g ?? 0,
     carbs: src.carbsPer100g ?? 0,
     fat: src.fatPer100g ?? 0,
+    fiber: gramsText(src.fiberPer100g),
+    sugar: gramsText(src.sugarPer100g),
     barcode: src.barcode ?? "",
   };
 }
@@ -44,6 +68,7 @@ export function fieldsFromFood(food: FoodResponse | null, prefill?: Partial<Food
 export function isFoodDirty(current: FoodFields, original: FoodFields): boolean {
   if (current.name.trim() !== original.name.trim()) return true;
   if (current.barcode.trim() !== original.barcode.trim()) return true;
+  if (current.fiber.trim() !== original.fiber.trim() || current.sugar.trim() !== original.sugar.trim()) return true;
   return NUMBER_KEYS.some((k) => round(current[k]) !== round(original[k]));
 }
 
@@ -55,12 +80,17 @@ export function isFoodDirty(current: FoodFields, original: FoodFields): boolean 
 export function foodRequest(current: FoodFields, original: FoodFields, hidden: boolean): FoodRequest {
   const pick = (k: (typeof NUMBER_KEYS)[number]) => (round(current[k]) === round(original[k]) ? original[k] : current[k]);
   const barcode = current.barcode.trim();
+  const fiber = parseOptionalGrams(current.fiber);
+  const sugar = parseOptionalGrams(current.sugar);
   return {
     name: current.name.trim(),
     caloriesPer100g: pick("kcal"),
     proteinPer100g: pick("protein"),
     carbsPer100g: pick("carbs"),
     fatPer100g: pick("fat"),
+    // Not known = left out, which the server stores as not known (an unparseable text never gets here: the editor blocks Save).
+    ...(typeof fiber === "number" ? { fiberPer100g: fiber } : {}),
+    ...(typeof sugar === "number" ? { sugarPer100g: sugar } : {}),
     barcode: barcode === "" ? null : barcode,
     hidden,
   };

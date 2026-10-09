@@ -49,6 +49,18 @@ class OpenFoodFactsClientBarcodeTest {
     }
 
     @Test
+    void fibreAndSugarsAreReadFromTheNutriments_andAbsentOnesStayNull() {
+        server.expect(method(GET)).andRespond(MockRestResponseCreators.withSuccess("""
+                {"status":1,"product":{"product_name":"Muesli","brands":"Acme",
+                 "nutriments":{"energy-kcal_100g":360,"proteins_100g":9,"carbohydrates_100g":62,"fat_100g":6,
+                               "fiber_100g":8.5,"sugars_100g":14}}}
+                """, MediaType.APPLICATION_JSON));
+        OffProduct full = client.findByBarcode("1").orElseThrow();
+        assertThat(full.fiberPer100g()).isEqualTo(8.5);
+        assertThat(full.sugarPer100g()).isEqualTo(14.0);
+    }
+
+    @Test
     void anUnknownProductIsEmpty_forBothTheStatusBodyAndAHard404() {
         server.expect(method(GET)).andRespond(MockRestResponseCreators.withSuccess("{\"status\":0}", MediaType.APPLICATION_JSON));
         assertThat(client.findByBarcode("1")).isEmpty();

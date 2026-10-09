@@ -86,6 +86,8 @@ class _FakeFoodController extends FoodController {
     required double protein,
     double? carbs,
     double? fat,
+    double? fiber,
+    double? sugar,
     String? barcode,
     bool hidden = false,
   }) async {

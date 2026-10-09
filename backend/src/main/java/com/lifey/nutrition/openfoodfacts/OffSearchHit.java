@@ -19,6 +19,13 @@ public record OffSearchHit(
         Double energyKcalPer100g,
         Double proteinsPer100g,
         Double carbohydratesPer100g,
-        Double fatPer100g
+        Double fatPer100g,
+        Double fiberPer100g,
+        Double sugarPer100g
 ) {
+    public OffSearchHit(String code, String productName, String localizedName, String brands, Double energyKcalPer100g,
+                        Double proteinsPer100g, Double carbohydratesPer100g, Double fatPer100g) {
+        this(code, productName, localizedName, brands, energyKcalPer100g, proteinsPer100g, carbohydratesPer100g,
+                fatPer100g, null, null);
+    }
 }

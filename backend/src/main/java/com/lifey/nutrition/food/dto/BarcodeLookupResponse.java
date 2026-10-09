@@ -15,6 +15,12 @@ public record BarcodeLookupResponse(
         Double carbsPer100g,
         Double fatPer100g,
         String barcode,
-        BarcodeSource source
+        BarcodeSource source,
+        Double fiberPer100g,
+        Double sugarPer100g
 ) {
+    public BarcodeLookupResponse(Long id, String name, Double caloriesPer100g, Double proteinPer100g,
+                                 Double carbsPer100g, Double fatPer100g, String barcode, BarcodeSource source) {
+        this(id, name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, source, null, null);
+    }
 }

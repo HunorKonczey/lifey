@@ -36,6 +36,13 @@ public class Food extends SyncableEntity {
     @Column(name = "fat_per_100g")
     private Double fatPer100g;
 
+    /** Dietary fibre and sugars per 100 g (LIF-145); null = not known, which is not zero. */
+    @Column(name = "fiber_per_100g")
+    private Double fiberPer100g;
+
+    @Column(name = "sugar_per_100g")
+    private Double sugarPer100g;
+
     @Column(name = "barcode")
     private String barcode;
 

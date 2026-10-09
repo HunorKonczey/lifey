@@ -126,7 +126,8 @@ public class FoodNameSearchServiceImpl implements FoodNameSearchService {
                 || !gramsPlausibleOrAbsent(hit.fatPer100g())) {
             return null;
         }
-        return new OffSearchItem(hit.code(), name, hit.brands(), kcal, protein, hit.carbohydratesPer100g(), hit.fatPer100g());
+        return new OffSearchItem(hit.code(), name, hit.brands(), kcal, protein, hit.carbohydratesPer100g(), hit.fatPer100g(),
+                nullIfImplausible(hit.fiberPer100g()), nullIfImplausible(hit.sugarPer100g()));
     }
 
     /**
@@ -142,6 +143,11 @@ public class FoodNameSearchServiceImpl implements FoodNameSearchService {
 
     private static boolean gramsPlausible(double grams) {
         return grams >= 0 && grams <= MAX_GRAMS_PER_100G;
+    }
+
+    /** Fibre and sugars only enrich a hit, so an out-of-range figure is left out rather than dropping the product. */
+    private static Double nullIfImplausible(Double grams) {
+        return grams != null && gramsPlausible(grams) ? grams : null;
     }
 
     private static boolean gramsPlausibleOrAbsent(Double grams) {

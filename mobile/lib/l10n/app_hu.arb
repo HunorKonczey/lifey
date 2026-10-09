@@ -138,6 +138,8 @@
   "nameLabel": "Név",
   "carbsOptionalLabel": "Szénhidrát (opcionális)",
   "fatOptionalLabel": "Zsír (opcionális)",
+  "fiberOptionalLabel": "Rost (opcionális)",
+  "sugarOptionalLabel": "Cukor (opcionális)",
   "mustBeZeroOrMoreError": "0 vagy annál nagyobbnak kell lennie",
   "noBarcodeMatchMessage": "Nincs találat ehhez a vonalkódhoz — elmentve, csak töltsd ki a részleteket.",
   "foodAlreadyExistsMessage": "Ez a termék már szerepel a listádban — megnyitjuk szerkesztésre.",

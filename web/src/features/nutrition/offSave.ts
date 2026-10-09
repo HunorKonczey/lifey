@@ -18,6 +18,9 @@ export function offFoodRequest(item: OffSearchItem, name: string = item.name, wi
     proteinPer100g: item.proteinPer100g,
     carbsPer100g: item.carbsPer100g ?? 0,
     fatPer100g: item.fatPer100g ?? 0,
+    // Fibre and sugars stay unknown when OpenFoodFacts has none - unlike carbs and fat they are not counted as 0.
+    ...(item.fiberPer100g != null ? { fiberPer100g: item.fiberPer100g } : {}),
+    ...(item.sugarPer100g != null ? { sugarPer100g: item.sugarPer100g } : {}),
     barcode: withBarcode ? item.barcode : null,
     hidden: false,
   };

@@ -27,7 +27,9 @@ public record OffApiResponse(
             @JsonProperty("energy-kcal_100g") Double energyKcal100g,
             @JsonProperty("proteins_100g") Double proteins100g,
             @JsonProperty("carbohydrates_100g") Double carbohydrates100g,
-            @JsonProperty("fat_100g") Double fat100g
+            @JsonProperty("fat_100g") Double fat100g,
+            @JsonProperty("fiber_100g") Double fiber100g,
+            @JsonProperty("sugars_100g") Double sugars100g
     ) {
     }
 }

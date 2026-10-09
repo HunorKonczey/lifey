@@ -2285,6 +2285,8 @@ meals from yesterday, create a food whose macros don't add up, log a recipe port
 
 ---
 
+*Follow-up (LIF-145, 2026-10-09):* the "no fibre or sugar" gap of the Nutrition frames is closed for the data and the web. `foods` has optional `fiber_per_100g` / `sugar_per_100g` (`V89`) - nullable, because "not known" is not 0 and OpenFoodFacts often has no fibre figure - filled from OpenFoodFacts (barcode and name search; an implausible figure is left out, not the product) and copied to a trainer's assigned food; a meal entry returns them scaled to its grams, `null` when the food has none. The food editor has two optional fields (empty = unknown, 0-100); the meal card and the day summary get one line, "Fibre 15 g · Sugar 1,8 g", with "some foods have no figure" when the sum covers only part of the entries (the day summary stays three macro bars - fibre and sugar have no goal to draw against). The phone stores, syncs, edits and imports the two; its meal / day totals and `/statistics` are not done (LIF-148). The phone's food update re-sends the stored figures because the server replaces a food's fields: omitting them would erase what the web set.
+
 ## W3 — Workouts · `Lifey Web 3 Workouts.dc.html` (W3-A … W3-F)
 
 **Goal:** a readable weekly log, a finished session that reads like a summary, and a live logger with

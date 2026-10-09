@@ -58,10 +58,21 @@ class _FakeFoodController extends FoodController {
     required double protein,
     double? carbs,
     double? fat,
+    double? fiber,
+    double? sugar,
     String? barcode,
     bool hidden = false,
   }) async {
-    saved.add({'name': name, 'calories': calories, 'protein': protein, 'carbs': carbs, 'fat': fat, 'barcode': barcode});
+    saved.add({
+      'name': name,
+      'calories': calories,
+      'protein': protein,
+      'carbs': carbs,
+      'fat': fat,
+      if (fiber != null) 'fiber': fiber,
+      if (sugar != null) 'sugar': sugar,
+      'barcode': barcode,
+    });
     return Food(clientId: 'new', name: name, caloriesPer100g: calories, proteinPer100g: protein);
   }
 }
@@ -74,6 +85,17 @@ const _csirke = OffSearchItem(
   proteinPer100g: 14,
   carbsPer100g: 2.4,
   fatPer100g: 4.9,
+);
+const _muesli = OffSearchItem(
+  barcode: '5900000000017',
+  name: 'Muesli',
+  brand: 'Acme',
+  caloriesPer100g: 360,
+  proteinPer100g: 9,
+  carbsPer100g: 62,
+  fatPer100g: 6,
+  fiberPer100g: 8.5,
+  sugarPer100g: 14,
 );
 const _noMacros = OffSearchItem(barcode: '5997000000001', name: 'Túró Rudi', caloriesPer100g: 400, proteinPer100g: 11);
 
@@ -156,6 +178,19 @@ void main() {
     expect(find.byKey(const ValueKey('off-search-hint')), findsNothing);
   });
 
+  testWidgets('editing a food shows its stored fibre and sugar (LIF-145)', (tester) async {
+    await _open(tester,
+        food: const Food(clientId: 'f', name: 'Oats', caloriesPer100g: 370, proteinPer100g: 13, fiberPer100g: 10, sugarPer100g: 1.2));
+    expect(_text(tester, _field('Fibre (optional)')), '10');
+    expect(_text(tester, _field('Sugar (optional)')), '1.2');
+  });
+
+  testWidgets('editing a food with no fibre or sugar figure leaves the fields blank', (tester) async {
+    await _open(tester, food: const Food(clientId: 'g', name: 'Egg', caloriesPer100g: 155, proteinPer100g: 13));
+    expect(_text(tester, _field('Fibre (optional)')), '');
+    expect(_text(tester, _field('Sugar (optional)')), '');
+  });
+
   testWidgets('editing an existing food has no OpenFoodFacts option', (tester) async {
     await _open(tester, food: const Food(clientId: 'f', name: 'Egg', caloriesPer100g: 155, proteinPer100g: 13));
 
@@ -227,6 +262,39 @@ void main() {
     expect(_text(tester, _nameField()), 'Túró Rudi');
     expect(_text(tester, _field('Carbs (optional)')), '');
     expect(_text(tester, _field('Fat (optional)')), '');
+  });
+
+  testWidgets('choosing a product with fibre and sugar fills them, and saving sends them (LIF-145)', (tester) async {
+    await _open(tester);
+    await _tick(tester);
+    await _type(tester, 'muesli');
+    await _debounce(tester);
+    await _answerLast(tester, _answer([_muesli]));
+    await tester.tap(find.text('Acme'));
+    await tester.pumpAndSettle();
+
+    expect(_text(tester, _field('Fibre (optional)')), '8.5');
+    expect(_text(tester, _field('Sugar (optional)')), '14');
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(_saved.single['fiber'], 8.5);
+    expect(_saved.single['sugar'], 14.0);
+  });
+
+  testWidgets('a product without fibre and sugar leaves them blank, and nothing is sent for them', (tester) async {
+    await _open(tester);
+    await _tick(tester);
+    await _type(tester, 'csirkemell');
+    await _debounce(tester);
+    await _answerLast(tester, _answer([_csirke]));
+    await tester.tap(find.text('Pikok'));
+    await tester.pumpAndSettle();
+
+    expect(_text(tester, _field('Fibre (optional)')), '');
+    expect(_text(tester, _field('Sugar (optional)')), '');
   });
 
   testWidgets('saving after choosing sends the filled values with the barcode', (tester) async {

@@ -142,6 +142,8 @@ export function FoodsView() {
           proteinPer100g: res.proteinPer100g,
           carbsPer100g: res.carbsPer100g ?? 0,
           fatPer100g: res.fatPer100g ?? 0,
+          fiberPer100g: res.fiberPer100g ?? null,
+          sugarPer100g: res.sugarPer100g ?? null,
           barcode: res.barcode,
         });
         show(t("loadedFromOff"), "success");

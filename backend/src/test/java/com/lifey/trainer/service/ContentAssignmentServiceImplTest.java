@@ -450,6 +450,8 @@ class ContentAssignmentServiceImplTest {
         sourceFood.setName("Whey");
         sourceFood.setCaloriesPer100g(400);
         sourceFood.setProteinPer100g(80);
+        sourceFood.setFiberPer100g(3.5);
+        sourceFood.setSugarPer100g(0.5);
         RecipeIngredient ingredient = new RecipeIngredient();
         ingredient.setFood(sourceFood);
         ingredient.setQuantityInGrams(40);
@@ -478,6 +480,11 @@ class ContentAssignmentServiceImplTest {
         assertThat(copy.getServings()).isEqualTo(3);
         assertThat(copy.getIngredients()).singleElement()
                 .satisfies(i -> assertThat(i.getFood().getId()).isEqualTo(77L));
+        // The client's copy of the food keeps the trainer's fibre and sugar figures (LIF-145).
+        ArgumentCaptor<Food> foodCaptor = ArgumentCaptor.forClass(Food.class);
+        verify(foodRepository).save(foodCaptor.capture());
+        assertThat(foodCaptor.getValue().getFiberPer100g()).isEqualTo(3.5);
+        assertThat(foodCaptor.getValue().getSugarPer100g()).isEqualTo(0.5);
         assertThat(copy.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
     }
 

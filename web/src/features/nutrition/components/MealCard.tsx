@@ -6,8 +6,10 @@ import { Card, Icon, IconButton } from "@/components/ds";
 import { RowMenuButton } from "@/components/ds/RowMenuButton";
 import type { MenuItemDef } from "@/components/ds/Menu";
 import { useFormat } from "@/lib/format/useFormat";
+import { fiberSugarOfEntries } from "../fiberSugar";
 import { MEAL_TYPE_STYLE } from "../mealTypeStyle";
 import type { MealResponse } from "../types";
+import { FiberSugarLine } from "./FiberSugarLine";
 import { MealItemRow, type MealItemRowData } from "./MealItemRow";
 
 export function mealKcal(m: MealResponse) {
@@ -130,6 +132,8 @@ export function MealCard({ meal, onAdd, onEdit, onDuplicate, onDelete, onDeleteI
           <MealItemRow key={i} item={item} menu={rowMenu(i)} />
         ))}
       </div>
+
+      <FiberSugarLine totals={fiberSugarOfEntries(meal.entries)} testId="meal-fiber-sugar" className="px-4 pb-3 pt-1" />
 
       {commentSlot ?? (meal.trainerComment ? <TrainerCommentBlock comment={meal.trainerComment} at={meal.trainerCommentAt ?? null} /> : null)}
     </Card>

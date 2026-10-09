@@ -20,6 +20,8 @@ class OffSearchItem {
     this.brand,
     this.carbsPer100g,
     this.fatPer100g,
+    this.fiberPer100g,
+    this.sugarPer100g,
   });
 
   final String barcode;
@@ -29,6 +31,8 @@ class OffSearchItem {
   final double proteinPer100g;
   final double? carbsPer100g;
   final double? fatPer100g;
+  final double? fiberPer100g;
+  final double? sugarPer100g;
 
   factory OffSearchItem.fromJson(Map<String, dynamic> json) {
     return OffSearchItem(
@@ -39,6 +43,8 @@ class OffSearchItem {
       proteinPer100g: (json['proteinPer100g'] as num).toDouble(),
       carbsPer100g: (json['carbsPer100g'] as num?)?.toDouble(),
       fatPer100g: (json['fatPer100g'] as num?)?.toDouble(),
+      fiberPer100g: (json['fiberPer100g'] as num?)?.toDouble(),
+      sugarPer100g: (json['sugarPer100g'] as num?)?.toDouble(),
     );
   }
 }

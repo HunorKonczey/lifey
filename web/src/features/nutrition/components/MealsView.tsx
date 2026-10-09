@@ -17,6 +17,7 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { EditMealDrawer } from "./EditMealDrawer";
 import { AddFoodFlow } from "./addFood/AddFoodFlow";
 import { ConfirmModal, GridItem, PageGrid } from "@/components/ds";
+import { fiberSugarOfMeals } from "../fiberSugar";
 import { DaySummaryView } from "./DaySummary";
 import { EmptyMealSlot } from "./EmptyMealSlot";
 import { MealCard, mealCarbs, mealFat, mealKcal, mealProtein } from "./MealCard";
@@ -130,6 +131,7 @@ export function MealsView() {
         carbs: { value: todayMeals.reduce((sum, m) => sum + mealCarbs(m), 0), goal: settings?.dailyCarbsGoal ?? null },
         fat: { value: todayMeals.reduce((sum, m) => sum + mealFat(m), 0), goal: settings?.dailyFatGoal ?? null },
       }}
+      fiberSugar={fiberSugarOfMeals(todayMeals)}
     />
   );
 
