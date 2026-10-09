@@ -20,6 +20,7 @@ import { buildEntries } from "../../logRecipePortion";
 import { foodPortion, recipePortion, type Macros } from "../../recipeMacros";
 import { offPortion, type ListItem } from "../../offSearch";
 import { ensureOwnFood } from "../../offSave";
+import { quantityChips } from "../../quantityChips";
 import type { FoodResponse, MealResponse, MealType } from "../../types";
 import { useAddFoodContext } from "./AddFoodModal";
 
@@ -46,6 +47,11 @@ export interface FoodPreviewPaneViewProps {
   onSubmit: (req: AddRequest) => Promise<unknown> | void;
   /** "Done" — the dialog stays open after an add, so this is the way out. */
   onDone: () => void;
+}
+
+interface Chip {
+  value: number;
+  label: string;
 }
 
 function defaultQuantity(item: ListItem | null, lastGrams: number | undefined): number {
@@ -127,7 +133,15 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     );
   }
 
-  const chips = isRecipe ? [0.5, 1, 2] : [100, ...(lastGrams && Math.round(lastGrams) !== 100 ? [Math.round(lastGrams)] : [])];
+  // A food's own servings come first (LIF-146): "1 glass · 200 g" sets the grams, so there is no arithmetic.
+  const chips: Chip[] = quantityChips({
+    recipe: isRecipe,
+    servings: active?.kind === "food" ? active.food.servings : undefined,
+    lastGrams,
+  }).map((c) => ({
+    value: c.value,
+    label: c.serving ? t("servingChip", { name: c.serving, g: fmt.number(c.value, 1) }) : isRecipe ? t("servingsChip", { n: c.value }) : `${c.value} g`,
+  }));
   const title = inMacros ? entry?.name || macroDraft.name.trim() || t("customEntry") : active!.name;
   const source = inMacros
     ? t("previewSourceMacros", { g: fmt.integer(entry?.grams ?? 100) })
@@ -185,24 +199,24 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
             onEnter={submit}
             className="w-44"
           />
-          <div className="flex gap-2 pb-1.5" role="group" aria-label={t("quantityChips")}>
+          <div className="flex flex-wrap gap-2 pb-1.5" role="group" aria-label={t("quantityChips")}>
             {chips.map((c) => (
               <button
-                key={c}
+                key={c.value}
                 type="button"
-                onClick={() => setQty(c)}
-                aria-pressed={qty === c}
-                className="lifey-button type-body-s tabular"
+                onClick={() => setQty(c.value)}
+                aria-pressed={qty === c.value}
+                className="lifey-button type-body-s tabular whitespace-nowrap"
                 style={{
                   height: 32,
                   padding: "0 12px",
                   borderRadius: "var(--r-pill)",
                   fontWeight: 700,
-                  background: qty === c ? "var(--primary-tint)" : "var(--nested)",
-                  color: qty === c ? "var(--on-primary-tint)" : "var(--text-2)",
+                  background: qty === c.value ? "var(--primary-tint)" : "var(--nested)",
+                  color: qty === c.value ? "var(--on-primary-tint)" : "var(--text-2)",
                 }}
               >
-                {isRecipe ? t("servingsChip", { n: c }) : `${c} g`}
+                {c.label}
               </button>
             ))}
           </div>

@@ -729,6 +729,15 @@ class _SelectedFoodCard extends ConsumerWidget {
                   spacing: AppSpacing.s8,
                   runSpacing: AppSpacing.s8,
                   children: [
+                    // The food's own servings first (LIF-146): "1 glass · 200 g" sets the grams, so no arithmetic.
+                    for (final serving in food.servings)
+                      ChoiceChip(
+                        key: ValueKey('serving-${serving.name}'),
+                        label: Text('${serving.name} · ${f.grams(serving.grams)} g'),
+                        selected: current == serving.grams,
+                        showCheckmark: false,
+                        onSelected: (_) => onSetGrams(serving.grams),
+                      ),
                     for (final amount in quick)
                       ChoiceChip(
                         label: Text('${f.grams(amount)} g'),

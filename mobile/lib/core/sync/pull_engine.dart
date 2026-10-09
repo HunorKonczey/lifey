@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/nutrition/domain/food.dart' show FoodServing;
 import '../local_db/app_database.dart';
 import '../local_db/database_provider.dart';
 import '../network/dio_client.dart';
@@ -178,6 +179,7 @@ class PullEngine {
       fatPer100g: Value((json['fatPer100g'] as num?)?.toDouble()),
       fiberPer100g: Value((json['fiberPer100g'] as num?)?.toDouble()),
       sugarPer100g: Value((json['sugarPer100g'] as num?)?.toDouble()),
+      servingsJson: Value(FoodServing.encode(FoodServing.listFromJson(json['servings']))),
       barcode: Value(json['barcode'] as String?),
       hidden: Value(json['hidden'] as bool? ?? false),
       originTrainerId: Value(json['originTrainerId'] as int?),
@@ -1565,6 +1567,7 @@ class PullEngine {
             fatPer100g: Value((json['fatPer100g'] as num?)?.toDouble()),
             fiberPer100g: Value((json['fiberPer100g'] as num?)?.toDouble()),
             sugarPer100g: Value((json['sugarPer100g'] as num?)?.toDouble()),
+            servingsJson: Value(FoodServing.encode(FoodServing.listFromJson(json['servings']))),
             barcode: Value(json['barcode'] as String?),
             hidden: Value(json['hidden'] as bool? ?? true),
             originTrainerId: Value(json['originTrainerId'] as int?),

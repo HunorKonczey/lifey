@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Card, Checkbox, Icon, IconButton, NumberField, ReadOnlyField, TextField } from "@/components/ds";
-import { EMPTY_FOOD, FOOD_DECIMALS, fieldsFromFood, foodRequest, gramsText, isFoodDirty, parseOptionalGrams, type FoodFields } from "../foodEdit";
+import { EMPTY_FOOD, FOOD_DECIMALS, fieldsFromFood, foodRequest, gramsText, isFoodDirty, parseOptionalGrams, parseServing, parseServings, type FoodFields } from "../foodEdit";
 import { macroCheck } from "../macroCheck";
-import type { FoodRequest, FoodResponse, OffSearchItem } from "../types";
+import { MAX_SERVING_NAME, MAX_SERVINGS, type FoodRequest, type FoodResponse, type OffSearchItem } from "../types";
 import { useNoOffSearch, type UseOffSearchResult } from "../useOffSearch";
 import { OffResultsList } from "./addFood/OffResultsList";
 
@@ -90,16 +90,21 @@ export function FoodEditor({
     setOffPicked(true);
     onNameEdit?.();
   };
+  const setServing = (index: number, patch: Partial<FoodFields["servings"][number]>) =>
+    setFields((f) => ({ ...f, servings: f.servings.map((s, i) => (i === index ? { ...s, ...patch } : s)) }));
+  const addServing = () => setFields((f) => (f.servings.length >= MAX_SERVINGS ? f : { ...f, servings: [...f.servings, { name: "", grams: "" }] }));
+  const removeServing = (index: number) => setFields((f) => ({ ...f, servings: f.servings.filter((_, i) => i !== index) }));
   const set = <K extends keyof FoodFields>(key: K, value: FoodFields[K]) => setFields((f) => ({ ...f, [key]: value }));
 
   const nameMissing = fields.name.trim() === "";
   const fiberInvalid = parseOptionalGrams(fields.fiber) === "invalid";
   const sugarInvalid = parseOptionalGrams(fields.sugar) === "invalid";
+  const servingsValid = parseServings(fields.servings).valid;
   const dirty = isFoodDirty(fields, baseline);
   const check = macroCheck(fields);
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const submit = () => {
-    if (nameMissing || fiberInvalid || sugarInvalid) {
+    if (nameMissing || fiberInvalid || sugarInvalid || !servingsValid) {
       setTriedSave(true);
       return;
     }
@@ -220,6 +225,51 @@ export function FoodEditor({
         <p className="type-body-s -mt-2" style={{ color: "var(--text-3)" }}>
           {t("fiberSugarHint")}
         </p>
+
+        <div className="flex flex-col gap-2" data-testid="food-servings">
+          <span className="type-label" style={{ color: "var(--text-3)" }}>
+            {t("servings")}
+          </span>
+          {fields.servings.map((row, i) => {
+            const invalid = triedSave && parseServing(row) === "invalid";
+            return (
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_96px_auto] items-start gap-2" data-testid="serving-row">
+                <TextField
+                  aria-label={t("servingName")}
+                  size="dense"
+                  className="min-w-0"
+                  autoComplete="off"
+                  maxLength={MAX_SERVING_NAME}
+                  value={row.name}
+                  placeholder={t("servingNamePlaceholder")}
+                  onChange={(e) => setServing(i, { name: e.target.value })}
+                  error={invalid ? t("servingInvalid") : undefined}
+                  data-testid="serving-name"
+                />
+                <TextField
+                  aria-label={t("servingGrams")}
+                  size="dense"
+                  className="min-w-0"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={row.grams}
+                  placeholder="g"
+                  onChange={(e) => setServing(i, { grams: e.target.value })}
+                  invalid={invalid}
+                  data-testid="serving-grams"
+                />
+                <IconButton icon="close" label={t("removeServing")} onClick={() => removeServing(i)} />
+              </div>
+            );
+          })}
+          {fields.servings.length < MAX_SERVINGS && (
+            <div>
+              <Button variant="ghost" onClick={addServing} data-testid="add-serving">
+                {t("addServing")}
+              </Button>
+            </div>
+          )}
+        </div>
 
         {check.tone !== "ok" && (
           <p

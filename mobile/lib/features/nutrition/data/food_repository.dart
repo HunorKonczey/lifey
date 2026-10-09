@@ -77,6 +77,7 @@ class FoodRepository {
     double? fat,
     double? fiber,
     double? sugar,
+    List<FoodServing> servings = const [],
     String? barcode,
     bool hidden = false,
   }) async {
@@ -90,6 +91,7 @@ class FoodRepository {
           fatPer100g: Value(fat),
           fiberPer100g: Value(fiber),
           sugarPer100g: Value(sugar),
+          servingsJson: Value(FoodServing.encode(servings)),
           barcode: Value(barcode),
           hidden: Value(hidden),
         ));
@@ -104,6 +106,7 @@ class FoodRepository {
         'fatPer100g': fat,
         'fiberPer100g': fiber,
         'sugarPer100g': sugar,
+        'servings': [for (final s in servings) s.toJson()],
         'barcode': barcode,
         'hidden': hidden,
       },
@@ -120,8 +123,14 @@ class FoodRepository {
     double? fat,
     double? fiber,
     double? sugar,
+    List<FoodServing>? servings,
     String? barcode,
   }) async {
+    // Not given = keep what the food has: the server replaces a food's servings with what it is sent, so an update that
+    // left them out would erase them.
+    final kept = servings ??
+        FoodServing.decode(
+            (await (_db.select(_db.foods)..where((t) => t.clientId.equals(clientId))).getSingleOrNull())?.servingsJson);
     await (_db.update(_db.foods)..where((t) => t.clientId.equals(clientId))).write(
       FoodsCompanion(
         name: Value(name),
@@ -131,6 +140,7 @@ class FoodRepository {
         fatPer100g: Value(fat),
         fiberPer100g: Value(fiber),
         sugarPer100g: Value(sugar),
+        servingsJson: Value(FoodServing.encode(kept)),
         barcode: Value(barcode),
       ),
     );
@@ -145,6 +155,7 @@ class FoodRepository {
         'fatPer100g': fat,
         'fiberPer100g': fiber,
         'sugarPer100g': sugar,
+        'servings': [for (final s in kept) s.toJson()],
         'barcode': barcode,
         'hidden': false,
       },
@@ -173,6 +184,7 @@ class FoodRepository {
       fatPer100g: row.fatPer100g,
       fiberPer100g: row.fiberPer100g,
       sugarPer100g: row.sugarPer100g,
+      servings: FoodServing.decode(row.servingsJson),
       barcode: row.barcode,
       hidden: row.hidden,
     );

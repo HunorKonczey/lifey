@@ -47,6 +47,7 @@ class _FakeFoods extends FoodController {
     double? fat,
     double? fiber,
     double? sugar,
+    List<FoodServing> servings = const [],
     String? barcode,
     bool hidden = false,
   }) async {

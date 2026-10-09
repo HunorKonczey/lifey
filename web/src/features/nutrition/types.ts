@@ -2,6 +2,16 @@ export type MealType = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
 export type BarcodeSource = "LOCAL" | "OPENFOODFACTS";
 
 // ─── Foods ───
+/** A named serving size of a food (LIF-146): "1 glass" = 200 g. */
+export interface FoodServing {
+  name: string;
+  grams: number;
+}
+
+export const MAX_SERVINGS = 10;
+export const MAX_SERVING_NAME = 40;
+export const MAX_SERVING_GRAMS = 5000;
+
 export interface FoodResponse {
   id: number;
   name: string;
@@ -12,6 +22,8 @@ export interface FoodResponse {
   /** Dietary fibre and sugars per 100 g (LIF-145); null / absent = not known, which is not zero. */
   fiberPer100g?: number | null;
   sugarPer100g?: number | null;
+  /** Named serving sizes (LIF-146), in the owner's order; absent from an older server. */
+  servings?: FoodServing[];
   barcode: string | null;
   hidden: boolean;
 }
@@ -25,6 +37,8 @@ export interface FoodRequest {
   /** Left out when not known. */
   fiberPer100g?: number;
   sugarPer100g?: number;
+  /** The whole list (an empty one clears them); left out = the server keeps what it has. */
+  servings?: FoodServing[];
   barcode?: string | null;
   hidden: boolean;
 }
