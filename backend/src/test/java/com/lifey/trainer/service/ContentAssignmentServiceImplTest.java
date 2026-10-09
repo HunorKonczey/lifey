@@ -452,6 +452,8 @@ class ContentAssignmentServiceImplTest {
         sourceFood.setProteinPer100g(80);
         sourceFood.setFiberPer100g(3.5);
         sourceFood.setSugarPer100g(0.5);
+        sourceFood.getServings().add(new com.lifey.nutrition.food.FoodServing("1 scoop", 30));
+        sourceFood.getServings().add(new com.lifey.nutrition.food.FoodServing("1 shake", 45));
         RecipeIngredient ingredient = new RecipeIngredient();
         ingredient.setFood(sourceFood);
         ingredient.setQuantityInGrams(40);
@@ -485,6 +487,9 @@ class ContentAssignmentServiceImplTest {
         verify(foodRepository).save(foodCaptor.capture());
         assertThat(foodCaptor.getValue().getFiberPer100g()).isEqualTo(3.5);
         assertThat(foodCaptor.getValue().getSugarPer100g()).isEqualTo(0.5);
+        // ... and its named servings, in order (LIF-146), as copies - not the trainer's own list.
+        assertThat(foodCaptor.getValue().getServings()).extracting(com.lifey.nutrition.food.FoodServing::getName).containsExactly("1 scoop", "1 shake");
+        assertThat(foodCaptor.getValue().getServings()).isNotSameAs(sourceFood.getServings());
         assertThat(copy.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
     }
 

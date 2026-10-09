@@ -2,14 +2,21 @@ package com.lifey.nutrition.food;
 
 import com.lifey.common.domain.SyncableEntity;
 import com.lifey.user.User;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -42,6 +49,16 @@ public class Food extends SyncableEntity {
 
     @Column(name = "sugar_per_100g")
     private Double sugarPer100g;
+
+    /**
+     * Named serving sizes (LIF-146), in the order the owner gave them. Lazy and batch-fetched: a page of foods is one extra query
+     * for all their servings, not one per food.
+     */
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "food_servings", joinColumns = @JoinColumn(name = "food_id"))
+    @OrderColumn(name = "position")
+    @BatchSize(size = 100)
+    private List<FoodServing> servings = new ArrayList<>();
 
     @Column(name = "barcode")
     private String barcode;

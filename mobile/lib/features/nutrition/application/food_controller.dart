@@ -73,6 +73,7 @@ class FoodController extends StreamNotifier<List<Food>> {
     double? fat,
     double? fiber,
     double? sugar,
+    List<FoodServing> servings = const [],
     String? barcode,
     bool hidden = false,
   }) async {
@@ -84,6 +85,7 @@ class FoodController extends StreamNotifier<List<Food>> {
         fat: fat,
         fiber: fiber,
         sugar: sugar,
+        servings: servings,
         barcode: barcode,
         hidden: hidden);
     return Food(
@@ -95,6 +97,7 @@ class FoodController extends StreamNotifier<List<Food>> {
       fatPer100g: fat,
       fiberPer100g: fiber,
       sugarPer100g: sugar,
+      servings: servings,
       barcode: barcode,
       hidden: hidden,
     );
@@ -109,6 +112,7 @@ class FoodController extends StreamNotifier<List<Food>> {
     double? fat,
     double? fiber,
     double? sugar,
+    List<FoodServing>? servings,
     String? barcode,
   }) {
     return _repo.update(clientId,
@@ -119,6 +123,7 @@ class FoodController extends StreamNotifier<List<Food>> {
         fat: fat,
         fiber: fiber,
         sugar: sugar,
+        servings: servings,
         barcode: barcode);
   }
 

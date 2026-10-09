@@ -40,6 +40,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
   late final TextEditingController _fat;
   late final TextEditingController _fiber;
   late final TextEditingController _sugar;
+
+  /// The named servings being edited (LIF-146): a name and a grams field per row; at most [_maxServings].
+  final List<_ServingRow> _servings = [];
+  static const _maxServings = 10;
   bool _submitting = false;
   bool _scanning = false;
   String? _error;
@@ -65,6 +69,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     _fat = TextEditingController(text: num(food?.fatPer100g));
     _fiber = TextEditingController(text: num(food?.fiberPer100g));
     _sugar = TextEditingController(text: num(food?.sugarPer100g));
+    for (final s in food?.servings ?? const <FoodServing>[]) {
+      _servings.add(_ServingRow(s.name, _trim(s.grams)));
+    }
     _barcode = food?.barcode;
 
     if (_isEditing) {
@@ -75,6 +82,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       _fat.addListener(_scheduleAutoSave);
       _fiber.addListener(_scheduleAutoSave);
       _sugar.addListener(_scheduleAutoSave);
+      for (final row in _servings) {
+        row.addListener(_scheduleAutoSave);
+      }
     }
 
     if (widget.initialBarcode != null) {
@@ -97,10 +107,58 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     _fat.dispose();
     _fiber.dispose();
     _sugar.dispose();
+    for (final row in _servings) {
+      row.dispose();
+    }
     super.dispose();
   }
 
   double? _parse(String text) => parseDecimal(text);
+
+  void _addServing() {
+    if (_servings.length >= _maxServings) return;
+    final row = _ServingRow('', '');
+    if (_isEditing) row.addListener(_scheduleAutoSave);
+    setState(() => _servings.add(row));
+  }
+
+  void _removeServing(_ServingRow row) {
+    setState(() => _servings.remove(row));
+    row.dispose();
+    if (_isEditing) _scheduleAutoSave();
+  }
+
+  /// The servings to save: the rows with both a name and a positive amount. A row left completely blank is dropped; a half-filled
+  /// one makes this null (the form is not valid yet).
+  List<FoodServing>? _collectServings() {
+    final result = <FoodServing>[];
+    for (final row in _servings) {
+      final name = row.name.text.trim();
+      final gramsText = row.grams.text.trim();
+      if (name.isEmpty && gramsText.isEmpty) continue;
+      final grams = _parse(gramsText);
+      if (name.isEmpty || grams == null || grams <= 0 || grams > 5000) return null;
+      result.add(FoodServing(name: name, grams: grams));
+    }
+    return result;
+  }
+
+  String? _validateServingName(_ServingRow row, String? value) {
+    final l10n = AppLocalizations.of(context)!;
+    final grams = row.grams.text.trim();
+    if ((value ?? '').trim().isEmpty && grams.isNotEmpty) return l10n.servingNameRequiredError;
+    return null;
+  }
+
+  String? _validateServingGrams(_ServingRow row, String? value) {
+    final l10n = AppLocalizations.of(context)!;
+    final text = (value ?? '').trim();
+    if (text.isEmpty) return row.name.text.trim().isEmpty ? null : l10n.enterANumberError;
+    final parsed = _parse(text);
+    if (parsed == null) return l10n.enterANumberError;
+    if (parsed <= 0 || parsed > 5000) return l10n.servingGramsRangeError;
+    return null;
+  }
 
   String? _validateRequiredNumber(String? value) {
     final l10n = AppLocalizations.of(context)!;
@@ -247,6 +305,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       final v = _parse(sugarText);
       if (v == null || v < 0) return;
     }
+    final servings = _collectServings();
+    if (servings == null) return;
     try {
       await ref.read(foodControllerProvider.notifier).updateFood(
             widget.food!.clientId,
@@ -257,6 +317,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             fat: fatText.isEmpty ? null : _parse(fatText),
             fiber: fiberText.isEmpty ? null : _parse(fiberText),
             sugar: sugarText.isEmpty ? null : _parse(sugarText),
+            servings: servings,
             barcode: _barcode,
           );
     } catch (_) {
@@ -285,6 +346,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       final fat = fatText.isEmpty ? null : _parse(fatText);
       final fiber = fiberText.isEmpty ? null : _parse(fiberText);
       final sugar = sugarText.isEmpty ? null : _parse(sugarText);
+      final servings = _collectServings() ?? const <FoodServing>[];
 
       if (_isEditing) {
         await notifier.updateFood(widget.food!.clientId,
@@ -295,6 +357,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             fat: fat,
             fiber: fiber,
             sugar: sugar,
+            servings: servings,
             barcode: _barcode);
       } else {
         await notifier.addFood(
@@ -305,6 +368,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             fat: fat,
             fiber: fiber,
             sugar: sugar,
+            servings: servings,
             barcode: _barcode);
       }
       if (mounted) Navigator.of(context).pop();
@@ -508,6 +572,64 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              Text(l10n.servingsSectionTitle, style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              for (final (index, row) in _servings.indexed) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextFormField(
+                        key: Key('serving-name-$index'),
+                        controller: row.name,
+                        textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.sentences,
+                        maxLength: 40,
+                        decoration: InputDecoration(
+                          labelText: l10n.servingNameLabel,
+                          hintText: l10n.servingNameHint,
+                          counterText: '',
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) => _validateServingName(row, v),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: TextFormField(
+                        key: Key('serving-grams-$index'),
+                        controller: row.grams,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: l10n.servingGramsLabel,
+                          suffixText: 'g',
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) => _validateServingGrams(row, v),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: l10n.removeServingTooltip,
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => _removeServing(row),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (_servings.length < _maxServings)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _addServing,
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text(l10n.addServingButton),
+                  ),
+                ),
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(_error!,
@@ -531,5 +653,25 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
         ),
       ),
     );
+  }
+}
+
+/// One editable serving in the form (LIF-146): a name and an amount in grams.
+class _ServingRow {
+  _ServingRow(String name, String grams)
+      : name = TextEditingController(text: name),
+        grams = TextEditingController(text: grams);
+
+  final TextEditingController name;
+  final TextEditingController grams;
+
+  void addListener(VoidCallback listener) {
+    name.addListener(listener);
+    grams.addListener(listener);
+  }
+
+  void dispose() {
+    name.dispose();
+    grams.dispose();
   }
 }

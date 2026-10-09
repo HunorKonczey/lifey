@@ -5,6 +5,7 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.dto.BarcodeLookupResponse;
 import com.lifey.nutrition.food.dto.BarcodeSource;
 import com.lifey.nutrition.food.dto.FoodResponse;
+import com.lifey.nutrition.food.dto.FoodServingResponse;
 import com.lifey.nutrition.food.dto.OffSearchItem;
 import com.lifey.nutrition.food.dto.OffSearchResponse;
 import com.lifey.nutrition.food.dto.OffSearchStatus;
@@ -136,6 +137,52 @@ class FoodControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(7))
                 .andExpect(jsonPath("$.name").value("Rice"));
+    }
+
+    @Test
+    void create_acceptsServings_andReturnsThemInOrder() throws Exception {
+        when(foodService.create(any())).thenReturn(new FoodResponse(8L, "Milk", 46.0, 3.4, 4.8, 1.5, null, false, Instant.now(), null,
+                null, null, null, List.of(new FoodServingResponse("1 glass", 200), new FoodServingResponse("1 spoon", 15))));
+
+        mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Milk\",\"caloriesPer100g\":46,\"proteinPer100g\":3.4,\"hidden\":false,"
+                                + "\"servings\":[{\"name\":\"1 glass\",\"grams\":200},{\"name\":\"1 spoon\",\"grams\":15}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.servings[0].name").value("1 glass"))
+                .andExpect(jsonPath("$.servings[0].grams").value(200))
+                .andExpect(jsonPath("$.servings[1].name").value("1 spoon"));
+    }
+
+    @Test
+    void create_aFoodWithoutServings_answersWithAnEmptyList() throws Exception {
+        when(foodService.create(any()))
+                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null, false, Instant.now(), null, null));
+
+        mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7,\"hidden\":false}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.servings").isArray())
+                .andExpect(jsonPath("$.servings").isEmpty());
+    }
+
+    @Test
+    void create_badServingsReturn400() throws Exception {
+        String base = "{\"name\":\"Milk\",\"caloriesPer100g\":46,\"proteinPer100g\":3.4,\"hidden\":false,\"servings\":";
+        String eleven = "[" + "{\"name\":\"s\",\"grams\":1},".repeat(10) + "{\"name\":\"s\",\"grams\":1}]";
+        String[] bad = {
+                "[{\"name\":\"\",\"grams\":100}]",
+                "[{\"name\":\"" + "x".repeat(41) + "\",\"grams\":100}]",
+                "[{\"name\":\"glass\",\"grams\":0}]",
+                "[{\"name\":\"glass\",\"grams\":-5}]",
+                "[{\"name\":\"glass\",\"grams\":5001}]",
+                "[{\"name\":\"glass\"}]",
+                eleven,
+        };
+        for (String servings : bad) {
+            mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON).content(base + servings + "}"))
+                    .andExpect(status().isBadRequest());
+        }
+        verify(foodService, never()).create(any());
     }
 
     @Test

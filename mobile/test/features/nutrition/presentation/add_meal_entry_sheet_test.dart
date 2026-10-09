@@ -202,6 +202,33 @@ void main() {
       expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '100 g')).selected, isTrue);
     });
 
+    testWidgets('a food with servings offers them as chips: "1 glass · 200 g" sets the grams (LIF-146)', (tester) async {
+      const milk = Food(
+        clientId: 'milk',
+        name: 'Milk',
+        caloriesPer100g: 46,
+        proteinPer100g: 3.4,
+        servings: [FoodServing(name: '1 glass', grams: 200), FoodServing(name: '1 spoon', grams: 15)],
+      );
+      await _pumpSheet(tester, initialFood: milk);
+
+      expect(find.widgetWithText(ChoiceChip, '1 glass · 200 g'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, '1 spoon · 15 g'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, '1 glass · 200 g'));
+      await tester.pump();
+
+      expect(_text(tester, _gramsField()), '200');
+      expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '1 glass · 200 g')).selected, isTrue);
+      expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '1 spoon · 15 g')).selected, isFalse);
+    });
+
+    testWidgets('a food without servings shows only the plain quick chips', (tester) async {
+      await pickChicken(tester);
+
+      expect(find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('serving-')), findsNothing);
+    });
+
     testWidgets('the card names the food and its energy per 100 g', (tester) async {
       await pickChicken(tester);
 

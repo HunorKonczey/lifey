@@ -60,9 +60,11 @@ class _FakeFoodController extends FoodController {
     double? fat,
     double? fiber,
     double? sugar,
+    List<FoodServing> servings = const [],
     String? barcode,
     bool hidden = false,
   }) async {
+    lastServings = servings;
     saved.add({
       'name': name,
       'calories': calories,
@@ -76,6 +78,8 @@ class _FakeFoodController extends FoodController {
     return Food(clientId: 'new', name: name, caloriesPer100g: calories, proteinPer100g: protein);
   }
 }
+
+List<FoodServing> lastServings = const [];
 
 const _csirke = OffSearchItem(
   barcode: '4056489827702',
@@ -176,6 +180,89 @@ void main() {
     expect(find.text('Also search the OpenFoodFacts food database'), findsOneWidget);
     expect(tester.widget<CheckboxListTile>(_toggle()).value, isFalse);
     expect(find.byKey(const ValueKey('off-search-hint')), findsNothing);
+  });
+
+  testWidgets('servings: add rows, fill them, and Save sends them in order; a blank row is dropped (LIF-146)', (tester) async {
+    await _open(tester);
+    await _tick(tester);
+    await _type(tester, 'tej');
+    await tester.enterText(_field('Calories'), '46');
+    await tester.enterText(_field('Protein'), '3.4');
+
+    for (var i = 0; i < 3; i++) {
+      await tester.ensureVisible(find.text('Add serving'));
+      await tester.tap(find.text('Add serving'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const Key('serving-name-2')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('serving-name-0')), '1 glass');
+    await tester.enterText(find.byKey(const Key('serving-grams-0')), '200');
+    await tester.enterText(find.byKey(const Key('serving-name-1')), '1 spoon');
+    await tester.enterText(find.byKey(const Key('serving-grams-1')), '15,5');
+    // the third row stays blank
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(lastServings, const [FoodServing(name: '1 glass', grams: 200), FoodServing(name: '1 spoon', grams: 15.5)]);
+  });
+
+  testWidgets('a half-filled serving blocks Save and says what is missing', (tester) async {
+    await _open(tester);
+    await _tick(tester);
+    await _type(tester, 'tej');
+    await tester.enterText(_field('Calories'), '46');
+    await tester.enterText(_field('Protein'), '3.4');
+    await tester.ensureVisible(find.text('Add serving'));
+    await tester.tap(find.text('Add serving'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('serving-grams-0')), '200');
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Give the serving a name'), findsOneWidget);
+    expect(_saved, isEmpty);
+  });
+
+  testWidgets('a serving can be removed, and the amount is bounded', (tester) async {
+    await _open(tester);
+    await _tick(tester);
+    await _type(tester, 'tej');
+    await tester.enterText(_field('Calories'), '46');
+    await tester.enterText(_field('Protein'), '3.4');
+    await tester.ensureVisible(find.text('Add serving'));
+    await tester.tap(find.text('Add serving'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('serving-name-0')), 'glass');
+    await tester.enterText(find.byKey(const Key('serving-grams-0')), '6000');
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Between 1 and 5000 g'), findsOneWidget);
+    expect(_saved, isEmpty);
+
+    await tester.tap(find.byTooltip('Remove serving'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('serving-name-0')), findsNothing);
+  });
+
+  testWidgets('editing a food shows its stored servings (LIF-146)', (tester) async {
+    await _open(tester,
+        food: const Food(
+          clientId: 'f',
+          name: 'Milk',
+          caloriesPer100g: 46,
+          proteinPer100g: 3.4,
+          servings: [FoodServing(name: '1 glass', grams: 200)],
+        ));
+
+    expect(_text(tester, find.byKey(const Key('serving-name-0'))), '1 glass');
+    expect(_text(tester, find.byKey(const Key('serving-grams-0'))), '200');
+    expect(find.byKey(const Key('serving-name-1')), findsNothing);
   });
 
   testWidgets('editing a food shows its stored fibre and sugar (LIF-145)', (tester) async {
@@ -376,5 +463,25 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(_sectionTitle(), findsOneWidget);
+  });
+
+  testWidgets('with ten servings at 1.3x text on a 360x640 phone the form scrolls instead of overflowing (LIF-146)', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await _open(tester,
+        textScale: 1.3,
+        food: Food(
+          clientId: 'f',
+          name: 'Milk',
+          caloriesPer100g: 46,
+          proteinPer100g: 3.4,
+          servings: [for (var i = 1; i <= 10; i++) FoodServing(name: 'A rather long serving name $i', grams: 100.0 * i)],
+        ));
+
+    expect(tester.takeException(), isNull);
+    // the cap: ten rows, no more "Add serving"
+    await tester.ensureVisible(find.byKey(const Key('serving-name-9')));
+    expect(find.text('Add serving'), findsNothing);
   });
 }

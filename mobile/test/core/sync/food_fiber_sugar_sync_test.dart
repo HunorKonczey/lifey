@@ -9,6 +9,7 @@ import 'package:lifey/core/sync/outbox_writer.dart';
 import 'package:lifey/core/sync/pull_engine.dart';
 import 'package:lifey/core/sync/sync_engine.dart';
 import 'package:lifey/features/nutrition/data/food_repository.dart';
+import 'package:lifey/features/nutrition/domain/food.dart';
 
 /// Serves GET /foods as one page; every other entity gets an empty response.
 class _FoodsAdapter implements HttpClientAdapter {
@@ -105,6 +106,49 @@ void main() {
     expect(payload['sugarPer100g'], isNull);
   });
 
+  group('servings (LIF-146)', () {
+    const glass = FoodServing(name: '1 glass', grams: 200);
+    const spoon = FoodServing(name: '1 spoon', grams: 15);
+
+    test('a created food keeps its servings and sends them in order', () async {
+      await repo.create(name: 'Milk', calories: 46, protein: 3.4, servings: [glass, spoon]);
+
+      final row = (await db.select(db.foods).get()).single;
+      expect(FoodServing.decode(row.servingsJson), [glass, spoon]);
+      final payload = await lastPayload();
+      expect(payload['servings'], [
+        {'name': '1 glass', 'grams': 200.0},
+        {'name': '1 spoon', 'grams': 15.0},
+      ]);
+    });
+
+    test('a food without servings sends an empty list', () async {
+      await repo.create(name: 'Rice', calories: 130, protein: 2.7);
+
+      expect((await lastPayload())['servings'], isEmpty);
+    });
+
+    test('an update that is not given servings keeps - and re-sends - the stored ones', () async {
+      final clientId = await repo.create(name: 'Milk', calories: 46, protein: 3.4, servings: [glass, spoon]);
+
+      await repo.update(clientId, name: 'Milk', calories: 50, protein: 3.4);
+
+      expect(FoodServing.decode((await db.select(db.foods).get()).single.servingsJson), [glass, spoon]);
+      expect((await lastPayload())['servings'], hasLength(2));
+    });
+
+    test('an update given servings replaces them, an empty list clears them', () async {
+      final clientId = await repo.create(name: 'Milk', calories: 46, protein: 3.4, servings: [glass]);
+
+      await repo.update(clientId, name: 'Milk', calories: 46, protein: 3.4, servings: [spoon, glass]);
+      expect(FoodServing.decode((await db.select(db.foods).get()).single.servingsJson), [spoon, glass]);
+
+      await repo.update(clientId, name: 'Milk', calories: 46, protein: 3.4, servings: const []);
+      expect((await db.select(db.foods).get()).single.servingsJson, isNull);
+      expect((await lastPayload())['servings'], isEmpty);
+    });
+  });
+
   group('pull', () {
     late _FoodsAdapter adapter;
     late PullEngine pull;
@@ -123,6 +167,24 @@ void main() {
       final row = (await db.select(db.foods).get()).single;
       expect(row.fiberPer100g, 10);
       expect(row.sugarPer100g, 1.2);
+    });
+
+    test('a food from the server arrives with its servings, in order; a bad entry is dropped (LIF-146)', () async {
+      adapter.full = [
+        {
+          ..._json(1),
+          'servings': [
+            {'name': '1 glass', 'grams': 200},
+            {'name': '', 'grams': 5},
+            {'name': '1 spoon', 'grams': 15},
+          ],
+        },
+      ];
+
+      await pull.pullAll();
+
+      final row = (await db.select(db.foods).get()).single;
+      expect(FoodServing.decode(row.servingsJson), const [FoodServing(name: '1 glass', grams: 200), FoodServing(name: '1 spoon', grams: 15)]);
     });
 
     test('a food the server has no figures for stays unknown (null), and a later pull updates it', () async {

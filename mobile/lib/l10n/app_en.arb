@@ -613,6 +613,38 @@
   "@sugarOptionalLabel": {
     "description": "Label for the optional sugars field of a food (per 100 g)"
   },
+  "servingsSectionTitle": "Servings (optional)",
+  "@servingsSectionTitle": {
+    "description": "Heading of the named serving sizes of a food on the add / edit food sheet"
+  },
+  "servingNameLabel": "Name",
+  "@servingNameLabel": {
+    "description": "Label of a serving's name field (e.g. 1 glass)"
+  },
+  "servingNameHint": "e.g. 1 glass",
+  "@servingNameHint": {
+    "description": "Placeholder of a serving's name field"
+  },
+  "servingGramsLabel": "Amount",
+  "@servingGramsLabel": {
+    "description": "Label of a serving's amount in grams"
+  },
+  "addServingButton": "Add serving",
+  "@addServingButton": {
+    "description": "Button adding a named serving row to the food form"
+  },
+  "removeServingTooltip": "Remove serving",
+  "@removeServingTooltip": {
+    "description": "Tooltip of the remove button on a serving row"
+  },
+  "servingNameRequiredError": "Give the serving a name",
+  "@servingNameRequiredError": {
+    "description": "Validation error: a serving has an amount but no name"
+  },
+  "servingGramsRangeError": "Between 1 and 5000 g",
+  "@servingGramsRangeError": {
+    "description": "Validation error: a serving's grams are outside what is accepted"
+  },
   "mustBeZeroOrMoreError": "Must be 0 or more",
   "@mustBeZeroOrMoreError": {
     "description": "Validation error for a non-negative numeric field"

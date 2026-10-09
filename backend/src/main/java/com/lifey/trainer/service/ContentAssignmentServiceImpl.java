@@ -8,6 +8,7 @@ import com.lifey.mail.MailLanguage;
 import com.lifey.mail.MailLanguageResolver;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
+import com.lifey.nutrition.food.FoodServing;
 import com.lifey.nutrition.recipe.Recipe;
 import com.lifey.nutrition.recipe.RecipeImage;
 import com.lifey.nutrition.recipe.RecipeImageRepository;
@@ -397,6 +398,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         copy.setFatPer100g(source.getFatPer100g());
         copy.setFiberPer100g(source.getFiberPer100g());
         copy.setSugarPer100g(source.getSugarPer100g());
+        source.getServings().forEach(s -> copy.getServings().add(new FoodServing(s.getName(), s.getGrams())));
         copy.setHidden(source.isHidden());
         copy.setOriginSourceId(source.getId());
         copy.setOriginTrainerId(trainerId);

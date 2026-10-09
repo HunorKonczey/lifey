@@ -14,6 +14,9 @@ class Foods extends Table {
   RealColumn get carbsPer100g => real().nullable()();
   RealColumn get fiberPer100g => real().nullable()();
   RealColumn get sugarPer100g => real().nullable()();
+
+  /// Named serving sizes (LIF-146) as a JSON array of `{name, grams}`; null = none.
+  TextColumn get servingsJson => text().nullable()();
   RealColumn get fatPer100g => real().nullable()();
   TextColumn get barcode => text().nullable()();
   BoolColumn get hidden => boolean().withDefault(const Constant(false))();

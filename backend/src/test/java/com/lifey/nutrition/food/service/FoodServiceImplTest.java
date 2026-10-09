@@ -5,6 +5,9 @@ import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
+import com.lifey.nutrition.food.FoodServing;
+import com.lifey.nutrition.food.dto.FoodServingRequest;
+import com.lifey.nutrition.food.dto.FoodServingResponse;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
@@ -232,6 +235,63 @@ class FoodServiceImplTest {
 
         assertThat(existing.getFiberPer100g()).isEqualTo(9.0);
         assertThat(existing.getSugarPer100g()).isNull();
+    }
+
+    @Test
+    void create_storesTheServingsInOrder_trimmed() {
+        FoodRequest request = new FoodRequest("Milk", 46.0, 3.4, 4.8, 1.5, null, false, null, null,
+                List.of(new FoodServingRequest("  1 glass ", 200.0), new FoodServingRequest("1 spoon", 15.0)));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Milk")).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+        when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 11L));
+
+        FoodResponse result = service.create(request);
+
+        assertThat(result.servings()).extracting(FoodServingResponse::name).containsExactly("1 glass", "1 spoon");
+        assertThat(result.servings()).extracting(FoodServingResponse::grams).containsExactly(200.0, 15.0);
+    }
+
+    @Test
+    void create_withoutServings_hasAnEmptyList_notNull() {
+        FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, false);
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+        when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 12L));
+
+        assertThat(service.create(request).servings()).isEmpty();
+    }
+
+    @Test
+    void update_withoutServings_keepsTheStoredOnes_anEmptyListClears_aListReplaces() {
+        Food existing = food(3L, "Milk", 46, 3.4);
+        existing.getServings().add(new FoodServing("1 glass", 200));
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Milk")).thenReturn(Optional.of(existing));
+
+        // A client that does not know the field sends none: what is stored stays.
+        service.update(3L, new FoodRequest("Milk", 46.0, 3.4, 4.8, 1.5, null, false));
+        assertThat(existing.getServings()).extracting(FoodServing::getName).containsExactly("1 glass");
+
+        service.update(3L, new FoodRequest("Milk", 46.0, 3.4, 4.8, 1.5, null, false, null, null,
+                List.of(new FoodServingRequest("1 cup", 250.0), new FoodServingRequest("1 glass", 200.0))));
+        assertThat(existing.getServings()).extracting(FoodServing::getName).containsExactly("1 cup", "1 glass");
+
+        service.update(3L, new FoodRequest("Milk", 46.0, 3.4, 4.8, 1.5, null, false, null, null, List.of()));
+        assertThat(existing.getServings()).isEmpty();
+    }
+
+    @Test
+    void update_ofTheServingsAlone_movesUpdatedAt_soDeltaSyncSeesIt() {
+        Food existing = food(3L, "Milk", 46, 3.4);
+        Instant old = Instant.parse("2020-01-01T00:00:00Z");
+        existing.setUpdatedAt(old);
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Milk")).thenReturn(Optional.of(existing));
+
+        service.update(3L, new FoodRequest("Milk", existing.getCaloriesPer100g(), existing.getProteinPer100g(), null, null, null, false,
+                null, null, List.of(new FoodServingRequest("1 glass", 200.0))));
+
+        assertThat(existing.getUpdatedAt()).isAfter(old);
     }
 
     @Test

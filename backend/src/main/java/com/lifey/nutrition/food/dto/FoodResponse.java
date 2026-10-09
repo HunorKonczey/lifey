@@ -1,6 +1,7 @@
 package com.lifey.nutrition.food.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 public record FoodResponse(
         Long id,
@@ -20,12 +21,18 @@ public record FoodResponse(
         Long originTrainerId,
         // Dietary fibre and sugars per 100 g (LIF-145); null = not known.
         Double fiberPer100g,
-        Double sugarPer100g
+        Double sugarPer100g,
+        // Named serving sizes (LIF-146), in order; empty when there are none.
+        List<FoodServingResponse> servings
 ) {
+    public FoodResponse {
+        servings = servings == null ? List.of() : servings;
+    }
+
     public FoodResponse(Long id, String name, Double caloriesPer100g, Double proteinPer100g, Double carbsPer100g,
                         Double fatPer100g, String barcode, boolean hidden, Instant updatedAt, Instant deletedAt,
                         Long originTrainerId) {
         this(id, name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, hidden, updatedAt,
-                deletedAt, originTrainerId, null, null);
+                deletedAt, originTrainerId, null, null, List.of());
     }
 }
