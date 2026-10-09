@@ -120,6 +120,79 @@ class WorkoutTemplateServiceImplTest {
         });
     }
 
+    // ---- duration and repetitions (LIF-106) ----
+
+    private WorkoutTemplate storedTemplate(Integer durationMinutes, Integer benchReps) {
+        WorkoutTemplate existing = new WorkoutTemplate();
+        existing.setId(9L);
+        existing.setName("Push day");
+        existing.setDurationMinutes(durationMinutes);
+        WorkoutTemplateExercise link = new WorkoutTemplateExercise();
+        link.setExercise(exercise(1L, "Bench Press"));
+        link.setTargetSets(3);
+        link.setTargetReps(benchReps);
+        existing.getExercises().add(link);
+        when(templateRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        return existing;
+    }
+
+    @Test
+    void create_storesTheStatedDurationAndRepetitions_andZeroMeansNotSaid() {
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+        when(templateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
+
+        WorkoutTemplateResponse result = service.create(new WorkoutTemplateRequest("Push day",
+                List.of(new TemplateExerciseEntry(1L, 3, 10), new TemplateExerciseEntry(4L, 3, 0)), 45));
+
+        assertThat(result.durationMinutes()).isEqualTo(45);
+        assertThat(result.exercises().get(0).targetReps()).isEqualTo(10);
+        assertThat(result.exercises().get(1).targetReps()).isNull();
+    }
+
+    @Test
+    void update_fromThePhone_keepsTheDurationAndRepetitionsTheTrainerSetOnTheWeb() {
+        WorkoutTemplate existing = storedTemplate(50, 8);
+
+        // What the phone sends: no duration, no repetitions - it does not know them.
+        WorkoutTemplateResponse result = service.update(9L, new WorkoutTemplateRequest("Push day renamed",
+                List.of(new TemplateExerciseEntry(1L, 4))));
+
+        assertThat(existing.getDurationMinutes()).isEqualTo(50);
+        assertThat(result.durationMinutes()).isEqualTo(50);
+        assertThat(result.exercises()).singleElement().satisfies(e -> {
+            assertThat(e.targetSets()).isEqualTo(4);
+            assertThat(e.targetReps()).isEqualTo(8);
+        });
+    }
+
+    @Test
+    void update_aValueReplacesTheStoredOne_andZeroClearsIt() {
+        WorkoutTemplate existing = storedTemplate(50, 8);
+
+        service.update(9L, new WorkoutTemplateRequest("Push day", List.of(new TemplateExerciseEntry(1L, 3, 12)), 40));
+        assertThat(existing.getDurationMinutes()).isEqualTo(40);
+        assertThat(existing.getExercises().getFirst().getTargetReps()).isEqualTo(12);
+
+        service.update(9L, new WorkoutTemplateRequest("Push day", List.of(new TemplateExerciseEntry(1L, 3, 0)), 0));
+        assertThat(existing.getDurationMinutes()).isNull();
+        assertThat(existing.getExercises().getFirst().getTargetReps()).isNull();
+    }
+
+    @Test
+    void update_anExerciseAddedOnThePhoneStartsWithoutRepetitions_theOthersKeepTheirs() {
+        WorkoutTemplate existing = storedTemplate(null, 8);
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+
+        WorkoutTemplateResponse result = service.update(9L, new WorkoutTemplateRequest("Push day",
+                List.of(new TemplateExerciseEntry(4L, 3), new TemplateExerciseEntry(1L, 3))));
+
+        assertThat(result.exercises()).extracting(TemplateExerciseEntry::exerciseId, TemplateExerciseEntry::targetReps)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(4L, null), org.assertj.core.groups.Tuple.tuple(1L, 8));
+        assertThat(existing.getDurationMinutes()).isNull();
+    }
+
     @Test
     void update_publishesUpdatedEventForLiveSync() {
         WorkoutTemplate existing = new WorkoutTemplate();

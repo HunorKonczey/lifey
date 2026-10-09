@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @Transactional
@@ -68,6 +70,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
         WorkoutTemplate template = new WorkoutTemplate();
         template.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         template.setName(request.name());
+        applyDuration(template, request.durationMinutes());
         replaceExercises(template, request.exercises());
         return WorkoutTemplateMapper.toResponse(templateRepository.save(template));
     }
@@ -76,6 +79,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
     public WorkoutTemplateResponse update(Long id, WorkoutTemplateRequest request) {
         WorkoutTemplate template = getOrThrow(id);
         template.setName(request.name());
+        applyDuration(template, request.durationMinutes());
         replaceExercises(template, request.exercises());
         // Exercise links are child rows with no delta feed of their own (docs/16 §2.3)
         // — a link-only edit (e.g. reordered, target sets changed, name unchanged)
@@ -104,6 +108,12 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
      * {@code exerciseId}. Relies on {@code orphanRemoval} to delete dropped links.
      */
     private void replaceExercises(WorkoutTemplate template, List<TemplateExerciseEntry> entries) {
+        // The phone rebuilds the whole list on every save and knows nothing of repetition counts, so a count the request
+        // does not carry is the one already stored for that exercise (LIF-106); 0 clears it.
+        Map<Long, Integer> storedReps = new HashMap<>();
+        for (WorkoutTemplateExercise link : template.getExercises()) {
+            if (link.getTargetReps() != null) storedReps.putIfAbsent(link.getExercise().getId(), link.getTargetReps());
+        }
         template.getExercises().clear();
         for (int i = 0; i < entries.size(); i++) {
             TemplateExerciseEntry entry = entries.get(i);
@@ -114,8 +124,24 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
             link.setWorkoutTemplate(template);
             link.setExercise(exercise);
             link.setTargetSets(entry.targetSets());
+            link.setTargetReps(resolveReps(entry.targetReps(), storedReps.get(entry.exerciseId())));
             link.setSortOrder(i);
             template.getExercises().add(link);
         }
+    }
+
+    /**
+     * The duration of a save (LIF-106): a value sets it, 0 clears it, and no value - what the phone sends - leaves the
+     * stored one alone, so an edit on the phone cannot erase what the trainer put on the web.
+     */
+    private static void applyDuration(WorkoutTemplate template, Integer requested) {
+        if (requested == null) return;
+        template.setDurationMinutes(requested == 0 ? null : requested);
+    }
+
+    /** The same rule for an exercise's repetition count: a value sets it, 0 clears it, none keeps what was stored. */
+    private static Integer resolveReps(Integer requested, Integer stored) {
+        if (requested == null) return stored;
+        return requested == 0 ? null : requested;
     }
 }

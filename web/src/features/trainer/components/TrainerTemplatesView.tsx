@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Avatar, Button, Card, ConfirmModal, DataTable, Icon, colorForSeed, type DataTableColumn } from "@/components/ds";
 import { Drawer } from "@/components/ds/overlay/Drawer";
@@ -11,19 +11,23 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { exerciseApi, templateApi, workoutSessionApi } from "@/features/workouts/api";
 import { TemplateEditorPanel } from "@/features/workouts/components/TemplateEditorPanel";
 import { pickerTemplates } from "@/features/workouts/templatePicker";
+import { buildTemplateRequest } from "@/features/workouts/templateRequest";
 import type { WorkoutTemplateResponse } from "@/features/workouts/types";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useToast } from "@/lib/hooks/useToast";
 import { trainerApi } from "../api";
-import { templateTags, templateUsers, type TemplateUser } from "../templateUsage";
+import { templateAllUsers, templateTags, type TemplateUser } from "../templateUsage";
 
 interface Row {
   template: WorkoutTemplateResponse;
   exerciseCount: number;
   minutes: number;
   tags: string[];
+  /** Everybody using it: assigned to them, or in a schedule / program still running. */
   users: TemplateUser[];
+  /** Of them, who have it in a schedule or program still running (LIF-106). */
+  scheduledCount: number;
 }
 
 interface Props {
@@ -58,22 +62,23 @@ export function TrainerTemplatesView({ onAssign, onSchedule }: Props) {
   const { data: clients } = useQuery({ queryKey: queryKeys.trainerClients.all(), queryFn: trainerApi.clients });
 
   const templates = templatesQ.data ?? [];
-  const assigned = useQueries({
-    queries: templates.map((tpl) => ({
-      queryKey: queryKeys.trainerAssignments.assignedClients("TEMPLATE", tpl.id),
-      queryFn: () => trainerApi.assignedClientIds("TEMPLATE", tpl.id),
-    })),
-  });
+  // One answer for every template (LIF-106): assigned clients and the ones with it in a live schedule or program.
+  const { data: usage } = useQuery({ queryKey: queryKeys.trainerTemplates.usage(), queryFn: trainerApi.templateUsage });
+  const usageById = new Map((usage ?? []).map((u) => [u.templateId, u]));
 
   const sessionsDesc = (sessions ?? []).slice().sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
   const picker = pickerTemplates(templates, sessionsDesc, null, new Date(), false);
-  const rows: Row[] = picker.map((item, i) => ({
-    template: item.template,
-    exerciseCount: item.exerciseCount,
-    minutes: item.estimatedMinutes,
-    tags: templateTags(item.template, exercises ?? []),
-    users: templateUsers(assigned[i]?.data, clients ?? []),
-  }));
+  const rows: Row[] = picker.map((item) => {
+    const itemUsage = usageById.get(item.template.id);
+    return {
+      template: item.template,
+      exerciseCount: item.exerciseCount,
+      minutes: item.estimatedMinutes,
+      tags: templateTags(item.template, exercises ?? []),
+      users: templateAllUsers(itemUsage, clients ?? []),
+      scheduledCount: templateAllUsers(itemUsage && { assignedClientIds: [], scheduledClientIds: itemUsage.scheduledClientIds }, clients ?? []).length,
+    };
+  });
   const q = search.trim().toLowerCase();
   const visible = q ? rows.filter((r) => r.template.name.toLowerCase().includes(q)) : rows;
   const inUse = rows.filter((r) => r.users.length > 0).length;
@@ -81,7 +86,7 @@ export function TrainerTemplatesView({ onAssign, onSchedule }: Props) {
 
   const duplicateMutation = useMutation({
     mutationFn: (tpl: WorkoutTemplateResponse) =>
-      templateApi.create({ name: t("copyOf", { name: tpl.name }), exercises: tpl.exercises.map((e) => ({ exerciseId: e.exerciseId, targetSets: e.targetSets })) }),
+      templateApi.create(buildTemplateRequest(null, t("copyOf", { name: tpl.name }), tpl.exercises, tpl.durationMinutes ?? null)),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutTemplates.all() });
       show(t("templateDuplicated"), "success");
@@ -169,7 +174,7 @@ export function TrainerTemplatesView({ onAssign, onSchedule }: Props) {
         onDirtyChange={setEditorDirty}
         onSaved={(id) => setSelectedId(id)}
         onDeleted={closeNow}
-        trainer={{ clientCount: selected?.users.length ?? 0, onClose: () => goTo(null) }}
+        trainer={{ clientCount: selected?.users.length ?? 0, scheduledCount: selected?.scheduledCount ?? 0, onClose: () => goTo(null) }}
       />
     ) : null;
 

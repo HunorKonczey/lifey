@@ -16,15 +16,28 @@ import { templateTotals } from "@/features/trainer/templateUsage";
 import { formatRest } from "../exerciseUi";
 import { useToast } from "@/lib/hooks/useToast";
 import { templateApi } from "../api";
+import { MAX_TEMPLATE_MINUTES, MAX_TEMPLATE_REPS, buildTemplateRequest, sanitizeCount } from "../templateRequest";
 import type { ExerciseResponse, TemplateExerciseEntry, WorkoutTemplateResponse } from "../types";
 
 /** True when the edited name / exercise list differ from the saved template (or a new one has anything in it). */
-export function isTemplateDirty(template: WorkoutTemplateResponse | null, name: string, rows: readonly TemplateExerciseEntry[]): boolean {
-  if (!template) return name.trim() !== "" || rows.length > 0;
+export function isTemplateDirty(
+  template: WorkoutTemplateResponse | null,
+  name: string,
+  rows: readonly TemplateExerciseEntry[],
+  /** The edited duration; left out where the duration is not edited. */
+  durationMinutes?: number | null,
+): boolean {
+  if (!template) return name.trim() !== "" || rows.length > 0 || (durationMinutes ?? null) !== null;
   return (
     template.name !== name ||
     template.exercises.length !== rows.length ||
-    template.exercises.some((e, i) => e.exerciseId !== rows[i].exerciseId || e.targetSets !== rows[i].targetSets)
+    template.exercises.some(
+      (e, i) =>
+        e.exerciseId !== rows[i].exerciseId ||
+        e.targetSets !== rows[i].targetSets ||
+        (e.targetReps ?? null) !== (rows[i].targetReps ?? null),
+    ) ||
+    (durationMinutes !== undefined && (template.durationMinutes ?? null) !== durationMinutes)
   );
 }
 
@@ -53,7 +66,7 @@ export function TemplateEditorPanel({
    * The trainer's variant (W9-A): a header with the name, the "Nem mentett" chip and a close button, the totals
    * line, a detail line per exercise, and a footer that says how many clients' future workouts a save reaches.
    */
-  trainer?: { clientCount: number; onClose: () => void };
+  trainer?: { clientCount: number; /** Of them, who have it in a schedule or program still running (LIF-106). */ scheduledCount?: number; onClose: () => void };
 }) {
   const t = useTranslations("workouts");
   const common = useTranslations("common");
@@ -61,12 +74,15 @@ export function TemplateEditorPanel({
   const { show } = useToast();
   const [name, setName] = useState(template?.name ?? "");
   const [rows, setRows] = useState<TemplateExerciseEntry[]>(template?.exercises ?? []);
+  // The author's own duration in minutes (LIF-106); null = not said, the estimate shows instead.
+  const [duration, setDuration] = useState<number | null>(template?.durationMinutes ?? null);
   const [picking, setPicking] = useState(false);
   const [search, setSearch] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const dirty = isTemplateDirty(template, name, rows);
-  const totals = templateTotals(rows);
+  const dirty = isTemplateDirty(template, name, rows, duration);
+  const totals = templateTotals(rows, duration);
+  const estimate = templateTotals(rows).minutes;
   useEffect(() => {
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
@@ -87,6 +103,7 @@ export function TemplateEditorPanel({
   const discard = () => {
     setName(template?.name ?? "");
     setRows(template?.exercises ?? []);
+    setDuration(template?.durationMinutes ?? null);
   };
   const exerciseDetail = (e: ExerciseResponse | undefined) => {
     if (!e) return undefined;
@@ -99,7 +116,7 @@ export function TemplateEditorPanel({
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const body = { name: name.trim(), exercises: rows };
+      const body = buildTemplateRequest(template, name, rows, duration);
       return template ? templateApi.update(template.id, body) : templateApi.create(body);
     },
     onSuccess: (saved) => {
@@ -130,7 +147,9 @@ export function TemplateEditorPanel({
             {!bare && <IconButton icon="close" label={common("close")} size={32} onClick={trainer.onClose} />}
           </div>
           <p className="type-body-s tabular" style={{ color: "var(--text-2)" }} data-testid="template-totals">
-            {t("templateTotals", { ...totals })}
+            {totals.stated
+              ? t("templateTotalsStated", { exercises: totals.exercises, sets: totals.sets, minutes: totals.minutes })
+              : t("templateTotals", { exercises: totals.exercises, sets: totals.sets, minutes: totals.minutes })}
           </p>
         </div>
       ) : (
@@ -138,6 +157,18 @@ export function TemplateEditorPanel({
       )}
 
       <TextField label={t("templateNameLabel")} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("templateNamePlaceholder")} autoFocus={!template} />
+
+      {trainer && (
+        <TextField
+          label={t("templateDurationLabel")}
+          inputMode="numeric"
+          value={duration ?? ""}
+          onChange={(e) => setDuration(sanitizeCount(e.target.value, MAX_TEMPLATE_MINUTES))}
+          placeholder={String(estimate)}
+          hint={t("templateDurationHint", { minutes: estimate })}
+          data-testid="template-duration"
+        />
+      )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={rows.map((r) => r.exerciseId)} strategy={verticalListSortingStrategy}>
@@ -148,6 +179,8 @@ export function TemplateEditorPanel({
                 row={row}
                 name={exerciseName(row.exerciseId)}
                 detail={trainer ? exerciseDetail(exercises.find((e) => e.id === row.exerciseId)) : undefined}
+                showReps={!!trainer}
+                onRepsChange={(n) => setRows((prev) => prev.map((r) => (r.exerciseId === row.exerciseId ? { ...r, targetReps: n } : r)))}
                 onSetsChange={(n) => setRows((prev) => prev.map((r) => (r.exerciseId === row.exerciseId ? { ...r, targetSets: n } : r)))}
                 onRemove={() => setRows((prev) => prev.filter((r) => r.exerciseId !== row.exerciseId))}
               />
@@ -192,6 +225,7 @@ export function TemplateEditorPanel({
       {trainer && (
         <p className="type-body-s" style={{ color: "var(--text-2)" }} data-testid="template-impact">
           {template ? t("templateImpact", { count: trainer.clientCount }) : t("templateImpactNew")}
+          {template && (trainer.scheduledCount ?? 0) > 0 && ` ${t("templateImpactScheduled", { count: trainer.scheduledCount ?? 0 })}`}
         </p>
       )}
       <div className="flex gap-2">
@@ -228,11 +262,14 @@ export function TemplateEditorPanel({
 }
 
 function SortableRow({
-  row, name, detail, onSetsChange, onRemove,
+  row, name, detail, showReps, onRepsChange, onSetsChange, onRemove,
 }: {
   row: TemplateExerciseEntry;
   name: string;
   detail?: string;
+  /** The trainer's editor asks for repetitions per set too (LIF-106). */
+  showReps?: boolean;
+  onRepsChange: (n: number | null) => void;
   onSetsChange: (n: number) => void;
   onRemove: () => void;
 }) {
@@ -273,6 +310,22 @@ function SortableRow({
         </span>
         <IconButton icon="add" label={t("moreSetsAria")} size={32} onClick={() => onSetsChange(row.targetSets + 1)} />
       </div>
+
+      {showReps && (
+        <span aria-hidden className="type-body-s" style={{ color: "var(--text-3)" }}>×</span>
+      )}
+      {showReps && (
+        <TextField
+          size="dense"
+          className="w-16 shrink-0"
+          inputMode="numeric"
+          aria-label={t("repsAria", { name })}
+          placeholder={t("repsPlaceholder")}
+          value={row.targetReps ?? ""}
+          onChange={(e) => onRepsChange(sanitizeCount(e.target.value, MAX_TEMPLATE_REPS))}
+          data-testid="template-reps"
+        />
+      )}
 
       <IconButton icon="close" label={t("removeExerciseAria")} size={32} onClick={onRemove} />
     </div>

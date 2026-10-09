@@ -131,6 +131,7 @@ export function ScheduleWorkoutDrawer({
       }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerSchedules.forClient(selectedClientId as number) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trainerTemplates.usage() });
       queryClient.invalidateQueries({ queryKey: ["trainer-calendar"] });
       show(t("scheduled", { count: res.occurrencesCreated, name: clientName }), "success");
       onClose();

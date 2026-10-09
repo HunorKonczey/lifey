@@ -2,6 +2,8 @@ package com.lifey.trainer;
 
 import com.lifey.trainer.entity.ContentAssignment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,4 +23,9 @@ public interface ContentAssignmentRepository extends JpaRepository<ContentAssign
             Long trainerId, ContentType contentType, Long sourceId);
 
     Optional<ContentAssignment> findByIdAndTrainerId(Long id, Long trainerId);
+
+    /** One (template, client) pair per template this trainer assigned - the "assigned" half of the usage view (LIF-106). */
+    @Query("select a.sourceId as templateId, a.client.id as clientId from ContentAssignment a "
+            + "where a.trainer.id = :trainerId and a.contentType = :type")
+    List<TemplateClientPair> findAssignedPairs(@Param("trainerId") Long trainerId, @Param("type") ContentType type);
 }

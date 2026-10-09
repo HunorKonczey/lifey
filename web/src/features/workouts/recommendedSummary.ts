@@ -49,16 +49,20 @@ export function summarizeTemplate(
   const durations = finished
     .map((s) => (new Date(s.finishedAt!).getTime() - new Date(s.startedAt).getTime()) / 60_000)
     .filter((m) => m > 0);
-  const estimatedMinutes = roundToFive(
-    durations.length > 0 ? median(durations) : template.exercises.length * FALLBACK_MINUTES_PER_EXERCISE,
-  );
+  // The author's own duration (LIF-106) beats any estimate; otherwise the median of the finished runs, else a guess per exercise.
+  const estimatedMinutes =
+    template.durationMinutes && template.durationMinutes > 0
+      ? template.durationMinutes
+      : roundToFive(durations.length > 0 ? median(durations) : template.exercises.length * FALLBACK_MINUTES_PER_EXERCISE);
 
   const preview = template.exercises.slice(0, PREVIEW_COUNT).map((e) => {
     // Newest session that logged this exercise — its median reps is what "4 × 8" shows.
     const last = sessionsDesc.find((s) => s.sets.some((set) => set.exerciseId === e.exerciseId));
     const reps = last
       ? Math.round(median(last.sets.filter((set) => set.exerciseId === e.exerciseId).map((set) => set.reps)))
-      : null;
+      : e.targetReps && e.targetReps > 0
+        ? e.targetReps // never performed: what the template itself asks for (LIF-106)
+        : null;
     return { exerciseId: e.exerciseId, name: exerciseNames.get(e.exerciseId) ?? "", sets: e.targetSets, reps };
   });
 

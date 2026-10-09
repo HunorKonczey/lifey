@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { templateTags, templateTotals, templateUsers } from "./templateUsage";
+import { templateAllUsers, templateTags, templateTotals, templateUsers } from "./templateUsage";
 import type { TrainerClientResponse } from "./types";
 import type { ExerciseResponse } from "@/features/workouts/types";
 
@@ -32,7 +32,25 @@ describe("templateTags", () => {
 
 describe("templateTotals", () => {
   it("sums sets and estimates 8 minutes an exercise, rounded to 5", () => {
-    expect(templateTotals([{ targetSets: 3 }, { targetSets: 4 }, { targetSets: 4 }])).toEqual({ exercises: 3, sets: 11, minutes: 25 });
-    expect(templateTotals([])).toEqual({ exercises: 0, sets: 0, minutes: 0 });
+    expect(templateTotals([{ targetSets: 3 }, { targetSets: 4 }, { targetSets: 4 }])).toEqual({ exercises: 3, sets: 11, minutes: 25, stated: false });
+    expect(templateTotals([])).toEqual({ exercises: 0, sets: 0, minutes: 0, stated: false });
+  });
+  it("takes the author's own duration over the estimate (LIF-106), and ignores an empty or zero one", () => {
+    const entries = [{ targetSets: 3 }, { targetSets: 4 }, { targetSets: 4 }];
+    expect(templateTotals(entries, 45)).toEqual({ exercises: 3, sets: 11, minutes: 45, stated: true });
+    expect(templateTotals(entries, null).minutes).toBe(25);
+    expect(templateTotals(entries, 0).stated).toBe(false);
+  });
+});
+
+describe("templateAllUsers (LIF-106)", () => {
+  const clients = [client(1, "Anna"), client(2, "Béla"), client(3, "Cili")];
+  it("is everybody who has the template assigned or in a live schedule, once, in client order", () => {
+    const users = templateAllUsers({ assignedClientIds: [3, 1], scheduledClientIds: [1, 2] }, clients);
+    expect(users.map((u) => u.clientId)).toEqual([1, 2, 3]);
+  });
+  it("counts a client who is only scheduled, and nobody without usage", () => {
+    expect(templateAllUsers({ assignedClientIds: [], scheduledClientIds: [2] }, clients).map((u) => u.clientId)).toEqual([2]);
+    expect(templateAllUsers(undefined, clients)).toEqual([]);
   });
 });

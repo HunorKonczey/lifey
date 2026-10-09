@@ -271,6 +271,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
      */
     private void copyTemplateFields(WorkoutTemplate copy, WorkoutTemplate source, Long trainerId, Long clientId, User client) {
         copy.setName(source.getName());
+        copy.setDurationMinutes(source.getDurationMinutes());
         copy.getExercises().clear();
         for (WorkoutTemplateExercise link : source.getExercises()) {
             Exercise exerciseCopy = resolveExerciseCopy(trainerId, clientId, client, link.getExercise());
@@ -279,6 +280,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
             copyLink.setWorkoutTemplate(copy);
             copyLink.setExercise(exerciseCopy);
             copyLink.setTargetSets(link.getTargetSets());
+            copyLink.setTargetReps(link.getTargetReps());
             copyLink.setSortOrder(link.getSortOrder());
             copy.getExercises().add(copyLink);
         }

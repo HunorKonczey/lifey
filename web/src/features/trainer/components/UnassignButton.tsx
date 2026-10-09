@@ -33,6 +33,7 @@ export function UnassignButton({ assignmentId, clientId, contentType, sourceId, 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerAssignments.forClient(clientId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerAssignments.assignedClients(contentType, sourceId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trainerTemplates.usage() });
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerClients.all() });
       show(t("unassigned"), "success");
     },

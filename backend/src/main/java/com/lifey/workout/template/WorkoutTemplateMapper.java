@@ -16,7 +16,7 @@ public final class WorkoutTemplateMapper {
 
     public static WorkoutTemplateResponse toResponse(WorkoutTemplate template) {
         List<TemplateExerciseEntry> exercises = template.getExercises().stream()
-                .map(link -> new TemplateExerciseEntry(link.getExercise().getId(), link.getTargetSets()))
+                .map(link -> new TemplateExerciseEntry(link.getExercise().getId(), link.getTargetSets(), link.getTargetReps()))
                 .toList();
 
         return new WorkoutTemplateResponse(
@@ -25,7 +25,8 @@ public final class WorkoutTemplateMapper {
                 exercises,
                 template.getUpdatedAt(),
                 template.getDeletedAt(),
-                template.getOriginTrainerId()
+                template.getOriginTrainerId(),
+                template.getDurationMinutes()
         );
     }
 }

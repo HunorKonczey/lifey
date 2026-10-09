@@ -48,6 +48,50 @@ class WorkoutTemplateControllerTest {
     }
 
     @Test
+    void create_passesTheDurationAndRepetitionsOn_andAnswersWithThem() throws Exception {
+        when(workoutTemplateService.create(any()))
+                .thenReturn(new WorkoutTemplateResponse(9L, "Push day",
+                        List.of(new TemplateExerciseEntry(1L, 3, 10)), Instant.parse("2026-06-18T08:00:00Z"), null, null, 45));
+
+        mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Push day\",\"durationMinutes\":45,\"exercises\":[{\"exerciseId\":1,\"targetSets\":3,\"targetReps\":10}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.durationMinutes").value(45))
+                .andExpect(jsonPath("$.exercises[0].targetReps").value(10));
+
+        org.mockito.ArgumentCaptor<com.lifey.workout.template.dto.WorkoutTemplateRequest> captor =
+                org.mockito.ArgumentCaptor.forClass(com.lifey.workout.template.dto.WorkoutTemplateRequest.class);
+        verify(workoutTemplateService).create(captor.capture());
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().durationMinutes()).isEqualTo(45);
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().exercises().getFirst().targetReps()).isEqualTo(10);
+    }
+
+    @Test
+    void create_aRequestWithoutThemStillWorks_asThePhoneSendsIt() throws Exception {
+        when(workoutTemplateService.create(any()))
+                .thenReturn(new WorkoutTemplateResponse(9L, "Push day",
+                        List.of(new TemplateExerciseEntry(1L, 3)), Instant.parse("2026-06-18T08:00:00Z"), null, null));
+
+        mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Push day\",\"exercises\":[{\"exerciseId\":1,\"targetSets\":3}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.durationMinutes").doesNotExist());
+    }
+
+    @Test
+    void create_aNegativeOrAbsurdDurationOrRepetitionCountReturns400() throws Exception {
+        for (String body : new String[] {
+                "{\"name\":\"x\",\"durationMinutes\":-5,\"exercises\":[{\"exerciseId\":1,\"targetSets\":3}]}",
+                "{\"name\":\"x\",\"durationMinutes\":1001,\"exercises\":[{\"exerciseId\":1,\"targetSets\":3}]}",
+                "{\"name\":\"x\",\"exercises\":[{\"exerciseId\":1,\"targetSets\":3,\"targetReps\":-1}]}",
+                "{\"name\":\"x\",\"exercises\":[{\"exerciseId\":1,\"targetSets\":3,\"targetReps\":1001}]}"}) {
+            mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        verify(workoutTemplateService, never()).create(any());
+    }
+
+    @Test
     void create_emptyExercisesReturns400() throws Exception {
         mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"\",\"exercises\":[]}"))

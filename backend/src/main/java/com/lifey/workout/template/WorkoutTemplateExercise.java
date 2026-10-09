@@ -23,6 +23,10 @@ public class WorkoutTemplateExercise extends BaseEntity {
     @Column(name = "target_sets")
     private Integer targetSets;
 
+    /** Repetitions asked for in each set (LIF-106); null when the template does not say. */
+    @Column(name = "target_reps")
+    private Integer targetReps;
+
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 }

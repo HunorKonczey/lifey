@@ -43,6 +43,7 @@ export function AssignedPlanGroup({ clientId, name, email, items }: Props) {
         if (item.sourceId != null) queryClient.invalidateQueries({ queryKey: queryKeys.trainerAssignments.assignedClients(item.kind, item.sourceId) });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerClients.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trainerTemplates.usage() });
       show(t("revoked"), "success");
       setRevoking(null);
     },
