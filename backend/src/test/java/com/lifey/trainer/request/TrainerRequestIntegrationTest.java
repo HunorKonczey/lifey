@@ -83,13 +83,16 @@ class TrainerRequestIntegrationTest {
         mockMvc.perform(post("/api/v1/trainer-requests")
                         .header("Authorization", "Bearer " + tokenFor(applicant))
                         .contentType("application/json")
-                        .content("{\"motivation\":\"queue test\",\"clientCount\":3}"))
-                .andExpect(status().isCreated());
+                        .content("{\"motivation\":\"queue test\",\"qualifications\":\"NASM-CPT, 6 years\",\"clientCount\":3}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.qualifications").value("NASM-CPT, 6 years"));
 
         mockMvc.perform(get("/api/v1/superadmin/trainer-requests")
                         .header("Authorization", "Bearer " + tokenFor(superAdmin)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[?(@.userId == " + applicant.getId() + ")]").exists());
+                .andExpect(jsonPath("$.content[?(@.userId == " + applicant.getId() + ")]").exists())
+                .andExpect(jsonPath("$.content[?(@.userId == " + applicant.getId() + ")].qualifications")
+                        .value("NASM-CPT, 6 years"));
     }
 
     @Test

@@ -37,6 +37,18 @@ async function registerAndLogin(request: APIRequestContext, email: string, passw
   return { userId: user.id, accessToken };
 }
 
+/** What the request row stored for the applicant's qualifications (LIF-107). */
+async function storedQualifications(userId: number): Promise<string | null> {
+  const db = new Client(DB_CONFIG);
+  await db.connect();
+  try {
+    const res = await db.query("select qualifications from trainer_request where user_id = $1 and status = 'PENDING'", [userId]);
+    return res.rows[0]?.qualifications ?? null;
+  } finally {
+    await db.end();
+  }
+}
+
 /** Grants ROLE_TRAINER and resolves the PENDING request, directly in Postgres —
  *  simulating the superadmin approve action (66 Prompt 3, not yet built). */
 async function approveTrainerRequest(userId: number) {
@@ -92,9 +104,11 @@ test.describe("Trainer access request flow", () => {
 
     await test.step("submitting the form transitions to the pending/waiting state", async () => {
       await page.getByPlaceholder(/spreadsheets/).fill("I coach 12 people on strength training");
+      await page.getByLabel("Your qualifications (optional)").fill("  NASM-CPT, 6 years  ");
       await page.getByPlaceholder("15", { exact: true }).fill("12");
       await page.getByRole("button", { name: "Submit request" }).click();
       await expect(page.getByText("We're reviewing your application")).toBeVisible();
+      expect(await storedQualifications(userId)).toBe("NASM-CPT, 6 years");
     });
 
     await test.step("a direct DB approval (simulating the superadmin queue) is picked up by the poll", async () => {

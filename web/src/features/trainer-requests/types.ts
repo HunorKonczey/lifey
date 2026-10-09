@@ -7,6 +7,7 @@ export interface TrainerRequestResponse {
   id: number;
   status: TrainerRequestStatus;
   motivation: string | null;
+  qualifications: string | null;
   clientCount: number | null;
   createdAt: string;
   decidedAt: string | null;
@@ -14,6 +15,8 @@ export interface TrainerRequestResponse {
 
 export interface TrainerRequestRequest {
   motivation?: string;
+  /** Optional, at most 500 characters (LIF-107). */
+  qualifications?: string;
   clientCount?: number;
   signupSource?: string;
 }
@@ -25,6 +28,7 @@ export interface SuperAdminTrainerRequestResponse {
   userEmail: string;
   status: TrainerRequestStatus;
   motivation: string | null;
+  qualifications: string | null;
   clientCount: number | null;
   signupSource: string | null;
   createdAt: string;

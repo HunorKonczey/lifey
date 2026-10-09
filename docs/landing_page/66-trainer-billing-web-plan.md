@@ -34,7 +34,7 @@ what the workspace looks like when the trial ends or the seats run out.
 
 ### D-T1 The landing CTA creates a request, and the request page is honest about the wait
 
-`POST /api/v1/trainer-requests { motivation?, clientCount?, signupSource }` — authenticated,
+`POST /api/v1/trainer-requests { motivation?, qualifications?, clientCount?, signupSource }` (`qualifications`: optional free text, ≤ 500 chars, added by LIF-107 / `V87`; a blank value is stored as none) — authenticated,
 any `ROLE_USER`. Creates a `trainer_request` row (`PENDING`), notifies the super admin by
 email through the existing `com.lifey.mail` path, and is rate-limited to one open request per
 user.

@@ -36,13 +36,14 @@ class SuperAdminTrainerRequestControllerTest {
     @Test
     void findPending_returnsThePage() throws Exception {
         SuperAdminTrainerRequestResponse response = new SuperAdminTrainerRequestResponse(5L, 1L, "trainer@example.com",
-                TrainerRequestStatus.PENDING, "motivation", 10, "landing-hero",
+                TrainerRequestStatus.PENDING, "motivation", "NASM-CPT", 10, "landing-hero",
                 Instant.parse("2026-08-28T09:00:00Z"), null, Instant.parse("2026-08-01T09:00:00Z"));
         when(trainerRequestService.findPending(any())).thenReturn(new PageImpl<>(List.of(response)));
 
         mockMvc.perform(get("/api/v1/superadmin/trainer-requests"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].userEmail").value("trainer@example.com"));
+                .andExpect(jsonPath("$.content[0].userEmail").value("trainer@example.com"))
+                .andExpect(jsonPath("$.content[0].qualifications").value("NASM-CPT"));
     }
 
     @Test

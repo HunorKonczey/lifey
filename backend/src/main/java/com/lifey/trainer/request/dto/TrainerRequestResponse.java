@@ -9,6 +9,7 @@ public record TrainerRequestResponse(
         Long id,
         TrainerRequestStatus status,
         String motivation,
+        String qualifications,
         Integer clientCount,
         Instant createdAt,
         Instant decidedAt

@@ -39,6 +39,10 @@ public class TrainerRequest extends BaseEntity {
     @Column
     private String motivation;
 
+    /** Optional free text - what the applicant trained for (LIF-107); shown to the deciding super admin. */
+    @Column
+    private String qualifications;
+
     @Column(name = "client_count")
     private Integer clientCount;
 

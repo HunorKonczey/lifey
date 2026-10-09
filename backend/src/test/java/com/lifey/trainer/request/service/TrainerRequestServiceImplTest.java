@@ -85,7 +85,7 @@ class TrainerRequestServiceImplTest {
         when(trainerRequestRepository.existsByUserIdAndStatus(USER_ID, TrainerRequestStatus.PENDING)).thenReturn(false);
 
         TrainerRequestResponse response = service().submit(USER_ID,
-                new TrainerRequestRequest("I have 10 clients on spreadsheets", 10, "landing-hero"));
+                new TrainerRequestRequest("I have 10 clients on spreadsheets", "  NASM-CPT, 6 years  ", 10, "landing-hero"));
 
         ArgumentCaptor<TrainerRequest> captor = ArgumentCaptor.forClass(TrainerRequest.class);
         verify(trainerRequestRepository).save(captor.capture());
@@ -93,11 +93,28 @@ class TrainerRequestServiceImplTest {
         assertThat(saved.getUser()).isSameAs(user);
         assertThat(saved.getStatus()).isEqualTo(TrainerRequestStatus.PENDING);
         assertThat(saved.getMotivation()).isEqualTo("I have 10 clients on spreadsheets");
+        assertThat(saved.getQualifications()).isEqualTo("NASM-CPT, 6 years");
         assertThat(saved.getClientCount()).isEqualTo(10);
         assertThat(saved.getSignupSource()).isEqualTo("landing-hero");
         assertThat(saved.getCreatedAt()).isEqualTo(NOW);
         assertThat(response.status()).isEqualTo(TrainerRequestStatus.PENDING);
-        verify(mailService).sendTrainerRequestNotification(user, "I have 10 clients on spreadsheets", 10);
+        verify(mailService).sendTrainerRequestNotification(user, "I have 10 clients on spreadsheets", "NASM-CPT, 6 years", 10);
+        assertThat(response.qualifications()).isEqualTo("NASM-CPT, 6 years");
+    }
+
+    @Test
+    void submit_blankQualifications_areStoredAsNone() {
+        User user = user(USER_ID, Role.ROLE_USER);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(trainerRequestRepository.existsByUserIdAndStatus(USER_ID, TrainerRequestStatus.PENDING)).thenReturn(false);
+
+        TrainerRequestResponse response = service().submit(USER_ID, new TrainerRequestRequest("coach", "   ", 3, null));
+
+        ArgumentCaptor<TrainerRequest> captor = ArgumentCaptor.forClass(TrainerRequest.class);
+        verify(trainerRequestRepository).save(captor.capture());
+        assertThat(captor.getValue().getQualifications()).isNull();
+        assertThat(response.qualifications()).isNull();
+        verify(mailService).sendTrainerRequestNotification(user, "coach", null, 3);
     }
 
     @Test
@@ -105,11 +122,11 @@ class TrainerRequestServiceImplTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user(USER_ID, Role.ROLE_USER, Role.ROLE_TRAINER)));
 
         var subject = service();
-        var trainerRequestRequest = new TrainerRequestRequest(null, null, null);
+        var trainerRequestRequest = new TrainerRequestRequest(null, null, null, null);
         assertThatThrownBy(() -> subject.submit(USER_ID, trainerRequestRequest))
                 .isInstanceOf(DuplicateResourceException.class);
         verify(trainerRequestRepository, never()).save(any());
-        verify(mailService, never()).sendTrainerRequestNotification(any(), any(), any());
+        verify(mailService, never()).sendTrainerRequestNotification(any(), any(), any(), any());
     }
 
     @Test
@@ -118,7 +135,7 @@ class TrainerRequestServiceImplTest {
         when(trainerRequestRepository.existsByUserIdAndStatus(USER_ID, TrainerRequestStatus.PENDING)).thenReturn(true);
 
         var subject = service();
-        var trainerRequestRequest = new TrainerRequestRequest(null, null, null);
+        var trainerRequestRequest = new TrainerRequestRequest(null, null, null, null);
         assertThatThrownBy(() -> subject.submit(USER_ID, trainerRequestRequest))
                 .isInstanceOf(DuplicateResourceException.class);
         verify(trainerRequestRepository, never()).save(any());
@@ -129,7 +146,7 @@ class TrainerRequestServiceImplTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
         var subject = service();
-        var trainerRequestRequest = new TrainerRequestRequest(null, null, null);
+        var trainerRequestRequest = new TrainerRequestRequest(null, null, null, null);
         assertThatThrownBy(() -> subject.submit(USER_ID, trainerRequestRequest))
                 .isInstanceOf(ResourceNotFoundException.class);
     }

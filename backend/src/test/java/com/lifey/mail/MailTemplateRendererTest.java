@@ -77,4 +77,20 @@ class MailTemplateRendererTest {
         assertThat(renderer.renderText("weekly_report_row", MailLanguage.HU, placeholders))
                 .contains("Jane").doesNotContain("{{");
     }
+
+    @Test
+    void trainerRequestNotification_showsTheQualificationsInEveryVariant() {
+        Map<String, String> placeholders = Map.of(
+                "email", "anna@example.com", "motivation", "15 clients", "qualifications", "NASM-CPT, 6 years",
+                "clientCount", "15");
+
+        for (MailLanguage language : MailLanguage.values()) {
+            assertThat(renderer.renderHtml("trainer_request_notification", language, placeholders))
+                    .contains("NASM-CPT, 6 years")
+                    .doesNotContain("{{");
+            assertThat(renderer.renderText("trainer_request_notification", language, placeholders))
+                    .contains("NASM-CPT, 6 years")
+                    .doesNotContain("{{");
+        }
+    }
 }

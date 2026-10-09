@@ -11,6 +11,7 @@ public record SuperAdminTrainerRequestResponse(
         String userEmail,
         TrainerRequestStatus status,
         String motivation,
+        String qualifications,
         Integer clientCount,
         String signupSource,
         Instant createdAt,

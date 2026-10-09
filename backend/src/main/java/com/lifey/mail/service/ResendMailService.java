@@ -117,17 +117,21 @@ class ResendMailService implements MailService {
 
     @Override
     @Async("mailTaskExecutor")
-    public void sendTrainerRequestNotification(User requester, String motivation, Integer clientCount) {
+    public void sendTrainerRequestNotification(User requester, String motivation, String qualifications,
+                                               Integer clientCount) {
         String subject = messages.get("mail.trainer-request-notification.subject", MailLanguage.EN, requester.getEmail());
         String motivationText = motivation == null || motivation.isBlank() ? "—" : motivation;
+        String qualificationsText = qualifications == null || qualifications.isBlank() ? "—" : qualifications;
         String clientCountText = clientCount == null ? "—" : clientCount.toString();
         Map<String, String> htmlPlaceholders = Map.of(
                 EMAIL_KEY, WeeklyReportFormatting.escapeHtml(requester.getEmail()),
                 "motivation", WeeklyReportFormatting.escapeHtml(motivationText),
+                "qualifications", WeeklyReportFormatting.escapeHtml(qualificationsText),
                 "clientCount", clientCountText
         );
         Map<String, String> textPlaceholders = Map.of(
-                EMAIL_KEY, requester.getEmail(), "motivation", motivationText, "clientCount", clientCountText);
+                EMAIL_KEY, requester.getEmail(), "motivation", motivationText,
+                "qualifications", qualificationsText, "clientCount", clientCountText);
         sendToInbox("trainer_request_notification", "trainer_request_notification", MailLanguage.EN, subject,
                 htmlPlaceholders, textPlaceholders, requester.getEmail());
     }

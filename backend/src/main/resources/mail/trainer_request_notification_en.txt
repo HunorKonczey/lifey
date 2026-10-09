@@ -6,4 +6,7 @@ Expected client count: {{clientCount}}
 Motivation:
 {{motivation}}
 
+Qualifications:
+{{qualifications}}
+
 Review it in the superadmin trainer-requests queue.
