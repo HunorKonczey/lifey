@@ -70,6 +70,8 @@ export const queryKeys = {
   },
   trainerInvites: {
     all: () => ["trainer-invites"] as const,
+    /** Under `all`, so an accepted link refreshes the pending list and the history with it (LIF-103). */
+    links: () => ["trainer-invites", "links"] as const,
     /** Under `all`, so every invite mutation that invalidates the live list refreshes the history too. */
     history: (size: number) => ["trainer-invites", "history", size] as const,
   },

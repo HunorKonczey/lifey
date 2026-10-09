@@ -45,6 +45,14 @@ public class TrainerInviteController {
         return trainerInviteService.findHistoryForTrainer(pageable);
     }
 
+    @Operation(summary = "Remind the client of a pending invite",
+            description = "A push, and the invite email again when that channel is on (with fresh links). 429 if the "
+                    + "invite was sent or reminded less than 4 hours ago; 404 if it is not pending any more.")
+    @PostMapping("/{id}/remind")
+    public TrainerInviteResponse remind(@PathVariable Long id) {
+        return trainerInviteService.remind(id);
+    }
+
     @Operation(summary = "Cancel a pending invite")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

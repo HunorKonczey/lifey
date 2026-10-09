@@ -40,7 +40,7 @@ class TrainerInviteControllerTest {
     @Test
     void invite_returnsCreated() throws Exception {
         when(trainerInviteService.invite(any())).thenReturn(new TrainerInviteResponse(
-                1L, "client@example.com", Instant.parse("2026-06-01T00:00:00Z"), Instant.parse("2026-06-02T00:00:00Z")));
+                1L, "client@example.com", Instant.parse("2026-06-01T00:00:00Z"), Instant.parse("2026-06-02T00:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/trainer/invites").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"client@example.com\"}"))
@@ -86,11 +86,32 @@ class TrainerInviteControllerTest {
     @Test
     void findPending_returnsList() throws Exception {
         when(trainerInviteService.findPendingForTrainer()).thenReturn(List.of(new TrainerInviteResponse(
-                1L, "client@example.com", Instant.parse("2026-06-01T00:00:00Z"), Instant.parse("2026-06-02T00:00:00Z"))));
+                1L, "client@example.com", Instant.parse("2026-06-01T00:00:00Z"), Instant.parse("2026-06-02T00:00:00Z"), null)));
 
         mockMvc.perform(get("/api/v1/trainer/invites"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].clientEmail").value("client@example.com"));
+    }
+
+    @Test
+    void remind_returnsTheInviteWithItsReminderTime() throws Exception {
+        when(trainerInviteService.remind(1L)).thenReturn(new TrainerInviteResponse(
+                1L, "client@example.com", Instant.parse("2026-06-01T00:00:00Z"), Instant.parse("2026-06-02T00:00:00Z"),
+                Instant.parse("2026-06-01T06:00:00Z")));
+
+        mockMvc.perform(post("/api/v1/trainer/invites/1/remind"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.lastRemindedAt").value("2026-06-01T06:00:00Z"));
+    }
+
+    @Test
+    void remind_tooSoonReturns429_andAnInviteThatIsGoneReturns404() throws Exception {
+        when(trainerInviteService.remind(1L)).thenThrow(new InviteRateLimitedException("too soon"));
+        when(trainerInviteService.remind(2L)).thenThrow(new com.lifey.trainer.exception.InviteNotFoundException("gone"));
+
+        mockMvc.perform(post("/api/v1/trainer/invites/1/remind")).andExpect(status().isTooManyRequests());
+        mockMvc.perform(post("/api/v1/trainer/invites/2/remind")).andExpect(status().isNotFound());
     }
 
     @Test

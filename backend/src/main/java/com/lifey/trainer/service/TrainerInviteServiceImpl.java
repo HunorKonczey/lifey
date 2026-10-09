@@ -4,6 +4,11 @@ import com.lifey.auth.CurrentUserProvider;
 import com.lifey.auth.TokenHasher;
 import com.lifey.billing.service.SeatLimitService;
 import com.lifey.mail.service.MailService;
+import com.lifey.push.service.PushMessage;
+import com.lifey.push.service.PushService;
+import com.lifey.settings.LanguagePreference;
+import com.lifey.settings.UserSettings;
+import com.lifey.settings.UserSettingsRepository;
 import com.lifey.trainer.TrainerClientMapper;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
@@ -31,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Invite lifecycle (docs/personal_trainer/01-koncepcio-es-folyamatok.md,
@@ -53,12 +59,20 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
     /** Global per-trainer cap over the same rolling window, to blunt email enumeration. */
     static final int DAILY_INVITE_CAP = 20;
 
+    /**
+     * Least time between two reminders of one invite, counted from the invite or the last reminder (LIF-103). An invite
+     * lives 24 hours, so this allows a handful, but never a nag.
+     */
+    static final Duration REMINDER_COOLDOWN = Duration.ofHours(4);
+
     private final TrainerClientRepository trainerClientRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
     private final MailService mailService;
     private final TrainerInviteProperties trainerInviteProperties;
     private final SeatLimitService seatLimitService;
+    private final PushService pushService;
+    private final UserSettingsRepository userSettingsRepository;
 
     @Override
     public TrainerInviteResponse invite(TrainerInviteRequest request) {
@@ -171,6 +185,59 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
         invite.setStatus(TrainerClientStatus.REVOKED);
         invite.setRevokedAt(Instant.now());
         invite.setRevokedBy(currentUserProvider.getUserId());
+    }
+
+    @Override
+    public TrainerInviteResponse remind(Long inviteId) {
+        Long trainerId = currentUserProvider.getUserId();
+        TrainerClient invite = trainerClientRepository.findByIdAndTrainerIdAndStatus(
+                        inviteId, trainerId, TrainerClientStatus.PENDING)
+                .filter(tc -> tc.getExpiresAt().isAfter(Instant.now()))
+                .orElseThrow(() -> new InviteNotFoundException("Invite not found: " + inviteId));
+
+        Instant now = Instant.now();
+        Instant since = invite.getLastRemindedAt() != null ? invite.getLastRemindedAt() : invite.getCreatedAt();
+        if (since.isAfter(now.minus(REMINDER_COOLDOWN))) {
+            throw new InviteRateLimitedException("This invite was reminded or sent too recently");
+        }
+        invite.setLastRemindedAt(now);
+
+        User trainer = invite.getTrainer();
+        User client = invite.getClient();
+        sendReminderPush(trainer, client);
+
+        if (trainerInviteProperties.emailEnabled()) {
+            // The earlier token cannot be read back from its hash, so the reminder mail carries a new one and the old
+            // links stop working - one live set of links per invite.
+            String emailToken = TokenHasher.generateOpaqueToken();
+            invite.setEmailTokenHash(TokenHasher.hash(emailToken));
+            String baseUrl = trainerInviteProperties.publicBaseUrl();
+            String acceptUrl = baseUrl + "/api/v1/trainer-invites/email/respond?token=" + emailToken + "&accept=true";
+            String declineUrl = baseUrl + "/api/v1/trainer-invites/email/respond?token=" + emailToken + "&accept=false";
+            mailService.sendTrainerInviteEmail(client, trainer, acceptUrl, declineUrl);
+        }
+
+        return TrainerClientMapper.toInviteResponse(invite);
+    }
+
+    private void sendReminderPush(User trainer, User client) {
+        boolean hungarian = userSettingsRepository.findByUserId(client.getId())
+                .map(UserSettings::getLanguage)
+                .map(l -> l == LanguagePreference.HUNGARIAN)
+                .orElse(false);
+        String who = displayName(trainer);
+        String title = hungarian ? "Egy edző válaszodra vár" : "A trainer is waiting for your answer";
+        String body = hungarian
+                ? who + " meghívott kliensnek - fogadd el vagy utasítsd el a meghívót"
+                : who + " invited you to be their client - accept or decline the invite";
+        pushService.sendToUser(client.getId(), new PushMessage(title, body, Map.of("type", "trainer_invite")));
+    }
+
+    private static String displayName(User user) {
+        String first = user.getFirstName() == null ? "" : user.getFirstName().trim();
+        String last = user.getLastName() == null ? "" : user.getLastName().trim();
+        String full = (first + " " + last).trim();
+        return full.isEmpty() ? user.getEmail() : full;
     }
 
     @Override

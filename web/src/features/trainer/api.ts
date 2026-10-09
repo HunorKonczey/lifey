@@ -25,6 +25,9 @@ import type {
   TrainerCalendarSessionResponse,
   TrainerClientResponse,
   TrainerInviteRequest,
+  TrainerInviteLinkResponse,
+  CreatedTrainerInviteLinkResponse,
+  InviteLinkPreviewResponse,
   TrainerInviteHistoryResponse,
   TrainerInviteResponse,
   TrainerPreferencesRequest,
@@ -39,6 +42,16 @@ export const trainerApi = {
   inviteHistory: (params: { page?: number; size?: number }) =>
     api.get<Page<TrainerInviteHistoryResponse>>(`/trainer/invites/history?page=${params.page ?? 0}&size=${params.size ?? 30}`),
   cancelInvite: (id: number) => api.delete(`/trainer/invites/${id}`),
+  /** Nudges the client of a pending invite (a push, and the email again when that channel is on); 429 if too soon (LIF-103). */
+  remindInvite: (id: number) => api.post<TrainerInviteResponse>(`/trainer/invites/${id}/remind`, {}),
+
+  /** Single-use join links (LIF-103). The token comes back once, from `createInviteLink`. */
+  createInviteLink: () => api.post<CreatedTrainerInviteLinkResponse>("/trainer/invite-links", {}),
+  inviteLinks: () => api.get<TrainerInviteLinkResponse[]>("/trainer/invite-links"),
+  revokeInviteLink: (id: number) => api.delete(`/trainer/invite-links/${id}`),
+  /** The visitor's side of a link: who is inviting (public), and taking it (needs an account). */
+  inviteLinkPreview: (token: string) => api.get<InviteLinkPreviewResponse>(`/trainer-invite-links/${encodeURIComponent(token)}`),
+  acceptInviteLink: (token: string) => api.post<void>(`/trainer-invite-links/${encodeURIComponent(token)}/accept`, {}),
 
   clients: () => api.get<TrainerClientResponse[]>("/trainer/clients"),
   revokeClient: (clientId: number) => api.delete(`/trainer/clients/${clientId}`),

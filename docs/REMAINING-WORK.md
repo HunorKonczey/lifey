@@ -107,7 +107,7 @@ A web redesign lezárult (W0–W10, a napló a [`78`](redesign-web/78-web-redesi
 
 | Tétel | Mi | Hol |
 |---|---|---|
-| Meghívó: megosztható link, emlékeztető | az előzmény már kész (`82` S2); a link és az emlékeztető a meghívó-modell bővítését kéri | `78` §6 |
+| Meghívó: megosztható link, emlékeztető | ✅ kész (2026-10-09, LIF-103): `POST/GET/DELETE /trainer/invite-links` (egyszer használható, 7 napig érvényes link, legfeljebb 5 élő, csak a hash tárolva, a token egyszer látszik), publikus előnézet `GET /trainer-invite-links/{token}` és `POST …/{token}/accept` (a belépett felhasználó a kliens lesz; a várakozó e-mail meghívót előlépteti), `V85`; `POST /trainer/invites/{id}/remind` (push + e-mail új linkekkel, 4 óránként); web: link-kártya és „Emlékeztető" gomb a meghívók oldalon, `/join/[token]` oldal, a belépés / regisztráció `?next=`-et követ | `78` §6 |
 | Súly napszak / jegyzet, étel-adagok, rost / cukor, kedvenc ételek | a `WeightResponse` csak dátumos; az étel-modell nem ismeri az adagot | `78` §6 |
 | „Az edződtől" jelölés a kiosztott recepten | ✅ kész (2026-10-08, LIF-104): a másolat mindig őrizte a származást (`originTrainerId`, a telefon „Edzőtől" jelvénye is ebből él), csak a web nem mutatta; a receptkártya most „Az edződtől" címkét kap | `78` §6 |
 | Edzői lépéscél | ✅ kész (2026-10-08, LIF-105): `PUT /trainer/clients/{id}/step-goal` (üres = törlés, 0 nem), a kliens push-t kap változáskor; mobil: a lépés-fül tetején kártya + lap, web: „Cél módosítása" fiók | `78` §6 |

@@ -21,6 +21,13 @@ public interface TrainerInviteService {
 
     void cancel(Long inviteId);
 
+    /**
+     * Reminds the client of a pending invite (LIF-103): a push, and the invite email again when that channel is on —
+     * with fresh accept / decline links, since the earlier ones cannot be recovered from their stored hash. At most one
+     * reminder per cooldown, counted from the invite or from the last reminder; the invite's own expiry is unchanged.
+     */
+    TrainerInviteResponse remind(Long inviteId);
+
     List<PendingInviteResponse> findPendingForClient();
 
     void respond(Long inviteId, RespondToInviteRequest request);

@@ -7,6 +7,8 @@ public record TrainerInviteResponse(
         Long id,
         String clientEmail,
         Instant createdAt,
-        Instant expiresAt
+        Instant expiresAt,
+        /* When the trainer last reminded the client of this invite (LIF-103); null if never. */
+        Instant lastRemindedAt
 ) {
 }

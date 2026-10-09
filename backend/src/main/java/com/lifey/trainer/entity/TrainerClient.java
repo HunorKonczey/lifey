@@ -62,4 +62,8 @@ public class TrainerClient extends BaseEntity {
      */
     @Column(name = "email_token_hash", length = 64)
     private String emailTokenHash;
+
+    /** When the trainer last reminded the client of this PENDING invite (LIF-103); null until the first reminder. */
+    @Column(name = "last_reminded_at")
+    private Instant lastRemindedAt;
 }

@@ -51,10 +51,12 @@ interface GoogleSignInButtonProps {
    *  always goes straight to the dashboard; the dashboard banner handles
    *  re-offering onboarding for returning users who skipped it. */
   mode?: "login" | "register";
+  /** Where to go after signing in instead of the dashboard / onboarding — the page the visitor was headed for (`?next=`). */
+  redirectTo?: string;
 }
 
 /** Official GIS-rendered "Continue with Google" button (Q5: no custom styling). */
-export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({ mode = "login", redirectTo }: GoogleSignInButtonProps) {
   const t = useTranslations("auth");
   const router = useRouter();
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
@@ -70,9 +72,9 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-  const latestRef = useRef({ applyAccessToken, router, show, t, mode });
+  const latestRef = useRef({ applyAccessToken, router, show, t, mode, redirectTo });
   useEffect(() => {
-    latestRef.current = { applyAccessToken, router, show, t, mode };
+    latestRef.current = { applyAccessToken, router, show, t, mode, redirectTo };
   });
 
   useEffect(() => {
@@ -86,11 +88,13 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
         window.google.accounts.id.initialize({
           client_id: env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
           callback: async (response) => {
-            const { applyAccessToken, router, show, t, mode } = latestRef.current;
+            const { applyAccessToken, router, show, t, mode, redirectTo } = latestRef.current;
             try {
               const res = await authApi.socialGoogleLogin(response.credential);
               applyAccessToken(res.accessToken, res.refreshToken);
-              if (mode === "register") {
+              if (redirectTo) {
+                router.push(redirectTo);
+              } else if (mode === "register") {
                 try {
                   await userDetailsApi.get();
                   router.push("/dashboard");
