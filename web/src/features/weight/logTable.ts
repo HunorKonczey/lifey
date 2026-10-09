@@ -20,6 +20,18 @@ export function weightLogRows(weights: readonly WeightResponse[]): WeightLogRow[
   return rows.reverse();
 }
 
+/**
+ * The moment to show as a time next to the date, or null when it would mislead: an entry logged for another day than the
+ * one it was taken on (a back-dated weigh-in) has no meaningful time. Compared in the viewer's local time.
+ */
+export function weightTakenAt(entry: Pick<WeightResponse, "date" | "recordedAt">): Date | null {
+  if (!entry.recordedAt) return null;
+  const taken = new Date(entry.recordedAt);
+  if (Number.isNaN(taken.getTime())) return null;
+  const local = `${taken.getFullYear()}-${String(taken.getMonth() + 1).padStart(2, "0")}-${String(taken.getDate()).padStart(2, "0")}`;
+  return local === entry.date ? taken : null;
+}
+
 /** "Péntek, szept. 26." / "Friday, Sep 26" — weekday spelled out, first letter capital (Hungarian weekdays are lower case). */
 export function logDateLabel(date: Date, locale: string, shortDate: (d: Date) => string): string {
   const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date);

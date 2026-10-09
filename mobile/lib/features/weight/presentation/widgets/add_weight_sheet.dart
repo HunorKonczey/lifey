@@ -46,6 +46,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
   final _now = DateTime.now();
   final _text = TextEditingController();
   final _focus = FocusNode();
+  final _note = TextEditingController();
   bool _editing = false;
 
   /// Until the person changes the number it follows the latest weigh-in — the
@@ -71,6 +72,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
   @override
   void dispose() {
     _text.dispose();
+    _note.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -127,7 +129,11 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
       _submitError = null;
     });
     try {
-      await ref.read(weightControllerProvider.notifier).addEntry(date: _date, weight: _amount.kg);
+      await ref.read(weightControllerProvider.notifier).addEntry(
+            date: _date,
+            weight: _amount.kg,
+            note: _note.text,
+          );
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) setState(() => _submitError = AppLocalizations.of(context)!.couldNotSaveEntryMessage);
@@ -249,6 +255,17 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
               Icon(Icons.keyboard_arrow_down_rounded, size: 24, color: p.text2),
             ],
           ),
+        ),
+        const SizedBox(height: AppSpacing.s12),
+        TextField(
+          controller: _note,
+          enabled: !_submitting,
+          maxLength: 280,
+          maxLines: 2,
+          minLines: 1,
+          textInputAction: TextInputAction.done,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(labelText: l10n.weightNoteLabel, hintText: l10n.weightNoteHint),
         ),
         if (_submitError != null) ...[
           const SizedBox(height: AppSpacing.s12),

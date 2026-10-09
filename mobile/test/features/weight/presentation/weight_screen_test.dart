@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/format/lifey_format.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/core/theme/app_tokens.dart';
 import 'package:lifey/features/onboarding/data/user_details_repository.dart';
@@ -102,13 +103,33 @@ void main() {
   testWidgets('history rows: date, weight and a signed change; the oldest has none', (tester) async {
     await _pump(tester, canvas);
 
-    expect(find.text('Today'), findsOneWidget);
-    expect(find.text('Yesterday'), findsOneWidget);
+    // the time follows the day (the helper logs every entry at 07:02 on its own day)
+    expect(find.textContaining('Today · '), findsOneWidget);
+    expect(find.textContaining('Yesterday · '), findsOneWidget);
     // 64.5 vs 64.6 → −0.1 with a real minus sign, 64.6 vs 64.9 → −0.3
     expect(find.text('−0.1'), findsOneWidget);
     expect(find.text('−0.3'), findsOneWidget);
     // 5 entries → 4 chips (the hero has two arrow chips of its own)
     expect(find.byType(DeltaChip), findsNWidgets(4 + 2));
+  });
+
+  testWidgets('a note shows under the date; a back-dated entry shows no time', (tester) async {
+    final today = _e(0, 64.5);
+    final backDated = WeightEntry(
+      clientId: 'back',
+      date: _day(3),
+      weight: 65.0,
+      recordedAt: _day(0).add(const Duration(hours: 9)), // logged today, for three days ago
+      note: 'fasted, after a run',
+    );
+    await _pump(tester, [today, backDated]);
+
+    expect(find.text('fasted, after a run'), findsOneWidget);
+    final f = LifeyFormat('en');
+    // the day label alone, without " · <time>", for the back-dated row
+    final backDay = '${f.weekdayShort(_day(3))}, ${f.shortDate(_day(3))}';
+    expect(find.text(backDay), findsOneWidget);
+    expect(find.textContaining('Today · '), findsOneWidget);
   });
 
   testWidgets('a gain reads with a plus sign, in the increase colour', (tester) async {

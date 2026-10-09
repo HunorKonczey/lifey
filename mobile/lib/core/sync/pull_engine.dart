@@ -383,18 +383,28 @@ class PullEngine {
 
     final date = DateTime.parse(json['date'] as String);
     final weight = (json['weight'] as num).toDouble();
+    // When the entry was taken (LIF-115) - the server's value, which is the
+    // device's own time for an entry this device created. Absent only from an
+    // older server; then a row keeps what it has and a new one gets "now".
+    final recordedAtText = json['recordedAt'] as String?;
+    final recordedAt = recordedAtText == null ? null : DateTime.parse(recordedAtText);
+    final note = json['note'] as String?;
     if (existingClientId != null) {
-      // recordedAt is local-only metadata (when this device first saw the
-      // row) — left untouched on update.
-      await (_db.update(_db.weightEntries)..where((t) => t.clientId.equals(existingClientId)))
-          .write(WeightEntriesCompanion(date: Value(date), weight: Value(weight)));
+      await (_db.update(_db.weightEntries)..where((t) => t.clientId.equals(existingClientId))).write(
+          WeightEntriesCompanion(
+            date: Value(date),
+            weight: Value(weight),
+            note: Value(note),
+            recordedAt: recordedAt == null ? const Value.absent() : Value(recordedAt),
+          ));
     } else {
       await _db.into(_db.weightEntries).insert(WeightEntriesCompanion.insert(
             clientId: newClientId(),
             serverId: Value(serverId),
             date: date,
             weight: weight,
-            recordedAt: DateTime.now(),
+            recordedAt: recordedAt ?? DateTime.now(),
+            note: Value(note),
           ));
     }
   }

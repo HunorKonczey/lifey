@@ -2146,6 +2146,14 @@
   "@weightHistoryTodayLabel": {
     "description": "Relative date shown on a weight history row recorded today"
   },
+  "weightNoteLabel": "Note (optional)",
+  "@weightNoteLabel": {
+    "description": "Label of the optional free-text note on the log-weight sheet"
+  },
+  "weightNoteHint": "e.g. fasted, after a run",
+  "@weightNoteHint": {
+    "description": "Placeholder of the optional note on the log-weight sheet"
+  },
   "weightHistoryYesterdayLabel": "Yesterday",
   "@weightHistoryYesterdayLabel": {
     "description": "Relative date shown on a weight history row recorded yesterday"

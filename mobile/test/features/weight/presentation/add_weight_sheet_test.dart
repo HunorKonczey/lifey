@@ -14,14 +14,14 @@ class _RecordingWeights extends WeightController {
   _RecordingWeights(this._entries);
 
   final List<WeightEntry> _entries;
-  final saved = <({DateTime date, double weight})>[];
+  final saved = <({DateTime date, double weight, String? note})>[];
 
   @override
   Stream<List<WeightEntry>> build() => Stream.value(_entries);
 
   @override
-  Future<void> addEntry({required DateTime date, required double weight}) async {
-    saved.add((date: date, weight: weight));
+  Future<void> addEntry({required DateTime date, required double weight, DateTime? recordedAt, String? note}) async {
+    saved.add((date: date, weight: weight, note: note));
   }
 }
 
@@ -121,6 +121,26 @@ void main() {
     expect(kg * 10, closeTo((kg * 10).roundToDouble(), 1e-9)); // whole tenths only
   });
 
+  testWidgets('the note field: typed text is saved with the weight, a blank one is not required', (tester) async {
+    final controller = await _open(tester, _canvas);
+
+    expect(find.text('Note (optional)'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'fasted, after a run');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(controller.saved.single.note, 'fasted, after a run');
+  });
+
+  testWidgets('Save without a note passes none', (tester) async {
+    final controller = await _open(tester, _canvas);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(controller.saved.single.note, isEmpty);
+  });
+
   testWidgets('Save writes exactly the value shown', (tester) async {
     final controller = await _open(tester, _canvas);
 
@@ -140,7 +160,7 @@ void main() {
 
     await tester.tap(find.text('64.5 kg'));
     await tester.pump();
-    await tester.enterText(find.byType(TextField), '70,3');
+    await tester.enterText(find.byType(TextField).first, '70,3');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
@@ -152,7 +172,7 @@ void main() {
 
     await tester.tap(find.text('64.5 kg'));
     await tester.pump();
-    await tester.enterText(find.byType(TextField), '0');
+    await tester.enterText(find.byType(TextField).first, '0');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
 

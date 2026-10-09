@@ -36,18 +36,28 @@ class WeightRepository {
     });
   }
 
-  Future<void> create({required DateTime date, required double weight}) async {
+  /// [recordedAt] defaults to now; [note] is trimmed and stored as null when blank.
+  Future<void> create({required DateTime date, required double weight, DateTime? recordedAt, String? note}) async {
     final clientId = newClientId();
+    final taken = recordedAt ?? DateTime.now();
+    final text = note?.trim();
+    final cleanNote = text == null || text.isEmpty ? null : text;
     await _db.into(_db.weightEntries).insert(WeightEntriesCompanion.insert(
           clientId: clientId,
           date: date,
           weight: weight,
-          recordedAt: DateTime.now(),
+          recordedAt: taken,
+          note: Value(cleanNote),
         ));
     await _outbox.enqueueCreate(
       clientId: clientId,
       entityType: 'weight_entry',
-      payload: {'date': _dateFormat.format(date), 'weight': weight},
+      payload: {
+        'date': _dateFormat.format(date),
+        'weight': weight,
+        'recordedAt': taken.toUtc().toIso8601String(),
+        if (cleanNote != null) 'note': cleanNote,
+      },
     );
   }
 
@@ -87,6 +97,7 @@ class WeightRepository {
       date: row.date,
       weight: row.weight,
       recordedAt: row.recordedAt,
+      note: row.note,
     );
   }
 }

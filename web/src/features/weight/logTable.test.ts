@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { logDateLabel, weightLogRows } from "./logTable";
+import { logDateLabel, weightLogRows, weightTakenAt } from "./logTable";
 import type { WeightResponse } from "./types";
 
 const w = (id: number, date: string, weight: number): WeightResponse => ({ id, date, weight });
@@ -33,5 +33,24 @@ describe("logDateLabel", () => {
   it("capitalises the weekday in Hungarian and English", () => {
     expect(logDateLabel(d, "hu", () => "szept. 26.")).toBe("Szombat, szept. 26.");
     expect(logDateLabel(d, "en", () => "Sep 26")).toBe("Saturday, Sep 26");
+  });
+});
+
+describe("weightTakenAt", () => {
+  // Built from local parts so the day comparison holds in any time zone the suite runs in.
+  const takenLocal = new Date(2026, 8, 27, 7, 2).toISOString();
+
+  it("is the moment itself when the entry was taken on the day it is for", () => {
+    expect(weightTakenAt({ date: "2026-09-27", recordedAt: takenLocal })?.getTime()).toBe(new Date(takenLocal).getTime());
+  });
+
+  it("is null for a back-dated entry: logged on another day than the one it is for", () => {
+    expect(weightTakenAt({ date: "2026-09-24", recordedAt: takenLocal })).toBeNull();
+  });
+
+  it("is null without a time (an older server) or with one that does not parse", () => {
+    expect(weightTakenAt({ date: "2026-09-27" })).toBeNull();
+    expect(weightTakenAt({ date: "2026-09-27", recordedAt: null })).toBeNull();
+    expect(weightTakenAt({ date: "2026-09-27", recordedAt: "not a date" })).toBeNull();
   });
 });

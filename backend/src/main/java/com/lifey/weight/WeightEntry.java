@@ -23,12 +23,17 @@ public class WeightEntry extends SyncableEntity {
     private LocalDate date;
 
     /**
-     * The instant the entry was recorded. Stamped by the server on creation and used
-     * to break ties between entries sharing the same {@link #date} (newest first).
+     * The instant the entry was recorded - the client's own time when it sends one (never later than the
+     * server's now), else stamped by the server on creation. Also breaks ties between entries sharing the same
+     * {@link #date} (newest first).
      */
     @Column(name = "recorded_at", nullable = false)
     private Instant recordedAt;
 
     @Column(nullable = false)
     private double weight;
+
+    /** Optional free text about the weigh-in (LIF-115), at most 280 characters; null when none. */
+    @Column(length = 280)
+    private String note;
 }
