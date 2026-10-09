@@ -7,6 +7,13 @@ export interface TrainerInviteResponse {
   lastRemindedAt?: string | null;
 }
 
+/** Who uses one of the trainer's workout templates (LIF-106): assigned to them, or in a schedule / program still running. */
+export interface TemplateUsageResponse {
+  templateId: number;
+  assignedClientIds: number[];
+  scheduledClientIds: number[];
+}
+
 /** A join link that can still be used. The token is not here: it was shown once, when the link was made (LIF-103). */
 export interface TrainerInviteLinkResponse {
   id: number;

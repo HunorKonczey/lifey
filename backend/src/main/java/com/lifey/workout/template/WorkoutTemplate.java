@@ -45,4 +45,11 @@ public class WorkoutTemplate extends SyncableEntity {
 
     @Column(name = "origin_trainer_id")
     private Long originTrainerId;
+
+    /**
+     * How long the workout takes, in minutes, as the template's author states it (LIF-106); null when they have not —
+     * readers then fall back to the estimate. Optional and unknown to the phone, see {@code WorkoutTemplateServiceImpl}.
+     */
+    @Column(name = "duration_minutes")
+    private Integer durationMinutes;
 }

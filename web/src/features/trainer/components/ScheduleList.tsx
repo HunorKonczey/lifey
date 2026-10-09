@@ -27,6 +27,7 @@ export function ScheduleList({ clientId, schedules }: ScheduleListProps) {
     mutationFn: (scheduleId: number) => trainerApi.cancelSchedule(scheduleId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerSchedules.forClient(clientId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trainerTemplates.usage() });
       show(t("scheduleCancelled"), "success");
     },
     onError: () => show(t("scheduleCancelFailed"), "error"),

@@ -11,6 +11,14 @@ public record WorkoutTemplateResponse(
         Instant deletedAt,
         // Non-null only for a trainer-assigned copy (docs/personal_trainer/05-mobil-terv.md
         // §2) — drives the mobile "Edzőtől" badge.
-        Long originTrainerId
+        Long originTrainerId,
+        // The author's stated duration in minutes (LIF-106); null when they have not said, readers then estimate.
+        Integer durationMinutes
 ) {
+
+    /** A response without a duration. */
+    public WorkoutTemplateResponse(Long id, String name, List<TemplateExerciseEntry> exercises, Instant updatedAt,
+                                   Instant deletedAt, Long originTrainerId) {
+        this(id, name, exercises, updatedAt, deletedAt, originTrainerId, null);
+    }
 }

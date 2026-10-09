@@ -25,6 +25,7 @@ import type {
   TrainerCalendarSessionResponse,
   TrainerClientResponse,
   TrainerInviteRequest,
+  TemplateUsageResponse,
   TrainerInviteLinkResponse,
   CreatedTrainerInviteLinkResponse,
   InviteLinkPreviewResponse,
@@ -44,6 +45,9 @@ export const trainerApi = {
   cancelInvite: (id: number) => api.delete(`/trainer/invites/${id}`),
   /** Nudges the client of a pending invite (a push, and the email again when that channel is on); 429 if too soon (LIF-103). */
   remindInvite: (id: number) => api.post<TrainerInviteResponse>(`/trainer/invites/${id}/remind`, {}),
+
+  /** Who uses each of the trainer's templates, assigned or in a live schedule / program, in one answer (LIF-106). */
+  templateUsage: () => api.get<TemplateUsageResponse[]>("/trainer/templates/usage"),
 
   /** Single-use join links (LIF-103). The token comes back once, from `createInviteLink`. */
   createInviteLink: () => api.post<CreatedTrainerInviteLinkResponse>("/trainer/invite-links", {}),

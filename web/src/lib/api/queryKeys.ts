@@ -81,6 +81,10 @@ export const queryKeys = {
     /** The superadmin queue (66 §7 Prompt 3). */
     pending: (params: { page: number; size?: number }) => ["trainer-requests", "pending", params] as const,
   },
+  trainerTemplates: {
+    /** Who uses each of the trainer's templates (LIF-106); anything that assigns, schedules or ends one refreshes it. */
+    usage: () => ["trainer-templates", "usage"] as const,
+  },
   trainerAssignments: {
     forClient: (clientId: number) => ["trainer-assignments", "client", clientId] as const,
     assignedClients: (contentType: string, sourceId: number) =>

@@ -314,6 +314,42 @@ class ContentAssignmentServiceImplTest {
     }
 
     @Test
+    void propagateTemplateUpdate_carriesTheStatedDurationAndRepetitionsToTheCopy() {
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day");
+        source.setDurationMinutes(45);
+        Exercise sourceExercise = new Exercise();
+        sourceExercise.setId(30L);
+        WorkoutTemplateExercise link = new WorkoutTemplateExercise();
+        link.setExercise(sourceExercise);
+        link.setTargetSets(4);
+        link.setTargetReps(10);
+        link.setSortOrder(0);
+        source.getExercises().add(link);
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
+        ContentAssignment assignment = new ContentAssignment();
+        assignment.setClient(user(CLIENT_ID));
+        assignment.setCopiedId(88L);
+        when(contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(TRAINER_ID, ContentType.TEMPLATE, 7L))
+                .thenReturn(List.of(assignment));
+        WorkoutTemplate copy = new WorkoutTemplate();
+        copy.setId(88L);
+        copy.setName("Push day");
+        copy.setDurationMinutes(20);
+        copy.setUpdatedAt(Instant.parse("2026-06-18T08:00:00Z"));
+        when(workoutTemplateRepository.findByIdAndUserId(88L, CLIENT_ID)).thenReturn(Optional.of(copy));
+        when(exerciseRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 30L))
+                .thenReturn(Optional.empty());
+        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 99L));
+
+        service.propagateTemplateUpdate(TRAINER_ID, 7L);
+
+        assertThat(copy.getDurationMinutes()).isEqualTo(45);
+        assertThat(copy.getExercises()).singleElement().satisfies(l -> assertThat(l.getTargetReps()).isEqualTo(10));
+    }
+
+    @Test
     void propagateTemplateUpdate_skipsAssignmentWhenClientCopyMissing() {
         WorkoutTemplate source = new WorkoutTemplate();
         source.setId(7L);

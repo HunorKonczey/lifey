@@ -78,6 +78,7 @@ export function AssignToClientDrawer({
         queryClient.invalidateQueries({ queryKey: queryKeys.trainerAssignments.forClient(clientId) });
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerAssignments.assignedClients(contentType, sourceId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trainerTemplates.usage() });
 
       const assignedCount = response.assignments.length;
       const skippedCount = response.skippedClientIds.length;

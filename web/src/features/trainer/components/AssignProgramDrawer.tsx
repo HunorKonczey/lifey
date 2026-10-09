@@ -102,6 +102,7 @@ export function AssignProgramDrawer({ clientId: fixedClientId, clientName: fixed
       const failed = rows.filter((r) => r.result.status === "rejected");
       for (const r of ok) queryClient.invalidateQueries({ queryKey: queryKeys.trainerProgramAssignments.forClient(r.clientId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerPrograms.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trainerTemplates.usage() });
       queryClient.invalidateQueries({ queryKey: ["trainer-calendar"] });
       if (ok.length > 0) {
         const first = ok[0].result as PromiseFulfilledResult<{ occurrenceCount: number }>;

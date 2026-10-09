@@ -15,6 +15,15 @@ export function templateUsers(assignedClientIds: readonly number[] | undefined, 
   return clients.filter((c) => ids.has(c.clientId)).map((c) => ({ clientId: c.clientId, name: clientDisplayName(c), email: c.clientEmail }));
 }
 
+/** The clients using a template either way - assigned to them or in a live schedule / program - in client-list order, once each. */
+export function templateAllUsers(
+  usage: { assignedClientIds: readonly number[]; scheduledClientIds: readonly number[] } | undefined,
+  clients: readonly TrainerClientResponse[],
+): TemplateUser[] {
+  if (!usage) return [];
+  return templateUsers([...usage.assignedClientIds, ...usage.scheduledClientIds], clients);
+}
+
 /**
  * The template's muscle groups for its tag line ("Mell · Hát"): the distinct categories of its exercises in
  * order of first appearance, cardio / other / full body left out unless nothing else is there, at most `limit`.
@@ -31,11 +40,19 @@ export function templateTags(template: Pick<WorkoutTemplateResponse, "exercises"
   return (specific.length > 0 ? specific : seen).slice(0, limit);
 }
 
-/** "6 exercises · 18 sets · about 50 min" as numbers — 8 minutes an exercise, rounded to 5 (the picker's estimate). */
-export function templateTotals(entries: readonly { targetSets: number }[]): { exercises: number; sets: number; minutes: number } {
+/**
+ * "6 exercises · 18 sets · about 50 min" as numbers — the author's own duration when they stated one (`stated`), else 8
+ * minutes an exercise, rounded to 5 (the picker's estimate).
+ */
+export function templateTotals(
+  entries: readonly { targetSets: number }[],
+  durationMinutes?: number | null,
+): { exercises: number; sets: number; minutes: number; stated: boolean } {
+  const stated = durationMinutes != null && durationMinutes > 0;
   return {
     exercises: entries.length,
     sets: entries.reduce((sum, e) => sum + e.targetSets, 0),
-    minutes: Math.round((entries.length * 8) / 5) * 5,
+    minutes: stated ? durationMinutes : Math.round((entries.length * 8) / 5) * 5,
+    stated,
   };
 }

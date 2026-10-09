@@ -44,17 +44,26 @@ export interface ExerciseRequest {
 export interface TemplateExerciseEntry {
   exerciseId: number;
   targetSets: number;
+  /**
+   * Repetitions per set the template asks for (LIF-106). On a response: the stored count or absent. On a request: absent
+   * leaves what is stored, 0 clears it (the phone never sends it), see `buildTemplateRequest`.
+   */
+  targetReps?: number | null;
 }
 
 export interface WorkoutTemplateResponse {
   id: number;
   name: string;
   exercises: TemplateExerciseEntry[];
+  /** How long the workout takes in minutes, as its author states it; absent or null when they have not (LIF-106). */
+  durationMinutes?: number | null;
 }
 
 export interface WorkoutTemplateRequest {
   name: string;
   exercises: TemplateExerciseEntry[];
+  /** Absent leaves the stored duration, 0 clears it, a number sets it (LIF-106). */
+  durationMinutes?: number | null;
 }
 
 // ─── Sessions ───
