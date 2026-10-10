@@ -6554,6 +6554,19 @@
     "description": "A duration of an hour or more in statistics, e.g. '23 h 40'",
     "placeholders": {"hours": {"type": "int"}, "minutes": {"type": "String"}}
   },
+  "statMetricFiberLabel": "Fibre",
+  "@statMetricFiberLabel": {
+    "description": "Statistics metric chip and hero label: dietary fibre per day"
+  },
+  "statMetricSugarLabel": "Sugar",
+  "@statMetricSugarLabel": {
+    "description": "Statistics metric chip and hero label: total sugars per day"
+  },
+  "statDaysLeftOutNote": "{count, plural, one{{count} day is not shown: some of its foods have no figure} other{{count} days are not shown: some of their foods have no figure}}",
+  "@statDaysLeftOutNote": {
+    "description": "Under a fibre/sugar chart: how many days were left out because some food eaten that day has no figure",
+    "placeholders": {"count": {"type": "int"}}
+  },
   "statWeeklyFootnote": "Grouped by week so a single day never looks like a spike.",
   "@statWeeklyFootnote": {
     "description": "Footnote under the weekly bar chart on the statistics screen"

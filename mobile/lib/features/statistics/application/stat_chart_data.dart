@@ -131,6 +131,9 @@ AsyncValue<StatSeries> _seriesFor(Ref ref, StatMetric metric, StatKindFilter kin
       return ref
           .watch(mealControllerProvider)
           .whenData((all) => onlyPoints(_mealPoints(all, metric, cutoff)));
+    case StatMetric.fiber:
+    case StatMetric.sugar:
+      return ref.watch(mealControllerProvider).whenData((all) => _fiberSugarSeries(all, metric, cutoff));
     // "edzés jellegű" (D-C3.4) — re-scoped to whichever kind is selected,
     // not just filtered out entirely under `strength`/`cardio` like the six
     // cardio-only metrics below are.
@@ -204,6 +207,9 @@ final availableStatMetricsProvider = Provider<Set<StatMetric>>((ref) {
       StatMetric.carbs,
       StatMetric.fat,
     ],
+    // Offered once some food eaten has a figure, so the picker does not list a chart that stays empty.
+    if (meals.any((m) => m.entries.any((e) => e.fiber != null))) StatMetric.fiber,
+    if (meals.any((m) => m.entries.any((e) => e.sugar != null))) StatMetric.sugar,
     if (sessions.isNotEmpty) StatMetric.workoutCount,
     if (sessions.any((s) => s.finishedAt != null)) StatMetric.workoutMinutes,
     if (sessions.any((s) => s.activeCalories != null)) StatMetric.activeCalories,
@@ -264,6 +270,31 @@ List<TimeSeriesPoint> _mealPoints(List<Meal> meals, StatMetric metric, DateTime?
     sumsByDay.update(day, (sum) => sum + value, ifAbsent: () => value);
   }
   return _pointsFromSums(sumsByDay);
+}
+
+/// Fibre or sugar per day (LIF-151): the day's sum - but only for a day on which *every* entry's food has a figure. A food with
+/// none is not 0 g, so a day with some missing would draw a lower number as if it were the whole; such a day is left out of the
+/// points and counted in [StatSeries.incompleteDays] instead, and the chart says how many.
+StatSeries _fiberSugarSeries(List<Meal> meals, StatMetric metric, DateTime? cutoff) {
+  double? figure(MealEntry e) => metric == StatMetric.fiber ? e.fiber : e.sugar;
+  final sums = <DateTime, double>{};
+  final incomplete = <DateTime>{};
+  for (final meal in meals) {
+    final day = _localDay(meal.dateTime);
+    if (cutoff != null && day.isBefore(cutoff)) continue;
+    for (final entry in meal.entries) {
+      final value = figure(entry);
+      if (value == null) {
+        incomplete.add(day);
+      } else {
+        sums.update(day, (sum) => sum + value, ifAbsent: () => value);
+      }
+    }
+  }
+  for (final day in incomplete) {
+    sums.remove(day);
+  }
+  return StatSeries(points: _pointsFromSums(sums), incompleteDays: incomplete);
 }
 
 StatSeries _sessionSeries(

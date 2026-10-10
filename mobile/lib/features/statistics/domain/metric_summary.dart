@@ -110,7 +110,7 @@ class PeriodTrend {
 /// The series behind a summary: one point per day that has a value, oldest
 /// first, plus what per-day points cannot say.
 class StatSeries {
-  const StatSeries({required this.points, this.samples = const [], this.weights = const {}});
+  const StatSeries({required this.points, this.samples = const [], this.weights = const {}, this.incompleteDays = const {}});
 
   /// Copy holding only what falls on a day in `[from, to)` — either end open —
   /// so one long series is cut into the range and the period before it.
@@ -120,6 +120,7 @@ class StatSeries {
       points: [for (final p in points) if (inside(p.date)) p],
       samples: [for (final s in samples) if (inside(s.date)) s],
       weights: {for (final e in weights.entries) if (inside(e.key)) e.key: e.value},
+      incompleteDays: {for (final d in incompleteDays) if (inside(d)) d},
     );
   }
 
@@ -137,6 +138,10 @@ class StatSeries {
   /// Per-day weight of a pace point (the day's kilometres), so the range's
   /// pace is Σ time / Σ distance rather than a mean of means.
   final Map<DateTime, double> weights;
+
+  /// Days that have entries but no point, because some entry has no figure for the metric (fibre, sugar - LIF-151). The
+  /// chart says how many were left out instead of drawing them as low days.
+  final Set<DateTime> incompleteDays;
 
   bool get isEmpty => points.isEmpty;
 }
@@ -188,6 +193,8 @@ StatChartKind chartKindFor(StatMetric metric) => switch (metric) {
       StatMetric.protein ||
       StatMetric.carbs ||
       StatMetric.fat ||
+      StatMetric.fiber ||
+      StatMetric.sugar ||
       StatMetric.water ||
       StatMetric.activeCalories =>
         StatChartKind.dailyBars,
@@ -216,6 +223,8 @@ bool isRunningDailyTotal(StatMetric metric) => switch (metric) {
       StatMetric.protein ||
       StatMetric.carbs ||
       StatMetric.fat ||
+      StatMetric.fiber ||
+      StatMetric.sugar ||
       StatMetric.water ||
       StatMetric.steps ||
       StatMetric.activeCalories =>
@@ -320,6 +329,8 @@ MetricSummary summaryFor(
     case StatMetric.protein:
     case StatMetric.carbs:
     case StatMetric.fat:
+    case StatMetric.fiber:
+    case StatMetric.sugar:
     case StatMetric.water:
       if (values.isEmpty) return empty(StatHeroKind.dailyAverage);
       final goal = switch (metric) {
@@ -327,7 +338,9 @@ MetricSummary summaryFor(
         StatMetric.protein => goals.protein,
         StatMetric.carbs => goals.carbs,
         StatMetric.fat => goals.fat,
-        _ => goals.waterLiters,
+        StatMetric.water => goals.waterLiters,
+        // Fibre and sugar have no goal setting (yet).
+        _ => null,
       };
       final third = goal == null
           ? null

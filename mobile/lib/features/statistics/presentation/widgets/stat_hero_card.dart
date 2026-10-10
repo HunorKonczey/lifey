@@ -247,6 +247,14 @@ class _StatChart extends ConsumerWidget {
           integer: integer,
           semanticsLabel: metric.label(l10n),
         ),
+        if (series.incompleteDays.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.s12),
+          Text(
+            l10n.statDaysLeftOutNote(series.incompleteDays.length),
+            key: const Key('stat-days-left-out'),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(color: context.palette.text3),
+          ),
+        ],
         if (drawn.weekly) ...[
           const SizedBox(height: AppSpacing.s12),
           Text(

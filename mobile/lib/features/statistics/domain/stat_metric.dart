@@ -28,6 +28,11 @@ enum StatMetric {
   protein,
   carbs,
   fat,
+
+  /// Dietary fibre and total sugars (LIF-151). A food can have no figure, so a day is charted only when *every* food eaten
+  /// that day has one - an unknown is not 0, and a day that is missing some would otherwise read as a low day.
+  fiber,
+  sugar,
   workoutMinutes,
   workoutCount,
   activeCalories,
@@ -67,6 +72,8 @@ enum StatMetric {
         StatMetric.protein => l10n.proteinLabel,
         StatMetric.carbs => l10n.carbsLabel,
         StatMetric.fat => l10n.fatLabel,
+        StatMetric.fiber => l10n.statMetricFiberLabel,
+        StatMetric.sugar => l10n.statMetricSugarLabel,
         StatMetric.workoutMinutes => l10n.statMetricWorkoutMinutesLabel,
         StatMetric.workoutCount => l10n.statMetricWorkoutCountLabel,
         StatMetric.activeCalories => l10n.statMetricActiveCaloriesLabel,
@@ -96,6 +103,8 @@ enum StatMetric {
         StatMetric.protein => l10n.statUnitGrams,
         StatMetric.carbs => l10n.statUnitGrams,
         StatMetric.fat => l10n.statUnitGrams,
+        StatMetric.fiber => l10n.statUnitGrams,
+        StatMetric.sugar => l10n.statUnitGrams,
         StatMetric.workoutMinutes => l10n.statUnitMinutes,
         StatMetric.workoutCount => '',
         StatMetric.activeCalories => l10n.statUnitKcal,
@@ -118,6 +127,8 @@ enum StatMetric {
         StatMetric.protein => StatAggregationType.sum,
         StatMetric.carbs => StatAggregationType.sum,
         StatMetric.fat => StatAggregationType.sum,
+        StatMetric.fiber => StatAggregationType.sum,
+        StatMetric.sugar => StatAggregationType.sum,
         StatMetric.workoutMinutes => StatAggregationType.sum,
         StatMetric.workoutCount => StatAggregationType.sum,
         StatMetric.activeCalories => StatAggregationType.sum,
