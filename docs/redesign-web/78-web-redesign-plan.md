@@ -2295,6 +2295,8 @@ meals from yesterday, create a food whose macros don't add up, log a recipe port
 
 *Follow-up (LIF-150, 2026-10-10):* a recipe's fibre and sugars are worked out from the foods its ingredients point at (the recipe API carries only kcal and protein per ingredient, carbs and fat already came the same way): `recipeFiberSugar` on the web, `Recipe.fiberSugar` on the phone, both the same "sum of what is known, partial when not all" rule - and a food that is not loaded counts as *not known*, never as 0 g. Shown per serving on the recipe card, as total and per serving in the editor, and for the logged portion (with edited amounts) in the log dialog / sheet. For AI-generated recipes the model's schema now also asks for fibre and sugars of a *new* ingredient (clamped to 0-100 g per 100 g like the macros); the per-serving `MacroTotals` adds the user's own foods' known figures and the model's estimate for the new ones, and the saved new food keeps the estimate. A server that sends none reads as unknown on the phone. The photo-based estimate (LIF-152) is separate.
 
+*Follow-up (LIF-151, 2026-10-10):* fibre and sugars are phone statistics metrics (`StatMetric.fiber` / `sugar`, daily bars, same summary shape as the macros, no goal). A day is a chart point only when *every* entry eaten that day has the figure - not known is not 0, so a partly-known day would read as a low day and drag the average down; those days are left out of the points and counted in `StatSeries.incompleteDays`, and a line under the chart says how many. The picker lists the metric only once some food eaten has the figure.
+
 ## W3 — Workouts · `Lifey Web 3 Workouts.dc.html` (W3-A … W3-F)
 
 **Goal:** a readable weekly log, a finished session that reads like a summary, and a live logger with

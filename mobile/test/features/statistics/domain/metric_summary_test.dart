@@ -398,6 +398,34 @@ void main() {
     });
   });
 
+  test('fibre and sugar: a daily average over the days that have a figure, today left out, and no goal comparison (LIF-151)', () {
+    for (final metric in [StatMetric.fiber, StatMetric.sugar]) {
+      final s = summaryFor(
+        metric,
+        current: _series([(3, 20), (2, 30), (1, 10), (0, 2)]),
+        today: _today,
+        rangeDays: 30,
+        // The goals are the macros' and the water's: none of them applies here.
+        goals: const StatGoals(calories: 2000, protein: 100, carbs: 250, fat: 70, waterLiters: 2),
+      );
+
+      expect(s.chartKind, StatChartKind.dailyBars, reason: metric.name);
+      expect(s.heroKind, StatHeroKind.dailyAverage, reason: metric.name);
+      expect(s.hero, 20, reason: metric.name); // (20 + 30 + 10) / 3, the unfinished today left out
+      expect(_side(s, StatSideKind.lowest).value, 10);
+      expect(_side(s, StatSideKind.highest).value, 30);
+      expect(_has(s, StatSideKind.daysAtGoal), isFalse, reason: metric.name);
+      expect(_has(s, StatSideKind.daysOnTarget), isFalse, reason: metric.name);
+    }
+  });
+
+  test('a series window keeps the left-out days that fall inside it', () {
+    final s = StatSeries(points: const [], incompleteDays: {_d(40), _d(5), _d(1)});
+
+    expect(s.window(from: _d(10)).incompleteDays, {_d(5), _d(1)});
+    expect(s.window(from: _d(60), to: _d(10)).incompleteDays, {_d(40)});
+  });
+
   test('every metric has a chart kind and a summary (nothing falls through)', () {
     for (final metric in StatMetric.values) {
       chartKindFor(metric);
