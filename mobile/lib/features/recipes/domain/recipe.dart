@@ -1,3 +1,5 @@
+import '../../nutrition/domain/fiber_sugar.dart';
+
 /// A single ingredient within a recipe (response side). Calories/protein are
 /// computed locally (quantity × the food's per-100g macros) rather than
 /// fetched from the backend, so they're available offline too.
@@ -10,6 +12,8 @@ class RecipeIngredient {
     required this.protein,
     required this.carbs,
     required this.fat,
+    this.fiber,
+    this.sugar,
   });
 
   final String foodClientId;
@@ -19,6 +23,11 @@ class RecipeIngredient {
   final double protein;
   final double carbs;
   final double fat;
+
+  /// Fibre and sugars of this ingredient (LIF-150): the food's per-100 g figure scaled to the grams; null when the food has
+  /// none (not known is not 0).
+  final double? fiber;
+  final double? sugar;
 }
 
 /// A recipe with its ingredients (`/recipes`).
@@ -60,4 +69,7 @@ class Recipe {
   double get totalCarbs => ingredients.fold(0, (sum, i) => sum + i.carbs);
 
   double get totalFat => ingredients.fold(0, (sum, i) => sum + i.fat);
+
+  /// The whole recipe's fibre and sugars - the sum of the ingredients that have a figure, partial when some do not.
+  FiberSugarTotals get fiberSugar => FiberSugarTotals.of(ingredients.map((i) => (fiber: i.fiber, sugar: i.sugar)));
 }

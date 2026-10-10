@@ -114,6 +114,45 @@ void main() {
 
   Finder gramsField(String text) => find.widgetWithText(TextField, text);
 
+  Recipe fibreRecipe(Food chicken, Food rice) => Recipe(
+        clientId: 'recipe-2',
+        name: 'Chicken rice',
+        servings: 2,
+        ingredients: [
+          RecipeIngredient(
+            foodClientId: chicken.clientId,
+            foodName: 'Chicken',
+            quantityInGrams: 300,
+            calories: 600,
+            protein: 60,
+            carbs: 0,
+            fat: 10,
+          ),
+          RecipeIngredient(
+            foodClientId: rice.clientId,
+            foodName: 'Rice',
+            quantityInGrams: 200,
+            calories: 260,
+            protein: 5,
+            carbs: 56,
+            fat: 1,
+            fiber: 4,
+            sugar: 0.4,
+          ),
+        ],
+      );
+
+  testWidgets("the portion's fibre and sugar follow the amounts, and say that the chicken has no figure (LIF-150)", (tester) async {
+    await tester.runAsync(() async {
+      final chicken = await makeFood('Chicken');
+      final rice = await makeFood('Rice');
+      await pumpSheet(tester, fibreRecipe(chicken, rice));
+    });
+
+    // Half the recipe: 100 g of the 200 g rice -> 2 g fibre, 0.2 g sugar; the chicken has no figure.
+    expect(find.text('Fibre 2 g \u00b7 Sugar 0.2 g \u00b7 some foods have no figure'), findsOneWidget);
+  });
+
   Future<void> expandIngredients(WidgetTester tester) async {
     await tester.tap(find.text('Adjust ingredients'));
     await tester.pumpAndSettle();

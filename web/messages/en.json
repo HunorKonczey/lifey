@@ -1298,6 +1298,7 @@
       "ingredients": "Ingredients",
       "addIngredientPlaceholder": "Add ingredient…",
       "total": "Total",
+      "perServing": "Per serving",
       "totalPerServingKcal": "{total} kcal · {perServing} / serving",
       "totalPerServingProtein": "{total}g protein · {perServing}g / serving",
       "saveFailed": "Failed to save recipe",

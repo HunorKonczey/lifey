@@ -57,7 +57,9 @@ public class ClaudeRecipeGenerator implements RecipeGenerator {
             for a new user: then everything is a new food.
 
             Nutrition values are per 100 g of the raw ingredient, must match at 4 kcal per gram of \
-            protein and carbohydrate and 9 per gram of fat, and must be realistic for that food.
+            protein and carbohydrate and 9 per gram of fat, and must be realistic for that food. \
+            For a new food also give dietary fibre and total sugars per 100 g: realistic for that \
+            food, and a food with none gets 0 (for example oil, meat).
 
             Before you answer, add up the energy of every ingredient — grams times its per-100 g \
             value, divided by 100 — and divide the total by the serving count. If that number falls \

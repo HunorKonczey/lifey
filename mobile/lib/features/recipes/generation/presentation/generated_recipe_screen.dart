@@ -13,6 +13,7 @@ import '../application/recipe_generation_controller.dart';
 import '../domain/generated_recipe.dart';
 import '../domain/recipe_wizard.dart';
 import '../../../../core/format/parse_decimal.dart';
+import '../../../nutrition/presentation/widgets/fiber_sugar_line.dart';
 
 /// Runs the generation for [answers] and shows the proposal
 /// (docs/23-ai-calorie-estimation-plan.md Phase 2): name and servings are
@@ -282,6 +283,10 @@ class _PerServingCard extends StatelessWidget {
             ' · ${l10n.fatLabel} ${perServing.fat.round()} g',
             style: theme.textTheme.bodyMedium,
           ),
+          if (!perServing.fiberSugar.isEmpty) ...[
+            const SizedBox(height: 2),
+            FiberSugarLine(totals: perServing.fiberSugar, style: theme.textTheme.bodyMedium),
+          ],
         ],
       ),
     );

@@ -25,6 +25,7 @@ import '../application/recipe_image_controller.dart';
 import '../application/recipes_controller.dart';
 import '../data/recipe_repository.dart';
 import '../domain/recipe.dart';
+import '../../nutrition/domain/fiber_sugar.dart';
 
 /// Full-screen form for creating a recipe, or editing one when [recipe] is given.
 class CreateRecipeScreen extends ConsumerStatefulWidget {
@@ -61,6 +62,10 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       0, (s, e) => s + (e.food.carbsPer100g ?? 0) * e.grams / 100);
   double get _totalFat => _ingredients.fold(
       0, (s, e) => s + (e.food.fatPer100g ?? 0) * e.grams / 100);
+  FiberSugarTotals get _fiberSugar => FiberSugarTotals.of(_ingredients.map((e) => (
+        fiber: e.food.fiberPer100g == null ? null : e.food.fiberPer100g! * e.grams / 100,
+        sugar: e.food.sugarPer100g == null ? null : e.food.sugarPer100g! * e.grams / 100,
+      )));
 
   @override
   void initState() {
@@ -81,6 +86,8 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             proteinPer100g: q > 0 ? ing.protein / q * 100 : 0,
             carbsPer100g: q > 0 ? ing.carbs / q * 100 : 0,
             fatPer100g: q > 0 ? ing.fat / q * 100 : 0,
+            fiberPer100g: q > 0 && ing.fiber != null ? ing.fiber! / q * 100 : null,
+            sugarPer100g: q > 0 && ing.sugar != null ? ing.sugar! / q * 100 : null,
           ),
           grams: q,
         ));
@@ -517,6 +524,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                 protein: _totalProtein,
                 carbs: _totalCarbs,
                 fat: _totalFat,
+                fiberSugar: _fiberSugar,
               ),
             )
           : null,

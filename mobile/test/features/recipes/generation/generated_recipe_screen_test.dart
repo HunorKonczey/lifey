@@ -168,6 +168,33 @@ void main() {
     expect(find.textContaining('530 kcal'), findsOneWidget);
   });
 
+  testWidgets('the per-serving line carries fibre and sugar, and says when only some foods have a figure (LIF-150)', (tester) async {
+    await open(
+        tester,
+        const RecipeGenerationDone(GeneratedRecipe(
+          name: 'Oat bowl',
+          description: null,
+          servings: 2,
+          ingredients: [
+            GeneratedIngredient(
+                name: 'Oats',
+                quantityInGrams: 100,
+                newFood: GeneratedNewFood(
+                    name: 'Oats', caloriesPer100g: 370, proteinPer100g: 13, carbsPer100g: 60, fatPer100g: 7,
+                    fiberPer100g: 10, sugarPer100g: 1)),
+          ],
+          perServing: RecipeMacros(calories: 185, protein: 6, carbs: 30, fat: 3, fiber: 5, sugar: 0.5, fiberSugarPartial: true),
+        )));
+
+    expect(find.text('Fibre 5 g \u00b7 Sugar 0.5 g \u00b7 some foods have no figure'), findsOneWidget);
+  });
+
+  testWidgets('no fibre or sugar figure: the per-serving line is not drawn', (tester) async {
+    await open(tester, const RecipeGenerationDone(_proposal));
+
+    expect(find.byKey(const Key('fiber-sugar-line')), findsNothing);
+  });
+
   testWidgets('saves the proposal as an ordinary recipe', (tester) async {
     await open(tester, const RecipeGenerationDone(_proposal));
 

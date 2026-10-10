@@ -20,7 +20,14 @@ public record GeneratedIngredientResponse(
             double caloriesPer100g,
             double proteinPer100g,
             double carbsPer100g,
-            double fatPer100g
+            double fatPer100g,
+            // The model's estimate of dietary fibre and total sugars per 100 g (LIF-150).
+            double fiberPer100g,
+            double sugarPer100g
     ) {
+
+        public NewFood(String name, double caloriesPer100g, double proteinPer100g, double carbsPer100g, double fatPer100g) {
+            this(name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, 0, 0);
+        }
     }
 }

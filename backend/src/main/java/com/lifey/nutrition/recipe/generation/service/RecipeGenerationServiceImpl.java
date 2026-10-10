@@ -174,7 +174,9 @@ public class RecipeGenerationServiceImpl implements RecipeGenerationService {
                         round(calories),
                         round(sanitize(ingredient.proteinPer100g(), 100)),
                         round(sanitize(ingredient.carbsPer100g(), 100)),
-                        round(sanitize(ingredient.fatPer100g(), 100))),
+                        round(sanitize(ingredient.fatPer100g(), 100)),
+                        round(sanitize(ingredient.fiberPer100g(), 100)),
+                        round(sanitize(ingredient.sugarPer100g(), 100))),
                 trim(ingredient.name(), MAX_NAME_LENGTH),
                 grams);
     }
@@ -194,6 +196,9 @@ public class RecipeGenerationServiceImpl implements RecipeGenerationService {
         double protein = 0;
         double carbs = 0;
         double fat = 0;
+        Double fiber = null;
+        Double sugar = null;
+        boolean anyMissing = false;
         for (GeneratedIngredientResponse ingredient : ingredients) {
             double factor = ingredient.quantityInGrams() / 100 / servings;
             if (ingredient.existingFoodId() != null) {
@@ -202,15 +207,24 @@ public class RecipeGenerationServiceImpl implements RecipeGenerationService {
                 protein += food.getProteinPer100g() * factor;
                 carbs += orZero(food.getCarbsPer100g()) * factor;
                 fat += orZero(food.getFatPer100g()) * factor;
+                // The user's own food may have no figure: it adds nothing and makes the total partial.
+                if (food.getFiberPer100g() != null) fiber = orZero(fiber) + food.getFiberPer100g() * factor;
+                if (food.getSugarPer100g() != null) sugar = orZero(sugar) + food.getSugarPer100g() * factor;
+                if (food.getFiberPer100g() == null || food.getSugarPer100g() == null) anyMissing = true;
             } else {
                 GeneratedIngredientResponse.NewFood food = ingredient.newFood();
                 calories += food.caloriesPer100g() * factor;
                 protein += food.proteinPer100g() * factor;
                 carbs += food.carbsPer100g() * factor;
                 fat += food.fatPer100g() * factor;
+                // A new food carries the model's estimate, which is what will be saved.
+                fiber = orZero(fiber) + food.fiberPer100g() * factor;
+                sugar = orZero(sugar) + food.sugarPer100g() * factor;
             }
         }
-        return new MacroTotals(round(calories), round(protein), round(carbs), round(fat));
+        return new MacroTotals(round(calories), round(protein), round(carbs), round(fat),
+                fiber == null ? null : round(fiber), sugar == null ? null : round(sugar),
+                anyMissing && (fiber != null || sugar != null));
     }
 
     private static double orZero(Double value) {

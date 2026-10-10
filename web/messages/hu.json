@@ -1298,6 +1298,7 @@
       "ingredients": "Hozzávalók",
       "addIngredientPlaceholder": "Hozzávaló hozzáadása…",
       "total": "Összesen",
+      "perServing": "Adagonként",
       "totalPerServingKcal": "{total} kcal · {perServing} / adag",
       "totalPerServingProtein": "{total} g fehérje · {perServing} g / adag",
       "saveFailed": "Nem sikerült elmenteni a receptet",

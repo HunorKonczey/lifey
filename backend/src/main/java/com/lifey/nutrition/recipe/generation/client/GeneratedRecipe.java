@@ -40,8 +40,18 @@ public record GeneratedRecipe(
             @JsonPropertyDescription("Carbohydrate per 100 g; only used when existingFoodId is 0")
             double carbsPer100g,
             @JsonPropertyDescription("Fat per 100 g; only used when existingFoodId is 0")
-            double fatPer100g
+            double fatPer100g,
+            @JsonPropertyDescription("Dietary fibre per 100 g; only used when existingFoodId is 0")
+            double fiberPer100g,
+            @JsonPropertyDescription("Total sugars per 100 g; only used when existingFoodId is 0")
+            double sugarPer100g
     ) {
+
+        /** Without fibre and sugars: the figures stay 0, which a caller that never asked for them can ignore. */
+        public Ingredient(String name, double quantityInGrams, long existingFoodId, double caloriesPer100g,
+                          double proteinPer100g, double carbsPer100g, double fatPer100g) {
+            this(name, quantityInGrams, existingFoodId, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, 0, 0);
+        }
 
         public boolean claimsExistingFood() {
             return existingFoodId > 0;

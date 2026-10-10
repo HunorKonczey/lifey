@@ -15,6 +15,8 @@ import 'package:lifey/features/recipes/generation/domain/generated_recipe.dart';
 
 class _FakeFoods extends FoodController {
   final created = <String>[];
+  final fibers = <double?>[];
+  final sugars = <double?>[];
 
   @override
   Stream<List<Food>> build() => Stream.value(const []);
@@ -34,6 +36,8 @@ class _FakeFoods extends FoodController {
     bool hidden = false,
   }) async {
     created.add(name);
+    fibers.add(fiber);
+    sugars.add(sugar);
     return Food(
       clientId: 'new-${created.length}',
       name: name,
@@ -136,6 +140,26 @@ void main() {
     expect(recipes.ingredients!.map((i) => i.foodClientId), ['chicken-local', 'new-1']);
     expect(recipes.ingredients!.map((i) => i.grams), [300, 150]);
     expect(recipes.servings, 2);
+  });
+
+  test("the model's fibre and sugar estimate is saved on the new food; a server that sent none leaves them unknown (LIF-150)", () async {
+    final container = containerWith({7: chicken});
+    const withFibre = GeneratedIngredient(
+        name: 'Oats',
+        quantityInGrams: 100,
+        newFood: GeneratedNewFood(
+            name: 'Oats', caloriesPer100g: 370, proteinPer100g: 13, carbsPer100g: 60, fatPer100g: 7,
+            fiberPer100g: 10, sugarPer100g: 1));
+
+    await container.read(generatedRecipeSaverProvider).save(
+          _recipe(const [withFibre, _newRice]),
+          name: 'Oat rice',
+          servings: 1,
+        );
+
+    expect(foods.created, ['Oats', 'Jasmine rice']);
+    expect(foods.fibers, [10, null]);
+    expect(foods.sugars, [1, null]);
   });
 
   test('edited quantities win, and a null drops the ingredient', () async {

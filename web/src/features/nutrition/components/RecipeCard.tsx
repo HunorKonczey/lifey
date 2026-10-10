@@ -8,14 +8,18 @@ import { RatioBar } from "@/components/ds/progress/RatioBar";
 import { RowMenuButton } from "@/components/ds/RowMenuButton";
 import { useFormat } from "@/lib/format/useFormat";
 import { useFormat as useNumberFormat } from "@/lib/i18n/format";
+import type { FiberSugarTotals } from "../fiberSugar";
 import type { Macros } from "../recipeMacros";
 import { recipeTint } from "../recipeTint";
 import type { RecipeResponse } from "../types";
+import { FiberSugarLine } from "./FiberSugarLine";
 
 export interface RecipeCardProps {
   recipe: RecipeResponse;
   /** One serving's macros — the whole recipe divided by its servings. */
   perServing: Macros;
+  /** One serving's fibre and sugars (LIF-150); nothing is drawn when no ingredient's food has a figure. */
+  fiberSugar?: FiberSugarTotals;
   /** The recipe's photo (a `RecipeThumbnail`) — the card draws the dominant-macro icon when there is none. */
   photo?: ReactNode;
   onOpen: () => void;
@@ -30,7 +34,7 @@ export interface RecipeCardProps {
  * that button so nothing is nested. A recipe the user's trainer assigned carries an "Az edződtől" chip, the web's
  * counterpart of the phone's "Edzőtől" pill (LIF-104).
  */
-export function RecipeCard({ recipe, perServing, photo, onOpen, onLog, menu }: RecipeCardProps) {
+export function RecipeCard({ recipe, perServing, fiberSugar, photo, onOpen, onLog, menu }: RecipeCardProps) {
   const t = useTranslations("nutrition.recipesView");
   const fmt = useFormat();
   const nf = useNumberFormat();
@@ -104,6 +108,7 @@ export function RecipeCard({ recipe, perServing, photo, onOpen, onLog, menu }: R
             })}
           />
         </span>
+        {fiberSugar && <FiberSugarLine totals={fiberSugar} testId="recipe-fiber-sugar" />}
       </button>
 
       <div className="flex items-center gap-2">
