@@ -14,6 +14,8 @@ class EstimatedItem {
     required this.carbs,
     required this.fat,
     required this.confidence,
+    this.fiber,
+    this.sugar,
   });
 
   final String name;
@@ -24,6 +26,11 @@ class EstimatedItem {
   final double fat;
   final EstimateConfidence confidence;
 
+  /// The model's estimate of fibre and sugars for the same portion (LIF-152); null when the server did not send one (an older
+  /// server) - not known is not 0.
+  final double? fiber;
+  final double? sugar;
+
   factory EstimatedItem.fromJson(Map<String, dynamic> json) {
     return EstimatedItem(
       name: json['name'] as String,
@@ -32,6 +39,8 @@ class EstimatedItem {
       protein: (json['proteinGrams'] as num).toDouble(),
       carbs: (json['carbsGrams'] as num).toDouble(),
       fat: (json['fatGrams'] as num).toDouble(),
+      fiber: (json['fiberGrams'] as num?)?.toDouble(),
+      sugar: (json['sugarGrams'] as num?)?.toDouble(),
       confidence: switch (json['confidence']) {
         'HIGH' => EstimateConfidence.high,
         'MEDIUM' => EstimateConfidence.medium,

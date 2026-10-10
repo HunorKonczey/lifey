@@ -30,7 +30,17 @@ public record MealPhotoEstimate(
             double carbsGrams,
             @JsonPropertyDescription("Fat in grams for the estimated portion")
             double fatGrams,
+            @JsonPropertyDescription("Dietary fibre in grams for the estimated portion; 0 when the food has none")
+            double fiberGrams,
+            @JsonPropertyDescription("Total sugars in grams for the estimated portion; 0 when the food has none")
+            double sugarGrams,
             EstimationConfidence confidence
     ) {
+
+        /** Without fibre and sugars (LIF-152): they stay 0, which a caller that never asked for them can ignore. */
+        public Item(String name, double estimatedGrams, double calories, double proteinGrams, double carbsGrams,
+                    double fatGrams, EstimationConfidence confidence) {
+            this(name, estimatedGrams, calories, proteinGrams, carbsGrams, fatGrams, 0, 0, confidence);
+        }
     }
 }

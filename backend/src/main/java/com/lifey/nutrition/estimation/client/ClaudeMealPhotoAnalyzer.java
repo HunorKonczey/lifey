@@ -50,8 +50,9 @@ public class ClaudeMealPhotoAnalyzer implements MealPhotoAnalyzer {
             estimate rather than declining when unsure.
 
             Identify each distinct food or drink item in the photo. For each, give a short English \
-            name, the estimated portion in grams, and the calories, protein, carbohydrates and fat \
-            for that portion (not per 100 g).
+            name, the estimated portion in grams, and the calories, protein, carbohydrates, fat, \
+            dietary fibre and total sugars for that portion (not per 100 g). Fibre and sugars must be \
+            realistic for the food, and a food with none gets 0 (for example oil, plain meat).
 
             Use plates, cutlery, hands and packaging for scale when visible. When a portion size is \
             ambiguous, estimate conservatively and lower the confidence. Account for visible cooking \

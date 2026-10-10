@@ -73,7 +73,7 @@ class MealEstimationServiceImplTest {
         MealEstimateResponse response = service.estimate(png(640, 480));
 
         assertThat(response.items()).containsExactly(new EstimatedItemResponse(
-                "Grilled chicken breast", 150, 248, 46.5, 0, 5.4, EstimationConfidence.HIGH));
+                "Grilled chicken breast", 150, 248, 46.5, 0, 5.4, 0.0, 0.0, EstimationConfidence.HIGH));
         assertThat(response.notes()).isEqualTo("Sauce not visible.");
         verify(aiFeatureGate).checkMealEstimation(USER_ID);
         verify(aiUsageCounterService).recordUsage(USER_ID);
@@ -149,8 +149,30 @@ class MealEstimationServiceImplTest {
                 null));
 
         assertThat(response.items()).containsExactly(new EstimatedItemResponse(
-                "Pizza", 3000, 28500, 0, 0, 40.0, EstimationConfidence.LOW));
+                "Pizza", 3000, 28500, 0, 0, 40.0, 0.0, 0.0, EstimationConfidence.LOW));
         assertThat(response.notes()).isNull();
+    }
+
+    @Test
+    void toResponse_carriesTheEstimatedFibreAndSugarOfThePortion() {
+        MealEstimateResponse response = MealEstimationServiceImpl.toResponse(new MealPhotoEstimate(List.of(
+                new MealPhotoEstimate.Item("Oat porridge", 250, 190, 7, 32, 4, 4.04, 6.26, EstimationConfidence.MEDIUM)),
+                null));
+
+        assertThat(response.items()).containsExactly(new EstimatedItemResponse(
+                "Oat porridge", 250, 190, 7, 32, 4, 4.0, 6.3, EstimationConfidence.MEDIUM));
+    }
+
+    @Test
+    void toResponse_clampsFibreAndSugarLikeTheMacros() {
+        MealEstimateResponse response = MealEstimationServiceImpl.toResponse(new MealPhotoEstimate(Arrays.asList(
+                // More than the portion weighs, negative, not a number: none of them is a figure the portion can hold.
+                new MealPhotoEstimate.Item("Apple", 100, 52, 0.3, 14, 0.2, 500, 12, EstimationConfidence.HIGH),
+                new MealPhotoEstimate.Item("Bread", 100, 250, 8, 49, 3, -2, Double.NaN, EstimationConfidence.HIGH)),
+                null));
+
+        assertThat(response.items()).extracting(EstimatedItemResponse::fiberGrams).containsExactly(100.0, 0.0);
+        assertThat(response.items()).extracting(EstimatedItemResponse::sugarGrams).containsExactly(12.0, 0.0);
     }
 
     private static MockMultipartFile png(int width, int height) throws IOException {

@@ -2297,6 +2297,8 @@ meals from yesterday, create a food whose macros don't add up, log a recipe port
 
 *Follow-up (LIF-151, 2026-10-10):* fibre and sugars are phone statistics metrics (`StatMetric.fiber` / `sugar`, daily bars, same summary shape as the macros, no goal). A day is a chart point only when *every* entry eaten that day has the figure - not known is not 0, so a partly-known day would read as a low day and drag the average down; those days are left out of the points and counted in `StatSeries.incompleteDays`, and a line under the chart says how many. The picker lists the metric only once some food eaten has the figure.
 
+*Follow-up (LIF-152, 2026-10-10):* the photo estimate (`/meals/estimate`, docs/23) asks the model for each item's fibre and sugars *for the estimated portion* (like the macros, not per 100 g; clamped to 0..portion weight). The phone's review sheet shows them as two editable, optional fields that scale with the portion; the hidden food saved from the item gets the per-100 g figures back-calculated from the reviewed portion, and an empty field leaves the food's figure unknown rather than 0.
+
 ## W3 — Workouts · `Lifey Web 3 Workouts.dc.html` (W3-A … W3-F)
 
 **Goal:** a readable weekly log, a finished session that reads like a summary, and a live logger with

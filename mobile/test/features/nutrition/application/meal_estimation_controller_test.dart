@@ -115,5 +115,30 @@ void main() {
     expect(item.protein, 46.5);
     expect(item.confidence, EstimateConfidence.low);
     expect(estimate.notes, isNull);
+    // An older server sends no fibre or sugar: that is not known, not 0.
+    expect(item.fiber, isNull);
+    expect(item.sugar, isNull);
+  });
+
+  test('parses the estimated fibre and sugar of the portion (LIF-152)', () {
+    final estimate = MealEstimate.fromJson({
+      'items': [
+        {
+          'name': 'Oats',
+          'estimatedGrams': 250,
+          'calories': 190,
+          'proteinGrams': 7,
+          'carbsGrams': 32,
+          'fatGrams': 4,
+          'fiberGrams': 5,
+          'sugarGrams': 0,
+          'confidence': 'HIGH',
+        },
+      ],
+    });
+
+    expect(estimate.items.single.fiber, 5.0);
+    // A sugar of 0 is a figure ("none"), different from a missing one.
+    expect(estimate.items.single.sugar, 0.0);
   });
 }

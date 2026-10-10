@@ -76,6 +76,9 @@ class _MealEstimateSheetState extends ConsumerState<MealEstimateSheet> {
           protein: _parse(item.protein.text)! * factor,
           carbs: _parse(item.carbs.text)! * factor,
           fat: _parse(item.fat.text)! * factor,
+          // Empty = not known, kept unknown on the saved food rather than saved as 0.
+          fiber: _scaled(item.fiber.text, factor),
+          sugar: _scaled(item.sugar.text, factor),
           hidden: true,
         );
         drafts.add((food: food, grams: grams));
@@ -224,6 +227,12 @@ class _MealEstimateSheetState extends ConsumerState<MealEstimateSheet> {
 
 double? _parse(String text) => parseDecimal(text);
 
+/// [text] times [factor]; null when it is empty (not known).
+double? _scaled(String text, double factor) {
+  final value = _parse(text);
+  return value == null ? null : value * factor;
+}
+
 /// Whole numbers without a trailing ".0"; otherwise one decimal.
 String _format(double value) {
   final rounded = (value * 10).round() / 10;
@@ -244,6 +253,8 @@ class _EditableItem {
         protein = TextEditingController(text: _format(item.protein)),
         carbs = TextEditingController(text: _format(item.carbs)),
         fat = TextEditingController(text: _format(item.fat)),
+        fiber = TextEditingController(text: item.fiber == null ? '' : _format(item.fiber!)),
+        sugar = TextEditingController(text: item.sugar == null ? '' : _format(item.sugar!)),
         _lastGrams = item.grams;
 
   final EstimateConfidence confidence;
@@ -253,13 +264,15 @@ class _EditableItem {
   final TextEditingController protein;
   final TextEditingController carbs;
   final TextEditingController fat;
+  final TextEditingController fiber;
+  final TextEditingController sugar;
   double _lastGrams;
 
   void onGramsChanged(String text) {
     final next = _parse(text);
     if (next == null || next <= 0 || _lastGrams <= 0) return;
     final factor = next / _lastGrams;
-    for (final field in [calories, protein, carbs, fat]) {
+    for (final field in [calories, protein, carbs, fat, fiber, sugar]) {
       final value = _parse(field.text);
       if (value != null) field.text = _format(value * factor);
     }
@@ -267,7 +280,7 @@ class _EditableItem {
   }
 
   void dispose() {
-    for (final c in [name, grams, calories, protein, carbs, fat]) {
+    for (final c in [name, grams, calories, protein, carbs, fat, fiber, sugar]) {
       c.dispose();
     }
   }
@@ -298,10 +311,17 @@ class _ItemCard extends StatelessWidget {
       return null;
     }
 
+    // Fibre and sugars may stay empty (not known); a figure must not be negative.
+    String? optionalNonNegative(String? v) {
+      if (v == null || v.trim().isEmpty) return null;
+      return requiredNonNegative(v);
+    }
+
     Widget number(TextEditingController c, String label, String suffix,
         String? Function(String?) validator,
-        {ValueChanged<String>? onChanged}) {
+        {ValueChanged<String>? onChanged, Key? key}) {
       return TextFormField(
+        key: key,
         controller: c,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         decoration: InputDecoration(
@@ -379,6 +399,20 @@ class _ItemCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: number(item.fat, l10n.fatLabel, 'g', requiredNonNegative),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: number(item.fiber, l10n.fiberLabel, 'g', optionalNonNegative,
+                          key: const Key('estimate-fiber')),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: number(item.sugar, l10n.sugarLabel, 'g', optionalNonNegative,
+                          key: const Key('estimate-sugar')),
                     ),
                   ],
                 ),
