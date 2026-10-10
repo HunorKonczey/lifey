@@ -73,6 +73,8 @@ class RecipeRepository {
                 protein: (food?.proteinPer100g ?? 0) * grams / 100,
                 carbs: (food?.carbsPer100g ?? 0) * grams / 100,
                 fat: (food?.fatPer100g ?? 0) * grams / 100,
+                fiber: food?.fiberPer100g == null ? null : food!.fiberPer100g! * grams / 100,
+                sugar: food?.sugarPer100g == null ? null : food!.sugarPer100g! * grams / 100,
               ),
             );
       }

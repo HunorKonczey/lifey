@@ -1,3 +1,5 @@
+import '../../../nutrition/domain/fiber_sugar.dart';
+
 /// A recipe proposal from `POST /recipes/generate`
 /// (docs/23-ai-calorie-estimation-plan.md Phase 2). Transient and online-only:
 /// nothing is stored until the user saves it, and then it is saved as an
@@ -65,6 +67,8 @@ class GeneratedNewFood {
     required this.proteinPer100g,
     required this.carbsPer100g,
     required this.fatPer100g,
+    this.fiberPer100g,
+    this.sugarPer100g,
   });
 
   final String name;
@@ -73,6 +77,10 @@ class GeneratedNewFood {
   final double carbsPer100g;
   final double fatPer100g;
 
+  /// The model's estimate of dietary fibre and sugars per 100 g (LIF-150); null from a server that does not send them.
+  final double? fiberPer100g;
+  final double? sugarPer100g;
+
   factory GeneratedNewFood.fromJson(Map<String, dynamic> json) {
     return GeneratedNewFood(
       name: json['name'] as String,
@@ -80,6 +88,8 @@ class GeneratedNewFood {
       proteinPer100g: (json['proteinPer100g'] as num).toDouble(),
       carbsPer100g: (json['carbsPer100g'] as num).toDouble(),
       fatPer100g: (json['fatPer100g'] as num).toDouble(),
+      fiberPer100g: (json['fiberPer100g'] as num?)?.toDouble(),
+      sugarPer100g: (json['sugarPer100g'] as num?)?.toDouble(),
     );
   }
 }
@@ -90,6 +100,9 @@ class RecipeMacros {
     required this.protein,
     required this.carbs,
     required this.fat,
+    this.fiber,
+    this.sugar,
+    this.fiberSugarPartial = false,
   });
 
   final double calories;
@@ -97,12 +110,22 @@ class RecipeMacros {
   final double carbs;
   final double fat;
 
+  /// Fibre and sugars per serving (LIF-150): null when no ingredient has a figure, partial when only some do.
+  final double? fiber;
+  final double? sugar;
+  final bool fiberSugarPartial;
+
+  FiberSugarTotals get fiberSugar => FiberSugarTotals(fiber: fiber, sugar: sugar, partial: fiberSugarPartial);
+
   factory RecipeMacros.fromJson(Map<String, dynamic> json) {
     return RecipeMacros(
       calories: (json['calories'] as num).toDouble(),
       protein: (json['proteinGrams'] as num).toDouble(),
       carbs: (json['carbsGrams'] as num).toDouble(),
       fat: (json['fatGrams'] as num).toDouble(),
+      fiber: (json['fiberGrams'] as num?)?.toDouble(),
+      sugar: (json['sugarGrams'] as num?)?.toDouble(),
+      fiberSugarPartial: json['fiberSugarPartial'] as bool? ?? false,
     );
   }
 }

@@ -16,6 +16,7 @@ import { matchesFoodSearch } from "../foodsTable";
 import { recipeTotals, type Macros } from "../recipeMacros";
 import type { FoodResponse, RecipeResponse } from "../types";
 import { LogRecipeDialog } from "./LogRecipeDialog";
+import { recipeFiberSugar, scaleFiberSugar } from "../fiberSugar";
 import { RecipeCard } from "./RecipeCard";
 import { RecipeEditor } from "./RecipeEditor";
 import { RecipeThumbnail } from "./RecipeThumbnail";
@@ -177,6 +178,7 @@ export function RecipesView({ onAssign, creating: creatingProp, onCreatingChange
               key={r.id}
               recipe={r}
               perServing={perServing(r, foodsById)}
+              fiberSugar={scaleFiberSugar(recipeFiberSugar(r.ingredients, foodsById), 1 / Math.max(r.servings, 1))}
               photo={r.imageUpdatedAt != null ? <RecipeThumbnail recipeId={r.id} hasImage size={56} /> : undefined}
               onOpen={() => setEditing(r)}
               onLog={() => setLogging(r)}

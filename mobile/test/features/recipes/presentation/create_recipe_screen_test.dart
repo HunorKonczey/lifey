@@ -86,7 +86,45 @@ Future<_FakeRecipes> _pump(
   return fake;
 }
 
+RecipeIngredient _ingFibre(String name, double grams, {double? fiber, double? sugar}) => RecipeIngredient(
+      foodClientId: name,
+      foodName: name,
+      quantityInGrams: grams,
+      calories: 100,
+      protein: 5,
+      carbs: 10,
+      fat: 2,
+      fiber: fiber,
+      sugar: sugar,
+    );
+
 void main() {
+  testWidgets('the recipe total shows fibre and sugar, and says when an ingredient has no figure (LIF-150)', (tester) async {
+    await _pump(
+        tester,
+        recipe: Recipe(clientId: 'r', name: 'Bowl', servings: 1, ingredients: [
+          _ingFibre('Oats', 100, fiber: 10, sugar: 1),
+          _ingFibre('Apple', 200, fiber: 4.8, sugar: 20),
+        ]));
+    expect(find.text('Fibre 14.8 g \u00b7 Sugar 21 g'), findsOneWidget);
+  });
+
+  testWidgets('an ingredient without a fibre figure makes the recipe total partial', (tester) async {
+    await _pump(
+        tester,
+        recipe: Recipe(clientId: 'r2', name: 'Bowl 2', servings: 1, ingredients: [
+          _ingFibre('Oats', 100, fiber: 10, sugar: 1),
+          _ingFibre('Mystery', 100),
+        ]));
+    expect(find.text('Fibre 10 g \u00b7 Sugar 1 g \u00b7 some foods have no figure'), findsOneWidget);
+  });
+
+  testWidgets('a recipe whose foods have no fibre or sugar figure shows no line', (tester) async {
+    await _pump(tester, recipe: _recipe);
+
+    expect(find.byKey(const Key('fiber-sugar-line')), findsNothing);
+  });
+
   testWidgets('edit layout: header with Save, fields, servings, favourite, ingredient rows, actions, summary', (tester) async {
     await _pump(tester, recipe: _recipe);
 

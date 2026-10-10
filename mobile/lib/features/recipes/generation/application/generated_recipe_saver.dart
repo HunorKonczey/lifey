@@ -52,6 +52,8 @@ class GeneratedRecipeSaver {
           protein: newFood.proteinPer100g,
           carbs: newFood.carbsPer100g,
           fat: newFood.fatPer100g,
+          fiber: newFood.fiberPer100g,
+          sugar: newFood.sugarPer100g,
         );
         clientId = created.clientId;
       } else {

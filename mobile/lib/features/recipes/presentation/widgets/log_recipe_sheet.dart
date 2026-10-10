@@ -7,7 +7,9 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../nutrition/application/meal_controller.dart';
 import '../../../nutrition/data/meal_repository.dart';
+import '../../../nutrition/domain/fiber_sugar.dart';
 import '../../../nutrition/domain/meal.dart';
+import '../../../nutrition/presentation/widgets/fiber_sugar_line.dart';
 import '../../domain/recipe.dart';
 import '../../../../core/format/parse_decimal.dart';
 
@@ -159,6 +161,22 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
       sum += macroOf(ingredient) * _gramsFor(i) / ingredient.quantityInGrams;
     }
     return sum;
+  }
+
+  /// The logged portion's fibre and sugars (LIF-150), each ingredient scaled to the grams actually being logged.
+  FiberSugarTotals get _scaledFiberSugar {
+    final entries = <({double? fiber, double? sugar})>[];
+    final ingredients = widget.recipe.ingredients;
+    for (var i = 0; i < ingredients.length; i++) {
+      final ingredient = ingredients[i];
+      if (ingredient.quantityInGrams <= 0) continue;
+      final scale = _gramsFor(i) / ingredient.quantityInGrams;
+      entries.add((
+        fiber: ingredient.fiber == null ? null : ingredient.fiber! * scale,
+        sugar: ingredient.sugar == null ? null : ingredient.sugar! * scale,
+      ));
+    }
+    return FiberSugarTotals.of(entries);
   }
 
   bool get _hasLoggableEntry {
@@ -356,6 +374,10 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
               ),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            if (!_scaledFiberSugar.isEmpty) ...[
+              const SizedBox(height: 4),
+              FiberSugarLine(totals: _scaledFiberSugar),
+            ],
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: canSubmit ? _submit : null,

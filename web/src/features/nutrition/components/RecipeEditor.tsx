@@ -7,6 +7,8 @@ import { Button, Icon, IconButton, NumberField, Switch, TextArea, TextField } fr
 import { Drawer } from "@/components/ds/overlay/Drawer";
 import { useFormat } from "@/lib/format/useFormat";
 import { foodApi, recipeApi } from "../api";
+import { recipeFiberSugar, scaleFiberSugar } from "../fiberSugar";
+import { FiberSugarLine } from "./FiberSugarLine";
 import { RecipeImageUploader } from "./RecipeImageUploader";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
@@ -93,6 +95,10 @@ export function RecipeEditor({ recipe, onClose, onDelete }: RecipeEditorProps) {
   const totalProtein = ingredients.reduce(
     (s, i) => s + (i.proteinPer100g * i.quantityInGrams) / 100, 0,
   );
+
+  // Fibre and sugars (LIF-150): from the foods the ingredients point at, like the recipe cards.
+  const foodsById = new Map((foods ?? []).map((f) => [f.id, f]));
+  const fiberSugar = recipeFiberSugar(ingredients, foodsById);
 
   // A recipe needs a name and at least one fully-quantified ingredient
   // before the backend will accept it (name is @NotBlank, each ingredient's
@@ -317,6 +323,14 @@ export function RecipeEditor({ recipe, onClose, onDelete }: RecipeEditorProps) {
             {t("totalPerServingProtein", { total: Math.round(totalProtein), perServing: Math.round(totalProtein / servings) })}
           </span>
         </div>
+        {!(fiberSugar.fiber == null && fiberSugar.sugar == null) && (
+          <div className="flex flex-col gap-0.5">
+            <FiberSugarLine totals={fiberSugar} testId="recipe-total-fiber-sugar" label={t("total")} />
+            {servings > 1 && (
+              <FiberSugarLine totals={scaleFiberSugar(fiberSugar, 1 / servings)} testId="recipe-serving-fiber-sugar" label={t("perServing")} />
+            )}
+          </div>
+        )}
       </div>
     </Drawer>
   );

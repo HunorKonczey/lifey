@@ -14,9 +14,11 @@ import { logTimestampFor } from "@/lib/utils/logTime";
 import {
   buildEntries, gramsFor, scaledMacros, type GramsOverrides,
 } from "../logRecipePortion";
+import { recipeFiberSugar } from "../fiberSugar";
 import { defaultMealType } from "../mealTypeDefault";
 import { MEAL_TYPE_ORDER } from "../mealTypeStyle";
 import type { FoodResponse, MealEntryRequest, MealType, RecipeResponse } from "../types";
+import { FiberSugarLine } from "./FiberSugarLine";
 
 export interface LogRecipeModalProps {
   recipe: RecipeResponse;
@@ -58,6 +60,7 @@ export function LogRecipeModal({ recipe, foodsById, initialMealType, pending, on
   const effDivisor = partial ? divisor : 1;
   const macros = scaledMacros(recipe.ingredients, effDivisor, overrides, foodsById);
   const entries = buildEntries(recipe.ingredients, effDivisor, overrides);
+  const fiberSugar = recipeFiberSugar(recipe.ingredients, foodsById, (ingredient, i) => gramsFor(ingredient, i, effDivisor, overrides));
 
   const resetOverride = (index: number) =>
     setOverrides((o) => {
@@ -169,6 +172,7 @@ export function LogRecipeModal({ recipe, foodsById, initialMealType, pending, on
             fat: nf.number(macros.fat, 0),
           })}
         </p>
+        <FiberSugarLine totals={fiberSugar} testId="log-fiber-sugar" className="-mt-3" />
 
         <div className="flex flex-wrap gap-3">
           <Button variant="secondary" onClick={onClose} className="min-w-[140px] flex-1">
