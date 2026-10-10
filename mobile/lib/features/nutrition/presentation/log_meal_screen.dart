@@ -25,6 +25,7 @@ import '../application/meal_controller.dart';
 import '../application/meal_estimation_controller.dart';
 import '../application/selected_meal_day_provider.dart';
 import '../data/meal_repository.dart';
+import '../domain/fiber_sugar.dart';
 import '../domain/food.dart';
 import '../domain/meal.dart';
 import '../domain/meal_budget_preview.dart';
@@ -90,6 +91,11 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   double get _totalFat =>
       _entries.fold(0, (s, e) => s + (e.food.fatPer100g ?? 0) * e.grams / 100);
 
+  FiberSugarTotals get _fiberSugar => FiberSugarTotals.of(_entries.map((e) => (
+        fiber: e.food.fiberPer100g == null ? null : e.food.fiberPer100g! * e.grams / 100,
+        sugar: e.food.sugarPer100g == null ? null : e.food.sugarPer100g! * e.grams / 100,
+      )));
+
   bool get _hasMacroData => _entries.any((e) => e.food.caloriesPer100g > 0);
 
   bool get _isToday => DateUtils.isSameDay(_dateTime, DateTime.now());
@@ -123,6 +129,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
             proteinPer100g: q > 0 ? entry.protein / q * 100 : 0,
             carbsPer100g: q > 0 ? entry.carbs / q * 100 : 0,
             fatPer100g: q > 0 ? entry.fat / q * 100 : 0,
+            fiberPer100g: q > 0 && entry.fiber != null ? entry.fiber! / q * 100 : null,
+            sugarPer100g: q > 0 && entry.sugar != null ? entry.sugar! / q * 100 : null,
           ),
           grams: q,
         ));
@@ -530,6 +538,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                 protein: _totalProtein,
                 carbs: _totalCarbs,
                 fat: _totalFat,
+                fiberSugar: _fiberSugar,
                 preview: _budgetPreview(),
                 day: _isToday ? null : _dateTime.toLocal(),
               ),

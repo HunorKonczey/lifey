@@ -64,7 +64,43 @@ Future<void> _pump(
   await tester.pump();
 }
 
+MealEntry _entryWithFiber(String name, {double? fiber, double? sugar}) => MealEntry(
+      foodClientId: name,
+      foodName: name,
+      quantityInGrams: 100,
+      calories: 100,
+      protein: 5,
+      carbs: 10,
+      fat: 2,
+      fiber: fiber,
+      sugar: sugar,
+    );
+
 void main() {
+  testWidgets('a meal whose foods have fibre and sugar shows the totals, and says when only some do (LIF-148)', (tester) async {
+    await _pump(tester, _meal(entries: [_entryWithFiber('Oats', fiber: 10, sugar: 1.2), _entryWithFiber('Apple', fiber: 2.4, sugar: 10)]));
+
+    expect(find.text('Fibre 12.4 g \u00b7 Sugar 11.2 g'), findsOneWidget);
+
+    await _pump(tester, _meal(entries: [_entryWithFiber('Oats', fiber: 10, sugar: 1.2), _entryWithFiber('Mystery')]));
+
+    expect(find.text('Fibre 10 g \u00b7 Sugar 1.2 g \u00b7 some foods have no figure'), findsOneWidget);
+  });
+
+  testWidgets('a meal with no fibre or sugar figure shows no line at all', (tester) async {
+    await _pump(tester, _meal());
+
+    expect(find.byKey(const Key('fiber-sugar-line')), findsNothing);
+  });
+
+  testWidgets('the fibre line in Hungarian at 1.3x on a 360 dp phone does not overflow', (tester) async {
+    await _pump(tester, _meal(entries: [_entryWithFiber('Oats', fiber: 10, sugar: 1.2), _entryWithFiber('Mystery')]),
+        locale: const Locale('hu'), textScale: 1.3, width: 360);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Rost 10 g \u00b7 Cukor 1,2 g \u00b7 néhány ételhez nincs adat'), findsOneWidget);
+  });
+
   testWidgets('a meal the trainer commented on shows the comment under its foods (LIF-144)', (tester) async {
     await _pump(tester, _meal(name: 'Oats & berries', trainerComment: 'Add a spoon of nut butter'));
 

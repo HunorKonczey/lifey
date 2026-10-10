@@ -633,6 +633,20 @@
   "@addServingButton": {
     "description": "Button adding a named serving row to the food form"
   },
+  "fiberTotalLine": "Fibre {value} g",
+  "@fiberTotalLine": {
+    "description": "Fibre total of a meal or a day, under its foods or macros",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "sugarTotalLine": "Sugar {value} g",
+  "@sugarTotalLine": {
+    "description": "Sugar total of a meal or a day, under its foods or macros",
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "fiberSugarPartialNote": "some foods have no figure",
+  "@fiberSugarPartialNote": {
+    "description": "Added to a fibre/sugar total when only some of the foods have a figure, so it is read as a lower bound"
+  },
   "foodFavoriteLabel": "Favourite",
   "@foodFavoriteLabel": {
     "description": "Label of the favourite switch on the food form and the screen-reader label of the star on a favourite food"

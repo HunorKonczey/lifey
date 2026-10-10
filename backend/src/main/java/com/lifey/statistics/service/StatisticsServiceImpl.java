@@ -113,6 +113,12 @@ public class StatisticsServiceImpl implements StatisticsService {
         double totalProtein = mealRepository.sumProteinBetween(userId, fromInstant, toInstant);
         double totalCarbs = mealRepository.sumCarbsBetween(userId, fromInstant, toInstant);
         double totalFat = mealRepository.sumFatBetween(userId, fromInstant, toInstant);
+        // Fibre and sugars are sums of what is known (LIF-148): null when no logged food has a figure, and flagged partial
+        // when some do and some do not - never a silent 0 that reads as "no fibre".
+        Double totalFiber = mealRepository.sumFiberBetween(userId, fromInstant, toInstant);
+        Double totalSugar = mealRepository.sumSugarBetween(userId, fromInstant, toInstant);
+        boolean fiberSugarPartial = (totalFiber != null || totalSugar != null)
+                && mealRepository.countEntriesMissingFiberOrSugarBetween(userId, fromInstant, toInstant) > 0;
         long workoutCount = workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThan(userId, fromInstant, toInstant);
         Double latestWeight = weightEntryRepository.findFirstByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(userId)
                 .map(WeightEntry::getWeight)
@@ -131,7 +137,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         return new StatisticsResponse(totalCalories, totalProtein, totalCarbs, totalFat,
                 (int) workoutCount, latestWeight, totalWater,
                 (int) strengthWorkoutCount, (int) cardioWorkoutCount, (int) (movingSeconds / 60),
-                totalDistanceMeters, totalElevationGainMeters);
+                totalDistanceMeters, totalElevationGainMeters, totalFiber, totalSugar, fiberSugarPartial);
     }
 
     /**

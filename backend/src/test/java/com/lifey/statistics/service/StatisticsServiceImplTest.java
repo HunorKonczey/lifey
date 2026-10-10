@@ -185,6 +185,44 @@ class StatisticsServiceImplTest {
         assertThat(result.totalElevationGainMeters()).isZero();
     }
 
+    @Test
+    void daily_carriesTheKnownFibreAndSugar_andFlagsAPartialSum() {
+        stubAggregates(200.0, 20.0, 0L, null);
+        when(mealRepository.sumFiberBetween(eq(USER_ID), any(), any())).thenReturn(12.5);
+        when(mealRepository.sumSugarBetween(eq(USER_ID), any(), any())).thenReturn(30.0);
+        when(mealRepository.countEntriesMissingFiberOrSugarBetween(eq(USER_ID), any(), any())).thenReturn(2L);
+
+        StatisticsResponse result = service.daily();
+
+        assertThat(result.totalFiber()).isEqualTo(12.5);
+        assertThat(result.totalSugar()).isEqualTo(30.0);
+        assertThat(result.fiberSugarPartial()).isTrue();
+    }
+
+    @Test
+    void daily_withNoFigureAnywhere_hasNullFibreAndSugar_andIsNotPartial() {
+        stubAggregates(200.0, 20.0, 0L, null);
+        when(mealRepository.sumFiberBetween(eq(USER_ID), any(), any())).thenReturn(null);
+        when(mealRepository.sumSugarBetween(eq(USER_ID), any(), any())).thenReturn(null);
+        lenient().when(mealRepository.countEntriesMissingFiberOrSugarBetween(eq(USER_ID), any(), any())).thenReturn(5L);
+
+        StatisticsResponse result = service.daily();
+
+        assertThat(result.totalFiber()).isNull();
+        assertThat(result.totalSugar()).isNull();
+        assertThat(result.fiberSugarPartial()).isFalse();
+    }
+
+    @Test
+    void daily_whenEveryEntryHasAFigure_isNotPartial() {
+        stubAggregates(200.0, 20.0, 0L, null);
+        when(mealRepository.sumFiberBetween(eq(USER_ID), any(), any())).thenReturn(3.0);
+        when(mealRepository.sumSugarBetween(eq(USER_ID), any(), any())).thenReturn(4.0);
+        when(mealRepository.countEntriesMissingFiberOrSugarBetween(eq(USER_ID), any(), any())).thenReturn(0L);
+
+        assertThat(service.daily().fiberSugarPartial()).isFalse();
+    }
+
     private void stubAggregates(double calories, double protein, long workouts, Double weight) {
         stubAggregates(calories, protein, workouts, weight, 0L, 0L, 0.0, 0.0);
     }

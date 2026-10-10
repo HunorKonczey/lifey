@@ -10,6 +10,8 @@ import '../../../../shared/widgets/ds/metric_bar.dart';
 import '../../../../shared/widgets/ds/tinted_chip.dart';
 import '../../../settings/domain/user_settings.dart';
 import '../../domain/daily_macros.dart';
+import '../../domain/fiber_sugar.dart';
+import 'fiber_sugar_line.dart';
 
 /// The selected day's budget, always on top of the Meals tab: the eaten kcal
 /// against the goal with a "1,739 left" chip, one bar in which the three
@@ -23,11 +25,14 @@ import '../../domain/daily_macros.dart';
 /// overage. Without a calorie goal the bar shows the macros' relative share
 /// and there is no chip; a macro without a goal shows just its grams.
 class DayBudgetCard extends StatelessWidget {
-  const DayBudgetCard({super.key, required this.totals, required this.settings});
+  const DayBudgetCard({super.key, required this.totals, required this.settings, this.fiberSugar = const FiberSugarTotals()});
 
   /// Null for a day without meals — everything reads 0.
   final DailyMacros? totals;
   final UserSettings settings;
+
+  /// The day's fibre and sugars (LIF-148); nothing is drawn when no food has a figure.
+  final FiberSugarTotals fiberSugar;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +106,10 @@ class DayBudgetCard extends StatelessWidget {
               _MacroLine(value: fat, goal: settings.dailyFatGoal, letter: l10n.macroLetterFat, color: mc.fat),
             ],
           ),
+          if (!fiberSugar.isEmpty) ...[
+            const SizedBox(height: AppSpacing.s8),
+            FiberSugarLine(totals: fiberSugar),
+          ],
         ],
       ),
     );

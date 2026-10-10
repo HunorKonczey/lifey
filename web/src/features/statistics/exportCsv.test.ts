@@ -8,7 +8,7 @@ const WEEK = { start: d(2026, 9, 21), end: d(2026, 9, 27) };
 
 const LABELS: ExportLabels = {
   headers: {
-    meals: ["Dátum", "Idő", "Étkezés", "Étel", "Mennyiség (g)", "kcal", "Fehérje (g)", "Szénhidrát (g)", "Zsír (g)"],
+    meals: ["Dátum", "Idő", "Étkezés", "Étel", "Mennyiség (g)", "kcal", "Fehérje (g)", "Szénhidrát (g)", "Zsír (g)", "Rost (g)", "Cukor (g)"],
     weight: ["Dátum", "Testsúly (kg)"],
     workouts: ["Dátum", "Idő", "Fajta", "Tevékenység", "Gyakorlat", "Ismétlés", "Súly (kg)", "Volumen (kg)", "Táv (km)", "Idő (perc)"],
     waterSteps: ["Dátum", "Víz (L)", "Lépés"],
@@ -133,15 +133,17 @@ describe("buildCsv", () => {
           mealType: "LUNCH",
           name: null,
           entries: [
-            { foodId: 1, foodName: "Túró Rudi", quantityInGrams: 120, calories: 312, protein: 14.4, carbs: 20, fat: 18.25 },
+            { foodId: 1, foodName: "Túró Rudi", quantityInGrams: 120, calories: 312, protein: 14.4, carbs: 20, fat: 18.25, fiber: 1.25, sugar: 12 },
             { foodId: 2, foodName: "=HYPERLINK(x)", quantityInGrams: 50, calories: 10, protein: 0, carbs: 2, fat: 0 },
           ],
         },
       ],
     };
     const lines = buildCsv("meals", raw, WEEK, "hu", LABELS).trim().split("\r\n");
-    expect(lines[1]).toBe("2026-09-22;12:30;Ebéd;Túró Rudi;120;312;14,4;20;18,3");
+    expect(lines[1]).toBe("2026-09-22;12:30;Ebéd;Túró Rudi;120;312;14,4;20;18,3;1,3;12");
     expect(lines[2]).toContain("'=HYPERLINK(x)");
+    // A food with no fibre/sugar figure leaves those cells empty - not 0.
+    expect(lines[2].endsWith(";0;;")).toBe(true);
   });
 
   it("workouts: a row per set, and a cardio session as one row with its distance", () => {

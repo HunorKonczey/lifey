@@ -2030,6 +2030,8 @@
     "export_col_protein": "Protein (g)",
     "export_col_carbs": "Carbs (g)",
     "export_col_fat": "Fat (g)",
+    "export_col_fiber": "Fibre (g)",
+    "export_col_sugar": "Sugar (g)",
     "export_col_weight": "Weight (kg)",
     "export_col_kind": "Type",
     "export_col_activity": "Activity",

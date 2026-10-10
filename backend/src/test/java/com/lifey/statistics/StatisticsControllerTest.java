@@ -45,6 +45,25 @@ class StatisticsControllerTest {
     }
 
     @Test
+    void daily_carriesFibreAndSugar_nullWhenUnknown() throws Exception {
+        when(statisticsService.daily())
+                .thenReturn(new StatisticsResponse(200.0, 20.0, 30.0, 10.0, 0, null, 0.0, 0, 0, 0, 0.0, 0.0, 12.5, 30.0, true));
+
+        mockMvc.perform(get("/api/v1/statistics/daily"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalFiber").value(12.5))
+                .andExpect(jsonPath("$.totalSugar").value(30.0))
+                .andExpect(jsonPath("$.fiberSugarPartial").value(true));
+
+        when(statisticsService.daily())
+                .thenReturn(new StatisticsResponse(200.0, 20.0, 30.0, 10.0, 0, null, 0.0, 0, 0, 0, 0.0, 0.0));
+
+        mockMvc.perform(get("/api/v1/statistics/daily"))
+                .andExpect(jsonPath("$.totalFiber").doesNotExist())
+                .andExpect(jsonPath("$.fiberSugarPartial").value(false));
+    }
+
+    @Test
     void weekly_returnsOk() throws Exception {
         when(statisticsService.weekly())
                 .thenReturn(new StatisticsResponse(400.0, 40.0, 60.0, 20.0, 3, null, 0.0,

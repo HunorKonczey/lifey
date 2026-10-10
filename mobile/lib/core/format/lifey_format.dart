@@ -57,6 +57,13 @@ class LifeyFormat {
   /// Grams of a macro — always whole.
   String grams(num value) => integer(value);
 
+  /// Grams of fibre or sugar: whole when whole, otherwise one decimal - "12" / "12.4" / "12,4". Small totals where rounding to
+  /// a whole number would misread (0.4 g is not 0 g).
+  String gramsFine(num value) {
+    final f = NumberFormat.decimalPattern(locale)..maximumFractionDigits = 1;
+    return f.format(value);
+  }
+
   /// Weight with one decimal: "64.5" / "64,5".
   String weight(double value) => _fixed(1).format(value);
 

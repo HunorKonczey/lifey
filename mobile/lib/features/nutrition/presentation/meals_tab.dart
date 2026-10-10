@@ -72,7 +72,7 @@ class MealsTab extends ConsumerWidget {
                 onSelect: (d) => ref.read(selectedMealDayProvider.notifier).select(d),
               ),
               const SizedBox(height: AppSpacing.s16),
-              DayBudgetCard(totals: _totals(day, meals), settings: settings),
+              DayBudgetCard(totals: _totals(day, meals), settings: settings, fiberSugar: meals.fiberSugar),
               const SizedBox(height: AppSpacing.s16),
               if (meals.isEmpty)
                 EmptyStateCard(

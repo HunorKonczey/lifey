@@ -1,4 +1,5 @@
 import '../../../l10n/app_localizations.dart';
+import 'fiber_sugar.dart';
 
 /// The four meal types supported by the backend.
 enum MealType {
@@ -34,6 +35,8 @@ class MealEntry {
     required this.protein,
     required this.carbs,
     required this.fat,
+    this.fiber,
+    this.sugar,
   });
 
   final String foodClientId;
@@ -43,6 +46,11 @@ class MealEntry {
   final double protein;
   final double carbs;
   final double fat;
+
+  /// Fibre and sugars of this entry (LIF-148): the food's per-100 g figure scaled to the grams; null when the food has none
+  /// (not known is not 0).
+  final double? fiber;
+  final double? sugar;
 }
 
 /// A logged meal (`/meals`).
@@ -80,4 +88,12 @@ class Meal {
   double get totalCarbs => entries.fold(0, (sum, e) => sum + e.carbs);
 
   double get totalFat => entries.fold(0, (sum, e) => sum + e.fat);
+
+  FiberSugarTotals get fiberSugar => FiberSugarTotals.of(entries.map((e) => (fiber: e.fiber, sugar: e.sugar)));
+}
+
+/// The fibre and sugars of a day's meals together.
+extension MealsFiberSugar on Iterable<Meal> {
+  FiberSugarTotals get fiberSugar =>
+      FiberSugarTotals.of(expand((m) => m.entries).map((e) => (fiber: e.fiber, sugar: e.sugar)));
 }
