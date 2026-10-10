@@ -18,6 +18,9 @@ class Foods extends Table {
   /// Named serving sizes (LIF-146) as a JSON array of `{name, grams}`; null = none.
   TextColumn get servingsJson => text().nullable()();
   RealColumn get fatPer100g => real().nullable()();
+
+  /// The owner's favourite mark (LIF-147).
+  BoolColumn get favorite => boolean().withDefault(const Constant(false))();
   TextColumn get barcode => text().nullable()();
   BoolColumn get hidden => boolean().withDefault(const Constant(false))();
 

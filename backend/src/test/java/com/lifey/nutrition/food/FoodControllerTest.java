@@ -166,6 +166,28 @@ class FoodControllerTest {
     }
 
     @Test
+    void create_acceptsTheFavouriteMark_andAnswersWithIt() throws Exception {
+        when(foodService.create(any())).thenReturn(new FoodResponse(9L, "Oats", 370.0, 13.0, null, null, null, false, Instant.now(), null,
+                null, null, null, List.of(), true));
+
+        mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Oats\",\"caloriesPer100g\":370,\"proteinPer100g\":13,\"hidden\":false,\"favorite\":true}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.favorite").value(true));
+    }
+
+    @Test
+    void create_aFoodWithoutTheField_answersNotFavourite() throws Exception {
+        when(foodService.create(any()))
+                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null, false, Instant.now(), null, null));
+
+        mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7,\"hidden\":false}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.favorite").value(false));
+    }
+
+    @Test
     void create_badServingsReturn400() throws Exception {
         String base = "{\"name\":\"Milk\",\"caloriesPer100g\":46,\"proteinPer100g\":3.4,\"hidden\":false,\"servings\":";
         String eleven = "[" + "{\"name\":\"s\",\"grams\":1},".repeat(10) + "{\"name\":\"s\",\"grams\":1}]";

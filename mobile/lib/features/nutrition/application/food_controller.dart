@@ -74,6 +74,7 @@ class FoodController extends StreamNotifier<List<Food>> {
     double? fiber,
     double? sugar,
     List<FoodServing> servings = const [],
+    bool favorite = false,
     String? barcode,
     bool hidden = false,
   }) async {
@@ -86,6 +87,7 @@ class FoodController extends StreamNotifier<List<Food>> {
         fiber: fiber,
         sugar: sugar,
         servings: servings,
+        favorite: favorite,
         barcode: barcode,
         hidden: hidden);
     return Food(
@@ -98,6 +100,7 @@ class FoodController extends StreamNotifier<List<Food>> {
       fiberPer100g: fiber,
       sugarPer100g: sugar,
       servings: servings,
+      favorite: favorite,
       barcode: barcode,
       hidden: hidden,
     );
@@ -113,6 +116,7 @@ class FoodController extends StreamNotifier<List<Food>> {
     double? fiber,
     double? sugar,
     List<FoodServing>? servings,
+    bool? favorite,
     String? barcode,
   }) {
     return _repo.update(clientId,
@@ -124,8 +128,11 @@ class FoodController extends StreamNotifier<List<Food>> {
         fiber: fiber,
         sugar: sugar,
         servings: servings,
+        favorite: favorite,
         barcode: barcode);
   }
+
+  Future<void> toggleFavorite(String clientId, bool value) => _repo.toggleFavorite(clientId, value);
 
   Future<void> deleteFood(String clientId) {
     return _repo.delete(clientId);

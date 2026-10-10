@@ -556,6 +556,10 @@ class _FoodOptions extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s8),
               child: Row(
                 children: [
+                  if (food.favorite) ...[
+                    Icon(Icons.star_rounded, size: 18, color: context.metricColors.carbs, semanticLabel: AppLocalizations.of(context)!.foodFavoriteLabel),
+                    const SizedBox(width: AppSpacing.s4),
+                  ],
                   Expanded(child: Text(food.name, style: t.bodyMedium!.copyWith(fontWeight: FontWeight.w700, color: p.text))),
                   const SizedBox(width: AppSpacing.s8),
                   Text('${f.kcal(food.caloriesPer100g)} kcal', style: t.bodySmall!.copyWith(color: p.text2)),

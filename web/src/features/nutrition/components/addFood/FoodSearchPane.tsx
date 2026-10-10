@@ -105,7 +105,7 @@ export function FoodSearchPane({
   };
 
   /** One result row, own or OpenFoodFacts: name (+ a small tag), a second line, and "73 kcal / 100 g". */
-  const renderRow = (key: string, name: string, secondLine: string, per100: number, tag?: string) => {
+  const renderRow = (key: string, name: string, secondLine: string, per100: number, tag?: string, favorite = false) => {
     const active = key === activeKey;
     return (
       <div
@@ -128,6 +128,7 @@ export function FoodSearchPane({
         {active && <span aria-hidden className="absolute left-0 top-2 bottom-2 rounded-full" style={{ width: 3, background: "var(--primary)" }} />}
         <span className="min-w-0">
           <span className="block" style={{ fontSize: 15, fontWeight: 700, overflowWrap: "anywhere" }}>
+            {favorite && <Icon name="star" size={16} fill={1} color="var(--m-carbs)" label={t("favoriteAria")} className="mr-1 align-text-bottom" />}
             {name}
             {tag && (
               <span
@@ -241,7 +242,14 @@ export function FoodSearchPane({
         ) : (
           <div id={listId} role="listbox" aria-label={t("results", { count: results.length })}>
             {results.map((item) =>
-              renderRow(item.key, item.name, sourceLine(item), item.kind === "food" ? item.food.caloriesPer100g : item.kcalPer100g),
+              renderRow(
+                item.key,
+                item.name,
+                sourceLine(item),
+                item.kind === "food" ? item.food.caloriesPer100g : item.kcalPer100g,
+                undefined,
+                item.kind === "food" ? item.food.favorite === true : item.recipe.favorite,
+              ),
             )}
           </div>
         )}

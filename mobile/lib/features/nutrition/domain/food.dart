@@ -13,6 +13,7 @@ class Food {
     this.fiberPer100g,
     this.sugarPer100g,
     this.servings = const [],
+    this.favorite = false,
     this.barcode,
     this.hidden = false,
   });
@@ -31,6 +32,9 @@ class Food {
 
   /// Named serving sizes (LIF-146), in the owner's order: "1 glass" = 150 g.
   final List<FoodServing> servings;
+
+  /// The owner's favourite mark (LIF-147): favourites are listed first and offered first when logging.
+  final bool favorite;
   final String? barcode;
   final bool hidden;
 }

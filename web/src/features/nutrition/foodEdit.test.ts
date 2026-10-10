@@ -15,7 +15,7 @@ const FOOD: FoodResponse = {
 
 describe("fieldsFromFood", () => {
   it("keeps stored numbers unrounded and turns nulls into 0 / empty", () => {
-    expect(fieldsFromFood(FOOD)).toEqual({ name: "Zabpehely", kcal: 372.123, protein: 13.3333, carbs: 58.7, fat: 0, fiber: "", sugar: "", servings: [], barcode: "" });
+    expect(fieldsFromFood(FOOD)).toEqual({ name: "Zabpehely", kcal: 372.123, protein: 13.3333, carbs: 58.7, fat: 0, fiber: "", sugar: "", servings: [], favorite: false, barcode: "" });
   });
 
   it("starts from a prefill (barcode lookup) and from nothing", () => {
@@ -60,16 +60,29 @@ describe("foodRequest", () => {
   });
 
   it("works for a new food (original = empty)", () => {
-    expect(foodRequest({ name: "Tojás", kcal: 143, protein: 12.6, carbs: 0.7, fat: 9.5, fiber: "", sugar: "", servings: [], barcode: "" }, EMPTY_FOOD, false)).toEqual({
+    expect(foodRequest({ name: "Tojás", kcal: 143, protein: 12.6, carbs: 0.7, fat: 9.5, fiber: "", sugar: "", servings: [], favorite: false, barcode: "" }, EMPTY_FOOD, false)).toEqual({
       name: "Tojás",
       caloriesPer100g: 143,
       proteinPer100g: 12.6,
       carbsPer100g: 0.7,
       fatPer100g: 9.5,
       servings: [],
+      favorite: false,
       barcode: null,
       hidden: false,
     });
+  });
+
+  it("the favourite mark (LIF-147): read from the food, always sent, and a change makes the form dirty", () => {
+    expect(fieldsFromFood({ ...FOOD, favorite: true }).favorite).toBe(true);
+    expect(fieldsFromFood(FOOD).favorite).toBe(false); // an older server sends none
+
+    const starred = fieldsFromFood({ ...FOOD, favorite: true });
+    expect(foodRequest(starred, starred, false).favorite).toBe(true);
+    expect(foodRequest({ ...starred, favorite: false }, starred, false).favorite).toBe(false);
+
+    expect(isFoodDirty(starred, starred)).toBe(false);
+    expect(isFoodDirty({ ...starred, favorite: false }, starred)).toBe(true);
   });
 });
 

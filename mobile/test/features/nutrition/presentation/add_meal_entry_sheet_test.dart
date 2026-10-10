@@ -40,11 +40,12 @@ Future<void> _pumpSheet(
   Food? initialFood,
   double? initialGrams,
   Food? preselectedFood,
+  List<Food>? foods,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        foodSearchProvider.overrideWith((ref) => Stream.value(_foods)),
+        foodSearchProvider.overrideWith((ref) => Stream.value(foods ?? _foods)),
         foodUsageProvider.overrideWith((ref) => usageStream ?? Stream.value(usage)),
         settingsControllerProvider.overrideWith(_NoGoal.new),
         mealsOnDayProvider.overrideWith((ref, day) => Stream.value(const <Meal>[])),
@@ -92,6 +93,24 @@ void main() {
     expect(_chip('Chicken'), findsOneWidget);
     expect(_chip('Rice'), findsOneWidget);
     expect(_chip('Bread'), findsNothing);
+  });
+
+  testWidgets('favourite foods are suggested first, with a star (LIF-147)', (tester) async {
+    await _pumpSheet(tester, foods: const [
+      Food(clientId: 'a', name: 'Banana bread', caloriesPer100g: 280, proteinPer100g: 5),
+      Food(clientId: 'b', name: 'Banana', caloriesPer100g: 89, proteinPer100g: 1.1, favorite: true),
+      Food(clientId: 'c', name: 'Bandage jelly', caloriesPer100g: 10, proteinPer100g: 0),
+    ]);
+
+    await tester.enterText(find.byType(TextFormField).first, 'ban');
+    await tester.pumpAndSettle();
+
+    final order = tester
+        .widgetList<Text>(find.byWidgetPredicate((w) => w is Text && (w.data == 'Banana' || w.data == 'Banana bread')))
+        .map((t) => t.data)
+        .toList();
+    expect(order.first, 'Banana');
+    expect(find.byIcon(Icons.star_rounded), findsOneWidget);
   });
 
   testWidgets('hides the recent row without any history', (tester) async {

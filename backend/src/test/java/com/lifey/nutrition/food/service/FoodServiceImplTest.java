@@ -295,6 +295,36 @@ class FoodServiceImplTest {
     }
 
     @Test
+    void create_storesTheFavouriteMark_andDefaultsToNotFavourite() {
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(any(), any())).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+        when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 13L));
+
+        FoodResponse plain = service.create(new FoodRequest("Rice", 130.0, 2.7, null, null, null, false));
+        FoodResponse starred = service.create(new FoodRequest("Oats", 370.0, 13.0, null, null, null, false, null, null, null, true));
+
+        assertThat(plain.favorite()).isFalse();
+        assertThat(starred.favorite()).isTrue();
+    }
+
+    @Test
+    void update_withoutTheFavouriteMark_keepsIt_trueAndFalseSetIt() {
+        Food existing = food(3L, "Milk", 46, 3.4);
+        existing.setFavorite(true);
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Milk")).thenReturn(Optional.of(existing));
+
+        // A client that does not know the field sends none: the star stays.
+        service.update(3L, new FoodRequest("Milk", 46.0, 3.4, 4.8, 1.5, null, false));
+        assertThat(existing.isFavorite()).isTrue();
+
+        assertThat(service.update(3L, new FoodRequest("Milk", 46.0, 3.4, 4.8, 1.5, null, false, null, null, null, false)).favorite()).isFalse();
+        assertThat(existing.isFavorite()).isFalse();
+
+        assertThat(service.update(3L, new FoodRequest("Milk", 46.0, 3.4, 4.8, 1.5, null, false, null, null, null, true)).favorite()).isTrue();
+    }
+
+    @Test
     void create_throwsWhenNameAlreadyExists() {
         FoodRequest request = new FoodRequest(" Rice ", 130.0, 2.7, null, null, null, false);
         when(repository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(USER_ID, "Rice")).thenReturn(Optional.of(food(1L, "Rice", 130, 2.7)));

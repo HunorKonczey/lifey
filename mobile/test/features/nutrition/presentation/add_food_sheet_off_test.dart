@@ -61,10 +61,12 @@ class _FakeFoodController extends FoodController {
     double? fiber,
     double? sugar,
     List<FoodServing> servings = const [],
+    bool favorite = false,
     String? barcode,
     bool hidden = false,
   }) async {
     lastServings = servings;
+    lastFavorite = favorite;
     saved.add({
       'name': name,
       'calories': calories,
@@ -80,6 +82,7 @@ class _FakeFoodController extends FoodController {
 }
 
 List<FoodServing> lastServings = const [];
+bool lastFavorite = false;
 
 const _csirke = OffSearchItem(
   barcode: '4056489827702',
@@ -206,6 +209,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(lastServings, const [FoodServing(name: '1 glass', grams: 200), FoodServing(name: '1 spoon', grams: 15.5)]);
+  });
+
+  testWidgets('the favourite switch: a new food is saved as a favourite when it is on, and not when it is left alone (LIF-147)', (tester) async {
+    await _open(tester);
+    await _tick(tester);
+    await _type(tester, 'skyr');
+    await tester.enterText(_field('Calories'), '60');
+    await tester.enterText(_field('Protein'), '11');
+    await tester.ensureVisible(find.byKey(const Key('food-favorite')));
+    expect(tester.widget<SwitchListTile>(find.byKey(const Key('food-favorite'))).value, isFalse);
+
+    await tester.tap(find.byKey(const Key('food-favorite')));
+    await tester.pump();
+    expect(tester.widget<SwitchListTile>(find.byKey(const Key('food-favorite'))).value, isTrue);
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(lastFavorite, isTrue);
+  });
+
+  testWidgets('a new food that is not touched on the switch is not a favourite', (tester) async {
+    await _open(tester);
+    await _tick(tester);
+    await _type(tester, 'rice');
+    await tester.enterText(_field('Calories'), '130');
+    await tester.enterText(_field('Protein'), '2.7');
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(lastFavorite, isFalse);
+  });
+
+  testWidgets('editing a favourite food shows the switch on', (tester) async {
+    await _open(tester,
+        food: const Food(clientId: 'f', name: 'Skyr', caloriesPer100g: 60, proteinPer100g: 11, favorite: true));
+
+    await tester.ensureVisible(find.byKey(const Key('food-favorite')));
+    expect(tester.widget<SwitchListTile>(find.byKey(const Key('food-favorite'))).value, isTrue);
   });
 
   testWidgets('a half-filled serving blocks Save and says what is missing', (tester) async {

@@ -43,15 +43,25 @@ public record FoodRequest(
          * erase it - and an empty list clears them. At most 10, replaced as a whole.
          */
         @Size(max = 10)
-        List<@Valid FoodServingRequest> servings
+        List<@Valid FoodServingRequest> servings,
+
+        /** The favourite mark (LIF-147). Absent (null) keeps what is stored, like {@code servings}; true/false sets it. */
+        Boolean favorite
 ) {
     public FoodRequest(String name, Double caloriesPer100g, Double proteinPer100g, Double carbsPer100g,
+                       Double fatPer100g, String barcode, boolean hidden, Double fiberPer100g, Double sugarPer100g,
+                       List<FoodServingRequest> servings) {
+        this(name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, hidden, fiberPer100g, sugarPer100g,
+                servings, null);
+    }
+
+    public FoodRequest(String name, Double caloriesPer100g, Double proteinPer100g, Double carbsPer100g,
                        Double fatPer100g, String barcode, boolean hidden, Double fiberPer100g, Double sugarPer100g) {
-        this(name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, hidden, fiberPer100g, sugarPer100g, null);
+        this(name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, hidden, fiberPer100g, sugarPer100g, null, null);
     }
 
     public FoodRequest(String name, Double caloriesPer100g, Double proteinPer100g, Double carbsPer100g,
                        Double fatPer100g, String barcode, boolean hidden) {
-        this(name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, hidden, null, null, null);
+        this(name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, hidden, null, null, null, null);
     }
 }
