@@ -216,4 +216,11 @@ public class WorkoutSession extends SyncableEntity {
      */
     @Column(name = "reminder_sent_at")
     private Instant reminderSentAt;
+
+    /**
+     * When the trainer was told that this scheduled occurrence was missed (docs/85-trainer-push-plan.md) - also set when the
+     * trainer had that push switched off, so turning it on later does not announce old misses. Null means not announced yet.
+     */
+    @Column(name = "missed_notified_at")
+    private Instant missedNotifiedAt;
 }

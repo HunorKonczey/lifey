@@ -120,6 +120,19 @@ public class UserSettings extends BaseEntity {
     private boolean weeklyReportEmailEnabled = true;
 
     /**
+     * Opt-out for the trainer's "a client missed a scheduled workout" push
+     * (docs/85-trainer-push-plan.md). Trainer-facing only, like
+     * {@link #weeklyReportEmailEnabled} - read and written through the
+     * trainer preferences endpoint, not the client settings round trip.
+     */
+    @Column(name = "client_missed_workout_push_enabled", nullable = false)
+    private boolean clientMissedWorkoutPushEnabled = true;
+
+    /** Opt-out for the trainer's "a client logged this week's weigh-in" push (docs/85-trainer-push-plan.md). Trainer-facing only. */
+    @Column(name = "client_weigh_in_push_enabled", nullable = false)
+    private boolean clientWeighInPushEnabled = true;
+
+    /**
      * Master switch for the rest-timer feature (docs/39-rest-timer-plan.md).
      * Default true.
      */

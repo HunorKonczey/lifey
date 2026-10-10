@@ -57,6 +57,8 @@
     "screenComingSoon": "This screen isn't built yet.",
     "preferences": {
       "weeklyReportEmailLabel": "Weekly email report",
+      "clientMissedWorkoutPushLabel": "Push: client missed a workout",
+      "clientWeighInPushLabel": "Push: client's weekly weigh-in",
       "updated": "Preference updated",
       "updateFailed": "Failed to update preference"
     },

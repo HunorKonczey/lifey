@@ -44,20 +44,45 @@ class _FakePreferencesRepository extends TrainerPreferencesRepository {
   _FakePreferencesRepository({this.failWrite = false}) : super(Dio());
 
   bool enabled = true;
+  bool missedEnabled = true;
+  bool weighInEnabled = true;
   final bool failWrite;
 
   final List<bool> writes = [];
+  final List<bool> missedWrites = [];
+  final List<bool> weighInWrites = [];
+
+  TrainerPreferences get _current => TrainerPreferences(
+        weeklyReportEmailEnabled: enabled,
+        clientMissedWorkoutPushEnabled: missedEnabled,
+        clientWeighInPushEnabled: weighInEnabled,
+      );
 
   @override
-  Future<TrainerPreferences> fetch() async =>
-      TrainerPreferences(weeklyReportEmailEnabled: enabled);
+  Future<TrainerPreferences> fetch() async => _current;
 
   @override
   Future<TrainerPreferences> setWeeklyReportEmailEnabled(bool value) async {
     if (failWrite) throw Exception('boom');
     writes.add(value);
     enabled = value;
-    return TrainerPreferences(weeklyReportEmailEnabled: value);
+    return _current;
+  }
+
+  @override
+  Future<TrainerPreferences> setClientMissedWorkoutPushEnabled(bool value) async {
+    if (failWrite) throw Exception('boom');
+    missedWrites.add(value);
+    missedEnabled = value;
+    return _current;
+  }
+
+  @override
+  Future<TrainerPreferences> setClientWeighInPushEnabled(bool value) async {
+    if (failWrite) throw Exception('boom');
+    weighInWrites.add(value);
+    weighInEnabled = value;
+    return _current;
   }
 }
 
@@ -110,19 +135,41 @@ void main() {
       repo = TrainerPreferencesRepository(dio);
     });
 
-    test('reads the one preference there is', () async {
-      adapter.body = {'weeklyReportEmailEnabled': false};
+    test('reads the preferences', () async {
+      adapter.body = {
+        'weeklyReportEmailEnabled': false,
+        'clientMissedWorkoutPushEnabled': false,
+        'clientWeighInPushEnabled': true,
+      };
 
       final preferences = await repo.fetch();
 
       expect(adapter.paths.single, '/trainer/preferences');
       expect(preferences.weeklyReportEmailEnabled, isFalse);
+      expect(preferences.clientMissedWorkoutPushEnabled, isFalse);
+      expect(preferences.clientWeighInPushEnabled, isTrue);
     });
 
-    test('a missing field defaults to enabled, matching the backend', () async {
+    test('a missing field defaults to enabled, matching the backend (an older server knows one switch)', () async {
+      adapter.body = {'weeklyReportEmailEnabled': false};
+
+      final preferences = await repo.fetch();
+
+      expect(preferences.weeklyReportEmailEnabled, isFalse);
+      expect(preferences.clientMissedWorkoutPushEnabled, isTrue);
+      expect(preferences.clientWeighInPushEnabled, isTrue);
+    });
+
+    test('each push switch is written alone, so the others keep what is stored', () async {
       adapter.body = <String, dynamic>{};
 
-      expect((await repo.fetch()).weeklyReportEmailEnabled, isTrue);
+      await repo.setClientMissedWorkoutPushEnabled(false);
+      await repo.setClientWeighInPushEnabled(false);
+
+      expect(adapter.bodies, [
+        {'clientMissedWorkoutPushEnabled': false},
+        {'clientWeighInPushEnabled': false},
+      ]);
     });
 
     test('writes it with PUT', () async {
@@ -147,19 +194,41 @@ void main() {
         find.textContaining('There is no in-app version'),
         findsOneWidget,
       );
-      expect(find.byType(Switch), findsOneWidget);
+      expect(find.byType(Switch), findsNWidgets(3));
     });
 
     testWidgets('turning it off writes it through', (tester) async {
       final repo = _FakePreferencesRepository();
       await _pump(tester, repo: repo);
 
-      await tester.tap(find.byType(Switch));
+      await tester.tap(find.byType(Switch).first);
       await tester.pumpAndSettle();
 
       expect(repo.writes, [false]);
-      final toggle = tester.widget<Switch>(find.byType(Switch));
+      final toggle = tester.widget<Switch>(find.byType(Switch).first);
       expect(toggle.value, isFalse);
+    });
+
+    testWidgets('the two client pushes have their own switches (LIF-100)', (tester) async {
+      final repo = _FakePreferencesRepository();
+      await _pump(tester, repo: repo);
+
+      expect(find.text('Missed workouts'), findsOneWidget);
+      expect(find.text('Weekly weigh-ins'), findsOneWidget);
+
+      await tester.tap(find.byType(Switch).at(1));
+      await tester.pumpAndSettle();
+      expect(repo.missedWrites, [false]);
+      expect(repo.weighInWrites, isEmpty);
+      expect(tester.widget<Switch>(find.byType(Switch).at(1)).value, isFalse);
+      expect(tester.widget<Switch>(find.byType(Switch).at(2)).value, isTrue);
+
+      // The whole row is a tap target, not only the switch.
+      await tester.tap(find.text('Weekly weigh-ins'));
+      await tester.pumpAndSettle();
+      expect(repo.weighInWrites, [false]);
+      expect(tester.widget<Switch>(find.byType(Switch).at(2)).value, isFalse);
+      expect(repo.writes, isEmpty);
     });
 
     testWidgets('a failed write says so and leaves the switch where it was',
@@ -169,7 +238,7 @@ void main() {
         repo: _FakePreferencesRepository(failWrite: true),
       );
 
-      await tester.tap(find.byType(Switch));
+      await tester.tap(find.byType(Switch).first);
       await tester.pumpAndSettle();
 
       // No optimistic flip: a switch that springs back is worse than one

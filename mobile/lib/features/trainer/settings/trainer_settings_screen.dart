@@ -16,8 +16,9 @@ import 'trainer_preferences.dart';
 /// The trainer view's own settings (T7).
 ///
 /// Kept apart from the client-side Settings screen, which is about the user's
-/// own app: this is about being someone's coach. Today it holds one switch and
-/// the way to the invites screen — small, but it is the whole of what a
+/// own app: this is about being someone's coach. It holds the way to the
+/// invites screen and the trainer's switches: the weekly report email and the
+/// two client pushes (docs/85-trainer-push-plan.md) — the whole of what a
 /// trainer can configure.
 class TrainerSettingsScreen extends ConsumerWidget {
   const TrainerSettingsScreen({super.key});
@@ -50,31 +51,53 @@ class TrainerSettingsScreen extends ConsumerWidget {
                   trailing: Icon(Icons.chevron_right_rounded, color: p.text3),
                   onTap: () => context.push(trainerInvitesLocation),
                 ),
-                preferences.when(
-                  data: (preferences) => ListRow(
-                    leading: ListIconHolder(icon: Icons.summarize_outlined, color: theme.colorScheme.primary),
-                    title: l10n.trainerWeeklyReportToggleLabel,
-                    // Says where the report actually goes. It is an email, and it
-                    // stays one — there is no reader for it in the app.
-                    subtitle: l10n.trainerWeeklyReportToggleSubtitle,
-                    subtitleMaxLines: 4,
-                    trailing: Switch(
+                ...preferences.when(
+                  data: (preferences) => [
+                    _switchRow(
+                      context,
+                      ref,
+                      icon: Icons.summarize_outlined,
+                      title: l10n.trainerWeeklyReportToggleLabel,
+                      // Says where the report actually goes. It is an email, and it
+                      // stays one — there is no reader for it in the app.
+                      subtitle: l10n.trainerWeeklyReportToggleSubtitle,
                       value: preferences.weeklyReportEmailEnabled,
-                      onChanged: (enabled) => _setWeeklyReport(context, ref, enabled),
+                      write: (controller, enabled) => controller.setWeeklyReportEmailEnabled(enabled),
                     ),
-                    onTap: () => _setWeeklyReport(context, ref, !preferences.weeklyReportEmailEnabled),
-                  ),
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.s24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (error, _) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.s12),
-                    child: ErrorView(
-                      error: error,
-                      onRetry: () => ref.invalidate(trainerPreferencesControllerProvider),
+                    _switchRow(
+                      context,
+                      ref,
+                      icon: Icons.event_busy_outlined,
+                      title: l10n.trainerMissedWorkoutPushToggleLabel,
+                      subtitle: l10n.trainerMissedWorkoutPushToggleSubtitle,
+                      value: preferences.clientMissedWorkoutPushEnabled,
+                      write: (controller, enabled) => controller.setClientMissedWorkoutPushEnabled(enabled),
                     ),
-                  ),
+                    _switchRow(
+                      context,
+                      ref,
+                      icon: Icons.monitor_weight_outlined,
+                      title: l10n.trainerWeighInPushToggleLabel,
+                      subtitle: l10n.trainerWeighInPushToggleSubtitle,
+                      value: preferences.clientWeighInPushEnabled,
+                      write: (controller, enabled) => controller.setClientWeighInPushEnabled(enabled),
+                    ),
+                  ],
+                  loading: () => const [
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.s24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ],
+                  error: (error, _) => [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s12),
+                      child: ErrorView(
+                        error: error,
+                        onRetry: () => ref.invalidate(trainerPreferencesControllerProvider),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -91,9 +114,33 @@ class TrainerSettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _setWeeklyReport(BuildContext context, WidgetRef ref, bool enabled) async {
+  Widget _switchRow(
+    BuildContext context,
+    WidgetRef ref, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required Future<void> Function(TrainerPreferencesController controller, bool enabled) write,
+  }) {
+    return ListRow(
+      leading: ListIconHolder(icon: icon, color: Theme.of(context).colorScheme.primary),
+      title: title,
+      subtitle: subtitle,
+      subtitleMaxLines: 4,
+      trailing: Switch(value: value, onChanged: (enabled) => _set(context, ref, write, enabled)),
+      onTap: () => _set(context, ref, write, !value),
+    );
+  }
+
+  Future<void> _set(
+    BuildContext context,
+    WidgetRef ref,
+    Future<void> Function(TrainerPreferencesController controller, bool enabled) write,
+    bool enabled,
+  ) async {
     try {
-      await ref.read(trainerPreferencesControllerProvider.notifier).setWeeklyReportEmailEnabled(enabled);
+      await write(ref.read(trainerPreferencesControllerProvider.notifier), enabled);
     } catch (error) {
       if (context.mounted) {
         AppSnackbar.showError(context, title: friendlyError(error));

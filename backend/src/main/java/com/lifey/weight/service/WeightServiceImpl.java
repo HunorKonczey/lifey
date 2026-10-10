@@ -6,10 +6,12 @@ import com.lifey.common.util.DateRanges;
 import com.lifey.user.UserRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
+import com.lifey.weight.WeightLoggedEvent;
 import com.lifey.weight.WeightMapper;
 import com.lifey.weight.dto.WeightRequest;
 import com.lifey.weight.dto.WeightResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +31,7 @@ public class WeightServiceImpl implements WeightService {
     private final WeightEntryRepository repository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -87,6 +90,7 @@ public class WeightServiceImpl implements WeightService {
         Instant requested = request.recordedAt();
         entry.setRecordedAt(requested == null || requested.isAfter(now) ? now : requested);
         WeightEntry saved = repository.save(entry);
+        eventPublisher.publishEvent(new WeightLoggedEvent(currentUserProvider.getUserId(), saved.getDate(), saved.getWeight()));
         return WeightMapper.toResponse(saved);
     }
 

@@ -45,6 +45,9 @@ public interface WeightEntryRepository extends JpaRepository<WeightEntry, Long> 
     Optional<WeightEntry> findFirstByUserIdAndDeletedAtIsNullAndDateLessThanOrderByDateDescRecordedAtDesc(
             Long userId, LocalDate date);
 
+    /** Weigh-ins of a user dated in {@code [from, to]} - "is this the first one of the week" (docs/85-trainer-push-plan.md). */
+    long countByUserIdAndDeletedAtIsNullAndDateBetween(Long userId, LocalDate from, LocalDate to);
+
     Optional<WeightEntry> findByIdAndUserId(Long id, Long userId);
 
     /**

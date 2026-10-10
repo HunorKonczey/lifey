@@ -133,6 +133,30 @@ public class SettingsServiceImpl implements SettingsService {
         return repository.save(settings).isWeeklyReportEmailEnabled();
     }
 
+    @Override
+    public boolean isClientMissedWorkoutPushEnabled() {
+        return getOrCreate().isClientMissedWorkoutPushEnabled();
+    }
+
+    @Override
+    public boolean setClientMissedWorkoutPushEnabled(boolean enabled) {
+        UserSettings settings = getOrCreate();
+        settings.setClientMissedWorkoutPushEnabled(enabled);
+        return repository.save(settings).isClientMissedWorkoutPushEnabled();
+    }
+
+    @Override
+    public boolean isClientWeighInPushEnabled() {
+        return getOrCreate().isClientWeighInPushEnabled();
+    }
+
+    @Override
+    public boolean setClientWeighInPushEnabled(boolean enabled) {
+        UserSettings settings = getOrCreate();
+        settings.setClientWeighInPushEnabled(enabled);
+        return repository.save(settings).isClientWeighInPushEnabled();
+    }
+
     /**
      * Settings rows aren't created at registration (the auth module doesn't know
      * about this feature), so the first read or write for a user creates the

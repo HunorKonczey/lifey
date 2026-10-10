@@ -37,6 +37,10 @@ public interface TrainerClientRepository extends JpaRepository<TrainerClient, Lo
     @Query("select count(distinct tc.client.id) from TrainerClient tc where tc.status = :status")
     long countDistinctClientsByStatus(@Param("status") TrainerClientStatus status);
 
+    /** The trainers a client currently has, for the pushes that tell them about the client (docs/85-trainer-push-plan.md). */
+    @Query("select tc.trainer.id from TrainerClient tc where tc.client.id = :clientId and tc.status = :status")
+    List<Long> findTrainerIdsByClientIdAndStatus(@Param("clientId") Long clientId, @Param("status") TrainerClientStatus status);
+
     boolean existsByTrainerIdAndClientIdAndStatus(Long trainerId, Long clientId, TrainerClientStatus status);
 
     /** Rate-limit check: the most recent invite between this pair, regardless of outcome. */

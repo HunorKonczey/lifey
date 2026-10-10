@@ -277,6 +277,25 @@ class SettingsServiceImplTest {
     }
 
     @Test
+    void trainerClientPushSwitches_defaultOn_andPersistWhenFlipped() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.isClientMissedWorkoutPushEnabled()).isTrue();
+        assertThat(service.isClientWeighInPushEnabled()).isTrue();
+
+        assertThat(service.setClientMissedWorkoutPushEnabled(false)).isFalse();
+        assertThat(existing.isClientMissedWorkoutPushEnabled()).isFalse();
+        // One switch never moves the other.
+        assertThat(existing.isClientWeighInPushEnabled()).isTrue();
+
+        assertThat(service.setClientWeighInPushEnabled(false)).isFalse();
+        assertThat(existing.isClientWeighInPushEnabled()).isFalse();
+    }
+
+    @Test
     void updateNutritionGoalsForUser_createsRowWhenNoneExistsAndPersistsGoals() {
         when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));

@@ -9,6 +9,7 @@ import '../../features/workouts/data/workout_session_repository.dart';
 import '../../features/workouts/presentation/open_workout_screens.dart';
 import '../ads/interstitial_manager.dart';
 import '../notifications/notification_service.dart';
+import '../../shared/widgets/trainer_view_menu.dart';
 import '../router/app_router.dart';
 import 'firebase_bootstrap.dart';
 
@@ -28,6 +29,9 @@ import 'firebase_bootstrap.dart';
 /// `type == program_assigned` navigates to the workouts tab — tab-level like
 /// `scheduled_workout`, no deep link to the specific program assignment
 /// (docs/34-multi-week-program-plan.md, M6).
+/// `type == client_missed_workout` / `client_weigh_in` (the trainer's own pushes
+/// about a client, docs/85-trainer-push-plan.md) open that client's page on top
+/// of the client list, or just the list when the push is about several clients.
 /// `type == chat_message` opens the exact thread on top of the conversation
 /// list (docs/chat/40-trainer-chat-plan.md §5.2). Unlike `trainer_comment`
 /// this needs no local lookup first: the thread screen reads its own cache
@@ -130,6 +134,17 @@ class PushTapHandler {
     if (data['type'] == 'chat_message') {
       _routeToConversation(data);
     }
+    if (data['type'] == 'client_missed_workout' || data['type'] == 'client_weigh_in') {
+      _routeToTrainerClient(data);
+    }
+  }
+
+  void _routeToTrainerClient(Map<String, dynamic> data) {
+    final clientId = int.tryParse('${data['clientId']}');
+    final router = _ref.read(appRouterProvider);
+    // Pushed on top of the list so the back gesture lands on the other clients.
+    router.go(trainerShellLocation);
+    if (clientId != null) router.push('$trainerShellLocation/$clientId');
   }
 
   void _routeToConversation(Map<String, dynamic> data) {

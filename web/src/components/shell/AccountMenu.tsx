@@ -10,6 +10,7 @@ import { SegmentedControl } from "@/components/ds/SegmentedControl";
 import { Switch } from "@/components/ds/Switch";
 import { settingsApi } from "@/features/settings/api";
 import { trainerApi } from "@/features/trainer/api";
+import type { TrainerPreferencesRequest } from "@/features/trainer/types";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useLocale } from "@/lib/hooks/useLocale";
@@ -63,7 +64,7 @@ export function AccountMenu({ open, onClose, anchorRef, onLogout, trainerPrefs }
   });
 
   const updateTrainerPreferences = useMutation({
-    mutationFn: (weeklyReportEmailEnabled: boolean) => trainerApi.updatePreferences({ weeklyReportEmailEnabled }),
+    mutationFn: (patch: TrainerPreferencesRequest) => trainerApi.updatePreferences(patch),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.trainerPreferences.all(), data);
       show(prefs("updated"), "success");
@@ -131,8 +132,22 @@ export function AccountMenu({ open, onClose, anchorRef, onLogout, trainerPrefs }
             <div className="px-3 py-1 mb-1">
               <Switch
                 checked={trainerPreferences.weeklyReportEmailEnabled}
-                onChange={(checked) => updateTrainerPreferences.mutate(checked)}
+                onChange={(checked) => updateTrainerPreferences.mutate({ weeklyReportEmailEnabled: checked })}
                 label={prefs("weeklyReportEmailLabel")}
+              />
+            </div>
+            <div className="px-3 py-1 mb-1">
+              <Switch
+                checked={trainerPreferences.clientMissedWorkoutPushEnabled}
+                onChange={(checked) => updateTrainerPreferences.mutate({ clientMissedWorkoutPushEnabled: checked })}
+                label={prefs("clientMissedWorkoutPushLabel")}
+              />
+            </div>
+            <div className="px-3 py-1 mb-1">
+              <Switch
+                checked={trainerPreferences.clientWeighInPushEnabled}
+                onChange={(checked) => updateTrainerPreferences.mutate({ clientWeighInPushEnabled: checked })}
+                label={prefs("clientWeighInPushLabel")}
               />
             </div>
           </>

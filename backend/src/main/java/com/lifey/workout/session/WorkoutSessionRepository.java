@@ -286,4 +286,12 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
               and s.scheduledFor between :from and :to
             """)
     List<WorkoutSession> findReminderCandidates(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /**
+     * Marks occurrences as announced to the trainer (docs/85-trainer-push-plan.md). A bulk update on purpose: the column is
+     * not synced, so it must not bump {@code updatedAt} and make every client re-pull the session.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("update WorkoutSession s set s.missedNotifiedAt = :now where s.id in :ids")
+    void markMissedNotified(@Param("ids") java.util.Collection<Long> ids, @Param("now") Instant now);
 }
