@@ -123,6 +123,7 @@ enum StatTone { higherIsBetter, lowerIsBetter, neutral }
 StatTone toneOf(StatMetric metric) => switch (metric) {
       StatMetric.steps ||
       StatMetric.protein ||
+      StatMetric.fiber ||
       StatMetric.water ||
       StatMetric.workoutCount ||
       StatMetric.workoutMinutes ||
@@ -157,6 +158,9 @@ Color statMetricColor(BuildContext context, StatMetric metric) {
     StatMetric.protein => mc.protein,
     StatMetric.carbs => mc.carbs,
     StatMetric.fat => mc.fat,
+    // No colour of their own: fibre in the plant green, sugar in the carbs gold (a sugar is a carb).
+    StatMetric.fiber => mc.protein,
+    StatMetric.sugar => mc.carbs,
     StatMetric.water => mc.water,
     StatMetric.weight => mc.weight,
     StatMetric.activeCalories => mc.calories,

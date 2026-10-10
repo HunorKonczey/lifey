@@ -252,6 +252,80 @@ void main() {
     expect(find.byType(LifeyBarChart), findsNothing);
   });
 
+  group('fibre and sugar (LIF-151)', () {
+    Meal fibreMeal(int daysAgo, {double? fiber, bool unknownFood = false}) => Meal(
+          clientId: 'fm-$daysAgo-$fiber-$unknownFood',
+          dateTime: _day(daysAgo),
+          mealType: MealType.lunch,
+          entries: [
+            MealEntry(
+              foodClientId: 'a',
+              foodName: 'A',
+              quantityInGrams: 100,
+              calories: 100,
+              protein: 1,
+              carbs: 1,
+              fat: 1,
+              fiber: fiber,
+              sugar: fiber,
+            ),
+            if (unknownFood)
+              const MealEntry(foodClientId: 'b', foodName: 'B', quantityInGrams: 100, calories: 100, protein: 1, carbs: 1, fat: 1),
+          ],
+        );
+
+    testWidgets('the picker offers them, and a day with an unknown food is left out with a note', (tester) async {
+      await _pump(
+        tester,
+        meals: () => _FakeMealController([
+          fibreMeal(2, fiber: 20),
+          fibreMeal(3, fiber: 30),
+          fibreMeal(4, fiber: 5, unknownFood: true),
+        ]),
+        metric: StatMetric.fiber,
+      );
+
+      expect(find.descendant(of: find.byType(StatMetricChips), matching: find.text('Fibre')), findsOneWidget);
+      expect(find.descendant(of: find.byType(StatMetricChips), matching: find.text('Sugar')), findsOneWidget);
+      expect(find.byType(LifeyBarChart), findsOneWidget);
+      // (20 + 30) / 2: the 5 g day is not averaged in as if it were the whole day.
+      expect(find.bySemanticsLabel('Daily average · last 30 days, 25 g'), findsOneWidget);
+      expect(find.byKey(const Key('stat-days-left-out')), findsOneWidget);
+      expect(find.text('1 day is not shown: some of its foods have no figure'), findsOneWidget);
+    });
+
+    testWidgets('no note when every day has its figures', (tester) async {
+      await _pump(tester, meals: () => _FakeMealController([fibreMeal(2, fiber: 20)]), metric: StatMetric.fiber);
+
+      expect(find.byKey(const Key('stat-days-left-out')), findsNothing);
+    });
+
+    testWidgets('no chip when no food eaten has a figure', (tester) async {
+      await _pump(tester, meals: () => _FakeMealController([_meal(_day(2))]));
+
+      expect(find.descendant(of: find.byType(StatMetricChips), matching: find.text('Fibre')), findsNothing);
+      expect(find.descendant(of: find.byType(StatMetricChips), matching: find.text('Sugar')), findsNothing);
+    });
+
+    testWidgets('Hungarian at 360 dp and 130 % text lays out without overflow', (tester) async {
+      await _pump(
+        tester,
+        meals: () => _FakeMealController([
+          fibreMeal(2, fiber: 20),
+          fibreMeal(3, fiber: 5, unknownFood: true),
+          fibreMeal(4, fiber: 5, unknownFood: true),
+        ]),
+        metric: StatMetric.sugar,
+        locale: const Locale('hu'),
+        size: const Size(360, 780),
+        textScale: 1.3,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('2 nap nem látszik: néhány ételükhöz nincs adat'), findsOneWidget);
+    });
+  });
+
   for (final (name, locale, size, scale) in [
     ('Hungarian at 360 dp', const Locale('hu'), const Size(360, 780), 1.0),
     ('English at 360 dp and 130 % text', const Locale('en'), const Size(360, 780), 1.3),
