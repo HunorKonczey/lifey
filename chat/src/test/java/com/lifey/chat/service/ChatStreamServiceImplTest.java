@@ -67,6 +67,9 @@ class ChatStreamServiceImplTest {
     ChatReceiptService receiptService;
 
     @Mock
+    ChatOnlinePresence onlinePresence;
+
+    @Mock
     ChatCaller caller;
 
     ChatStreamServiceImpl streamService;
@@ -87,7 +90,7 @@ class ChatStreamServiceImplTest {
         when(caller.currentUserId()).thenReturn(USER_ID);
         throttle = new ChatTypingThrottle(properties());
         streamService = new ChatStreamServiceImpl(messageRepository, conversationRepository, registry,
-                eventBus, presenceRegistry, receiptService, throttle, caller,
+                eventBus, presenceRegistry, receiptService, onlinePresence, throttle, caller,
                 properties());
     }
 
@@ -98,6 +101,34 @@ class ChatStreamServiceImplTest {
         assertThat(emitter.getTimeout()).isEqualTo(Duration.ofMinutes(5).toMillis());
         verify(registry).register(eq(USER_ID), eq(emitter), any());
         verify(receiptService).markDeliveredOnConnect(USER_ID);
+    }
+
+    @Test
+    void openingAStreamTellsThePeersThePersonIsOnline_andTheLastOneClosingStartsTheOfflineGrace() {
+        when(registry.isConnected(USER_ID)).thenReturn(true);
+        SseEmitter emitter = streamService.open(null);
+
+        verify(onlinePresence).connected(USER_ID, emitter);
+        ArgumentCaptor<Runnable> onDisconnect = ArgumentCaptor.captor();
+        verify(registry).register(eq(USER_ID), eq(emitter), onDisconnect.capture());
+
+        // Another device is still connected: nothing to announce.
+        when(registry.isConnected(USER_ID)).thenReturn(true);
+        onDisconnect.getValue().run();
+        verify(onlinePresence, never()).disconnected(any());
+
+        when(registry.isConnected(USER_ID)).thenReturn(false);
+        onDisconnect.getValue().run();
+        verify(onlinePresence).disconnected(USER_ID);
+    }
+
+    @Test
+    void aStreamThatDiedOnItsFirstWriteIsNotAnnouncedOnline() {
+        when(registry.isConnected(USER_ID)).thenReturn(false);
+
+        streamService.open(null);
+
+        verify(onlinePresence, never()).connected(any(), any());
     }
 
     @Test

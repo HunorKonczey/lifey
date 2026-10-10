@@ -21,6 +21,7 @@ import { chatApi } from "../api";
 import {
   useChatPollInterval,
   useChatStreamConnected,
+  useIsPeerOnline,
   usePeerTyping,
   useReportTyping,
 } from "../hooks";
@@ -323,6 +324,7 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onIn
   const items = buildThreadItems(thread, ownUserId);
   const archived = conversation.archivedAt !== null;
   const peerTyping = usePeerTyping(conversationId);
+  const peerOnline = useIsPeerOnline(conversation?.peer.userId);
   // Nothing to report from a thread nobody can write in.
   const reportTyping = useReportTyping(conversationId, !archived);
   const muted = isMuted(conversation.mutedUntil);
@@ -356,9 +358,22 @@ export function ChatThread({ conversation, ownUserId, onBack, initialDraft, onIn
             <ChatAvatar userId={conversation.peer.userId} displayName={conversation.peer.displayName} size={44} />
             <div className="flex-1 min-w-0">
               <p className="truncate" style={{ fontSize: 16, fontWeight: 800 }}>{conversation.peer.displayName}</p>
-              {/* No "online / last seen" line: presence is not a real signal here (D-W0.19). */}
+              {/* "Online" is the server's word, not a guess (LIF-122): no "last seen", and none while our own stream is down. */}
               <p className="type-body-s truncate" style={{ color: "var(--text-2)" }}>
-                {streamConnected === false ? t("reconnecting") : conversation.peer.email}
+                {streamConnected === false ? (
+                  t("reconnecting")
+                ) : (
+                  <>
+                    {peerOnline && (
+                      <span data-testid="chat-peer-online" style={{ color: "var(--improvement)", fontWeight: 700 }}>
+                        <span aria-hidden="true">● </span>
+                        {t("peerOnline")}
+                        {" · "}
+                      </span>
+                    )}
+                    {conversation.peer.email}
+                  </>
+                )}
               </p>
             </div>
             <IconButton icon="search" label={t("searchInThread")} onClick={() => setSearchQuery("")} />

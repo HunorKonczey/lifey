@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   MAX_MESSAGE_LENGTH,
   applyDeletion,
+  applyOnline,
   hasCard,
   hasImage,
   highlightSegments,
@@ -424,5 +425,23 @@ describe("unread signalling", () => {
   it("caps the row badge at 9+", () => {
     expect(unreadBadgeLabel(9)).toBe("9");
     expect(unreadBadgeLabel(12)).toBe("9+");
+  });
+});
+
+describe("applyOnline (LIF-122)", () => {
+  it("adds a person who came online, and removes one who left", () => {
+    expect(applyOnline([], 8, true)).toEqual([8]);
+    expect(applyOnline([8, 9], 8, false)).toEqual([9]);
+  });
+
+  it("keeps the others as they were", () => {
+    expect(applyOnline([8], 9, true)).toEqual([8, 9]);
+    expect(applyOnline([8, 9], 7, false)).toEqual([8, 9]);
+  });
+
+  it("returns the very same array for a repeated state, so nothing re-renders", () => {
+    const current = [8, 9] as const;
+    expect(applyOnline(current, 8, true)).toBe(current);
+    expect(applyOnline(current, 7, false)).toBe(current);
   });
 });

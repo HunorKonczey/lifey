@@ -362,3 +362,13 @@ export function muteUntil(hours: number | null, now: Date = new Date()): string 
 export function unreadBadgeLabel(unread: number): string {
   return unread > 9 ? "9+" : String(unread);
 }
+
+/**
+ * The people online after an `online` frame (LIF-122). The same state twice returns the very same array, so a repeated frame
+ * does not re-render every thread header that reads it.
+ */
+export function applyOnline(current: readonly number[], userId: number, online: boolean): readonly number[] {
+  const isOnline = current.includes(userId);
+  if (online === isOnline) return current;
+  return online ? [...current, userId] : current.filter((id) => id !== userId);
+}

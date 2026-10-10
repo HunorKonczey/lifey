@@ -129,6 +129,20 @@ class ChatEmitterRegistryTest {
         assertThat(registry.connectionCount()).isZero();
     }
 
+    @Test
+    void aFailedHeartbeatWriteRunsTheCleanupToo_exactlyOnce() throws IOException {
+        SseEmitter dead = mock(SseEmitter.class);
+        doThrow(new IOException("broken pipe")).when(dead).send(any(SseEmitter.SseEventBuilder.class));
+        int[] cleanedUp = {0};
+        registry.register(USER_ID, dead, () -> cleanedUp[0]++);
+
+        registry.heartbeat();
+        // The container reports the same connection afterwards: the cleanup must not run a second time.
+        completionCallbackOf(dead).run();
+
+        assertThat(cleanedUp[0]).isEqualTo(1);
+    }
+
     private static Runnable completionCallbackOf(SseEmitter emitter) {
         ArgumentCaptor<Runnable> completion = ArgumentCaptor.captor();
         verify(emitter).onCompletion(completion.capture());
