@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 50;
+  int get schemaVersion => 51;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -416,6 +416,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 50) {
             await _addColumnIfMissing(m, foods, foods.servingsJson);
+          }
+          if (from < 51) {
+            await _addColumnIfMissing(m, foods, foods.favorite);
           }
         },
       );

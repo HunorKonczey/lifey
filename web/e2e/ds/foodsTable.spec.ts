@@ -58,9 +58,12 @@ test("search matches ignoring accents and case, and says so when nothing matches
   await expect(section(page).getByText("No foods match")).toBeVisible();
 });
 
-test("the row '⋯' offers Edit, Duplicate, Log today and a destructive Delete… last", async ({ page }) => {
+test("the row '⋯' offers Edit, Duplicate, Log today, the favourite toggle and a destructive Delete… last", async ({ page }) => {
   await section(page).getByRole("button", { name: "Actions for Zabpehely" }).click();
-  await expect(page.getByRole("menuitem")).toHaveText([/Edit/, /Duplicate/, /Log today/, /Delete…/]);
+  await expect(page.getByRole("menuitem")).toHaveText([/Edit/, /Duplicate/, /Log today/, /Add to favorites/, /Delete…/]);
+  await page.getByRole("menuitem", { name: /Add to favorites/ }).click();
+  await expect(page.getByTestId("foods-log")).toHaveText("Last action: favorite Zabpehely");
+  await section(page).getByRole("button", { name: "Actions for Zabpehely" }).click();
   await page.getByRole("menuitem", { name: /Log today/ }).click();
   await expect(page.getByTestId("foods-log")).toHaveText("Last action: log Zabpehely");
   await section(page).getByRole("button", { name: "Actions for Alma" }).click();

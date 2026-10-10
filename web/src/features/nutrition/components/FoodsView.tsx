@@ -108,6 +108,22 @@ export function FoodsView() {
     onError: () => show(t("duplicateFailed"), "error"),
   });
 
+  // The star from the row menu: the list flips at once; a failed save puts it back.
+  const favoriteMutation = useMutation({
+    mutationFn: (food: FoodResponse) => {
+      const original = fieldsFromFood(food);
+      return foodApi.update(food.id, foodRequest({ ...original, favorite: !(food.favorite === true) }, original, false));
+    },
+    onMutate: (food) => {
+      setCachedFoods((list) => list.map((f) => (f.id === food.id ? { ...f, favorite: !(food.favorite === true) } : f)));
+    },
+    onError: (_error, food) => {
+      setCachedFoods((list) => list.map((f) => (f.id === food.id ? { ...f, favorite: food.favorite === true } : f)));
+      show(t("favoriteFailed"), "error");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() }),
+  });
+
   const setCachedFoods = (update: (list: FoodResponse[]) => FoodResponse[]) =>
     queryClient.setQueryData<FoodResponse[]>(queryKeys.foods.all(), (old) => update(old ?? []));
 
@@ -211,6 +227,7 @@ export function FoodsView() {
             onNew={() => openNew()}
             onDuplicate={(f) => duplicateMutation.mutate(f)}
             onLogToday={setLogging}
+            onToggleFavorite={(food) => favoriteMutation.mutate(food)}
             onDelete={setDeleting}
           />
         )}

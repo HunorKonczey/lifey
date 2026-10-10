@@ -19,7 +19,7 @@ class FoodRepository {
   Stream<List<Food>> watchAll() {
     final foods$ = (_db.select(_db.foods)
           ..where((t) => t.hidden.equals(false))
-          ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+          ..orderBy([(t) => OrderingTerm.desc(t.favorite), (t) => OrderingTerm.asc(t.name)]))
         .watch();
     final pendingOps$ = _db.select(_db.pendingOperations).watch();
     return combineLatest2(foods$, pendingOps$, (rows, ops) {
@@ -58,7 +58,7 @@ class FoodRepository {
   Stream<List<Food>> watchPaged({required int limit}) {
     final foods$ = (_db.select(_db.foods)
           ..where((t) => t.hidden.equals(false))
-          ..orderBy([(t) => OrderingTerm.asc(t.name)])
+          ..orderBy([(t) => OrderingTerm.desc(t.favorite), (t) => OrderingTerm.asc(t.name)])
           ..limit(limit))
         .watch();
     final pendingOps$ = _db.select(_db.pendingOperations).watch();
@@ -78,6 +78,7 @@ class FoodRepository {
     double? fiber,
     double? sugar,
     List<FoodServing> servings = const [],
+    bool favorite = false,
     String? barcode,
     bool hidden = false,
   }) async {
@@ -92,6 +93,7 @@ class FoodRepository {
           fiberPer100g: Value(fiber),
           sugarPer100g: Value(sugar),
           servingsJson: Value(FoodServing.encode(servings)),
+          favorite: Value(favorite),
           barcode: Value(barcode),
           hidden: Value(hidden),
         ));
@@ -107,6 +109,7 @@ class FoodRepository {
         'fiberPer100g': fiber,
         'sugarPer100g': sugar,
         'servings': [for (final s in servings) s.toJson()],
+        'favorite': favorite,
         'barcode': barcode,
         'hidden': hidden,
       },
@@ -124,13 +127,14 @@ class FoodRepository {
     double? fiber,
     double? sugar,
     List<FoodServing>? servings,
+    bool? favorite,
     String? barcode,
   }) async {
     // Not given = keep what the food has: the server replaces a food's servings with what it is sent, so an update that
-    // left them out would erase them.
-    final kept = servings ??
-        FoodServing.decode(
-            (await (_db.select(_db.foods)..where((t) => t.clientId.equals(clientId))).getSingleOrNull())?.servingsJson);
+    // left them out would erase them - and the favourite mark is sent with every update too.
+    final stored = await (_db.select(_db.foods)..where((t) => t.clientId.equals(clientId))).getSingleOrNull();
+    final kept = servings ?? FoodServing.decode(stored?.servingsJson);
+    final keptFavorite = favorite ?? stored?.favorite ?? false;
     await (_db.update(_db.foods)..where((t) => t.clientId.equals(clientId))).write(
       FoodsCompanion(
         name: Value(name),
@@ -141,6 +145,7 @@ class FoodRepository {
         fiberPer100g: Value(fiber),
         sugarPer100g: Value(sugar),
         servingsJson: Value(FoodServing.encode(kept)),
+        favorite: Value(keptFavorite),
         barcode: Value(barcode),
       ),
     );
@@ -156,9 +161,29 @@ class FoodRepository {
         'fiberPer100g': fiber,
         'sugarPer100g': sugar,
         'servings': [for (final s in kept) s.toJson()],
+        'favorite': keptFavorite,
         'barcode': barcode,
         'hidden': false,
       },
+    );
+  }
+
+  /// Flips a food's favourite mark. The server replaces a food's fields with what an update carries, so the stored values
+  /// go out with it - a mark-only update must not blank the rest.
+  Future<void> toggleFavorite(String clientId, bool value) async {
+    final row = await (_db.select(_db.foods)..where((t) => t.clientId.equals(clientId))).getSingleOrNull();
+    if (row == null) return;
+    await update(
+      clientId,
+      name: row.name,
+      calories: row.caloriesPer100g,
+      protein: row.proteinPer100g,
+      carbs: row.carbsPer100g,
+      fat: row.fatPer100g,
+      fiber: row.fiberPer100g,
+      sugar: row.sugarPer100g,
+      favorite: value,
+      barcode: row.barcode,
     );
   }
 
@@ -185,6 +210,7 @@ class FoodRepository {
       fiberPer100g: row.fiberPer100g,
       sugarPer100g: row.sugarPer100g,
       servings: FoodServing.decode(row.servingsJson),
+      favorite: row.favorite,
       barcode: row.barcode,
       hidden: row.hidden,
     );

@@ -23,6 +23,8 @@ export interface FoodsTableProps {
   onNew: () => void;
   onDuplicate: (food: FoodResponse) => void;
   onLogToday: (food: FoodResponse) => void;
+  /** Flips the favourite mark from the row menu. */
+  onToggleFavorite: (food: FoodResponse) => void;
   onDelete: (food: FoodResponse) => void;
 }
 
@@ -31,13 +33,14 @@ export interface FoodsTableProps {
  * 100 g, the three macros (each headed by its metric dot) and when the food was last logged — a search
  * box (focused by `/`), "＋ Új étel", and one "⋯" per row: Edit, Duplicate, Log today, Delete….
  */
-export function FoodsTable({ foods, usage, now, selectedId, onOpen, onNew, onDuplicate, onLogToday, onDelete }: FoodsTableProps) {
+export function FoodsTable({ foods, usage, now, selectedId, onOpen, onNew, onDuplicate, onLogToday, onToggleFavorite, onDelete }: FoodsTableProps) {
   const t = useTranslations("nutrition.foodsView");
   const fmt = useFormat();
   const nf = useNumberFormat();
   const [search, setSearch] = useState("");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
-  const rows = search.trim() === "" ? foods : foods.filter((f) => matchesFoodSearch(f.name, search));
+  const rows = foods.filter((f) => (!favoritesOnly || f.favorite === true) && (search.trim() === "" || matchesFoodSearch(f.name, search)));
   const gramValue = (v: number | null) => (v == null ? "—" : `${nf.number(v)} g`);
 
   const columns: DataTableColumn<FoodResponse>[] = [
@@ -45,7 +48,12 @@ export function FoodsTable({ foods, usage, now, selectedId, onOpen, onNew, onDup
       key: "name",
       header: t("colName"),
       sort: (f) => f.name.toLocaleLowerCase(),
-      render: (f) => <span style={{ fontWeight: 700 }}>{f.name}</span>,
+      render: (f) => (
+        <span className="inline-flex items-center gap-1.5" style={{ fontWeight: 700 }}>
+          {f.favorite === true && <Icon name="star" size={16} fill={1} color="var(--m-carbs)" label={t("favoriteAria")} className="shrink-0" />}
+          {f.name}
+        </span>
+      ),
     },
     {
       key: "kcal",
@@ -96,6 +104,9 @@ export function FoodsTable({ foods, usage, now, selectedId, onOpen, onNew, onDup
     { label: t("menuEdit"), icon: "edit", onSelect: () => onOpen(f) },
     { label: t("menuDuplicate"), icon: "content_copy", onSelect: () => onDuplicate(f) },
     { label: t("menuLogToday"), icon: "add_circle", onSelect: () => onLogToday(f) },
+    f.favorite === true
+      ? { label: t("menuUnfavorite"), icon: "star", onSelect: () => onToggleFavorite(f) }
+      : { label: t("menuFavorite"), icon: "star", onSelect: () => onToggleFavorite(f) },
     { label: t("menuDelete"), icon: "delete", destructive: true, onSelect: () => onDelete(f) },
   ];
 
@@ -112,6 +123,25 @@ export function FoodsTable({ foods, usage, now, selectedId, onOpen, onNew, onDup
         rowMenuLabel={(f) => t("rowMenuLabel", { food: f.name })}
         pageSize={15}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
+        filters={
+          <button
+            type="button"
+            aria-pressed={favoritesOnly}
+            onClick={() => setFavoritesOnly((v) => !v)}
+            className="lifey-button type-body-s inline-flex items-center gap-1.5"
+            style={{
+              height: 30,
+              padding: "0 12px",
+              borderRadius: "var(--r-pill)",
+              fontWeight: 700,
+              background: favoritesOnly ? "var(--primary)" : "var(--nested)",
+              color: favoritesOnly ? "var(--on-primary)" : "var(--text-2)",
+            }}
+          >
+            <Icon name="star" size={16} fill={favoritesOnly ? 1 : 0} />
+            {t("favorites")}
+          </button>
+        }
         totalLabel={(n) => t("totalFoods", { count: n })}
         action={
           <Button onClick={onNew}>
@@ -120,7 +150,7 @@ export function FoodsTable({ foods, usage, now, selectedId, onOpen, onNew, onDup
           </Button>
         }
         renderCardRow={(f) => ({
-          title: f.name,
+          title: f.favorite === true ? `★ ${f.name}` : f.name,
           meta: t("cardMacros", { protein: nf.number(f.proteinPer100g), carbs: nf.number(f.carbsPer100g ?? 0), fat: nf.number(f.fatPer100g ?? 0) }),
           value: `${fmt.integer(f.caloriesPer100g)} kcal`,
         })}

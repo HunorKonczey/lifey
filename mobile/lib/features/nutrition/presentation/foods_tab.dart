@@ -156,6 +156,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
                   macroLine: _macroLine(context, food),
                   onTap: () => _edit(context, food),
                   onAddToMeal: () => _addToMeal(context, food),
+                  onToggleFavorite: () => ref.read(foodControllerProvider.notifier).toggleFavorite(food.clientId, !food.favorite),
                   onDelete: () => _delete(context, ref, food),
                 );
               }))]),
@@ -200,6 +201,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
               macroLine: _macroLine(context, food),
               onTap: () => _edit(context, food),
               onAddToMeal: () => _addToMeal(context, food),
+              onToggleFavorite: () => ref.read(foodControllerProvider.notifier).toggleFavorite(food.clientId, !food.favorite),
               onDelete: () => _delete(context, ref, food),
             );
           }))]);
@@ -231,6 +233,7 @@ class _FoodRow extends StatelessWidget {
     required this.macroLine,
     required this.onTap,
     required this.onAddToMeal,
+    required this.onToggleFavorite,
     required this.onDelete,
   });
 
@@ -240,6 +243,7 @@ class _FoodRow extends StatelessWidget {
   final String macroLine;
   final VoidCallback onTap;
   final VoidCallback onAddToMeal;
+  final VoidCallback onToggleFavorite;
   final VoidCallback onDelete;
 
   @override
@@ -272,6 +276,17 @@ class _FoodRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             SyncStatusIndicator(clientId: food.clientId),
+            IconButton(
+              icon: Icon(food.favorite ? Icons.star_rounded : Icons.star_outline_rounded),
+              tooltip: food.favorite ? l10n.foodUnfavoriteTooltip : l10n.foodFavoriteTooltip,
+              onPressed: onToggleFavorite,
+              style: IconButton.styleFrom(
+                fixedSize: const Size.square(40),
+                minimumSize: const Size.square(40),
+                foregroundColor: food.favorite ? context.metricColors.carbs : p.text2,
+                tapTargetSize: MaterialTapTargetSize.padded,
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.add_rounded),
               tooltip: l10n.addToMealTooltip,

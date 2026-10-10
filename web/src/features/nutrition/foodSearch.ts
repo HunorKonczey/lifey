@@ -79,7 +79,7 @@ function matchesFilter(item: SearchItem, filter: SearchFilter, usage: Map<string
     case "recipes":
       return item.kind === "recipe";
     case "favorites":
-      return item.kind === "recipe" && item.recipe.favorite;
+      return item.kind === "recipe" ? item.recipe.favorite : item.food.favorite === true;
     case "recent":
       return usage.has(item.key);
   }

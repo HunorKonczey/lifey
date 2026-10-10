@@ -66,6 +66,10 @@ public class Food extends SyncableEntity {
     @Column(nullable = false)
     private boolean hidden;
 
+    /** The owner's favourite mark (LIF-147), separate from the one on recipes. */
+    @Column(nullable = false)
+    private boolean favorite;
+
     /**
      * Provenance for a copy created by the trainer content-assignment feature
      * (docs/personal_trainer/02-domain-es-migraciok.md, "Változás 3") — null for

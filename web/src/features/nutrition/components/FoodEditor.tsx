@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Card, Checkbox, Icon, IconButton, NumberField, ReadOnlyField, TextField } from "@/components/ds";
+import { Button, Card, Checkbox, Icon, IconButton, NumberField, ReadOnlyField, Switch, TextField } from "@/components/ds";
 import { EMPTY_FOOD, FOOD_DECIMALS, fieldsFromFood, foodRequest, gramsText, isFoodDirty, parseOptionalGrams, parseServing, parseServings, type FoodFields } from "../foodEdit";
 import { macroCheck } from "../macroCheck";
 import { MAX_SERVING_NAME, MAX_SERVINGS, type FoodRequest, type FoodResponse, type OffSearchItem } from "../types";
@@ -270,6 +270,8 @@ export function FoodEditor({
             </div>
           )}
         </div>
+
+        <Switch checked={fields.favorite} onChange={(v) => set("favorite", v)} label={t("favorite")} />
 
         {check.tone !== "ok" && (
           <p

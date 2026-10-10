@@ -27,13 +27,16 @@ List<Food> recentFoodsByUsage(List<Food> foods, Map<String, FoodUsage> usage) {
 }
 
 /// Orders [foods] for suggestion lists: recents first (see
-/// [recentFoodsByUsage]), then repeatedly-logged foods by frequency, then
-/// the rest in the incoming (alphabetical) order.
+/// [recentFoodsByUsage]), then the favourites (LIF-147), then repeatedly-logged
+/// foods by frequency, then the rest in the incoming (alphabetical) order.
 List<Food> rankFoodsByUsage(List<Food> foods, Map<String, FoodUsage> usage) {
-  if (usage.isEmpty) return foods;
+  if (usage.isEmpty && !foods.any((f) => f.favorite)) return foods;
 
   final recents = recentFoodsByUsage(foods, usage);
   final promoted = recents.map((f) => f.clientId).toSet();
+
+  final favourites = foods.where((f) => f.favorite && !promoted.contains(f.clientId)).toList();
+  promoted.addAll(favourites.map((f) => f.clientId));
 
   final frequents = foods
       .where((f) => !promoted.contains(f.clientId) && (usage[f.clientId]?.useCount ?? 0) >= 2)
@@ -48,6 +51,7 @@ List<Food> rankFoodsByUsage(List<Food> foods, Map<String, FoodUsage> usage) {
 
   return [
     ...recents,
+    ...favourites,
     ...frequents,
     ...foods.where((f) => !promoted.contains(f.clientId)),
   ];

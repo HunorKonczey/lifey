@@ -14,6 +14,8 @@ export interface FoodFields {
   sugar: string;
   /** The serving rows as typed (LIF-146); a row with both fields empty is ignored. */
   servings: ServingField[];
+  /** The favourite mark (LIF-147). */
+  favorite: boolean;
   barcode: string;
 }
 
@@ -22,7 +24,7 @@ export interface ServingField {
   grams: string;
 }
 
-export const EMPTY_FOOD: FoodFields = { name: "", kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: "", sugar: "", servings: [], barcode: "" };
+export const EMPTY_FOOD: FoodFields = { name: "", kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: "", sugar: "", servings: [], favorite: false, barcode: "" };
 
 export const MAX_GRAMS_PER_100G = 100;
 
@@ -88,6 +90,7 @@ export function fieldsFromFood(food: FoodResponse | null, prefill?: Partial<Food
     fiber: gramsText(src.fiberPer100g),
     sugar: gramsText(src.sugarPer100g),
     servings: (src.servings ?? []).map((s) => ({ name: s.name, grams: gramsText(s.grams) })),
+    favorite: src.favorite ?? false,
     barcode: src.barcode ?? "",
   };
 }
@@ -103,6 +106,7 @@ export function isFoodDirty(current: FoodFields, original: FoodFields): boolean 
   if (current.barcode.trim() !== original.barcode.trim()) return true;
   if (current.fiber.trim() !== original.fiber.trim() || current.sugar.trim() !== original.sugar.trim()) return true;
   if (servingsKey(current.servings) !== servingsKey(original.servings)) return true;
+  if (current.favorite !== original.favorite) return true;
   return NUMBER_KEYS.some((k) => round(current[k]) !== round(original[k]));
 }
 
@@ -132,6 +136,8 @@ export function foodRequest(current: FoodFields, original: FoodFields, hidden: b
     ...(typeof sugar === "number" ? { sugarPer100g: sugar } : {}),
     // Always the whole list: the form shows every serving the food has, so what it holds is the truth (empty = none).
     servings: parseServings(current.servings).servings,
+    // Likewise the mark: the form shows it, so what it holds is the truth.
+    favorite: current.favorite,
     barcode: barcode === "" ? null : barcode,
     hidden,
   };

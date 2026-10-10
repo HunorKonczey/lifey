@@ -23,7 +23,9 @@ public record FoodResponse(
         Double fiberPer100g,
         Double sugarPer100g,
         // Named serving sizes (LIF-146), in order; empty when there are none.
-        List<FoodServingResponse> servings
+        List<FoodServingResponse> servings,
+        // The owner's favourite mark (LIF-147).
+        boolean favorite
 ) {
     public FoodResponse {
         servings = servings == null ? List.of() : servings;
@@ -31,8 +33,15 @@ public record FoodResponse(
 
     public FoodResponse(Long id, String name, Double caloriesPer100g, Double proteinPer100g, Double carbsPer100g,
                         Double fatPer100g, String barcode, boolean hidden, Instant updatedAt, Instant deletedAt,
+                        Long originTrainerId, Double fiberPer100g, Double sugarPer100g, List<FoodServingResponse> servings) {
+        this(id, name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, hidden, updatedAt,
+                deletedAt, originTrainerId, fiberPer100g, sugarPer100g, servings, false);
+    }
+
+    public FoodResponse(Long id, String name, Double caloriesPer100g, Double proteinPer100g, Double carbsPer100g,
+                        Double fatPer100g, String barcode, boolean hidden, Instant updatedAt, Instant deletedAt,
                         Long originTrainerId) {
         this(id, name, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, barcode, hidden, updatedAt,
-                deletedAt, originTrainerId, null, null, List.of());
+                deletedAt, originTrainerId, null, null, List.of(), false);
     }
 }

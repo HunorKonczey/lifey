@@ -43,6 +43,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
 
   /// The named servings being edited (LIF-146): a name and a grams field per row; at most [_maxServings].
   final List<_ServingRow> _servings = [];
+
+  /// The favourite mark (LIF-147).
+  bool _favorite = false;
   static const _maxServings = 10;
   bool _submitting = false;
   bool _scanning = false;
@@ -73,6 +76,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       _servings.add(_ServingRow(s.name, _trim(s.grams)));
     }
     _barcode = food?.barcode;
+    _favorite = food?.favorite ?? false;
 
     if (_isEditing) {
       _name.addListener(_scheduleAutoSave);
@@ -318,6 +322,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             fiber: fiberText.isEmpty ? null : _parse(fiberText),
             sugar: sugarText.isEmpty ? null : _parse(sugarText),
             servings: servings,
+            favorite: _favorite,
             barcode: _barcode,
           );
     } catch (_) {
@@ -358,6 +363,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             fiber: fiber,
             sugar: sugar,
             servings: servings,
+            favorite: _favorite,
             barcode: _barcode);
       } else {
         await notifier.addFood(
@@ -369,6 +375,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             fiber: fiber,
             sugar: sugar,
             servings: servings,
+            favorite: _favorite,
             barcode: _barcode);
       }
       if (mounted) Navigator.of(context).pop();
@@ -630,6 +637,16 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     label: Text(l10n.addServingButton),
                   ),
                 ),
+              SwitchListTile(
+                key: const Key('food-favorite'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.foodFavoriteLabel),
+                value: _favorite,
+                onChanged: (v) {
+                  setState(() => _favorite = v);
+                  if (_isEditing) _scheduleAutoSave();
+                },
+              ),
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(_error!,

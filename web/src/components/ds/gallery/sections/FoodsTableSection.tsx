@@ -77,6 +77,7 @@ export function FoodsTableSection() {
             onNew={() => setEditing({ food: null, key: `new:${Date.now()}` })}
             onDuplicate={(f) => setLog(`duplicate ${f.name}`)}
             onLogToday={(f) => setLog(`log ${f.name}`)}
+            onToggleFavorite={(f) => setLog(`favorite ${f.name}`)}
             onDelete={(f) => setLog(`delete ${f.name}`)}
           />
         </div>

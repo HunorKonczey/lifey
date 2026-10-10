@@ -106,6 +106,77 @@ void main() {
     expect(payload['sugarPer100g'], isNull);
   });
 
+  group('favourite mark (LIF-147)', () {
+    test('a created food sends the mark, false by default', () async {
+      await repo.create(name: 'Skyr', calories: 60, protein: 11, favorite: true);
+      expect((await db.select(db.foods).get()).single.favorite, isTrue);
+      expect((await lastPayload())['favorite'], isTrue);
+
+      await repo.create(name: 'Rice', calories: 130, protein: 2.7);
+      expect((await lastPayload())['favorite'], isFalse);
+    });
+
+    test('an update that is not given the mark keeps - and re-sends - the stored one', () async {
+      final clientId = await repo.create(name: 'Skyr', calories: 60, protein: 11, favorite: true);
+
+      await repo.update(clientId, name: 'Skyr', calories: 61, protein: 11);
+
+      expect((await db.select(db.foods).get()).single.favorite, isTrue);
+      expect((await lastPayload())['favorite'], isTrue);
+    });
+
+    test('an update given the mark sets it, either way', () async {
+      final clientId = await repo.create(name: 'Skyr', calories: 60, protein: 11);
+
+      await repo.update(clientId, name: 'Skyr', calories: 60, protein: 11, favorite: true);
+      expect((await db.select(db.foods).get()).single.favorite, isTrue);
+
+      await repo.update(clientId, name: 'Skyr', calories: 60, protein: 11, favorite: false);
+      expect((await db.select(db.foods).get()).single.favorite, isFalse);
+      expect((await lastPayload())['favorite'], isFalse);
+    });
+
+    test('toggling sends every stored field with it, so the server does not blank the rest', () async {
+      final clientId = await repo.create(
+        name: 'Oats',
+        calories: 370,
+        protein: 13,
+        carbs: 60,
+        fat: 7,
+        fiber: 10,
+        sugar: 1.2,
+        servings: const [FoodServing(name: '1 bowl', grams: 50)],
+        barcode: '123',
+      );
+
+      await repo.toggleFavorite(clientId, true);
+
+      final payload = await lastPayload();
+      expect(payload['favorite'], isTrue);
+      expect(payload['name'], 'Oats');
+      expect(payload['caloriesPer100g'], 370);
+      expect(payload['carbsPer100g'], 60);
+      expect(payload['fiberPer100g'], 10);
+      expect(payload['sugarPer100g'], 1.2);
+      expect(payload['servings'], [
+        {'name': '1 bowl', 'grams': 50.0},
+      ]);
+      expect(payload['barcode'], '123');
+    });
+
+    test('the list puts favourites first, then by name', () async {
+      await repo.create(name: 'Apple', calories: 52, protein: 0.3);
+      await repo.create(name: 'Skyr', calories: 60, protein: 11, favorite: true);
+      await repo.create(name: 'Banana', calories: 89, protein: 1.1);
+      await repo.create(name: 'Yoghurt', calories: 60, protein: 4, favorite: true);
+
+      final all = await repo.watchAll().first;
+
+      expect(all.map((f) => f.name), ['Skyr', 'Yoghurt', 'Apple', 'Banana']);
+      expect((await repo.watchPaged(limit: 3).first).map((f) => f.name), ['Skyr', 'Yoghurt', 'Apple']);
+    });
+  });
+
   group('servings (LIF-146)', () {
     const glass = FoodServing(name: '1 glass', grams: 200);
     const spoon = FoodServing(name: '1 spoon', grams: 15);
@@ -167,6 +238,18 @@ void main() {
       final row = (await db.select(db.foods).get()).single;
       expect(row.fiberPer100g, 10);
       expect(row.sugarPer100g, 1.2);
+    });
+
+    test('a food from the server arrives with its favourite mark; one without the field is not a favourite (LIF-147)', () async {
+      adapter.full = [
+        {..._json(1), 'favorite': true},
+        {..._json(2), 'name': 'Rice'},
+      ];
+
+      await pull.pullAll();
+
+      final rows = {for (final r in await db.select(db.foods).get()) r.name: r.favorite};
+      expect(rows, {'Oats': true, 'Rice': false});
     });
 
     test('a food from the server arrives with its servings, in order; a bad entry is dropped (LIF-146)', () async {

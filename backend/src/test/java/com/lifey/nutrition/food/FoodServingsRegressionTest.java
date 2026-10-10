@@ -78,6 +78,30 @@ class FoodServingsRegressionTest {
     }
 
     @Test
+    void theFavouriteMark_isStored_survivesAnOrdinaryUpdate_andMovesUpdatedAt() throws InterruptedException {
+        String name = "Fav " + System.nanoTime();
+        FoodResponse created = foodService.create(new FoodRequest(name, 46.0, 3.4, 4.8, 1.5, null, false, null, null, null, true));
+        assertThat(foodService.findById(created.id()).favorite()).isTrue();
+
+        // A client that does not know the field: the star stays.
+        Thread.sleep(20);
+        FoodResponse ordinary = foodService.update(created.id(), new FoodRequest(name, 50.0, 3.4, 4.8, 1.5, null, false));
+        assertThat(ordinary.favorite()).isTrue();
+
+        // Only the star changes: the food must still reach the phones' delta sync.
+        Thread.sleep(20);
+        FoodResponse before = foodService.findById(created.id());
+        FoodResponse off = foodService.update(created.id(), new FoodRequest(name, 50.0, 3.4, 4.8, 1.5, null, false, null, null, null, false));
+        assertThat(off.favorite()).isFalse();
+        assertThat(foodService.findById(created.id()).updatedAt()).isAfter(before.updatedAt());
+        assertThat(foodService.findPage(PageRequest.of(0, 50), null, before.updatedAt()).getContent())
+                .anySatisfy(f -> {
+                    assertThat(f.id()).isEqualTo(created.id());
+                    assertThat(f.favorite()).isFalse();
+                });
+    }
+
+    @Test
     void aPageOfFoodsCarriesTheirServings() {
         String tag = "Page" + System.nanoTime();
         FoodResponse a = foodService.create(milk(tag + " a", List.of(new FoodServingRequest("1 glass", 200.0))));

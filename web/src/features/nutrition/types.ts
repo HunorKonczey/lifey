@@ -24,6 +24,8 @@ export interface FoodResponse {
   sugarPer100g?: number | null;
   /** Named serving sizes (LIF-146), in the owner's order; absent from an older server. */
   servings?: FoodServing[];
+  /** The owner's favourite mark (LIF-147); absent from an older server. */
+  favorite?: boolean;
   barcode: string | null;
   hidden: boolean;
 }
@@ -39,6 +41,8 @@ export interface FoodRequest {
   sugarPer100g?: number;
   /** The whole list (an empty one clears them); left out = the server keeps what it has. */
   servings?: FoodServing[];
+  /** true/false sets the mark; left out = the server keeps what it has. */
+  favorite?: boolean;
   barcode?: string | null;
   hidden: boolean;
 }

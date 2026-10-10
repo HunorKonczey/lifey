@@ -30,6 +30,11 @@ public final class FoodMapper {
         food.setSugarPer100g(request.sugarPer100g());
         food.setBarcode(request.barcode());
         food.setHidden(request.hidden());
+        // Absent keeps what is stored (a client that does not know the field must not un-favourite); a change is a column
+        // change, so @PreUpdate moves updatedAt and the delta feed carries it.
+        if (request.favorite() != null) {
+            food.setFavorite(request.favorite());
+        }
         if (request.servings() != null) {
             // Replaced as a whole, in the order sent. Only the collection changes here, which Hibernate does not turn into an
             // UPDATE of the food (so @PreUpdate would not move updatedAt) - and delta sync must hand the phones the change.
@@ -54,7 +59,8 @@ public final class FoodMapper {
                 food.getOriginTrainerId(),
                 food.getFiberPer100g(),
                 food.getSugarPer100g(),
-                food.getServings().stream().map(s -> new FoodServingResponse(s.getName(), s.getGrams())).toList()
+                food.getServings().stream().map(s -> new FoodServingResponse(s.getName(), s.getGrams())).toList(),
+                food.isFavorite()
         );
     }
 }

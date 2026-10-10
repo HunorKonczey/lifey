@@ -70,8 +70,14 @@ describe("searchItems — filters", () => {
     expect(run("", "recipes")).toEqual(["Csirkés rizstál", "Joghurtos zabkása"]);
   });
 
-  it("Favourites are favourite recipes only", () => {
+  it("Favourites are the favourite recipes (none of the foods are starred here)", () => {
     expect(run("", "favorites")).toEqual(["Joghurtos zabkása"]);
+  });
+
+  it("Favourites include a favourite food too (LIF-147), and only a starred one", () => {
+    const starred = buildSearchItems([food(5, "Kefir", { favorite: true }), food(6, "Barna rizs (főtt)", { favorite: false }), food(7, "Skyr")], recipes);
+
+    expect(names(searchItems({ items: starred, query: "", filter: "favorites", usage: new Map() }))).toEqual(["Joghurtos zabkása", "Kefir"]);
   });
 
   it("Recent is what was logged lately, newest first", () => {

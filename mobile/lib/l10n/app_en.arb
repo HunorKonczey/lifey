@@ -633,6 +633,18 @@
   "@addServingButton": {
     "description": "Button adding a named serving row to the food form"
   },
+  "foodFavoriteLabel": "Favourite",
+  "@foodFavoriteLabel": {
+    "description": "Label of the favourite switch on the food form and the screen-reader label of the star on a favourite food"
+  },
+  "foodFavoriteTooltip": "Add to favourites",
+  "@foodFavoriteTooltip": {
+    "description": "Tooltip of the star button on a food row that is not a favourite yet"
+  },
+  "foodUnfavoriteTooltip": "Remove from favourites",
+  "@foodUnfavoriteTooltip": {
+    "description": "Tooltip of the star button on a favourite food row"
+  },
   "removeServingTooltip": "Remove serving",
   "@removeServingTooltip": {
     "description": "Tooltip of the remove button on a serving row"

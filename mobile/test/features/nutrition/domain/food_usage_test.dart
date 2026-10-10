@@ -33,6 +33,22 @@ void main() {
       expect(rankFoodsByUsage(foods, const {}), same(foods));
     });
 
+    test('favourites come after the recents and before the frequents (LIF-147), also with no usage at all', () {
+      final foods = [
+        _food('a'),
+        const Food(clientId: 'b', name: 'b', caloriesPer100g: 100, proteinPer100g: 10, favorite: true),
+        _food('c'),
+        _food('d'),
+        const Food(clientId: 'e', name: 'e', caloriesPer100g: 100, proteinPer100g: 10, favorite: true),
+      ];
+
+      expect(rankFoodsByUsage(foods, const {}).map((f) => f.clientId), ['b', 'e', 'a', 'c', 'd']);
+
+      final usage = {'d': _usage(daysAgo: 1), 'c': _usage(daysAgo: 2, count: 4), 'e': _usage(daysAgo: 3)};
+      // The three used foods are the recents (newest first); the favourite b follows them, then what is left.
+      expect(rankFoodsByUsage(foods, usage).map((f) => f.clientId), ['d', 'c', 'e', 'b', 'a']);
+    });
+
     test('orders recents, then frequents by count, then the rest', () {
       // Alphabetical input a..h; recency runs the other way (f newest), so a
       // correct ranking must diverge from the incoming order. 7 used foods —
