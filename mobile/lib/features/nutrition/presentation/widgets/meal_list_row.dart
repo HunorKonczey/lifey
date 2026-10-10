@@ -8,6 +8,7 @@ import '../../../../shared/widgets/ds/list_group.dart';
 import '../../../../shared/widgets/sync_status_indicator.dart';
 import '../../../../shared/widgets/trainer_comment_card.dart';
 import '../../domain/meal.dart';
+import 'fiber_sugar_line.dart';
 import 'meal_type_style.dart';
 
 /// One logged meal in a `ListGroup` of the Meals tab and the all-meals list
@@ -106,6 +107,10 @@ class MealListRow extends StatelessWidget {
                   if (foods.isNotEmpty) ...[
                     const SizedBox(height: 5),
                     Text(foods, maxLines: 2, overflow: TextOverflow.ellipsis, style: secondary),
+                  ],
+                  if (!meal.fiberSugar.isEmpty) ...[
+                    const SizedBox(height: 3),
+                    FiberSugarLine(totals: meal.fiberSugar),
                   ],
                   if (meal.hasTrainerComment) ...[
                     const SizedBox(height: 6),

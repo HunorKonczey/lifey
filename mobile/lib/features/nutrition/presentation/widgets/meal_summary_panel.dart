@@ -7,7 +7,9 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/ds/animated_number.dart';
 import '../../../../shared/widgets/ds/lifey_card.dart';
 import '../../../../shared/widgets/ds/metric_bar.dart';
+import '../../domain/fiber_sugar.dart';
 import '../../domain/meal_budget_preview.dart';
+import 'fiber_sugar_line.dart';
 
 /// The meal editor's floating summary, pinned above the keyboard / the bottom
 /// edge so it stays in view while the food list scrolls (docs/redesign/
@@ -28,6 +30,7 @@ class MealSummaryPanel extends StatelessWidget {
     this.preview,
     this.day,
     this.label,
+    this.fiberSugar = const FiberSugarTotals(),
   });
 
   final double calories;
@@ -43,6 +46,9 @@ class MealSummaryPanel extends StatelessWidget {
 
   /// Overrides "Meal total" (the recipe editor says "Recipe total").
   final String? label;
+
+  /// The meal's fibre and sugars (LIF-148); nothing is drawn when no food has a figure.
+  final FiberSugarTotals fiberSugar;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +102,10 @@ class MealSummaryPanel extends StatelessWidget {
                       value: fat, label: l10n.fatLabel, color: mc.fat)),
             ],
           ),
+          if (!fiberSugar.isEmpty) ...[
+            const SizedBox(height: AppSpacing.s8),
+            FiberSugarLine(totals: fiberSugar),
+          ],
           if (preview != null) ...[
             const SizedBox(height: AppSpacing.s12),
             Wrap(

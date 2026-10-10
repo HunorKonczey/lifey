@@ -63,7 +63,7 @@ export function ExportControl({ raw, viewed, period, isCurrent, periodLabel, ico
     try {
       const labels: ExportLabels = {
         headers: {
-          meals: ["date", "time", "meal", "food", "grams", "kcal", "protein", "carbs", "fat"].map((k) => t(`export_col_${k}`)),
+          meals: ["date", "time", "meal", "food", "grams", "kcal", "protein", "carbs", "fat", "fiber", "sugar"].map((k) => t(`export_col_${k}`)),
           weight: ["date", "weight"].map((k) => t(`export_col_${k}`)),
           workouts: ["date", "time", "kind", "activity", "exercise", "reps", "weightKg", "volume", "distance", "minutes"].map((k) => t(`export_col_${k}`)),
           waterSteps: ["date", "water", "steps"].map((k) => t(`export_col_${k}`)),

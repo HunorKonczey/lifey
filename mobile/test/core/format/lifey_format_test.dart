@@ -37,6 +37,15 @@ void main() {
   });
 
   group('decimals', () {
+    test('gramsFine (fibre, sugar) is whole when whole and otherwise one decimal, never 0.4 -> 0', () {
+      expect(en.gramsFine(12), '12');
+      expect(en.gramsFine(12.4), '12.4');
+      expect(hu.gramsFine(12.4), '12,4');
+      expect(en.gramsFine(0.4), '0.4');
+      expect(en.gramsFine(12.44), '12.4');
+      expect(en.gramsFine(1234.5), '1,234.5');
+    });
+
     test('weight has one decimal, with the locale separator', () {
       expect(en.weight(64.5), '64.5');
       expect(hu.weight(64.5), '64,5');

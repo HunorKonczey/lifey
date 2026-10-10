@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/format/lifey_format.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/nutrition/domain/daily_macros.dart';
+import 'package:lifey/features/nutrition/domain/fiber_sugar.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/day_budget_card.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
@@ -23,6 +24,7 @@ Future<void> _pump(
   WidgetTester tester,
   DailyMacros? totals,
   UserSettings settings, {
+  FiberSugarTotals fiberSugar = const FiberSugarTotals(),
   Locale locale = const Locale('en'),
   double textScale = 1,
   double width = 411,
@@ -42,7 +44,7 @@ Future<void> _pump(
         child: child!,
       ),
       home: Scaffold(
-        body: Padding(padding: const EdgeInsets.all(20), child: DayBudgetCard(totals: totals, settings: settings)),
+        body: Padding(padding: const EdgeInsets.all(20), child: DayBudgetCard(totals: totals, settings: settings, fiberSugar: fiberSugar)),
       ),
     ),
   );
@@ -56,6 +58,17 @@ String _text(WidgetTester tester) => tester
     .join('|');
 
 void main() {
+  testWidgets('the day card shows the fibre and sugar line, a note when partial, and nothing when unknown (LIF-148)', (tester) async {
+    await _pump(tester, _today, _settings(), fiberSugar: const FiberSugarTotals(fiber: 21.5, sugar: 40, partial: true));
+    expect(find.text('Fibre 21.5 g \u00b7 Sugar 40 g \u00b7 some foods have no figure'), findsOneWidget);
+
+    await _pump(tester, _today, _settings(), fiberSugar: const FiberSugarTotals(fiber: 8));
+    expect(find.text('Fibre 8 g'), findsOneWidget);
+
+    await _pump(tester, _today, _settings());
+    expect(find.byKey(const Key('fiber-sugar-line')), findsNothing);
+  });
+
   testWidgets('canvas day: 621 / 2,360 kcal, 1,739 left, macros against their goals', (tester) async {
     await _pump(tester, _today, _settings());
 

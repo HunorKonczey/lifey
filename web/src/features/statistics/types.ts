@@ -18,6 +18,11 @@ export interface StatisticsResponse {
   totalProtein: number | null;
   totalCarbs: number | null;
   totalFat: number | null;
+  /** Fibre and sugars of the foods that have a figure (LIF-148); null when none has, which is not 0. */
+  totalFiber?: number | null;
+  totalSugar?: number | null;
+  /** True when some logged food has no fibre/sugar figure, so the totals above are a lower bound. */
+  fiberSugarPartial?: boolean;
   /** Unchanged meaning — every session, strength and cardio alike (docs/cardio/56 D-C3.1). */
   workoutCount: number | null;
   latestWeight: number | null;

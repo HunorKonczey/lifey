@@ -126,6 +126,9 @@ function mealRows(raw: RawData, range: PeriodRange, labels: ExportLabels, n: (v:
           n(e.protein, 1),
           n(e.carbs, 1),
           n(e.fat, 1),
+          // Not known is an empty cell, not 0 (LIF-145): a spreadsheet sum then skips it instead of counting a zero.
+          e.fiber == null ? "" : n(e.fiber, 1),
+          e.sugar == null ? "" : n(e.sugar, 1),
         ],
       });
     }

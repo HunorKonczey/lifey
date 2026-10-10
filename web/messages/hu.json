@@ -2030,6 +2030,8 @@
     "export_col_protein": "Fehérje (g)",
     "export_col_carbs": "Szénhidrát (g)",
     "export_col_fat": "Zsír (g)",
+    "export_col_fiber": "Rost (g)",
+    "export_col_sugar": "Cukor (g)",
     "export_col_weight": "Testsúly (kg)",
     "export_col_kind": "Fajta",
     "export_col_activity": "Tevékenység",
