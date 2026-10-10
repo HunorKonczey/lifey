@@ -209,11 +209,14 @@ export interface TrainerCalendarSessionResponse {
 /** The trainer's own preferences (docs/33) — not client data, separate from /settings. */
 export interface TrainerPreferencesResponse {
   weeklyReportEmailEnabled: boolean;
+  /** A push when a client misses a scheduled workout (docs/85). */
+  clientMissedWorkoutPushEnabled: boolean;
+  /** A push when a client logs the first weigh-in of their week (docs/85). */
+  clientWeighInPushEnabled: boolean;
 }
 
-export interface TrainerPreferencesRequest {
-  weeklyReportEmailEnabled: boolean;
-}
+/** Every field is optional: what is absent keeps its stored value. */
+export type TrainerPreferencesRequest = Partial<TrainerPreferencesResponse>;
 
 // ─── Multi-week programs (docs/34-multi-week-program-plan.md) ───
 

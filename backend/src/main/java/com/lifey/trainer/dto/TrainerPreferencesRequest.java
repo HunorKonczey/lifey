@@ -1,9 +1,12 @@
 package com.lifey.trainer.dto;
 
-import jakarta.validation.constraints.NotNull;
-
+/**
+ * Every field is optional: absent keeps the stored value, so a client that only knows the weekly report switch
+ * (the first one) keeps working next to ones that send the push switches (docs/85-trainer-push-plan.md).
+ */
 public record TrainerPreferencesRequest(
-        @NotNull
-        Boolean weeklyReportEmailEnabled
+        Boolean weeklyReportEmailEnabled,
+        Boolean clientMissedWorkoutPushEnabled,
+        Boolean clientWeighInPushEnabled
 ) {
 }

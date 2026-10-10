@@ -59,4 +59,14 @@ public interface SettingsService {
     boolean isWeeklyReportEmailEnabled();
 
     boolean setWeeklyReportEmailEnabled(boolean enabled);
+
+    /** The trainer's "a client missed a scheduled workout" push opt-out (docs/85-trainer-push-plan.md); same contract as the weekly report switch. */
+    boolean isClientMissedWorkoutPushEnabled();
+
+    boolean setClientMissedWorkoutPushEnabled(boolean enabled);
+
+    /** The trainer's "a client logged this week's weigh-in" push opt-out (docs/85-trainer-push-plan.md). */
+    boolean isClientWeighInPushEnabled();
+
+    boolean setClientWeighInPushEnabled(boolean enabled);
 }

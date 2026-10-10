@@ -441,7 +441,8 @@ rendezni — mindegyik **additív**, egyik sem töri a webet:
    beágyazva nincs vissza gomb, illetve nincs AppBar, mert nincs hová visszamenni.
 3. **Legyen-e „edzői” push-csomag** (kliens kihagyott edzést, kliens leadta a heti
    mérését)? Ez természetes folytatás a 30-as terv infrastruktúráján, de **külön terv** —
-   nem a v2 része.
+   nem a v2 része. ✅ **Eldőlt (2026-10-11, LIF-100): igen, a terv a
+   [`85-trainer-push-plan.md`](../85-trainer-push-plan.md).**
 4. **Mikor induljon a v2?** Javaslat: a 40-es terv I2 (mobil chat) éles visszajelzései
    után. Ha az edzők a chatet mobilról használják, a v2 igazolt; ha nem, a v2 sorrendje
    újragondolandó.

@@ -5934,6 +5934,22 @@
   "@trainerWeeklyReportToggleSubtitle": {
     "description": "Subtitle of the weekly report switch. Says plainly that the report stays an email and why that is not a gap: the same figures are on the client list and client screens, live"
   },
+  "trainerMissedWorkoutPushToggleLabel": "Missed workouts",
+  "@trainerMissedWorkoutPushToggleLabel": {
+    "description": "Trainer settings: switch for the push about a client missing a scheduled workout"
+  },
+  "trainerMissedWorkoutPushToggleSubtitle": "A push when a client misses a scheduled workout: once, the next morning at 8:00.",
+  "@trainerMissedWorkoutPushToggleSubtitle": {
+    "description": "Trainer settings: what the missed-workout push does and when it arrives"
+  },
+  "trainerWeighInPushToggleLabel": "Weekly weigh-ins",
+  "@trainerWeighInPushToggleLabel": {
+    "description": "Trainer settings: switch for the push about a client logging their weekly weigh-in"
+  },
+  "trainerWeighInPushToggleSubtitle": "A push when a client logs the first weigh-in of their week, never more than one a week.",
+  "@trainerWeighInPushToggleSubtitle": {
+    "description": "Trainer settings: what the weigh-in push does and how often it arrives"
+  },
   "trainerSettingsFootnote": "Your own account settings — theme, language, units — are under your own log.",
   "@trainerSettingsFootnote": {
     "description": "Footnote on the trainer settings screen, pointing at where the client-side settings live so the short list does not read as missing something"

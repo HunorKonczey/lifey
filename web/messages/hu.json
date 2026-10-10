@@ -57,6 +57,8 @@
     "screenComingSoon": "Ez a képernyő még nincs elkészítve.",
     "preferences": {
       "weeklyReportEmailLabel": "Heti e-mail riport",
+      "clientMissedWorkoutPushLabel": "Push: kliens kihagyott egy edzést",
+      "clientWeighInPushLabel": "Push: kliens heti mérése",
       "updated": "Beállítás frissítve",
       "updateFailed": "Nem sikerült frissíteni a beállítást"
     },

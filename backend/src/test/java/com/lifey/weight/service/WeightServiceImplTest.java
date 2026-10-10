@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +50,9 @@ class WeightServiceImplTest {
 
     @Mock
     CurrentUserProvider currentUserProvider;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     WeightServiceImpl service;
@@ -111,6 +116,16 @@ class WeightServiceImplTest {
         assertThat(result.weight()).isEqualTo(80.0);
         // The recording instant is stamped server-side so same-day entries stay ordered.
         assertThat(captor.getValue().getRecordedAt()).isNotNull();
+    }
+
+    @Test
+    void create_announcesTheWeighIn_forTheTrainerPush() {
+        WeightRequest request = new WeightRequest(LocalDate.of(2026, Month.JUNE, 18), 80.5);
+        when(repository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
+
+        service.create(request);
+
+        verify(eventPublisher).publishEvent(new com.lifey.weight.WeightLoggedEvent(USER_ID, LocalDate.of(2026, Month.JUNE, 18), 80.5));
     }
 
     @Test

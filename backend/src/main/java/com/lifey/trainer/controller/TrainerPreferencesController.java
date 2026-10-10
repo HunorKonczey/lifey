@@ -14,8 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The trainer's own preferences — currently just the weekly report email
- * opt-out (docs/33-weekly-trainer-report-plan.md). Deliberately separate from
+ * The trainer's own preferences — the weekly report email opt-out
+ * (docs/33-weekly-trainer-report-plan.md) and the two client pushes
+ * (docs/85-trainer-push-plan.md). Deliberately separate from
  * {@code /settings}: that endpoint is the mobile client-settings round-trip,
  * this one is trainer-only and web-only.
  */
@@ -30,13 +31,28 @@ public class TrainerPreferencesController {
     @Operation(summary = "Current trainer's preferences")
     @GetMapping
     public TrainerPreferencesResponse get() {
-        return new TrainerPreferencesResponse(settingsService.isWeeklyReportEmailEnabled());
+        return current();
     }
 
     @Operation(summary = "Update the current trainer's preferences")
     @PutMapping
     public TrainerPreferencesResponse update(@Valid @RequestBody TrainerPreferencesRequest request) {
+        if (request.weeklyReportEmailEnabled() != null) {
+            settingsService.setWeeklyReportEmailEnabled(request.weeklyReportEmailEnabled());
+        }
+        if (request.clientMissedWorkoutPushEnabled() != null) {
+            settingsService.setClientMissedWorkoutPushEnabled(request.clientMissedWorkoutPushEnabled());
+        }
+        if (request.clientWeighInPushEnabled() != null) {
+            settingsService.setClientWeighInPushEnabled(request.clientWeighInPushEnabled());
+        }
+        return current();
+    }
+
+    private TrainerPreferencesResponse current() {
         return new TrainerPreferencesResponse(
-                settingsService.setWeeklyReportEmailEnabled(request.weeklyReportEmailEnabled()));
+                settingsService.isWeeklyReportEmailEnabled(),
+                settingsService.isClientMissedWorkoutPushEnabled(),
+                settingsService.isClientWeighInPushEnabled());
     }
 }
