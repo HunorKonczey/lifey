@@ -152,6 +152,8 @@
   "removeServingTooltip": "Adag törlése",
   "servingNameRequiredError": "Adj nevet az adagnak",
   "servingGramsRangeError": "1 és 5000 g között",
+  "fiberLabel": "Rost",
+  "sugarLabel": "Cukor",
   "fiberOptionalLabel": "Rost (opcionális)",
   "sugarOptionalLabel": "Cukor (opcionális)",
   "mustBeZeroOrMoreError": "0 vagy annál nagyobbnak kell lennie",

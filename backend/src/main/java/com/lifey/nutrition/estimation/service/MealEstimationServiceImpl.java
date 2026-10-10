@@ -108,6 +108,8 @@ public class MealEstimationServiceImpl implements MealEstimationService {
                 round(Math.min(sanitize(item.proteinGrams()), grams)),
                 round(Math.min(sanitize(item.carbsGrams()), grams)),
                 round(Math.min(sanitize(item.fatGrams()), grams)),
+                round(Math.min(sanitize(item.fiberGrams()), grams)),
+                round(Math.min(sanitize(item.sugarGrams()), grams)),
                 item.confidence() == null ? EstimationConfidence.LOW : item.confidence());
     }
 

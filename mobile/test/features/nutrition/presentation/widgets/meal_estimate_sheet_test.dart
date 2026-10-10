@@ -54,6 +54,8 @@ class _FakeFoods extends FoodController {
       proteinPer100g: protein,
       carbsPer100g: carbs,
       fatPer100g: fat,
+      fiberPer100g: fiber,
+      sugarPer100g: sugar,
       hidden: hidden,
     );
     added.add(food);
@@ -67,6 +69,10 @@ const _rice = EstimatedItem(
 const _chicken = EstimatedItem(
     name: 'Chicken', grams: 150, calories: 248, protein: 46.5, carbs: 0, fat: 5.4,
     confidence: EstimateConfidence.low);
+
+const _oats = EstimatedItem(
+    name: 'Oats', grams: 250, calories: 190, protein: 7, carbs: 32, fat: 4,
+    confidence: EstimateConfidence.medium, fiber: 5, sugar: 7.5);
 
 void main() {
   late _FakeFoods foods;
@@ -134,6 +140,51 @@ void main() {
     expect(find.widgetWithText(TextFormField, '130'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, '28'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, '0.3'), findsOneWidget);
+  });
+
+  testWidgets('the estimated fibre and sugar are reviewable, rescale with the portion and are saved per 100 g (LIF-152)',
+      (tester) async {
+    await open(tester, const MealEstimationDone(MealEstimate(items: [_oats])));
+
+    expect(tester.widget<TextFormField>(find.byKey(const Key('estimate-fiber'))).controller!.text, '5');
+    expect(tester.widget<TextFormField>(find.byKey(const Key('estimate-sugar'))).controller!.text, '7.5');
+
+    // Half the portion: half the fibre and sugar.
+    await tester.enterText(find.widgetWithText(TextFormField, '250'), '125');
+    await tester.pump();
+    expect(tester.widget<TextFormField>(find.byKey(const Key('estimate-fiber'))).controller!.text, '2.5');
+    expect(tester.widget<TextFormField>(find.byKey(const Key('estimate-sugar'))).controller!.text, '3.8');
+
+    // A correction by the user is what is saved: 3 g fibre in 125 g = 2.4 g per 100 g.
+    await tester.enterText(find.byKey(const Key('estimate-fiber')), '3');
+    await tester.tap(find.widgetWithText(FilledButton, 'Add 1 item'));
+    await tester.pumpAndSettle();
+
+    expect(foods.added.single.fiberPer100g, closeTo(2.4, 0.001));
+    expect(foods.added.single.sugarPer100g, closeTo(3.8 / 125 * 100, 0.001));
+  });
+
+  testWidgets('no estimate stays unknown: the saved food has no fibre or sugar, and the fields may stay empty',
+      (tester) async {
+    await open(tester, const MealEstimationDone(MealEstimate(items: [_rice])));
+
+    expect(tester.widget<TextFormField>(find.byKey(const Key('estimate-fiber'))).controller!.text, isEmpty);
+    await tester.tap(find.widgetWithText(FilledButton, 'Add 1 item'));
+    await tester.pumpAndSettle();
+
+    expect(foods.added.single.fiberPer100g, isNull);
+    expect(foods.added.single.sugarPer100g, isNull);
+  });
+
+  testWidgets('a negative fibre figure is refused', (tester) async {
+    await open(tester, const MealEstimationDone(MealEstimate(items: [_oats])));
+
+    await tester.enterText(find.byKey(const Key('estimate-fiber')), '-1');
+    await tester.tap(find.widgetWithText(FilledButton, 'Add 1 item'));
+    await tester.pumpAndSettle();
+
+    expect(foods.added, isEmpty);
+    expect(popped, isNull);
   });
 
   testWidgets('a removed item is not added', (tester) async {

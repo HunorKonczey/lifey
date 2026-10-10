@@ -76,6 +76,14 @@ class ClaudeMealPhotoAnalyzerTest {
     }
 
     @Test
+    void theSchemaAsksForFibreAndSugarsOfThePortion() throws Exception {
+        assertThat(ClaudeMealPhotoAnalyzer.SYSTEM_PROMPT).contains("dietary fibre and total sugars");
+        assertThat(java.util.Arrays.stream(MealPhotoEstimate.Item.class.getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName))
+                .contains("fiberGrams", "sugarGrams");
+    }
+
+    @Test
     void analyze_returnsTheStructuredAnswer() {
         givenResponse(StopReason.END_TURN, ESTIMATE);
 

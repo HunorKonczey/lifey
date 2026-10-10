@@ -39,7 +39,7 @@ class MealEstimationControllerTest {
     @Test
     void estimate_returnsItemsForThePortion() throws Exception {
         when(service.estimate(any())).thenReturn(new MealEstimateResponse(List.of(
-                new EstimatedItemResponse("Grilled chicken breast", 150, 248, 46.5, 0, 5.4,
+                new EstimatedItemResponse("Grilled chicken breast", 150, 248, 46.5, 0, 5.4, 0.0, 1.5,
                         EstimationConfidence.HIGH)),
                 null));
 
@@ -48,6 +48,8 @@ class MealEstimationControllerTest {
                 .andExpect(jsonPath("$.items[0].name").value("Grilled chicken breast"))
                 .andExpect(jsonPath("$.items[0].estimatedGrams").value(150.0))
                 .andExpect(jsonPath("$.items[0].calories").value(248.0))
+                .andExpect(jsonPath("$.items[0].fiberGrams").value(0.0))
+                .andExpect(jsonPath("$.items[0].sugarGrams").value(1.5))
                 .andExpect(jsonPath("$.items[0].confidence").value("HIGH"));
     }
 

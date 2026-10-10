@@ -605,6 +605,14 @@
   "@fatOptionalLabel": {
     "description": "Label for the optional fat field"
   },
+  "fiberLabel": "Fibre",
+  "@fiberLabel": {
+    "description": "Label of a fibre field (grams) where space is tight, e.g. the AI meal-estimate review"
+  },
+  "sugarLabel": "Sugar",
+  "@sugarLabel": {
+    "description": "Label of a sugar field (grams) where space is tight, e.g. the AI meal-estimate review"
+  },
   "fiberOptionalLabel": "Fibre (optional)",
   "@fiberOptionalLabel": {
     "description": "Label for the optional dietary fibre field of a food (per 100 g)"
