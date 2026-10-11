@@ -81,6 +81,7 @@ Nincs integráció. A HealthKit és a Health Connect kész.
 | Tétel | Mi | Hol |
 |---|---|---|
 | Web (marad) | a `/hu` első betöltése ~215 KB gzip (volt 278), a cél 100 KB: a maradék a közös React/Next + React Query/Zustand alap; a marketing tokenek (`72` D5) és a Lighthouse újramérés (`lhci`, telepített URL kell) is nyitva | `landing_page/REMAINING-WORK.md` §2.2, §2.3 |
+| Lapozás: Gyakorlatok és Edzések fül | ✅ kész (2026-10-11, LIF-113): mindkét fül a helyi cache egy 40 soros, görgetésre növekvő ablakát rajzolja (`watchPaged`, `ExercisePagedController` / `WorkoutSessionsPagedController`); az Edzések fül az ablakot maga növeli, amíg az nem ér vissza a hét elejéig, vagy az „Összes" szűrt listája fél oldalnál rövidebb. Nézet, nem a lista: a statisztika, dashboard, sorozatok, ajánlott edzés és PR-számlálók még a teljes listát olvassák (`workoutSessionControllerProvider`) — nyitva, hogy ezek SQL-aggregátumból / könnyű vetületből dolgozzanak | [`14`](14-pagination-plan.md) 1.3 |
 | Zene M4 | Spotify iOS-en (App Remote) — Spotify Developer regisztráció kell | [`music/46`](music/46-workout-music-controls-plan.md) |
 | Design-backlog | a redesign mockupjaiból adódó extra UI-elemek — egyenként ellenőrizni, mi készült el (a kalória-sparkline pl. már kész) | [`design/19`](design/19-new-features.md) |
 

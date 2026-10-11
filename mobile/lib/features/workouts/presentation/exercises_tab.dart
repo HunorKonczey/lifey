@@ -13,6 +13,7 @@ import '../../../shared/widgets/ds/lifey_card.dart';
 import '../../../shared/widgets/ds/list_group.dart';
 import '../../../shared/widgets/ds/section_label.dart';
 import '../application/exercise_controller.dart';
+import '../application/exercise_paged_controller.dart';
 import '../domain/exercise.dart';
 import '../domain/exercise_enums.dart';
 import 'exercise_detail_screen.dart';
@@ -43,6 +44,22 @@ class ExercisesTab extends ConsumerStatefulWidget {
 }
 
 class _ExercisesTabState extends ConsumerState<ExercisesTab> {
+  /// Distance from the bottom (in px) at which the next page is requested.
+  static const _loadMoreThreshold = 300.0;
+
+  /// Edge-triggered like the Foods tab: the next page is asked for when the viewport *enters* the zone near the bottom, not on
+  /// every scroll notification while it lingers there.
+  bool _nearBottom = false;
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    final metrics = notification.metrics;
+    final isNearBottom = metrics.maxScrollExtent - metrics.pixels <= _loadMoreThreshold;
+    if (isNearBottom && !_nearBottom) {
+      ref.read(exercisePagedControllerProvider(widget.categoryFilter).notifier).loadMore();
+    }
+    _nearBottom = isNearBottom;
+    return false;
+  }
 
   Future<void> _delete(Exercise exercise) async {
     final l10n = AppLocalizations.of(context)!;
@@ -79,7 +96,9 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(exerciseControllerProvider);
+    // The window the tab draws (LIF-113); deleting and refreshing still go through the whole-list controller.
+    final state = ref.watch(exercisePagedControllerProvider(widget.categoryFilter));
+    final hasMore = ref.read(exercisePagedControllerProvider(widget.categoryFilter).notifier).hasMore;
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
@@ -101,32 +120,42 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
 
           final bottomPadding = EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, bottomPad + 88);
 
-          return CustomScrollView(
-            slivers: [
-              const OverlapInsetSliver(),
-              const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s8)),
-              if (widget.categoryFilter != null)
-                _FlatList(
-                  exercises: exercises
-                      .where((e) => e.category == widget.categoryFilter)
-                      .toList(),
-                  padding: bottomPadding,
-                  l10n: l10n,
-                  onDelete: _delete,
-                  onEdit: _openEdit,
-                  onTap: _openDetail,
-                )
-              else
-                _GroupedList(
-                  exercises: exercises,
-                  presentCategories: presentCategories,
-                  padding: bottomPadding,
-                  l10n: l10n,
-                  onDelete: _delete,
-                  onEdit: _openEdit,
-                  onTap: _openDetail,
-                ),
-            ],
+          return NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: CustomScrollView(
+              slivers: [
+                const OverlapInsetSliver(),
+                const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s8)),
+                if (widget.categoryFilter != null)
+                  // The query already holds only this group.
+                  _FlatList(
+                    exercises: exercises,
+                    padding: bottomPadding,
+                    l10n: l10n,
+                    onDelete: _delete,
+                    onEdit: _openEdit,
+                    onTap: _openDetail,
+                  )
+                else
+                  _GroupedList(
+                    exercises: exercises,
+                    presentCategories: presentCategories,
+                    padding: bottomPadding,
+                    l10n: l10n,
+                    onDelete: _delete,
+                    onEdit: _openEdit,
+                    onTap: _openDetail,
+                  ),
+                if (hasMore)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      key: Key('exercises-loading-more'),
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.s16),
+                      child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+                    ),
+                  ),
+              ],
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
