@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/format/lifey_format.dart';
+import '../../../../core/health/weight_health_writer.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/app_type.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -31,8 +33,9 @@ Future<void> showAddWeightSheet(BuildContext context) => showLifeySheet<void>(
 /// a reference under it, the date, Save.
 ///
 /// The value is whole grams ([WeightAmount]), so a hundred taps add exactly
-/// ten kilograms. The canvas's "Also saved to Health Connect" line is not
-/// drawn: the app only *imports* weight, so the claim would be false.
+/// ten kilograms. The canvas's "Also saved to Health Connect" line is drawn
+/// only when it is true (LIF-109): the Health integration is on and the write
+/// permission is granted, so the weigh-in really is copied to the health store.
 class AddWeightSheet extends ConsumerStatefulWidget {
   const AddWeightSheet({super.key});
 
@@ -134,6 +137,8 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
             weight: _amount.kg,
             note: _note.text,
           );
+      // After the save, never before or instead of it: the copy to Health is best effort and silent.
+      unawaited(ref.read(weightHealthWriterProvider).write(kg: _amount.kg, at: _date));
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) setState(() => _submitError = AppLocalizations.of(context)!.couldNotSaveEntryMessage);
@@ -267,6 +272,23 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
           textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(labelText: l10n.weightNoteLabel, hintText: l10n.weightNoteHint),
         ),
+        if (ref.watch(healthWeightWriteAvailableProvider).value ?? false) ...[
+          const SizedBox(height: AppSpacing.s12),
+          Row(
+            key: const Key('weight-also-saved-to-health'),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.favorite_rounded, size: 16, color: context.metricColors.heart),
+              const SizedBox(width: AppSpacing.s8),
+              Flexible(
+                child: Text(
+                  l10n.weightSheetAlsoSavedToHealth(Platform.isIOS ? l10n.healthStoreAppleHealth : l10n.healthStoreHealthConnect),
+                  style: t.bodySmall!.copyWith(color: p.text2),
+                ),
+              ),
+            ],
+          ),
+        ],
         if (_submitError != null) ...[
           const SizedBox(height: AppSpacing.s12),
           Text(_submitError!, style: t.bodyMedium!.copyWith(color: context.metricColors.negative)),
