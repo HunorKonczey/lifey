@@ -670,8 +670,13 @@ class PullEngine {
             trainerCommentPushEnabled: Value(json['trainerCommentPushEnabled'] as bool? ?? true),
             trainerGoalsPushEnabled: Value(json['trainerGoalsPushEnabled'] as bool? ?? true),
             programAssignedPushEnabled: Value(json['programAssignedPushEnabled'] as bool? ?? true),
-            // A change made on the web reaches the phone (LIF-153); a server that predates it says nothing, which is "visible".
+            // The chat switches too (LIF-154): a change made on the web reaches the phone, instead of staying where it was made
+            // and being written back over by the phone's next save. The server always sends the quiet hours - null when there is no
+            // window - so a missing value is no window, and a server that predates a switch says nothing, which is "on".
+            chatPushEnabled: Value(json['chatPushEnabled'] as bool? ?? true),
             chatOnlineVisible: Value(json['chatOnlineVisible'] as bool? ?? true),
+            chatQuietHoursStart: Value(json['chatQuietHoursStart'] as String?),
+            chatQuietHoursEnd: Value(json['chatQuietHoursEnd'] as String?),
             restTimerEnabled: Value(json['restTimerEnabled'] as bool? ?? true),
             defaultRestSeconds: Value(json['defaultRestSeconds'] as int? ?? 90),
           ),
