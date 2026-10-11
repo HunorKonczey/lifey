@@ -8,6 +8,7 @@ import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/exercise_controller.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
+import 'package:lifey/features/workouts/application/workout_sessions_paged_controller.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
@@ -16,6 +17,7 @@ import 'package:lifey/features/workouts/presentation/sessions_tab.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/date_range_filter_bar.dart';
 import 'package:lifey/shared/widgets/history_boundary_row.dart';
+import 'fake_paged_sessions.dart';
 
 /// Covers the history boundary row in a workout list (frame P12, `69` §4.2)
 /// at both `historyDays: 30` and `historyDays: null`, and D-P6's explicit
@@ -103,6 +105,7 @@ Future<ProviderContainer> _pumpSessionsTab(
     ProviderScope(
       overrides: [
         workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
+        workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
         exerciseControllerProvider.overrideWith(_FakeExerciseController.new),
         workoutTemplateControllerProvider.overrideWith(_FakeWorkoutTemplateController.new),
         settingsControllerProvider.overrideWith(_FakeSettingsController.new),

@@ -8,6 +8,7 @@ import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/exercise_controller.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
+import 'package:lifey/features/workouts/application/workout_sessions_paged_controller.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
@@ -17,6 +18,7 @@ import 'package:lifey/features/workouts/presentation/widgets/session_row.dart';
 import 'package:lifey/features/workouts/presentation/widgets/week_summary_row.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/date_range_filter_bar.dart';
+import 'fake_paged_sessions.dart';
 
 class _FakeSessions extends WorkoutSessionController {
   _FakeSessions(this._sessions);
@@ -73,6 +75,7 @@ Future<_FakeSessions> _pump(
     ProviderScope(
       overrides: [
         workoutSessionControllerProvider.overrideWith(() => fake),
+        workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
         exerciseControllerProvider.overrideWith(_NoExercises.new),
         workoutTemplateControllerProvider.overrideWith(_NoTemplates.new),
         settingsControllerProvider.overrideWith(_Settings.new),

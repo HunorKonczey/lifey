@@ -7,12 +7,14 @@ import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/exercise_controller.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
+import 'package:lifey/features/workouts/application/workout_sessions_paged_controller.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/domain/workout_template.dart';
 import 'package:lifey/features/workouts/presentation/sessions_tab.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'fake_paged_sessions.dart';
 
 /// C1.7: the sessions-tab kind/type filter (mind / erősítő / cardio +
 /// másodlagos típus-szűrő). See docs/cardio/59-cardio-implementation-plan.md
@@ -127,6 +129,7 @@ void main() {
         ProviderScope(
           overrides: [
             workoutSessionControllerProvider.overrideWith(() => _FakeSessions(sessions)),
+            workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
             exerciseControllerProvider.overrideWith(_FakeExercises.new),
             workoutTemplateControllerProvider.overrideWith(_FakeTemplates.new),
             settingsControllerProvider.overrideWith(_FakeSettings.new),

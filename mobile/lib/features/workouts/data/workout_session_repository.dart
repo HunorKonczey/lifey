@@ -64,84 +64,122 @@ class WorkoutSessionRepository {
       final blocked = blockedByActiveDelete(ops);
       final sessionRows =
           allSessionRows.where((r) => !blocked.contains(r.clientId)).toList();
-      if (sessionRows.isEmpty) return const <WorkoutSession>[];
-
-      final exerciseNames = {
-        for (final row in await _db.select(_db.exercises).get())
-          row.clientId: row.name,
-      };
-
-      final exercisesBySession = <String, List<SessionExercise>>{};
-      for (final link in await _db.select(_db.workoutSessionExercises).get()) {
-        exercisesBySession.putIfAbsent(link.sessionClientId, () => []).add(
-              SessionExercise(
-                exerciseClientId: link.exerciseClientId,
-                exerciseName: exerciseNames[link.exerciseClientId] ?? 'Unknown',
-                targetSets: link.targetSets,
-              ),
-            );
-      }
-
-      final setsBySession = <String, List<ExerciseSet>>{};
-      for (final set in await _db.select(_db.exerciseSets).get()) {
-        setsBySession.putIfAbsent(set.sessionClientId, () => []).add(
-              ExerciseSet(
-                exerciseClientId: set.exerciseClientId,
-                exerciseName: exerciseNames[set.exerciseClientId] ?? 'Unknown',
-                reps: set.reps,
-                weight: set.weight,
-                performedAt: set.performedAt,
-              ),
-            );
-      }
-      // Rest time is a delta between consecutive sets, so each session's
-      // sets must be in performedAt order before they reach the UI.
-      for (final sets in setsBySession.values) {
-        sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
-      }
-
-      final cardioBySession = {
-        for (final row in await _db.select(_db.cardioDetails).get())
-          row.sessionClientId: _cardioMetricsFromRow(row),
-      };
-      final splitsBySession = <String, List<CardioSplit>>{};
-      for (final row in await _db.select(_db.cardioSplits).get()) {
-        splitsBySession
-            .putIfAbsent(row.sessionClientId, () => [])
-            .add(_cardioSplitFromRow(row));
-      }
-      for (final splits in splitsBySession.values) {
-        splits.sort((a, b) => a.splitIndex.compareTo(b.splitIndex));
-      }
-      final waypointsBySession = <String, List<CardioWaypoint>>{};
-      for (final row in await _db.select(_db.cardioWaypoints).get()) {
-        waypointsBySession
-            .putIfAbsent(row.sessionClientId, () => [])
-            .add(_cardioWaypointFromRow(row));
-      }
-      for (final waypoints in waypointsBySession.values) {
-        waypoints.sort((a, b) => a.waypointIndex.compareTo(b.waypointIndex));
-      }
-
-      final sessions = sessionRows
-          .map((row) => _toDomain(
-                row,
-                exercisesBySession[row.clientId] ?? const [],
-                setsBySession[row.clientId] ?? const [],
-                cardio: cardioBySession[row.clientId],
-                splits: splitsBySession[row.clientId] ?? const [],
-                waypoints: waypointsBySession[row.clientId] ?? const [],
-              ))
-          .toList()
-        // Upcoming (not-yet-started) sessions have no startedAt — fall back
-        // to scheduledFor so the comparator never sees a null.
-        ..sort((a, b) {
-          final aKey = a.startedAt ?? a.scheduledFor ?? DateTime(0);
-          final bKey = b.startedAt ?? b.scheduledFor ?? DateTime(0);
-          return bKey.compareTo(aKey);
-        });
-      return sessions;
+      return _hydrate(sessionRows);
     });
+  }
+
+  /// The [limit] newest *started* sessions plus every not-yet-started (upcoming) one, newest first - the Sessions tab's window
+  /// (docs/14-pagination-plan.md Phase 1.3, LIF-113). Unlike [watchAll] it reads the sets, cardio rows and splits of only those
+  /// sessions, so what a change costs no longer grows with the whole history. Upcoming ones are few (a trainer's schedule) and
+  /// have no start time to order by, so they always come with the window.
+  ///
+  /// The pending-delete filter can drop rows below the SQL LIMIT, so a caller that must know whether older sessions exist asks for
+  /// `limit + 1` and counts the started ones.
+  Stream<List<WorkoutSession>> watchPaged({required int limit}) {
+    final started$ = (_db.select(_db.workoutSessions)
+          ..where((t) => t.startedAt.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.startedAt)])
+          ..limit(limit))
+        .watch();
+    final upcoming$ = (_db.select(_db.workoutSessions)..where((t) => t.startedAt.isNull())).watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    final rows$ = combineLatest2(started$, upcoming$, (started, upcoming) => [...started, ...upcoming]);
+    return combineLatest2(rows$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
+      final (rows, ops) = pair;
+      final blocked = blockedByActiveDelete(ops);
+      return _hydrate([for (final r in rows) if (!blocked.contains(r.clientId)) r], onlyThese: true);
+    });
+  }
+
+  /// Builds the sessions for [sessionRows]: their planned exercises, sets and cardio rows, newest first.
+  ///
+  /// [onlyThese] reads the child tables for these sessions only (a window); without it they are read whole, which is what
+  /// [watchAll] wants and avoids a huge `IN (...)` list.
+  Future<List<WorkoutSession>> _hydrate(List<WorkoutSessionRow> sessionRows, {bool onlyThese = false}) async {
+    if (sessionRows.isEmpty) return const <WorkoutSession>[];
+    final ids = [for (final r in sessionRows) r.clientId];
+
+    final exerciseNames = {
+      for (final row in await _db.select(_db.exercises).get()) row.clientId: row.name,
+    };
+
+    final exercisesBySession = <String, List<SessionExercise>>{};
+    final links = await (_db.select(_db.workoutSessionExercises)
+          ..where((t) => onlyThese ? t.sessionClientId.isIn(ids) : const Constant(true)))
+        .get();
+    for (final link in links) {
+      exercisesBySession.putIfAbsent(link.sessionClientId, () => []).add(
+            SessionExercise(
+              exerciseClientId: link.exerciseClientId,
+              exerciseName: exerciseNames[link.exerciseClientId] ?? 'Unknown',
+              targetSets: link.targetSets,
+            ),
+          );
+    }
+
+    final setsBySession = <String, List<ExerciseSet>>{};
+    final setRows = await (_db.select(_db.exerciseSets)
+          ..where((t) => onlyThese ? t.sessionClientId.isIn(ids) : const Constant(true)))
+        .get();
+    for (final set in setRows) {
+      setsBySession.putIfAbsent(set.sessionClientId, () => []).add(
+            ExerciseSet(
+              exerciseClientId: set.exerciseClientId,
+              exerciseName: exerciseNames[set.exerciseClientId] ?? 'Unknown',
+              reps: set.reps,
+              weight: set.weight,
+              performedAt: set.performedAt,
+            ),
+          );
+    }
+    // Rest time is a delta between consecutive sets, so each session's
+    // sets must be in performedAt order before they reach the UI.
+    for (final sets in setsBySession.values) {
+      sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
+    }
+
+    final cardioRows = await (_db.select(_db.cardioDetails)
+          ..where((t) => onlyThese ? t.sessionClientId.isIn(ids) : const Constant(true)))
+        .get();
+    final cardioBySession = {for (final row in cardioRows) row.sessionClientId: _cardioMetricsFromRow(row)};
+    final splitsBySession = <String, List<CardioSplit>>{};
+    final splitRows = await (_db.select(_db.cardioSplits)
+          ..where((t) => onlyThese ? t.sessionClientId.isIn(ids) : const Constant(true)))
+        .get();
+    for (final row in splitRows) {
+      splitsBySession.putIfAbsent(row.sessionClientId, () => []).add(_cardioSplitFromRow(row));
+    }
+    for (final splits in splitsBySession.values) {
+      splits.sort((a, b) => a.splitIndex.compareTo(b.splitIndex));
+    }
+    final waypointsBySession = <String, List<CardioWaypoint>>{};
+    final waypointRows = await (_db.select(_db.cardioWaypoints)
+          ..where((t) => onlyThese ? t.sessionClientId.isIn(ids) : const Constant(true)))
+        .get();
+    for (final row in waypointRows) {
+      waypointsBySession.putIfAbsent(row.sessionClientId, () => []).add(_cardioWaypointFromRow(row));
+    }
+    for (final waypoints in waypointsBySession.values) {
+      waypoints.sort((a, b) => a.waypointIndex.compareTo(b.waypointIndex));
+    }
+
+    return sessionRows
+        .map((row) => _toDomain(
+              row,
+              exercisesBySession[row.clientId] ?? const [],
+              setsBySession[row.clientId] ?? const [],
+              cardio: cardioBySession[row.clientId],
+              splits: splitsBySession[row.clientId] ?? const [],
+              waypoints: waypointsBySession[row.clientId] ?? const [],
+            ))
+        .toList()
+      // Upcoming (not-yet-started) sessions have no startedAt - fall back
+      // to scheduledFor so the comparator never sees a null.
+      ..sort((a, b) {
+        final aKey = a.startedAt ?? a.scheduledFor ?? DateTime(0);
+        final bKey = b.startedAt ?? b.scheduledFor ?? DateTime(0);
+        return bKey.compareTo(aKey);
+      });
   }
 
   /// Same as [watchAll], narrowed to one [SessionKind] code (`'STRENGTH'` or

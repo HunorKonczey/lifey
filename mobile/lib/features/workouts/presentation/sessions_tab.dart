@@ -25,6 +25,7 @@ import '../../settings/domain/user_settings.dart';
 import '../application/recommended_template_provider.dart';
 import '../application/session_pr_counts.dart';
 import '../application/workout_session_controller.dart';
+import '../application/workout_sessions_paged_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/session_groups.dart';
 import '../domain/week_summary.dart';
@@ -36,6 +37,8 @@ import 'widgets/recommended_workout_card.dart';
 import 'widgets/session_row.dart';
 import 'widgets/upcoming_sessions_section.dart';
 import 'widgets/week_summary_row.dart';
+import '../../streaks/domain/weekly_recap.dart';
+import '../../../core/utils/date_math.dart';
 
 /// Whether [session] passes the sessions-tab kind/type filter
 /// (docs/cardio/59-cardio-implementation-plan.md C1.7).
@@ -91,6 +94,46 @@ class SessionsTab extends ConsumerStatefulWidget {
 }
 
 class _SessionsTabState extends ConsumerState<SessionsTab> {
+  /// Distance from the bottom (in px) at which the next page is requested.
+  static const _loadMoreThreshold = 300.0;
+
+  /// Edge-triggered like the Foods tab: the next page is asked for when the viewport *enters* the zone near the bottom.
+  bool _nearBottom = false;
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    final metrics = notification.metrics;
+    final isNearBottom = metrics.maxScrollExtent - metrics.pixels <= _loadMoreThreshold;
+    if (isNearBottom && !_nearBottom) {
+      ref.read(workoutSessionsPagedProvider.notifier).loadMore();
+    }
+    _nearBottom = isNearBottom;
+    return false;
+  }
+
+  /// Whether the loaded window is too short for what the tab has to show, so the next page must be loaded without waiting for a
+  /// scroll (LIF-113). The window is the newest N sessions, and the list is that window *filtered*, so a filter can leave it
+  /// nearly empty while older matching sessions are still on disk:
+  ///
+  /// - the week summary counts the whole current week, and the Today / Week filter are ranges - the window must reach back past
+  ///   the start of the earliest of them;
+  /// - "All" has no range, so it needs enough rows to fill a screen after the kind filter;
+  /// - the free history window ([cutoff]) is a hard stop: nothing older is ever shown, so nothing older is loaded.
+  bool _needsMoreHistory(List<WorkoutSession> window, List<WorkoutSession> filtered, DateTime? cutoff) {
+    final starts = [for (final s in window) if (s.startedAt != null) s.startedAt!.toLocal()];
+    if (starts.isEmpty) return false;
+    final oldest = starts.reduce((a, b) => a.isBefore(b) ? a : b);
+    final oldestDay = DateTime(oldest.year, oldest.month, oldest.day);
+    if (cutoff != null && oldest.isBefore(cutoff)) return false;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    var requiredFrom = WeeklyRecap.weekStartFor(now);
+    if (widget.filter == DateRangeFilter.week && addDays(today, -6).isBefore(requiredFrom)) {
+      requiredFrom = addDays(today, -6);
+    }
+    if (!oldestDay.isBefore(requiredFrom)) return true;
+    return widget.filter == DateRangeFilter.all && filtered.length < sessionsPageSize ~/ 2;
+  }
   Future<void> _edit(BuildContext context, WorkoutSession session) {
     return openSessionScreen(Navigator.of(context, rootNavigator: true), session);
   }
@@ -187,7 +230,9 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(workoutSessionControllerProvider);
+    // The window the tab draws (LIF-113); deleting and refreshing still go through the whole-history controller.
+    final state = ref.watch(workoutSessionsPagedProvider);
+    final pagedSessions = ref.read(workoutSessionsPagedProvider.notifier);
     final recommended = ref.watch(recommendedTemplateProvider);
     final prCounts = ref.watch(sessionPrCountsProvider);
     final l10n = AppLocalizations.of(context)!;
@@ -221,6 +266,14 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
             ? filtered
             : filtered.where((s) => !s.startedAt!.toLocal().isBefore(cutoff)).toList();
         final truncated = visible.length < filtered.length;
+
+        // A filter can leave the window nearly empty while older matching sessions are still on disk: load them now, after this
+        // frame, rather than waiting for a scroll that a short list never gets.
+        if (pagedSessions.hasMore && _needsMoreHistory(sessions, filtered, cutoff)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) pagedSessions.loadMore();
+          });
+        }
 
         if (sessions.isEmpty || (filtered.isEmpty && upcoming.isEmpty)) {
           return RefreshIndicator(
@@ -272,11 +325,19 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
             _widgetEntry(const SizedBox(height: AppSpacing.s8)),
           ],
           if (truncated) _widgetEntry(const HistoryBoundaryRow()),
+          if (pagedSessions.hasMore && !truncated)
+            _widgetEntry(const Padding(
+              key: Key('sessions-loading-more'),
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.s16),
+              child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+            )),
         ];
 
         return RefreshIndicator(
           onRefresh: () => ref.read(workoutSessionControllerProvider.notifier).refresh(),
-          child: CustomScrollView(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               const OverlapInsetSliver(),
@@ -310,6 +371,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
                 ),
               ),
             ],
+          ),
           ),
         );
       },

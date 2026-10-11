@@ -8,6 +8,7 @@ import '../../../core/sync/outbox_writer.dart';
 import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
 import '../domain/exercise.dart';
+import '../domain/exercise_enums.dart';
 
 /// Local-first access to the shared exercise master list.
 class ExerciseRepository {
@@ -25,6 +26,34 @@ class ExerciseRepository {
       return rows.where((r) => !blocked.contains(r.clientId)).map(_toDomain).toList();
     });
   }
+
+  /// The first [limit] exercises, for the Exercises tab's windowed list (docs/14-pagination-plan.md, LIF-113).
+  ///
+  /// With no [category] they come in the order the tab groups them - muscle group in [kMuscleGroups] order, exercises without a
+  /// known group last, then by name - so a window is a run of whole groups plus the start of the next, never a name-sorted
+  /// scatter across all of them. With a [category] it is that group only, by name. The pending-delete filter can drop rows below
+  /// the SQL LIMIT, so a caller that must know whether more rows exist asks for `limit + 1`.
+  Stream<List<Exercise>> watchPaged({required int limit, String? category}) {
+    final exercises$ = (_db.select(_db.exercises)
+          ..where((t) => category == null ? const Constant(true) : t.category.equals(category))
+          ..orderBy([
+            if (category == null) (t) => OrderingTerm.asc(_muscleGroupRank),
+            (t) => OrderingTerm.asc(t.name),
+          ])
+          ..limit(limit))
+        .watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(exercises$, pendingOps$, (rows, ops) {
+      final blocked = blockedByActiveDelete(ops);
+      return rows.where((r) => !blocked.contains(r.clientId)).map(_toDomain).toList();
+    });
+  }
+
+  /// `CASE category WHEN 'CHEST' THEN 0 ... ELSE n END` over [kMuscleGroups] - the SQL twin of the tab's grouping order. The
+  /// names are constants of ours, never user input.
+  static final _muscleGroupRank = CustomExpression<int>(
+    'CASE category ${[for (final (i, g) in kMuscleGroups.indexed) "WHEN '$g' THEN $i"].join(' ')} ELSE ${kMuscleGroups.length} END',
+  );
 
   /// Returns the newly generated [Exercise.clientId] — [getOrCreateByName]
   /// needs it to resolve a lookup miss into a usable id.

@@ -2,9 +2,10 @@
 
 Status: **partly implemented.** Foods went through the whole track (UI pagination, a
 pageable/searchable backend endpoint, then delta sync); meals have the local windowed read
-(`MealRepository.watchPaged`), and recipes gained the pageable/searchable backend query.
-Exercises, sessions and the rest still load whole tables — the plan below is still the recipe
-for them.
+(`MealRepository.watchPaged`), recipes gained the pageable/searchable backend query, and the
+Exercises and Sessions tabs read a growing local window (LIF-113, see "Phase 1.3 status" below).
+The recipes tab and the other consumers of whole tables still load everything — the plan below is
+still the recipe for them.
 Author: planning doc (implement in phases)
 Scope: Foods tab first, then every long list (meals, recipes, exercises, sessions, …)
 
@@ -159,8 +160,33 @@ each feature's existing ordering (e.g. meals/sessions likely by date desc).
 Foods and Meals have already shipped Phase 1 on mobile:
 `FoodRepository.watchPaged`/`FoodController.loadMore` (`mobile/lib/features/nutrition/data/food_repository.dart`,
 `mobile/lib/features/nutrition/application/food_controller.dart`) windowed-scroll the
-Foods tab, and the same pattern is live for Meals. Recipes/Exercises/Sessions
-(Phase 1.3) are still open.
+Foods tab, and the same pattern is live for Meals. Recipes (Phase 1.3) is still open;
+Exercises and Sessions are done as tab-level windows, below.
+
+### Phase 1.3 status — Exercises and Sessions (LIF-113)
+
+Both tabs now draw a window of the local cache, 40 rows at a time, grown by a scroll-triggered
+`loadMore` (300 px from the bottom, edge-triggered) with a footer spinner while older rows exist.
+The backend is never paged for them; this bounds what the tab itself reads and builds.
+
+- **Exercises** — `ExerciseRepository.watchPaged(limit, category)` + `ExercisePagedController`
+  (a family keyed by the muscle-group chip). Without a chip the SQL order is the tab's grouping
+  order (`kMuscleGroups` rank via a `CASE`, unknown group last, then name), so a window is a run of
+  whole groups, never a name-sorted scatter across all of them. With a chip the group is filtered in
+  SQL.
+- **Sessions** — `WorkoutSessionRepository.watchPaged(limit)` + `WorkoutSessionsPagedController`:
+  the newest `limit` *started* sessions plus every upcoming (trainer-scheduled) one, with sets,
+  cardio rows and splits read for those sessions only (`_hydrate(..., onlyThese: true)`).
+  Because the tab shows the window *filtered* (Today / Week / kind), and the week summary counts
+  the whole week, `SessionsTab` also grows the window by itself while it does not reach back past
+  the start of the current week, or — under "All" — while the filtered list is under half a page.
+  The free-tier history cutoff is a hard stop: nothing older than it is loaded.
+- Both read `limit + 1` rows to know whether more exist without a count query.
+- **A view, not the list.** `exerciseControllerProvider` and `workoutSessionControllerProvider`
+  still hold the whole tables — the pickers, the statistics, the dashboard, streaks, the
+  recommended workout and the PR counts need them complete — and the tabs still delete and
+  refresh through them. Making those consumers aggregate in SQL (or read a light projection) is
+  the remaining step before the full session list stops being loaded at all.
 
 Critically, Phase 1 also already added `foodSearchProvider`
 (`food_controller.dart`), a **second, unbounded** stream over
@@ -391,7 +417,7 @@ the design and migration plan.
 
 1. **Phase 1.1 + 1.2** — Foods tab pagination — **done**.
 2. **Phase 1.3** — roll out to recipes / exercises / sessions (meals already
-   done alongside foods).
+   done alongside foods; exercises and sessions done as tab windows, LIF-113).
 3. **Phase 2.1** — pageable + searchable `/foods` endpoint (backend).
 4. **Phase 2.2** — migrate web `FoodsView` to server pagination + search — do
    this promptly once 2.1 ships, since the web table is the one actively
