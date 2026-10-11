@@ -5,6 +5,7 @@ import com.lifey.chat.dto.OnlineEventPayload;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatParticipant;
 import com.lifey.chat.repository.ChatParticipantRepository;
+import com.lifey.chat.spi.ChatPresencePreferences;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,6 +55,9 @@ class ChatOnlinePresenceTest {
     ChatEventBus eventBus;
 
     @Mock
+    ChatPresencePreferences preferences;
+
+    @Mock
     TaskScheduler scheduler;
 
     @Mock
@@ -62,7 +67,7 @@ class ChatOnlinePresenceTest {
 
     @BeforeEach
     void setUp() {
-        presence = new ChatOnlinePresence(participantRepository, registry, eventBus, scheduler, Duration.ofSeconds(15));
+        presence = new ChatOnlinePresence(participantRepository, registry, eventBus, preferences, scheduler, Duration.ofSeconds(15));
         when(participantRepository.findAllForUser(USER)).thenReturn(List.of(
                 participantIn(conversation(1L, USER, PEER, null)),
                 participantIn(conversation(2L, USER, OTHER_PEER, null)),
@@ -152,6 +157,90 @@ class ChatOnlinePresenceTest {
         expiry.getValue().run();
 
         verify(eventBus, never()).publish(any(), any(ChatEvent.class));
+    }
+
+    // ---- the switch (LIF-153) ----
+
+    @Test
+    void aUserWhoHidesThemselves_isNeverAnnounced_andIsToldAboutNobody() {
+        when(preferences.hiddenAmong(any())).thenReturn(Set.of(USER));
+        when(eventBus.isConnected(PEER)).thenReturn(true);
+
+        presence.connected(USER, emitter);
+
+        verify(eventBus, never()).publish(any(), any(ChatEvent.class));
+        verify(registry, never()).sendTo(any(), any(), any());
+    }
+
+    @Test
+    void aPeerWhoHidesThemselves_isNeitherToldAboutTheNewcomer_norShownToThem() {
+        when(preferences.hiddenAmong(any())).thenReturn(Set.of(PEER));
+        when(eventBus.isConnected(PEER)).thenReturn(true);
+        when(eventBus.isConnected(OTHER_PEER)).thenReturn(true);
+
+        presence.connected(USER, emitter);
+
+        verify(eventBus, never()).publish(eq(PEER), any(ChatEvent.class));
+        verify(eventBus).publish(eq(OTHER_PEER), any(ChatEvent.class));
+        ArgumentCaptor<ChatEvent> shown = ArgumentCaptor.captor();
+        verify(registry).sendTo(eq(USER), eq(emitter), shown.capture());
+        assertThat(shown.getValue().data()).isEqualTo(new OnlineEventPayload(OTHER_PEER, true));
+    }
+
+    @Test
+    void reconcile_hidesAnAnnouncedUserWhoTurnedTheSwitchOff_bothWays() {
+        presence.connected(USER, emitter);
+        when(registry.connectedUserIds()).thenReturn(Set.of(USER));
+        when(eventBus.isConnected(PEER)).thenReturn(true);
+        // Only the user themselves has hidden; the peers asked about afterwards are all visible.
+        when(preferences.hiddenAmong(any())).thenAnswer(inv ->
+                ((java.util.Collection<Long>) inv.getArgument(0)).contains(USER) ? Set.of(USER) : Set.of());
+
+        presence.reconcile();
+
+        // Their peers are told they went offline ...
+        ArgumentCaptor<ChatEvent> told = ArgumentCaptor.captor();
+        verify(eventBus, times(2)).publish(eq(PEER), told.capture());
+        assertThat(told.getAllValues().get(1).data()).isEqualTo(new OnlineEventPayload(USER, false));
+        // ... and they lose the peer who is online.
+        ArgumentCaptor<ChatEvent> self = ArgumentCaptor.captor();
+        verify(eventBus).publish(eq(USER), self.capture());
+        assertThat(self.getValue().data()).isEqualTo(new OnlineEventPayload(PEER, false));
+    }
+
+    @Test
+    void reconcile_showsAConnectedUserWhoTurnedTheSwitchBackOn() {
+        when(preferences.hiddenAmong(any())).thenReturn(Set.of(USER)).thenReturn(Set.of());
+        presence.connected(USER, emitter);
+        verify(eventBus, never()).publish(eq(PEER), any(ChatEvent.class));
+        when(registry.connectedUserIds()).thenReturn(Set.of(USER));
+        when(eventBus.isConnected(OTHER_PEER)).thenReturn(true);
+
+        presence.reconcile();
+
+        ArgumentCaptor<ChatEvent> told = ArgumentCaptor.captor();
+        verify(eventBus).publish(eq(PEER), told.capture());
+        assertThat(told.getValue().data()).isEqualTo(new OnlineEventPayload(USER, true));
+        // And they now see who is here.
+        ArgumentCaptor<ChatEvent> self = ArgumentCaptor.captor();
+        verify(eventBus).publish(eq(USER), self.capture());
+        assertThat(self.getValue().data()).isEqualTo(new OnlineEventPayload(OTHER_PEER, true));
+    }
+
+    @Test
+    void reconcile_withNobodyOnline_asksNothing() {
+        when(registry.connectedUserIds()).thenReturn(Set.of());
+
+        presence.reconcile();
+
+        verify(preferences, never()).hiddenAmong(any());
+    }
+
+    @Test
+    void reconcile_neverLetsAFailureEscapeTheScheduler() {
+        when(registry.connectedUserIds()).thenThrow(new IllegalStateException("boom"));
+
+        presence.reconcile();
     }
 
     private ArgumentCaptor<Runnable> scheduleOneExpiry() {

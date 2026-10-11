@@ -116,6 +116,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _autoSave() {
+    // What this screen does not edit is carried over from what is stored *now*, not from when the screen opened: the
+    // notification screen can have changed it since, and a whole-object save would otherwise reset it (the chat quiet hours
+    // and the online switch, LIF-153).
+    final stored = ref.read(settingsControllerProvider).value ?? const UserSettings.defaults();
     ref
         .read(settingsControllerProvider.notifier)
         .save(
@@ -134,6 +138,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trainerGoalsPushEnabled: _trainerGoalsPushEnabled,
             programAssignedPushEnabled: _programAssignedPushEnabled,
             chatPushEnabled: _chatPushEnabled,
+            chatOnlineVisible: stored.chatOnlineVisible,
+            chatQuietHoursStart: stored.chatQuietHoursStart,
+            chatQuietHoursEnd: stored.chatQuietHoursEnd,
             restTimerEnabled: _restTimerEnabled,
             defaultRestSeconds: _defaultRestSeconds,
             watchWorkoutEnabled: _watchWorkoutEnabled,

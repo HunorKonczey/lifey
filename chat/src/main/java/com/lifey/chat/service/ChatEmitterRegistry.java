@@ -100,6 +100,11 @@ public class ChatEmitterRegistry {
         }
     }
 
+    /** Everybody with at least one stream open right now (a copy: the map keeps changing underneath). */
+    public Set<Long> connectedUserIds() {
+        return Set.copyOf(emittersByUser.keySet());
+    }
+
     /** True when at least one of this user's clients is holding a stream open. */
     public boolean isConnected(Long userId) {
         Set<SseEmitter> emitters = emittersByUser.get(userId);

@@ -21,6 +21,7 @@ import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/settings/presentation/notification_settings_screen.dart';
 import 'package:lifey/features/settings/presentation/settings_screen.dart';
 import 'package:lifey/features/settings/presentation/widgets/settings_integrations.dart';
+import 'package:lifey/features/settings/presentation/widgets/settings_kit.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/ds/tinted_chip.dart';
 
@@ -36,6 +37,20 @@ class _FakeSettings extends SettingsController {
         dailyFatGoal: 66,
         dailyWaterGoalLiters: 2.6,
       ));
+}
+
+/// A settings controller that remembers what was saved, and starts from [initial].
+class _RecordingSettings extends SettingsController {
+  _RecordingSettings(this.initial);
+
+  final UserSettings initial;
+  final saved = <UserSettings>[];
+
+  @override
+  Stream<UserSettings> build() => Stream.value(initial);
+
+  @override
+  Future<void> save(UserSettings settings) async => saved.add(settings);
 }
 
 class _FakeAuth extends AuthController {
@@ -108,8 +123,8 @@ class _FakeWatch implements WatchWorkoutService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-List<Override> _overrides({EntitlementTier tier = EntitlementTier.free, bool health = false}) => [
-      settingsControllerProvider.overrideWith(_FakeSettings.new),
+List<Override> _overrides({EntitlementTier tier = EntitlementTier.free, bool health = false, SettingsController Function()? settings}) => [
+      settingsControllerProvider.overrideWith(settings ?? _FakeSettings.new),
       authControllerProvider.overrideWith(_FakeAuth.new),
       avatarControllerProvider.overrideWith(_FakeAvatar.new),
       entitlementProvider.overrideWith(() => _FakeEntitlement(tier)),
@@ -262,6 +277,52 @@ void main() {
     // one-line title is checked on the emulator).
     final pill = tester.getRect(find.text('Metrikus'));
     expect(pill.top, greaterThan(tester.getRect(find.text('Mértékegységek')).bottom - 1));
+  });
+
+  group('the online switch and what a whole-object save must not reset (LIF-153)', () {
+    const stored = UserSettings(
+      unitSystem: UnitSystem.metric,
+      theme: ThemePreference.system,
+      language: LanguagePreference.system,
+      chatOnlineVisible: false,
+      chatQuietHoursStart: '22:00:00',
+      chatQuietHoursEnd: '07:00:00',
+    );
+
+    testWidgets('changing something on the Settings screen keeps the quiet hours and the online switch as they are stored',
+        (tester) async {
+      final recording = _RecordingSettings(stored);
+      await _pump(tester, const SettingsScreen(),
+          overrides: _overrides(settings: () => recording));
+
+      await tester.tap(find.text('Imperial'));
+      await tester.pumpAndSettle();
+
+      expect(recording.saved, hasLength(1));
+      expect(recording.saved.single.unitSystem, UnitSystem.imperial);
+      // The screen does not edit these, so a whole-object save must carry them over - not reset them.
+      expect(recording.saved.single.chatOnlineVisible, isFalse);
+      expect(recording.saved.single.chatQuietHoursStart, '22:00:00');
+      expect(recording.saved.single.chatQuietHoursEnd, '07:00:00');
+    });
+
+    testWidgets('the switch sits with the chat notifications, shows what is stored and saves the flip', (tester) async {
+      final recording = _RecordingSettings(stored);
+      await _pump(tester, const NotificationSettingsScreen(),
+          overrides: _overrides(settings: () => recording));
+
+      expect(find.text("Show when I'm online"), findsOneWidget);
+      final row = find.ancestor(of: find.text("Show when I'm online"), matching: find.byType(SettingsRow)).first;
+      final switchFinder = find.descendant(of: row, matching: find.byType(Switch));
+      expect(tester.widget<Switch>(switchFinder).value, isFalse);
+
+      await tester.tap(switchFinder);
+      await tester.pumpAndSettle();
+
+      expect(recording.saved.single.chatOnlineVisible, isTrue);
+      // Everything else in the stored settings is untouched by the flip.
+      expect(recording.saved.single.chatQuietHoursStart, '22:00:00');
+    });
   });
 
   group('notification settings', () {

@@ -807,6 +807,8 @@
   "chatNewConversationSearchHint": "Kliensek keresése…",
   "chatNewConversationEmpty": "Minden kliensednek van már szála.",
   "chatMessageAction": "Üzenet",
+  "chatOnlineVisibleLabel": "Látszódjon, hogy online vagyok",
+  "chatOnlineVisibleSubtitle": "Akikkel chatelsz, \"online\"-t látnak, amíg nyitva van az appod. Ha kikapcsolod, te sem látod másoknál.",
   "chatQuietHoursLabel": "Csendes órák",
   "chatQuietHoursSubtitle": "Ebben az idősávban nincs chat értesítés — az üzenetek attól még megérkeznek",
   "chatQuietHoursFrom": "Ettől",

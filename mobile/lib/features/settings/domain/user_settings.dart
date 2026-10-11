@@ -22,6 +22,7 @@ class UserSettings {
     this.trainerGoalsPushEnabled = true,
     this.programAssignedPushEnabled = true,
     this.chatPushEnabled = true,
+    this.chatOnlineVisible = true,
     this.chatQuietHoursStart,
     this.chatQuietHoursEnd,
     this.restTimerEnabled = true,
@@ -44,6 +45,7 @@ class UserSettings {
         trainerGoalsPushEnabled = true,
         programAssignedPushEnabled = true,
         chatPushEnabled = true,
+        chatOnlineVisible = true,
         chatQuietHoursStart = null,
         chatQuietHoursEnd = null,
         restTimerEnabled = true,
@@ -95,6 +97,9 @@ class UserSettings {
   // switch covers both the client's and the trainer's messages.
   final bool chatPushEnabled;
 
+  /// Whether the people I share a chat thread with see me online (LIF-153). Off is reciprocal: I stop seeing theirs too.
+  final bool chatOnlineVisible;
+
   /// Local-time window in which chat pushes are held back, in the shape the
   /// backend serializes a `LocalTime`: "HH:mm:ss". Both null means no window
   /// (docs/chat/40-trainer-chat-plan.md §5.4).
@@ -126,6 +131,7 @@ class UserSettings {
     bool? trainerGoalsPushEnabled,
     bool? programAssignedPushEnabled,
     bool? chatPushEnabled,
+    bool? chatOnlineVisible,
     // Nullable fields need a "was it passed at all" marker, or clearing the
     // window would be indistinguishable from leaving it alone.
     Object? chatQuietHoursStart = _unset,
@@ -149,6 +155,7 @@ class UserSettings {
       trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
       programAssignedPushEnabled: programAssignedPushEnabled ?? this.programAssignedPushEnabled,
       chatPushEnabled: chatPushEnabled ?? this.chatPushEnabled,
+      chatOnlineVisible: chatOnlineVisible ?? this.chatOnlineVisible,
       chatQuietHoursStart: chatQuietHoursStart == _unset
           ? this.chatQuietHoursStart
           : chatQuietHoursStart as String?,
@@ -177,6 +184,7 @@ class UserSettings {
       trainerGoalsPushEnabled: json['trainerGoalsPushEnabled'] as bool? ?? true,
       programAssignedPushEnabled: json['programAssignedPushEnabled'] as bool? ?? true,
       chatPushEnabled: json['chatPushEnabled'] as bool? ?? true,
+      chatOnlineVisible: json['chatOnlineVisible'] as bool? ?? true,
       chatQuietHoursStart: json['chatQuietHoursStart'] as String?,
       chatQuietHoursEnd: json['chatQuietHoursEnd'] as String?,
       restTimerEnabled: json['restTimerEnabled'] as bool? ?? true,
@@ -200,6 +208,7 @@ class UserSettings {
         'trainerGoalsPushEnabled': trainerGoalsPushEnabled,
         'programAssignedPushEnabled': programAssignedPushEnabled,
         'chatPushEnabled': chatPushEnabled,
+        'chatOnlineVisible': chatOnlineVisible,
         'chatQuietHoursStart': chatQuietHoursStart,
         'chatQuietHoursEnd': chatQuietHoursEnd,
         // This client knows about quiet hours, so its values are authoritative.

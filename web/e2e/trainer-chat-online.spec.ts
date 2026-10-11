@@ -103,4 +103,52 @@ test.describe("Trainer web chat: online", () => {
     // Not at once: the server notices a closed socket at its next heartbeat write (up to 20 s) and then waits out its grace (15 s).
     await expect(online).toBeHidden({ timeout: 70_000 });
   });
+  test("a client who turns the switch off disappears from the trainer's header while still connected, and comes back when it is on", async ({ page, request }) => {
+    test.setTimeout(180_000);
+    const runId = Date.now();
+    const trainerEmail = `e2e-hide-trainer-${runId}@example.com`;
+    const clientEmail = `e2e-hide-client-${runId}@example.com`;
+    const password = "E2eHide123!";
+
+    const trainer = await registerAndLogin(request, trainerEmail, password);
+    await grantTrainerRole(trainer.userId);
+    const client = await registerAndLogin(request, clientEmail, password);
+    const trainerToken: string = (await (await request.post(`${API_BASE}/auth/login`, { data: { email: trainerEmail, password } })).json()).accessToken;
+    const invite: { id: number } = await (await request.post(`${API_BASE}/trainer/invites`, { headers: { Authorization: `Bearer ${trainerToken}` }, data: { email: clientEmail } })).json();
+    const respond = await request.post(`${API_BASE}/trainer-invites/${invite.id}/respond`, { headers: { Authorization: `Bearer ${client.accessToken}` }, data: { accept: true } });
+    expect(respond.ok(), await respond.text()).toBeTruthy();
+
+    await page.goto("/login");
+    await page.getByPlaceholder("you@example.com").fill(trainerEmail);
+    await page.getByPlaceholder("••••••••").fill(password);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/dashboard");
+    await page.goto(`/admin/clients/${client.userId}`);
+    await page.getByRole("button", { name: "Message" }).click();
+    await page.waitForURL(/\/admin\/chat\?c=\d+/);
+    await expect(page.getByPlaceholder("Message…")).toBeVisible();
+
+    const setVisible = async (visible: boolean) => {
+      const auth = { Authorization: `Bearer ${client.accessToken}` };
+      const settings = await (await request.get(`${API_BASE}/settings`, { headers: auth })).json();
+      const res = await request.put(`${API_BASE}/settings`, { headers: auth, data: { ...settings, chatOnlineVisible: visible } });
+      expect(res.ok(), await res.text()).toBeTruthy();
+    };
+
+    const online = page.getByTestId("chat-peer-online");
+    const closeClientStream = await openStream(client.accessToken);
+    try {
+      await expect(online).toBeVisible({ timeout: 15_000 });
+
+      // The stream stays open: the person is still connected, only no longer shown. The server notices the saved setting on
+      // its next reconcile tick (30 s by default), not at once.
+      await setVisible(false);
+      await expect(online).toBeHidden({ timeout: 60_000 });
+
+      await setVisible(true);
+      await expect(online).toBeVisible({ timeout: 60_000 });
+    } finally {
+      closeClientStream();
+    }
+  });
 });

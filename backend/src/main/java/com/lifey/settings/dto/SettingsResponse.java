@@ -25,6 +25,21 @@ public record SettingsResponse(
         LocalTime chatQuietHoursStart,
         LocalTime chatQuietHoursEnd,
         Boolean restTimerEnabled,
-        Integer defaultRestSeconds
+        Integer defaultRestSeconds,
+        /** Whether the people in the user's threads see them online (LIF-153); true when the server predates the switch. */
+        Boolean chatOnlineVisible
 ) {
+
+    /** Without the online switch: the older tests, and anything that does not care. */
+    public SettingsResponse(UnitSystem unitSystem, Integer dailyCalorieGoal, Integer dailyProteinGoal, Integer dailyCarbsGoal,
+                            Integer dailyFatGoal, Double dailyWaterGoalLiters, Integer dailyStepGoal, ThemePreference theme,
+                            LanguagePreference language, Boolean workoutReminderEnabled, Boolean trainerCommentPushEnabled,
+                            Boolean trainerGoalsPushEnabled, Boolean programAssignedPushEnabled, Boolean chatPushEnabled,
+                            LocalTime chatQuietHoursStart, LocalTime chatQuietHoursEnd, Boolean restTimerEnabled,
+                            Integer defaultRestSeconds) {
+        this(unitSystem, dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal, dailyWaterGoalLiters, dailyStepGoal,
+                theme, language, workoutReminderEnabled, trainerCommentPushEnabled, trainerGoalsPushEnabled,
+                programAssignedPushEnabled, chatPushEnabled, chatQuietHoursStart, chatQuietHoursEnd, restTimerEnabled,
+                defaultRestSeconds, true);
+    }
 }

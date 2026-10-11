@@ -45,6 +45,7 @@ create table user_settings
     user_id                 bigint  not null unique references users (id),
     language                varchar(20) not null default 'SYSTEM',
     chat_push_enabled       boolean not null default true,
+    chat_online_visible     boolean not null default true,
     chat_quiet_hours_start  time,
     chat_quiet_hours_end    time
 );

@@ -29,6 +29,9 @@ public final class SettingsMapper {
         if (request.chatPushEnabled() != null) {
             settings.setChatPushEnabled(request.chatPushEnabled());
         }
+        if (request.chatOnlineVisible() != null) {
+            settings.setChatOnlineVisible(request.chatOnlineVisible());
+        }
         // The flag, not the times, decides whether to write: it is what tells
         // "the client doesn't know about quiet hours" from "the user turned
         // them off", and only the second one should clear the stored window.
@@ -62,7 +65,8 @@ public final class SettingsMapper {
                 settings.getChatQuietHoursStart(),
                 settings.getChatQuietHoursEnd(),
                 settings.isRestTimerEnabled(),
-                settings.getDefaultRestSeconds()
+                settings.getDefaultRestSeconds(),
+                settings.isChatOnlineVisible()
         );
     }
 }

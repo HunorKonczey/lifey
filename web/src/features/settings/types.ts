@@ -15,6 +15,11 @@ export interface SettingsResponse {
   /** Master switch for chat notifications (docs/chat/40-trainer-chat-plan.md §3.2). */
   chatPushEnabled: boolean;
   /**
+   * Whether the people in the user's chat threads see them online (LIF-153); off is reciprocal. Absent on an older server -
+   * treated as on.
+   */
+  chatOnlineVisible?: boolean;
+  /**
    * Local-time window in which chat pushes are held back, "HH:mm:ss" as the
    * backend serializes a `LocalTime`. Both null means no window (§5.4).
    */

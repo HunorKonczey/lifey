@@ -1,6 +1,7 @@
 package com.lifey.chat.spi.jdbc;
 
 import com.lifey.chat.spi.ChatNotificationPreferences;
+import com.lifey.chat.spi.ChatPresencePreferences;
 import com.lifey.chat.spi.ChatPushPrefs;
 import com.lifey.chat.spi.ChatRelationship;
 import com.lifey.chat.spi.ChatRelationshipGuard;
@@ -56,6 +57,9 @@ class JdbcProjectionsIntegrationTest {
 
     @Autowired
     ChatNotificationPreferences preferences;
+
+    @Autowired
+    ChatPresencePreferences presencePreferences;
 
     @Autowired
     ChatRelationshipGuard relationshipGuard;
@@ -159,6 +163,25 @@ class JdbcProjectionsIntegrationTest {
         // dropped message.
         assertThat(prefs.pushEnabled()).isTrue();
         assertThat(prefs.utcOffsetMinutes()).isZero();
+    }
+
+    // --- ChatPresencePreferences (LIF-153) ---------------------------------
+
+    @Test
+    void onlyAnExplicitOffSwitchHidesAUser_noRowAndTheDefaultAreVisible() {
+        long hidden = saveUser("Hid", "Den", 0);
+        long visible = saveUser("Vis", "Ible", 0);
+        long noRow = saveUser("No", "Row", 0);
+        saveSettings(hidden, true, null, null, "SYSTEM");
+        saveSettings(visible, true, null, null, "SYSTEM");
+        jdbcClient.sql("update user_settings set chat_online_visible = false where user_id = :id").param("id", hidden).update();
+
+        assertThat(presencePreferences.hiddenAmong(java.util.List.of(hidden, visible, noRow))).containsExactly(hidden);
+    }
+
+    @Test
+    void anEmptyAsk_isAnEmptyAnswer_withoutTouchingTheDatabase() {
+        assertThat(presencePreferences.hiddenAmong(java.util.List.of())).isEmpty();
     }
 
     // --- ChatRelationshipGuard ---------------------------------------------

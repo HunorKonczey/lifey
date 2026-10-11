@@ -87,6 +87,25 @@ public record SettingsRequest(
         @NotNull
         @Min(15)
         @Max(600)
-        Integer defaultRestSeconds
+        Integer defaultRestSeconds,
+
+        /**
+         * Nullable like {@code chatPushEnabled}: absent means "leave the stored value alone", so a client that predates the
+         * switch cannot turn it back on by saving (LIF-153).
+         */
+        Boolean chatOnlineVisible
 ) {
+
+    /** Without the online switch: how every client that predates it (and the older tests) builds a request. */
+    public SettingsRequest(UnitSystem unitSystem, Integer dailyCalorieGoal, Integer dailyProteinGoal, Integer dailyCarbsGoal,
+                           Integer dailyFatGoal, Double dailyWaterGoalLiters, Integer dailyStepGoal, ThemePreference theme,
+                           LanguagePreference language, Boolean workoutReminderEnabled, Boolean trainerCommentPushEnabled,
+                           Boolean trainerGoalsPushEnabled, Boolean programAssignedPushEnabled, Boolean chatPushEnabled,
+                           LocalTime chatQuietHoursStart, LocalTime chatQuietHoursEnd, Boolean chatQuietHoursSet,
+                           Boolean restTimerEnabled, Integer defaultRestSeconds) {
+        this(unitSystem, dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal, dailyWaterGoalLiters, dailyStepGoal,
+                theme, language, workoutReminderEnabled, trainerCommentPushEnabled, trainerGoalsPushEnabled,
+                programAssignedPushEnabled, chatPushEnabled, chatQuietHoursStart, chatQuietHoursEnd, chatQuietHoursSet,
+                restTimerEnabled, defaultRestSeconds, null);
+    }
 }

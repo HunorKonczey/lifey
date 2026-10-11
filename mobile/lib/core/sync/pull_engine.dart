@@ -670,6 +670,8 @@ class PullEngine {
             trainerCommentPushEnabled: Value(json['trainerCommentPushEnabled'] as bool? ?? true),
             trainerGoalsPushEnabled: Value(json['trainerGoalsPushEnabled'] as bool? ?? true),
             programAssignedPushEnabled: Value(json['programAssignedPushEnabled'] as bool? ?? true),
+            // A change made on the web reaches the phone (LIF-153); a server that predates it says nothing, which is "visible".
+            chatOnlineVisible: Value(json['chatOnlineVisible'] as bool? ?? true),
             restTimerEnabled: Value(json['restTimerEnabled'] as bool? ?? true),
             defaultRestSeconds: Value(json['defaultRestSeconds'] as int? ?? 90),
           ),

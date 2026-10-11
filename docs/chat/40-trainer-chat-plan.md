@@ -1875,3 +1875,55 @@ nélkül elbukik. Mobil: 3292 zöld (+6).
 
 **Nincs:** kikapcsoló („ne lássák, hogy online vagyok” — a beállítás a monolitban élne, `user_settings`, külön Story); online pont a
 beszélgetés-listában; emulátoros és iOS próba; több példányos üzem (az eseménycsatorna ma példány-helyi, §2 skálázási seam).
+
+---
+
+## 23. Megvalósítási napló — LIF-153 (az online jelzés kikapcsolója)
+
+> A §22.4 hiányzó darabja: az „online” jelzést addig mindenki látta, akivel nyitott szálat osztasz, elrejteni nem lehetett.
+
+### 23.1 Döntések
+
+- **Alapból látszik** (`chat_online_visible` = true), mint a többi chat-kapcsoló. A jelzés az edző–kliens kapcsolat természetes
+  része; aki nem akarja, kikapcsolja.
+- **A kikapcsolás kölcsönös.** Aki elrejti magát, azt sem látja, hogy mások online-e: nincs ráhangolódás úgy, hogy közben maga
+  láthatatlan. (Ezt mondja ki a kapcsoló szövege is.) Mindkét irányt a `ChatOnlinePresence` dönti el, kötegelt lekérdezéssel
+  (`ChatPresencePreferences.hiddenAmong`), nem felhasználónként.
+- **Az értékét a monolit tárolja, a chat csak olvassa.** `V94__user_settings_chat_online_visible.sql` (`user_settings`, nem a
+  chat táblái — a séma-tulajdon ellenőrzés érintetlen); a `SettingsRequest` mezője nullable, „hiányzik = megtartja”, hogy egy régi
+  kliens mentése ne kapcsolja vissza (mint a `chatPushEnabled`-nél).
+- **Nincs hívás a mentéskor.** A chat-szolgáltatás `reconcile()` (`lifey.chat.online-reconcile`, alap 30 mp) időzítője minden
+  online felhasználóra egyszerre újraolvassa a beállítást, és elrejt vagy megmutat. Így a telefon offline mentése is érvényesül,
+  amikor a szerverhez ér, és a kliensnek nem kell sorrendet tartania a mentés és egy chat-hívás között. Ára: a kapcsoló legfeljebb
+  ~30 mp-et késik.
+
+### 23.2 Ami készült
+
+- **Monolit:** a migráció, `UserSettings.chatOnlineVisible`, a mapper, a DTO-k (a régi konstruktor megmaradt).
+- **Chat-szolgáltatás:** `spi/ChatPresencePreferences` + `JdbcChatPresencePreferences`, `ChatEmitterRegistry.connectedUserIds()`, a
+  `ChatOnlinePresence` átírása (csatlakozás: rejtett felhasználó semmit sem hirdet és kezdőállapotot sem kap; a rejtett peerek
+  sem hirdetődnek neki; `reconcile`: `hide` / `show` mindkét irányban).
+- **Telefon:** Drift séma **52** (`chatOnlineVisible`), `UserSettings`, a repository, a pull (a weben átállított érték is lejön), a
+  kapcsoló az értesítések képernyőn a chat-push mellett (nem része a „N bekapcsolva”-nak és a főkapcsolónak: nem értesítés).
+- **Web:** `SettingsResponse.chatOnlineVisible?`, a kapcsoló a beállítások › értesítések szekcióban (a telefonos lista is ezt használja).
+
+### 23.3 Egy talált hiba (kijavítva)
+
+A telefon **Beállítások** képernyője minden mentésnél egy teljesen új `UserSettings`-et épített, amelybe a chat csendes óráit nem
+vitte át, így a mentés (pl. mértékegység váltása) **törölte a csendes órákat** (null + `chatQuietHoursSet: true` a szervernek).
+Ugyanez érte volna az új kapcsolót. Most a képernyő a mentés pillanatában tárolt értékekből viszi át, amit nem szerkeszt (a csendes
+órákat és az online kapcsolót) — a képernyő megnyitásakor készült másolatból nem, mert az értesítések képernyő közben módosíthatta.
+Teszt: a mértékegység-váltás után a csendes órák és a kapcsoló ugyanaz; a javítás nélkül elbukik.
+
+### 23.4 Tesztek és ami nincs
+
+Monolit 1484 zöld (+1: elküldve beírja, hiányzóra megtartja). Chat-szolgáltatás 256 zöld (+8: a rejtett felhasználó nem hirdet és
+nem kap kezdőállapotot, a rejtett peer sem a hirdetést, sem a kezdőállapotot nem kapja, `reconcile` elrejt / megmutat kölcsönösen,
+nincs kérdés ha senki sem online, a hiba nem szökik ki; valódi Postgres: csak az explicit „ki” rejt, a hiányzó sor és az alapérték
+látszik, üres kérdés üres válasz). Mobil 3309 (+7: a beállítások mentése nem nulláz, a kapcsoló látszik, mutatja a tárolt értéket
+és menti; JSON-körút). Web 1230 vitest; két e2e valódi szolgáltatásokon: a beállítási kapcsoló mentése és újratöltése, és az
+edzői fejléc: a kliens kikapcsolja, az „Online” eltűnik, miközben a stream nyitva marad, visszakapcsolva visszajön.
+
+**Nincs / nyitott:** a lista pontja (a lista nem mutat online-t); az edzői web fiókmenüjében nincs külön kapcsoló (a beállítások
+oldalon van); emulátoros és iOS próba. **Külön Story (LIF-154):** a telefon pull-ja a `chatPushEnabled`-et és a csendes órákat sem térképezi
+(a weben átállított chat-push nem jut le a telefonra) — nem ennek a jegynek a dolga.
