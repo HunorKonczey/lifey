@@ -86,7 +86,7 @@ class _MusicStickyButtonState extends ConsumerState<MusicStickyButton>
       await _openPicker();
       return;
     }
-    final action = await showModalBottomSheet<MusicPlayerSheetAction>(
+    final action = await showModalBottomSheet<MusicPlayerSheetAction>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -99,7 +99,7 @@ class _MusicStickyButtonState extends ConsumerState<MusicStickyButton>
   }
 
   Future<void> _openPicker() {
-    return showModalBottomSheet<MusicProviderId>(
+    return showModalBottomSheet<MusicProviderId>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

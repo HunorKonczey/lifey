@@ -3,8 +3,9 @@
 //
 // Counts, per file under `lib/`, the hand-rolled styling the v2 design system
 // replaces: `fontSize:` literals, `Color(0x…)` literals, `BorderRadius.circular(`
-// literals, plain `AppBar(`s, `AdaptiveAppBar(`s and the legacy `AppRadius`
-// aliases (sm / md / input / lg / nav). Files under `lib/core/theme/` (where the
+// literals, plain `AppBar(`s, `AdaptiveAppBar(`s, the legacy `AppRadius`
+// aliases (sm / md / input / lg / nav) and raw `showModalBottomSheet(` calls
+// (a sheet belongs in `showLifeySheet`, unless it brings its own frame). Files under `lib/core/theme/` (where the
 // tokens are defined) and `lib/shared/widgets/ds/` (the design system itself)
 // are skipped, as are generated files, and lines that are only a comment.
 //
@@ -27,6 +28,9 @@ const _measures = <String, String>{
   'AppBar': r'(?<![A-Za-z])AppBar\(',
   'AdaptiveAppBar': r'\bAdaptiveAppBar\(',
   'AppRadius legacy': r'\bAppRadius\.(sm|md|input|lg|nav)(All)?\b',
+  // A raw Material bottom sheet (LIF-111): a sheet that fits `showLifeySheet`'s frame (a title and a list or a form) goes through
+  // it; one that brings its own header and scroll behaviour (a feature sheet widget, a draggable one) says so with the marker.
+  'showModalBottomSheet': r'\bshowModalBottomSheet\s*[<(]',
 };
 
 /// Path fragments that are never audited.

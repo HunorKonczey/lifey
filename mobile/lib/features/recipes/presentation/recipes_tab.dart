@@ -46,7 +46,7 @@ class _RecipesTabState extends ConsumerState<RecipesTab> {
   RecipeFilter _filter = RecipeFilter.all;
 
   Future<void> _logAsMeal(BuildContext context, Recipe recipe) {
-    return showModalBottomSheet<void>(
+    return showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -67,7 +67,7 @@ class _RecipesTabState extends ConsumerState<RecipesTab> {
     }
     if (!requireAiCredits(context, ref)) return;
 
-    final answers = await showModalBottomSheet<RecipeWizardAnswers>(
+    final answers = await showModalBottomSheet<RecipeWizardAnswers>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

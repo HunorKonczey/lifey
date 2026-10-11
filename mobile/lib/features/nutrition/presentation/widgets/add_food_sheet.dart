@@ -232,7 +232,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                   title: l10n.foodAlreadyExistsMessage);
               final navigator = Navigator.of(context, rootNavigator: true);
               navigator.pop();
-              showModalBottomSheet<void>(
+              showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
                 context: navigator.context,
                 useRootNavigator: true,
                 isScrollControlled: true,

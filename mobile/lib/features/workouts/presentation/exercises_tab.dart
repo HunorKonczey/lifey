@@ -60,7 +60,7 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
   }
 
   void _openEdit(Exercise exercise) {
-    showModalBottomSheet<void>(
+    showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

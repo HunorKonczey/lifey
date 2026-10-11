@@ -165,7 +165,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
       return;
     }
 
-    showModalBottomSheet<void>(
+    showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

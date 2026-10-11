@@ -661,6 +661,8 @@
   "onboardingBannerDismissTooltip": "Bezárás",
   "onboardingProfileTileLabel": "Testadatok és célok",
   "changePhotoLabel": "Fénykép módosítása",
+  "photoSourceSheetTitle": "Fénykép hozzáadása",
+  "chatMessageSheetTitle": "Üzenet",
   "takePhotoAction": "Fénykép készítése",
   "chooseFromGalleryAction": "Választás a galériából",
   "removePhotoAction": "Fénykép eltávolítása",

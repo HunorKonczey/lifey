@@ -103,7 +103,7 @@ Future<PostWorkoutFeedback?> showPostWorkoutFeedbackSheet(
   int? initialRpe,
   String? initialNote,
 }) {
-  return showModalBottomSheet<PostWorkoutFeedback>(
+  return showModalBottomSheet<PostWorkoutFeedback>( // design-audit: ok - its own header and scroll frame
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,

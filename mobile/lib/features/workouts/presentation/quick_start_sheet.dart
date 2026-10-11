@@ -27,7 +27,7 @@ import 'widgets/gps_explainer_sheet.dart';
 /// convention so the sheet sits above the bottom nav, not clipped by the
 /// Workouts tab's own navigator.
 Future<void> showQuickStartSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,

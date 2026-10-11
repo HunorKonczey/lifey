@@ -50,6 +50,17 @@ void main() {
       expect(send, const Size.square(48));
     });
 
+    testWidgets('the picture button opens a titled sheet with the two sources (LIF-111)', (tester) async {
+      await _pump(tester, ChatComposer(onSend: (_, __) {}));
+
+      await tester.tap(find.byIcon(Icons.add_photo_alternate_outlined));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Attach an image'), findsWidgets);
+      expect(find.text('Take a photo'), findsOneWidget);
+      expect(find.text('Choose from gallery'), findsOneWidget);
+    });
+
     testWidgets('send is off until there is something to send, then hands the text over', (tester) async {
       String? sent;
       await _pump(tester, ChatComposer(onSend: (body, File? _) => sent = body));

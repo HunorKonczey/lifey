@@ -185,4 +185,33 @@ void main() {
     );
     handle.dispose();
   });
+
+  group('the long-press actions are a design-system sheet (LIF-111)', () {
+    testWidgets('an own, sent message: a titled sheet with Copy and Delete, and no Resend', (tester) async {
+      await _pump(tester, message: _message());
+
+      await tester.longPress(find.text('Holnap 17:00 jó?'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Message'), findsOneWidget, reason: 'the sheet title');
+      expect(find.text('Copy'), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+      expect(find.text('Resend'), findsNothing);
+    });
+
+    testWidgets('a failed message also offers Resend; a peer message cannot be deleted', (tester) async {
+      await _pump(tester, message: _message(state: ChatMessageState.failed));
+      await tester.longPress(find.text('Holnap 17:00 jó?'));
+      await tester.pumpAndSettle();
+      expect(find.text('Resend'), findsOneWidget);
+
+      await tester.tapAt(const Offset(10, 10)); // the scrim closes it
+      await tester.pumpAndSettle();
+      await _pump(tester, message: _message(), isOwn: false);
+      await tester.longPress(find.text('Holnap 17:00 jó?'));
+      await tester.pumpAndSettle();
+      expect(find.text('Copy'), findsOneWidget);
+      expect(find.text('Delete'), findsNothing);
+    });
+  });
 }
