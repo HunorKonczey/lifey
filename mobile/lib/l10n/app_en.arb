@@ -3630,6 +3630,14 @@
   "@chatMessageAction": {
     "description": "Action on the My Trainers settings row that opens the chat thread with that trainer"
   },
+  "chatOnlineVisibleLabel": "Show when I'm online",
+  "@chatOnlineVisibleLabel": {
+    "description": "Chat privacy switch: whether the people I chat with see that I have the app open"
+  },
+  "chatOnlineVisibleSubtitle": "The people you chat with see \"online\" while you have the app open. Turn it off and you stop seeing it for them, too.",
+  "@chatOnlineVisibleSubtitle": {
+    "description": "Explains the online switch, including that hiding is reciprocal"
+  },
   "chatQuietHoursLabel": "Quiet hours",
   "chatQuietHoursSubtitle": "No chat notifications in this window — the messages still arrive",
   "chatQuietHoursFrom": "From",

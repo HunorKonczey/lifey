@@ -40,6 +40,9 @@ class UserSettingsTable extends Table {
   // DEFAULT for the same reason as `language` above.
   BoolColumn get chatPushEnabled => boolean().withDefault(const Constant(true))();
 
+  /// Schema v52 (LIF-153): whether the people in my chat threads see me online. Defaults to true like the server.
+  BoolColumn get chatOnlineVisible => boolean().withDefault(const Constant(true))();
+
   /// Local-time window in which chat pushes are held back, "HH:mm:ss" as the
   /// backend serializes a `LocalTime`. Both null means no window (§5.4).
   TextColumn get chatQuietHoursStart => text().nullable()();

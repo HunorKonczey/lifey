@@ -2062,6 +2062,8 @@
     "notifications": "Értesítések",
     "chatPushLabel": "Chat üzenetek",
     "chatPushHint": "Értesítés, ha új üzenetet kapsz.",
+    "chatOnlineVisibleLabel": "Látszódjon, hogy online vagyok",
+    "chatOnlineVisibleHint": "Akikkel chatelsz, \"online\"-t látnak, amíg nyitva van az appod. Ha kikapcsolod, te sem látod másoknál.",
     "quietHoursLabel": "Csendes órák",
     "quietHoursHint": "Ebben az idősávban nem kapsz chat értesítést — az üzenetek attól még megérkeznek.",
     "quietHoursFrom": "Ettől",

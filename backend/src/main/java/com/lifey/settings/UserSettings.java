@@ -156,6 +156,13 @@ public class UserSettings extends BaseEntity {
     private boolean chatPushEnabled = true;
 
     /**
+     * Whether the people this user shares an open chat thread with see "online" next to them (LIF-153). Off is reciprocal: the
+     * user then sees nobody's "online" either. Role-independent, like {@link #chatPushEnabled}. Read by the chat service.
+     */
+    @Column(name = "chat_online_visible", nullable = false)
+    private boolean chatOnlineVisible = true;
+
+    /**
      * Local-time window in which chat pushes are suppressed (the messages still
      * arrive). Null means no quiet hours, which is the default. The window may
      * wrap past midnight. Honoured from I5 on.

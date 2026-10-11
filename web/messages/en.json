@@ -2062,6 +2062,8 @@
     "notifications": "Notifications",
     "chatPushLabel": "Chat messages",
     "chatPushHint": "Get notified when a new message arrives.",
+    "chatOnlineVisibleLabel": "Show when I'm online",
+    "chatOnlineVisibleHint": "The people you chat with see \"online\" while you have the app open. Turn it off and you stop seeing it for them, too.",
     "quietHoursLabel": "Quiet hours",
     "quietHoursHint": "No chat notifications in this window — the messages still arrive.",
     "quietHoursFrom": "From",

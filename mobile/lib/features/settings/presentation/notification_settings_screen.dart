@@ -9,6 +9,7 @@ import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/ds/list_group.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../application/notification_settings_controller.dart';
+import '../application/settings_controller.dart';
 import 'widgets/settings_kit.dart';
 
 /// Per-type notification toggles + a master switch
@@ -71,6 +72,17 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
   Future<void> _setChatPush(bool value) async {
     try {
       await _controller.setChatPushEnabled(value);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
+  /// Not a notification, so not part of [NotificationSettingsState] (it would count towards "N on" and the master switch): the
+  /// stored setting is saved straight away, like every other setting - offline-first, the server gets it with the next sync.
+  Future<void> _setChatOnlineVisible(bool value) async {
+    try {
+      final settings = await ref.read(settingsControllerProvider.future);
+      await ref.read(settingsControllerProvider.notifier).save(settings.copyWith(chatOnlineVisible: value));
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
     }
@@ -211,6 +223,8 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
               state.programAssignedPushEnabled, _setProgramAssignedPush),
           toggle(Icons.chat_bubble_outline_rounded, l10n.chatPushToggleLabel, l10n.chatPushToggleSubtitle,
               state.chatPushEnabled, _setChatPush),
+          toggle(Icons.visibility_outlined, l10n.chatOnlineVisibleLabel, l10n.chatOnlineVisibleSubtitle,
+              ref.watch(settingsControllerProvider).value?.chatOnlineVisible ?? true, _setChatOnlineVisible),
           toggle(Icons.bedtime_outlined, l10n.chatQuietHoursLabel, l10n.chatQuietHoursSubtitle, state.quietHoursEnabled,
               (value) => _setQuietHoursEnabled(value, state)),
           if (state.quietHoursEnabled)

@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 51;
+  int get schemaVersion => 52;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -419,6 +419,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 51) {
             await _addColumnIfMissing(m, foods, foods.favorite);
+          }
+          // V52: "show when I am online" in the chat (LIF-153) - on, like the server default.
+          if (from < 52) {
+            await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.chatOnlineVisible);
           }
         },
       );

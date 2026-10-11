@@ -71,6 +71,28 @@ class SettingsServiceImplTest {
     }
 
     @Test
+    void update_theOnlineSwitch_isWrittenWhenSent_andKeptWhenAbsent() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        assertThat(existing.isChatOnlineVisible()).isTrue();
+
+        // Sent: written.
+        SettingsResponse hidden = service.update(new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, null, null, null, true, 90,
+                false));
+        assertThat(hidden.chatOnlineVisible()).isFalse();
+        assertThat(existing.isChatOnlineVisible()).isFalse();
+
+        // Absent (a client that predates the switch): left alone, so an old app cannot turn it back on by saving.
+        SettingsResponse kept = service.update(new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, null, null, null, true, 90));
+        assertThat(kept.chatOnlineVisible()).isFalse();
+        assertThat(existing.isChatOnlineVisible()).isFalse();
+    }
+
+    @Test
     void update_withDailyStepGoalPersistsAndReturnsIt() {
         UserSettings existing = new UserSettings();
         existing.setUser(new User());

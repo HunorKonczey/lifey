@@ -24,6 +24,14 @@ export function NotificationsSection() {
         <Switch aria-label={t("chatPushLabel")} checked={settings.chatPushEnabled ?? true} onChange={(checked) => save({ chatPushEnabled: checked })} />
       </SettingsRow>
       <div className="h-px" style={{ background: "var(--hairline)" }} />
+      <SettingsRow label={t("chatOnlineVisibleLabel")} hint={t("chatOnlineVisibleHint")}>
+        <Switch
+          aria-label={t("chatOnlineVisibleLabel")}
+          checked={settings.chatOnlineVisible ?? true}
+          onChange={(checked) => save({ chatOnlineVisible: checked })}
+        />
+      </SettingsRow>
+      <div className="h-px" style={{ background: "var(--hairline)" }} />
       <SettingsRow label={t("quietHoursLabel")} hint={t("quietHoursHint")}>
         <Switch
           aria-label={t("quietHoursLabel")}
