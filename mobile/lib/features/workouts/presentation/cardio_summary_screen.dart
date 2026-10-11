@@ -504,7 +504,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   Future<void> _editGameSetup() async {
     if (_busy) return;
     final l10n = AppLocalizations.of(context)!;
-    final changed = await showModalBottomSheet<bool>(
+    final changed = await showModalBottomSheet<bool>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       showDragHandle: true,
@@ -599,7 +599,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         : (imperial ? _weatherPrecipMm! / mmPerInch : _weatherPrecipMm!)
             .toStringAsFixed(imperial ? 2 : 0);
 
-    final saved = await showModalBottomSheet<bool>(
+    final saved = await showModalBottomSheet<bool>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       showDragHandle: true,

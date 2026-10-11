@@ -129,7 +129,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
   }
 
   void _addExercise() {
-    showModalBottomSheet<void>(
+    showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

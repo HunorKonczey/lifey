@@ -211,7 +211,7 @@ class _IntervalPlanEditorScreenState extends ConsumerState<IntervalPlanEditorScr
 
   Future<void> _editSection(_Item item, {required VoidCallback onRemove}) async {
     final l10n = AppLocalizations.of(context)!;
-    await showModalBottomSheet<void>(
+    await showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

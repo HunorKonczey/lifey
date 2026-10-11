@@ -276,7 +276,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
       _gramsFocus.requestFocus();
       return;
     }
-    await showModalBottomSheet<void>(
+    await showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

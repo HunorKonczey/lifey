@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/my_trainers/application/my_trainers_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/theme/app_tokens.dart';
+import 'ds/lifey_sheet.dart';
 
 /// Small "Edzőtől" pill shown on a trainer-assigned template/recipe card
 /// (docs/personal_trainer/05-mobil-terv.md §2, design in 06-design.md §4).
@@ -58,40 +59,13 @@ class OriginTrainerBadge extends ConsumerWidget {
 
   void _showOriginSheet(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final email = _trainerEmail(ref);
-    showModalBottomSheet<void>(
+    showLifeySheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (sheetCtx) {
-        final scheme = Theme.of(sheetCtx).colorScheme;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.school, color: context.palette.role),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      l10n.originTrainerSheetTitle,
-                      style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurface),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                email != null
-                    ? l10n.originTrainerSheetBody(email)
-                    : l10n.originTrainerUnknown,
-                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant, height: 1.4),
-              ),
-            ],
-          ),
-        );
-      },
+      title: l10n.originTrainerSheetTitle,
+      builder: (sheetCtx) => Text(
+        email != null ? l10n.originTrainerSheetBody(email) : l10n.originTrainerUnknown,
+        style: Theme.of(sheetCtx).textTheme.bodyMedium!.copyWith(color: context.palette.text2, height: 1.4),
+      ),
     );
   }
 }

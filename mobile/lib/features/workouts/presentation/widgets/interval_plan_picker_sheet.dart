@@ -198,7 +198,7 @@ class _AddRow extends StatelessWidget {
 }
 
 Future<IntervalPlanChoice?> showIntervalPlanPicker(BuildContext context) {
-  return showModalBottomSheet<IntervalPlanChoice>(
+  return showModalBottomSheet<IntervalPlanChoice>( // design-audit: ok - its own header and scroll frame
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,

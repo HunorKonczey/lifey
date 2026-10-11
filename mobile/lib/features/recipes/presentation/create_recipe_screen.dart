@@ -26,6 +26,7 @@ import '../application/recipes_controller.dart';
 import '../data/recipe_repository.dart';
 import '../domain/recipe.dart';
 import '../../nutrition/domain/fiber_sugar.dart';
+import '../../../shared/widgets/ds/lifey_sheet.dart';
 
 /// Full-screen form for creating a recipe, or editing one when [recipe] is given.
 class CreateRecipeScreen extends ConsumerStatefulWidget {
@@ -112,7 +113,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   }
 
   Future<void> _addIngredient() async {
-    final draft = await showModalBottomSheet<MealEntryDraft>(
+    final draft = await showModalBottomSheet<MealEntryDraft>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -126,7 +127,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   }
 
   Future<void> _addMacros() async {
-    final draft = await showModalBottomSheet<MealEntryDraft>(
+    final draft = await showModalBottomSheet<MealEntryDraft>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -141,7 +142,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
   Future<void> _editIngredient(int index) async {
     final current = _ingredients[index];
-    final draft = await showModalBottomSheet<MealEntryDraft>(
+    final draft = await showModalBottomSheet<MealEntryDraft>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -250,43 +251,39 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
   void _openPhotoSheet(AppLocalizations l10n, RecipeImageKey key,
       {required bool hasPhoto}) {
-    showModalBottomSheet<void>(
+    showLifeySheet<void>(
       context: context,
       useRootNavigator: true,
-      showDragHandle: true,
+      title: l10n.photoSourceSheetTitle,
       builder: (sheetCtx) {
-        final scheme = Theme.of(sheetCtx).colorScheme;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
+        final primary = Theme.of(sheetCtx).colorScheme.primary;
+        return ListGroup(
           children: [
-            ListTile(
-              leading: Icon(Icons.photo_camera_outlined, color: scheme.primary),
-              title: Text(l10n.takePhotoAction),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.photo_camera_outlined, color: primary),
+              title: l10n.takePhotoAction,
               onTap: () {
                 Navigator.of(sheetCtx).pop();
                 _pickAndUploadPhoto(ImageSource.camera, key, l10n);
               },
             ),
-            ListTile(
-              leading:
-                  Icon(Icons.photo_library_outlined, color: scheme.primary),
-              title: Text(l10n.chooseFromGalleryAction),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.photo_library_outlined, color: primary),
+              title: l10n.chooseFromGalleryAction,
               onTap: () {
                 Navigator.of(sheetCtx).pop();
                 _pickAndUploadPhoto(ImageSource.gallery, key, l10n);
               },
             ),
             if (hasPhoto)
-              ListTile(
-                leading: Icon(Icons.delete_outline, color: scheme.error),
-                title: Text(l10n.removePhotoAction,
-                    style: TextStyle(color: scheme.error)),
+              ListRow(
+                leading: ListIconHolder(icon: Icons.delete_rounded, color: sheetCtx.metricColors.heart),
+                title: l10n.removePhotoAction,
                 onTap: () {
                   Navigator.of(sheetCtx).pop();
                   _removePhoto(key, l10n);
                 },
               ),
-            SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
           ],
         );
       },

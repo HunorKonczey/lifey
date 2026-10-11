@@ -9,6 +9,8 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/ds/lifey_segmented.dart';
+import '../../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../../shared/widgets/ds/list_group.dart';
 
 /// The message input.
 ///
@@ -118,32 +120,32 @@ class _ChatComposerState extends State<ChatComposer> {
   }
 
   Future<void> _showImageSourceSheet(AppLocalizations l10n) async {
-    await showModalBottomSheet<void>(
+    await showLifeySheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      title: l10n.chatAttachImageTooltip,
+      builder: (sheetContext) {
+        final primary = Theme.of(sheetContext).colorScheme.primary;
+        return ListGroup(
           children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: Text(l10n.chatTakePhotoAction),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.photo_camera_outlined, color: primary),
+              title: l10n.chatTakePhotoAction,
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 unawaited(_pickImage(ImageSource.camera, l10n));
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l10n.chatChooseImageAction),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.photo_library_outlined, color: primary),
+              title: l10n.chatChooseImageAction,
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 unawaited(_pickImage(ImageSource.gallery, l10n));
               },
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 

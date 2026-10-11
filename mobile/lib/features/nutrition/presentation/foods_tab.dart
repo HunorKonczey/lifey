@@ -56,7 +56,7 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
   }
 
   Future<void> _edit(BuildContext context, Food food) {
-    return showModalBottomSheet<void>(
+    return showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

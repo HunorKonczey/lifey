@@ -146,7 +146,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   }
 
   void _addFood() {
-    showModalBottomSheet<void>(
+    showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -181,7 +181,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     );
     if (barcode == null || !mounted) return;
     _tabController.animateTo(0);
-    showModalBottomSheet<void>(
+    showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -193,7 +193,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   Future<void> _openCopyDaySheet() async {
     final meals = ref.read(mealControllerProvider).value ?? const [];
     final hasMealsToday = meals.any((m) => DateRangeFilter.today.matches(m.dateTime));
-    final picked = await showModalBottomSheet<DayMealsSummary>(
+    final picked = await showModalBottomSheet<DayMealsSummary>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

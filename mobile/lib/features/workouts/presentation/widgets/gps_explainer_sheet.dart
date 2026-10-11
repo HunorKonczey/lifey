@@ -126,7 +126,7 @@ class _Bullet extends StatelessWidget {
 /// once regardless of how it closes, so an ignored sheet must still count as
 /// "seen" (see `LocationPermissionPreferences`), just without requesting.
 Future<GpsExplainerChoice?> showGpsExplainerSheet(BuildContext context) {
-  return showModalBottomSheet<GpsExplainerChoice>(
+  return showModalBottomSheet<GpsExplainerChoice>( // design-audit: ok - its own header and scroll frame
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
