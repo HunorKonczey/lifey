@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/health/health_preferences.dart';
+import 'package:lifey/core/health/health_service.dart';
+import 'package:lifey/core/health/weight_health_writer.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/weight/application/weight_controller.dart';
 import 'package:lifey/features/weight/domain/weight_entry.dart';
@@ -25,6 +30,19 @@ class _RecordingWeights extends WeightController {
   }
 }
 
+class _RecordingWriter extends WeightHealthWriter {
+  _RecordingWriter({this.result = true}) : super(HealthPreferences(const FlutterSecureStorage()), HealthService());
+
+  final bool result;
+  final writes = <({double kg, DateTime at})>[];
+
+  @override
+  Future<bool> write({required double kg, required DateTime at}) async {
+    writes.add((kg: kg, at: at));
+    return result;
+  }
+}
+
 final _now = DateTime.now();
 DateTime _day(int daysAgo) => DateTime(_now.year, _now.month, _now.day).subtract(Duration(days: daysAgo));
 
@@ -40,13 +58,14 @@ Future<_RecordingWeights> _open(
   double width = 411,
   double textScale = 1,
   ThemeData? theme,
+  List<Override> extra = const [],
 }) async {
   tester.view.physicalSize = Size(width * 2.625, 923 * 2.625);
   tester.view.devicePixelRatio = 2.625;
   addTearDown(tester.view.reset);
   final controller = _RecordingWeights(entries);
   await tester.pumpWidget(ProviderScope(
-    overrides: [weightControllerProvider.overrideWith(() => controller)],
+    overrides: [weightControllerProvider.overrideWith(() => controller), ...extra],
     child: MaterialApp(
       theme: theme ?? AppTheme.dark,
       locale: locale,
@@ -86,8 +105,57 @@ void main() {
     expect(find.textContaining('Today · '), findsOneWidget);
     expect(find.text('Save'), findsOneWidget);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
-    // never claims a write to Health Connect — the app only imports weight
+    // No health store here (the test host has none), so it never claims a write to one.
     expect(find.textContaining('Health Connect'), findsNothing);
+    expect(find.byKey(const Key('weight-also-saved-to-health')), findsNothing);
+  });
+
+  group('the copy to the health store (LIF-109)', () {
+    testWidgets('the "also saved" line appears only when a save would really be copied', (tester) async {
+      await _open(tester, _canvas, extra: [healthWeightWriteAvailableProvider.overrideWith((ref) async => true)]);
+
+      expect(find.byKey(const Key('weight-also-saved-to-health')), findsOneWidget);
+      expect(find.text('Also saved to Health Connect'), findsOneWidget);
+    });
+
+    testWidgets('no line when the write is not available - integration off, permission refused, no store', (tester) async {
+      await _open(tester, _canvas, extra: [healthWeightWriteAvailableProvider.overrideWith((ref) async => false)]);
+
+      expect(find.byKey(const Key('weight-also-saved-to-health')), findsNothing);
+    });
+
+    testWidgets('Hungarian reads naturally', (tester) async {
+      await _open(tester, _canvas,
+          locale: const Locale('hu'), extra: [healthWeightWriteAvailableProvider.overrideWith((ref) async => true)]);
+
+      expect(find.text('Health Connect-be is mentve'), findsOneWidget);
+    });
+
+    testWidgets('saving sends the same weight and date to the health store, after the save', (tester) async {
+      final writer = _RecordingWriter();
+      final controller = await _open(tester, _canvas, extra: [weightHealthWriterProvider.overrideWithValue(writer)]);
+
+      await tester.tap(find.byIcon(Icons.add_rounded));
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(controller.saved.single.weight, closeTo(64.6, 1e-9));
+      expect(writer.writes, hasLength(1));
+      expect(writer.writes.single.kg, closeTo(64.6, 1e-9));
+      expect(writer.writes.single.at, controller.saved.single.date);
+    });
+
+    testWidgets('a copy that fails never fails the weigh-in', (tester) async {
+      final writer = _RecordingWriter(result: false);
+      final controller = await _open(tester, _canvas, extra: [weightHealthWriterProvider.overrideWithValue(writer)]);
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(controller.saved, hasLength(1));
+      expect(find.text('Log weight'), findsNothing, reason: 'the sheet closed as usual');
+    });
   });
 
   testWidgets('the ± buttons are 56 dp and step 0.1 kg', (tester) async {
