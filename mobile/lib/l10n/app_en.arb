@@ -6690,6 +6690,11 @@
   "@chatPeerRoleTrainer": {
     "description": "Under the name in a chat header when the other person is the user's trainer (docs/redesign/77-mobile-redesign-plan.md R5.5)"
   },
+  "chatPeerOnlineSubtitle": "{role} · online",
+  "@chatPeerOnlineSubtitle": {
+    "description": "Thread header subtitle while the other person has the app open, e.g. 'Your trainer · online'",
+    "placeholders": {"role": {"type": "String"}}
+  },
   "chatPeerRoleClient": "Your client",
   "@chatPeerRoleClient": {
     "description": "Under the name in a chat header when the other person is the trainer's client"

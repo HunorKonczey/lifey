@@ -6,11 +6,12 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { connectChatStream, type ChatStreamFrame } from "@/lib/api/chat-stream";
 import { useSessionStore } from "@/features/auth/store";
 import { chatApi } from "./api";
-import { applyDeletion, mergeMessages, sortConversations, titleWithUnread, totalUnread } from "./thread";
+import { applyDeletion, applyOnline, mergeMessages, sortConversations, titleWithUnread, totalUnread } from "./thread";
 import type {
   ConversationResponse,
   MessageDeletedEventPayload,
   MessageEventPayload,
+  OnlineEventPayload,
   ReadEventPayload,
   ThreadMessage,
   TypingEventPayload,
@@ -101,6 +102,9 @@ export function useChatStream(enabled: boolean): boolean {
         // stream lives in the admin shell and the chat screens live elsewhere,
         // and this is the one channel that already runs between them.
         queryClient.setQueryData<boolean>(queryKeys.chat.streamStatus(), isConnected);
+        // Whoever was online is no longer known to be: the server sends the starting state again on reconnect, and "online"
+        // we cannot confirm is worse than no dot (LIF-122).
+        if (!isConnected) queryClient.setQueryData<readonly number[]>(queryKeys.chat.online(), []);
       },
     });
     return () => {
@@ -109,6 +113,7 @@ export function useChatStream(enabled: boolean): boolean {
       // rather than leaving a stale "reconnecting" behind for whatever mounts
       // next.
       queryClient.setQueryData<boolean | null>(queryKeys.chat.streamStatus(), null);
+      queryClient.setQueryData<readonly number[]>(queryKeys.chat.online(), []);
     };
   }, [enabled, queryClient]);
 
@@ -210,6 +215,15 @@ function applyFrame(queryClient: QueryClient, frame: ChatStreamFrame) {
     return;
   }
 
+  if (frame.name === "online") {
+    const payload = frame.data as OnlineEventPayload;
+    if (typeof payload?.userId !== "number" || typeof payload.online !== "boolean") return;
+    queryClient.setQueryData<readonly number[]>(queryKeys.chat.online(), (current) =>
+      applyOnline(current ?? [], payload.userId, payload.online),
+    );
+    return;
+  }
+
   if (frame.name === "resync") {
     // The stream gave up on bridging the gap — the REST API is the truth.
     // Only what the gap can have changed: the other `chat` keys are pictures
@@ -263,6 +277,20 @@ export function usePeerTyping(conversationId: number): boolean {
     gcTime: TYPING_TTL_MS * 4,
   });
   return data != null;
+}
+
+/**
+ * Whether this person (the other side of a thread) has the app open right now (LIF-122). Reads the cache entry the stream
+ * writes; nothing to fetch, and false whenever our own stream is down.
+ */
+export function useIsPeerOnline(userId: number | undefined): boolean {
+  const { data } = useQuery<readonly number[]>({
+    queryKey: queryKeys.chat.online(),
+    queryFn: () => [],
+    enabled: false,
+    staleTime: Infinity,
+  });
+  return userId != null && (data?.includes(userId) ?? false);
 }
 
 /**

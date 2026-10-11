@@ -8,6 +8,7 @@ import '../../../core/network/dio_client.dart';
 import '../data/chat_repository.dart';
 import '../data/chat_stream_client.dart';
 import '../domain/chat_message.dart';
+import 'chat_online_controller.dart';
 import 'chat_typing_controller.dart';
 
 /// Holds the chat stream open while the app is in the foreground, and folds
@@ -19,7 +20,13 @@ import 'chat_typing_controller.dart';
 /// going to the background closes the stream *and* clears presence, and
 /// resuming reconnects with a `Last-Event-ID` that replays whatever was missed.
 class ChatStreamController with WidgetsBindingObserver {
-  ChatStreamController(this._repository, this._client, {required this.onPeerTyping}) {
+  ChatStreamController(
+    this._repository,
+    this._client, {
+    required this.onPeerTyping,
+    this.onPeerOnline,
+    this.onStreamDown,
+  }) {
     WidgetsBinding.instance.addObserver(this);
     _connect();
   }
@@ -31,6 +38,12 @@ class ChatStreamController with WidgetsBindingObserver {
   /// because typing touches no storage at all — it is the one frame with
   /// nothing to write down (§19.4/1).
   final void Function(int conversationId) onPeerTyping;
+
+  /// Where an `online` frame goes (LIF-122) - presence is as unstored as typing.
+  final void Function(int userId, {required bool online})? onPeerOnline;
+
+  /// Our own stream is down: whoever was online is no longer known to be.
+  final void Function()? onStreamDown;
 
   /// Which thread is on screen, remembered so it can be re-reported after a
   /// reconnect — the server's presence entry is in memory and does not survive
@@ -54,6 +67,7 @@ class ChatStreamController with WidgetsBindingObserver {
       onConnectionChange: (connected) {
         final reconnected = connected && !_connected;
         _connected = connected;
+        if (!connected) onStreamDown?.call();
         if (reconnected && _activeConversationId != null) {
           unawaited(_repository.setPresence(_activeConversationId));
         }
@@ -83,6 +97,11 @@ class ChatStreamController with WidgetsBindingObserver {
         final conversationId = (frame.data['conversationId'] as num?)?.toInt();
         if (conversationId == null) return;
         onPeerTyping(conversationId);
+      case 'online':
+        final userId = (frame.data['userId'] as num?)?.toInt();
+        final online = frame.data['online'] as bool?;
+        if (userId == null || online == null) return;
+        onPeerOnline?.call(userId, online: online);
       case 'deleted':
         final conversationId = (frame.data['conversationId'] as num?)?.toInt();
         final messageId = (frame.data['messageId'] as num?)?.toInt();
@@ -122,6 +141,7 @@ class ChatStreamController with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       unawaited(_client.disconnect());
       _connected = false;
+      onStreamDown?.call();
       // Backgrounded means not looking at anything, so pushes must resume at
       // once rather than waiting for the server's presence TTL to lapse.
       unawaited(_repository.setPresence(null));
@@ -148,6 +168,9 @@ final chatStreamControllerProvider = Provider<ChatStreamController>((ref) {
     ChatStreamClient(ref.watch(chatDioProvider), ApiEndpoints.chatStream),
     onPeerTyping: (conversationId) =>
         ref.read(chatTypingControllerProvider.notifier).peerTyping(conversationId),
+    onPeerOnline: (userId, {required online}) =>
+        ref.read(chatOnlineControllerProvider.notifier).peerChanged(userId, online: online),
+    onStreamDown: () => ref.read(chatOnlineControllerProvider.notifier).clear(),
   );
   ref.onDispose(controller.dispose);
   return controller;

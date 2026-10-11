@@ -157,6 +157,15 @@ export interface TypingEventPayload {
 }
 
 /**
+ * Body of an `event: online` frame (LIF-122): a person who shares a thread with me opened or closed the app. Like `typing` it
+ * has no REST counterpart and is never stored - the server sends the starting state on every (re)connect.
+ */
+export interface OnlineEventPayload {
+  userId: number;
+  online: boolean;
+}
+
+/**
  * A message as the thread renders it. The server shape plus the local send
  * state: web mirrors mobile's optimistic send (§13.4/2), so a bubble exists
  * before the POST resolves and keeps its identity through the server echo.

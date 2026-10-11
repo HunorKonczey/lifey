@@ -33,6 +33,7 @@ public class ChatStreamServiceImpl implements ChatStreamService {
     private final ChatEventBus eventBus;
     private final ChatPresenceRegistry presenceRegistry;
     private final ChatReceiptService receiptService;
+    private final ChatOnlinePresence onlinePresence;
     private final ChatTypingThrottle throttle;
     private final ChatCaller caller;
     private final ChatProperties properties;
@@ -52,12 +53,18 @@ public class ChatStreamServiceImpl implements ChatStreamService {
                 // Last connection gone: whatever thread they were viewing, they
                 // are not viewing it now, so pushes must resume immediately.
                 presenceRegistry.clear(userId);
+                onlinePresence.disconnected(userId);
             }
         });
 
         // First byte, immediately: it commits the response, so the client knows
         // it is connected now rather than at the next heartbeat.
         registry.sendOpeningComment(userId, emitter);
+        // A stream that died on its very first write is already gone, and its cleanup has already run: announcing it now
+        // would leave the person online for good, with no later disconnect to take it back.
+        if (registry.isConnected(userId)) {
+            onlinePresence.connected(userId, emitter);
+        }
 
         replayMissed(userId, lastEventId, emitter);
         receiptService.markDeliveredOnConnect(userId);

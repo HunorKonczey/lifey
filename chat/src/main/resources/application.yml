@@ -144,6 +144,10 @@ lifey:
     # How long "the user is looking at thread X" is believed without a refresh.
     # Losing it is safe: the fallback is sending a push that wasn't needed.
     presence-ttl: ${CHAT_PRESENCE_TTL:2m}
+    # How long the last stream of a user must be gone before their peers are told they went
+    # offline (LIF-122). A phone drops its stream on every app switch and every stream is
+    # recycled every few minutes; a connect inside the grace tells nobody anything.
+    online-grace: ${CHAT_ONLINE_GRACE:15s}
     # At most one push per thread per window (§5.3). A burst of messages is one
     # interruption; the count in the body comes from the read cursor, so it is
     # accurate no matter how many sends the window swallowed.

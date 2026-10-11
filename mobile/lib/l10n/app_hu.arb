@@ -1473,6 +1473,7 @@
   "onboardingChipMaintenance": "Szinten tartás",
   "onboardingWaterPerDay": "naponta",
   "chatPeerRoleTrainer": "Az edződ",
+  "chatPeerOnlineSubtitle": "{role} · online",
   "chatPeerRoleClient": "A tanítványod",
   "chatMoreTooltip": "Továbbiak",
   "logOutDialogMessage": "Minden mentve van a fiókodban. A telefonon lévő adataid törlődnek.",

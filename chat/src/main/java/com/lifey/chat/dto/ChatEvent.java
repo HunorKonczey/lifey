@@ -12,7 +12,7 @@ package com.lifey.chat.dto;
  * space would have made the gap-fill query ambiguous.
  *
  * @param name event name as it appears in {@code event:} — see {@link #MESSAGE},
- *             {@link #READ}, {@link #DELETED}, {@link #TYPING}, {@link #RESYNC}
+ *             {@link #READ}, {@link #DELETED}, {@link #TYPING}, {@link #ONLINE}, {@link #RESYNC}
  * @param id   value for {@code id:}, or null to leave the client's cursor alone
  * @param data serialized to JSON into {@code data:}
  */
@@ -24,6 +24,8 @@ public record ChatEvent(String name, Long id, Object data) {
     public static final String DELETED = "deleted";
     /** The peer is writing. Expires on the client; nothing is stored. */
     public static final String TYPING = "typing";
+    /** A peer opened or closed the app (LIF-122). Not stored, no cursor. */
+    public static final String ONLINE = "online";
     /** "I cannot replay what you missed — reload from REST." */
     public static final String RESYNC = "resync";
 
@@ -51,6 +53,11 @@ public record ChatEvent(String name, Long id, Object data) {
      */
     public static ChatEvent ofTyping(TypingEventPayload payload) {
         return new ChatEvent(TYPING, null, payload);
+    }
+
+    /** No {@code id:}, like typing: a presence hint must never be able to move the message cursor. */
+    public static ChatEvent ofOnline(OnlineEventPayload payload) {
+        return new ChatEvent(ONLINE, null, payload);
     }
 
     public static ChatEvent ofResync() {

@@ -22,6 +22,7 @@ import '../domain/chat_peer.dart';
 import '../application/chat_thread_controller.dart';
 import '../data/chat_repository.dart';
 import '../application/chat_stream_controller.dart';
+import '../application/chat_online_controller.dart';
 import '../application/chat_typing_controller.dart';
 import '../application/open_chat_card.dart';
 import '../domain/chat_conversation.dart';
@@ -178,6 +179,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
     }
   }
 
+  static String _subtitle(AppLocalizations l10n, String role, {required bool online}) =>
+      online ? l10n.chatPeerOnlineSubtitle(role) : role;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -197,12 +201,15 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
                 size: 44,
               ),
         title: conversation?.peer.displayName ?? '',
-        // The person's role, not a presence claim: presence is tracked for the
-        // push decision (§5.1) but never reported back, so an "online" would
-        // be a lie the design explicitly rules out.
+        // The person's role, plus "online" while the server says they have the app open (LIF-122). Never
+        // guessed: the set is empty whenever our own stream is down, so no dot beats a stale one.
         subtitle: conversation == null
             ? null
-            : (conversation.peer.role == ChatPeerRole.trainer ? l10n.chatPeerRoleTrainer : l10n.chatPeerRoleClient),
+            : _subtitle(
+                l10n,
+                conversation.peer.role == ChatPeerRole.trainer ? l10n.chatPeerRoleTrainer : l10n.chatPeerRoleClient,
+                online: ref.watch(chatOnlineControllerProvider).contains(conversation.peer.userId),
+              ),
         actions: [
           // The bridge from the conversation to the numbers behind it
           // (docs/chat/41 T2). Only for a trainer looking at a *client*: the

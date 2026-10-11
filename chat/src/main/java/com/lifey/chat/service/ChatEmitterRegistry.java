@@ -34,8 +34,18 @@ public class ChatEmitterRegistry {
 
     private final Map<Long, Set<SseEmitter>> emittersByUser = new ConcurrentHashMap<>();
 
+    /** What to run once when each connection ends, however it ends (see {@link #remove}). */
+    private final Map<SseEmitter, Runnable> cleanups = new ConcurrentHashMap<>();
+
     /**
-     * @param onDisconnect run after the emitter has been dropped from the map.
+     * @param onDisconnect run, exactly once, after the emitter has been dropped
+     *                     from the map - whichever way it ended: the container's
+     *                     completion/error callbacks, a timeout, or a write that
+     *                     failed (a heartbeat finding a dead socket). The last
+     *                     one matters: a client that vanished without a FIN is
+     *                     only ever noticed by a failing write, and the cleanup
+     *                     (presence, the "went offline" announcement) must not
+     *                     depend on the container reporting it afterwards.
      *                     Spring's {@code onCompletion} keeps a single delegate,
      *                     so callers must hand their cleanup in here rather than
      *                     registering a second callback that would silently
@@ -43,20 +53,15 @@ public class ChatEmitterRegistry {
      */
     public void register(Long userId, SseEmitter emitter, Runnable onDisconnect) {
         emittersByUser.computeIfAbsent(userId, id -> ConcurrentHashMap.newKeySet()).add(emitter);
-        emitter.onCompletion(() -> {
-            remove(userId, emitter);
-            onDisconnect.run();
-        });
+        cleanups.put(emitter, onDisconnect);
+        emitter.onCompletion(() -> remove(userId, emitter));
         emitter.onTimeout(() -> {
             // Completing here rather than leaving it to the container is what
             // makes onCompletion fire, which is what actually frees the entry.
             emitter.complete();
             remove(userId, emitter);
         });
-        emitter.onError(error -> {
-            remove(userId, emitter);
-            onDisconnect.run();
-        });
+        emitter.onError(error -> remove(userId, emitter));
     }
 
     /** Write to one specific connection — the {@code Last-Event-ID} replay path. */
@@ -173,5 +178,9 @@ public class ChatEmitterRegistry {
             // Returning null drops the key, so an idle user leaves nothing behind.
             return emitters.isEmpty() ? null : emitters;
         });
+        Runnable cleanup = cleanups.remove(emitter);
+        if (cleanup != null) {
+            cleanup.run();
+        }
     }
 }

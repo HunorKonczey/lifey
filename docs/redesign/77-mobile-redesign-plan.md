@@ -2321,7 +2321,7 @@ register, wizard, settings, dialog), light HU ×1.3 (settings top to bottom, Bod
 - The chat list is a large-title screen with the empty state in the card; the thread's bubbles, header and composer follow the canvas (verified by widget tests — see below).
 
 **Deviations (intended)**
-- The chat thread's subtitle is "Your trainer" without "· online": presence is never reported to the client, so "online" would be invented — R5.5. No blur scrim behind the composer: nothing scrolls under it.
+- The chat thread's subtitle is "Your trainer" without "· online": presence is never reported to the client, so "online" would be invented — R5.5 (LIF-122 later added a real signal: the subtitle now reads "Your trainer · online" while the peer has the app open). No blur scrim behind the composer: nothing scrolls under it.
 - The Google button keeps the "G" mark (branding guidelines) — R5.1. "Edit" next to DAILY GOALS opens Body & goals (recalculates the goals) — the canvas names no other target; each tile still edits its own number — R5.7.
 - The log-out copy drops "from the last 2 minutes" (the outbox has no such window) and counts the real number of queued changes — R5.6. The Theme pill's third option reads "System", the canvas "Auto".
 - The theme's "System" and the language's "System" share one string (`optionSystem`).

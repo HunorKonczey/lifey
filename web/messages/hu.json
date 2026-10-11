@@ -749,6 +749,7 @@
     "searchResultCount": "{count} találat",
     "searchMoreResults": "a legfrissebbek",
     "isTyping": "{name} gépel…",
+    "peerOnline": "Online",
     "reconnecting": "Újracsatlakozás… az új üzenetek késhetnek",
     "attachImage": "Kép csatolása",
     "removeImage": "Kép eltávolítása",

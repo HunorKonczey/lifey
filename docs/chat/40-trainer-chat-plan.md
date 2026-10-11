@@ -1815,3 +1815,63 @@ push-modul saját iterációja lenne, nem a chaté), megőrzési szabály a chat
 5. **A runbook a művelet, a terv az indoklás.** Üzemeltetési változás
    (új küszöb, új lever) a `devops/chat-operations.md`-be megy; ide csak akkor,
    ha a *döntés* változik.
+
+---
+
+## 22. Megvalósítási napló — LIF-122 (online jelzés)
+
+> A **jelenlét kifelé**: eddig a szerver csak azt tudta, melyik szálat nézi valaki (a push-döntéshez, §4.3), de a másik
+> félnek soha nem mondta meg, hogy valaki *online*. A design ezt hamis jelzés miatt tiltotta (D-W0.19, mobil R5.5); most van
+> valós jel, ezért kikerült a tiltás.
+
+### 22.1 Mi az „online”
+
+**Az, hogy a személynek nyitva van egy chat-streamje** (`ChatEmitterRegistry.isConnected`). A telefon háttérbe menéskor
+lezárja a streamet, a web a lap nyitva tartásáig megtartja — azaz „online” = „nyitva van nála az app”. Nem a szál megnyitása
+(az a `POST /chat/presence`, a push-kapu), és nem tárolt adat: memóriában él, mint a presence-registry.
+
+### 22.2 Szerver
+
+| Elem | Fájlok |
+|---|---|
+| Esemény | `event: online`, `{userId, online}` (`dto/OnlineEventPayload`, `ChatEvent.ONLINE`); `id:` nélkül, mint a `typing` — nem mozdíthatja el az üzenet-kurzort |
+| Logika | `service/ChatOnlinePresence` |
+| Bekötés | `ChatStreamServiceImpl.open` (`connected`) és a stream-regisztráció lecsatlakozási callbackje (`disconnected`) |
+| Konfig | `lifey.chat.online-grace` (alap 15 mp, `CHAT_ONLINE_GRACE`) |
+
+- **Kinek szól.** Csak azoknak, akikkel nyitott (nem archivált) szálat osztasz, és csak arról, hogy csatlakoztál-e. Se „utoljára
+  aktív”, se szál, se idő.
+- **Be:** az első kapcsolat megnyílásakor azonnal. **Ki:** az utolsó megszűnése után a türelmi idő letelte után, ha közben senki
+  nem jött vissza. A türelmi idő azért kell, mert a telefon minden app-váltásnál eldobja a streamet, és a stream amúgy is pár
+  percenként újraindul: egy ide-oda villogó pont rosszabb a semmilyennél. Ha a türelmi időn belül újra csatlakozik, **senkinek
+  nem szólunk semmit** — a peerek számára sosem ment el.
+- **Kezdőállapot.** Csatlakozáskor a kliens megkapja, kik a peerjei közül vannak éppen itt (egy-egy `online` keret). Ez teszi
+  a (re)connectet önjavítóvá; REST megfelelő nincs (mint a gépelés-jelzőnek, §19.4/1), ezért a kliens a saját streamjének
+  megszakadásakor **mindenkit töröl**: egy meg nem erősíthető „online” rosszabb, mint a hiány.
+- **Egy lyuk, amit a teszt talált.** A `ChatEmitterRegistry` a lecsatlakozás utáni takarítást (presence-törlés, most az
+  offline-bejelentés) csak a konténer completion/error callbackjéből futtatta; a heartbeat, amely egy FIN nélkül eltűnt klienst
+  csak egy elbukó írásról vesz észre, csak kivette az emittert. Így egy bezárt lap után az „online” a stream 5 perces
+  időkorlátjáig ottmaradt. Most a takarítás **minden eltávolítási úton, emitterenként pontosan egyszer** lefut
+  (`ChatEmitterRegistry.remove`). Következmény: egy lecsatlakozott kliens „online” jelzése legfeljebb ~35 mp-ig (20 mp heartbeat +
+  15 mp türelmi idő) marad.
+- **Egy stream, ami az első írásán meghalt**, nincs bejelentve (különben örökre online maradna, mert a takarítása már lefutott).
+
+### 22.3 Kliensek
+
+- **Mobil:** `application/chat_online_controller.dart` (`Set<int>` userId-kből, nem tárolt), a `ChatStreamController` `online` ága
+  és `onStreamDown` (kapcsolat megszakadása / háttérbe menés törli); a szál fejléce: „Az edződ · online” (`chatPeerOnlineSubtitle`).
+- **Web:** `useIsPeerOnline` + `queryKeys.chat.online` (a `typing` mintájára, a stream írja), `thread.ts` `applyOnline`
+  (ugyanaz az állapot ugyanazt a tömböt adja vissza, nincs felesleges újrarajzolás), a fejléc „● Online · e-mail” (zöld, `data-testid
+  =chat-peer-online`); a stream leesésekor üres.
+
+### 22.4 Tesztek és ami nincs
+
+Chat-szolgáltatás: 240 zöld (új: `ChatOnlinePresenceTest` 7 — első csatlakozás, archivált szál kihagyása, második kapcsolat nem
+jelent újat, kezdőállapot, offline csak a türelmi idő után és csak ha nem jött vissza, visszajövetel törli a függőt, soha be
+nem jelentett nem megy offline; `ChatStreamServiceImplTest` +2; `ChatEmitterRegistryTest` +1: a heartbeat-hiba is lefuttatja a
+takarítást, egyszer). Web: vitest 1227 zöld (+3 `applyOnline`), új e2e (`trainer-chat-online.spec.ts`, valódi backenden + chat-
+szolgáltatáson: a kliens streamjét egy `fetch` tartja nyitva; megjelenik az „Online”, a zárás után eltűnik) — a fejléc módosítása
+nélkül elbukik. Mobil: 3292 zöld (+6).
+
+**Nincs:** kikapcsoló („ne lássák, hogy online vagyok” — a beállítás a monolitban élne, `user_settings`, külön Story); online pont a
+beszélgetés-listában; emulátoros és iOS próba; több példányos üzem (az eseménycsatorna ma példány-helyi, §2 skálázási seam).

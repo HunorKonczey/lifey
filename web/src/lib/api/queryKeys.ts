@@ -133,6 +133,11 @@ export const queryKeys = {
      */
     typing: (conversationId: number) => ["chat", "typing", conversationId] as const,
     /**
+     * Not fetched either: the user ids of the people who share a thread with me and have the app open (LIF-122), written by the
+     * stream's `online` frames and wiped whenever the stream is down.
+     */
+    online: () => ["chat", "online"] as const,
+    /**
      * Keyed by user, not by conversation: the same person can appear in a row,
      * a thread header and a bubble at once, and all three should share the one
      * download.
