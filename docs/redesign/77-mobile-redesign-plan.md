@@ -1962,7 +1962,9 @@ priorities change; the canvas priority order (dashboard, nutrition, workouts, â€
   in `app_theme.dart`); it will diverge after R0.1. Follow-up plan:
   [docs/redesign-web/78-web-redesign-plan.md](../redesign-web/78-web-redesign-plan.md).
 - **Watch apps, iOS widget / Live Activity, Android widget / ongoing notification** â€” native
-  styling, not covered. Colour alignment is a follow-up.
+  styling, not covered. The watch apps were redone by `redesign-watch/79`; the **iOS widget, the Live
+  Activity and the Android widget now use the redesign tokens (LIF-110, 2026-10-11)**, with a test that
+  keeps them equal to the Dart tokens. The Android ongoing notification has no colours of its own.
 - **Material Symbols** icon font (D-R0.10).
 - **New features or data** beyond R6.2's two read-only fields (D-R0.15).
 - **Golden-image tests** (D-R0.11).
