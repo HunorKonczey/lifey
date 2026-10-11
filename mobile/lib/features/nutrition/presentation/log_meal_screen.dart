@@ -35,6 +35,7 @@ import 'widgets/add_meal_entry_sheet.dart';
 import 'widgets/ai_credit_chip.dart';
 import 'widgets/meal_estimate_sheet.dart';
 import 'widgets/meal_summary_panel.dart';
+import '../../../shared/widgets/ds/lifey_sheet.dart';
 
 /// Full-screen form for logging a meal, or editing one when [meal] is provided.
 ///
@@ -188,7 +189,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   /// never persisted.
   Future<void> _addEntry(
       {Food? preselected, bool closeScreenOnCancel = false}) async {
-    final draft = await showModalBottomSheet<MealEntryDraft>(
+    final draft = await showModalBottomSheet<MealEntryDraft>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -208,7 +209,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   }
 
   Future<void> _addMacros() async {
-    final draft = await showModalBottomSheet<MealEntryDraft>(
+    final draft = await showModalBottomSheet<MealEntryDraft>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -233,27 +234,27 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     }
     if (!requireAiCredits(context, ref)) return _PhotoOutcome.paywall;
 
-    final source = await showModalBottomSheet<ImageSource>(
+    final source = await showLifeySheet<ImageSource>(
       context: context,
       useRootNavigator: true,
-      showDragHandle: true,
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      title: l10n.photoSourceSheetTitle,
+      builder: (sheetCtx) {
+        final primary = Theme.of(sheetCtx).colorScheme.primary;
+        return ListGroup(
           children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: Text(l10n.takePhotoAction),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.photo_camera_outlined, color: primary),
+              title: l10n.takePhotoAction,
               onTap: () => Navigator.of(sheetCtx).pop(ImageSource.camera),
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l10n.chooseFromGalleryAction),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.photo_library_outlined, color: primary),
+              title: l10n.chooseFromGalleryAction,
               onTap: () => Navigator.of(sheetCtx).pop(ImageSource.gallery),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
     if (source == null || !mounted) return _PhotoOutcome.dismissed;
 
@@ -270,7 +271,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (picked == null || !mounted) return _PhotoOutcome.dismissed;
     final imagePath = picked.path;
 
-    final drafts = await showModalBottomSheet<List<MealEntryDraft>>(
+    final drafts = await showModalBottomSheet<List<MealEntryDraft>>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -293,7 +294,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
 
   Future<void> _editEntry(int index) async {
     final current = _entries[index];
-    final draft = await showModalBottomSheet<MealEntryDraft>(
+    final draft = await showModalBottomSheet<MealEntryDraft>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

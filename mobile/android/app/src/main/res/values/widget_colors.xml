@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Light theme widget palette — transcribed from lib/core/theme/app_theme.dart
-     (_LightColors) and app_tokens.dart (AppMetricColors.light.calories).
+<!-- Light theme widget palette - the redesign tokens of lib/core/theme/app_tokens.dart (AppPalette.light, AppMetricColors.light),
+     LIF-110. The widget is a card (widget_container) with nested chips (widget_surface) and a control-coloured progress track.
+     test/native/widget_palette_test.dart compares these values to the tokens, so a palette change that forgets the widget fails.
      See values-night/widget_colors.xml for the dark variant. -->
 <resources>
-    <color name="widget_surface">#FFFFFFFF</color>
-    <color name="widget_container">#FFECEBDE</color>
-    <color name="widget_on_surface">#FF1E1F18</color>
-    <color name="widget_on_surface_variant">#FF5C5C50</color>
-    <color name="widget_calories">#FFD27A3E</color>
-    <color name="widget_progress_track">#FFE6E5DC</color>
+    <!-- nested -->
+    <color name="widget_surface">#FFF0EEE3</color>
+    <!-- card -->
+    <color name="widget_container">#FFFFFFFF</color>
+    <!-- text -->
+    <color name="widget_on_surface">#FF1C1D16</color>
+    <!-- text2 -->
+    <color name="widget_on_surface_variant">#FF56574B</color>
+    <!-- AppMetricColors.light.calories -->
+    <color name="widget_calories">#FF9D4602</color>
+    <!-- control -->
+    <color name="widget_progress_track">#FFE6E4D6</color>
 </resources>

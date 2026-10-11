@@ -127,7 +127,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
   // "Use default" + 9 presets don't fit a fixed-height sheet on shorter
   // screens.
   Future<void> _pickRestDuration() async {
-    final result = await showModalBottomSheet<({int? seconds})>(
+    final result = await showModalBottomSheet<({int? seconds})>( // design-audit: ok - its own header and scroll frame
       context: context,
       showDragHandle: true,
       isScrollControlled: true,

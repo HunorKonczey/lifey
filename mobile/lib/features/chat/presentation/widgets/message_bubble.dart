@@ -10,6 +10,8 @@ import '../../../settings/domain/user_settings.dart';
 import '../../domain/chat_message.dart';
 import 'chat_attachment_view.dart';
 import 'chat_card_view.dart';
+import '../../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../../shared/widgets/ds/list_group.dart';
 
 /// One message.
 ///
@@ -242,18 +244,18 @@ class MessageBubble extends StatelessWidget {
     // logger's long-press actions.
     unawaited(HapticFeedback.mediumImpact());
     final failed = _state == ChatMessageState.failed;
-    await showModalBottomSheet<void>(
+    await showLifeySheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      title: l10n.chatMessageSheetTitle,
+      builder: (sheetContext) {
+        final primary = Theme.of(sheetContext).colorScheme.primary;
+        return ListGroup(
           children: [
             // Nothing to copy from a picture with no caption.
             if ((message.body ?? '').isNotEmpty)
-              ListTile(
-                leading: const Icon(Icons.content_copy),
-                title: Text(l10n.chatCopyAction),
+              ListRow(
+                leading: ListIconHolder(icon: Icons.content_copy_rounded, color: primary),
+                title: l10n.chatCopyAction,
                 onTap: () async {
                   await Clipboard.setData(ClipboardData(text: message.body!));
                   if (sheetContext.mounted) Navigator.of(sheetContext).pop();
@@ -262,26 +264,26 @@ class MessageBubble extends StatelessWidget {
             // Resend is only meaningful on something that actually failed —
             // shown disabled elsewhere would just be noise.
             if (failed && onRetry != null)
-              ListTile(
-                leading: const Icon(Icons.refresh),
-                title: Text(l10n.chatResendAction),
+              ListRow(
+                leading: ListIconHolder(icon: Icons.refresh_rounded, color: primary),
+                title: l10n.chatResendAction,
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   onRetry!();
                 },
               ),
             if (isOwn && onDelete != null)
-              ListTile(
-                leading: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
-                title: Text(l10n.chatDeleteAction),
+              ListRow(
+                leading: ListIconHolder(icon: Icons.delete_rounded, color: context.metricColors.heart),
+                title: l10n.chatDeleteAction,
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   onDelete!();
                 },
               ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

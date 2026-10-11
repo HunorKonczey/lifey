@@ -31,6 +31,8 @@ import 'widgets/chat_avatar.dart';
 import 'widgets/chat_composer.dart';
 import 'widgets/day_divider.dart';
 import 'widgets/message_bubble.dart';
+import '../../../shared/widgets/ds/lifey_sheet.dart';
+import '../../../shared/widgets/ds/list_group.dart';
 
 /// One conversation. Identical for both roles — nothing on this screen knows
 /// whether the person on the other side is a trainer or a client.
@@ -122,28 +124,28 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
   /// alone for a bit" or "for good", and a picker would make the common case
   /// slower without making it more expressive.
   Future<void> _showMuteOptions(ChatConversation conversation, AppLocalizations l10n) async {
-    final choice = await showModalBottomSheet<Duration?>(
+    final choice = await showLifeySheet<Duration?>(
       context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      title: l10n.chatMuteAction,
+      builder: (sheetContext) {
+        final primary = Theme.of(sheetContext).colorScheme.primary;
+        return ListGroup(
           children: [
             for (final hours in const [1, 8])
-              ListTile(
-                leading: const Icon(Icons.schedule),
-                title: Text(l10n.chatMuteForHours(hours)),
+              ListRow(
+                leading: ListIconHolder(icon: Icons.schedule_rounded, color: primary),
+                title: l10n.chatMuteForHours(hours),
                 onTap: () => Navigator.of(sheetContext).pop(Duration(hours: hours)),
               ),
-            ListTile(
-              leading: const Icon(Icons.notifications_off),
-              title: Text(l10n.chatMuteUntilFurtherNotice),
+            ListRow(
+              leading: ListIconHolder(icon: Icons.notifications_off_rounded, color: primary),
+              title: l10n.chatMuteUntilFurtherNotice,
               // Far enough out to read as "off" without a separate flag.
               onTap: () => Navigator.of(sheetContext).pop(const Duration(days: 3650)),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
     if (choice == null || !mounted) return;
     await _setMuted(DateTime.now().add(choice), l10n);

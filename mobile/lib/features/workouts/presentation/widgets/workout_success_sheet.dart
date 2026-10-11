@@ -717,7 +717,7 @@ Future<void> showWorkoutSuccessSheet(
 }) async {
   if (!result.isSuccess) return;
   final duration = AppMotion.of(context, AppMotion.sheet);
-  await showModalBottomSheet<void>(
+  await showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

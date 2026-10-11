@@ -366,7 +366,7 @@ Future<void> showCardioSessionSettingsSheet(
   BuildContext context, {
   ActivityFamily family = ActivityFamily.distance,
 }) {
-  return showModalBottomSheet<void>(
+  return showModalBottomSheet<void>( // design-audit: ok - its own header and scroll frame
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,

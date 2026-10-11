@@ -338,7 +338,7 @@ class _SectionLabel extends StatelessWidget {
 /// Shows [GameSetupSheet]. Returns the chosen setup, or `null` when the sheet
 /// was dismissed without starting.
 Future<GameSetup?> showGameSetupSheet(BuildContext context) {
-  return showModalBottomSheet<GameSetup>(
+  return showModalBottomSheet<GameSetup>( // design-audit: ok - its own header and scroll frame
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,

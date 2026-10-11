@@ -1319,7 +1319,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
 
   Future<void> _handleAddExercise() async {
     final excluded = {for (final b in _blocks) b.exerciseClientId};
-    final draft = await showModalBottomSheet<PlannedExerciseDraft>(
+    final draft = await showModalBottomSheet<PlannedExerciseDraft>( // design-audit: ok - its own header and scroll frame
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,

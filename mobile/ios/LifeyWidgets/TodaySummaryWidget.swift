@@ -107,33 +107,38 @@ struct TodaySummaryProvider: TimelineProvider {
   }
 }
 
-// MARK: - Palette (transcribed from lib/core/theme/app_tokens.dart + app_theme.dart)
+// MARK: - Palette (the redesign tokens of lib/core/theme/app_tokens.dart: AppPalette + AppMetricColors, LIF-110)
 // Internal (not `private`) so WorkoutLiveActivity.swift can reuse it too.
+// test/native/widget_palette_test.dart compares these values to the Dart tokens, so a palette change that forgets this fails.
+//   bg = card, container = nested, track = control, onSurface = text, onSurfaceVariant = text2.
 
 struct Palette {
   let bg: Color
   let container: Color
+  let track: Color
   let onSurface: Color
   let onSurfaceVariant: Color
   let calories: Color
   let steps: Color
 
   static let light = Palette(
-    bg: Color(red: 0xF3 / 255, green: 0xF2 / 255, blue: 0xE8 / 255),
-    container: Color(red: 0xEC / 255, green: 0xEB / 255, blue: 0xDE / 255),
-    onSurface: Color(red: 0x1E / 255, green: 0x1F / 255, blue: 0x18 / 255),
-    onSurfaceVariant: Color(red: 0x5C / 255, green: 0x5C / 255, blue: 0x50 / 255),
-    calories: Color(red: 0xD2 / 255, green: 0x7A / 255, blue: 0x3E / 255),
-    steps: Color(red: 0x8A / 255, green: 0x6A / 255, blue: 0xB0 / 255)
+    bg: Color(red: 0xFF / 255, green: 0xFF / 255, blue: 0xFF / 255),
+    container: Color(red: 0xF0 / 255, green: 0xEE / 255, blue: 0xE3 / 255),
+    track: Color(red: 0xE6 / 255, green: 0xE4 / 255, blue: 0xD6 / 255),
+    onSurface: Color(red: 0x1C / 255, green: 0x1D / 255, blue: 0x16 / 255),
+    onSurfaceVariant: Color(red: 0x56 / 255, green: 0x57 / 255, blue: 0x4B / 255),
+    calories: Color(red: 0x9D / 255, green: 0x46 / 255, blue: 0x02 / 255),
+    steps: Color(red: 0x83 / 255, green: 0x48 / 255, blue: 0x8D / 255)
   )
 
   static let dark = Palette(
-    bg: Color(red: 0x16 / 255, green: 0x16 / 255, blue: 0x11 / 255),
-    container: Color(red: 0x22 / 255, green: 0x24 / 255, blue: 0x1B / 255),
-    onSurface: Color(red: 0xF1 / 255, green: 0xF0 / 255, blue: 0xE4 / 255),
-    onSurfaceVariant: Color(red: 0xA8 / 255, green: 0xA8 / 255, blue: 0x99 / 255),
-    calories: Color(red: 0xE0 / 255, green: 0x91 / 255, blue: 0x5A / 255),
-    steps: Color(red: 0xB0 / 255, green: 0x8A / 255, blue: 0xC8 / 255)
+    bg: Color(red: 0x1A / 255, green: 0x1C / 255, blue: 0x15 / 255),
+    container: Color(red: 0x22 / 255, green: 0x25 / 255, blue: 0x1C / 255),
+    track: Color(red: 0x2C / 255, green: 0x2F / 255, blue: 0x24 / 255),
+    onSurface: Color(red: 0xF2 / 255, green: 0xF1 / 255, blue: 0xE6 / 255),
+    onSurfaceVariant: Color(red: 0xB6 / 255, green: 0xB5 / 255, blue: 0xA5 / 255),
+    calories: Color(red: 0xEC / 255, green: 0x9A / 255, blue: 0x66 / 255),
+    steps: Color(red: 0xC5 / 255, green: 0x93 / 255, blue: 0xCC / 255)
   )
 }
 
@@ -178,7 +183,7 @@ private struct SmallSummaryView: View {
   var body: some View {
     VStack(spacing: 6) {
       ZStack {
-        Circle().stroke(palette.container, lineWidth: 8)
+        Circle().stroke(palette.track, lineWidth: 8)
         if let progress = caloriesProgress {
           Circle()
             .trim(from: 0, to: progress)

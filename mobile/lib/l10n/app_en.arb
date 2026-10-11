@@ -2916,6 +2916,14 @@
   "@changePhotoLabel": {
     "description": "Settings profile header: link text under the email to change the profile picture"
   },
+  "photoSourceSheetTitle": "Add a photo",
+  "@photoSourceSheetTitle": {
+    "description": "Title of the sheet that asks whether to take a photo or pick one from the gallery"
+  },
+  "chatMessageSheetTitle": "Message",
+  "@chatMessageSheetTitle": {
+    "description": "Title of the sheet of actions on one chat message (copy, resend, delete)"
+  },
   "takePhotoAction": "Take photo",
   "@takePhotoAction": {
     "description": "Profile picture sheet: option to take a new photo with the camera"
@@ -6437,6 +6445,19 @@
   "logWeightTitle": "Log weight",
   "@logWeightTitle": {
     "description": "Title of the log-weight sheet (docs/redesign/77-mobile-redesign-plan.md R4.4)"
+  },
+  "weightSheetAlsoSavedToHealth": "Also saved to {store}",
+  "@weightSheetAlsoSavedToHealth": {
+    "description": "Line in the log-weight sheet, only when the weigh-in is also written to the phone's health store; {store} is its name",
+    "placeholders": {"store": {"type": "String"}}
+  },
+  "healthStoreAppleHealth": "Apple Health",
+  "@healthStoreAppleHealth": {
+    "description": "Name of the iOS health store; a product name, not translated"
+  },
+  "healthStoreHealthConnect": "Health Connect",
+  "@healthStoreHealthConnect": {
+    "description": "Name of the Android health store; a product name, not translated"
   },
   "weightSheetYesterday": "Yesterday {kg} kg",
   "@weightSheetYesterday": {

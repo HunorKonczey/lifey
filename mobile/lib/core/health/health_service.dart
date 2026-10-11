@@ -22,6 +22,13 @@ const healthDataTypes = <HealthDataType>[
   HealthDataType.WEIGHT,
 ];
 
+/// What the integration is allowed to do with each of [healthDataTypes]: read everything, and - for body weight only (LIF-109) -
+/// write too, so a weigh-in logged in Lifey also lands in Apple Health / Health Connect. Same length as [healthDataTypes], which the
+/// plugin requires.
+final healthDataAccess = <HealthDataAccess>[
+  for (final type in healthDataTypes) type == HealthDataType.WEIGHT ? HealthDataAccess.READ_WRITE : HealthDataAccess.READ,
+];
+
 /// Thin wrapper around the `health` plugin, the single entry point every
 /// caller uses to touch the platform's health store — Apple Health on iOS,
 /// Google Health Connect on Android (docs/16-apple-health-integration-plan.md,
@@ -92,7 +99,7 @@ class HealthService {
             name: 'HealthService',
             error: error,
           );
-          await _health.requestAuthorization(healthDataTypes);
+          await _health.requestAuthorization(healthDataTypes, permissions: healthDataAccess);
           return await body();
         } catch (_) {
           return fallback;
@@ -112,7 +119,8 @@ class HealthService {
         (message.contains('securityexception') || message.contains('healthconnectexception'));
   }
 
-  /// Requests READ access to [types] (defaults to [healthDataTypes]). Returns
+  /// Requests access to [types]: with no argument, the integration's own [healthDataTypes] with their [healthDataAccess] (read
+  /// everything, write body weight); with a list, READ for each of them. Returns
   /// false immediately when unavailable. Neither platform reveals whether
   /// READ was actually granted (HealthKit never does, for privacy; we treat
   /// Health Connect the same way for a consistent contract), so a `true` here
@@ -122,7 +130,42 @@ class HealthService {
     if (!isAvailable) return false;
     return _guarded(false, () async {
       await _ensureConfigured();
-      return _health.requestAuthorization(types ?? healthDataTypes);
+      return types == null
+          ? _health.requestAuthorization(healthDataTypes, permissions: healthDataAccess)
+          : _health.requestAuthorization(types);
+    });
+  }
+
+  /// Whether Lifey may write body weight to the health store right now. False when unavailable, Health Connect is not installed,
+  /// or the write permission was not granted (an install from before LIF-109 only ever asked for READ). Backs the "Also saved to
+  /// Health Connect" line, which must never claim a save that cannot happen.
+  Future<bool> canWriteBodyMass() async {
+    if (!isAvailable) return false;
+    return _guarded(false, () async {
+      await _ensureConfigured();
+      return await _health.hasPermissions(const [HealthDataType.WEIGHT], permissions: const [HealthDataAccess.READ_WRITE]) == true;
+    });
+  }
+
+  /// Writes one body-weight sample (kilograms) at [at] - a weigh-in the user typed in, so it is marked as a manual entry. Asks for
+  /// the write permission once if it is missing (an install from before LIF-109), and answers false rather than throwing when it
+  /// is refused, the store is unavailable, or the write fails: a failed copy to Health must never fail the weigh-in itself.
+  Future<bool> writeBodyMass({required double kg, required DateTime at}) async {
+    if (!isAvailable) return false;
+    return _guarded(false, () async {
+      await _ensureConfigured();
+      final has = await _health.hasPermissions(const [HealthDataType.WEIGHT], permissions: const [HealthDataAccess.READ_WRITE]);
+      if (has != true) {
+        final granted = await _health.requestAuthorization(const [HealthDataType.WEIGHT], permissions: const [HealthDataAccess.READ_WRITE]);
+        if (!granted) return false;
+      }
+      return _health.writeHealthData(
+        value: kg,
+        unit: HealthDataUnit.KILOGRAM,
+        type: HealthDataType.WEIGHT,
+        startTime: at,
+        recordingMethod: RecordingMethod.manual,
+      );
     });
   }
 
