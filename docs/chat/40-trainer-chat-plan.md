@@ -1925,5 +1925,7 @@ látszik, üres kérdés üres válasz). Mobil 3309 (+7: a beállítások menté
 edzői fejléc: a kliens kikapcsolja, az „Online” eltűnik, miközben a stream nyitva marad, visszakapcsolva visszajön.
 
 **Nincs / nyitott:** a lista pontja (a lista nem mutat online-t); az edzői web fiókmenüjében nincs külön kapcsoló (a beállítások
-oldalon van); emulátoros és iOS próba. **Külön Story (LIF-154):** a telefon pull-ja a `chatPushEnabled`-et és a csendes órákat sem térképezi
-(a weben átállított chat-push nem jut le a telefonra) — nem ennek a jegynek a dolga.
+oldalon van); emulátoros és iOS próba. **Külön Story (LIF-154), kész:** a telefon pull-ja a `chatPushEnabled`-et és a csendes órákat sem térképezte (a weben
+átállított chat-push és csendes óra nem jutott le a telefonra, és a telefon következő mentése visszaírta a régit); a
+`pull_engine._pullSettings` most mindhármat leképezi (a szerver mindig küldi a csendes órákat, null = nincs ablak; a hiányzó kapcsoló
+= be), a függő kimenő művelet mellett nem ír felül. Teszt: `pull_engine_chat_settings_test` (4), a javítás nélkül elbukik.
