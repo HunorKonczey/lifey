@@ -1,5 +1,8 @@
-/// A result a participant shares in the thread — a finished workout or one
-/// personal record (docs/chat/83-chat-result-card-plan.md).
+import '../../nutrition/domain/fiber_sugar.dart';
+import '../../nutrition/domain/meal.dart';
+
+/// A result a participant shares in the thread — a finished workout, one
+/// personal record or a meal (docs/chat/83-chat-result-card-plan.md, section 10).
 ///
 /// A **snapshot**: the numbers are frozen when the card is sent, and
 /// [sessionId] (the main API's workout-session id) is only what a tap opens.
@@ -70,9 +73,43 @@ sealed class ChatCard {
           weightKg: (p['weightKg'] as num?)?.toDouble(),
           reps: (p['reps'] as num?)?.toInt(),
         );
+      case 'MEAL':
+        final m = json['meal'];
+        final mealType = m is Map<String, dynamic> ? _mealTypeFromWire(m['mealType']) : null;
+        if (m is! Map<String, dynamic> ||
+            mealType == null ||
+            m['calories'] is! num ||
+            m['proteinGrams'] is! num ||
+            m['carbsGrams'] is! num ||
+            m['fatGrams'] is! num) {
+          return UnknownChatCard(kind: kind, occurredAt: occurredAt, raw: json);
+        }
+        return MealChatCard(
+          occurredAt: occurredAt,
+          mealType: mealType,
+          calories: (m['calories'] as num).toDouble(),
+          proteinGrams: (m['proteinGrams'] as num).toDouble(),
+          carbsGrams: (m['carbsGrams'] as num).toDouble(),
+          fatGrams: (m['fatGrams'] as num).toDouble(),
+          fiberGrams: (m['fiberGrams'] as num?)?.toDouble(),
+          sugarGrams: (m['sugarGrams'] as num?)?.toDouble(),
+          fiberSugarPartial: m['fiberSugarPartial'] == true,
+          itemCount: (m['itemCount'] as num?)?.toInt(),
+          itemNames: [
+            for (final name in (m['itemNames'] as List<dynamic>? ?? const []))
+              if (name is String) name,
+          ],
+        );
       default:
         return UnknownChatCard(kind: kind, occurredAt: occurredAt, raw: json);
     }
+  }
+
+  static MealType? _mealTypeFromWire(Object? wire) {
+    for (final type in MealType.values) {
+      if (type.apiValue == wire) return type;
+    }
+    return null;
   }
 }
 
@@ -217,6 +254,92 @@ class PrChatCard extends ChatCard {
           if (previousValue != null) 'previousValue': previousValue,
           if (weightKg != null) 'weightKg': weightKg,
           if (reps != null) 'reps': reps,
+        },
+      };
+}
+
+/// One meal as the sender logged it (LIF-123): what they ate, in totals.
+///
+/// Fibre and sugars are nullable on purpose - a food with no figure is "not known", never 0 - and [fiberSugarPartial] says that
+/// only some of the foods had one, so the reader takes the numbers as a lower bound (the same rule as everywhere else).
+/// A meal has no session, so there is nothing to open from it: the card is a snapshot to read, never a door.
+class MealChatCard extends ChatCard {
+  const MealChatCard({
+    required super.occurredAt,
+    required this.mealType,
+    required this.calories,
+    required this.proteinGrams,
+    required this.carbsGrams,
+    required this.fatGrams,
+    this.fiberGrams,
+    this.sugarGrams,
+    this.fiberSugarPartial = false,
+    this.itemCount,
+    this.itemNames = const [],
+  });
+
+  /// Snapshot of [meal], as it is when the sender presses share.
+  factory MealChatCard.fromMeal(Meal meal) {
+    final fiberSugar = meal.fiberSugar;
+    return MealChatCard(
+      occurredAt: meal.dateTime,
+      mealType: meal.mealType,
+      calories: meal.totalCalories,
+      proteinGrams: meal.totalProtein,
+      carbsGrams: meal.totalCarbs,
+      fatGrams: meal.totalFat,
+      fiberGrams: fiberSugar.fiber,
+      sugarGrams: fiberSugar.sugar,
+      fiberSugarPartial: fiberSugar.partial,
+      itemCount: meal.entries.length,
+      itemNames: [for (final entry in meal.entries.take(3)) entry.foodName],
+    );
+  }
+
+  final MealType mealType;
+  final double calories;
+  final double proteinGrams;
+  final double carbsGrams;
+  final double fatGrams;
+  final double? fiberGrams;
+  final double? sugarGrams;
+  final bool fiberSugarPartial;
+  final int? itemCount;
+
+  /// Up to three of the foods' names, for a glance at what it was.
+  final List<String> itemNames;
+
+  FiberSugarTotals get fiberSugar =>
+      FiberSugarTotals(fiber: fiberGrams, sugar: sugarGrams, partial: fiberSugarPartial);
+
+  /// How many foods the names do not cover, or zero.
+  int get moreItems {
+    final count = itemCount ?? itemNames.length;
+    return count > itemNames.length ? count - itemNames.length : 0;
+  }
+
+  @override
+  String get kindCode => 'MEAL';
+
+  /// A meal has no session: whatever id is offered is ignored.
+  @override
+  MealChatCard withSessionId(int? sessionId) => this;
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'kind': kindCode,
+        'occurredAt': occurredAt.toUtc().toIso8601String(),
+        'meal': {
+          'mealType': mealType.apiValue,
+          'calories': calories,
+          'proteinGrams': proteinGrams,
+          'carbsGrams': carbsGrams,
+          'fatGrams': fatGrams,
+          if (fiberGrams != null) 'fiberGrams': fiberGrams,
+          if (sugarGrams != null) 'sugarGrams': sugarGrams,
+          if (fiberSugarPartial) 'fiberSugarPartial': true,
+          if (itemCount != null) 'itemCount': itemCount,
+          if (itemNames.isNotEmpty) 'itemNames': itemNames,
         },
       };
 }

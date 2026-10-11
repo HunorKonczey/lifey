@@ -179,7 +179,7 @@ thread); M3 adds the open-the-session payoff, M4 the second client.
 
 ## 6. Non-goals (deferred)
 
-- Cards for other things (a meal, a weight entry, a program) — the `kind` enum is built to grow, nothing more.
+- Cards for other things (a weight entry, a program) — the `kind` enum is built to grow, nothing more. (The meal card is done: §10.)
 - Searching card contents in the thread search (the server matches on `body` only).
 - Web "open the session" from a card — the web's client detail page has no per-session route; a link is a
   separate step.
@@ -283,3 +283,42 @@ Pixel 10 as the client and Pixel Tablet as the trainer, both debug builds agains
 - The trainer tablet's first tap into the comment field raised Android's own "Try out your stylus" dialog — a system feature of the tablet image, not the app.
 
 **Not covered:** the web tile against a running chat service, a trainer sharing a card to a client (the "a client cannot open a card from their trainer" rule), iOS.
+
+## 10. LIF-123 - a third kind: the meal (2026-10-11)
+
+The `kind` enum was built to grow (§2.4, §6 "Cards for other things - a meal"); this is the first growth.
+
+**What it is.** A client shares one logged meal with their trainer: the card says *which meal* (breakfast, lunch, dinner,
+snack), how many **kcal**, the **macros**, the **fibre and sugars** and *what it was* (the first three foods' names, "+N" for
+the rest). A snapshot like every card (§2.2), and a claim (§2.3).
+
+**Shape.** `kind: "MEAL"` plus `meal: { mealType, calories, proteinGrams, carbsGrams, fatGrams, fiberGrams?, sugarGrams?,
+fiberSugarPartial?, itemCount?, itemNames[<=3] }`. Fibre and sugars are **nullable and omitted when unknown** - not known is not
+0 (the rule of LIF-145/148/150/152) - and `fiberSugarPartial` says only some foods had a figure, so the reader takes the numbers
+as a lower bound; the tile then says "some foods have no figure". Totals, not entries: the card is a glance, not a log.
+
+**Not openable.** A workout card carries `sessionId`, the target of a tap (§2.7); a meal has nothing to open - the trainer's
+client page has no meal by id or by day to land on. So a `MEAL` card has no `sessionId` (the server clears one if it is sent) and
+renders static, no chevron. Opening it (the client's Nutrition tab at that day) is a follow-up if wanted; the card can grow a
+`mealId` without a migration, because the card is one JSON text column.
+
+**Server.** `MessageCard.Kind.MEAL` + `MessageCard.Meal` (bounds: kcal 0-100 000, macros/fibre/sugars 0-10 000, at most 3 names of
+<=120 chars, blank names dropped); `MessageCards` rejects a MEAL card without a meal, and any other kind carrying one;
+`V1002__chat_message_meal_cards.sql` widens the table check, as V1001 said a new kind would; the push says "🍽️ Shared a meal" /
+"🍽️ Étkezést osztott meg". `MessageCard` keeps its 5-argument constructor for the two older kinds.
+
+**Phone.** `MealChatCard` (`chat_card.dart`; `fromMeal` sums the meal the way the meal row does), the card in `ChatCardView`
+(the meal type's own icon and tint, 30 pt kcal, macros line, the existing `FiberSugarLine`, the foods), the list preview "🍽️
+Étkezés". The entry point is the meal row's long-press menu - "Share in chat" next to Edit / Duplicate / Delete - and, like the
+workout buttons, it is **absent, not disabled, when there is nobody to share with** (§1.2).
+
+**Web.** `MessageCardMeal` type, `card.ts` rules (`mealFiberSugar`, `mealMoreItems`, the preview key), the tile (the same
+`FiberSugarLine` the nutrition screens use), the list preview. Read-only.
+
+**Tests.** Chat service 248 (validator: totals, trimmed and capped names, an unknown fibre stays null, the kind decides which
+sub-object may be there, JSON round trip; push text in both languages; real Postgres: stored and read back, refused when it has no
+meal, the table's check accepts MEAL and still refuses an unknown kind). Mobile 3305 (the wire format, `fromMeal`, the card in EN /
+HU / partial / unknown / a narrow window at x 1.3 in both themes, "can never be opened", the menu row present or absent). Web 1230
+(+3 rules) and an e2e on the real services (`trainer-chat-meal-card.spec.ts`: the client's card arrives as a tile with the fibre
+note and the foods; fails without the tile). **Not verified:** the phone on an emulator, a trainer-side phone seeing the card from a
+*client's* thread on a real two-device walk (the parse and the view are unit-tested), iOS.

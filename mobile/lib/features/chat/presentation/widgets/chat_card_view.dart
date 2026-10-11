@@ -9,6 +9,8 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/ds/lifey_card.dart';
 import '../../../../shared/widgets/ds/list_group.dart';
 import '../../../../shared/widgets/ds/tinted_chip.dart';
+import '../../../nutrition/presentation/widgets/fiber_sugar_line.dart';
+import '../../../nutrition/presentation/widgets/meal_type_style.dart';
 import '../../../settings/domain/user_settings.dart';
 import '../../domain/chat_card.dart';
 
@@ -40,6 +42,11 @@ class ChatCardText {
           l10n.chatCardRecordLabel,
           card.exerciseName,
           '${_prValue(l10n, card)} · ${_prKind(l10n, card)}',
+        ),
+      MealChatCard() => ChatCardText._(
+          l10n.chatCardMealLabel,
+          card.mealType.label(l10n),
+          '${fmt.integer(card.calories)} ${l10n.statUnitKcal} · ${_mealMacros(l10n, fmt, card)}',
         ),
       UnknownChatCard() => ChatCardText._(l10n.chatCardUnsupported, l10n.chatCardUnsupported, null),
     };
@@ -79,6 +86,13 @@ class ChatCardText {
       parts.isEmpty ? null : parts.join(' · '),
     );
   }
+
+  /// "Protein 42 g · Carbs 66 g · Fat 18 g".
+  static String _mealMacros(AppLocalizations l10n, LifeyFormat fmt, MealChatCard card) => l10n.chatCardMealMacros(
+        fmt.grams(card.proteinGrams),
+        fmt.grams(card.carbsGrams),
+        fmt.grams(card.fatGrams),
+      );
 
   /// "102.5 kg" or "8 reps" — the number a record is about.
   static String _prValue(AppLocalizations l10n, PrChatCard card) {
@@ -142,6 +156,7 @@ class ChatCardView extends StatelessWidget {
       WorkoutChatCard(isCardio: true) => (Icons.directions_run_rounded, mc.heart),
       WorkoutChatCard() => (Icons.fitness_center_rounded, scheme.primary),
       PrChatCard() => (Icons.emoji_events_rounded, mc.record),
+      MealChatCard(:final mealType) => mealTypeStyle(context, mealType),
       UnknownChatCard() => (Icons.help_outline_rounded, p.text2),
     };
 
@@ -249,6 +264,35 @@ class ChatCardView extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.s4),
         Text(ChatCardText._prKind(l10n, c), style: t.bodyMedium!.copyWith(color: p.text2)),
+      ];
+    }
+    if (c is MealChatCard) {
+      final fmt = LifeyFormat.of(context);
+      final foods = c.itemNames.join(', ');
+      final more = c.moreItems;
+      return [
+        const SizedBox(height: AppSpacing.s8),
+        Text(
+          '${fmt.integer(c.calories)} ${l10n.statUnitKcal}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppType.number(30, color: p.text),
+        ),
+        const SizedBox(height: AppSpacing.s4),
+        Text(ChatCardText._mealMacros(l10n, fmt, c), style: t.bodyMedium!.copyWith(color: p.text2)),
+        if (!c.fiberSugar.isEmpty) ...[
+          const SizedBox(height: AppSpacing.s4),
+          FiberSugarLine(totals: c.fiberSugar),
+        ],
+        if (foods.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.s8),
+          Text(
+            more > 0 ? '$foods +$more' : foods,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: t.bodySmall!.copyWith(color: p.text3),
+          ),
+        ],
       ];
     }
     if (c is WorkoutChatCard) {

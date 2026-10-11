@@ -7084,6 +7084,19 @@
   "@chatCardRecordLabel": {
     "description": "Small overline above the title of a shared personal-record card in a chat thread"
   },
+  "chatCardMealLabel": "Meal",
+  "@chatCardMealLabel": {
+    "description": "Overline of a shared meal card in the chat"
+  },
+  "chatCardMealMacros": "Protein {protein} g · Carbs {carbs} g · Fat {fat} g",
+  "@chatCardMealMacros": {
+    "description": "The macros line of a shared meal card",
+    "placeholders": {"protein": {"type": "String"}, "carbs": {"type": "String"}, "fat": {"type": "String"}}
+  },
+  "chatCardPreviewMeal": "🍽️ Meal",
+  "@chatCardPreviewMeal": {
+    "description": "Conversation list preview of a shared meal card"
+  },
   "chatCardUntitledWorkout": "Workout",
   "@chatCardUntitledWorkout": {
     "description": "Title of a shared strength-workout card when the session had no template name"

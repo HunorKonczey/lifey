@@ -25,7 +25,7 @@ export interface MessageAttachmentResponse {
 }
 
 /** The kinds of result card a message can carry (docs/chat/83-chat-result-card-plan.md). */
-export type MessageCardKind = "WORKOUT" | "PR";
+export type MessageCardKind = "WORKOUT" | "PR" | "MEAL";
 export type MessageCardWorkoutKind = "STRENGTH" | "CARDIO";
 export type MessageCardPrType = "MAX_WEIGHT" | "REPS_AT_WEIGHT" | "ESTIMATED_ONE_RM";
 
@@ -37,6 +37,25 @@ export interface MessageCardWorkout {
   exerciseCount: number | null;
   distanceMeters: number | null;
   recordCount: number | null;
+}
+
+export type MessageCardMealType = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
+
+/**
+ * One meal as the sender logged it (LIF-123): totals, not entries. Fibre and sugars are null when no food had a figure - not
+ * known is never 0 - and `fiberSugarPartial` says only some did, so they are a lower bound.
+ */
+export interface MessageCardMeal {
+  mealType: MessageCardMealType;
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  fiberGrams?: number | null;
+  sugarGrams?: number | null;
+  fiberSugarPartial?: boolean | null;
+  itemCount?: number | null;
+  itemNames?: string[] | null;
 }
 
 export interface MessageCardPr {
@@ -63,6 +82,8 @@ export interface MessageCardResponse {
   occurredAt: string;
   workout: MessageCardWorkout | null;
   pr: MessageCardPr | null;
+  /** Present on a MEAL card only; absent from older servers. A meal has no session, so `sessionId` is null. */
+  meal?: MessageCardMeal | null;
 }
 
 /**

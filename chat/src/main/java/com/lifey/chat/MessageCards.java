@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * The rules and the storage format of a message card
@@ -58,17 +60,17 @@ public final class MessageCards {
         }
         return switch (card.kind()) {
             case WORKOUT -> {
-                if (card.workout() == null || card.pr() != null) {
+                if (card.workout() == null || card.pr() != null || card.meal() != null) {
                     throw new InvalidMessageCardException("A WORKOUT card carries a workout and nothing else");
                 }
                 MessageCard.Workout w = card.workout();
                 yield new MessageCard(card.kind(), card.sessionId(), card.occurredAt(),
                         new MessageCard.Workout(w.workoutKind(), blankToNull(w.title()), w.durationSeconds(),
                                 w.volumeKg(), w.exerciseCount(), w.distanceMeters(), w.recordCount()),
-                        null);
+                        null, null);
             }
             case PR -> {
-                if (card.pr() == null || card.workout() != null) {
+                if (card.pr() == null || card.workout() != null || card.meal() != null) {
                     throw new InvalidMessageCardException("A PR card carries a record and nothing else");
                 }
                 MessageCard.Pr p = card.pr();
@@ -78,7 +80,24 @@ public final class MessageCards {
                 }
                 yield new MessageCard(card.kind(), card.sessionId(), card.occurredAt(), null,
                         new MessageCard.Pr(exercise, p.prType(), p.value(), p.previousValue(), p.weightKg(),
-                                p.reps()));
+                                p.reps()),
+                        null);
+            }
+            case MEAL -> {
+                if (card.meal() == null || card.workout() != null || card.pr() != null) {
+                    throw new InvalidMessageCardException("A MEAL card carries a meal and nothing else");
+                }
+                MessageCard.Meal m = card.meal();
+                // Blank names are noise, and at most three are kept whatever the client sent.
+                List<String> names = m.itemNames() == null ? List.of() : m.itemNames().stream()
+                        .map(MessageCards::blankToNull)
+                        .filter(Objects::nonNull)
+                        .limit(3)
+                        .toList();
+                // A meal is a snapshot of foods eaten, not an appointment: it has no session to open.
+                yield new MessageCard(card.kind(), null, card.occurredAt(), null, null,
+                        new MessageCard.Meal(m.mealType(), m.calories(), m.proteinGrams(), m.carbsGrams(), m.fatGrams(),
+                                m.fiberGrams(), m.sugarGrams(), m.fiberSugarPartial(), m.itemCount(), names));
             }
         };
     }

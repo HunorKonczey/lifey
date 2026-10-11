@@ -7,6 +7,7 @@ import 'package:lifey/features/chat/domain/chat_message.dart';
 import 'package:lifey/features/chat/domain/chat_peer.dart';
 import 'package:lifey/features/chat/presentation/widgets/chat_card_view.dart';
 import 'package:lifey/features/chat/presentation/widgets/message_bubble.dart';
+import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
@@ -42,6 +43,20 @@ PrChatCard _pr({ChatPrKind kind = ChatPrKind.maxWeight, double? previous = 100})
       previousValue: kind == ChatPrKind.repsAtWeight && previous != null ? 6 : previous,
       weightKg: 80,
       reps: 3,
+    );
+
+MealChatCard _meal({double? fiber = 7.5, double? sugar = 9, bool partial = false, int items = 3}) => MealChatCard(
+      occurredAt: _when,
+      mealType: MealType.lunch,
+      calories: 620,
+      proteinGrams: 42,
+      carbsGrams: 66,
+      fatGrams: 18,
+      fiberGrams: fiber,
+      sugarGrams: sugar,
+      fiberSugarPartial: partial,
+      itemCount: items,
+      itemNames: const ['Chicken breast', 'Rice', 'Broccoli'],
     );
 
 Future<void> _pumpCard(
@@ -118,6 +133,75 @@ void main() {
 
       expect(find.text('Végre!'), findsOneWidget);
     });
+  });
+
+  group('meal card (LIF-123)', () {
+    testWidgets('shows the meal, the calories, the macros, the fibre line and what it was', (tester) async {
+      await _pumpCard(tester, _meal(items: 5));
+
+      expect(find.text('MEAL'), findsOneWidget);
+      expect(find.text('Lunch'), findsOneWidget);
+      expect(find.text('620 kcal'), findsOneWidget);
+      expect(find.text('Protein 42 g · Carbs 66 g · Fat 18 g'), findsOneWidget);
+      expect(find.text('Fibre 7.5 g · Sugar 9 g'), findsOneWidget);
+      expect(find.text('Chicken breast, Rice, Broccoli +2'), findsOneWidget);
+      expect(find.text('Oct 3'), findsOneWidget);
+    });
+
+    testWidgets('reads in Hungarian for a Hungarian reader', (tester) async {
+      await _pumpCard(tester, _meal(), locale: 'hu');
+
+      expect(find.text('ÉTKEZÉS'), findsOneWidget);
+      expect(find.text('Ebéd'), findsOneWidget);
+      expect(find.text('Fehérje 42 g · Szénhidrát 66 g · Zsír 18 g'), findsOneWidget);
+      expect(find.text('Rost 7,5 g · Cukor 9 g'), findsOneWidget);
+    });
+
+    testWidgets('a partial fibre figure says so, and an unknown one draws no line at all', (tester) async {
+      await _pumpCard(tester, _meal(partial: true));
+      expect(find.text('Fibre 7.5 g · Sugar 9 g · some foods have no figure'), findsOneWidget);
+
+      await _pumpCard(tester, _meal(fiber: null, sugar: null));
+      expect(find.textContaining('Fibre'), findsNothing);
+      expect(find.textContaining('Sugar'), findsNothing);
+    });
+
+    testWidgets('it is a snapshot to read: no chevron, and a caption sits inside the card', (tester) async {
+      await _pumpCard(tester, _meal(), caption: 'Ez volt az ebédem');
+
+      expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+      expect(find.text('Ez volt az ebédem'), findsOneWidget);
+    });
+
+    testWidgets('it can never be opened, whoever taps it', (tester) async {
+      final card = _meal();
+
+      expect(canOpenChatCard(card: card, isOwn: true, peerRole: ChatPeerRole.client), isFalse);
+      expect(canOpenChatCard(card: card, isOwn: false, peerRole: ChatPeerRole.client), isFalse);
+    });
+
+    for (final (name, locale) in [('English', 'en'), ('Hungarian', 'hu')]) {
+      testWidgets('fits a narrow window at x 1.3 in $name, dark and light', (tester) async {
+        tester.view.physicalSize = const Size(360, 780);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        for (final theme in [AppTheme.dark, AppTheme.light]) {
+          await tester.pumpWidget(MaterialApp(
+            theme: theme,
+            locale: Locale(locale),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)),
+              child: child!,
+            ),
+            home: Scaffold(body: Center(child: ChatCardView(card: _meal(partial: true, items: 9), isOwn: true, caption: 'Hosszú megjegyzés az ebédről'))),
+          ));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        }
+      });
+    }
   });
 
   group('record card', () {
