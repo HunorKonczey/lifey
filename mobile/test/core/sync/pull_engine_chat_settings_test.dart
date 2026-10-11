@@ -104,12 +104,12 @@ void main() {
 
   test('a change still waiting to be sent is not overwritten by the pull', () async {
     // The phone changed something offline: the server still holds the old values, and the pull must not undo the change.
-    await db.into(db.userSettingsTable).insert(UserSettingsTableCompanion(
-          clientId: const Value('singleton'),
-          unitSystem: const Value('METRIC'),
-          theme: const Value('SYSTEM'),
-          language: const Value('SYSTEM'),
-          chatPushEnabled: const Value(false),
+    await db.into(db.userSettingsTable).insert(const UserSettingsTableCompanion(
+          clientId: Value('singleton'),
+          unitSystem: Value('METRIC'),
+          theme: Value('SYSTEM'),
+          language: Value('SYSTEM'),
+          chatPushEnabled: Value(false),
         ));
     await db.into(db.pendingOperations).insert(PendingOperationsCompanion.insert(
           clientId: 'singleton',
