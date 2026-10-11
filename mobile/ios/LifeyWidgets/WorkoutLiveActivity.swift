@@ -18,8 +18,8 @@ struct WorkoutLiveActivity: Widget {
         }
       }
       .padding(16)
-      .activityBackgroundTint(Color(red: 0x16 / 255, green: 0x16 / 255, blue: 0x11 / 255))
-      .activitySystemActionForegroundColor(.white)
+      .activityBackgroundTint(Palette.dark.bg)
+      .activitySystemActionForegroundColor(Palette.dark.onSurface)
       // Own widgetURL for the lock screen presentation — it does NOT
       // inherit the one set below on the Dynamic Island. Distinct from
       // TodaySummaryWidget's `lifey://today` since tapping a running
@@ -40,7 +40,7 @@ struct WorkoutLiveActivity: Widget {
           } else {
             ElapsedTimerView(startedAtEpochMs: context.attributes.startedAtEpochMs)
               .font(.system(size: 14, weight: .semibold))
-              .foregroundColor(.white)
+              .foregroundColor(Palette.dark.onSurface)
           }
         }
         DynamicIslandExpandedRegion(.trailing) {
@@ -52,7 +52,7 @@ struct WorkoutLiveActivity: Widget {
               restEndsAtEpochMs: context.state.restEndsAtEpochMs
             )
             .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.white)
+            .foregroundColor(Palette.dark.onSurface)
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
@@ -60,7 +60,7 @@ struct WorkoutLiveActivity: Widget {
             CardioIslandBottom(cardio: cardio)
           } else {
             ExerciseProgressView(state: context.state)
-              .foregroundColor(.white)
+              .foregroundColor(Palette.dark.onSurface)
           }
         }
       } compactLeading: {
@@ -173,21 +173,21 @@ private struct LockScreenView: View {
       HStack {
         Text(attributes.title)
           .font(.system(size: 15, weight: .bold))
-          .foregroundColor(.white)
+          .foregroundColor(Palette.dark.onSurface)
         Spacer()
         ElapsedTimerView(startedAtEpochMs: attributes.startedAtEpochMs)
           .font(.system(size: 15, weight: .bold))
-          .foregroundColor(.white)
+          .foregroundColor(Palette.dark.onSurface)
       }
       ExerciseProgressView(state: state)
-        .foregroundColor(.white.opacity(0.9))
+        .foregroundColor(Palette.dark.onSurface.opacity(0.9))
       if state.lastSetAtEpochMs != nil {
         RestTimerView(
           lastSetAtEpochMs: state.lastSetAtEpochMs,
           restEndsAtEpochMs: state.restEndsAtEpochMs
         )
         .font(.system(size: 13, weight: .medium))
-        .foregroundColor(.white.opacity(0.7))
+        .foregroundColor(Palette.dark.onSurfaceVariant)
       }
     }
   }
@@ -273,11 +273,11 @@ private struct CardioStatPair: View {
     VStack(spacing: 2) {
       Text(value)
         .font(.system(size: 17, weight: .bold))
-        .foregroundColor(.white)
+        .foregroundColor(Palette.dark.onSurface)
         .monospacedDigit()
       Text(label)
         .font(.system(size: 9, weight: .semibold))
-        .foregroundColor(.white.opacity(0.6))
+        .foregroundColor(Palette.dark.onSurface.opacity(0.6))
     }
   }
 }
@@ -305,7 +305,7 @@ private struct CardioHeaderView: View {
         Text(title)
           .font(.system(size: 15, weight: .bold))
       }
-      .foregroundColor(.white)
+      .foregroundColor(Palette.dark.onSurface)
       Spacer()
       HStack(spacing: 4) {
         if cardio.paused {
@@ -314,7 +314,7 @@ private struct CardioHeaderView: View {
         CardioMovingTimeView(cardio: cardio)
       }
       .font(.system(size: 15, weight: .bold))
-      .foregroundColor(.white.opacity(cardio.paused ? 0.6 : 1))
+      .foregroundColor(Palette.dark.onSurface.opacity(cardio.paused ? 0.6 : 1))
     }
   }
 }
@@ -328,10 +328,10 @@ private struct CardioMetricsRow: View {
       VStack(alignment: .leading, spacing: 2) {
         Text(cardio.primaryLabel.uppercased())
           .font(.system(size: 10, weight: .bold))
-          .foregroundColor(.white.opacity(0.6))
+          .foregroundColor(Palette.dark.onSurface.opacity(0.6))
         Text(cardio.primaryValue)
           .font(.system(size: 34, weight: .bold))
-          .foregroundColor(.white.opacity(cardio.paused ? 0.55 : 1))
+          .foregroundColor(Palette.dark.onSurface.opacity(cardio.paused ? 0.55 : 1))
           .monospacedDigit()
       }
       Spacer()
@@ -374,7 +374,7 @@ private struct CardioIslandLeading: View {
       CardioMovingTimeView(cardio: cardio)
     }
     .font(.system(size: 13, weight: .semibold))
-    .foregroundColor(.white)
+    .foregroundColor(Palette.dark.onSurface)
   }
 }
 
@@ -393,7 +393,7 @@ private struct CardioIslandTrailing: View {
           .opacity(0.7)
       }
     }
-    .foregroundColor(.white)
+    .foregroundColor(Palette.dark.onSurface)
     .opacity(cardio.paused ? 0.6 : 1)
   }
 }
@@ -413,7 +413,7 @@ private struct CardioIslandBottom: View {
           .font(.system(size: 12, weight: .semibold))
           .monospacedDigit()
       }
-      .foregroundColor(.white)
+      .foregroundColor(Palette.dark.onSurface)
     }
     // Hidden when the tertiary metric is unmeasured — mirrors RestTimerView
     // above, which the same STRENGTH region renders instead.
