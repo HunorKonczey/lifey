@@ -12,8 +12,8 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
 /**
- * A result a participant shares in the thread — a finished workout or one
- * personal record (docs/chat/83-chat-result-card-plan.md).
+ * A result a participant shares in the thread — a finished workout, one
+ * personal record or a meal (docs/chat/83-chat-result-card-plan.md, section 10).
  *
  * <p>A <em>snapshot</em>, frozen when it is sent: {@code sessionId} is only the
  * target of the recipient's tap, never a live reference. And a <em>claim</em>:
@@ -35,12 +35,27 @@ public record MessageCard(
         @Positive Long sessionId,
         @NotNull Instant occurredAt,
         @Valid Workout workout,
-        @Valid Pr pr
+        @Valid Pr pr,
+        @Valid Meal meal
 ) {
+
+    /** A card without a meal - how every WORKOUT and PR card is built. */
+    public MessageCard(Kind kind, Long sessionId, Instant occurredAt, Workout workout, Pr pr) {
+        this(kind, sessionId, occurredAt, workout, pr, null);
+    }
 
     public enum Kind {
         WORKOUT,
-        PR
+        PR,
+        MEAL
+    }
+
+    /** The app's own meal types, by the names its API already uses. */
+    public enum MealType {
+        BREAKFAST,
+        LUNCH,
+        DINNER,
+        SNACK
     }
 
     public enum WorkoutKind {
@@ -86,6 +101,28 @@ public record MessageCard(
             @DecimalMin("0") @DecimalMax("10000") Double previousValue,
             @DecimalMin("0") @DecimalMax("10000") Double weightKg,
             @Min(0) @Max(10_000) Integer reps
+    ) {
+    }
+
+    /**
+     * One meal as the sender logged it (LIF-123): what they ate, in totals. Fibre and sugars are nullable on purpose - a food
+     * with no figure is "not known", never 0 - and {@code fiberSugarPartial} says that only some of the foods had one, so the
+     * reader takes them as a lower bound.
+     *
+     * @param itemCount the number of foods in the meal
+     * @param itemNames up to three of their names, for a glance at what it was
+     */
+    public record Meal(
+            @NotNull MealType mealType,
+            @NotNull @DecimalMin("0") @DecimalMax("100000") Double calories,
+            @NotNull @DecimalMin("0") @DecimalMax("10000") Double proteinGrams,
+            @NotNull @DecimalMin("0") @DecimalMax("10000") Double carbsGrams,
+            @NotNull @DecimalMin("0") @DecimalMax("10000") Double fatGrams,
+            @DecimalMin("0") @DecimalMax("10000") Double fiberGrams,
+            @DecimalMin("0") @DecimalMax("10000") Double sugarGrams,
+            Boolean fiberSugarPartial,
+            @Min(0) @Max(1_000) Integer itemCount,
+            @Size(max = 3) java.util.List<@Size(max = 120) String> itemNames
     ) {
     }
 }

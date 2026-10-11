@@ -23,6 +23,59 @@ class MessageCardsTest {
         return new MessageCard.Pr("  Bench press ", MessageCard.PrType.REPS_AT_WEIGHT, 8.0, 6.0, 80.0, 8);
     }
 
+    private static MessageCard.Meal meal() {
+        return new MessageCard.Meal(MessageCard.MealType.LUNCH, 620.0, 42.0, 66.0, 18.0, 7.5, 9.0, true, 4,
+                java.util.Arrays.asList("  Chicken breast ", "", "Rice", "Broccoli", "A fourth one"));
+    }
+
+    @Test
+    void aMealCard_keepsItsTotals_trimsAndCapsTheNames_andHasNothingToOpen() {
+        MessageCard card = MessageCards.validated(
+                // A session id on a meal is meaningless; it must not be stored as a door to something.
+                new MessageCard(MessageCard.Kind.MEAL, 481L, WHEN, null, null, meal()), NOW);
+
+        assertThat(card.sessionId()).isNull();
+        assertThat(card.workout()).isNull();
+        assertThat(card.pr()).isNull();
+        assertThat(card.meal().mealType()).isEqualTo(MessageCard.MealType.LUNCH);
+        assertThat(card.meal().calories()).isEqualTo(620.0);
+        assertThat(card.meal().fiberGrams()).isEqualTo(7.5);
+        assertThat(card.meal().fiberSugarPartial()).isTrue();
+        // Blank dropped, trimmed, at most three.
+        assertThat(card.meal().itemNames()).containsExactly("Chicken breast", "Rice", "Broccoli");
+    }
+
+    @Test
+    void aMealWithNoFibreFigure_staysUnknown_notZero() {
+        MessageCard.Meal unknown = new MessageCard.Meal(MessageCard.MealType.SNACK, 100.0, 1.0, 20.0, 1.0,
+                null, null, null, 1, null);
+
+        MessageCard card = MessageCards.validated(new MessageCard(MessageCard.Kind.MEAL, null, WHEN, null, null, unknown), NOW);
+
+        assertThat(card.meal().fiberGrams()).isNull();
+        assertThat(card.meal().sugarGrams()).isNull();
+        assertThat(card.meal().itemNames()).isEmpty();
+    }
+
+    @Test
+    void aMealCardCarriesAMealAndNothingElse_andNoOtherKindMayCarryOne() {
+        assertThatThrownBy(() -> MessageCards.validated(new MessageCard(MessageCard.Kind.MEAL, null, WHEN, null, null, null), NOW))
+                .isInstanceOf(InvalidMessageCardException.class);
+        assertThatThrownBy(() -> MessageCards.validated(new MessageCard(MessageCard.Kind.MEAL, null, WHEN, workout(), null, meal()), NOW))
+                .isInstanceOf(InvalidMessageCardException.class);
+        assertThatThrownBy(() -> MessageCards.validated(new MessageCard(MessageCard.Kind.WORKOUT, null, WHEN, workout(), null, meal()), NOW))
+                .isInstanceOf(InvalidMessageCardException.class);
+        assertThatThrownBy(() -> MessageCards.validated(new MessageCard(MessageCard.Kind.PR, null, WHEN, null, pr(), meal()), NOW))
+                .isInstanceOf(InvalidMessageCardException.class);
+    }
+
+    @Test
+    void aMealCard_roundTripsThroughTheStoredJson() {
+        MessageCard original = MessageCards.validated(new MessageCard(MessageCard.Kind.MEAL, null, WHEN, null, null, meal()), NOW);
+
+        assertThat(MessageCards.fromJson(MessageCards.toJson(original))).isEqualTo(original);
+    }
+
     @Test
     void aWorkoutCard_isTrimmedAndKeepsItsNumbers() {
         MessageCard card = MessageCards.validated(

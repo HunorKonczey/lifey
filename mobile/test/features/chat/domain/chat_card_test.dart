@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/chat/domain/chat_card.dart';
+import 'package:lifey/features/nutrition/domain/meal.dart';
 
 void main() {
   final when = DateTime.utc(2026, 10, 3, 7, 12);
@@ -27,6 +28,87 @@ void main() {
       expect(parsed.recordCount, 2);
       expect(parsed.isCardio, isFalse);
       expect(parsed.occurredAt.toUtc(), when);
+    });
+
+    test('a meal card round-trips, keeps an unknown fibre unknown and has nothing to open (LIF-123)', () {
+      final card = MealChatCard(
+        occurredAt: when,
+        mealType: MealType.lunch,
+        calories: 620,
+        proteinGrams: 42,
+        carbsGrams: 66,
+        fatGrams: 18,
+        fiberGrams: 7.5,
+        fiberSugarPartial: true,
+        itemCount: 5,
+        itemNames: const ['Chicken', 'Rice', 'Broccoli'],
+      );
+
+      final json = card.toJson();
+      final parsed = ChatCard.tryParse(json) as MealChatCard;
+
+      expect(json['kind'], 'MEAL');
+      expect(json, isNot(contains('sessionId')));
+      expect((json['meal'] as Map), isNot(contains('sugarGrams')), reason: 'unknown is not sent as 0');
+      expect(parsed.mealType, MealType.lunch);
+      expect(parsed.calories, 620);
+      expect(parsed.fiberGrams, 7.5);
+      expect(parsed.sugarGrams, isNull);
+      expect(parsed.fiberSugarPartial, isTrue);
+      expect(parsed.itemNames, ['Chicken', 'Rice', 'Broccoli']);
+      expect(parsed.moreItems, 2);
+      expect(parsed.sessionId, isNull);
+      expect(parsed.withSessionId(481).sessionId, isNull, reason: 'a meal has no session to point at');
+    });
+
+    test('a meal card built from a logged meal sums it, the way the meal row does', () {
+      final meal = Meal(
+        clientId: 'm',
+        dateTime: DateTime(2026, 10, 3, 12, 30),
+        mealType: MealType.dinner,
+        entries: const [
+          MealEntry(foodClientId: 'a', foodName: 'Salmon', quantityInGrams: 150, calories: 300, protein: 30, carbs: 0, fat: 20, fiber: 0, sugar: 0),
+          MealEntry(foodClientId: 'b', foodName: 'Rice', quantityInGrams: 200, calories: 260, protein: 5, carbs: 56, fat: 1, fiber: 1, sugar: 0.4),
+          // No figure: not known, so the card says only some foods have one.
+          MealEntry(foodClientId: 'c', foodName: 'Sauce', quantityInGrams: 30, calories: 60, protein: 1, carbs: 5, fat: 4),
+          MealEntry(foodClientId: 'd', foodName: 'Salad', quantityInGrams: 80, calories: 20, protein: 1, carbs: 3, fat: 0, fiber: 2, sugar: 1),
+        ],
+      );
+
+      final card = MealChatCard.fromMeal(meal);
+
+      expect(card.mealType, MealType.dinner);
+      expect(card.calories, 640);
+      expect(card.proteinGrams, 37);
+      expect(card.carbsGrams, 64);
+      expect(card.fatGrams, 25);
+      expect(card.fiberGrams, 3);
+      expect(card.sugarGrams, closeTo(1.4, 1e-9));
+      expect(card.fiberSugarPartial, isTrue);
+      expect(card.itemCount, 4);
+      expect(card.itemNames, ['Salmon', 'Rice', 'Sauce']);
+      expect(card.moreItems, 1);
+    });
+
+    test('a meal card with no fibre figure at all stays empty, not zero', () {
+      final card = MealChatCard.fromMeal(Meal(
+        clientId: 'm',
+        dateTime: DateTime(2026, 10, 3),
+        mealType: MealType.snack,
+        entries: const [MealEntry(foodClientId: 'a', foodName: 'Apple', quantityInGrams: 100, calories: 52, protein: 0, carbs: 14, fat: 0)],
+      ));
+
+      expect(card.fiberGrams, isNull);
+      expect(card.sugarGrams, isNull);
+      expect(card.fiberSugar.isEmpty, isTrue);
+    });
+
+    test('a malformed meal card becomes an unknown one instead of throwing', () {
+      expect(
+        ChatCard.tryParse({'kind': 'MEAL', 'occurredAt': when.toIso8601String(), 'meal': {'mealType': 'BRUNCH', 'calories': 1}}),
+        isA<UnknownChatCard>(),
+      );
+      expect(ChatCard.tryParse({'kind': 'MEAL', 'occurredAt': when.toIso8601String()}), isA<UnknownChatCard>());
     });
 
     test('a PR card round-trips and knows how far it moved the record', () {

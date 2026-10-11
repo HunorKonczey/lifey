@@ -2,12 +2,15 @@
 
 import { useTranslations } from "next-intl";
 import { Card, Icon, RecordChip } from "@/components/ds";
+import { FiberSugarLine } from "@/features/nutrition/components/FiberSugarLine";
 import { useFormat } from "@/lib/format/useFormat";
 import {
   distanceKm,
   durationMinutes,
   isCardio,
   isKnownCard,
+  mealFiberSugar,
+  mealMoreItems,
   prDelta,
   prUnit,
   recordCount,
@@ -38,21 +41,27 @@ export function ChatCardTile({
   ariaLabel: (spoken: string) => string;
 }) {
   const t = useTranslations("chat");
+  const tNutrition = useTranslations("nutrition");
   const fmt = useFormat();
   const known = isKnownCard(card);
 
   const cardio = isCardio(card);
   const workout = card.kind === "WORKOUT" ? card.workout : null;
   const pr = card.kind === "PR" ? card.pr : null;
+  const meal = card.kind === "MEAL" ? (card.meal ?? null) : null;
 
   const kindLabel = !known
     ? t("cardUnsupported")
+    : meal
+      ? t("cardMeal")
+      : pr
+        ? t("cardRecord")
+        : cardio
+          ? t("cardCardio")
+          : t("cardWorkout");
+  const title = meal
+    ? tNutrition(meal.mealType.toLowerCase() as "breakfast" | "lunch" | "dinner" | "snack")
     : pr
-      ? t("cardRecord")
-      : cardio
-        ? t("cardCardio")
-        : t("cardWorkout");
-  const title = pr
     ? pr.exerciseName
     : workout
       ? (workout.title?.trim() || (cardio ? t("cardUntitledCardio") : t("cardUntitledWorkout")))
@@ -81,14 +90,26 @@ export function ChatCardTile({
         : t("cardKindReps", { weight: fmt.number(pr.weightKg ?? 0, 1) })
     : null;
 
+  const mealMacros = meal
+    ? t("cardMealMacros", {
+        protein: fmt.number(meal.proteinGrams, 0),
+        carbs: fmt.number(meal.carbsGrams, 0),
+        fat: fmt.number(meal.fatGrams, 0),
+      })
+    : null;
+  const mealKcal = meal ? `${fmt.number(meal.calories, 0)} kcal` : null;
+  const mealFoods = meal?.itemNames?.length
+    ? `${meal.itemNames.join(", ")}${mealMoreItems(meal) > 0 ? ` +${mealMoreItems(meal)}` : ""}`
+    : null;
+
   const records = recordCount(card);
   const spoken = !known
     ? t("cardUnsupported")
     : t("cardSemantics", {
         kind: kindLabel,
-        summary: [title, prValue, prKind, ...summaryParts].filter(Boolean).join(", "),
+        summary: [title, mealKcal, mealMacros, prValue, prKind, ...summaryParts].filter(Boolean).join(", "),
       });
-  const color = pr ? "var(--record)" : cardio ? "var(--heart)" : "var(--primary)";
+  const color = meal ? "var(--m-kcal)" : pr ? "var(--record)" : cardio ? "var(--heart)" : "var(--primary)";
 
   return (
     <Card
@@ -112,7 +133,7 @@ export function ChatCardTile({
             color: known ? color : "var(--text-2)",
           }}
         >
-          <Icon name={!known ? "help" : pr ? "trophy" : cardio ? "directions_run" : "fitness_center"} size={20} />
+          <Icon name={!known ? "help" : meal ? "restaurant" : pr ? "trophy" : cardio ? "directions_run" : "fitness_center"} size={20} />
         </span>
         <span
           className="type-body-s truncate"
@@ -144,6 +165,19 @@ export function ChatCardTile({
                 )}
               </p>
               <p className="type-body-s mt-1" style={{ color: "var(--text-2)" }}>{prKind}</p>
+            </>
+          )}
+
+          {meal && mealKcal && (
+            <>
+              <p className="mt-2">
+                <span className="num" style={{ fontSize: 30, fontWeight: 800, color: "var(--text)" }}>{mealKcal}</span>
+              </p>
+              <p className="type-body-s mt-1" style={{ color: "var(--text-2)" }}>{mealMacros}</p>
+              <FiberSugarLine totals={mealFiberSugar(meal)} testId="chat-card-meal-fiber-sugar" className="mt-1" />
+              {mealFoods && (
+                <p className="type-body-s mt-2 line-clamp-2" style={{ color: "var(--text-3)" }} data-testid="chat-card-meal-foods">{mealFoods}</p>
+              )}
             </>
           )}
 

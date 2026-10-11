@@ -7,17 +7,20 @@ import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../../../shared/widgets/ds/list_group.dart';
+import '../../../chat/application/chat_share.dart';
+import '../../../chat/domain/chat_card.dart';
+import '../../../chat/presentation/share_to_chat_sheet.dart';
 import '../../application/meal_controller.dart';
 import '../../domain/meal.dart';
 import '../log_meal_screen.dart';
 import 'duplicate_meal_dialog.dart';
 import 'meal_list_row.dart';
 
-enum _MealAction { edit, duplicate, delete }
+enum _MealAction { edit, duplicate, share, delete }
 
 /// A [MealListRow] with everything a logged meal can do: tap edits, swipe left
 /// deletes (after a confirmation), long-press opens a menu with Edit /
-/// Duplicate / Delete — the copy button that used to sit on every row now
+/// Duplicate / Share in chat / Delete — the copy button that used to sit on every row now
 /// lives there (docs/redesign/77-mobile-redesign-plan.md R2.3).
 ///
 /// Used by the Meals tab and the all-meals screen, so both behave alike.
@@ -96,6 +99,16 @@ class MealListItem extends ConsumerWidget {
               title: l10n.duplicateMenuItem,
               onTap: () => pick(_MealAction.duplicate),
             ),
+            // Only with someone to send it to - a greyed-out row that can never work is clutter (docs/chat/83 section 1.2).
+            Consumer(
+              builder: (context, ref, _) => (ref.watch(chatShareTargetsProvider).value?.isNotEmpty ?? false)
+                  ? ListRow(
+                      leading: ListIconHolder(icon: Icons.ios_share_rounded, color: primary),
+                      title: l10n.shareInChatButton,
+                      onTap: () => pick(_MealAction.share),
+                    )
+                  : const SizedBox.shrink(),
+            ),
             ListRow(
               leading: ListIconHolder(icon: Icons.delete_rounded, color: mc.heart),
               title: l10n.deleteButton,
@@ -111,6 +124,8 @@ class MealListItem extends ConsumerWidget {
         await _edit(context);
       case _MealAction.duplicate:
         await _duplicate(context, ref);
+      case _MealAction.share:
+        await showShareToChatSheet(context, card: MealChatCard.fromMeal(meal));
       case _MealAction.delete:
         if (await _confirmDelete(context) && context.mounted) await _delete(context, ref);
     }

@@ -1,4 +1,5 @@
-import type { MessageCardPr, MessageCardResponse } from "./types";
+import type { FiberSugarTotals } from "@/features/nutrition/fiberSugar";
+import type { MessageCardMeal, MessageCardPr, MessageCardResponse } from "./types";
 
 /**
  * What a result card says, as plain numbers — the tile maps these to words and
@@ -10,12 +11,29 @@ import type { MessageCardPr, MessageCardResponse } from "./types";
 export function isKnownCard(card: MessageCardResponse): boolean {
   if (card.kind === "WORKOUT") return card.workout !== null;
   if (card.kind === "PR") return card.pr !== null;
+  if (card.kind === "MEAL") return card.meal != null;
   return false;
 }
 
 /** Message-catalog key of the conversation-list preview for a card. */
-export function cardPreviewKey(card: MessageCardResponse): "cardPreviewWorkout" | "cardPreviewRecord" {
-  return card.kind === "PR" ? "cardPreviewRecord" : "cardPreviewWorkout";
+export function cardPreviewKey(
+  card: MessageCardResponse,
+): "cardPreviewWorkout" | "cardPreviewRecord" | "cardPreviewMeal" {
+  if (card.kind === "PR") return "cardPreviewRecord";
+  if (card.kind === "MEAL") return "cardPreviewMeal";
+  return "cardPreviewWorkout";
+}
+
+/** The fibre and sugars of a meal card in the shape the nutrition line draws; unknown stays null, never 0. */
+export function mealFiberSugar(meal: Pick<MessageCardMeal, "fiberGrams" | "sugarGrams" | "fiberSugarPartial">): FiberSugarTotals {
+  return { fiber: meal.fiberGrams ?? null, sugar: meal.sugarGrams ?? null, partial: meal.fiberSugarPartial === true };
+}
+
+/** How many foods the (at most three) listed names do not cover. */
+export function mealMoreItems(meal: Pick<MessageCardMeal, "itemCount" | "itemNames">): number {
+  const listed = meal.itemNames?.length ?? 0;
+  const count = meal.itemCount ?? listed;
+  return count > listed ? count - listed : 0;
 }
 
 export function isCardio(card: MessageCardResponse): boolean {

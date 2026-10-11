@@ -502,6 +502,43 @@ class ChatFlowIntegrationTest {
                 .andExpect(jsonPath("$.items[0].unreadCount").value(1));
     }
 
+    private static final String MEAL_CARD = "{\"kind\":\"MEAL\",\"occurredAt\":\"2026-10-03T11:30:00Z\","
+            + "\"meal\":{\"mealType\":\"LUNCH\",\"calories\":620,\"proteinGrams\":42,\"carbsGrams\":66,\"fatGrams\":18,"
+            + "\"fiberGrams\":7.5,\"sugarGrams\":9,\"fiberSugarPartial\":true,\"itemCount\":3,"
+            + "\"itemNames\":[\"Chicken\",\"Rice\",\"Broccoli\"]}}";
+
+    @Test
+    void aMealCardIsStoredAndReadBack_withNothingToOpen() throws Exception {
+        long conversationId = openConversation();
+
+        sendCard(conversationId, clientToken, MEAL_CARD, "Ebéd", "client-meal-1")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.card.kind").value("MEAL"));
+
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + trainerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].body").value("Ebéd"))
+                .andExpect(jsonPath("$.items[0].card.kind").value("MEAL"))
+                .andExpect(jsonPath("$.items[0].card.sessionId").doesNotExist())
+                .andExpect(jsonPath("$.items[0].card.meal.mealType").value("LUNCH"))
+                .andExpect(jsonPath("$.items[0].card.meal.calories").value(620.0))
+                .andExpect(jsonPath("$.items[0].card.meal.fiberGrams").value(7.5))
+                .andExpect(jsonPath("$.items[0].card.meal.fiberSugarPartial").value(true))
+                .andExpect(jsonPath("$.items[0].card.meal.itemNames[2]").value("Broccoli"));
+    }
+
+    @Test
+    void aMealCardWithoutAMealIsRefused_andNothingIsStored() throws Exception {
+        long conversationId = openConversation();
+        String wrong = "{\"kind\":\"MEAL\",\"occurredAt\":\"2026-10-03T11:30:00Z\"}";
+
+        sendCard(conversationId, clientToken, wrong, null, "wrong-meal").andExpect(status().isBadRequest());
+
+        assertThat(jdbcClient.sql("select count(*) from chat_messages where client_message_id = 'wrong-meal'")
+                .query(Long.class).single()).isZero();
+    }
+
     @Test
     void aCardKeepsItsCaption_andReplayingTheSameIdStoresOne() throws Exception {
         long conversationId = openConversation();
@@ -575,9 +612,10 @@ class ChatFlowIntegrationTest {
                         + "values (?, ?, ?, now(), 'hi', '{}')")
                 .params(conversationId, clientId, "ck-data-only").update())
                 .isInstanceOf(DataIntegrityViolationException.class);
-        // Only the kinds the app knows.
+        // Only the kinds the app knows (V1002 widened the list to the meal).
+        jdbcClient.sql(insert).params(conversationId, clientId, "ck-meal", "MEAL", "{}").update();
         assertThatThrownBy(() -> jdbcClient.sql(insert)
-                .params(conversationId, clientId, "ck-unknown", "MEAL", "{}").update())
+                .params(conversationId, clientId, "ck-unknown", "WEIGHT", "{}").update())
                 .isInstanceOf(DataIntegrityViolationException.class);
         // A row with no content at all is still refused.
         assertThatThrownBy(() -> jdbcClient.sql(

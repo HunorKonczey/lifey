@@ -354,6 +354,21 @@ class ChatNotificationServiceImplTest {
         assertThat(capturePushTo(CLIENT_ID).body()).isEqualTo("🏆 Rekordot osztott meg · Végre megvan!");
     }
 
+    @Test
+    void aMealCard_isLocalized() {
+        storedCard("MEAL", null);
+        when(preferences.load(CLIENT_ID)).thenReturn(prefs(true, 0, null, null, true));
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+        assertThat(capturePushTo(CLIENT_ID).body()).isEqualTo("🍽️ Étkezést osztott meg");
+    }
+
+    @Test
+    void aMealCard_saysMealInEnglishToo_andKeepsItsCaption() {
+        storedCard("MEAL", "Lunch");
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+        assertThat(capturePushTo(CLIENT_ID).body()).isEqualTo("🍽️ Shared a meal · Lunch");
+    }
+
     private void storedCard(String kind, String caption) {
         storedMessage(TRAINER_ID, caption);
         ChatMessage message = messageRepository.findById(MESSAGE_ID).orElseThrow();

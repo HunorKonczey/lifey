@@ -208,6 +208,7 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
         if (message.hasCard()) {
             return switch (message.getCardKind()) {
                 case "PR" -> hungarian ? "🏆 Rekordot osztott meg" : "🏆 Shared a record";
+                case "MEAL" -> hungarian ? "🍽️ Étkezést osztott meg" : "🍽️ Shared a meal";
                 default -> hungarian ? "🏋️ Edzést osztott meg" : "🏋️ Shared a workout";
             };
         }

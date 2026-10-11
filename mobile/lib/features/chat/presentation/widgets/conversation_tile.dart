@@ -63,9 +63,11 @@ class ConversationTile extends StatelessWidget {
       // A card has no body of its own, so the kind is the preview; a caption
       // follows it like it does a picture's (docs/chat/83 §4).
       final caption = conversation.lastMessagePreview;
-      final marker = conversation.lastMessageCardKind == 'PR'
-          ? l10n.chatCardPreviewRecord
-          : l10n.chatCardPreviewWorkout;
+      final marker = switch (conversation.lastMessageCardKind) {
+        'PR' => l10n.chatCardPreviewRecord,
+        'MEAL' => l10n.chatCardPreviewMeal,
+        _ => l10n.chatCardPreviewWorkout,
+      };
       preview = '$ownPrefix$marker${caption == null || caption.isEmpty ? '' : ' · $caption'}';
     } else if (conversation.lastMessageHasAttachment) {
       final caption = conversation.lastMessagePreview;

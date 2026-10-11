@@ -5,6 +5,8 @@ import {
   durationMinutes,
   isCardio,
   isKnownCard,
+  mealFiberSugar,
+  mealMoreItems,
   prDelta,
   prUnit,
   recordCount,
@@ -108,5 +110,51 @@ describe("record numbers", () => {
     expect(prDelta({ value: 100, previousValue: null })).toBeNull();
     expect(prDelta({ value: 100, previousValue: 100 })).toBeNull();
     expect(prDelta({ value: 90, previousValue: 100 })).toBeNull();
+  });
+});
+
+const meal = (over: Partial<NonNullable<MessageCardResponse["meal"]>> = {}): MessageCardResponse => ({
+  kind: "MEAL",
+  sessionId: null,
+  occurredAt: "2026-10-03T11:30:00Z",
+  workout: null,
+  pr: null,
+  meal: {
+    mealType: "LUNCH",
+    calories: 620,
+    proteinGrams: 42,
+    carbsGrams: 66,
+    fatGrams: 18,
+    fiberGrams: 7.5,
+    sugarGrams: 9,
+    fiberSugarPartial: true,
+    itemCount: 5,
+    itemNames: ["Chicken", "Rice", "Broccoli"],
+    ...over,
+  },
+});
+
+describe("a meal card (LIF-123)", () => {
+  it("is known when it carries its meal, and previews as a meal", () => {
+    expect(isKnownCard(meal())).toBe(true);
+    expect(isKnownCard({ ...meal(), meal: null })).toBe(false);
+    expect(isKnownCard({ ...meal(), meal: undefined })).toBe(false);
+    expect(cardPreviewKey(meal())).toBe("cardPreviewMeal");
+    expect(recordCount(meal())).toBe(0);
+  });
+
+  it("hands the fibre and sugars over as they are: unknown stays null, never 0", () => {
+    expect(mealFiberSugar(meal().meal!)).toEqual({ fiber: 7.5, sugar: 9, partial: true });
+    expect(mealFiberSugar(meal({ fiberGrams: null, sugarGrams: undefined, fiberSugarPartial: null }).meal!)).toEqual({
+      fiber: null,
+      sugar: null,
+      partial: false,
+    });
+  });
+
+  it("counts the foods the listed names do not cover", () => {
+    expect(mealMoreItems(meal().meal!)).toBe(2);
+    expect(mealMoreItems(meal({ itemCount: 3 }).meal!)).toBe(0);
+    expect(mealMoreItems(meal({ itemCount: null, itemNames: null }).meal!)).toBe(0);
   });
 });
