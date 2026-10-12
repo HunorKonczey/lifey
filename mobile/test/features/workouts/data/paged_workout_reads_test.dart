@@ -150,6 +150,89 @@ void main() {
       expect(await sessions.watchPaged(limit: 5).first, <WorkoutSession>[]);
     });
   });
+
+  group('WorkoutSessionRepository.watchSummaries', () {
+    Future<String> logged(DateTime at, {int sets = 3}) => sessions.create(
+          startedAt: at,
+          finishedAt: at.add(const Duration(hours: 1)),
+          exercises: [const PlannedExerciseInput(exerciseClientId: 'ex-a', targetSets: 3)],
+          sets: [
+            for (var i = 0; i < sets; i++)
+              ExerciseSetInput(exerciseClientId: 'ex-a', reps: 8, weight: 50, performedAt: at.add(Duration(minutes: i))),
+          ],
+        );
+
+    test('holds every session, newest first - not a window', () async {
+      for (var day = 1; day <= 60; day++) {
+        await logged(DateTime.utc(2026, 1, 1).add(Duration(days: day)), sets: 1);
+      }
+
+      final summaries = await sessions.watchSummaries().first;
+
+      expect(summaries, hasLength(60));
+      expect(summaries.first.startedAt!.isAfter(summaries.last.startedAt!), isTrue);
+    });
+
+    test('carries no children: no sets, no planned exercises', () async {
+      await logged(DateTime.utc(2026, 7, 2, 17));
+
+      final summary = (await sessions.watchSummaries().first).single;
+      final full = (await sessions.watchAll().first).single;
+
+      expect(full.sets, hasLength(3));
+      expect(full.exercises, hasLength(1));
+      expect(summary.sets, isEmpty);
+      expect(summary.exercises, isEmpty);
+    });
+
+    test('has everything else watchAll has: the session fields and the cardio metrics', () async {
+      final at = DateTime.utc(2026, 7, 3, 7);
+      final cardioId = await sessions.create(
+        startedAt: at,
+        finishedAt: at.add(const Duration(minutes: 40)),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'RUNNING',
+        movingSeconds: 2400,
+        cardio: const CardioMetrics(distanceMeters: 8000, maxHeartRate: 171),
+      );
+      await logged(DateTime.utc(2026, 7, 2, 17));
+
+      final full = {for (final s in await sessions.watchAll().first) s.clientId: s};
+      final summaries = await sessions.watchSummaries().first;
+
+      expect(summaries.map((s) => s.clientId), (await sessions.watchAll().first).map((s) => s.clientId));
+      for (final s in summaries) {
+        final f = full[s.clientId]!;
+        expect(s.startedAt, f.startedAt);
+        expect(s.finishedAt, f.finishedAt);
+        expect(s.sessionKind, f.sessionKind);
+        expect(s.activityType, f.activityType);
+        expect(s.movingSeconds, f.movingSeconds);
+        expect(s.cardio?.distanceMeters, f.cardio?.distanceMeters);
+        expect(s.cardio?.maxHeartRate, f.cardio?.maxHeartRate);
+      }
+      expect(summaries.firstWhere((s) => s.clientId == cardioId).cardio?.distanceMeters, 8000);
+    });
+
+    test('upcoming sessions are in, and a session with a delete queued is out', () async {
+      await db.into(db.workoutSessions).insert(
+            WorkoutSessionsCompanion.insert(clientId: 'plan-1', scheduledFor: Value(DateTime.utc(2026, 8, 1))),
+          );
+      final gone = await logged(DateTime.utc(2026, 7, 2, 17));
+      final kept = await logged(DateTime.utc(2026, 7, 1, 17));
+      await sessions.delete(gone);
+
+      final summaries = await sessions.watchSummaries().first;
+
+      expect(summaries.map((s) => s.clientId), unorderedEquals(['plan-1', kept]));
+    });
+
+    test('an empty database gives an empty list', () async {
+      expect(await sessions.watchSummaries().first, <WorkoutSession>[]);
+    });
+  });
 }
 
 class _NoopSyncEngine extends SyncEngine {

@@ -183,10 +183,26 @@ The backend is never paged for them; this bounds what the tab itself reads and b
   The free-tier history cutoff is a hard stop: nothing older than it is loaded.
 - Both read `limit + 1` rows to know whether more exist without a count query.
 - **A view, not the list.** `exerciseControllerProvider` and `workoutSessionControllerProvider`
-  still hold the whole tables — the pickers, the statistics, the dashboard, streaks, the
-  recommended workout and the PR counts need them complete — and the tabs still delete and
-  refresh through them. Making those consumers aggregate in SQL (or read a light projection) is
-  the remaining step before the full session list stops being loaded at all.
+  still hold the whole tables, and the tabs still delete and refresh through them.
+
+#### Summaries instead of the whole history (LIF-155)
+
+Most of what read the whole session list never looked at a set. `WorkoutSessionRepository.watchSummaries()` /
+`workoutSummariesProvider` give every session *without its children* — the session's own fields and its cardio
+metrics, but no planned exercises, sets, splits or waypoints (they are **empty, not "none logged"**). Two table
+reads however long the history is.
+
+On the summaries now: the statistics (`stat_chart_data`), the streaks, the weekly recap, the quick-start options,
+the recommended workout, the interstitial gate, the dashboard's today counts, and the cardio record baseline at the
+end of a run. The dashboard's recent-workouts card needs the sets, so it reads its own bounded window
+(`recentWorkoutSessionsProvider`: `watchPaged` of the newest few).
+
+Still on the whole list, because they read the sets or the planned exercises (or open a session from it):
+the Sessions list's PR counts (`sessionPrCountsProvider` replays every set), the watch quick-start sync
+(`previousSetsFor`), the live log screen's watch mirror, the resume prompt, the upcoming-workout card (starts the
+session it holds), and every mutation (`ref.read(workoutSessionControllerProvider.notifier)` builds the stream).
+Taking those off it — the mutations into a plain actions object, the PR counts and the watch sync onto a sets-only
+read — is what remains before the full list stops being loaded at all (LIF-156).
 
 Critically, Phase 1 also already added `foodSearchProvider`
 (`food_controller.dart`), a **second, unbounded** stream over

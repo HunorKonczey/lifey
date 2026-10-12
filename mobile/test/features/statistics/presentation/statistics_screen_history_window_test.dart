@@ -18,6 +18,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/charts/stats_range.dart';
 import 'package:lifey/shared/widgets/ds/lifey_segmented.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// Covers the range switcher's two locked segments (frame P11, `69` §4.1) at
 /// both `historyDays: 30` and `historyDays: null` — the lock glyph, the reason
@@ -91,6 +92,7 @@ Future<ProviderContainer> _pumpStatisticsScreen(
     ProviderScope(
       overrides: [
         mealControllerProvider.overrideWith(() => _FakeMealController([_meal(DateTime.now())])),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(_EmptyWorkoutSessionController.new),
         weightControllerProvider.overrideWith(_EmptyWeightController.new),
         allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),

@@ -21,6 +21,8 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/shared/widgets/charts/stats_range.dart';
 import 'package:lifey/shared/widgets/charts/time_series_chart.dart';
+import 'package:lifey/features/workouts/application/workout_summaries_provider.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// Anchors every test's dates relative to "now" rather than hard-coding
 /// calendar dates, so the suite never goes stale or flakes around a fixed
@@ -177,10 +179,12 @@ ProviderContainer _buildContainer({
   return ProviderContainer(
     overrides: [
       if (meals != null) mealControllerProvider.overrideWith(() => _FakeMealController(meals)),
-      if (sessions != null)
+      if (sessions != null) ...[
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(
           () => _FakeWorkoutSessionController(sessions),
         ),
+      ],
       if (water != null) allWaterEntriesProvider.overrideWith((ref) => Stream.value(water)),
       if (weights != null)
         weightControllerProvider.overrideWith(() => _FakeWeightController(weights)),
@@ -264,7 +268,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutMinutes);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final points = container.read(statChartDataProvider).value!;
         expect(_asPairs(points), [(_day(1), 135.0), (_day(0), 20.0)]);
@@ -281,7 +285,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutCount);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(1), 2.0), (_day(0), 2.0)]);
@@ -296,7 +300,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.activeCalories);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(2), 300.0), (_day(1), 150.0)]);
@@ -325,7 +329,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.activeCalories);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final points = container.read(statChartDataProvider).value!;
         // 486, not 1098 and not 612.
@@ -347,7 +351,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutMinutes);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final points = container.read(statChartDataProvider).value!;
         expect(_asPairs(points), [(_day(0), 42.0)]);
@@ -364,7 +368,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioSessions);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(1), 2.0), (_day(0), 1.0)]);
@@ -381,7 +385,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioMovingMinutes);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(0), 40.0)]); // (1800+600)/60
@@ -408,7 +412,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioDistance);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(0), 20.0)]); // (5000+15000)/1000, basketball excluded
@@ -431,7 +435,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioElevationGain);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(0), 320.0)]);
@@ -458,7 +462,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioAvgPace);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final points = container.read(statChartDataProvider).value!;
         expect(points, hasLength(1));
@@ -478,7 +482,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioAvgPace);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         expect(container.read(statChartDataProvider).value, isEmpty);
       });
@@ -492,7 +496,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioAvgPace);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         expect(container.read(statChartDataProvider).value, isEmpty);
       });
@@ -508,7 +512,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.maxHeartRate);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(1), 160.0), (_day(0), 171.0)]);
@@ -534,7 +538,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioMaxAltitude);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(1), 340.0), (_day(0), 756.0)]);
@@ -548,7 +552,7 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioMaxAltitude);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       expect(container.read(statChartDataProvider).value, isEmpty);
     });
@@ -571,7 +575,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutCount);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(0), 2.0)]);
       });
@@ -582,7 +586,7 @@ void main() {
         container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.strength);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutCount);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
         expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(0), 1.0)]);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutMinutes);
@@ -595,7 +599,7 @@ void main() {
         container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.cardio);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutCount);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
         expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(0), 1.0)]);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutMinutes);
@@ -609,7 +613,7 @@ void main() {
         container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.strength);
 
         container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioMovingMinutes);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         expect(container.read(statChartDataProvider).value, isEmpty);
       });
@@ -627,7 +631,7 @@ void main() {
         container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.strength);
 
         await container.listen(mealControllerProvider.future, (previous, next) {}).read();
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
         await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
         await container.listen(weightControllerProvider.future, (previous, next) {}).read();
         await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
@@ -664,7 +668,7 @@ void main() {
         container
             .read(statMetricControllerProvider.notifier)
             .select(StatMetric.cardioHardZoneMinutes);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(1), 27.0)]);
       });
@@ -689,7 +693,7 @@ void main() {
         container
             .read(statMetricControllerProvider.notifier)
             .select(StatMetric.cardioHardZoneMinutes);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(1), 0.0)]);
       });
@@ -710,7 +714,7 @@ void main() {
         container
             .read(statMetricControllerProvider.notifier)
             .select(StatMetric.cardioHardZoneMinutes);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final value = container.read(statChartDataProvider).value!.single.value;
         expect(value, lessThanOrEqualTo(60.0));
@@ -730,7 +734,7 @@ void main() {
             .read(statMetricControllerProvider.notifier)
             .select(StatMetric.cardioHardZoneMinutes);
         container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.strength);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         expect(container.read(statChartDataProvider).value, isEmpty);
       });
@@ -750,7 +754,7 @@ void main() {
           addTearDown(container.dispose);
           await container.listen(mealControllerProvider.future, (previous, next) {}).read();
           await container
-              .listen(workoutSessionControllerProvider.future, (previous, next) {})
+              .listen(workoutSummariesProvider.future, (previous, next) {})
               .read();
           await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
           await container.listen(weightControllerProvider.future, (previous, next) {}).read();
@@ -934,7 +938,7 @@ void main() {
       addTearDown(container.dispose);
 
       await container.listen(mealControllerProvider.future, (previous, next) {}).read();
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
       await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await container.listen(weightControllerProvider.future, (previous, next) {}).read();
       await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
@@ -956,7 +960,7 @@ void main() {
       addTearDown(container.dispose);
 
       await container.listen(mealControllerProvider.future, (previous, next) {}).read();
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
       await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await container.listen(weightControllerProvider.future, (previous, next) {}).read();
       await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
@@ -981,7 +985,7 @@ void main() {
       addTearDown(container.dispose);
 
       await container.listen(mealControllerProvider.future, (previous, next) {}).read();
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
       await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await container.listen(weightControllerProvider.future, (previous, next) {}).read();
       await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
@@ -1019,7 +1023,7 @@ void main() {
       addTearDown(container.dispose);
 
       await container.listen(mealControllerProvider.future, (previous, next) {}).read();
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
       await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await container.listen(weightControllerProvider.future, (previous, next) {}).read();
       await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
@@ -1053,7 +1057,7 @@ void main() {
       );
       addTearDown(container.dispose);
       await container.listen(mealControllerProvider.future, (previous, next) {}).read();
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
       await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await container.listen(weightControllerProvider.future, (previous, next) {}).read();
       await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
@@ -1074,7 +1078,7 @@ void main() {
       );
       addTearDown(withHike.dispose);
       await withHike.listen(mealControllerProvider.future, (previous, next) {}).read();
-      await withHike.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await withHike.listen(workoutSummariesProvider.future, (previous, next) {}).read();
       await withHike.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await withHike.listen(weightControllerProvider.future, (previous, next) {}).read();
       await withHike.listen(allStepCountsProvider.future, (previous, next) {}).read();

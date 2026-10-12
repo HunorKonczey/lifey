@@ -24,6 +24,7 @@ import 'package:lifey/features/workouts/presentation/open_workout_screens.dart';
 import 'package:lifey/features/workouts/presentation/quick_start_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C2.7: the FAB long-press quick-start sheet.
 /// docs/cardio/59-cardio-implementation-plan.md C2.7 — kész-ha: "Hosszú
@@ -119,6 +120,7 @@ Future<_RecordingSessionController> _pumpAndOpenSheet(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => sessionController),
         workoutTemplateControllerProvider.overrideWith(() => templateController),
         exerciseControllerProvider.overrideWith(_FakeExercises.new),

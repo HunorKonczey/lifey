@@ -19,6 +19,7 @@ import 'package:lifey/features/workouts/presentation/widgets/week_summary_row.da
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/date_range_filter_bar.dart';
 import 'fake_paged_sessions.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 class _FakeSessions extends WorkoutSessionController {
   _FakeSessions(this._sessions);
@@ -74,6 +75,7 @@ Future<_FakeSessions> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => fake),
         workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
         exerciseControllerProvider.overrideWith(_NoExercises.new),

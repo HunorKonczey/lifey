@@ -15,6 +15,7 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../helpers/summaries_bridge.dart';
 
 // A fixed Tuesday, safely inside the Monday–Wednesday nudge window.
 final _tuesday = DateTime(2026, 6, 2);
@@ -49,6 +50,7 @@ Future<void> _pumpCard(
       overrides: [
         settingsControllerProvider.overrideWith(() => _FakeSettingsController()),
         dailyMacrosProvider.overrideWith((ref) => Stream.value(macros)),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(
           () => _FakeWorkoutSessionController(sessions),
         ),

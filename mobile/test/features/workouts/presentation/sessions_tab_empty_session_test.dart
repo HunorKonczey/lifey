@@ -15,6 +15,7 @@ import 'package:lifey/features/workouts/presentation/sessions_tab.dart';
 import 'package:lifey/core/sync/sync_status_provider.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'fake_paged_sessions.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C0.3 regression: a hand-inserted session with no exercises and no sets —
 /// today possible for a plain STRENGTH session started and never filled in,
@@ -61,6 +62,7 @@ Future<void> _pumpSessionsTab(WidgetTester tester, List<WorkoutSession> sessions
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
         workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
         exerciseControllerProvider.overrideWith(_FakeExerciseController.new),

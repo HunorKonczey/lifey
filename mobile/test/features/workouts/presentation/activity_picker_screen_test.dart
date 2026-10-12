@@ -15,6 +15,7 @@ import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart'
 import 'package:lifey/features/workouts/presentation/open_workout_screens.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C2.7 (M03): the full activity/template picker reached from the
 /// quick-start sheet's "All workout types" row.
@@ -62,6 +63,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, {List<WorkoutTemp
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         workoutTemplateControllerProvider.overrideWith(() => _FakeTemplates()..templates = templates),
         exerciseControllerProvider.overrideWith(_FakeExercises.new),
@@ -231,6 +233,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          summariesFollowController,
           workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
           workoutTemplateControllerProvider.overrideWith(() => _FakeTemplates()),
           exerciseControllerProvider.overrideWith(_FakeExercises.new),

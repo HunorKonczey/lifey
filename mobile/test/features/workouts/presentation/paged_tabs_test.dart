@@ -19,6 +19,7 @@ import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/date_range_filter_bar.dart';
 
 import 'fake_paged_sessions.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// What the Exercises and Sessions tabs do with their windows (docs/14-pagination-plan.md Phase 1.3, LIF-113): a footer while
 /// older rows exist, a request for the next page when the viewport nears the bottom, and - for sessions - loading on its own
@@ -50,6 +51,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            summariesFollowController,
             workoutSessionControllerProvider.overrideWith(() => _Sessions(sessions)),
             workoutSessionsPagedProvider.overrideWith(() => fake),
             exerciseControllerProvider.overrideWith(_Exercises.new),

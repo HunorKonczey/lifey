@@ -18,6 +18,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C2.4: the GAME family layout on `CardioSessionScreen` — the two
 /// independent clocks (playing time vs. gross time) and the on-court/bench
@@ -214,6 +215,7 @@ Future<_RecordingSessionController> _pump(
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         if (location != null) locationServiceProvider.overrideWithValue(location),

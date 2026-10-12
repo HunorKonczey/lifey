@@ -6,14 +6,23 @@ import '../../nutrition/domain/meal.dart';
 import '../../water/data/water_entry_repository.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../workouts/application/exercise_controller.dart';
-import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/domain/exercise_enums.dart';
 import '../domain/daily_stats.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import '../domain/today_meal_group.dart';
+import '../../workouts/application/workout_summaries_provider.dart';
+import '../../workouts/data/workout_session_repository.dart';
+import '../../workouts/domain/workout_session.dart';
 
 const _recentWorkoutLimit = 5;
+
+/// The newest few sessions *with* their sets - the recent-workouts card names the exercises and counts the sets, which the
+/// summaries behind the rest of the dashboard do not carry (LIF-155). A bounded window, so the card costs the same however long the
+/// history is; a couple more than shown, as a session being deleted drops out of the read before it leaves the table.
+final recentWorkoutSessionsProvider = StreamProvider<List<WorkoutSession>>((ref) {
+  return ref.watch(workoutSessionRepositoryProvider).watchPaged(limit: _recentWorkoutLimit + 2);
+});
 
 const _mealTypeOrder = [MealType.breakfast, MealType.lunch, MealType.dinner, MealType.snack];
 
@@ -57,7 +66,7 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
   // Upcoming (trainer-scheduled, not-yet-started) sessions aren't "workouts
   // that happened" — excluded here the same way the backend excludes them
   // from statistics/history (docs/personal_trainer/09-utemezett-edzesek-domain-backend.md).
-  final sessions = (ref.watch(workoutSessionControllerProvider).value ?? const [])
+  final sessions = (ref.watch(workoutSummariesProvider).value ?? const [])
       .where((s) => !s.isUpcoming)
       .toList();
   final exercises = ref.watch(exerciseControllerProvider).value ?? const [];
@@ -92,8 +101,9 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
       .whereType<TodayMealGroup>()
       .toList();
 
-  // Already sorted newest-first by WorkoutSessionRepository.watchAll().
-  final recentWorkouts = sessions.take(_recentWorkoutLimit).map((session) {
+  // Newest first, from the window that carries the sets; upcoming ones are not workouts that happened.
+  final recentSessions = (ref.watch(recentWorkoutSessionsProvider).value ?? const <WorkoutSession>[]).where((s) => !s.isUpcoming);
+  final recentWorkouts = recentSessions.take(_recentWorkoutLimit).map((session) {
     final exerciseNames = <String>{for (final set in session.sets) set.exerciseName};
     final exerciseIds = <String>{
       for (final ex in session.exercises) ex.exerciseClientId,

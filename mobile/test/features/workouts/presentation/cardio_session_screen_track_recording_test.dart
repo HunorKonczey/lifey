@@ -15,6 +15,7 @@ import 'package:lifey/features/workouts/data/cardio_track_point_repository.dart'
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C4a.3: `CardioSessionScreen` actually consuming `LocationService.positionStream`
 /// and writing to `CardioTrackPoints` — the live-wiring half of the step,
@@ -100,6 +101,7 @@ void main() {
           // this override — InterstitialManager (67 Prompt 10) needs it
           // here too.
           adsEnabledProvider.overrideWithValue(false),
+          summariesFollowController,
           workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
           settingsControllerProvider.overrideWith(_MetricSettings.new),
           locationServiceProvider.overrideWithValue(location),

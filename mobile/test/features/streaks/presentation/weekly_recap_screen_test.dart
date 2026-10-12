@@ -16,6 +16,7 @@ import 'package:lifey/features/weight/domain/weight_entry.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 final _lastWeek = WeeklyRecap.lastCompletedWeekStart();
 DateTime _lastWeekDay(int offset) => _lastWeek.add(Duration(days: offset));
@@ -66,6 +67,7 @@ Future<void> _pumpScreen(
       overrides: [
         settingsControllerProvider.overrideWith(() => _FakeSettingsController(settings)),
         dailyMacrosProvider.overrideWith((ref) => Stream.value(macros)),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(
           () => _FakeWorkoutSessionController(sessions),
         ),

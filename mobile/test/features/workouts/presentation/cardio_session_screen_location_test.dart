@@ -14,6 +14,7 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C4a.2, M27/M28 — the in-session "no GPS" status card + header chip.
 /// Every fixture here is DISTANCE-family (RUNNING) except the one dedicated
@@ -85,6 +86,7 @@ Future<LocationServiceStub> _pump(
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         locationServiceProvider.overrideWithValue(location),

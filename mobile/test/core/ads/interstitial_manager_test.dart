@@ -8,6 +8,8 @@ import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lifey/features/workouts/application/workout_summaries_provider.dart';
+import '../../helpers/summaries_bridge.dart';
 
 /// Covers Prompt 10's remaining verify items — the two the pure
 /// `isInterstitialEligible` (`is_interstitial_eligible_test.dart`) can't
@@ -66,6 +68,7 @@ class _ActiveWorkoutSessionController extends WorkoutSessionController {
 }) {
   final container = ProviderContainer(overrides: [
     adsEnabledProvider.overrideWithValue(adsEnabled),
+    summariesFollowController,
     workoutSessionControllerProvider
         .overrideWith(sessionController ?? _EmptyWorkoutSessionController.new),
     interstitialManagerProvider
@@ -77,6 +80,7 @@ class _ActiveWorkoutSessionController extends WorkoutSessionController {
   // stream's first emission not yet landed — same Riverpod gotcha
   // documented in `ads_service_provider_test.dart`'s `_keepAlive`.
   container.listen(workoutSessionControllerProvider, (_, __) {});
+  container.listen(workoutSummariesProvider, (_, __) {});
   return (container: container, manager: container.read(interstitialManagerProvider));
 }
 

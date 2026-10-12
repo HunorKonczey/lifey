@@ -14,6 +14,7 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C2.2: the DISTANCE family layout on `CardioSessionScreen` — the
 /// dominant/secondary switch and the manual distance edit that stands in
@@ -117,6 +118,7 @@ Future<_RecordingSessionController> _pump(
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider
             .overrideWith(imperial ? _ImperialSettings.new : _MetricSettings.new),

@@ -26,6 +26,7 @@ import 'package:lifey/shared/widgets/charts/stats_range.dart';
 import 'package:lifey/shared/widgets/charts/time_series_chart.dart';
 import 'package:lifey/shared/widgets/ds/lifey_segmented.dart';
 import 'package:lifey/shared/widgets/error_view.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 class _FakeMealController extends MealController {
   _FakeMealController(this._meals);
@@ -113,6 +114,7 @@ Future<ProviderContainer> _pump(
       // selected one), so every source needs a fake here, not just meals.
       overrides: [
         mealControllerProvider.overrideWith(meals ?? () => _FakeMealController(const [])),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
         weightControllerProvider.overrideWith(_EmptyWeightController.new),
         allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),

@@ -68,6 +68,21 @@ class WorkoutSessionRepository {
     });
   }
 
+  /// Every session *without its children*: no planned exercises, sets, splits or waypoints - only the session's own fields and its
+  /// cardio metrics (LIF-155). What the derived views (streaks, the weekly recap, the statistics, the recommended workout, the
+  /// dashboard counts) read; none of them look at a set. It costs two queries however many sets the history holds.
+  ///
+  /// **Never read `exercises`, `sets`, `splits` or `waypoints` off these** - they are empty, not "none logged".
+  Stream<List<WorkoutSession>> watchSummaries() {
+    final sessions$ = _db.select(_db.workoutSessions).watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(sessions$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
+      final (allSessionRows, ops) = pair;
+      final blocked = blockedByActiveDelete(ops);
+      return _hydrate([for (final r in allSessionRows) if (!blocked.contains(r.clientId)) r], withChildren: false);
+    });
+  }
+
   /// The [limit] newest *started* sessions plus every not-yet-started (upcoming) one, newest first - the Sessions tab's window
   /// (docs/14-pagination-plan.md Phase 1.3, LIF-113). Unlike [watchAll] it reads the sets, cardio rows and splits of only those
   /// sessions, so what a change costs no longer grows with the whole history. Upcoming ones are few (a trainer's schedule) and
@@ -95,9 +110,23 @@ class WorkoutSessionRepository {
   ///
   /// [onlyThese] reads the child tables for these sessions only (a window); without it they are read whole, which is what
   /// [watchAll] wants and avoids a huge `IN (...)` list.
-  Future<List<WorkoutSession>> _hydrate(List<WorkoutSessionRow> sessionRows, {bool onlyThese = false}) async {
+  ///
+  /// [withChildren] false builds summaries (see [watchSummaries]): the cardio metrics are read, nothing else.
+  Future<List<WorkoutSession>> _hydrate(
+    List<WorkoutSessionRow> sessionRows, {
+    bool onlyThese = false,
+    bool withChildren = true,
+  }) async {
     if (sessionRows.isEmpty) return const <WorkoutSession>[];
     final ids = [for (final r in sessionRows) r.clientId];
+
+    if (!withChildren) {
+      final cardioRows = await _db.select(_db.cardioDetails).get();
+      final cardioBySession = {for (final row in cardioRows) row.sessionClientId: _cardioMetricsFromRow(row)};
+      return _newestFirst([
+        for (final row in sessionRows) _toDomain(row, const [], const [], cardio: cardioBySession[row.clientId]),
+      ]);
+    }
 
     final exerciseNames = {
       for (final row in await _db.select(_db.exercises).get()) row.clientId: row.name,
@@ -163,7 +192,7 @@ class WorkoutSessionRepository {
       waypoints.sort((a, b) => a.waypointIndex.compareTo(b.waypointIndex));
     }
 
-    return sessionRows
+    return _newestFirst(sessionRows
         .map((row) => _toDomain(
               row,
               exercisesBySession[row.clientId] ?? const [],
@@ -172,15 +201,17 @@ class WorkoutSessionRepository {
               splits: splitsBySession[row.clientId] ?? const [],
               waypoints: waypointsBySession[row.clientId] ?? const [],
             ))
-        .toList()
-      // Upcoming (not-yet-started) sessions have no startedAt - fall back
-      // to scheduledFor so the comparator never sees a null.
-      ..sort((a, b) {
-        final aKey = a.startedAt ?? a.scheduledFor ?? DateTime(0);
-        final bKey = b.startedAt ?? b.scheduledFor ?? DateTime(0);
-        return bKey.compareTo(aKey);
-      });
+        .toList());
   }
+
+  /// Newest first. Upcoming (not-yet-started) sessions have no startedAt - fall back to scheduledFor so the comparator never sees
+  /// a null.
+  static List<WorkoutSession> _newestFirst(List<WorkoutSession> sessions) => sessions
+    ..sort((a, b) {
+      final aKey = a.startedAt ?? a.scheduledFor ?? DateTime(0);
+      final bKey = b.startedAt ?? b.scheduledFor ?? DateTime(0);
+      return bKey.compareTo(aKey);
+    });
 
   /// Same as [watchAll], narrowed to one [SessionKind] code (`'STRENGTH'` or
   /// `'CARDIO'`) — the fajta-szűrő (docs/cardio/53-cardio-mobile-plan.md §6,

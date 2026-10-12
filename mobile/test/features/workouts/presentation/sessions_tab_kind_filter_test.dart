@@ -15,6 +15,7 @@ import 'package:lifey/features/workouts/domain/workout_template.dart';
 import 'package:lifey/features/workouts/presentation/sessions_tab.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'fake_paged_sessions.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C1.7: the sessions-tab kind/type filter (mind / erősítő / cardio +
 /// másodlagos típus-szűrő). See docs/cardio/59-cardio-implementation-plan.md
@@ -128,6 +129,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            summariesFollowController,
             workoutSessionControllerProvider.overrideWith(() => _FakeSessions(sessions)),
             workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
             exerciseControllerProvider.overrideWith(_FakeExercises.new),

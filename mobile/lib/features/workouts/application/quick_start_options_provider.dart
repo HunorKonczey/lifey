@@ -4,8 +4,8 @@ import '../../../l10n/app_localizations.dart';
 import '../domain/activity_type.dart';
 import '../domain/workout_template.dart';
 import 'activity_ranking.dart';
-import 'workout_session_controller.dart';
 import 'workout_template_controller.dart';
+import 'workout_summaries_provider.dart';
 
 /// A ranked [QuickStartEntry] joined against the user's actual templates —
 /// [QuickStartEntry.templateClientId] on its own doesn't carry a name.
@@ -30,7 +30,7 @@ typedef ResolvedQuickStartEntry = ({QuickStartEntry entry, WorkoutTemplate? temp
 /// a `Provider` only re-runs when a watched dependency emits a new value,
 /// and neither controller stream emits without a real underlying change.
 final quickStartEntriesProvider = Provider<List<ResolvedQuickStartEntry>>((ref) {
-  final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final sessions = ref.watch(workoutSummariesProvider).value ?? const [];
   final templates = ref.watch(workoutTemplateControllerProvider).value ?? const [];
   final templatesById = {for (final t in templates) t.clientId: t};
   return [
@@ -69,7 +69,7 @@ const quickStartColdStartThreshold = 3;
 
 /// Whether the quick-start sheet should show the cold-start explainer.
 final isQuickStartColdStartProvider = Provider<bool>((ref) {
-  final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final sessions = ref.watch(workoutSummariesProvider).value ?? const [];
   final completed = sessions.where((s) => s.finishedAt != null).length;
   return completed < quickStartColdStartThreshold;
 });
