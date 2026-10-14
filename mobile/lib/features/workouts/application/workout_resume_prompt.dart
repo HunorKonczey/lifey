@@ -28,10 +28,7 @@ import '../presentation/quick_start_sheet.dart';
 /// [openActiveWorkoutSession] use, which assumes at most one is ever
 /// running).
 Future<WorkoutSession?> _findActiveSession(Ref ref, {String? clientId}) async {
-  final sessions = await ref.read(workoutSessionRepositoryProvider).watchAll().first;
-  return sessions
-      .where((s) => s.inProgress && (clientId == null || s.clientId == clientId))
-      .firstOrNull;
+  return ref.read(workoutSessionRepositoryProvider).findActive(clientId: clientId);
 }
 
 /// Pushes [LogSessionScreen] for [active] via the root navigator, unless a
@@ -240,8 +237,7 @@ class WorkoutResumePrompt {
     // A session already paired via the manual Health import (doc 16) reflects
     // a more recent, explicit user action — the watch summary must not
     // overwrite it (docs/40-watch-app-plan.md §6.3).
-    final sessions = _ref.read(workoutSessionControllerProvider).value ?? const <WorkoutSession>[];
-    final session = sessions.where((s) => s.clientId == event.sessionClientId).firstOrNull;
+    final session = await _ref.read(workoutSessionRepositoryProvider).findByClientId(event.sessionClientId);
     if (session == null || session.healthWorkoutId != null) return;
 
     // iOS summaries already carry a real HKWorkout uuid; Android summaries

@@ -216,6 +216,7 @@ Future<_RecordingSessionController> _pump(
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         if (location != null) locationServiceProvider.overrideWithValue(location),

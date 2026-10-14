@@ -8,6 +8,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/widgets/upcoming_workout_card.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../helpers/summaries_bridge.dart';
 
 WorkoutSession _today({String? name, String? scheduledTime}) {
   final now = DateTime.now();
@@ -47,6 +48,7 @@ Future<void> _pumpCard(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        summariesFollowController,
         workoutSessionControllerProvider
             .overrideWith(() => _FakeWorkoutSessionController(sessions)),
         trainerInviteControllerProvider.overrideWith(() => _FakeTrainerInviteController(invites)),

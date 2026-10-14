@@ -3,9 +3,9 @@ import '../domain/workout_session.dart';
 /// Everything [LogSessionScreen._applyWatchMirror] reads out of a mirrored
 /// session, flattened into one comparable string.
 ///
-/// The mirror listens to `workoutSessionControllerProvider`, whose stream is
+/// The mirror listens to `workoutSessionProvider` (one session; before LIF-156 the whole history), whose stream is
 /// re-emitted by *any* write to `workout_sessions` **or**
-/// `pending_operations` (see [WorkoutSessionRepository.watchAll]) — including
+/// `pending_operations` (see [WorkoutSessionRepository.watchOne]) — including
 /// outbox traffic from completely unrelated entities (water, steps, meals).
 /// Rebuilding the screen on every one of those was both wasteful (a full
 /// block rebuild plus a previous-performance and PR-baseline query per

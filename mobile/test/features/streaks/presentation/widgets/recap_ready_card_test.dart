@@ -51,6 +51,7 @@ Future<void> _pumpCard(
         settingsControllerProvider.overrideWith(() => _FakeSettingsController()),
         dailyMacrosProvider.overrideWith((ref) => Stream.value(macros)),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(
           () => _FakeWorkoutSessionController(sessions),
         ),

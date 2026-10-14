@@ -294,7 +294,7 @@ String activityModalitySubtitle(AppLocalizations l10n, ActivityFamily family) {
 
 /// Creates+persists a new cardio session for [activityType] — pure data
 /// work, no navigation. Builds the navigation [WorkoutSession] locally
-/// rather than waiting for [workoutSessionControllerProvider]'s stream to
+/// rather than waiting for a sessions stream to
 /// emit the freshly-created row: the repository already knows
 /// `startedAt`/`movingSinceEpochMs` are the same value and `movingSeconds`
 /// starts at 0 (see `WorkoutSessionController.startCardioSession`), so

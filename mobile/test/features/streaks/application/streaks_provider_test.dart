@@ -85,6 +85,7 @@ ProviderContainer _buildContainer({
       if (water != null)
         dailyWaterTotalsProvider.overrideWith((ref) => AsyncValue.data(water)),
       summariesFollowController,
+      sessionsWithSetsFollowController,
       workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
     ],
   );

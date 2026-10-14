@@ -7,9 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../trainer_invite/application/trainer_invite_controller.dart';
-import '../../application/workout_session_controller.dart';
 import '../../domain/workout_session.dart';
 import '../open_workout_screens.dart';
+import '../../application/workout_summaries_provider.dart';
+import '../../data/workout_session_repository.dart';
 
 const _dismissedOnKey = 'lifey.upcomingWorkoutCardDismissedOn';
 
@@ -89,8 +90,11 @@ class _UpcomingWorkoutCardState extends ConsumerState<UpcomingWorkoutCard>
     await prefs.setString(_dismissedOnKey, todayKey);
   }
 
-  void _start(WorkoutSession session) {
-    openSessionScreen(Navigator.of(context, rootNavigator: true), session);
+  Future<void> _start(WorkoutSession session) async {
+    // [session] is a summary (no planned exercises); the screen needs the whole session.
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final whole = await ref.read(workoutSessionRepositoryProvider).findByClientId(session.clientId) ?? session;
+    await openSessionScreen(navigator, whole);
   }
 
   @override
@@ -108,7 +112,7 @@ class _UpcomingWorkoutCardState extends ConsumerState<UpcomingWorkoutCard>
       });
     }
 
-    final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+    final sessions = ref.watch(workoutSummariesProvider).value ?? const [];
     final todaysSessions = sessions.where((s) => s.isUpcoming && _isToday(s.scheduledFor!)).toList()
       ..sort((a, b) => (a.scheduledTime ?? '99:99').compareTo(b.scheduledTime ?? '99:99'));
 

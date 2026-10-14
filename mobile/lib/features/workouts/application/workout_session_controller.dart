@@ -6,12 +6,20 @@ import '../../../core/sync/sync_engine_provider.dart';
 import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
 
-/// Streams workout sessions from the local cache and exposes the mutations.
+/// The workout sessions' mutations: log, start, pause, finish, edit, rate, delete, refresh.
+///
+/// It **holds no list** (LIF-156): reading `.notifier` to write used to build a stream of the whole history - every session with
+/// every set, planned exercise, split and waypoint - which then stayed resident and was rebuilt on each change. What a screen reads
+/// instead: `workoutSessionsPagedProvider` (the Sessions tab's window), `workoutSummariesProvider` (the derived views),
+/// `workoutSessionsWithSetsProvider` (record counts, watch prefill), `workoutSessionProvider` (one session, whole). The state here
+/// is never read; `test/features/workouts/application/workout_session_controller_guard_test.dart` fails if production code does.
+///
+/// Still a [StreamNotifier] of a list, only so the many fakes that serve one to the widgets under test keep compiling.
 class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   WorkoutSessionRepository get _repo => ref.read(workoutSessionRepositoryProvider);
 
   @override
-  Stream<List<WorkoutSession>> build() => _repo.watchAll();
+  Stream<List<WorkoutSession>> build() => const Stream.empty();
 
   /// Returns the new session's clientId so the caller can keep editing it.
   Future<String> logSession({

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/cardio_personal_record.dart';
 import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
-import 'workout_session_controller.dart';
+import 'workout_summaries_provider.dart';
 
 /// How many personal records each finished session set at the time — the
 /// "🏆 2 PRs" chip of the Sessions list (docs/redesign/77-mobile-redesign-plan.md
@@ -63,7 +63,7 @@ Map<String, int> computeSessionPrCounts(List<WorkoutSession> sessions) {
 /// [computeSessionPrCounts] over the whole cached history, recomputed only
 /// when the sessions change — once per list build, not once per row.
 final sessionPrCountsProvider = Provider<Map<String, int>>((ref) {
-  final sessions = ref.watch(workoutSessionControllerProvider).value;
+  final sessions = ref.watch(workoutSessionsWithSetsProvider).value;
   if (sessions == null) return const {};
   return computeSessionPrCounts(sessions);
 });

@@ -71,6 +71,7 @@ ProviderContainer _buildContainer(List<WorkoutSession> sessions) {
     overrides: [
       mealControllerProvider.overrideWith(_FakeMealController.new),
       summariesFollowController,
+      sessionsWithSetsFollowController,
       recentWorkoutSessionsProvider.overrideWith((ref) => Stream.value(sessions)),
       workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
       exerciseControllerProvider.overrideWith(_FakeExerciseController.new),

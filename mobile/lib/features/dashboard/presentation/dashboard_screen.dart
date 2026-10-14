@@ -46,12 +46,13 @@ import 'widgets/recent_workouts_section.dart';
 import 'widgets/today_meals_section.dart';
 import 'widgets/weekly_calories_card.dart';
 import 'widgets/sponsorship_ended_card.dart';
+import '../../workouts/data/workout_session_repository.dart';
 
 /// Opens the matching session straight into edit mode, falling back to the
 /// "Workouts" tab if the session isn't in the local cache (e.g. mid-sync).
 Future<void> _openWorkout(BuildContext context, WidgetRef ref, String clientId) async {
-  final sessions = ref.read(workoutSessionControllerProvider).value ?? const [];
-  final session = sessions.where((s) => s.clientId == clientId).firstOrNull;
+  final session = await ref.read(workoutSessionRepositoryProvider).findByClientId(clientId);
+  if (!context.mounted) return;
   if (session == null) {
     context.go('/workouts');
     return;

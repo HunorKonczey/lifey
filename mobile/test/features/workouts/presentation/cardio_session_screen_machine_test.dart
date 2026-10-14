@@ -96,6 +96,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
         // pending Drift stream at teardown.
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
       ],

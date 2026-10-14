@@ -54,6 +54,7 @@ class _FakeMeals extends MealController {
 ProviderContainer _container(List<Meal> meals) => ProviderContainer(overrides: [
       mealControllerProvider.overrideWith(() => _FakeMeals(meals)),
       summariesFollowController,
+      sessionsWithSetsFollowController,
       workoutSessionControllerProvider.overrideWith(_NoSessions.new),
       weightControllerProvider.overrideWith(_NoWeights.new),
       allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),

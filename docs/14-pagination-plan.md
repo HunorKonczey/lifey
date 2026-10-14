@@ -197,12 +197,22 @@ the recommended workout, the interstitial gate, the dashboard's today counts, an
 end of a run. The dashboard's recent-workouts card needs the sets, so it reads its own bounded window
 (`recentWorkoutSessionsProvider`: `watchPaged` of the newest few).
 
-Still on the whole list, because they read the sets or the planned exercises (or open a session from it):
-the Sessions list's PR counts (`sessionPrCountsProvider` replays every set), the watch quick-start sync
-(`previousSetsFor`), the live log screen's watch mirror, the resume prompt, the upcoming-workout card (starts the
-session it holds), and every mutation (`ref.read(workoutSessionControllerProvider.notifier)` builds the stream).
-Taking those off it — the mutations into a plain actions object, the PR counts and the watch sync onto a sets-only
-read — is what remains before the full list stops being loaded at all (LIF-156).
+#### The whole list is gone (LIF-156)
+
+What was left on the whole list moved to a read that fits it, and `WorkoutSessionController` now **holds no list**
+(its `build()` is an empty stream; it is the mutation entry point, so reading `.notifier` to write no longer
+hydrates the history). A guard test fails if production code reads its state.
+
+- PR counts (`sessionPrCountsProvider`) and the watch quick-start sync (`previousSetsFor`) replay the sets:
+  `watchWithSets()` / `workoutSessionsWithSetsProvider` — sets and cardio metrics, no planned exercises, splits or waypoints.
+- The live log screen's watch mirror follows its own session: `watchOne(clientId)` / `workoutSessionProvider(id)`.
+- The resume / adopt flows used to take the first emission of `watchAll()` to find the running session; they call
+  `findActive({clientId})`, and the dashboard and the resume prompt look a session up with `findByClientId`.
+- The upcoming-workout card reads the summaries and loads the whole session when it is started.
+
+`watchAll()` stays in the repository as the reference the other reads are tested against; nothing in production calls it.
+What is still proportional to the history: the summaries (two table reads) and the sets-level read (all sets) — the
+latter only while the Sessions tab or the watch sync is alive. An SQL aggregate for the record counts would remove that.
 
 Critically, Phase 1 also already added `foodSearchProvider`
 (`food_controller.dart`), a **second, unbounded** stream over

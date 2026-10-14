@@ -10,8 +10,8 @@ import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'activity_ranking.dart';
 import 'exercise_controller.dart';
-import 'workout_session_controller.dart';
 import 'workout_template_controller.dart';
+import 'workout_summaries_provider.dart';
 
 /// At most this many templates go over the wire in one [buildWatchTemplateSync]
 /// call — still the default for that function on its own (docs/watch/
@@ -493,7 +493,7 @@ final watchTemplateSyncPayloadProvider = Provider<WatchQuickStartPayload?>((ref)
   }
   final unitSystem = settings.unitSystem == UnitSystem.imperial ? 'IMPERIAL' : 'METRIC';
 
-  final sessions = ref.watch(workoutSessionControllerProvider).value;
+  final sessions = ref.watch(workoutSessionsWithSetsProvider).value;
   final templates = ref.watch(workoutTemplateControllerProvider).value;
   final exercises = ref.watch(exerciseControllerProvider).value;
   if (sessions == null || templates == null || exercises == null) return null;
