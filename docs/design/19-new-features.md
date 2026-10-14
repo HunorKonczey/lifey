@@ -15,6 +15,31 @@
 
 ---
 
+## Állapot (2026-10-14, LIF-114)
+
+Tételenként a kódhoz mérve (mobil; ahol a webnek is van párja, jelölve). A lista létrehozása óta szinte minden elkészült
+a redesign részeként; az **egyetlen valóban hiányzó** a jelszó-erősség mérő a mobilon (LIF-157).
+
+| Tétel | Állapot | Hol van |
+|---|---|---|
+| A1 Napszak-köszöntés | ✅ kész | `dashboard_screen.dart`, ARB `greeting*` |
+| A2 Étkezések típus szerint a dashboardon | ✅ kész | `Meal.mealType`, `today_meals_section.dart` (`mealTypeStyle`) |
+| A3 Heti kalória-sparkline | ✅ kész | `weekly_calories_card.dart` |
+| A4 „maradt / túl" a kalóriánál | ✅ kész | `calorie_hero_card.dart` (a gyűrű a hátralévő kcal-t, túllépésnél a többletet írja) |
+| A5 Gazdagabb edzés-csempe | ✅ kész | `recent_workouts_section.dart` (időtartam · gyakorlatszám · kcal) |
+| B1 Kereső a Nutrition fejlécben | ✅ kész | `nutrition_screen.dart` (Receptek és Ételek fül) |
+| B2 „Recent" gyors-hozzáadás | ◐ részben | a legutóbbi ételek chipjei a bejegyzés-lapon (`recentFoodsByUsage`), egy koppintás kiválasztja az ételt és előtölti az utolsó mennyiséget; **egy koppintásos naplózás nincs** (még a mennyiség-lap jön) |
+| C1 Kardió-edzés | ✅ kész | `cardio_session_screen.dart`, `cardio_summary_screen.dart` (`docs/cardio/`) |
+| D1 Health-adatok az edzés fejlécében | ✅ kész | `workout_header_pills.dart` (pulzus, kcal), a session `activeCalories` / `averageHeartRate` mezői |
+| E1 Elfelejtett jelszó | ✅ kész | `forgot_password_screen.dart`, `AuthController` (web: `forgot-password`) |
+| E2 Jelszó-erősség mérő | ❌ mobilon nincs | a webnek van (`PasswordStrength.tsx`); mobil: **LIF-157** |
+| F Súly-változás a fejlécben | ◐ részben | `weight_hero_header.dart`: „az utolsó óta" és „30 nap" delta, nem a kiválasztott időszaké |
+| F Tappintható chart-pont tooltip | ✅ kész | `time_series_chart.dart` |
+| F Lépés „… célból" felirat | ✅ kész | `dashboard_tiles.dart` (`dashboardStepsOfGoal`) |
+| F Étel-ikonok | ✅ kész | `mealTypeStyle` (kategória → ikon) |
+
+---
+
 ## A. Dashboard
 
 ### A1. Greeting / napszak-fejléc — "Good morning · Today"
