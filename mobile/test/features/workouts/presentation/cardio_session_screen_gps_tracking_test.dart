@@ -16,6 +16,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C4a.4 — live GPS distance/weak-signal UI wired into `CardioSessionScreen`
 /// (M04 healthy, M10 weak). docs/cardio/59-cardio-implementation-plan.md
@@ -136,6 +137,7 @@ Future<
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         locationServiceProvider.overrideWithValue(loc),
@@ -457,6 +459,7 @@ void main() {
           // InterstitialManager (67 Prompt 10) needs this — see
           // cardio_session_screen_machine_test.dart.
           adsEnabledProvider.overrideWithValue(false),
+          summariesFollowController,
           workoutSessionControllerProvider.overrideWith(() => controller),
           settingsControllerProvider.overrideWith(_MetricSettings.new),
           locationServiceProvider.overrideWithValue(_grantedLocationStub()),

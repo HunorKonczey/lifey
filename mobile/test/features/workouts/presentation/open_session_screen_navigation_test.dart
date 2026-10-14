@@ -16,6 +16,7 @@ import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart'
 import 'package:lifey/features/workouts/presentation/log_session_screen.dart';
 import 'package:lifey/features/workouts/presentation/open_workout_screens.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C1.9: the single kind-branch point (`open_workout_screens.dart`) now
 /// actually branches — the TODO left since C0.4 is resolved here. See
@@ -56,6 +57,7 @@ Future<void> _pumpAndOpen(WidgetTester tester, WorkoutSession session) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(_FakeSessions.new),
         exerciseControllerProvider.overrideWith(_FakeExercises.new),
         settingsControllerProvider.overrideWith(_FakeSettings.new),

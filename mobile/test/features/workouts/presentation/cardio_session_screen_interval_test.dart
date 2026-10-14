@@ -16,6 +16,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// docs/cardio/60 C7.5 — the player on the live MACHINE screen (M38). The
 /// section maths is covered by `interval_player_controller_test.dart`; what
@@ -115,6 +116,7 @@ Future<_RecordingSessionController> _pump(
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         appDatabaseProvider.overrideWithValue(db),

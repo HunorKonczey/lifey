@@ -11,6 +11,8 @@ import 'package:lifey/features/streaks/domain/streak.dart';
 import 'package:lifey/features/water/application/daily_water_totals_provider.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
+import 'package:lifey/features/workouts/application/workout_summaries_provider.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// Anchors every test's dates relative to "now", same convention as
 /// `stat_chart_data_test.dart`, so the suite never goes stale.
@@ -82,6 +84,7 @@ ProviderContainer _buildContainer({
       if (steps != null) allStepCountsProvider.overrideWith((ref) => Stream.value(steps)),
       if (water != null)
         dailyWaterTotalsProvider.overrideWith((ref) => AsyncValue.data(water)),
+      summariesFollowController,
       workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
     ],
   );
@@ -97,7 +100,7 @@ void main() {
       final container = _buildContainer(settings: const UserSettings.defaults());
       addTearDown(container.dispose);
       await _settle(container);
-      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
       final streak = container.read(streaksProvider).single;
       expect(streak.metric, StreakMetric.workout);
@@ -230,7 +233,7 @@ void main() {
         );
         addTearDown(container.dispose);
         await _settle(container);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final streak = container.read(streaksProvider).single;
         expect(streak.metric, StreakMetric.workout);
@@ -245,7 +248,7 @@ void main() {
         );
         addTearDown(container.dispose);
         await _settle(container);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final streak = container.read(streaksProvider).single;
         expect(streak.current, 0);
@@ -261,7 +264,7 @@ void main() {
         );
         addTearDown(container.dispose);
         await _settle(container);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final streak = container.read(streaksProvider).single;
         expect(streak.current, 1);
@@ -279,7 +282,7 @@ void main() {
         );
         addTearDown(container.dispose);
         await _settle(container);
-        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
 
         final streak = container.read(streaksProvider).single;
         expect(streak.current, 1);

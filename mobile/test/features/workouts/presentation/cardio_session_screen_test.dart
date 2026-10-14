@@ -18,6 +18,7 @@ import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart'
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/features/workouts/presentation/workouts_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C2.1: `CardioSessionScreen` — the live state machine skeleton.
 /// docs/cardio/59-cardio-implementation-plan.md C2.1 — kész-ha: "App-kilövés
@@ -266,6 +267,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         locationServiceProvider.overrideWithValue(_grantedLocationStub()),
@@ -299,6 +301,7 @@ Future<(_RecordingSessionController, _RecordingNotifierService)> _pumpWithNotifi
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionNotifierServiceProvider.overrideWithValue(notifier),
@@ -332,6 +335,7 @@ Future<(_RecordingSessionController, _RecordingWatchService)> _pumpWithWatch(
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         watchWorkoutServiceProvider.overrideWithValue(watch),
@@ -748,6 +752,7 @@ void main() {
             // InterstitialManager (67 Prompt 10) needs this — see
             // cardio_session_screen_machine_test.dart.
             adsEnabledProvider.overrideWithValue(false),
+            summariesFollowController,
             workoutSessionControllerProvider.overrideWith(() => controller),
             settingsControllerProvider.overrideWith(
               () => _DisabledWatchSettings(),

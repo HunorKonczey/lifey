@@ -2,11 +2,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import '../../features/workouts/application/workout_session_controller.dart';
 import '../entitlements/entitlement_providers.dart';
 import 'ad_ids.dart';
 import 'interstitial_ad_loader.dart';
 import 'interstitial_preferences.dart';
+import '../../features/workouts/application/workout_summaries_provider.dart';
 
 /// Where [InterstitialManager.maybeShow] is called from (`67` §5.3) —
 /// "exactly two places", and only these.
@@ -87,7 +87,7 @@ class InterstitialManager with WidgetsBindingObserver {
   void dispose() => WidgetsBinding.instance.removeObserver(this);
 
   bool get _hasActiveSession =>
-      (_ref.read(workoutSessionControllerProvider).value ?? const []).any((s) => s.inProgress);
+      (_ref.read(workoutSummariesProvider).value ?? const []).any((s) => s.inProgress);
 
   Future<void> maybeShow(BuildContext context, InterstitialReason reason) async {
     final lastShownAt = await _ref.read(interstitialPreferencesProvider).lastShownAt();

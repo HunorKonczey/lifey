@@ -4,9 +4,9 @@ import '../../nutrition/application/daily_macros_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../steps/data/step_count_repository.dart';
 import '../../water/application/daily_water_totals_provider.dart';
-import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/domain/workout_session.dart';
 import '../domain/streak.dart';
+import '../../workouts/application/workout_summaries_provider.dart';
 
 /// A day meets the workout streak once it has a STRENGTH session (any
 /// length) *or* a cardio session with at least this many moving seconds —
@@ -103,7 +103,7 @@ final streaksProvider = Provider<List<Streak>>((ref) {
   // `_computeStreak`'s per-item loop assumes at most one relevant reading
   // per day and would let a later unmet session silently overwrite an
   // earlier met one for `todayMet` if fed raw sessions directly.
-  final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final sessions = ref.watch(workoutSummariesProvider).value ?? const [];
   final workoutMetByDay = <DateTime, bool>{};
   for (final session in sessions) {
     if (session.isUpcoming || session.startedAt == null) continue;

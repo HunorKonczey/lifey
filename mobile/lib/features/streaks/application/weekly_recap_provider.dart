@@ -6,9 +6,9 @@ import '../../settings/domain/user_settings.dart';
 import '../../steps/data/step_count_repository.dart';
 import '../../water/application/daily_water_totals_provider.dart';
 import '../../weight/application/weight_controller.dart';
-import '../../workouts/application/workout_session_controller.dart';
 import '../domain/weekly_recap.dart';
 import 'streaks_provider.dart';
+import '../../workouts/application/workout_summaries_provider.dart';
 
 /// One [WeeklyRecap] per requested [weekStart] (local-midnight Monday) — a
 /// plain derived family [Provider], same pattern as `dashboardControllerProvider`
@@ -17,7 +17,7 @@ import 'streaks_provider.dart';
 /// blocking the whole recap.
 final weeklyRecapProvider = Provider.family<WeeklyRecap, DateTime>((ref, weekStart) {
   final dailyMacros = ref.watch(dailyMacrosProvider).value ?? const [];
-  final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final sessions = ref.watch(workoutSummariesProvider).value ?? const [];
   final weights = ref.watch(weightControllerProvider).value ?? const [];
   final dailyWater = ref.watch(dailyWaterTotalsProvider).value ?? const {};
   final dailySteps = ref.watch(allStepCountsProvider).value ?? const [];

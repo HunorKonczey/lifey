@@ -13,6 +13,8 @@ import 'package:lifey/features/weight/application/weight_controller.dart';
 import 'package:lifey/features/weight/domain/weight_entry.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
+import 'package:lifey/features/workouts/application/workout_summaries_provider.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 final _monday = DateTime(2026, 6, 1);
 DateTime _weekDay(int offset) => DateTime(_monday.year, _monday.month, _monday.day + offset);
@@ -55,6 +57,7 @@ ProviderContainer _buildContainer({
     overrides: [
       settingsControllerProvider.overrideWith(() => _FakeSettingsController(settings)),
       dailyMacrosProvider.overrideWith((ref) => Stream.value(macros)),
+      summariesFollowController,
       workoutSessionControllerProvider.overrideWith(
         () => _FakeWorkoutSessionController(sessions),
       ),
@@ -68,7 +71,7 @@ ProviderContainer _buildContainer({
 Future<void> _settle(ProviderContainer container) async {
   await container.listen(settingsControllerProvider.future, (previous, next) {}).read();
   await container.listen(dailyMacrosProvider.future, (previous, next) {}).read();
-  await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+  await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
   await container.listen(weightControllerProvider.future, (previous, next) {}).read();
   await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
 }

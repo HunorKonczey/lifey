@@ -9,6 +9,7 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C2.3: the MACHINE family layout on `CardioSessionScreen`.
 /// docs/cardio/59-cardio-implementation-plan.md C2.3 — kész-ha:
@@ -94,6 +95,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
         // reaches the real (unmocked) entitlement repository and leaves a
         // pending Drift stream at teardown.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
       ],

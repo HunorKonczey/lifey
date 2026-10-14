@@ -12,7 +12,6 @@ import '../../water/data/water_entry_repository.dart';
 import '../../water/domain/water_entry.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
-import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/domain/activity_type.dart';
 import '../../workouts/domain/hr_zone_breakdown.dart';
 import '../../workouts/domain/workout_session.dart';
@@ -23,6 +22,7 @@ import '../domain/stat_metric.dart';
 import 'stat_kind_filter_controller.dart';
 import 'stat_metric_controller.dart';
 import 'stats_range_controller.dart';
+import '../../workouts/application/workout_summaries_provider.dart';
 
 /// How many days a [StatsRange] spans, null for "all".
 int? statRangeDays(StatsRange range) => switch (range) {
@@ -140,7 +140,7 @@ AsyncValue<StatSeries> _seriesFor(Ref ref, StatMetric metric, StatKindFilter kin
     case StatMetric.workoutMinutes:
     case StatMetric.workoutCount:
     case StatMetric.activeCalories:
-      return ref.watch(workoutSessionControllerProvider).whenData(
+      return ref.watch(workoutSummariesProvider).whenData(
           (all) => _sessionSeries(_filterByKind(all, kindFilter), metric, cutoff));
     // Cardio-only metrics only ever contain cardio sessions regardless of
     // the filter — under `strength` there's nothing to show at all.
@@ -149,17 +149,17 @@ AsyncValue<StatSeries> _seriesFor(Ref ref, StatMetric metric, StatKindFilter kin
     case StatMetric.cardioElevationGain:
     case StatMetric.cardioSessions:
     case StatMetric.cardioHardZoneMinutes:
-      return ref.watch(workoutSessionControllerProvider).whenData((all) =>
+      return ref.watch(workoutSummariesProvider).whenData((all) =>
           kindFilter == StatKindFilter.strength ? StatSeries.empty : _sessionSeries(all, metric, cutoff));
     case StatMetric.cardioAvgPace:
-      return ref.watch(workoutSessionControllerProvider).whenData((all) =>
+      return ref.watch(workoutSummariesProvider).whenData((all) =>
           kindFilter == StatKindFilter.strength ? StatSeries.empty : _cardioAvgPaceSeries(all, cutoff));
     case StatMetric.maxHeartRate:
-      return ref.watch(workoutSessionControllerProvider).whenData((all) => kindFilter == StatKindFilter.strength
+      return ref.watch(workoutSummariesProvider).whenData((all) => kindFilter == StatKindFilter.strength
           ? StatSeries.empty
           : onlyPoints(_maxHeartRatePoints(all, cutoff)));
     case StatMetric.cardioMaxAltitude:
-      return ref.watch(workoutSessionControllerProvider).whenData((all) => kindFilter == StatKindFilter.strength
+      return ref.watch(workoutSummariesProvider).whenData((all) => kindFilter == StatKindFilter.strength
           ? StatSeries.empty
           : onlyPoints(_maxAltitudePoints(all, cutoff)));
     case StatMetric.water:
@@ -187,7 +187,7 @@ List<WorkoutSession> _filterByKind(List<WorkoutSession> sessions, StatKindFilter
 /// of letting the user select a perpetually-empty one.
 final availableStatMetricsProvider = Provider<Set<StatMetric>>((ref) {
   final meals = ref.watch(mealControllerProvider).value ?? const [];
-  final allSessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final allSessions = ref.watch(workoutSummariesProvider).value ?? const [];
   final water = ref.watch(allWaterEntriesProvider).value ?? const [];
   final weights = ref.watch(weightControllerProvider).value ?? const [];
   // Same re-scoping `statChartDataProvider` applies (D-C3.4) — pre-filtering

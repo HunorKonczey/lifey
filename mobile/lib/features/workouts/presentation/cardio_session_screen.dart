@@ -54,6 +54,7 @@ import 'widgets/cardio_session_settings_sheet.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
 import 'workouts_screen.dart';
+import '../application/workout_summaries_provider.dart';
 
 /// The live cardio screen — skeleton (docs/cardio/59-cardio-implementation-plan.md
 /// C2.1) plus all three family layouts: DISTANCE (C2.2), MACHINE (C2.3), and
@@ -216,6 +217,10 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// session running indefinitely (only the watch side actually closed).
   /// See [_onWatchEvent].
   StreamSubscription<Object>? _watchEventsSubscription;
+
+  /// Keeps the children-free session summaries loaded for the whole run, so the record baseline at the end finds them resident
+  /// (LIF-155) instead of starting a read at the moment the run is finished - and a provider nobody listens to is not read at all.
+  ProviderSubscription<AsyncValue<List<WorkoutSession>>>? _summariesSubscription;
 
   /// Next sequence number to assign — seeded once from the DB
   /// ([_seedTrackPointSeqAndSync]) so a session reopened after an app kill
@@ -425,6 +430,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   @override
   void initState() {
     super.initState();
+    _summariesSubscription = ref.listenManual(workoutSummariesProvider, (previous, next) {});
     _watchEventsSubscription =
         ref.read(watchWorkoutServiceProvider).events.listen(_onWatchEvent);
     final s = widget.session;
@@ -898,6 +904,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _hrTicker?.cancel();
     _finishProgress.dispose();
     _watchEventsSubscription?.cancel();
+    _summariesSubscription?.close();
     _locationSub?.cancel();
     _positionSub?.cancel();
     _weakSignalTimer?.cancel();
@@ -1570,13 +1577,10 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         cardio: displayCardio,
         splits: [...routeSplits, ...intervalSplits],
       );
-      // Baseline is every other cardio session already known locally — read
-      // once, here, rather than a dedicated repository query: the whole list
-      // is already resident via `workoutSessionControllerProvider`
-      // (`watchAll()`), and the strength engine's own `getPrBaseline` is the
-      // only place that owns a second raw-row query, for a table
-      // (`exerciseSets`) `WorkoutSession` doesn't already assemble.
-      final priorSessions = (ref.read(workoutSessionControllerProvider).value ?? const [])
+      // Baseline is every other cardio session already known locally. A record
+      // is judged on the cardio metrics alone, so the children-free summaries
+      // are enough (LIF-155); awaited, as this may be the first read of them.
+      final priorSessions = (await ref.read(workoutSummariesProvider.future))
           .where((s) => s.clientId != _clientId);
       final baseline = CardioPrBaseline.fromSessions(priorSessions);
       final newRecords = detectCardioPrs(baseline, finishedSession);

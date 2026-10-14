@@ -10,6 +10,8 @@ import 'package:lifey/features/workouts/application/exercise_controller.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
+import 'package:lifey/features/workouts/application/workout_summaries_provider.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// This is the dashboard feature's first test file — `dashboard_controller.dart`
 /// had none before C3.4 added the strength/cardio breakdown
@@ -68,6 +70,8 @@ ProviderContainer _buildContainer(List<WorkoutSession> sessions) {
   return ProviderContainer(
     overrides: [
       mealControllerProvider.overrideWith(_FakeMealController.new),
+      summariesFollowController,
+      recentWorkoutSessionsProvider.overrideWith((ref) => Stream.value(sessions)),
       workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
       exerciseControllerProvider.overrideWith(_FakeExerciseController.new),
       weightControllerProvider.overrideWith(_FakeWeightController.new),
@@ -77,7 +81,8 @@ ProviderContainer _buildContainer(List<WorkoutSession> sessions) {
 }
 
 Future<void> _settle(ProviderContainer container) async {
-  await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+  await container.listen(workoutSummariesProvider.future, (previous, next) {}).read();
+  await container.listen(recentWorkoutSessionsProvider.future, (previous, next) {}).read();
 }
 
 void main() {
@@ -148,6 +153,59 @@ void main() {
       expect(cardio.activityType, 'WALKING');
       expect(strength.sessionKind, 'STRENGTH');
       expect(strength.activityType, isNull);
+    });
+  });
+
+  group('dashboardControllerProvider - summaries and the recent window (LIF-155)', () {
+    test('the recent card names the sets from its own window; the counts come from the children-free summaries', () async {
+      final at = _today(hour: 8);
+      final withSets = WorkoutSession(
+        clientId: 'bench-day',
+        startedAt: at,
+        finishedAt: at.add(const Duration(minutes: 50)),
+        exercises: const [],
+        sets: [
+          for (var i = 0; i < 4; i++)
+            ExerciseSet(exerciseClientId: 'ex-bench', exerciseName: 'Bench press', reps: 8, weight: 60, performedAt: at.add(Duration(minutes: i))),
+        ],
+      );
+      // The summary of the same session: no sets, as watchSummaries serves it.
+      final summary = WorkoutSession(clientId: 'bench-day', startedAt: at, finishedAt: withSets.finishedAt, exercises: const [], sets: const []);
+      final container = ProviderContainer(overrides: [
+        mealControllerProvider.overrideWith(_FakeMealController.new),
+        workoutSummariesProvider.overrideWith((ref) => Stream.value([summary])),
+        recentWorkoutSessionsProvider.overrideWith((ref) => Stream.value([withSets])),
+        exerciseControllerProvider.overrideWith(_FakeExerciseController.new),
+        weightControllerProvider.overrideWith(_FakeWeightController.new),
+        todayWaterTotalProvider.overrideWith((ref) => Stream.value(0.0)),
+      ]);
+      addTearDown(container.dispose);
+      await _settle(container);
+
+      final data = container.read(dashboardControllerProvider);
+
+      expect(data.stats.workoutCount, 1);
+      expect(data.recentWorkouts.single.setCount, 4);
+      expect(data.recentWorkouts.single.exerciseNames, ['Bench press']);
+    });
+
+    test('an upcoming session in the recent window is not a workout that happened', () async {
+      final upcoming = WorkoutSession(clientId: 'plan', scheduledFor: _today(hour: 18), exercises: const [], sets: const []);
+      final container = ProviderContainer(overrides: [
+        mealControllerProvider.overrideWith(_FakeMealController.new),
+        workoutSummariesProvider.overrideWith((ref) => Stream.value([upcoming])),
+        recentWorkoutSessionsProvider.overrideWith((ref) => Stream.value([upcoming])),
+        exerciseControllerProvider.overrideWith(_FakeExerciseController.new),
+        weightControllerProvider.overrideWith(_FakeWeightController.new),
+        todayWaterTotalProvider.overrideWith((ref) => Stream.value(0.0)),
+      ]);
+      addTearDown(container.dispose);
+      await _settle(container);
+
+      final data = container.read(dashboardControllerProvider);
+
+      expect(data.recentWorkouts, isEmpty);
+      expect(data.stats.workoutCount, 0);
     });
   });
 }

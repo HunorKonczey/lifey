@@ -18,6 +18,7 @@ import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/date_range_filter_bar.dart';
 import 'package:lifey/shared/widgets/history_boundary_row.dart';
 import 'fake_paged_sessions.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// Covers the history boundary row in a workout list (frame P12, `69` §4.2)
 /// at both `historyDays: 30` and `historyDays: null`, and D-P6's explicit
@@ -104,6 +105,7 @@ Future<ProviderContainer> _pumpSessionsTab(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
         workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
         exerciseControllerProvider.overrideWith(_FakeExerciseController.new),

@@ -4,6 +4,7 @@ import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'workout_session_controller.dart';
 import 'workout_template_controller.dart';
+import 'workout_summaries_provider.dart';
 
 /// Looks for a repeating cycle in the templates used across [sessionsDesc]
 /// (newest first, as returned by [WorkoutSessionController]) and predicts
@@ -48,7 +49,7 @@ String? predictNextTemplateClientId(List<WorkoutSession> sessionsDesc) {
 /// The template recommended to start next, or null when there isn't enough
 /// history/pattern to suggest one, or the predicted template was deleted.
 final recommendedTemplateProvider = Provider<WorkoutTemplate?>((ref) {
-  final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final sessions = ref.watch(workoutSummariesProvider).value ?? const [];
   final templates = ref.watch(workoutTemplateControllerProvider).value ?? const [];
   final predictedId = predictNextTemplateClientId(sessions);
   if (predictedId == null) return null;

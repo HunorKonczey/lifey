@@ -19,6 +19,7 @@ import 'package:lifey/features/workouts/presentation/widgets/route_painter.dart'
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/features/workouts/domain/activity_type.dart';
 import 'fake_paged_sessions.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C1.6: the activity icon on the session list row, with a family-dependent
 /// primary metric for cardio sessions (the row was restyled in R3.3). See
@@ -97,6 +98,7 @@ Future<void> _pumpSessionsTab(WidgetTester tester, List<WorkoutSession> sessions
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
         workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
         exerciseControllerProvider.overrideWith(_FakeExerciseController.new),

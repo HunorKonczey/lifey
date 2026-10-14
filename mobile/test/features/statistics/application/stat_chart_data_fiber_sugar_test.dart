@@ -15,6 +15,7 @@ import 'package:lifey/features/weight/domain/weight_entry.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/shared/widgets/charts/stats_range.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// Fibre and sugar as chart metrics (LIF-151): a day is charted only when every food eaten that day has a figure - an unknown
 /// is not 0, so a day missing some would read as a low day. Such days are left out and counted instead.
@@ -52,6 +53,7 @@ class _FakeMeals extends MealController {
 
 ProviderContainer _container(List<Meal> meals) => ProviderContainer(overrides: [
       mealControllerProvider.overrideWith(() => _FakeMeals(meals)),
+      summariesFollowController,
       workoutSessionControllerProvider.overrideWith(_NoSessions.new),
       weightControllerProvider.overrideWith(_NoWeights.new),
       allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),

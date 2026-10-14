@@ -17,6 +17,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../helpers/summaries_bridge.dart';
 
 /// C4a.5a — GPS-driven auto-pause, bound to `CardioSessionScreen`.
 /// docs/cardio/53-cardio-mobile-plan.md §4.3 — kész-ha: "Ha 15 másodpercig a
@@ -166,6 +167,7 @@ Future<
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
+        summariesFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         locationServiceProvider.overrideWithValue(location),
