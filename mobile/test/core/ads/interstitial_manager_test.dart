@@ -69,6 +69,7 @@ class _ActiveWorkoutSessionController extends WorkoutSessionController {
   final container = ProviderContainer(overrides: [
     adsEnabledProvider.overrideWithValue(adsEnabled),
     summariesFollowController,
+    sessionsWithSetsFollowController,
     workoutSessionControllerProvider
         .overrideWith(sessionController ?? _EmptyWorkoutSessionController.new),
     interstitialManagerProvider

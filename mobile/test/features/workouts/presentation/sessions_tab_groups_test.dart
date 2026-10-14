@@ -76,6 +76,7 @@ Future<_FakeSessions> _pump(
     ProviderScope(
       overrides: [
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(() => fake),
         workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
         exerciseControllerProvider.overrideWith(_NoExercises.new),

@@ -268,6 +268,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         locationServiceProvider.overrideWithValue(_grantedLocationStub()),
@@ -302,6 +303,7 @@ Future<(_RecordingSessionController, _RecordingNotifierService)> _pumpWithNotifi
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionNotifierServiceProvider.overrideWithValue(notifier),
@@ -336,6 +338,7 @@ Future<(_RecordingSessionController, _RecordingWatchService)> _pumpWithWatch(
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         watchWorkoutServiceProvider.overrideWithValue(watch),
@@ -753,6 +756,7 @@ void main() {
             // cardio_session_screen_machine_test.dart.
             adsEnabledProvider.overrideWithValue(false),
             summariesFollowController,
+            sessionsWithSetsFollowController,
             workoutSessionControllerProvider.overrideWith(() => controller),
             settingsControllerProvider.overrideWith(
               () => _DisabledWatchSettings(),

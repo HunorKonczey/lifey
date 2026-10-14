@@ -55,6 +55,8 @@ class WorkoutSessionRepository {
   final AppDatabase _db;
   final OutboxWriter _outbox;
 
+  /// The whole history, whole. **No production code reads it** since LIF-156 - the reads that replaced it are [watchPaged] (a
+  /// window), [watchSummaries], [watchWithSets], [watchOne] and [findActive]; it stays as the reference they are tested against.
   Stream<List<WorkoutSession>> watchAll() {
     final sessions$ = _db.select(_db.workoutSessions).watch();
     final pendingOps$ = _db.select(_db.pendingOperations).watch();
@@ -81,6 +83,52 @@ class WorkoutSessionRepository {
       final blocked = blockedByActiveDelete(ops);
       return _hydrate([for (final r in allSessionRows) if (!blocked.contains(r.clientId)) r], withChildren: false);
     });
+  }
+
+  /// Every session with its sets and cardio metrics, but no planned exercises, splits or waypoints (LIF-156) - what a view that
+  /// replays the history's sets needs (the Sessions list's record counts, the watch's "last time" prefill) without paying for the
+  /// children it never reads. As [watchSummaries], what it leaves out is **empty, not "none logged"**: never read `exercises`,
+  /// `splits` or `waypoints` off these.
+  Stream<List<WorkoutSession>> watchWithSets() {
+    final sessions$ = _db.select(_db.workoutSessions).watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(sessions$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
+      final (allSessionRows, ops) = pair;
+      final blocked = blockedByActiveDelete(ops);
+      return _hydrate(
+        [for (final r in allSessionRows) if (!blocked.contains(r.clientId)) r],
+        withChildren: false,
+        withSets: true,
+      );
+    });
+  }
+
+  /// One session, whole, kept up to date - what a screen that edits a single session watches instead of the whole history
+  /// (LIF-156). Null once the row is gone (or a delete of it is queued).
+  Stream<WorkoutSession?> watchOne(String clientId) {
+    final row$ = (_db.select(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(row$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
+      final (rows, ops) = pair;
+      if (rows.isEmpty || blockedByActiveDelete(ops).contains(clientId)) return null;
+      return _loadAggregate(rows.first);
+    });
+  }
+
+  /// The newest session that has started and not finished - optionally only the one with [clientId] - whole, or null. A one-shot
+  /// read for the resume / adopt flows, which used to take the first emission of [watchAll] (the whole history) to find it.
+  Future<WorkoutSession?> findActive({String? clientId}) async {
+    final rows = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.startedAt.isNotNull() & t.finishedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.startedAt)]))
+        .get();
+    final blocked = blockedByActiveDelete(await _db.select(_db.pendingOperations).get());
+    for (final row in rows) {
+      if (blocked.contains(row.clientId)) continue;
+      if (clientId != null && row.clientId != clientId) continue;
+      return _loadAggregate(row);
+    }
+    return null;
   }
 
   /// The [limit] newest *started* sessions plus every not-yet-started (upcoming) one, newest first - the Sessions tab's window
@@ -111,11 +159,13 @@ class WorkoutSessionRepository {
   /// [onlyThese] reads the child tables for these sessions only (a window); without it they are read whole, which is what
   /// [watchAll] wants and avoids a huge `IN (...)` list.
   ///
-  /// [withChildren] false builds summaries (see [watchSummaries]): the cardio metrics are read, nothing else.
+  /// [withChildren] false builds summaries (see [watchSummaries]): the cardio metrics are read, nothing else - plus the sets when
+  /// [withSets] (see [watchWithSets]).
   Future<List<WorkoutSession>> _hydrate(
     List<WorkoutSessionRow> sessionRows, {
     bool onlyThese = false,
     bool withChildren = true,
+    bool withSets = false,
   }) async {
     if (sessionRows.isEmpty) return const <WorkoutSession>[];
     final ids = [for (final r in sessionRows) r.clientId];
@@ -123,8 +173,29 @@ class WorkoutSessionRepository {
     if (!withChildren) {
       final cardioRows = await _db.select(_db.cardioDetails).get();
       final cardioBySession = {for (final row in cardioRows) row.sessionClientId: _cardioMetricsFromRow(row)};
+      final setsBySession = <String, List<ExerciseSet>>{};
+      if (withSets) {
+        final exerciseNames = {
+          for (final row in await _db.select(_db.exercises).get()) row.clientId: row.name,
+        };
+        for (final set in await _db.select(_db.exerciseSets).get()) {
+          setsBySession.putIfAbsent(set.sessionClientId, () => []).add(
+                ExerciseSet(
+                  exerciseClientId: set.exerciseClientId,
+                  exerciseName: exerciseNames[set.exerciseClientId] ?? 'Unknown',
+                  reps: set.reps,
+                  weight: set.weight,
+                  performedAt: set.performedAt,
+                ),
+              );
+        }
+        for (final sets in setsBySession.values) {
+          sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
+        }
+      }
       return _newestFirst([
-        for (final row in sessionRows) _toDomain(row, const [], const [], cardio: cardioBySession[row.clientId]),
+        for (final row in sessionRows)
+          _toDomain(row, const [], setsBySession[row.clientId] ?? const [], cardio: cardioBySession[row.clientId]),
       ]);
     }
 

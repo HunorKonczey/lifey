@@ -12,9 +12,10 @@ const sessionsPageSize = 40;
 /// [sessionsPageSize] newest started sessions, grown by [loadMore], plus every upcoming (trainer-scheduled) one. Purely a
 /// local-cache window - the backend is never paged for it.
 ///
-/// A *view*, not the history: the statistics, the dashboard, the streaks, the recommended workout and the PR counts still read
-/// the whole list from `workoutSessionControllerProvider`, which they need complete, and the tab still deletes and refreshes
-/// through that controller. What this changes is what the tab itself reads and builds: the sets of only the window's sessions.
+/// A *view*, not the history: the statistics, the streaks, the recommended workout and the rest read `workoutSummariesProvider`,
+/// the record counts `workoutSessionsWithSetsProvider` (LIF-155, LIF-156), and the tab still deletes and refreshes through
+/// `workoutSessionControllerProvider`, which holds no list. What this provider changes is what the tab itself reads and builds:
+/// the sets of only the window's sessions.
 ///
 /// Same bridge as `FoodController`: one broadcast [StreamController] returned from [build], with the repository subscription
 /// swapped underneath it by [loadMore].

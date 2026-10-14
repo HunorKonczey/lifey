@@ -52,6 +52,7 @@ void main() {
         ProviderScope(
           overrides: [
             summariesFollowController,
+            sessionsWithSetsFollowController,
             workoutSessionControllerProvider.overrideWith(() => _Sessions(sessions)),
             workoutSessionsPagedProvider.overrideWith(() => fake),
             exerciseControllerProvider.overrideWith(_Exercises.new),

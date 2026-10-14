@@ -19,3 +19,15 @@ final Override summariesFollowController = workoutSummariesProvider.overrideWith
   ref.onDispose(controller.close);
   return controller.stream;
 });
+
+/// The same for `workoutSessionsWithSetsProvider` (LIF-156): the record counts and the watch prefill read the sets.
+final Override sessionsWithSetsFollowController = workoutSessionsWithSetsProvider.overrideWith((ref) {
+  final controller = StreamController<List<WorkoutSession>>();
+  ref.listen(
+    workoutSessionControllerProvider,
+    (previous, next) => next.whenData(controller.add),
+    fireImmediately: true,
+  );
+  ref.onDispose(controller.close);
+  return controller.stream;
+});

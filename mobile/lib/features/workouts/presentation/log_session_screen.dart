@@ -43,6 +43,7 @@ import 'widgets/workout_header_pills.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/rest_hero_card.dart';
 import 'widgets/workout_success_sheet.dart';
+import '../application/workout_summaries_provider.dart';
 
 /// Full-screen form for logging a session, or editing one when [session] is given.
 ///
@@ -674,8 +675,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   void _startWatchMirror() {
     _watchMastered = true;
     if (_watchMirrorSubscription != null) return;
+    final clientId = _sessionClientId;
+    if (clientId == null) return;
+    // This one session, not the whole history (LIF-156).
     _watchMirrorSubscription = ref.listenManual(
-      workoutSessionControllerProvider,
+      workoutSessionProvider(clientId),
       (_, next) => _applyWatchMirror(next.value),
       // The write that prompted this may already have landed — don't wait for
       // the *next* set to catch up with the one that just arrived.
@@ -692,18 +696,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// changed — see [watchMirrorSignature]: the stream behind it re-emits on
   /// unrelated database traffic too, and rebuilding then threw away the
   /// screen's state (and re-pushed it to the watch) for nothing.
-  void _applyWatchMirror(List<WorkoutSession>? sessions) {
-    if (!mounted || sessions == null) return;
-    final clientId = _sessionClientId;
-    if (clientId == null) return;
-    WorkoutSession? mirrored;
-    for (final candidate in sessions) {
-      if (candidate.clientId == clientId) {
-        mirrored = candidate;
-        break;
-      }
-    }
-    if (mirrored == null) return;
+  void _applyWatchMirror(WorkoutSession? mirrored) {
+    if (!mounted || mirrored == null) return;
     final session = mirrored;
     final signature = watchMirrorSignature(session);
     if (signature == _mirroredSignature) return;

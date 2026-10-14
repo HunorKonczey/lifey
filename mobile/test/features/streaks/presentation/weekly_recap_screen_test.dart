@@ -68,6 +68,7 @@ Future<void> _pumpScreen(
         settingsControllerProvider.overrideWith(() => _FakeSettingsController(settings)),
         dailyMacrosProvider.overrideWith((ref) => Stream.value(macros)),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(
           () => _FakeWorkoutSessionController(sessions),
         ),

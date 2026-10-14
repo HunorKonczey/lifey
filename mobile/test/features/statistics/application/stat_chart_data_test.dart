@@ -181,6 +181,7 @@ ProviderContainer _buildContainer({
       if (meals != null) mealControllerProvider.overrideWith(() => _FakeMealController(meals)),
       if (sessions != null) ...[
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(
           () => _FakeWorkoutSessionController(sessions),
         ),

@@ -63,6 +63,7 @@ Future<void> _pumpSessionsTab(WidgetTester tester, List<WorkoutSession> sessions
     ProviderScope(
       overrides: [
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
         workoutSessionsPagedProvider.overrideWith(() => FakePagedSessions(sessions)),
         exerciseControllerProvider.overrideWith(_FakeExerciseController.new),

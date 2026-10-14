@@ -10,6 +10,8 @@ import 'package:lifey/features/workouts/domain/activity_type.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/domain/workout_template.dart';
+import '../../../helpers/summaries_bridge.dart';
+import 'package:lifey/features/workouts/application/workout_summaries_provider.dart';
 
 /// Each fake replaces one of the four sources
 /// [watchTemplateSyncPayloadProvider] reads. A `null` list stands for "still
@@ -471,6 +473,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           settingsControllerProvider.overrideWith(() => _FakeSettingsController(userSettings)),
+          sessionsWithSetsFollowController,
           workoutSessionControllerProvider.overrideWith(() => _FakeSessionController(sessions)),
           workoutTemplateControllerProvider.overrideWith(() => _FakeTemplateController(templates)),
           exerciseControllerProvider.overrideWith(() => _FakeExerciseController(exercises)),
@@ -481,7 +484,7 @@ void main() {
       Future<void> settle() async {
         await container.listen(settingsControllerProvider.future, (_, __) {}).read();
         if (sessions != null) {
-          await container.listen(workoutSessionControllerProvider.future, (_, __) {}).read();
+          await container.listen(workoutSessionsWithSetsProvider.future, (_, __) {}).read();
         }
         if (templates != null) {
           await container.listen(workoutTemplateControllerProvider.future, (_, __) {}).read();

@@ -115,6 +115,7 @@ Future<ProviderContainer> _pump(
       overrides: [
         mealControllerProvider.overrideWith(meals ?? () => _FakeMealController(const [])),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
         weightControllerProvider.overrideWith(_EmptyWeightController.new),
         allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),

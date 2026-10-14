@@ -87,6 +87,7 @@ Future<LocationServiceStub> _pump(
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
+        sessionsWithSetsFollowController,
         workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         locationServiceProvider.overrideWithValue(location),

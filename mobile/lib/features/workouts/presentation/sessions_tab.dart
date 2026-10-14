@@ -259,7 +259,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 
         // The free history window (`67` §3.2, D-P6) — a presentation filter
         // applied on top of the today/week/all filter above, never a change
-        // to the `workoutSessionControllerProvider` query itself. `filtered`
+        // to the sessions query itself. `filtered`
         // is already newest-first, so anything cut off is a contiguous tail.
         final cutoff = ref.watch(historyCutoffProvider);
         final visible = cutoff == null
