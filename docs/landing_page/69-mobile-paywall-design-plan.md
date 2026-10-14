@@ -502,7 +502,8 @@ real (`67` §4.1 — never a fabricated price). Needs one sub-frame on P08 (§13
 
 ## 13. What is still outstanding
 
-Small, and none of it blocks `67`'s prompts:
+Small, and none of it blocks `67`'s prompts. Items 2–3 are in the rerun brief,
+[`86`](86-missing-frames-rerun-brief.md) §0 items 8–9:
 
 1. **DV-9 fix in P11** — one check mark, not two. Fixed in code (`67` Prompt 3); the frame itself
    is still undrawn, and is now `72` Prompt 17's job.

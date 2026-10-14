@@ -30,7 +30,8 @@
 >
 > **Also still outstanding from §0/§5/§7, on the web side:** the for-trainers, the app and the
 > download page frames; the form/failed-image/404 state frames; and the motion-notes + open-
-> questions closing sections. The rerun brief for these is [68 §13](68-web-landing-design-plan.md).
+> questions closing sections. The rerun brief for these is [68 §13](68-web-landing-design-plan.md); the
+> ready-to-paste version, with screenshots of the pages as built, is [`86`](86-missing-frames-rerun-brief.md).
 
 ---
 
