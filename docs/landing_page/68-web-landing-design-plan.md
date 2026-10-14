@@ -575,7 +575,8 @@ Prompt 17's redraw list.
 
 ## 13. What still has to be designed (web)
 
-The rerun brief. Everything here was in `70` §0/§5/§7 and is not in the canvas:
+The rerun brief. Everything here was in `70` §0/§5/§7 and is not in the canvas.
+**The ready-to-paste brief, with screenshots of the pages as built, is [`86`](86-missing-frames-rerun-brief.md)** (LIF-121):
 
 1. **For-trainers page** (§6) — six value blocks reusing L10–L12's vocabulary, the "day in the
    life" strip, and the pricing preview. No new components, so this is composition, not design.
