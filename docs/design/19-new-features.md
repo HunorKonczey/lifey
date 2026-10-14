@@ -101,7 +101,7 @@ A login képernyőn `Forgot password?` link.
 - **Jelenleg:** nincs jelszó-visszaállítás (csak login/register, JWT+refresh).
 - **Kell:** backend endpoint (e-mail token), mobil flow, ARB. Önálló feature.
 
-### E2. Jelszó-erősség mérő (register)
+### E2. Jelszó-erősség mérő (register) — ✅ kész (2026-10-14, LIF-157; web és mobil)
 A register képernyőn 3 szegmenses erősség-jelző ("Strong").
 - **Kell:** kliensoldali jelszó-erősség kiértékelés + sáv. Tisztán frontend,
   kicsi.

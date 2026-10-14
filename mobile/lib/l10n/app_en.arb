@@ -164,6 +164,22 @@
   "@passwordTooShortError": {
     "description": "Validation error when the password is too short"
   },
+  "passwordStrengthWeak": "Weak password",
+  "@passwordStrengthWeak": {
+    "description": "Word under the registration password field's strength meter when the password is shorter than 8 characters (docs/design/19-new-features.md E2); the web says the same"
+  },
+  "passwordStrengthAcceptable": "Acceptable",
+  "@passwordStrengthAcceptable": {
+    "description": "Word under the registration password field's strength meter for a password that meets the 8-character minimum and little else (two of four segments)"
+  },
+  "passwordStrengthStrong": "Strong password",
+  "@passwordStrengthStrong": {
+    "description": "Word under the registration password field's strength meter for a password with good variety or length (three of four segments)"
+  },
+  "passwordStrengthVeryStrong": "Very strong password",
+  "@passwordStrengthVeryStrong": {
+    "description": "Word under the registration password field's strength meter for a password with every kind of variety (four of four segments)"
+  },
   "confirmPasswordLabel": "Confirm password",
   "@confirmPasswordLabel": {
     "description": "Label for the confirm-password field"

@@ -10,6 +10,8 @@ import '../../onboarding/data/user_details_repository.dart';
 import '../application/auth_controller.dart';
 import '../../../shared/widgets/ds/screen_heading.dart';
 import 'widgets/auth_widgets.dart';
+import 'widgets/password_strength_meter.dart';
+import '../domain/password_strength.dart';
 
 /// Account creation. Registering also logs the user in immediately, matching
 /// the backend flow (register, then login to receive a token pair).
@@ -157,8 +159,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 obscureText: true,
                 helperText: l10n.passwordHelperText,
                 textInputAction: TextInputAction.next,
-                validator: (value) => (value == null || value.length < 8) ? l10n.passwordTooShortError : null,
+                validator: (value) => (value == null || value.length < passwordMinLength) ? l10n.passwordTooShortError : null,
               ),
+              PasswordStrengthMeter(controller: _passwordController),
               const SizedBox(height: AppSpacing.s16),
               AuthTextField(
                 controller: _confirmController,
