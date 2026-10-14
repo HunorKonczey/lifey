@@ -1970,6 +1970,19 @@ priorities change; the canvas priority order (dashboard, nutrition, workouts, �
 - **Golden-image tests** (D-R0.11).
 - **Max-HR setting**, if it doesn't exist yet — the cardio footnote drops its last sentence.
 
+**Re-evaluated 2026-10-14 (LIF-112): all three stay out.**
+- *Material Symbols*: the reason stands — a large icon-font dependency for a glyph set that is visually near-identical to the
+  rounded Material Icons the app already uses, and "no new framework without justification". Nothing in the shipped screens
+  shows a missing or mismatched glyph that would change that.
+- *Golden-image tests*: the reason stands — development is on Windows and CI on ubuntu, so the same widget renders with
+  different fonts and a golden would fail on one of them. The design gallery plus structure / semantics / no-overflow widget
+  tests (D-R0.11) cover what a golden would, without the flake.
+- *Max-HR setting*: not built. The live cardio zone row (`hr_zones.dart`) uses the 220 − age estimate from the birth date and
+  shows nothing without one; a finished session's zone times come from the watch against the profile's own maximum, so the
+  number that is kept is already personal. An override would add a column, a DTO field, sync and a settings row to refine
+  a live-only colour band. If it is ever wanted: an optional `max_heart_rate` (100–230) in `user_settings`, used by
+  `maxHeartRateForAge`'s caller on the live screen in place of the estimate.
+
 ---
 
 ## 7. Edge cases
