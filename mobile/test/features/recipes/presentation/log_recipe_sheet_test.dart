@@ -185,6 +185,20 @@ void main() {
     });
   });
 
+  testWidgets('every logged entry remembers the recipe it came from (docs/88)', (tester) async {
+    await tester.runAsync(() async {
+      final chicken = await makeFood('Chicken');
+      final rice = await makeFood('Rice');
+      await pumpSheet(tester, recipeWith(chicken, rice));
+
+      await submit(tester);
+
+      final meal = (await repo.recentMeals(days: 1)).single;
+      expect(meal.entries, hasLength(2));
+      expect(meal.entries.map((e) => e.recipeClientId), everyElement('recipe-1'));
+    });
+  });
+
   testWidgets('a zero amount leaves that ingredient out of the logged meal', (tester) async {
     await tester.runAsync(() async {
       final chicken = await makeFood('Chicken');

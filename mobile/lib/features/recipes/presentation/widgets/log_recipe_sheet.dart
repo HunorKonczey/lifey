@@ -161,7 +161,10 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
             entries: [
               for (final item in _portion.loggable)
                 MealEntryInput(
-                    foodClientId: item.ingredient.foodClientId, grams: item.grams),
+                    foodClientId: item.ingredient.foodClientId,
+                    grams: item.grams,
+                    // Every entry remembers the recipe it came from (docs/88).
+                    recipeClientId: widget.recipe.clientId),
             ],
           );
       navigator.pop();
