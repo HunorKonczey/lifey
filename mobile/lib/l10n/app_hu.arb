@@ -1618,5 +1618,6 @@
   "addRecipeServingsLabel": "Elfogyasztott adag",
   "addRecipeServingsDecreaseTooltip": "Kevesebb adag",
   "addRecipeServingsIncreaseTooltip": "Több adag",
-  "addRecipeConfirm": "Hozzáadás az étkezéshez"
+  "addRecipeConfirm": "Hozzáadás az étkezéshez",
+  "mealActionRecipe": "Recept hozzáadása"
 }

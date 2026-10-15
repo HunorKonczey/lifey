@@ -32,6 +32,7 @@ import '../domain/meal_budget_preview.dart';
 import '../domain/meal_days.dart';
 import 'widgets/add_macros_sheet.dart';
 import 'widgets/add_meal_entry_sheet.dart';
+import 'widgets/add_recipe_sheet.dart';
 import 'widgets/ai_credit_chip.dart';
 import 'widgets/meal_estimate_sheet.dart';
 import 'widgets/meal_summary_panel.dart';
@@ -80,6 +81,12 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   bool _saving = false;
   bool _pendingSave = false;
   String? _mealClientId;
+
+  /// The recipe's name while the new meal holds nothing but one added recipe
+  /// (docs/87 §2.6): saved as the meal's name, as when a recipe is logged from
+  /// the Recipes tab. Any other addition clears it; an existing meal keeps the
+  /// name it has.
+  String? _recipeName;
 
   bool get _isEditing => widget.meal != null;
 
@@ -201,7 +208,10 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     );
     if (!mounted) return;
     if (draft != null) {
-      setState(() => _entries.add((food: draft.food, grams: draft.grams)));
+      setState(() {
+        _recipeName = null;
+        _entries.add((food: draft.food, grams: draft.grams));
+      });
       _autoSave();
     } else if (closeScreenOnCancel && _entries.isEmpty) {
       Navigator.of(context).pop();
@@ -217,9 +227,31 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       builder: (_) => const AddMacrosSheet(),
     );
     if (draft != null) {
-      setState(() => _entries.add((food: draft.food, grams: draft.grams)));
+      setState(() {
+        _recipeName = null;
+        _entries.add((food: draft.food, grams: draft.grams));
+      });
       _autoSave();
     }
+  }
+
+  /// Adds a recipe's ingredients as ordinary entries (docs/87 Prompt M3): the
+  /// meal can mix them with foods, macros and photo items. The meal takes the
+  /// recipe's name only when this recipe is all it holds.
+  Future<void> _addRecipe() async {
+    final result = await showModalBottomSheet<AddRecipeResult>( // design-audit: ok - its own header and scroll frame
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const AddRecipeSheet(),
+    );
+    if (!mounted || result == null || result.drafts.isEmpty) return;
+    setState(() {
+      _recipeName = _entries.isEmpty && !_isEditing ? result.recipe.name : null;
+      _entries.addAll(result.drafts.map((d) => (food: d.food, grams: d.grams)));
+    });
+    _autoSave();
   }
 
   /// AI estimate from a meal photo (docs/23-ai-calorie-estimation-plan.md).
@@ -280,8 +312,10 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     );
     if (!mounted) return _PhotoOutcome.dismissed;
     if (drafts != null && drafts.isNotEmpty) {
-      setState(() =>
-          _entries.addAll(drafts.map((d) => (food: d.food, grams: d.grams))));
+      setState(() {
+        _recipeName = null;
+        _entries.addAll(drafts.map((d) => (food: d.food, grams: d.grams)));
+      });
       _autoSave();
       return _PhotoOutcome.added;
     } else if (ref.read(mealEstimationControllerProvider)
@@ -312,7 +346,10 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   }
 
   void _removeEntry(int index) {
-    setState(() => _entries.removeAt(index));
+    setState(() {
+      _entries.removeAt(index);
+      if (_entries.isEmpty) _recipeName = null;
+    });
     _autoSave();
   }
 
@@ -353,11 +390,11 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
           dateTime: _dateTime,
           mealType: _mealType,
           entries: entries,
-          name: widget.meal?.name);
+          name: _isEditing ? widget.meal?.name : _recipeName);
     } else {
       final isFirstSave = _mealClientId == null;
       _mealClientId = await notifier.logMeal(
-          dateTime: _dateTime, mealType: _mealType, entries: entries);
+          dateTime: _dateTime, mealType: _mealType, entries: entries, name: _recipeName);
       // `67` §5.3: only the meal's creation counts as "successfully
       // logged" — the auto-save on every subsequent edit must not re-trigger
       // this (it isn't a new meal, and it would also blow past the
@@ -487,7 +524,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
             ),
           ],
           const SizedBox(height: AppSpacing.s16),
-          // Three equal actions.
+          // Four actions in two rows of two - a fourth tile in one row would be
+          // ~80 dp wide on a small phone (docs/87 §2.5).
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -502,6 +540,23 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: _ActionTile(
+                    icon: Icons.menu_book_outlined,
+                    label: l10n.mealActionRecipe,
+                    background: p.primaryTint,
+                    foreground: primary,
+                    onTap: _addRecipe,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Expanded(
                   child: _ActionTile(
                     icon: Icons.tune_rounded,
