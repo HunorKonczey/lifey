@@ -3,6 +3,7 @@ package com.lifey.nutrition.meal;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.meal.dto.MealEntryResponse;
 import com.lifey.nutrition.meal.dto.MealResponse;
+import com.lifey.nutrition.recipe.Recipe;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ public final class MealMapper {
                     double grams = entry.getQuantityInGrams();
                     double carbsPer100g = food.getCarbsPer100g() != null ? food.getCarbsPer100g() : 0.0;
                     double fatPer100g = food.getFatPer100g() != null ? food.getFatPer100g() : 0.0;
+                    Recipe recipe = entry.getRecipe();
                     return new MealEntryResponse(
                             food.getId(),
                             food.getName(),
@@ -31,7 +33,9 @@ public final class MealMapper {
                             carbsPer100g * grams / 100.0,
                             fatPer100g * grams / 100.0,
                             food.getFiberPer100g() == null ? null : food.getFiberPer100g() * grams / 100.0,
-                            food.getSugarPer100g() == null ? null : food.getSugarPer100g() * grams / 100.0);
+                            food.getSugarPer100g() == null ? null : food.getSugarPer100g() * grams / 100.0,
+                            recipe == null ? null : recipe.getId(),
+                            recipe == null ? null : recipe.getName());
                 })
                 .toList();
 

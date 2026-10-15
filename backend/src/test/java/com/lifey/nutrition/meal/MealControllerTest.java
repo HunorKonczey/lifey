@@ -1,9 +1,11 @@
 package com.lifey.nutrition.meal;
 
 import com.lifey.nutrition.meal.dto.MealEntryResponse;
+import com.lifey.nutrition.meal.dto.MealRequest;
 import com.lifey.nutrition.meal.dto.MealResponse;
 import com.lifey.nutrition.meal.service.MealService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
@@ -14,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -44,6 +47,27 @@ class MealControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.mealType").value("BREAKFAST"))
                 .andExpect(jsonPath("$.entries[0].foodName").value("Oats"));
+    }
+
+    @Test
+    void create_passesTheRecipeIdOfAnEntryToTheService() throws Exception {
+        when(mealService.create(any())).thenReturn(new MealResponse(4L,
+                Instant.parse("2026-06-01T08:00:00Z"), MealType.LUNCH, null,
+                List.of(new MealEntryResponse(1L, "Beans", 100.0, 100.0, 6.0, 18.0, 0.5, null, null, 7L, "Chilli")),
+                Instant.parse("2026-06-01T08:00:00Z"), null, null, null));
+
+        mockMvc.perform(post("/api/v1/meals").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dateTime\":\"2026-06-01T08:00:00Z\",\"mealType\":\"LUNCH\","
+                                + "\"entries\":[{\"foodId\":1,\"quantityInGrams\":100,\"recipeId\":7},"
+                                + "{\"foodId\":2,\"quantityInGrams\":50}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.entries[0].recipeId").value(7))
+                .andExpect(jsonPath("$.entries[0].recipeName").value("Chilli"));
+
+        ArgumentCaptor<MealRequest> captor = ArgumentCaptor.forClass(MealRequest.class);
+        verify(mealService).create(captor.capture());
+        assertThat(captor.getValue().entries().get(0).recipeId()).isEqualTo(7L);
+        assertThat(captor.getValue().entries().get(1).recipeId()).isNull();
     }
 
     @Test

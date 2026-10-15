@@ -12,6 +12,8 @@ import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.nutrition.meal.dto.MealEntryRequest;
 import com.lifey.nutrition.meal.dto.MealRequest;
 import com.lifey.nutrition.meal.dto.MealResponse;
+import com.lifey.nutrition.recipe.Recipe;
+import com.lifey.nutrition.recipe.RecipeRepository;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class MealServiceImpl implements MealService {
 
     private final MealRepository mealRepository;
     private final FoodRepository foodRepository;
+    private final RecipeRepository recipeRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
 
@@ -122,6 +125,19 @@ public class MealServiceImpl implements MealService {
     }
 
     /**
+     * The caller's own recipe for a tagged entry (docs/88 §2.4), or null for an untagged one. A recipe that was deleted
+     * (soft) is accepted - the entry may have been logged offline before the deletion reached this device - while one that
+     * is someone else's, or does not exist, is a 404 like a foreign food.
+     */
+    private Recipe resolveRecipe(Long recipeId) {
+        if (recipeId == null) {
+            return null;
+        }
+        return recipeRepository.findByIdAndUserId(recipeId, currentUserProvider.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
+    }
+
+    /**
      * Rebuilds the meal's entry list from the request, resolving each {@code foodId}.
      * Relies on {@code orphanRemoval} to delete dropped entries.
      */
@@ -134,6 +150,7 @@ public class MealServiceImpl implements MealService {
             MealEntry entry = new MealEntry();
             entry.setMeal(meal);
             entry.setFood(food);
+            entry.setRecipe(resolveRecipe(item.recipeId()));
             entry.setQuantityInGrams(item.quantityInGrams());
             meal.getEntries().add(entry);
         }
