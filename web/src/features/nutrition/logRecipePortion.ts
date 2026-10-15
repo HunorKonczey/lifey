@@ -76,14 +76,19 @@ export function scaledMacros(
   return { calories, protein, carbs, fat };
 }
 
-/** Meal entries for the logged portion; zero-gram ingredients are left out. */
+/**
+ * Meal entries for the logged portion; zero-gram ingredients are left out. With `recipeId` every entry remembers the
+ * recipe it came from (docs/88), which is what makes a recipe mixed into a meal count as used.
+ */
 export function buildEntries(
   ingredients: RecipeIngredientResponse[],
   divisor: number,
   overrides: GramsOverrides,
+  recipeId?: number,
 ): MealEntryRequest[] {
   return ingredients.flatMap((ingredient, i) => {
     const grams = round2(gramsFor(ingredient, i, divisor, overrides));
-    return grams > 0 ? [{ foodId: ingredient.foodId, quantityInGrams: grams }] : [];
+    if (grams <= 0) return [];
+    return [recipeId != null ? { foodId: ingredient.foodId, quantityInGrams: grams, recipeId } : { foodId: ingredient.foodId, quantityInGrams: grams }];
   });
 }

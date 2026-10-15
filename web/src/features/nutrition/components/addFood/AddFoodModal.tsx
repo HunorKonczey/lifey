@@ -248,8 +248,8 @@ export function AddFoodModal(props: AddFoodModalProps) {
 
   const items = useMemo(() => buildSearchItems(foods ?? [], recipes ?? []), [foods, recipes]);
   const usage = useMemo(
-    () => usageByKey(computeFoodUsage(meals ?? []), computeRecipeUsage(meals ?? [], recipes ?? [])),
-    [meals, recipes],
+    () => usageByKey(computeFoodUsage(meals ?? []), computeRecipeUsage(meals ?? [])),
+    [meals],
   );
 
   return (
