@@ -101,8 +101,8 @@ iterations.
 | 82 | [Web-redesign backend gaps: goal attribution, last activity, invite history, role filter](redesign-web/82-web-backend-gaps-plan.md) (in `redesign-web/`) | built |
 | 83 | [Chat result card: sharing a workout or a PR as a message](chat/83-chat-result-card-plan.md) (in `chat/`) | built — two-device emulator walk done 2026-10-07 (web tile, iOS open) |
 | 84 | [Food search by name in OpenFoodFacts (HU first, EN backoff)](84-off-name-search-plan.md) | built; CI Docker tests, real-stack run and emulator walk done 2026-10-08 (LIF-93) |
-| 87 | [Add a recipe to a meal (mobile Log meal + web Add food)](87-add-recipe-to-meal-plan.md) | planned (LIF-159 … LIF-165) |
-| 88 | [Recipe provenance on meal entries (`meal_entries.recipe_id`, recipe usage, grouped display)](88-recipe-provenance-on-meal-entries-plan.md) | planned (LIF-166 umbrella, LIF-167 … LIF-176) |
+| 87 | [Add a recipe to a meal (mobile Log meal + web Add food)](87-add-recipe-to-meal-plan.md) | built (LIF-159 … LIF-165) |
+| 88 | [Recipe provenance on meal entries (`meal_entries.recipe_id`, recipe usage, grouped display)](88-recipe-provenance-on-meal-entries-plan.md) | built (LIF-166 umbrella, LIF-167 … LIF-176) |
 
 Plans 40–74 live in the topic folders above.
 

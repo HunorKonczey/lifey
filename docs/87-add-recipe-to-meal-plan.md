@@ -1,6 +1,9 @@
 # 87 – Add a Recipe to a Meal
 
-Status: planned — not started (Jira: LIF-159 … LIF-166 under epic LIF-6)
+Status: built — LIF-159 … LIF-165 merged on 2026-10-15 (epic LIF-6). Web path walked in a browser against the real backend
+(Recipe mode, ingredient overrides, one Lunch with a food and a recipe, the Recipes tab's Log unchanged); mobile
+checked in widget tests (360/411 dp, text ×1.3, Hungarian) and on the Pixel_10 emulator (2×2 action grid, the
+recipe group, 130 % font scale). Recipe provenance on the entries followed in docs/88.
 Scope: mobile · web — no backend, no schema change
 Depends on: docs/75-log-food-from-foods-tab-plan.md (the meal-add flow this extends),
 docs/redesign-web/78-web-redesign-plan.md W2.5/W2.6 (the web Add-food dialog),
@@ -385,7 +388,7 @@ fits; Hungarian labels.
 
 ## Non-goals (deferred)
 
-- **Remembering which recipe the rows came from** — recipe usage in mixed
+- **Remembering which recipe the rows came from** (built in docs/88) — recipe usage in mixed
   meals, a grouped "Chilli (1.5 servings)" block inside a meal, "log it again"
   at the same portion. Needs `recipe_id` on entries (migration, sync, both
   clients): LIF-166, planned in `docs/88-recipe-provenance-on-meal-entries-plan.md`.
