@@ -258,4 +258,33 @@ void main() {
     expect(meals.updated.last.name, 'Old recipe');
     expect(meals.updated.last.entries, hasLength(3));
   });
+
+  testWidgets('the recipe tags of a meal being edited survive an edit of another row', (tester) async {
+    MealEntry entry(String food, {String? recipe}) => MealEntry(
+          foodClientId: food,
+          foodName: food,
+          quantityInGrams: 100,
+          calories: 100,
+          protein: 5,
+          carbs: 10,
+          fat: 2,
+          recipeClientId: recipe,
+        );
+    final meal = Meal(
+      clientId: 'm1',
+      dateTime: DateTime(2026, 10, 1, 12),
+      mealType: MealType.lunch,
+      entries: [entry('Beans', recipe: 'chilli'), entry('Rice', recipe: 'chilli'), entry('Salad')],
+    );
+    await open(tester, meal: meal);
+
+    // Remove the salad (the last row): the autosave carries the other rows with their tags.
+    await tester.tap(find.byIcon(Icons.more_vert_rounded).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+
+    final saved = meals.updated.last.entries;
+    expect(saved.map((e) => (e.foodClientId, e.recipeClientId)), [('Beans', 'chilli'), ('Rice', 'chilli')]);
+  });
 }

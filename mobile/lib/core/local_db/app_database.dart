@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 52;
+  int get schemaVersion => 53;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -423,6 +423,11 @@ class AppDatabase extends _$AppDatabase {
           // V52: "show when I am online" in the chat (LIF-153) - on, like the server default.
           if (from < 52) {
             await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.chatOnlineVisible);
+          }
+          // V53: which recipe a meal entry came from (docs/88, LIF-170) - one nullable column; every existing entry is
+          // simply "not from a recipe" until the next pull brings the tags the server backfilled.
+          if (from < 53) {
+            await _addColumnIfMissing(m, mealEntries, mealEntries.recipeClientId);
           }
         },
       );

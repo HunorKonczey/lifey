@@ -93,7 +93,8 @@ class MealController extends StreamNotifier<List<Meal>> {
   Future<Meal> duplicateMeal(Meal meal, {DateTime? dateTime}) async {
     final loggedAt = dateTime ?? DateTime.now();
     final entries = meal.entries
-        .map((e) => MealEntryInput(foodClientId: e.foodClientId, grams: e.quantityInGrams))
+        .map((e) => MealEntryInput(
+            foodClientId: e.foodClientId, grams: e.quantityInGrams, recipeClientId: e.recipeClientId))
         .toList();
     final clientId = await _repo.create(
       dateTime: loggedAt,
@@ -123,7 +124,8 @@ class MealController extends StreamNotifier<List<Meal>> {
       if (meal.entries.isEmpty) continue;
       final time = meal.dateTime.toLocal();
       final entries = meal.entries
-          .map((e) => MealEntryInput(foodClientId: e.foodClientId, grams: e.quantityInGrams))
+          .map((e) => MealEntryInput(
+              foodClientId: e.foodClientId, grams: e.quantityInGrams, recipeClientId: e.recipeClientId))
           .toList();
       await _repo.create(
         dateTime: DateTime(

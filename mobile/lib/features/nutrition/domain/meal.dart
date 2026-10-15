@@ -37,6 +37,7 @@ class MealEntry {
     required this.fat,
     this.fiber,
     this.sugar,
+    this.recipeClientId,
   });
 
   final String foodClientId;
@@ -51,6 +52,10 @@ class MealEntry {
   /// (not known is not 0).
   final double? fiber;
   final double? sugar;
+
+  /// The recipe this entry was added as part of (docs/88), by client id; null for a plain entry. May name a recipe that
+  /// is no longer here - callers treat an unknown recipe as "not from a recipe".
+  final String? recipeClientId;
 }
 
 /// A logged meal (`/meals`).

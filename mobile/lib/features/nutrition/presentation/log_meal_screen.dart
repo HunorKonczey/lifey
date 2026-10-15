@@ -71,13 +71,17 @@ class LogMealScreen extends ConsumerStatefulWidget {
   ConsumerState<LogMealScreen> createState() => _LogMealScreenState();
 }
 
+/// One row of the meal being built: a food and how much of it, and the recipe it was added as part of (docs/88) - the
+/// tag rides along through edits and saves, or the meal would forget it.
+typedef _Entry = ({Food food, double grams, String? recipeClientId});
+
 /// How an AI photo estimate ended — see [LogMealScreen.startWithPhoto].
 enum _PhotoOutcome { added, dismissed, paywall }
 
 class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   late MealType _mealType;
   late DateTime _dateTime;
-  final List<({Food food, double grams})> _entries = [];
+  final List<_Entry> _entries = [];
   bool _saving = false;
   bool _pendingSave = false;
   String? _mealClientId;
@@ -141,6 +145,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
             sugarPer100g: q > 0 && entry.sugar != null ? entry.sugar! / q * 100 : null,
           ),
           grams: q,
+          recipeClientId: entry.recipeClientId,
         ));
       }
     }
@@ -210,7 +215,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (draft != null) {
       setState(() {
         _recipeName = null;
-        _entries.add((food: draft.food, grams: draft.grams));
+        _entries.add((food: draft.food, grams: draft.grams, recipeClientId: null));
       });
       _autoSave();
     } else if (closeScreenOnCancel && _entries.isEmpty) {
@@ -229,7 +234,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (draft != null) {
       setState(() {
         _recipeName = null;
-        _entries.add((food: draft.food, grams: draft.grams));
+        _entries.add((food: draft.food, grams: draft.grams, recipeClientId: null));
       });
       _autoSave();
     }
@@ -249,7 +254,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (!mounted || result == null || result.drafts.isEmpty) return;
     setState(() {
       _recipeName = _entries.isEmpty && !_isEditing ? result.recipe.name : null;
-      _entries.addAll(result.drafts.map((d) => (food: d.food, grams: d.grams)));
+      _entries.addAll(result.drafts.map((d) => (food: d.food, grams: d.grams, recipeClientId: null)));
     });
     _autoSave();
   }
@@ -314,7 +319,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (drafts != null && drafts.isNotEmpty) {
       setState(() {
         _recipeName = null;
-        _entries.addAll(drafts.map((d) => (food: d.food, grams: d.grams)));
+        _entries.addAll(drafts.map((d) => (food: d.food, grams: d.grams, recipeClientId: null)));
       });
       _autoSave();
       return _PhotoOutcome.added;
@@ -340,7 +345,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       ),
     );
     if (draft != null) {
-      setState(() => _entries[index] = (food: draft.food, grams: draft.grams));
+      setState(() => _entries[index] = (food: draft.food, grams: draft.grams, recipeClientId: current.recipeClientId));
       _autoSave();
     }
   }
@@ -382,7 +387,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     final notifier = ref.read(mealControllerProvider.notifier);
     final entries = _entries
         .map((e) =>
-            MealEntryInput(foodClientId: e.food.clientId, grams: e.grams))
+            MealEntryInput(foodClientId: e.food.clientId, grams: e.grams, recipeClientId: e.recipeClientId))
         .toList();
     final id = _isEditing ? widget.meal!.clientId : _mealClientId;
     if (id != null) {
