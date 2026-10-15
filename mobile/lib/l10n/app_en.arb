@@ -7301,5 +7301,9 @@
   "addRecipeConfirm": "Add to meal",
   "@addRecipeConfirm": {
     "description": "Confirm button of the Add-recipe sheet: puts the recipe ingredients into the meal being logged (docs/87 M2)"
+  },
+  "mealActionRecipe": "Add recipe",
+  "@mealActionRecipe": {
+    "description": "Label of the tile on the Log meal screen that adds a recipe's ingredients to the meal (docs/87 M3)"
   }
 }

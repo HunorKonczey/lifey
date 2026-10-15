@@ -143,7 +143,7 @@ Future<_FakeMealController> _pump(
 }
 
 void main() {
-  testWidgets('edit layout: Save in the header, type chips, date row, food rows, three actions', (tester) async {
+  testWidgets('edit layout: Save in the header, type chips, date row, food rows, four actions', (tester) async {
     await _pump(tester, meal: _breakfast);
 
     expect(find.text('Edit meal'), findsOneWidget);
@@ -158,6 +158,7 @@ void main() {
     expect(find.text('60 g · 8 g protein'), findsOneWidget);
     expect(find.textContaining('227'), findsOneWidget);
     expect(find.text('Add food'), findsOneWidget);
+    expect(find.text('Add recipe'), findsOneWidget);
     expect(find.text('Macros only'), findsOneWidget);
     expect(find.text('From photo'), findsOneWidget);
     expect(find.byIcon(Icons.more_vert_rounded), findsNWidgets(3));
