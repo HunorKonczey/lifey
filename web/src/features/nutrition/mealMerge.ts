@@ -1,4 +1,5 @@
 import { logTimestampFor } from "@/lib/utils/logTime";
+import { entryRequestOf } from "./mealEntry";
 import type { MealEntryRequest, MealRequest, MealResponse, MealType } from "./types";
 
 /** What an add to the day's meals boils down to: start a meal, or rewrite an existing one with more entries. */
@@ -30,7 +31,7 @@ export function planMealWrite(
       dateTime: target.dateTime,
       mealType,
       name: null,
-      entries: [...target.entries.map((e) => ({ foodId: e.foodId, quantityInGrams: e.quantityInGrams })), ...entries],
+      entries: [...target.entries.map((e) => entryRequestOf(e)), ...entries],
     },
   };
 }

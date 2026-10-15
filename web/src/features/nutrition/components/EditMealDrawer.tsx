@@ -11,14 +11,14 @@ import { useFormat } from "@/lib/format/useFormat";
 import { useToast } from "@/lib/hooks/useToast";
 import { mealApi } from "../api";
 import { editedEntries, isMealDirty, round1 } from "../mealEdit";
-import type { MealResponse } from "../types";
+import type { MealEntryRequest, MealResponse } from "../types";
 
 const MEAL_KEY = { BREAKFAST: "breakfast", LUNCH: "lunch", SNACK: "snack", DINNER: "dinner" } as const;
 
 export interface EditMealDrawerViewProps {
   meal: MealResponse;
   onClose: () => void;
-  onSave: (entries: { foodId: number; quantityInGrams: number }[]) => void;
+  onSave: (entries: MealEntryRequest[]) => void;
   saving?: boolean;
 }
 
@@ -102,7 +102,7 @@ export function EditMealDrawer({ meal, onClose }: { meal: MealResponse; onClose:
   const { show } = useToast();
 
   const save = useMutation({
-    mutationFn: (entries: { foodId: number; quantityInGrams: number }[]) =>
+    mutationFn: (entries: MealEntryRequest[]) =>
       mealApi.update(meal.id, { dateTime: meal.dateTime, mealType: meal.mealType, name: meal.name, entries }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });

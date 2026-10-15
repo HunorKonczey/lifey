@@ -100,6 +100,9 @@ export interface MealEntryResponse {
   /** This entry's fibre and sugars (LIF-145); null / absent when the food has no figure. */
   fiber?: number | null;
   sugar?: number | null;
+  /** The recipe this entry was added as part of, and its current name (docs/88); absent or null for a plain entry. */
+  recipeId?: number | null;
+  recipeName?: string | null;
 }
 
 export interface MealResponse {
@@ -116,6 +119,8 @@ export interface MealResponse {
 export interface MealEntryRequest {
   foodId: number;
   quantityInGrams: number;
+  /** Absent or null = not from a recipe. A meal update replaces all entries, so leaving it out clears the tag (docs/88). */
+  recipeId?: number | null;
 }
 
 export interface MealRequest {
