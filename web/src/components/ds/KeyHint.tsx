@@ -13,6 +13,7 @@ export interface KeyHintProps {
  * to press it on.
  */
 export function KeyHint({ children, tone = "default", className }: KeyHintProps) {
+  const edge = tone === "onPrimary" ? "color-mix(in srgb, var(--on-primary) 45%, transparent)" : "color-mix(in srgb, var(--text) 28%, transparent)";
   return (
     <kbd
       aria-hidden
@@ -25,8 +26,10 @@ export function KeyHint({ children, tone = "default", className }: KeyHintProps)
         fontFamily: "inherit",
         fontWeight: 700,
         lineHeight: 1,
-        background: tone === "onPrimary" ? "color-mix(in srgb, var(--on-primary) 14%, transparent)" : "var(--control)",
-        border: `1px solid ${tone === "onPrimary" ? "color-mix(in srgb, var(--on-primary) 35%, transparent)" : "color-mix(in srgb, var(--text) 22%, transparent)"}`,
+        background: tone === "onPrimary" ? "color-mix(in srgb, var(--on-primary) 12%, transparent)" : "var(--control)",
+        border: `1px solid ${edge}`,
+        // The thicker bottom edge is what makes it read as a key, not a badge.
+        borderBottomWidth: 2,
         color: tone === "onPrimary" ? "var(--on-primary)" : "var(--text-2)",
       }}
     >
