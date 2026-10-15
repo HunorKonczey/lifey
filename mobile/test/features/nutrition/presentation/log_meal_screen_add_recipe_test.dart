@@ -169,6 +169,7 @@ void main() {
     expect(saved.name, 'Chilli');
     // One of the two servings: half of every ingredient.
     expect(saved.entries.map((e) => (e.foodClientId, e.grams)), [('food-Beans', 150.0), ('food-Rice', 100.0)]);
+    expect(saved.entries.map((e) => e.recipeClientId), everyElement('chilli'));
   });
 
   testWidgets('a food added after the recipe drops the name', (tester) async {
@@ -185,6 +186,8 @@ void main() {
     expect(meals.updated, isNotEmpty);
     expect(meals.updated.last.name, isNull);
     expect(meals.updated.last.entries.map((e) => e.foodClientId), ['food-Beans', 'food-Rice', 'chicken']);
+    // The recipe's rows keep their tag, the food added by hand has none.
+    expect(meals.updated.last.entries.map((e) => e.recipeClientId), ['chilli', 'chilli', null]);
   });
 
   testWidgets('a recipe added to a meal that already has a food is not named', (tester) async {

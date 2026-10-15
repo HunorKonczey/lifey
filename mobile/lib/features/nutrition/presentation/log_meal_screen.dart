@@ -254,7 +254,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (!mounted || result == null || result.drafts.isEmpty) return;
     setState(() {
       _recipeName = _entries.isEmpty && !_isEditing ? result.recipe.name : null;
-      _entries.addAll(result.drafts.map((d) => (food: d.food, grams: d.grams, recipeClientId: null)));
+      _entries.addAll(result.drafts.map(
+          (d) => (food: d.food, grams: d.grams, recipeClientId: result.recipe.clientId)));
     });
     _autoSave();
   }
