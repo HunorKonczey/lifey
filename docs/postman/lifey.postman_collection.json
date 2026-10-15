@@ -1041,7 +1041,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"dateTime\": \"2026-06-18T08:00:00\",\n  \"mealType\": \"BREAKFAST\",\n  \"name\": \"Post-workout breakfast\",\n  \"entries\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 150 }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/meals", "host": ["{{baseUrl}}"], "path": ["api", "v1", "meals"] },
-            "description": "Logs a meal. `dateTime` and `mealType` required, at least one entry required, each entry needs an existing `foodId` and positive `quantityInGrams`. `name` (max 255 chars) is optional. Returns 201 and stores the id in `mealId`. Unknown foodId returns 404."
+            "description": "Logs a meal. `dateTime` and `mealType` required, at least one entry required, each entry needs an existing `foodId` and positive `quantityInGrams`. `name` (max 255 chars) is optional. An entry may carry `recipeId` (one of your own recipes) when it was added as part of a recipe; it is returned with `recipeName`, and a meal update replaces all entries, so leaving `recipeId` out clears it. Returns 201 and stores the id in `mealId`. Unknown foodId returns 404."
           },
           "response": []
         },

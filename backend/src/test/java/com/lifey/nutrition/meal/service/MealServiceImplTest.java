@@ -6,11 +6,14 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.meal.Meal;
+import com.lifey.nutrition.meal.MealEntry;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.nutrition.meal.MealType;
 import com.lifey.nutrition.meal.dto.MealEntryRequest;
 import com.lifey.nutrition.meal.dto.MealRequest;
 import com.lifey.nutrition.meal.dto.MealResponse;
+import com.lifey.nutrition.recipe.Recipe;
+import com.lifey.nutrition.recipe.RecipeRepository;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +52,9 @@ class MealServiceImplTest {
 
     @Mock
     FoodRepository foodRepository;
+
+    @Mock
+    RecipeRepository recipeRepository;
 
     @Mock
     UserRepository userRepository;
@@ -94,6 +100,74 @@ class MealServiceImplTest {
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Food not found: 99");
+    }
+
+    @Test
+    void create_tagsAnEntryWithItsRecipe() {
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Beans")));
+        when(recipeRepository.findByIdAndUserId(7L, USER_ID)).thenReturn(Optional.of(recipe(7L, "Chilli")));
+        when(mealRepository.save(any(Meal.class))).thenAnswer(inv -> withId(inv.getArgument(0), 4L));
+        MealRequest request = new MealRequest(
+                Instant.parse("2026-06-18T12:00:00Z"), MealType.LUNCH, null,
+                List.of(new MealEntryRequest(1L, 100.0, 7L), new MealEntryRequest(1L, 50.0)));
+
+        MealResponse result = service.create(request);
+
+        assertThat(result.entries()).hasSize(2);
+        assertThat(result.entries().get(0).recipeId()).isEqualTo(7L);
+        assertThat(result.entries().get(0).recipeName()).isEqualTo("Chilli");
+        assertThat(result.entries().get(1).recipeId()).isNull();
+        assertThat(result.entries().get(1).recipeName()).isNull();
+    }
+
+    @Test
+    void create_acceptsARecipeThatWasDeletedMeanwhile() {
+        Recipe deleted = recipe(7L, "Old chilli");
+        deleted.setDeletedAt(Instant.parse("2026-06-17T00:00:00Z"));
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Beans")));
+        when(recipeRepository.findByIdAndUserId(7L, USER_ID)).thenReturn(Optional.of(deleted));
+        when(mealRepository.save(any(Meal.class))).thenAnswer(inv -> withId(inv.getArgument(0), 4L));
+
+        MealResponse result = service.create(new MealRequest(
+                Instant.parse("2026-06-18T12:00:00Z"), MealType.LUNCH, null,
+                List.of(new MealEntryRequest(1L, 100.0, 7L))));
+
+        assertThat(result.entries().get(0).recipeId()).isEqualTo(7L);
+    }
+
+    @Test
+    void create_throwsWhenTheRecipeIsNotTheCallers() {
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Beans")));
+        when(recipeRepository.findByIdAndUserId(8L, USER_ID)).thenReturn(Optional.empty());
+        MealRequest request = new MealRequest(
+                Instant.parse("2026-06-18T12:00:00Z"), MealType.LUNCH, null,
+                List.of(new MealEntryRequest(1L, 100.0, 8L)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Recipe not found: 8");
+    }
+
+    @Test
+    void update_withoutRecipeIdClearsTheTag() {
+        Meal meal = new Meal();
+        meal.setId(1L);
+        meal.setDateTime(Instant.parse("2026-06-18T12:00:00Z"));
+        meal.setMealType(MealType.LUNCH);
+        MealEntry tagged = new MealEntry();
+        tagged.setMeal(meal);
+        tagged.setFood(food(1L, "Beans"));
+        tagged.setQuantityInGrams(100);
+        tagged.setRecipe(recipe(7L, "Chilli"));
+        meal.getEntries().add(tagged);
+        when(mealRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(meal));
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Beans")));
+
+        // The same entry, resent the way an older client builds it: no recipeId.
+        service.update(1L, new MealRequest(Instant.parse("2026-06-18T12:00:00Z"), MealType.LUNCH, null,
+                List.of(new MealEntryRequest(1L, 100.0))));
+
+        assertThat(meal.getEntries()).singleElement().satisfies(e -> assertThat(e.getRecipe()).isNull());
     }
 
     @Test
@@ -185,6 +259,13 @@ class MealServiceImplTest {
         f.setCaloriesPer100g(389);
         f.setProteinPer100g(17);
         return f;
+    }
+
+    private static Recipe recipe(Long id, String name) {
+        Recipe r = new Recipe();
+        r.setId(id);
+        r.setName(name);
+        return r;
     }
 
     private static <T extends BaseEntity> T withId(T entity, Long id) {

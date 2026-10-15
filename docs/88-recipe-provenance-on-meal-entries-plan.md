@@ -210,8 +210,9 @@ update meals set updated_at = now() where id in (select meal_id from tagged);
   record; the existing 7-argument convenience constructor keeps working
   (`null, null`). `MealMapper` fills them from `entry.getRecipe()`.
 - `MealServiceImpl.replaceEntries`: resolve `recipeId` per 2.4.
-- `MealRepository` queries that already fetch `entries → food` also fetch the
-  recipe, so the mapper's `getRecipe().getName()` is not an N+1.
+- No fetch join: the meal queries load `entries` and each `food` lazily today, and the recipe is loaded the same way,
+  only for tagged entries and once per *distinct* recipe in a response (the persistence context caches it) - so the cost is
+  bounded by the number of different recipes, not of entries.
 
 ### 3.2 Mobile
 
@@ -276,15 +277,14 @@ others' did not.
 
 ## Prompt B2 — Backend: `recipeId` / `recipeName` in the meal API (LIF-168)
 
-Request/response fields, service resolution (2.4), mapper, fetch joins (§3.1).
+Request/response fields, service resolution (2.4), mapper (§3.1).
 Update the Postman collection for the changed meal request/response.
 
 Verify: service and controller tests — create with a tagged entry returns
 `recipeId` + `recipeName`; update **without** `recipeId` clears it (pin the
 contract); a soft-deleted own recipe is accepted; another user's recipe → 404;
 the delta feed (`/meals?updatedSince=`) includes the fields; an entry-only tag
-change bumps `updatedAt`. A query-count assertion (or Hibernate statistics) on
-`findAll` with N tagged entries shows no per-entry recipe query.
+change bumps `updatedAt` (the existing `update_entryOnlyEditBumpsParentUpdatedAt`).
 
 ## Prompt M1 — Mobile sync: optional `clientRef` (LIF-169)
 
@@ -442,7 +442,7 @@ as another; the edit drawer still lists every ingredient; dark theme; Hungarian.
 | Layer | What | Where |
 |---|---|---|
 | Backend migration | backfill cases + `updated_at` bump | new migration test next to `FoodsExercisesOwnershipMigrationTest` |
-| Backend service/controller | tag round trip, clear-on-absent, soft-deleted ok, foreign 404, delta feed, no N+1 | `MealServiceImplTest`, controller test |
+| Backend service/controller | tag round trip, clear-on-absent, soft-deleted ok, foreign 404, delta feed | `MealServiceImplTest`, controller test |
 | Mobile unit | `optionalClientRef` in the sync engine and dependencies | `test/core/sync/*` |
 | Mobile repository / pull / migration | tag persisted, pushed, pulled, preserved by duplicate/copy; v52→v53 | `meal_repository_test`, `pull_engine_test`, migration test |
 | Mobile widget | recipe paths tag, edit keeps tag, picker order, grouped editor | M3–M5 tests |
@@ -474,9 +474,10 @@ as another; the edit drawer still lists every ingredient; dark theme; Hungarian.
   `clientRef` for the tag, deleting a recipe offline parks the meal's sync as
   failed and the meal never reaches the server. M1's test of the plain-ref
   failure *and* the optional-ref success is the guard.
-- **N+1 on the meal list.** `recipeName` is read per entry; a missed fetch join
-  turns `GET /meals` (all meals, unpaged) into hundreds of queries and still
-  returns the right JSON.
+- **Lazy recipe loads on the meal list.** `recipeName` is read per tagged entry; the
+  recipe is loaded lazily once per distinct recipe. If `GET /meals` (all meals,
+  unpaged) ever shows a query count that grows with entries, batch-load the recipes
+  (`@BatchSize`) rather than fetch-joining.
 - **Group header uses a stale name.** Mobile must read the recipe's name from
   the local recipes table at render time, not store it on the entry; otherwise
   a rename shows two different names on two screens.
