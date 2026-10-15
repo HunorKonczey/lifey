@@ -7,10 +7,10 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../nutrition/application/meal_controller.dart';
 import '../../../nutrition/data/meal_repository.dart';
-import '../../../nutrition/domain/fiber_sugar.dart';
 import '../../../nutrition/domain/meal.dart';
 import '../../../nutrition/presentation/widgets/fiber_sugar_line.dart';
 import '../../domain/recipe.dart';
+import '../../domain/recipe_portion.dart';
 import '../../../../core/format/parse_decimal.dart';
 
 /// Bottom sheet to log a whole recipe as a meal: pick the meal type and time,
@@ -110,17 +110,15 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
     });
   }
 
-  double _effectiveGrams(double grams) {
-    if (!_isPartialLog) return grams;
-    return (grams / _portionDivisor * 100).round() / 100;
-  }
+  /// The portion being logged, from the sheet's current divisor and the
+  /// amounts the user typed.
+  RecipePortion get _portion => RecipePortion(
+        widget.recipe,
+        divisor: _isPartialLog ? _portionDivisor.toDouble() : null,
+        overrides: _overrides,
+      );
 
-  double _defaultGramsFor(int index) =>
-      _effectiveGrams(widget.recipe.ingredients[index].quantityInGrams);
-
-  /// Grams actually being logged for one ingredient: the user's override if
-  /// there is one, otherwise the divisor-derived default.
-  double _gramsFor(int index) => _overrides[index] ?? _defaultGramsFor(index);
+  double _defaultGramsFor(int index) => _portion.defaultGramsFor(index);
 
   /// Rewrites the text of every non-overridden field after the divisor or the
   /// part-meal toggle changed; overridden fields keep the user's value.
@@ -150,59 +148,20 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
     return rounded.toString();
   }
 
-  /// Effective total of one macro across all ingredients, each scaled to the
-  /// grams actually being logged (overrides included).
-  double _scaledTotal(double Function(RecipeIngredient) macroOf) {
-    var sum = 0.0;
-    final ingredients = widget.recipe.ingredients;
-    for (var i = 0; i < ingredients.length; i++) {
-      final ingredient = ingredients[i];
-      if (ingredient.quantityInGrams <= 0) continue;
-      sum += macroOf(ingredient) * _gramsFor(i) / ingredient.quantityInGrams;
-    }
-    return sum;
-  }
-
-  /// The logged portion's fibre and sugars (LIF-150), each ingredient scaled to the grams actually being logged.
-  FiberSugarTotals get _scaledFiberSugar {
-    final entries = <({double? fiber, double? sugar})>[];
-    final ingredients = widget.recipe.ingredients;
-    for (var i = 0; i < ingredients.length; i++) {
-      final ingredient = ingredients[i];
-      if (ingredient.quantityInGrams <= 0) continue;
-      final scale = _gramsFor(i) / ingredient.quantityInGrams;
-      entries.add((
-        fiber: ingredient.fiber == null ? null : ingredient.fiber! * scale,
-        sugar: ingredient.sugar == null ? null : ingredient.sugar! * scale,
-      ));
-    }
-    return FiberSugarTotals.of(entries);
-  }
-
-  bool get _hasLoggableEntry {
-    for (var i = 0; i < widget.recipe.ingredients.length; i++) {
-      if (_gramsFor(i) > 0) return true;
-    }
-    return false;
-  }
-
   Future<void> _submit() async {
     if (_submitting) return; // guard against a fast double-tap creating two meals
     setState(() => _submitting = true);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
-      final ingredients = widget.recipe.ingredients;
       await ref.read(mealControllerProvider.notifier).logMeal(
             dateTime: _dateTime,
             mealType: _mealType,
             name: widget.recipe.name,
             entries: [
-              for (var i = 0; i < ingredients.length; i++)
-                if (_gramsFor(i) > 0)
-                  MealEntryInput(
-                      foodClientId: ingredients[i].foodClientId,
-                      grams: _gramsFor(i)),
+              for (final item in _portion.loggable)
+                MealEntryInput(
+                    foodClientId: item.ingredient.foodClientId, grams: item.grams),
             ],
           );
       navigator.pop();
@@ -272,9 +231,10 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final count = widget.recipe.ingredients.length;
     final l10n = AppLocalizations.of(context)!;
+    final portion = _portion;
     // A recipe without ingredients logs an empty meal, as before; with
     // ingredients, at least one non-zero amount is required.
-    final canSubmit = !_submitting && (count == 0 || _hasLoggableEntry);
+    final canSubmit = !_submitting && (count == 0 || portion.hasLoggableEntry);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
@@ -367,16 +327,16 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
             const SizedBox(height: 8),
             Text(
               l10n.recipeMacrosPreviewLabel(
-                _scaledTotal((i) => i.calories).round().toString(),
-                LifeyFormat.of(context).decimal(_scaledTotal((i) => i.protein), 1),
-                LifeyFormat.of(context).decimal(_scaledTotal((i) => i.carbs), 1),
-                LifeyFormat.of(context).decimal(_scaledTotal((i) => i.fat), 1),
+                portion.calories.round().toString(),
+                LifeyFormat.of(context).decimal(portion.protein, 1),
+                LifeyFormat.of(context).decimal(portion.carbs, 1),
+                LifeyFormat.of(context).decimal(portion.fat, 1),
               ),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            if (!_scaledFiberSugar.isEmpty) ...[
+            if (!portion.fiberSugar.isEmpty) ...[
               const SizedBox(height: 4),
-              FiberSugarLine(totals: _scaledFiberSugar),
+              FiberSugarLine(totals: portion.fiberSugar),
             ],
             const SizedBox(height: 20),
             FilledButton.icon(
