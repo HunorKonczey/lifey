@@ -17,11 +17,12 @@ import { remainingAfter, type Nutrients } from "../../budget";
 import { parseMacroDraft, per100g, type ParsedMacroEntry } from "../../macroEntry";
 import { MEAL_TYPE_ORDER } from "../../mealTypeStyle";
 import { buildEntries } from "../../logRecipePortion";
+import { planMealWrite } from "../../mealMerge";
 import { foodPortion, recipePortion, type Macros } from "../../recipeMacros";
 import { offPortion, type ListItem } from "../../offSearch";
 import { ensureOwnFood } from "../../offSave";
 import { quantityChips } from "../../quantityChips";
-import type { FoodResponse, MealResponse, MealType } from "../../types";
+import type { FoodResponse, MealType } from "../../types";
 import { useAddFoodContext } from "./AddFoodModal";
 
 const MEAL_KEY = { BREAKFAST: "breakfast", LUNCH: "lunch", SNACK: "snack", DINNER: "dinner" } as const;
@@ -324,22 +325,11 @@ export function FoodPreviewPane({
   );
 
   // A food goes into the day's latest plain meal of that type, else starts one; a recipe meal
-  // (it has a name) is never extended with loose foods.
+  // (it has a name) is never extended with loose foods (`planMealWrite`).
   const addFoodEntry = async (foodId: number, grams: number, mealType: MealType) => {
-    const target = dayMeals
-      .filter((m): m is MealResponse => m.mealType === mealType && m.name == null)
-      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())[0];
-    const entry = { foodId, quantityInGrams: grams };
-    if (target) {
-      await mealApi.update(target.id, {
-        dateTime: target.dateTime,
-        mealType,
-        name: null,
-        entries: [...target.entries.map((e) => ({ foodId: e.foodId, quantityInGrams: e.quantityInGrams })), entry],
-      });
-    } else {
-      await mealApi.create({ dateTime: logTimestampFor(date), mealType, name: null, entries: [entry] });
-    }
+    const write = planMealWrite(dayMeals, mealType, [{ foodId, quantityInGrams: grams }], date);
+    if (write.kind === "update") await mealApi.update(write.id, write.body);
+    else await mealApi.create(write.body);
   };
 
   const add = useMutation({
