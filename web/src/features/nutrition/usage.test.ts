@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeFoodUsage, computeRecipeUsage, recentFoodsByUsage, rankFoodsByUsage, RECENT_FOODS_COUNT } from "./usage";
-import type { FoodResponse, MealResponse, RecipeResponse } from "./types";
+import type { FoodResponse, MealResponse } from "./types";
 
 function food(id: number, name: string): FoodResponse {
   return { id, name, caloriesPer100g: 100, proteinPer100g: 10, carbsPer100g: null, fatPer100g: null, barcode: null, hidden: false };
@@ -143,17 +143,52 @@ describe("rankFoodsByUsage", () => {
 });
 
 describe("computeRecipeUsage", () => {
-  const recipe = (id: number, name: string): RecipeResponse => ({ id, name, description: null, favorite: false, servings: 1, ingredients: [], imageUpdatedAt: null });
-  const named = (id: number, daysAgo: number, name: string | null): MealResponse => ({ ...meal(id, daysAgo, [{ foodId: 1, grams: 100 }]), name });
-
-  it("finds a recipe's logs by the meal name (case and spacing insensitive), newest and count", () => {
-    const usage = computeRecipeUsage([named(1, 5, "Lentil soup"), named(2, 1, " lentil SOUP "), named(3, 2, "Other")], [recipe(10, "Lentil soup")]);
-    expect(usage.get(10)?.useCount).toBe(2);
-    expect(usage.get(10)!.lastUsedAt).toBeGreaterThan(Date.now() - 2 * 24 * 60 * 60 * 1000);
+  const tagged = (id: number, daysAgo: number, tags: (number | null)[], name: string | null = null): MealResponse => ({
+    ...meal(id, daysAgo, tags.map(() => ({ foodId: 1, grams: 100 }))),
+    name,
+    entries: tags.map((recipeId, i) => ({
+      foodId: i + 1,
+      foodName: `food-${i + 1}`,
+      quantityInGrams: 100,
+      calories: 100,
+      protein: 10,
+      carbs: 0,
+      fat: 0,
+      recipeId,
+    })),
   });
 
-  it("ignores unnamed meals, meals of unknown names and logs older than the 90-day window", () => {
-    const usage = computeRecipeUsage([named(1, 1, null), named(2, 1, "Nope"), named(3, 120, "Lentil soup")], [recipe(10, "Lentil soup")]);
+  it("counts a meal once per recipe, however many of its entries carry the tag", () => {
+    const usage = computeRecipeUsage([tagged(1, 2, [10, 10, 10, null])]);
+
+    expect(usage.size).toBe(1);
+    expect(usage.get(10)?.useCount).toBe(1);
+  });
+
+  it("finds a recipe mixed into a meal with other foods, and counts every recipe of the meal", () => {
+    const usage = computeRecipeUsage([tagged(1, 2, [10, null, 11])]);
+
+    expect(usage.get(10)?.useCount).toBe(1);
+    expect(usage.get(11)?.useCount).toBe(1);
+  });
+
+  it("adds up the meals and keeps the newest date", () => {
+    const usage = computeRecipeUsage([tagged(1, 5, [10]), tagged(2, 1, [10]), tagged(3, 2, [11])]);
+
+    expect(usage.get(10)?.useCount).toBe(2);
+    expect(usage.get(10)!.lastUsedAt).toBeGreaterThan(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    expect(usage.get(11)?.useCount).toBe(1);
+  });
+
+  it("does not depend on the meal's name, so a renamed recipe keeps its history", () => {
+    const usage = computeRecipeUsage([tagged(1, 2, [10], "The old name")]);
+
+    expect(usage.get(10)?.useCount).toBe(1);
+  });
+
+  it("ignores untagged meals - even a named one - and logs older than the 90-day window", () => {
+    const usage = computeRecipeUsage([tagged(1, 1, [null, null], "Lentil soup"), tagged(2, 120, [10])]);
+
     expect(usage.size).toBe(0);
   });
 });

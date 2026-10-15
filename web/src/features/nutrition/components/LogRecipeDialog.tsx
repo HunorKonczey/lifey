@@ -59,7 +59,7 @@ export function LogRecipeModal({ recipe, foodsById, initialMealType, pending, on
 
   const effDivisor = partial ? divisor : 1;
   const macros = scaledMacros(recipe.ingredients, effDivisor, overrides, foodsById);
-  const entries = buildEntries(recipe.ingredients, effDivisor, overrides);
+  const entries = buildEntries(recipe.ingredients, effDivisor, overrides, recipe.id);
   const fiberSugar = recipeFiberSugar(recipe.ingredients, foodsById, (ingredient, i) => gramsFor(ingredient, i, effDivisor, overrides));
 
   return (

@@ -1,4 +1,4 @@
-import type { FoodResponse, MealResponse, RecipeResponse } from "./types";
+import type { FoodResponse, MealResponse } from "./types";
 
 /** Aggregated usage of one food across recent meal history. */
 export interface FoodUsage {
@@ -69,23 +69,22 @@ export function rankFoodsByUsage(
   return [...recents, ...frequents, ...foods.filter((f) => !promoted.has(f.id))];
 }
 
-/** When and how often each recipe was logged. A logged recipe is a meal carrying the recipe's
- *  name (`LogRecipeDialog`), so usage is found by that name — a renamed recipe starts over. */
-export function computeRecipeUsage(
-  meals: MealResponse[],
-  recipes: RecipeResponse[],
-): Map<number, { lastUsedAt: number; useCount: number }> {
-  const byName = new Map(recipes.map((r) => [r.name.trim().toLowerCase(), r.id]));
+/**
+ * When and how often each recipe was logged (docs/88 §2.5): a meal is one use of a recipe when at least one of its entries
+ * carries the recipe's id - however many ingredients it brought, mixed with other foods or not, and whatever the recipe
+ * is called now. The meal-name match this replaces missed every recipe mixed into a meal and every renamed recipe.
+ */
+export function computeRecipeUsage(meals: MealResponse[]): Map<number, { lastUsedAt: number; useCount: number }> {
   const cutoff = Date.now() - USAGE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
   const usage = new Map<number, { lastUsedAt: number; useCount: number }>();
   for (const meal of meals) {
-    if (!meal.name) continue;
-    const id = byName.get(meal.name.trim().toLowerCase());
-    if (id == null) continue;
     const at = new Date(meal.dateTime).getTime();
     if (at < cutoff) continue;
-    const prev = usage.get(id);
-    usage.set(id, { lastUsedAt: Math.max(prev?.lastUsedAt ?? 0, at), useCount: (prev?.useCount ?? 0) + 1 });
+    const recipeIds = new Set(meal.entries.flatMap((e) => (e.recipeId != null ? [e.recipeId] : [])));
+    for (const id of recipeIds) {
+      const prev = usage.get(id);
+      usage.set(id, { lastUsedAt: Math.max(prev?.lastUsedAt ?? 0, at), useCount: (prev?.useCount ?? 0) + 1 });
+    }
   }
   return usage;
 }

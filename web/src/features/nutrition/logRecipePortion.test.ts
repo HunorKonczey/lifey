@@ -59,6 +59,19 @@ describe("scaledTotals", () => {
   });
 });
 
+describe("buildEntries with a recipe id (docs/88)", () => {
+  it("tags every entry with the recipe, leaving out the zero-gram ingredients", () => {
+    expect(buildEntries(ingredients, 2, { 1: "0" }, 42)).toEqual([{ foodId: 1, quantityInGrams: 150, recipeId: 42 }]);
+  });
+
+  it("sends no recipe id when none is given", () => {
+    expect(buildEntries(ingredients, 2, {})).toEqual([
+      { foodId: 1, quantityInGrams: 150 },
+      { foodId: 2, quantityInGrams: 100 },
+    ]);
+  });
+});
+
 describe("buildEntries", () => {
   it("builds divided entries by default", () => {
     expect(buildEntries(ingredients, 2, {})).toEqual([

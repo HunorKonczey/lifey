@@ -383,7 +383,7 @@ export function FoodPreviewPane({
         // A recipe added here is its ingredients in the meal, next to whatever else is in it (docs/87 §2.7) — the
         // Recipes tab's "Log" is where a recipe becomes a meal of its own.
         await addEntries(
-          buildEntries(req.item.recipe.ingredients, recipeDivisor(req.item.recipe, req.quantity), req.overrides ?? {}),
+          buildEntries(req.item.recipe.ingredients, recipeDivisor(req.item.recipe, req.quantity), req.overrides ?? {}, req.item.recipe.id),
           mealType,
         );
       } else if (req.item.kind === "off") {
