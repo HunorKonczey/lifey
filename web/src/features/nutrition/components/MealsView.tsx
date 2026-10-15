@@ -40,7 +40,8 @@ export function MealsView() {
   const [editingMeal, setEditingMeal] = useState<MealResponse | null>(null);
   // Deleting used to fire on the first click with no way back (docs/redesign/web-redesign-prompt.md).
   const [removingMeal, setRemovingMeal] = useState<MealResponse | null>(null);
-  const [removingItem, setRemovingItem] = useState<{ meal: MealResponse; index: number } | null>(null);
+  // One food, or - with `recipeName` - all the entries of one recipe (docs/88 §2.8).
+  const [removingItem, setRemovingItem] = useState<{ meal: MealResponse; indexes: number[]; recipeName?: string } | null>(null);
   const undoableDelete = useUndoableDelete();
   const undoSeconds = TOAST_DURATION_MS / 1000;
 
@@ -78,12 +79,13 @@ export function MealsView() {
       errorMessage: t("removeFailed"),
     });
 
-  // One food out of a meal is a PUT of the rest, deferred the same way; the last food takes the meal with it.
-  const deleteItem = (meal: MealResponse, index: number) => {
-    if (meal.entries.length <= 1) return deleteMeal(meal);
-    const remaining = meal.entries.filter((_, i) => i !== index);
+  // One food - or one recipe's entries - out of a meal is a PUT of the rest, deferred the same way; the last of the meal
+  // takes the meal with it.
+  const deleteItem = (meal: MealResponse, indexes: number[], recipeName?: string) => {
+    if (indexes.length >= meal.entries.length) return deleteMeal(meal);
+    const remaining = meal.entries.filter((_, i) => !indexes.includes(i));
     undoableDelete({
-      message: t("itemDeleted", { food: meal.entries[index].foodName }),
+      message: recipeName ? t("recipeRemoved", { recipe: recipeName }) : t("itemDeleted", { food: meal.entries[indexes[0]].foodName }),
       remove: () => setCachedMeals((list) => list.map((m) => (m.id === meal.id ? { ...m, entries: remaining } : m))),
       restore: () => setCachedMeals((list) => list.map((m) => (m.id === meal.id ? meal : m))),
       commit: async () => {
@@ -179,7 +181,8 @@ export function MealsView() {
                     onEdit={() => setEditingMeal(meal)}
                     onDuplicate={() => duplicateMutation.mutate(meal)}
                     onDelete={() => setRemovingMeal(meal)}
-                    onDeleteItem={(index) => setRemovingItem({ meal, index })}
+                    onDeleteItem={(index) => setRemovingItem({ meal, indexes: [index] })}
+                    onDeleteGroup={(indexes, recipeName) => setRemovingItem({ meal, indexes, recipeName })}
                   />
                 ))}
               </div>
@@ -242,20 +245,32 @@ export function MealsView() {
         open={removingItem != null}
         onClose={() => setRemovingItem(null)}
         onConfirm={() => {
-          if (removingItem) deleteItem(removingItem.meal, removingItem.index);
+          if (removingItem) deleteItem(removingItem.meal, removingItem.indexes, removingItem.recipeName);
           setRemovingItem(null);
         }}
         icon="delete"
-        title={removingItem ? t("deleteItemTitle", { food: removingItem.meal.entries[removingItem.index].foodName }) : ""}
+        title={
+          removingItem
+            ? removingItem.recipeName
+              ? t("deleteRecipeTitle", { recipe: removingItem.recipeName })
+              : t("deleteItemTitle", { food: removingItem.meal.entries[removingItem.indexes[0]].foodName })
+            : ""
+        }
         body={
           removingItem
-            ? removingItem.meal.entries.length <= 1
+            ? removingItem.indexes.length >= removingItem.meal.entries.length
               ? t("deleteItemLastBody", { seconds: undoSeconds })
-              : t("deleteItemBody", {
-                  grams: fmt.number(removingItem.meal.entries[removingItem.index].quantityInGrams, 1),
-                  kcal: Math.round(removingItem.meal.entries[removingItem.index].calories),
-                  seconds: undoSeconds,
-                })
+              : removingItem.recipeName
+                ? t("deleteRecipeBody", {
+                    count: removingItem.indexes.length,
+                    kcal: Math.round(removingItem.indexes.reduce((sum, i) => sum + removingItem.meal.entries[i].calories, 0)),
+                    seconds: undoSeconds,
+                  })
+                : t("deleteItemBody", {
+                    grams: fmt.number(removingItem.meal.entries[removingItem.indexes[0]].quantityInGrams, 1),
+                    kcal: Math.round(removingItem.meal.entries[removingItem.indexes[0]].calories),
+                    seconds: undoSeconds,
+                  })
             : ""
         }
         cancelLabel={common("cancel")}
