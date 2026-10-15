@@ -20,10 +20,14 @@ const _usageWindow = Duration(days: 90);
 
 /// One food + quantity to include when logging a meal (request side).
 class MealEntryInput {
-  const MealEntryInput({required this.foodClientId, required this.grams});
+  const MealEntryInput({required this.foodClientId, required this.grams, this.recipeClientId});
 
   final String foodClientId;
   final double grams;
+
+  /// The recipe this entry belongs to (docs/88), when it was added as part of one. Every write that rebuilds a meal's
+  /// entries must pass it on, or the meal silently forgets where its entries came from.
+  final String? recipeClientId;
 }
 
 /// Local-first access to meals and their entries. A meal and its entries are
@@ -147,6 +151,7 @@ class MealRepository {
               fat: (food?.fatPer100g ?? 0) * grams / 100,
               fiber: food?.fiberPer100g == null ? null : food!.fiberPer100g! * grams / 100,
               sugar: food?.sugarPer100g == null ? null : food!.sugarPer100g! * grams / 100,
+              recipeClientId: entryRow.recipeClientId,
             ),
           );
     }
@@ -351,6 +356,7 @@ class MealRepository {
               mealClientId: mealClientId,
               foodClientId: entry.foodClientId,
               quantityInGrams: entry.grams,
+              recipeClientId: Value(entry.recipeClientId),
             ),
           );
     }
@@ -367,7 +373,12 @@ class MealRepository {
       'mealType': mealType.apiValue,
       if (name != null) 'name': name,
       'entries': entries
-          .map((e) => {'foodId': clientRef(e.foodClientId), 'quantityInGrams': e.grams})
+          .map((e) => {
+                'foodId': clientRef(e.foodClientId),
+                'quantityInGrams': e.grams,
+                // Optional: a recipe deleted before it synced must not take the meal down with it (docs/88 section 2.7).
+                if (e.recipeClientId != null) 'recipeId': optionalClientRef(e.recipeClientId!),
+              })
           .toList(),
     };
   }

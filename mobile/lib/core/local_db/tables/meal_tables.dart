@@ -37,6 +37,11 @@ class MealEntries extends Table {
   TextColumn get foodClientId => text().references(Foods, #clientId)();
   RealColumn get quantityInGrams => real()();
 
+  /// The recipe this entry was added as part of (docs/88), by client id; null for an entry added as a plain food, macros
+  /// or a photo estimate. Deliberately **not** a foreign key: recipes are removed from this table when they are deleted,
+  /// and a tag that outlives its recipe must degrade to "not grouped", not violate a constraint.
+  TextColumn get recipeClientId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }
