@@ -11,6 +11,7 @@ import '../../../core/utils/combine_latest.dart';
 import '../domain/daily_macros.dart';
 import '../domain/food_usage.dart';
 import '../domain/meal.dart';
+import '../domain/recipe_usage.dart';
 
 typedef _JoinedMealRow = TypedResult;
 
@@ -258,6 +259,37 @@ class MealRepository {
           lastGrams: isNewest ? entry.quantityInGrams : prev.lastGrams,
         );
       }
+      return usage;
+    });
+  }
+
+  /// Per-recipe usage over the last [_usageWindow] of meal history, keyed by `recipeClientId` (docs/88): a meal is one use
+  /// of a recipe however many of its entries carry the tag, so a six-ingredient recipe is not six uses. Like
+  /// [watchFoodUsage], pending deletes are not filtered out - the numbers only rank suggestions.
+  Stream<Map<String, RecipeUsage>> watchRecipeUsage() {
+    final cutoff = DateTime.now().subtract(_usageWindow);
+    final joined$ = (_db.select(_db.mealEntries).join([
+      innerJoin(_db.meals, _db.meals.clientId.equalsExp(_db.mealEntries.mealClientId)),
+    ])
+          ..where(_db.meals.mealDateTime.isBiggerOrEqualValue(cutoff) & _db.mealEntries.recipeClientId.isNotNull()))
+        .watch();
+
+    return joined$.map((rows) {
+      // (meal, recipe) pairs first: one use each, dated by the meal.
+      final pairs = <(String, String), DateTime>{};
+      for (final row in rows) {
+        final entry = row.readTable(_db.mealEntries);
+        final meal = row.readTable(_db.meals);
+        pairs[(meal.clientId, entry.recipeClientId!)] = meal.mealDateTime;
+      }
+      final usage = <String, RecipeUsage>{};
+      pairs.forEach((key, at) {
+        final prev = usage[key.$2];
+        usage[key.$2] = RecipeUsage(
+          lastUsedAt: prev == null || at.isAfter(prev.lastUsedAt) ? at : prev.lastUsedAt,
+          useCount: (prev?.useCount ?? 0) + 1,
+        );
+      });
       return usage;
     });
   }

@@ -9,6 +9,7 @@ import 'package:lifey/features/nutrition/application/food_controller.dart';
 import 'package:lifey/features/nutrition/application/food_usage_provider.dart';
 import 'package:lifey/features/nutrition/application/meal_controller.dart';
 import 'package:lifey/features/nutrition/application/remaining_budget_provider.dart';
+import 'package:lifey/features/nutrition/application/recipe_usage_provider.dart';
 import 'package:lifey/features/nutrition/data/meal_repository.dart';
 import 'package:lifey/features/nutrition/domain/food.dart';
 import 'package:lifey/features/nutrition/domain/food_usage.dart';
@@ -108,6 +109,7 @@ void main() {
         overrides: [
           mealControllerProvider.overrideWith(() => meals),
           recipeControllerProvider.overrideWith(_FakeRecipes.new),
+          recipeUsageProvider.overrideWith((ref) => Stream.value(const {})),
           settingsControllerProvider.overrideWith(_NoGoalSettings.new),
           interstitialManagerProvider.overrideWith(_NoAds.new),
           isOfflineProvider.overrideWith((ref) => Stream.value(false)),
