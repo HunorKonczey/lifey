@@ -264,7 +264,9 @@
   --radius-nav:   var(--r-hero);
   --radius-pill:  var(--r-pill);
 
-  --font-sans: "Plus Jakarta Sans", sans-serif;
+  /* The self-hosted face (layout.tsx: `localFont`, registered as "plusJakarta" with a size-adjusted fallback); the literal name stays
+     as a second choice for a machine that has the family installed. */
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", sans-serif;
 }
 
 /* ─── Base styles ─── */
@@ -280,7 +282,7 @@ html {
 
 body {
   min-height: 100%;
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.5;
   background: var(--bg);
