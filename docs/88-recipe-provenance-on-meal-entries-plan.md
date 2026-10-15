@@ -1,6 +1,10 @@
 # 88 – Recipe Provenance on Meal Entries
 
-Status: planned — not started (Jira umbrella LIF-166; steps LIF-167 … LIF-176 under epic LIF-6)
+Status: built — LIF-167 … LIF-176 merged on 2026-10-15 (umbrella LIF-166, epic LIF-6). Checked on the real stack: the V95
+backfill tagged the existing recipe-named meal; an edit from the web drawer kept the tags; a recipe added from the web
+dialog arrived tagged and showed in "Recent"; a mixed meal is two rows on the web card and a "Chilli" group in the
+mobile editor after a pull on the Pixel_10 emulator. Not walked: Hungarian/dark theme of the new web rows, the
+cross-client edit-on-one-pull-on-the-other loop, a recipe deleted offline before its meal synced (covered by unit tests).
 Scope: backend · mobile · web — one migration (`V95`), API field, offline sync, no new endpoint
 Depends on: docs/87-add-recipe-to-meal-plan.md (the flows that put a recipe into a mixed meal —
 only the *stamping* steps M3/W2 wait for it), docs/15-delta-sync.md and
