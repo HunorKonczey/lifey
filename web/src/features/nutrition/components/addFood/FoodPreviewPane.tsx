@@ -11,7 +11,6 @@ import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useFormat } from "@/lib/format/useFormat";
 import { useToast } from "@/lib/hooks/useToast";
-import { logTimestampFor } from "@/lib/utils/logTime";
 import { foodApi, mealApi } from "../../api";
 import { remainingAfter, type Nutrients } from "../../budget";
 import { parseMacroDraft, per100g, type ParsedMacroEntry } from "../../macroEntry";
@@ -22,7 +21,7 @@ import { foodPortion, recipePortion, type Macros } from "../../recipeMacros";
 import { offPortion, type ListItem } from "../../offSearch";
 import { ensureOwnFood } from "../../offSave";
 import { quantityChips } from "../../quantityChips";
-import type { FoodResponse, MealType } from "../../types";
+import type { FoodResponse, MealEntryRequest, MealType } from "../../types";
 import { useAddFoodContext } from "./AddFoodModal";
 
 const MEAL_KEY = { BREAKFAST: "breakfast", LUNCH: "lunch", SNACK: "snack", DINNER: "dinner" } as const;
@@ -101,7 +100,11 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
     ? (entry?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 })
     : macrosOf(active, qty, foodsById);
   const left = remainingAfter(consumed, goals, { calories: macros.calories, protein: macros.protein });
-  const canSubmit = !pending && (inMacros ? !!entry : !!active && qty > 0);
+  // A recipe with no ingredient to log (none, or all of 0 g) would write an empty meal.
+  const recipeHasEntries =
+    active?.kind !== "recipe" ||
+    (qty > 0 && buildEntries(active.recipe.ingredients, Math.max(active.recipe.servings, 1) / qty, {}).length > 0);
+  const canSubmit = !pending && (inMacros ? !!entry : !!active && qty > 0 && recipeHasEntries);
 
   const submit = () => {
     if (!canSubmit) return;
@@ -324,13 +327,15 @@ export function FoodPreviewPane({
     { calories: 0, protein: 0 },
   );
 
-  // A food goes into the day's latest plain meal of that type, else starts one; a recipe meal
-  // (it has a name) is never extended with loose foods (`planMealWrite`).
-  const addFoodEntry = async (foodId: number, grams: number, mealType: MealType) => {
-    const write = planMealWrite(dayMeals, mealType, [{ foodId, quantityInGrams: grams }], date);
+  // A food — or a recipe's ingredients — goes into the day's latest plain meal of that type, else starts one; a
+  // recipe logged as its own meal (it has a name) is never extended with loose foods (`planMealWrite`).
+  const addEntries = async (entries: MealEntryRequest[], mealType: MealType) => {
+    const write = planMealWrite(dayMeals, mealType, entries, date);
     if (write.kind === "update") await mealApi.update(write.id, write.body);
     else await mealApi.create(write.body);
   };
+  const addFoodEntry = (foodId: number, grams: number, mealType: MealType) =>
+    addEntries([{ foodId, quantityInGrams: grams }], mealType);
 
   const add = useMutation({
     mutationFn: async (req: AddRequest): Promise<MealType> => {
@@ -348,14 +353,10 @@ export function FoodPreviewPane({
         });
         await addFoodEntry(food.id, req.entry.grams, mealType);
       } else if (req.item.kind === "recipe") {
-        // A logged recipe is its own meal, named after it (`LogRecipeDialog` does the same).
+        // A recipe added here is its ingredients in the meal, next to whatever else is in it (docs/87 §2.7) — the
+        // Recipes tab's "Log" is where a recipe becomes a meal of its own.
         const servings = Math.max(req.item.recipe.servings, 1);
-        await mealApi.create({
-          dateTime: logTimestampFor(date),
-          mealType,
-          name: req.item.recipe.name,
-          entries: buildEntries(req.item.recipe.ingredients, servings / req.quantity, {}),
-        });
+        await addEntries(buildEntries(req.item.recipe.ingredients, servings / req.quantity, {}), mealType);
       } else if (req.item.kind === "off") {
         // An OpenFoodFacts product becomes one of the user's own foods first (a 409 — product or name already
         // there — is walked through in `ensureOwnFood`), then it is logged like any food (docs/84 D8).
