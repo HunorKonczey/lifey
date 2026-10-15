@@ -15,8 +15,8 @@ import { useNoOffSearch, useOffSearchForLocale, type UseOffSearchResult } from "
 import { FoodSearchPane } from "./FoodSearchPane";
 import { MacroEntryForm } from "./MacroEntryForm";
 
-/** Search the user's foods and recipes, or type the macros of something that is in neither. */
-export type AddFoodMode = "search" | "macros";
+/** Search the user's foods and recipes, pick one of the recipes, or type the macros of something that is in neither. */
+export type AddFoodMode = "search" | "recipe" | "macros";
 
 /** What the right-hand pane gets to work with. */
 export interface AddFoodPreviewContext {
@@ -51,6 +51,8 @@ export interface AddFoodModalViewProps {
   onClose: () => void;
   items: SearchItem[];
   usage: Map<string, ItemUsage>;
+  /** The recipes are still being fetched — Recipe mode then shows nothing rather than "no recipes yet". */
+  recipesLoading?: boolean;
   /** Start with this typed into the search field. */
   initialQuery?: string;
   /** Start with this row (`food:12`) highlighted. */
@@ -83,6 +85,7 @@ export function AddFoodModalView({
   onClose,
   items,
   usage,
+  recipesLoading = false,
   initialQuery = "",
   initialKey,
   onCreate,
@@ -103,7 +106,7 @@ export function AddFoodModalView({
   // The hook gets no text at all until then: it debounces what it is given, and a debounce that had settled on the
   // prefilled name would send that name once more the moment the first letter is typed.
   const [typed, setTyped] = useState(false);
-  const offWanted = offChecked && !!useOff && (initialQuery === "" || typed);
+  const offWanted = mode === "search" && offChecked && !!useOff && (initialQuery === "" || typed);
   const offAnswer = (useOff ?? useNoOffSearch)({ query: offWanted ? query : "", checked: offWanted });
   // A product that is already one of the user's foods is not offered again, even from a cached answer (LIF-134).
   const owned = useMemo(() => ownedBarcodes(items), [items]);
@@ -112,9 +115,14 @@ export function AddFoodModalView({
   const commitRef = useRef<(() => void) | null>(null);
   const searchWrapRef = useRef<HTMLDivElement>(null);
 
-  const results = useMemo(() => searchItems({ items, query, filter, usage }), [items, query, filter, usage]);
+  // Recipe mode is the same search over the recipes alone, with no filter chips (docs/87 §2.8).
+  const modeItems = useMemo(() => (mode === "recipe" ? items.filter((i) => i.kind === "recipe") : items), [items, mode]);
+  const results = useMemo(
+    () => searchItems({ items: modeItems, query, filter: mode === "recipe" ? "all" : filter, usage }),
+    [modeItems, query, filter, mode, usage],
+  );
   // The highlighted row is the picked one while it is still in a list (own rows, then OpenFoodFacts rows), else the first own row.
-  const offRows = offChecked ? off.items : [];
+  const offRows = offChecked && mode === "search" ? off.items : [];
   const active: ListItem | null = results.find((r) => r.key === pickedKey) ?? offRows.find((r) => r.key === pickedKey) ?? results[0] ?? null;
 
   const ctx: AddFoodPreviewContext = {
@@ -178,10 +186,11 @@ export function AddFoodModalView({
             onChange={setMode}
             options={[
               { value: "search", label: t("modeSearch"), icon: "search" },
+              { value: "recipe", label: t("modeRecipe"), icon: "menu_book" },
               { value: "macros", label: t("modeMacros"), icon: "edit_note" },
             ]}
           />
-          {mode === "search" ? (
+          {mode !== "macros" ? (
             <FoodSearchPane
               results={results}
               usage={usage}
@@ -197,8 +206,10 @@ export function AddFoodModalView({
               onCommit={() => commitRef.current?.()}
               onFocusQuantity={() => quantityInput.current?.focus()}
               onCreate={onCreate}
+              recipesOnly={mode === "recipe"}
+              loading={recipesLoading}
               off={
-                useOff
+                useOff && mode === "search"
                   ? {
                       checked: offChecked,
                       onCheckedChange: (next) => {
@@ -246,6 +257,7 @@ export function AddFoodModal(props: AddFoodModalProps) {
       {...props}
       items={items}
       usage={usage}
+      recipesLoading={!recipes}
       useOff={useOffSearchForLocale}
       initialOffChecked={offChecked}
       onOffCheckedChange={writeOffSearchPreference}
