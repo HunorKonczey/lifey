@@ -17,9 +17,10 @@
 > [`71`](71-mobile-paywall-design-prompt.md) (the mobile one), [`68`](68-web-landing-design-plan.md),
 > [`69`](69-mobile-paywall-design-plan.md).
 >
-> The screenshots were captured on 2026-10-14 from the dev build (dark theme, reduced motion;
-> 1440 px and 390 px wide, Hungarian and English). Only the dark theme was captured; the site also has a
-> complete light theme (`68` D-DW2: dark is the hero, light is complete).
+> The screenshots (`design/as-built/`) were captured on 2026-10-14 from the dev build (dark theme, reduced motion; 1440 px and
+> 390 px wide, Hungarian and English). Only the dark theme was captured; the site also has a complete light theme (`68` D-DW2:
+> dark is the hero, light is complete). They predate LIF-120 (2026-10-15), which put real captures of the trainer workspace into
+> the three value blocks of the home and for-trainers pages: those blocks now differ from the screenshots.
 
 ---
 
@@ -67,10 +68,10 @@ Hard constraints (all carried over from the original briefs):
    success (the form is replaced by a confirmation), error (the typed message is kept, an inline
    error and the direct e-mail address are offered).
 5. **L28 — 404**, HU and EN, inside the marketing shell (header and footer stay).
-6. **L29 — Failed image** (frame with alt text): **hold this one.** The marketing pages contain no
-   `<img>` today — every mockup is reproduced HTML/CSS — so there is nothing for it to apply to
-   until real captures replace the reproduced UI (LIF-120). Draw it only if you want it ready for
-   then.
+6. **L29 — Failed image** (frame with alt text). It now applies, narrowly: since LIF-120 the home and
+   for-trainers value blocks show three real captures of the trainer workspace (`<img>`, translated
+   alt text, a browser-window frame; the dark or the light file by theme). If one fails to load the
+   frame is empty and the alt text shows; nothing else is built. Draw what you would want there.
 7. **L30 — Motion notes and open questions** (closing sections). The motion spec is one pattern
    (§2.4), so the notes are short. **The open questions are the part we most want:** every product
    or design question you had to assume an answer to while drawing L01–L21 and these frames.

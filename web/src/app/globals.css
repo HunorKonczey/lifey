@@ -644,3 +644,15 @@ input[type="number"] { -moz-appearance: textfield; }
   background: var(--bg);
   color: var(--text);
 }
+
+/* The captures of the real product (LIF-120): one image per theme, in the markup both; the other theme's is not displayed, and a
+   lazy image that is not displayed is not fetched. See components/marketing/home/ProductShot.tsx. */
+.product-shot-light {
+  display: none;
+}
+[data-theme="light"] .product-shot-dark {
+  display: none;
+}
+[data-theme="light"] .product-shot-light {
+  display: block;
+}

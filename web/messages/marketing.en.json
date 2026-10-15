@@ -5,11 +5,8 @@
       "fatLoss": "Fat loss · week 7",
       "hypertrophy": "Hypertrophy · week 2",
       "invited": "invited",
-      "cardio": "Cardio · week 5",
       "squat": "Squat",
-      "benchPress": "Bench press",
-      "row": "Row",
-      "plank": "Plank"
+      "benchPress": "Bench press"
     },
     "hero": {
       "eyebrow": "Trainer workspace",
@@ -48,21 +45,7 @@
       "bullet1": "Invite by email, activated on their first sign-in",
       "bullet2": "A private note on every client, visible only to you",
       "bullet3": "Weekly compliance at a glance",
-      "mockClientsHeading": "My clients",
-      "mockSearch": "Search",
-      "mockOverview": "Overview",
-      "mockWorkouts": "Workouts",
-      "mockNutrition": "Nutrition",
-      "mockWeight": "Weight",
-      "mockNotes": "Notes",
-      "mockWeeklyWorkouts": "Weekly sessions",
-      "mockWeightLabel": "Weight",
-      "mockAvgKcal": "Avg. kcal",
-      "mockLastWorkouts": "Recent sessions",
-      "mockProgramLength": "8-week program",
-      "mockMessage": "Message",
-      "mockProgram": "Program",
-      "mockInvited": "invited"
+      "mockClientsHeading": "My clients"
     },
     "program": {
       "eyebrow": "Programs",
@@ -74,24 +57,10 @@
       "bullet2": "A recurring session goes with the program",
       "bullet3": "It's on the client's phone instantly",
       "mockProgramName": "Strength 5×5",
-      "mockProgramMeta": "8 weeks · assigned to 4 clients",
-      "mockAssign": "Assign",
       "mockWeek3": "Week 3",
-      "mockWeek4": "Week 4",
-      "mockWeek5": "Week 5",
-      "mockAddWeek": "+ week",
       "mockMonday": "Monday — Day A",
       "mockWednesday": "Wednesday — Day B",
-      "mockFriday": "Friday — Day A",
-      "mockExerciseCount": "4 exercises",
-      "mockScheduling": "Session",
-      "mockSchedulingFor": "Szabó Anna · Wednesday",
-      "mockDate": "Date",
-      "mockTime": "Time",
-      "mockLocation": "Location",
-      "mockLocationValue": "Fit Studio, room 2",
-      "mockRecurrence": "Wednesdays at 5 pm, repeats for 8 weeks.",
-      "mockSave": "Save"
+      "mockExerciseCount": "4 exercises"
     },
     "chat": {
       "eyebrow": "Chat and the weekly report",
@@ -102,18 +71,8 @@
       "bullet1": "Messages with session context",
       "bullet2": "A weekly report for every client",
       "bullet3": "A missed session gets flagged, not blamed",
-      "mockOnline": "online",
-      "mockClientMsg": "Bence, my form fell apart on the third set of squats.",
-      "mockWorkoutContext": "Session",
-      "mockWorkoutContextValue": "Strength 5×5 — A · Aug 24",
-      "mockWorkoutContextSet": "Squat 5×5 · 82.5 kg",
-      "mockTrainerMsg": "Let's drop to 77.5 for the next two sessions, and film the last set.",
       "mockTrainerMsgShort": "Let's drop to 77.5.",
-      "mockClientMsgShort": "My form fell apart on the third set.",
-      "mockInputPlaceholder": "Message…",
-      "mockReportTitle": "Weekly report",
-      "mockReportPeriod": "Aug 17–23, 2026",
-      "mockReportNote": "Márk missed two sessions — worth a message."
+      "mockClientMsgShort": "My form fell apart on the third set."
     },
     "sponsored": {
       "eyebrow": "For your clients",
@@ -221,6 +180,11 @@
       "cta": "Try it for 14 days",
       "reassurance": "14 days free · no card",
       "reassuranceHighlight": "your clients get the app free"
+    },
+    "shots": {
+      "clientsAlt": "A client's overview in the Lifey trainer workspace: seven-day calorie and protein averages, workouts this week, the weight trend and a four-week logging calendar.",
+      "programAlt": "A six-week strength programme in the Lifey trainer workspace: a week-by-week grid of workouts, with the templates on the left.",
+      "chatAlt": "A conversation between a trainer and a client in Lifey's web chat: the client reports a heavy last set and the trainer plans next week's load."
     }
   },
   "forTrainers": {

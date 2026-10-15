@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { ValueSection } from "./ValueSection";
-import { ChatMock } from "./ChatMock";
+import { ChatShot } from "./ChatShot";
 
 /** design/Lifey Landing.dc.html L12 (desktop) + L15 third block (mobile). */
 export async function ChatSection() {
@@ -15,7 +15,7 @@ export async function ChatSection() {
         title={t("title")}
         body={t("body")}
         bullets={bullets}
-        visual={<ChatMock />}
+        visual={<ChatShot />}
         imageSide="right"
         background="bg"
       />
