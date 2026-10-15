@@ -2,6 +2,7 @@ package com.lifey.nutrition.meal;
 
 import com.lifey.common.domain.BaseEntity;
 import com.lifey.nutrition.food.Food;
+import com.lifey.nutrition.recipe.Recipe;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,4 +23,13 @@ public class MealEntry extends BaseEntity {
 
     @Column(name = "quantity_in_grams", nullable = false)
     private double quantityInGrams;
+
+    /**
+     * The recipe this entry came from, when it was added as part of one (docs/88); null for entries added as plain foods,
+     * macros or a photo estimate, and for entries of a recipe that has since been deleted for good. Soft-deleted recipes
+     * stay referenced.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipe_id")
+    private Recipe recipe;
 }
