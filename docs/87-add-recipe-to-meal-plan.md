@@ -63,13 +63,15 @@ An added recipe is expanded into one meal entry per ingredient
 - Consequence: the meal does not remember *which recipe* the rows came from;
   see 2.6 and the follow-up LIF-166.
 
-### 2.2 The amount is "servings eaten"; `RecipePortion` works on a fraction of the whole recipe
+### 2.2 The amount is "servings eaten"; `RecipePortion` works on a divisor of the whole recipe
 
 Both new surfaces ask *how many servings did you eat* (default 1, step 0.5,
 0.25–50) — the question the web preview pane already asks. Internally the
-portion is one number, `scale` = fraction of the whole recipe
-(`servingsEaten / recipe.servings`). `LogRecipeSheet`'s existing "divide into
-N parts" maps onto the same number (`1 / divisor`, or `1` when not split).
+portion is one number, the **divisor** of the whole recipe
+(`recipe.servings / servingsEaten`, null = the whole recipe as stored) — the
+same representation the web uses (`servings / qty`). `LogRecipeSheet`'s
+existing "divide into N parts" is the same number (`N`, or null when not
+split).
 
 - Rejected: reusing the divisor UI on the new surfaces ("split into 4 parts").
   It answers the same question backwards and needs the "log as part meal"
@@ -215,13 +217,15 @@ grams}` plus an optional `name`. The meal API, sync and pull are untouched.
 
 ```dart
 class RecipePortion {
-  RecipePortion(this.recipe, {double scale = 1, Map<int, double> overrides = const {}});
-  double gramsFor(int i);                    // override ?? round2(quantity * scale)
+  const RecipePortion(this.recipe, {double? divisor, Map<int, double> overrides = const {}});
+  double defaultGramsFor(int i);             // round2(quantity / divisor); as stored when divisor is null
+  double gramsFor(int i);                    // override ?? defaultGramsFor(i)
   double get calories / protein / carbs / fat;
   FiberSugarTotals get fiberSugar;
   bool get hasLoggableEntry;
-  List<MealEntryInput> entries();            // 0 g left out
+  List<PortionIngredient> get loggable;     // (ingredient, grams), 0 g left out
 }
+// plus extension RecipeIngredientFood.toFood(): the ingredient as a Food with per-100 g figures
 ```
 
 `LogRecipeSheet` is refactored onto it in M1 with no visible change.
@@ -247,10 +251,15 @@ class RecipePortion {
 |---|---|---|
 | `mealActionRecipe` | Add recipe | Recept hozzáadása |
 | `addRecipeSheetTitle` | Add a recipe | Recept hozzáadása |
-| `addRecipeSearchHint` | Search recipes | Receptek keresése |
-| `addRecipeEmpty` | No recipes yet | Még nincs receptje |
+| `addRecipeEmpty` | No recipes yet | Még nincs receptjed |
+| `addRecipeNoMatch` | No recipe matches | Nincs ilyen recept |
+| `addRecipeRowSubtitle` | {count} ingredients · {kcal} kcal / serving | {count} hozzávaló · {kcal} kcal / adag |
 | `addRecipeServingsLabel` | Servings eaten | Elfogyasztott adag |
+| `addRecipeServingsDecreaseTooltip` / `…IncreaseTooltip` | Fewer / More servings | Kevesebb / Több adag |
 | `addRecipeConfirm` | Add to meal | Hozzáadás az étkezéshez |
+
+The search field reuses `searchRecipesHint`. (`mealActionRecipe` arrives with
+the tile in M3.)
 
 The ingredient-adjust strings (`adjustIngredientsButton`, `ingredientAmountsHint`,
 `resetIngredientTooltip`, `recipeMacrosPreviewLabel`) already exist and are reused.
@@ -282,8 +291,8 @@ and macro-sum logic out of `_LogRecipeSheetState`
 `_hasLoggableEntry`, the entry building in `_submit`). The sheet keeps its UI
 state (divisor, text controllers) and builds a `RecipePortion` from it.
 
-Verify: new `recipe_portion_test.dart` — rounding to 2 decimals, `scale` 0.5 /
-1 / 3, override beats default, override 0 drops the row, an ingredient with
+Verify: new `recipe_portion_test.dart` — rounding to 2 decimals, divisors 1 /
+3 / 4 ÷ 1.5, override beats default, override 0 drops the row, an ingredient with
 `quantityInGrams == 0` contributes nothing and does not divide by zero, fibre /
 sugar stay null when no ingredient has a figure. `flutter test
 test/features/recipes` (the existing `log_recipe_sheet_test.dart` must pass
@@ -443,9 +452,9 @@ in the browser; the pure functions carry the unit tests.
 
 ## Risk checkpoints where a failure would be silent
 
-- **Wrong grams from the scale.** `servingsEaten / recipe.servings` on mobile
-  and `servings / qty` as divisor on web are inverses of each other. An
-  inversion logs a recipe at 1/n² or n² of what was eaten and every screen
+- **Wrong grams from the divisor.** Both platforms divide the recipe by
+  `recipe.servings / servingsEaten` (mobile `RecipePortion.divisor`, web
+  `servings / qty`); flipping the fraction on either one logs a recipe at 1/n² or n² of what was eaten and every screen
   still looks plausible. The tests must pin a concrete case on each platform:
   a 4-serving recipe of 400 g flour at 1 serving logs **100 g**, at 2 servings
   **200 g**.

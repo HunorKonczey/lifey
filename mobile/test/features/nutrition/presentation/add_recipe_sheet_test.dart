@@ -29,7 +29,7 @@ final _recipes = [
   Recipe(clientId: 'z', name: 'Zucchini bake', ingredients: [_ingredient('Zucchini', 300, kcal: 60)]),
   _chilli,
   Recipe(clientId: 'k', name: 'Töltött káposzta', favorite: true, ingredients: [_ingredient('Cabbage', 300, kcal: 200)]),
-  Recipe(clientId: 'e', name: 'Empty one', ingredients: const []),
+  const Recipe(clientId: 'e', name: 'Empty one', ingredients: []),
   Recipe(clientId: 'a', name: 'Apple pie', ingredients: [_ingredient('Apples', 200, kcal: 100)]),
 ];
 
