@@ -15,7 +15,7 @@ import { dayKey, loggedDayKeys, mealsOnDay, quickSourceDays, sourceChip } from "
 import { MEAL_TYPE_STYLE } from "../mealTypeStyle";
 import { useCopyMeals } from "../useCopyMeals";
 import type { MealResponse } from "../types";
-import { isRecipeMeal, mealKcal } from "./MealCard";
+import { mealKcal, recipeMealName } from "./MealCard";
 
 const MEAL_TYPE_KEY = { BREAKFAST: "breakfast", LUNCH: "lunch", SNACK: "snack", DINNER: "dinner" } as const;
 
@@ -195,7 +195,7 @@ function Panel({ meals, target, today, pending, onCopy }: Omit<CopyFromDayViewPr
                       {name}
                     </span>
                     <span className="block type-label tabular" style={{ color: "var(--text-3)" }}>
-                      {isRecipeMeal(m) ? `${time} · ${m.name}` : t("mealMeta", { time, count: m.entries.length })}
+                      {recipeMealName(m) ? `${time} · ${recipeMealName(m)}` : t("mealMeta", { time, count: m.entries.length })}
                     </span>
                   </span>
                   <span className="type-body-s tabular" style={{ fontWeight: 700 }}>
