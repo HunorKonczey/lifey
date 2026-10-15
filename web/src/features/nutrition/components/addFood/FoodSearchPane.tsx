@@ -33,6 +33,10 @@ export interface FoodSearchPaneProps {
   /** The empty-result shortcut: create a food with the typed name. */
   onCreate: (name: string) => void;
   off?: OffSearchPaneProps;
+  /** Recipe mode (docs/87 §2.8): the rows are recipes only, so there are no filter chips and nothing to create from a typed name. */
+  recipesOnly?: boolean;
+  /** Recipe mode while the recipes are still on their way — no "no recipes yet" before they arrive. */
+  loading?: boolean;
 }
 
 /**
@@ -62,6 +66,8 @@ export function FoodSearchPane({
   onFocusQuantity,
   onCreate,
   off,
+  recipesOnly = false,
+  loading = false,
 }: FoodSearchPaneProps) {
   const t = useTranslations("nutrition.addFoodModal");
   const fmt = useFormat();
@@ -173,12 +179,13 @@ export function FoodSearchPane({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t("searchPlaceholder")}
+          placeholder={t(recipesOnly ? "recipeSearchPlaceholder" : "searchPlaceholder")}
           leadingIcon="search"
         />
         {query === "" && <KeyHint className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">esc</KeyHint>}
       </div>
 
+      {!recipesOnly && (
       <div className="flex flex-wrap gap-2" role="group" aria-label={t("filtersLabel")}>
         {SEARCH_FILTERS.map((f) => {
           const on = f === filter;
@@ -203,6 +210,7 @@ export function FoodSearchPane({
           );
         })}
       </div>
+      )}
 
       {off && (
         <Checkbox
@@ -227,12 +235,14 @@ export function FoodSearchPane({
 
       {/* One scroll area for both lists, so arrowing from the last own row into OpenFoodFacts keeps the active row in view. */}
       <div className="-mx-2 min-h-0 flex-1 overflow-y-auto">
-        {results.length === 0 ? (
+        {results.length === 0 && recipesOnly && loading ? (
+          <div aria-busy className="px-2 py-4" />
+        ) : results.length === 0 ? (
           <div className="flex flex-col items-start gap-3 px-2 py-4">
             <p className="type-body-s" style={{ color: "var(--text-2)" }}>
-              {query.trim() ? t("noResults") : t("noFoodsYet")}
+              {query.trim() ? t("noResults") : t(recipesOnly ? "noRecipesYet" : "noFoodsYet")}
             </p>
-            {query.trim() && (
+            {query.trim() && !recipesOnly && (
               <Button variant="tonal" onClick={() => onCreate(query.trim())}>
                 <Icon name="add" size={18} />
                 {t("createNamed", { name: query.trim() })}
