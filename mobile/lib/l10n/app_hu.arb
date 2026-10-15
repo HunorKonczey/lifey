@@ -1619,5 +1619,8 @@
   "addRecipeServingsDecreaseTooltip": "Kevesebb adag",
   "addRecipeServingsIncreaseTooltip": "Több adag",
   "addRecipeConfirm": "Hozzáadás az étkezéshez",
-  "mealActionRecipe": "Recept hozzáadása"
+  "mealActionRecipe": "Recept hozzáadása",
+  "mealRecipeGroupSubtitle": "{count} hozzávaló · {kcal} kcal",
+  "mealRecipeMenuTooltip": "Recept menü",
+  "mealRecipeRemoveMenuItem": "Recept eltávolítása"
 }

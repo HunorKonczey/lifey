@@ -144,7 +144,8 @@ void main() {
   Future<void> addChilli(WidgetTester tester) async {
     await tester.tap(find.text('Add recipe'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Chilli'));
+    // The recipe may already head a group in the list behind the sheet.
+    await tester.tap(find.descendant(of: find.byType(AddRecipeSheet), matching: find.text('Chilli')));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Add to meal'));
     await tester.pumpAndSettle();
@@ -291,5 +292,95 @@ void main() {
 
     final saved = meals.updated.last.entries;
     expect(saved.map((e) => (e.foodClientId, e.recipeClientId)), [('Beans', 'chilli'), ('Rice', 'chilli')]);
+  });
+
+  group('recipe group in the list (docs/88)', () {
+    testWidgets('the recipe heads its ingredients, which sit under it', (tester) async {
+      await open(tester);
+
+      await addChilli(tester);
+
+      expect(find.text('Chilli'), findsOneWidget);
+      expect(find.text('2 ingredients · 280 kcal'), findsOneWidget);
+      final header = tester.getTopLeft(find.text('Chilli')).dy;
+      expect(tester.getTopLeft(find.text('Beans')).dy, greaterThan(header));
+      expect(tester.getTopLeft(find.text('Rice')).dy, greaterThan(tester.getTopLeft(find.text('Beans')).dy));
+      // The ingredients' names line up under the header's name.
+      expect(tester.getTopLeft(find.text('Beans')).dx, closeTo(tester.getTopLeft(find.text('Chilli')).dx, 1));
+    });
+
+    testWidgets('a food added by hand is a loose row, not part of the recipe', (tester) async {
+      await open(tester);
+      await addChilli(tester);
+
+      await tester.tap(find.text('Add food'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ActionChip, 'Chicken'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Add to meal'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 ingredients · 280 kcal'), findsOneWidget);
+      expect(tester.getTopLeft(find.text('Chicken')).dx, lessThan(tester.getTopLeft(find.text('Beans')).dx));
+    });
+
+    testWidgets("the header's menu removes the whole recipe and nothing else", (tester) async {
+      await open(tester);
+      await addChilli(tester);
+      await tester.tap(find.text('Add food'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ActionChip, 'Chicken'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Add to meal'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Recipe options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove recipe'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chilli'), findsNothing);
+      expect(find.text('Beans'), findsNothing);
+      expect(find.text('Chicken'), findsOneWidget);
+      expect(meals.updated.last.entries.map((e) => e.foodClientId), ['chicken']);
+    });
+
+    testWidgets('removing a single ingredient leaves the rest of the recipe grouped', (tester) async {
+      await open(tester);
+      await addChilli(tester);
+
+      // The header's menu is "Recipe options"; the ingredients' are "Food options".
+      await tester.tap(find.byTooltip('Food options').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Beans'), findsNothing);
+      expect(find.text('1 ingredient · 130 kcal'), findsOneWidget);
+    });
+
+    testWidgets('an entry tagged with a recipe this phone does not have is a loose row', (tester) async {
+      final meal = Meal(
+        clientId: 'm1',
+        dateTime: DateTime(2026, 10, 1, 12),
+        mealType: MealType.lunch,
+        entries: const [
+          MealEntry(
+            foodClientId: 'chicken',
+            foodName: 'Chicken',
+            quantityInGrams: 100,
+            calories: 165,
+            protein: 31,
+            carbs: 0,
+            fat: 3,
+            recipeClientId: 'ghost',
+          ),
+        ],
+      );
+      await open(tester, meal: meal);
+
+      expect(find.text('Chicken'), findsOneWidget);
+      expect(find.byTooltip('Recipe options'), findsNothing);
+    });
   });
 }
