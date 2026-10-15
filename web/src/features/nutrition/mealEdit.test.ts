@@ -55,6 +55,17 @@ describe("editedEntries", () => {
     expect(editedEntries(entries, [null, 166.7, null])[1].quantityInGrams).toBe(166.68518);
   });
 
+  it("an edited row stays in its recipe, and a loose row stays loose (docs/88)", () => {
+    const tagged = [{ ...entry(1, 100), recipeId: 7, recipeName: "Chilli" }, entry(2, 50)];
+
+    const out = editedEntries(tagged, [80, null]);
+
+    expect(out).toEqual([
+      { foodId: 1, quantityInGrams: 80, recipeId: 7 },
+      { foodId: 2, quantityInGrams: 50 },
+    ]);
+  });
+
   it("carries the food ids through in order", () => {
     expect(editedEntries(entries, [null, null, null]).map((e) => e.foodId)).toEqual([1, 2, 3]);
   });

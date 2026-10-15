@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { format, subDays, isToday } from "date-fns";
 import { mealApi } from "../api";
 import { copyMealPayload } from "../copyMeal";
+import { entryRequestOf } from "../mealEntry";
 import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDateStore } from "@/lib/hooks/useDateStore";
@@ -90,7 +91,7 @@ export function MealsView() {
           dateTime: meal.dateTime,
           mealType: meal.mealType,
           name: meal.name,
-          entries: remaining.map((e) => ({ foodId: e.foodId, quantityInGrams: e.quantityInGrams })),
+          entries: remaining.map((e) => entryRequestOf(e)),
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
       },

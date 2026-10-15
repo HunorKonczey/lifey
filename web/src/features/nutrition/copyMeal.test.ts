@@ -16,6 +16,20 @@ function meal(overrides: Partial<MealResponse> = {}): MealResponse {
 }
 
 describe("copyMealPayload", () => {
+  it("keeps the recipe each entry was added as part of (docs/88)", () => {
+    const source = meal({
+      entries: [
+        { foodId: 10, foodName: "Rice", quantityInGrams: 200, calories: 260, protein: 5, carbs: 56, fat: 1, recipeId: 7, recipeName: "Chilli" },
+        { foodId: 11, foodName: "Salad", quantityInGrams: 50, calories: 10, protein: 1, carbs: 1, fat: 0 },
+      ],
+    });
+
+    expect(copyMealPayload(source, new Date()).entries).toEqual([
+      { foodId: 10, quantityInGrams: 200, recipeId: 7 },
+      { foodId: 11, quantityInGrams: 50 },
+    ]);
+  });
+
   it("lands on the target date's calendar day, preserving the source time-of-day", () => {
     const source = meal();
     const target = new Date("2026-07-10T00:00:00.000Z");

@@ -1,4 +1,5 @@
-import type { MealEntryResponse } from "./types";
+import { entryRequestOf } from "./mealEntry";
+import type { MealEntryRequest, MealEntryResponse } from "./types";
 
 /** A quantity as the edit drawer shows and accepts it: one decimal ("166,7 g", never "166.68"). */
 export const round1 = (n: number): number => Math.round(n * 10) / 10;
@@ -17,9 +18,8 @@ export function isMealDirty(entries: MealEntryResponse[], edits: (number | null)
 export function editedEntries(
   entries: MealEntryResponse[],
   edits: (number | null)[],
-): { foodId: number; quantityInGrams: number }[] {
-  return entries.map((e, i) => ({
-    foodId: e.foodId,
-    quantityInGrams: edits[i] != null && edits[i] !== round1(e.quantityInGrams) ? (edits[i] as number) : e.quantityInGrams,
-  }));
+): MealEntryRequest[] {
+  return entries.map((e, i) =>
+    entryRequestOf(e, edits[i] != null && edits[i] !== round1(e.quantityInGrams) ? (edits[i] as number) : e.quantityInGrams),
+  );
 }

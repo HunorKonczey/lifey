@@ -1,3 +1,4 @@
+import { entryRequestOf } from "./mealEntry";
 import type { MealRequest, MealResponse, MealType } from "./types";
 
 /**
@@ -15,7 +16,7 @@ export function copyMealPayload(meal: MealResponse, targetDate: Date): MealReque
     dateTime: target.toISOString(),
     mealType: meal.mealType,
     name: meal.name,
-    entries: meal.entries.map((e) => ({ foodId: e.foodId, quantityInGrams: e.quantityInGrams })),
+    entries: meal.entries.map((e) => entryRequestOf(e)),
   };
 }
 

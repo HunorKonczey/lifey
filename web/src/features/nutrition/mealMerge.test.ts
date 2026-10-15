@@ -40,6 +40,19 @@ describe("planMealWrite", () => {
     ]);
   });
 
+  it("keeps the recipe tags of the entries already in the meal (docs/88)", () => {
+    const tagged = meal({
+      entries: [{ foodId: 10, foodName: "Rice", quantityInGrams: 200, calories: 260, protein: 5, carbs: 56, fat: 1, recipeId: 7, recipeName: "Chilli" }],
+    });
+
+    const write = planMealWrite([tagged], "LUNCH", added, date);
+
+    expect(write.kind === "update" && write.body.entries).toEqual([
+      { foodId: 10, quantityInGrams: 200, recipeId: 7 },
+      { foodId: 20, quantityInGrams: 100 },
+    ]);
+  });
+
   it("appends several entries at once", () => {
     const two = [
       { foodId: 20, quantityInGrams: 100 },
