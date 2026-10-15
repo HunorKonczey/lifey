@@ -7305,5 +7305,21 @@
   "mealActionRecipe": "Add recipe",
   "@mealActionRecipe": {
     "description": "Label of the tile on the Log meal screen that adds a recipe's ingredients to the meal (docs/87 M3)"
+  },
+  "mealRecipeGroupSubtitle": "{count, plural, =1{1 ingredient} other{{count} ingredients}} · {kcal} kcal",
+  "@mealRecipeGroupSubtitle": {
+    "description": "Second line of a recipe header in the Log meal screen list: how many of the meal entries came from the recipe and their calories (docs/88 M5)",
+    "placeholders": {
+      "count": {"type": "int"},
+      "kcal": {"type": "String"}
+    }
+  },
+  "mealRecipeMenuTooltip": "Recipe options",
+  "@mealRecipeMenuTooltip": {
+    "description": "Tooltip of the three-dot menu on a recipe header in the Log meal screen list (docs/88 M5)"
+  },
+  "mealRecipeRemoveMenuItem": "Remove recipe",
+  "@mealRecipeRemoveMenuItem": {
+    "description": "Menu item on a recipe header in the Log meal screen list: removes every entry that came from that recipe from the meal (docs/88 M5)"
   }
 }

@@ -20,6 +20,8 @@ import '../../../shared/widgets/ds/lifey_card.dart';
 import '../../../shared/widgets/ds/lifey_header.dart';
 import '../../../shared/widgets/ds/list_group.dart';
 import '../../../shared/widgets/ds/section_label.dart';
+import '../../recipes/application/recipes_controller.dart';
+import '../../recipes/domain/recipe.dart';
 import '../../settings/application/settings_controller.dart';
 import '../application/meal_controller.dart';
 import '../application/meal_estimation_controller.dart';
@@ -441,6 +443,63 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     );
   }
 
+  /// Removes every entry of one recipe (docs/88 §2.8) - what the group header's menu does.
+  void _removeRecipe(String recipeClientId) {
+    setState(() {
+      _entries.removeWhere((e) => e.recipeClientId == recipeClientId);
+      if (_entries.isEmpty) _recipeName = null;
+    });
+    _autoSave();
+  }
+
+  /// The meal's rows: the entries of one recipe under a header with the recipe's current name, in the place of the
+  /// group's first entry, and every other entry on its own. An entry tagged with a recipe this phone no longer has is a
+  /// loose row - the tag degrades to "not grouped".
+  List<Widget> _entryRows() {
+    // Only a meal with tagged entries needs the recipes at all.
+    final recipes = {
+      if (_entries.any((e) => e.recipeClientId != null))
+        for (final r in ref.watch(recipeControllerProvider).value ?? const <Recipe>[]) r.clientId: r,
+    };
+    final rows = <Widget>[];
+    final grouped = <String>{};
+    for (final (i, entry) in _entries.indexed) {
+      final recipeId = entry.recipeClientId;
+      final recipe = recipeId == null ? null : recipes[recipeId];
+      if (recipe == null) {
+        rows.add(_FoodRow(
+          food: entry.food,
+          grams: entry.grams,
+          onTap: () => _editEntry(i),
+          onRemove: () => _removeEntry(i),
+        ));
+        continue;
+      }
+      if (!grouped.add(recipe.clientId)) continue; // already emitted with its first entry
+      final members = [
+        for (final (j, e) in _entries.indexed)
+          if (e.recipeClientId == recipe.clientId) j,
+      ];
+      rows.add(_RecipeHeader(
+        name: recipe.name,
+        count: members.length,
+        kcal: members.fold<double>(
+            0, (sum, j) => sum + _entries[j].food.caloriesPer100g * _entries[j].grams / 100),
+        onRemove: () => _removeRecipe(recipe.clientId),
+      ));
+      for (final j in members) {
+        rows.add(_FoodRow(
+          food: _entries[j].food,
+          grams: _entries[j].grams,
+          indented: true,
+          onTap: () => _editEntry(j),
+          onRemove: () => _removeEntry(j),
+        ));
+      }
+    }
+    return rows;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -518,15 +577,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
             const SizedBox(height: AppSpacing.s8),
             ListGroup(
               dividerInset: AppSpacing.s16,
-              children: [
-                for (final (i, entry) in _entries.indexed)
-                  _FoodRow(
-                    food: entry.food,
-                    grams: entry.grams,
-                    onTap: () => _editEntry(i),
-                    onRemove: () => _removeEntry(i),
-                  ),
-              ],
+              children: _entryRows(),
             ),
           ],
           const SizedBox(height: AppSpacing.s16),
@@ -622,12 +673,16 @@ class _FoodRow extends StatelessWidget {
     required this.grams,
     required this.onTap,
     required this.onRemove,
+    this.indented = false,
   });
 
   final Food food;
   final double grams;
   final VoidCallback onTap;
   final VoidCallback onRemove;
+
+  /// Under a recipe header (docs/88): the name lines up with the header's name, after its icon.
+  final bool indented;
 
   @override
   Widget build(BuildContext context) {
@@ -647,8 +702,8 @@ class _FoodRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 64),
         child: Padding(
-          padding: const EdgeInsets.only(
-              left: AppSpacing.s16, top: AppSpacing.s8, bottom: AppSpacing.s8),
+          padding: EdgeInsets.only(
+              left: indented ? AppSpacing.s16 + AppSpacing.s32 : AppSpacing.s16, top: AppSpacing.s8, bottom: AppSpacing.s8),
           child: Row(
             children: [
               Expanded(
@@ -687,6 +742,70 @@ class _FoodRow extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Recipe header — the name, "3 ingredients · 520 kcal" and a ⋮ menu that removes the whole recipe
+// ---------------------------------------------------------------------------
+
+enum _RecipeAction { remove }
+
+class _RecipeHeader extends StatelessWidget {
+  const _RecipeHeader({
+    required this.name,
+    required this.count,
+    required this.kcal,
+    required this.onRemove,
+  });
+
+  final String name;
+  final int count;
+  final double kcal;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final f = LifeyFormat.of(context);
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 56),
+      child: Padding(
+        padding: const EdgeInsets.only(left: AppSpacing.s16, top: AppSpacing.s8, bottom: AppSpacing.s8),
+        child: Row(
+          children: [
+            Icon(Icons.menu_book_outlined, size: 20, color: p.text2),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(name, style: t.titleMedium!.copyWith(height: 1.25, color: p.text)),
+                  const SizedBox(height: 3),
+                  Text(l10n.mealRecipeGroupSubtitle(count, f.kcal(kcal)),
+                      style: t.bodySmall!.copyWith(height: 1.4, color: p.text2)),
+                ],
+              ),
+            ),
+            PopupMenuButton<_RecipeAction>(
+              tooltip: l10n.mealRecipeMenuTooltip,
+              icon: Icon(Icons.more_vert_rounded, color: p.text2),
+              onSelected: (_) => onRemove(),
+              itemBuilder: (context) => [
+                PopupMenuItem<_RecipeAction>(
+                  value: _RecipeAction.remove,
+                  child: Text(l10n.mealRecipeRemoveMenuItem, style: TextStyle(color: context.metricColors.heart)),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
