@@ -99,7 +99,7 @@ LCP 30 s) — the reason CI takes the median of three.
 |---|---|
 | `72` W9 — structured data in Google's Rich Results Test | a Google sign-in (paste each page's JSON-LD into its **Code** tab) or a public URL. Already validated with schema.org's validator (0 errors / 0 warnings, LIF-119) and guarded by `e2e/marketing/structured-data.spec.ts` |
 | `72` W13 — `lifey://invite/<token>` on iOS | an Apple device (the Android side was checked on an emulator on 2026-10-07, LIF-99: see `72` §3.1 W13) |
-| `72` W12 — hero/value-block visuals are reproduced UI, not real captures | a seeded demo backend to capture from |
+| `72` W12 — hero/value-block visuals are reproduced UI, not real captures | **the trainer-workspace pictures are done** (LIF-120, `web/scripts/marketing-demo/`: seeded demo backend + capture script, 12 WebP files); what is left is the hero and the phone screens, which need an emulator or device with a seeded account |
 | `72` D3 — never drawn: for-trainers page, app page, download page, the web state frames, the motion + open-questions addendum (`68` §13) | design time — the brief and as-built screenshots are ready: [`86`](86-missing-frames-rerun-brief.md) (LIF-121) |
 | `72` D4 — never drawn: the sponsorship-ended card, the price-loading skeleton (both built in code from the spec text) (`69` §13) | design time — in the same brief, [`86`](86-missing-frames-rerun-brief.md) §0 items 8–9 (no mobile screenshots yet: they need a device) |
 

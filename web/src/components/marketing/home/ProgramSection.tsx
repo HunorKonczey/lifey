@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { ValueSection } from "./ValueSection";
-import { ProgramMock } from "./ProgramMock";
+import { ProgramShot } from "./ProgramShot";
 
 /** design/Lifey Landing.dc.html L11 (desktop) + L15 second block (mobile). */
 export async function ProgramSection() {
@@ -15,7 +15,7 @@ export async function ProgramSection() {
         title={t("title")}
         body={t("body")}
         bullets={bullets}
-        visual={<ProgramMock />}
+        visual={<ProgramShot />}
         imageSide="left"
         background="container"
       />

@@ -5,11 +5,8 @@
       "fatLoss": "Fogyás · 7. hét",
       "hypertrophy": "Hipertrófia · 2. hét",
       "invited": "meghívva",
-      "cardio": "Kardió · 5. hét",
       "squat": "Guggolás",
-      "benchPress": "Fekvenyomás",
-      "row": "Evezés",
-      "plank": "Plank"
+      "benchPress": "Fekvenyomás"
     },
     "hero": {
       "eyebrow": "Edzői munkafelület",
@@ -48,21 +45,7 @@
       "bullet1": "Meghívás e-mailben, aktiválás első belépéskor",
       "bullet2": "Jegyzet minden kliensnél, csak neked",
       "bullet3": "Heti teljesítés egy pillantásra",
-      "mockClientsHeading": "Klienseim",
-      "mockSearch": "Keresés",
-      "mockOverview": "Áttekintés",
-      "mockWorkouts": "Edzések",
-      "mockNutrition": "Étrend",
-      "mockWeight": "Testsúly",
-      "mockNotes": "Jegyzet",
-      "mockWeeklyWorkouts": "Heti edzés",
-      "mockWeightLabel": "Testsúly",
-      "mockAvgKcal": "Átlag kcal",
-      "mockLastWorkouts": "Utolsó edzések",
-      "mockProgramLength": "8 hetes program",
-      "mockMessage": "Üzenet",
-      "mockProgram": "Program",
-      "mockInvited": "meghívva"
+      "mockClientsHeading": "Klienseim"
     },
     "program": {
       "eyebrow": "Programok",
@@ -74,24 +57,10 @@
       "bullet2": "Ismétlődő időpont a program mellé",
       "bullet3": "A kliens telefonján azonnal ott van",
       "mockProgramName": "Erő 5×5",
-      "mockProgramMeta": "8 hét · 4 kliensnek kiosztva",
-      "mockAssign": "Kiosztás",
       "mockWeek3": "3. hét",
-      "mockWeek4": "4. hét",
-      "mockWeek5": "5. hét",
-      "mockAddWeek": "+ hét",
       "mockMonday": "Hétfő — A nap",
       "mockWednesday": "Szerda — B nap",
-      "mockFriday": "Péntek — A nap",
-      "mockExerciseCount": "4 gyakorlat",
-      "mockScheduling": "Időpont",
-      "mockSchedulingFor": "Szabó Anna · szerda",
-      "mockDate": "Dátum",
-      "mockTime": "Idő",
-      "mockLocation": "Hely",
-      "mockLocationValue": "Fit Studio, 2. terem",
-      "mockRecurrence": "Szerdán 17:00-kor, ismétlődik 8 héten át.",
-      "mockSave": "Mentés"
+      "mockExerciseCount": "4 gyakorlat"
     },
     "chat": {
       "eyebrow": "Chat és heti jelentés",
@@ -102,18 +71,8 @@
       "bullet1": "Üzenet edzés-kontextussal",
       "bullet2": "Heti jelentés minden kliensről",
       "bullet3": "Kimaradt edzés jelzése, nem vádolása",
-      "mockOnline": "online",
-      "mockClientMsg": "Bence, a guggolás harmadik sorozatánál elment a technikám.",
-      "mockWorkoutContext": "Edzés",
-      "mockWorkoutContextValue": "Erő 5×5 — A · aug. 24.",
-      "mockWorkoutContextSet": "Guggolás 5×5 · 82,5 kg",
-      "mockTrainerMsg": "Vegyük le 77,5-re a következő két edzésen, és videózd le az utolsó sorozatot.",
       "mockTrainerMsgShort": "Vegyük le 77,5-re.",
-      "mockClientMsgShort": "Elment a technikám a harmadik sorozatnál.",
-      "mockInputPlaceholder": "Üzenet…",
-      "mockReportTitle": "Heti jelentés",
-      "mockReportPeriod": "2026. aug. 17—23.",
-      "mockReportNote": "Márknál két kimaradt edzés — érdemes írni neki."
+      "mockClientMsgShort": "Elment a technikám a harmadik sorozatnál."
     },
     "sponsored": {
       "eyebrow": "A klienseidnek",
@@ -221,6 +180,11 @@
       "cta": "Kipróbálom 14 napig",
       "reassurance": "14 nap ingyen · bankkártya nélkül",
       "reassuranceHighlight": "a klienseidnek ingyenes az app"
+    },
+    "shots": {
+      "clientsAlt": "Egy kliens áttekintése a Lifey edzői felületén: 7 napos kalória- és fehérjeátlag, a heti edzések, a testsúly alakulása és egy négyhetes naplózási naptár.",
+      "programAlt": "Hat hetes erőprogram a Lifey edzői felületén: heti bontású edzésrács, bal oldalt a sablonokkal.",
+      "chatAlt": "Edző és kliens beszélgetése a Lifey webes chatjében: a kliens nehéz utolsó szériát jelez, az edző a jövő heti terhelést tervezi."
     }
   },
   "forTrainers": {

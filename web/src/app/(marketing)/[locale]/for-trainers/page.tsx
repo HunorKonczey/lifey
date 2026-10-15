@@ -7,9 +7,9 @@ import { PlanParityMock } from "@/components/marketing/for-trainers/PlanParityMo
 import { SponsoredMock } from "@/components/marketing/for-trainers/SponsoredMock";
 import { TrialMock } from "@/components/marketing/for-trainers/TrialMock";
 import { DayInLifeStrip } from "@/components/marketing/for-trainers/DayInLifeStrip";
-import { ClientsMock } from "@/components/marketing/home/ClientsMock";
-import { ProgramMock } from "@/components/marketing/home/ProgramMock";
-import { ChatMock } from "@/components/marketing/home/ChatMock";
+import { ClientsShot } from "@/components/marketing/home/ClientsShot";
+import { ProgramShot } from "@/components/marketing/home/ProgramShot";
+import { ChatShot } from "@/components/marketing/home/ChatShot";
 import { PricingPreview } from "@/components/marketing/home/PricingPreview";
 import { FinalCta } from "@/components/marketing/home/FinalCta";
 
@@ -56,9 +56,9 @@ export default async function ForTrainersPage({
     <main>
       <TrainerHero />
 
-      <TrainerValueBlock {...block(1)} visual={<ClientsMock />} imageSide="right" background="bg" />
-      <TrainerValueBlock {...block(2)} visual={<ProgramMock />} imageSide="left" background="container" />
-      <TrainerValueBlock {...block(3)} visual={<ChatMock />} imageSide="right" background="bg" />
+      <TrainerValueBlock {...block(1)} visual={<ClientsShot />} imageSide="right" background="bg" />
+      <TrainerValueBlock {...block(2)} visual={<ProgramShot />} imageSide="left" background="container" />
+      <TrainerValueBlock {...block(3)} visual={<ChatShot />} imageSide="right" background="bg" />
       <TrainerValueBlock {...block(4)} visual={<PlanParityMock />} imageSide="left" background="container" />
       <TrainerValueBlock {...block(5)} visual={<SponsoredMock />} imageSide="right" background="bg" />
       <TrainerValueBlock {...block(6)} visual={<TrialMock />} imageSide="left" background="container" />

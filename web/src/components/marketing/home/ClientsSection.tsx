@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { ValueSection } from "./ValueSection";
-import { ClientsMock } from "./ClientsMock";
+import { ClientsShot } from "./ClientsShot";
 
 /**
  * design/Lifey Landing.dc.html L10 (desktop) + L15 first block (mobile —
@@ -18,7 +18,7 @@ export async function ClientsSection() {
         title={t("title")}
         body={t("body")}
         bullets={bullets}
-        visual={<ClientsMock />}
+        visual={<ClientsShot />}
         imageSide="right"
         background="bg"
       />

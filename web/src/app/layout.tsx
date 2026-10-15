@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { DeferredTelemetry } from "@/components/status/DeferredTelemetry";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+// Self-hosted (the variable "latin" file Google serves, SIL OFL - see fonts/OFL.txt) rather than `next/font/google`: the dev server's
+// Google path fetches the CSS at request time and failed in CI intermittently ("next/font/google queries have exactly one entry"),
+// taking the e2e suites down with it. A local file has no network in dev, in CI or at build time. Same family, same weights (200-800
+// covers the 400-800 the app uses), same CSS variable.
+const plusJakarta = localFont({
+  src: "./fonts/PlusJakartaSans-latin.woff2",
+  weight: "200 800",
   display: "swap",
   variable: "--font-jakarta",
 });
