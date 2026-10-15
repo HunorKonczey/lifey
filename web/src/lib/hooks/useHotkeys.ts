@@ -107,7 +107,7 @@ export function useHotkeys({ goToItems, onHelp, suppressed }: UseHotkeysOptions)
         chord.start();
         return;
       }
-      if (e.key.toLowerCase() === "n") {
+      if (e.key.toLowerCase() === "n" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const onNew = usePageShortcutsStore.getState().onNew;
         if (onNew) {
           e.preventDefault();
