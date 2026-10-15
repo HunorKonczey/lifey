@@ -9,14 +9,14 @@ import '../domain/workout_session.dart';
 /// What the derived views read - the streaks, the weekly recap, the statistics, the recommended and quick-start workouts, the
 /// dashboard counts, the cardio record baseline. None of them looks at a set, so none of them should pay for reading the whole
 /// history's sets, nor be rebuilt each time one is logged. Anything that does look at sets reads [workoutSessionsWithSetsProvider]
-/// (the Sessions list's record counts, the watch sync), [workoutSessionProvider] (one session, whole) or a window
+/// (the watch sync), [strengthPrCountsProvider] (the Sessions list's record counts), [workoutSessionProvider] (one session, whole) or a window
 /// (`workoutSessionsPagedProvider`, `recentWorkoutSessionsProvider`).
 final workoutSummariesProvider = StreamProvider<List<WorkoutSession>>((ref) {
   return ref.watch(workoutSessionRepositoryProvider).watchSummaries();
 });
 
 /// Every session with its sets and cardio metrics, but no planned exercises, splits or waypoints (LIF-156): for the views that
-/// replay the history's sets - the Sessions list's record counts, the watch's "last time" prefill. Those that only need to know a
+/// need the history's sets - the watch's "last time" prefill (the Sessions list's record counts used to, until the database took them over: LIF-158). Those that only need to know a
 /// session happened read [workoutSummariesProvider]; the ones that need a single session whole read [workoutSessionProvider].
 final workoutSessionsWithSetsProvider = StreamProvider<List<WorkoutSession>>((ref) {
   return ref.watch(workoutSessionRepositoryProvider).watchWithSets();

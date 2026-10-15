@@ -13,7 +13,7 @@ const sessionsPageSize = 40;
 /// local-cache window - the backend is never paged for it.
 ///
 /// A *view*, not the history: the statistics, the streaks, the recommended workout and the rest read `workoutSummariesProvider`,
-/// the record counts `workoutSessionsWithSetsProvider` (LIF-155, LIF-156), and the tab still deletes and refreshes through
+/// the record counts `strengthPrCountsProvider` (the database counts them, LIF-158), and the tab still deletes and refreshes through
 /// `workoutSessionControllerProvider`, which holds no list. What this provider changes is what the tab itself reads and builds:
 /// the sets of only the window's sessions.
 ///

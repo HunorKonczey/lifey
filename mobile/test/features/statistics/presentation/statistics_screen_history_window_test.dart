@@ -94,6 +94,7 @@ Future<ProviderContainer> _pumpStatisticsScreen(
         mealControllerProvider.overrideWith(() => _FakeMealController([_meal(DateTime.now())])),
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(_EmptyWorkoutSessionController.new),
         weightControllerProvider.overrideWith(_EmptyWeightController.new),
         allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),

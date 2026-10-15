@@ -217,6 +217,7 @@ Future<_RecordingSessionController> _pump(
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         if (location != null) locationServiceProvider.overrideWithValue(location),

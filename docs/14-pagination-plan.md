@@ -203,8 +203,9 @@ What was left on the whole list moved to a read that fits it, and `WorkoutSessio
 (its `build()` is an empty stream; it is the mutation entry point, so reading `.notifier` to write no longer
 hydrates the history). A guard test fails if production code reads its state.
 
-- PR counts (`sessionPrCountsProvider`) and the watch quick-start sync (`previousSetsFor`) replay the sets:
-  `watchWithSets()` / `workoutSessionsWithSetsProvider` — sets and cardio metrics, no planned exercises, splits or waypoints.
+- The watch quick-start sync (`previousSetsFor`) replays the sets: `watchWithSets()` / `workoutSessionsWithSetsProvider` — sets and
+  cardio metrics, no planned exercises, splits or waypoints. (The PR counts used to, too; since LIF-158 the database counts them —
+  below.)
 - The live log screen's watch mirror follows its own session: `watchOne(clientId)` / `workoutSessionProvider(id)`.
 - The resume / adopt flows used to take the first emission of `watchAll()` to find the running session; they call
   `findActive({clientId})`, and the dashboard and the resume prompt look a session up with `findByClientId`.
@@ -212,7 +213,18 @@ hydrates the history). A guard test fails if production code reads its state.
 
 `watchAll()` stays in the repository as the reference the other reads are tested against; nothing in production calls it.
 What is still proportional to the history: the summaries (two table reads) and the sets-level read (all sets) — the
-latter only while the Sessions tab or the watch sync is alive. An SQL aggregate for the record counts would remove that.
+latter only while the watch sync is alive (watch workouts enabled).
+
+#### The record counts in SQL (LIF-158)
+
+The Sessions list's "🏆 N PRs" chip no longer loads a set. `WorkoutSessionRepository.watchStrengthPrCounts()` is one window-function
+query over `exercise_sets` ⨝ `workout_sessions` that returns only `(session, count)` pairs: per exercise, the sets in session order
+(`started_at`) then performed order, each judged against everything before it — a heavier weight, a higher Epley 1RM (both need an
+earlier set with weight > 0 to beat), more reps at exactly the same weight (0 kg counts) — strictly greater, each kind once per exercise
+per session; only finished strength sessions, queued deletes left out. The cardio records need no sets and come from the summaries
+(`computeSessionPrCounts` over the cardio sessions). `computeSessionPrCounts` / `detectPrs` stay as the reference: the SQL is tested
+against them on 30 random histories and by hand, per rule (`strength_pr_counts_sql_test.dart`); the Sessions-tab tests feed the fake
+sessions through the same reference (`strengthPrCountsFollowController`).
 
 Critically, Phase 1 also already added `foodSearchProvider`
 (`food_controller.dart`), a **second, unbounded** stream over

@@ -103,6 +103,7 @@ void main() {
           adsEnabledProvider.overrideWithValue(false),
           summariesFollowController,
           sessionsWithSetsFollowController,
+          strengthPrCountsFollowController,
           workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
           settingsControllerProvider.overrideWith(_MetricSettings.new),
           locationServiceProvider.overrideWithValue(location),

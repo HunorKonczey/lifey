@@ -120,6 +120,7 @@ Future<_RecordingSessionController> _pump(
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider
             .overrideWith(imperial ? _ImperialSettings.new : _MetricSettings.new),

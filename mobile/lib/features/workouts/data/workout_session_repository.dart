@@ -86,7 +86,7 @@ class WorkoutSessionRepository {
   }
 
   /// Every session with its sets and cardio metrics, but no planned exercises, splits or waypoints (LIF-156) - what a view that
-  /// replays the history's sets needs (the Sessions list's record counts, the watch's "last time" prefill) without paying for the
+  /// needs the history's sets (the watch's "last time" prefill; the Sessions list's record counts are counted by [watchStrengthPrCounts]) without paying for the
   /// children it never reads. As [watchSummaries], what it leaves out is **empty, not "none logged"**: never read `exercises`,
   /// `splits` or `waypoints` off these.
   Stream<List<WorkoutSession>> watchWithSets() {
@@ -102,6 +102,83 @@ class WorkoutSessionRepository {
       );
     });
   }
+
+  /// How many personal records each finished *strength* session set - "🏆 2 PRs" on the Sessions list (LIF-158) - counted by the
+  /// database: one row per session that set at least one, never a set loaded into Dart. The same rules as
+  /// `computeSessionPrCounts` / `detectPrs` (`domain/personal_record.dart`), which stays the reference this is tested against:
+  ///
+  /// - per exercise, the sets are replayed in session order (`started_at`), then the order they were performed, and each is judged
+  ///   against everything before it - earlier sessions *and* earlier sets of the same session;
+  /// - three kinds of record: a heavier weight (weight > 0, and an earlier set with weight > 0 to beat), a higher estimated 1RM
+  ///   (Epley, `weight * (1 + reps / 30)`, same two conditions), more reps at exactly the same weight (0 kg counts; needs an earlier
+  ///   set at that weight). Strictly greater: equalling the best is not a record;
+  /// - a session counts each kind once per exercise, however many sets broke it.
+  ///
+  /// Only finished sessions count, and a session whose delete is queued is left out (as in [watchAll]). Cardio records are not
+  /// here: they need no sets, and are counted from the summaries.
+  Stream<Map<String, int>> watchStrengthPrCounts() {
+    return _db
+        .customSelect(
+          _strengthPrCountsSql,
+          readsFrom: {_db.exerciseSets, _db.workoutSessions, _db.pendingOperations},
+        )
+        .watch()
+        .map((rows) => {for (final row in rows) row.read<String>('session_id'): row.read<int>('prs')});
+  }
+
+  static const _strengthPrCountsSql = """
+WITH ordered AS (
+  SELECT s.client_id AS session_id,
+         e.exercise_client_id AS exercise_id,
+         e.weight AS weight,
+         e.reps AS reps,
+         s.started_at AS session_start,
+         e.performed_at AS performed_at,
+         e.rowid AS set_rowid
+  FROM exercise_sets e
+  JOIN workout_sessions s ON s.client_id = e.session_client_id
+  WHERE s.started_at IS NOT NULL
+    AND s.finished_at IS NOT NULL
+    AND s.session_kind != 'CARDIO'
+    AND s.client_id NOT IN (SELECT client_id FROM pending_operations WHERE operation = 'delete' AND status != 'failed')
+),
+judged AS (
+  SELECT session_id,
+         exercise_id,
+         weight,
+         reps,
+         MAX(CASE WHEN weight > 0 THEN weight END) OVER earlier AS prior_max_weight,
+         MAX(CASE WHEN weight > 0 THEN weight * (1 + reps / 30.0) END) OVER earlier AS prior_best_one_rm,
+         MAX(reps) OVER earlier_at_weight AS prior_reps_at_weight
+  FROM ordered
+  WINDOW earlier AS (
+           PARTITION BY exercise_id
+           ORDER BY session_start, performed_at, set_rowid
+           ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING),
+         earlier_at_weight AS (
+           PARTITION BY exercise_id, weight
+           ORDER BY session_start, performed_at, set_rowid
+           ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING)
+),
+per_set AS (
+  SELECT session_id,
+         exercise_id,
+         CASE WHEN weight > 0 AND prior_max_weight IS NOT NULL AND weight > prior_max_weight THEN 1 ELSE 0 END AS broke_weight,
+         CASE WHEN weight > 0 AND prior_best_one_rm IS NOT NULL AND weight * (1 + reps / 30.0) > prior_best_one_rm THEN 1 ELSE 0 END AS broke_one_rm,
+         CASE WHEN prior_reps_at_weight IS NOT NULL AND reps > prior_reps_at_weight THEN 1 ELSE 0 END AS broke_reps
+  FROM judged
+),
+per_exercise AS (
+  SELECT session_id,
+         MAX(broke_weight) + MAX(broke_one_rm) + MAX(broke_reps) AS records
+  FROM per_set
+  GROUP BY session_id, exercise_id
+)
+SELECT session_id, SUM(records) AS prs
+FROM per_exercise
+GROUP BY session_id
+HAVING SUM(records) > 0
+""";
 
   /// One session, whole, kept up to date - what a screen that edits a single session watches instead of the whole history
   /// (LIF-156). Null once the row is gone (or a delete of it is queued).

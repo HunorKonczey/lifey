@@ -474,6 +474,7 @@ void main() {
         overrides: [
           settingsControllerProvider.overrideWith(() => _FakeSettingsController(userSettings)),
           sessionsWithSetsFollowController,
+          strengthPrCountsFollowController,
           workoutSessionControllerProvider.overrideWith(() => _FakeSessionController(sessions)),
           workoutTemplateControllerProvider.overrideWith(() => _FakeTemplateController(templates)),
           exerciseControllerProvider.overrideWith(() => _FakeExerciseController(exercises)),

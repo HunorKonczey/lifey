@@ -182,6 +182,7 @@ ProviderContainer _buildContainer({
       if (sessions != null) ...[
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(
           () => _FakeWorkoutSessionController(sessions),
         ),

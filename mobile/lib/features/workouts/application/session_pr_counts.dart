@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/workout_session_repository.dart';
 import '../domain/cardio_personal_record.dart';
 import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
@@ -60,10 +61,19 @@ Map<String, int> computeSessionPrCounts(List<WorkoutSession> sessions) {
   return counts;
 }
 
-/// [computeSessionPrCounts] over the whole cached history, recomputed only
-/// when the sessions change — once per list build, not once per row.
+/// The strength records of every finished session, counted by the database (LIF-158): one `(session, count)` pair per session that
+/// set at least one, never a set loaded into Dart - see [WorkoutSessionRepository.watchStrengthPrCounts].
+final strengthPrCountsProvider = StreamProvider<Map<String, int>>((ref) {
+  return ref.watch(workoutSessionRepositoryProvider).watchStrengthPrCounts();
+});
+
+/// The Sessions list's "records" chip, per session: the strength records from [strengthPrCountsProvider], and the cardio ones from
+/// [computeSessionPrCounts] over the cardio sessions of the set-free [workoutSummariesProvider] (a cardio record needs the
+/// session's metrics, not its sets, and there are few such sessions). Before LIF-158 this replayed every set of the history in
+/// Dart on every change; [computeSessionPrCounts] stays as the reference the database count is tested against.
 final sessionPrCountsProvider = Provider<Map<String, int>>((ref) {
-  final sessions = ref.watch(workoutSessionsWithSetsProvider).value;
-  if (sessions == null) return const {};
-  return computeSessionPrCounts(sessions);
+  final strength = ref.watch(strengthPrCountsProvider).value;
+  final summaries = ref.watch(workoutSummariesProvider).value;
+  final cardio = summaries == null ? const <String, int>{} : computeSessionPrCounts([for (final s in summaries) if (s.isCardio) s]);
+  return {...?strength, ...cardio};
 });
