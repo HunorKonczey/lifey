@@ -309,6 +309,9 @@ class SyncEngine {
       final clientId = clientRefId(value as String);
       final serverId = await _lookupServerId(null, clientId);
       if (serverId == null) {
+        // An optional reference to a row that is gone (and nothing is queued for it any more - the caller already
+        // waited for that) is sent as null; a required one cannot be sent at all.
+        if (isOptionalClientRef(value)) return null;
         throw StateError('Unresolved clientRef: $clientId — is dependsOnClientId set?');
       }
       return serverId;
