@@ -1451,12 +1451,17 @@ class PullEngine {
         // can reference it.
         foodClientId ??= await _fetchAndStoreFood(foodServerId);
         if (foodClientId == null) continue; // still not found — skip entry
+        // The recipe the entry was added as part of (docs/88); recipes are pulled before meals, so it is known locally
+        // unless it was removed meanwhile - then the entry is simply untagged.
+        final recipeServerId = entry['recipeId'] as int?;
+        final recipeClientId = recipeServerId == null ? null : await _localClientId('recipes', recipeServerId);
         await _db.into(_db.mealEntries).insert(
               MealEntriesCompanion.insert(
                 clientId: newClientId(),
                 mealClientId: clientId,
                 foodClientId: foodClientId,
                 quantityInGrams: (entry['quantityInGrams'] as num).toDouble(),
+                recipeClientId: Value(recipeClientId),
               ),
             );
       }
