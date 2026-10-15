@@ -205,6 +205,7 @@
       "statusExpired": "Expired",
       "statusRefunded": "Refunded",
       "trialEndsOn": "Your trial ends on {date}",
+      "trialEndsConsequence": "If you haven't chosen a plan by then, your workspace becomes read-only: your clients, their data and the chat stay, but you can't send new invites or assignments.",
       "renewsOn": "Renews on {date}",
       "seatMeterTitle": "Seats",
       "seatCount": "{active} / {max} active clients",

@@ -141,6 +141,11 @@ export default function AdminBillingPage() {
                     <p className="type-body-s" style={{ color: "var(--text-3)" }}>
                       {t("trialEndsOn", { date: fmt.date(trainer.trialEndsAt!, "dayYear") })}
                     </p>
+                    {/* What happens when it does: no free tier (63 D-M3 rejected one), the workspace goes read-only - the same rule as the
+                        "read-only" banner (BannerRestricted) and the marketing FAQ. The canvas (W9-D) promised "free up to 5 clients after". */}
+                    <p className="type-body-s" style={{ color: "var(--text-3)" }} data-testid="trial-end-consequence">
+                      {t("trialEndsConsequence")}
+                    </p>
                   </div>
                 ) : (
                   trainer.status !== "TRIALING" &&
