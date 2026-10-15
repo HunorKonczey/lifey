@@ -1,4 +1,5 @@
 import '../../nutrition/domain/fiber_sugar.dart';
+import '../../nutrition/domain/food.dart';
 import 'recipe.dart';
 
 /// One ingredient of a [RecipePortion] with the grams that are actually being
@@ -88,4 +89,26 @@ class RecipePortion {
         for (var i = 0; i < recipe.ingredients.length; i++)
           if (gramsFor(i) > 0) (ingredient: recipe.ingredients[i], grams: gramsFor(i)),
       ];
+}
+
+extension RecipeIngredientFood on RecipeIngredient {
+  /// The ingredient as a [Food] with per-100 g figures derived from its own
+  /// amounts, the way the meal editor rebuilds the foods of a saved meal's
+  /// entries - no repository lookup, so it works offline and for trainer
+  /// assigned recipes. A zero-gram ingredient yields zeros.
+  Food toFood() {
+    final q = quantityInGrams;
+    double per100(double v) => q > 0 ? v / q * 100 : 0;
+    double? per100OrNull(double? v) => q > 0 && v != null ? v / q * 100 : null;
+    return Food(
+      clientId: foodClientId,
+      name: foodName,
+      caloriesPer100g: per100(calories),
+      proteinPer100g: per100(protein),
+      carbsPer100g: per100(carbs),
+      fatPer100g: per100(fat),
+      fiberPer100g: per100OrNull(fiber),
+      sugarPer100g: per100OrNull(sugar),
+    );
+  }
 }

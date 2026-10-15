@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/format/lifey_format.dart';
@@ -11,6 +10,7 @@ import '../../../nutrition/domain/meal.dart';
 import '../../../nutrition/presentation/widgets/fiber_sugar_line.dart';
 import '../../domain/recipe.dart';
 import '../../domain/recipe_portion.dart';
+import 'ingredient_amount_row.dart';
 import '../../../../core/format/parse_decimal.dart';
 
 /// Bottom sheet to log a whole recipe as a meal: pick the meal type and time,
@@ -180,49 +180,14 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
     }
   }
 
-  Widget _ingredientRow(int index, AppLocalizations l10n) {
-    final ingredient = widget.recipe.ingredients[index];
-    final overridden = _overrides.containsKey(index);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              ingredient.foodName,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-          if (overridden)
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              tooltip: l10n.resetIngredientTooltip,
-              onPressed: _submitting ? null : () => _resetOverride(index),
-              icon: const Icon(Icons.restart_alt, size: 20),
-            ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 88,
-            child: TextField(
-              controller: _gramsControllers[index],
-              enabled: !_submitting,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-              ],
-              textAlign: TextAlign.end,
-              decoration: const InputDecoration(
-                isDense: true,
-                suffixText: 'g',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              onChanged: (text) => _onGramsChanged(index, text),
-            ),
-          ),
-        ],
-      ),
+  Widget _ingredientRow(int index) {
+    return IngredientAmountRow(
+      name: widget.recipe.ingredients[index].foodName,
+      controller: _gramsControllers[index],
+      overridden: _overrides.containsKey(index),
+      enabled: !_submitting,
+      onChanged: (text) => _onGramsChanged(index, text),
+      onReset: () => _resetOverride(index),
     );
   }
 
@@ -321,7 +286,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
                 Text(l10n.ingredientAmountsHint,
                     style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 4),
-                for (var i = 0; i < count; i++) _ingredientRow(i, l10n),
+                for (var i = 0; i < count; i++) _ingredientRow(i),
               ],
             ],
             const SizedBox(height: 8),

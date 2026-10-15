@@ -1610,5 +1610,13 @@
   "offSearchFellBack": "Magyarországon árusított termékek között nincs találat — angol nyelvű találatokat mutatunk, bárhonnan.",
   "offSearchUnavailable": "Az OpenFoodFacts most nem válaszol.",
   "offSearchRateLimited": "Túl sok keresés — próbáld újra egy perc múlva.",
-  "offSearchOffline": "Nincs kapcsolat — az OpenFoodFacts-keresés internetet igényel."
+  "offSearchOffline": "Nincs kapcsolat — az OpenFoodFacts-keresés internetet igényel.",
+  "addRecipeSheetTitle": "Recept hozzáadása",
+  "addRecipeEmpty": "Még nincs receptjed",
+  "addRecipeNoMatch": "Nincs ilyen recept",
+  "addRecipeRowSubtitle": "{count} hozzávaló · {kcal} kcal / adag",
+  "addRecipeServingsLabel": "Elfogyasztott adag",
+  "addRecipeServingsDecreaseTooltip": "Kevesebb adag",
+  "addRecipeServingsIncreaseTooltip": "Több adag",
+  "addRecipeConfirm": "Hozzáadás az étkezéshez"
 }

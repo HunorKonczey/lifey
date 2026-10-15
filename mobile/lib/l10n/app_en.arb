@@ -7265,5 +7265,41 @@
   "offSearchOffline": "You're offline — OpenFoodFacts search needs a connection.",
   "@offSearchOffline": {
     "description": "Hint next to the disabled OpenFoodFacts checkbox when the device is offline"
+  },
+  "addRecipeSheetTitle": "Add a recipe",
+  "@addRecipeSheetTitle": {
+    "description": "Title of the bottom sheet on the Log meal screen that picks a recipe and a portion to add to the meal (docs/87 M2)"
+  },
+  "addRecipeEmpty": "No recipes yet",
+  "@addRecipeEmpty": {
+    "description": "Empty state of the recipe picker in the Add-recipe sheet when the user has no recipes (docs/87 M2)"
+  },
+  "addRecipeNoMatch": "No recipe matches",
+  "@addRecipeNoMatch": {
+    "description": "Shown in the Add-recipe sheet when the search matches none of the user's recipes (docs/87 M2)"
+  },
+  "addRecipeRowSubtitle": "{count, plural, =1{1 ingredient} other{{count} ingredients}} · {kcal} kcal / serving",
+  "@addRecipeRowSubtitle": {
+    "description": "Second line of a recipe row in the Add-recipe picker: ingredient count and calories of one serving (docs/87 M2)",
+    "placeholders": {
+      "count": {"type": "int"},
+      "kcal": {"type": "String"}
+    }
+  },
+  "addRecipeServingsLabel": "Servings eaten",
+  "@addRecipeServingsLabel": {
+    "description": "Label of the servings stepper in the Add-recipe sheet: how many servings of the recipe were eaten (docs/87 M2)"
+  },
+  "addRecipeServingsDecreaseTooltip": "Fewer servings",
+  "@addRecipeServingsDecreaseTooltip": {
+    "description": "Tooltip of the minus button of the servings stepper in the Add-recipe sheet (docs/87 M2)"
+  },
+  "addRecipeServingsIncreaseTooltip": "More servings",
+  "@addRecipeServingsIncreaseTooltip": {
+    "description": "Tooltip of the plus button of the servings stepper in the Add-recipe sheet (docs/87 M2)"
+  },
+  "addRecipeConfirm": "Add to meal",
+  "@addRecipeConfirm": {
+    "description": "Confirm button of the Add-recipe sheet: puts the recipe ingredients into the meal being logged (docs/87 M2)"
   }
 }
