@@ -78,6 +78,29 @@ describe("buildEntries", () => {
   });
 });
 
+describe("servings eaten as a divisor (docs/87 §2.2)", () => {
+  const flour: RecipeIngredientResponse = { foodId: 3, foodName: "Flour", quantityInGrams: 400, calories: 1400, protein: 40 };
+
+  it("a four-serving recipe at one serving logs a quarter, at two servings a half", () => {
+    const servings = 4;
+    expect(buildEntries([flour], servings / 1, {})).toEqual([{ foodId: 3, quantityInGrams: 100 }]);
+    expect(buildEntries([flour], servings / 2, {})).toEqual([{ foodId: 3, quantityInGrams: 200 }]);
+    expect(buildEntries([flour], servings / 4, {})).toEqual([{ foodId: 3, quantityInGrams: 400 }]);
+  });
+
+  it("the preview and the entries use the same portion", () => {
+    const overrides = { 0: "60" };
+    const divisor = 4 / 1.5;
+    const entries = buildEntries(ingredients, divisor, overrides);
+    const saved = entries.reduce((kcal, e) => {
+      const ing = ingredients.find((i) => i.foodId === e.foodId)!;
+      return kcal + (ing.calories * e.quantityInGrams) / ing.quantityInGrams;
+    }, 0);
+
+    expect(scaledTotals(ingredients, divisor, overrides).calories).toBeCloseTo(saved, 6);
+  });
+});
+
 describe("scaledMacros", () => {
   const food = (id: number, carbs: number | null, fat: number | null): FoodResponse => ({
     id, name: `f${id}`, caloriesPer100g: 0, proteinPer100g: 0, carbsPer100g: carbs, fatPer100g: fat, barcode: null, hidden: false,

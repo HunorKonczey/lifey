@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Button, IconButton, NumberField, SegmentedControl, Switch } from "@/components/ds";
+import { Button, NumberField, SegmentedControl, Switch } from "@/components/ds";
 import { Modal } from "@/components/ds/overlay/Modal";
 import { useFormat } from "@/lib/format/useFormat";
 import { useFormat as useNumberFormat } from "@/lib/i18n/format";
@@ -19,6 +19,7 @@ import { defaultMealType } from "../mealTypeDefault";
 import { MEAL_TYPE_ORDER } from "../mealTypeStyle";
 import type { FoodResponse, MealEntryRequest, MealType, RecipeResponse } from "../types";
 import { FiberSugarLine } from "./FiberSugarLine";
+import { IngredientAmounts } from "./IngredientAmounts";
 
 export interface LogRecipeModalProps {
   recipe: RecipeResponse;
@@ -46,7 +47,6 @@ export function LogRecipeModal({ recipe, foodsById, initialMealType, pending, on
   const [mealType, setMealType] = useState<MealType>(initialMealType ?? defaultMealType());
   const [partial, setPartial] = useState(recipe.servings > 1);
   const [divisor, setDivisor] = useState(Math.min(Math.max(recipe.servings, 1), 20));
-  const [showIngredients, setShowIngredients] = useState(false);
   // User-typed per-ingredient amounts (keyed by ingredient index); the others show the divisor-derived default.
   const [overrides, setOverrides] = useState<GramsOverrides>({});
 
@@ -61,13 +61,6 @@ export function LogRecipeModal({ recipe, foodsById, initialMealType, pending, on
   const macros = scaledMacros(recipe.ingredients, effDivisor, overrides, foodsById);
   const entries = buildEntries(recipe.ingredients, effDivisor, overrides);
   const fiberSugar = recipeFiberSugar(recipe.ingredients, foodsById, (ingredient, i) => gramsFor(ingredient, i, effDivisor, overrides));
-
-  const resetOverride = (index: number) =>
-    setOverrides((o) => {
-      const next = { ...o };
-      delete next[index];
-      return next;
-    });
 
   return (
     <Modal open onClose={onClose} width={480} aria-label={t("title")}>
@@ -113,52 +106,7 @@ export function LogRecipeModal({ recipe, foodsById, initialMealType, pending, on
           </p>
         )}
 
-        {recipe.ingredients.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              aria-expanded={showIngredients}
-              onClick={() => setShowIngredients((s) => !s)}
-              className="lifey-button type-body-s inline-flex items-center gap-1.5 self-start"
-              style={{ fontWeight: 700, color: "var(--text-2)", borderRadius: "var(--r-control)" }}
-            >
-              <span className="material-symbols-rounded" style={{ fontSize: 18 }} aria-hidden>
-                {showIngredients ? "expand_less" : "tune"}
-              </span>
-              {t("adjustIngredients")}
-            </button>
-            {showIngredients && (
-              <>
-                <p className="type-body-s" style={{ color: "var(--text-3)" }}>{t("amountsHint")}</p>
-                {recipe.ingredients.map((ing, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 px-3 py-2"
-                    style={{ background: "var(--nested)", borderRadius: "var(--r-control)" }}
-                    data-testid="log-ingredient"
-                  >
-                    <span className="type-body-s min-w-0 flex-1 truncate">{ing.foodName}</span>
-                    {overrides[i] !== undefined && (
-                      <IconButton icon="restart_alt" label={t("resetAmount")} onClick={() => resetOverride(i)} />
-                    )}
-                    <NumberField
-                      aria-label={ing.foodName}
-                      size="dense"
-                      className="w-36"
-                      unit="g"
-                      value={gramsFor(ing, i, effDivisor, overrides)}
-                      onChange={(v) => setOverrides((o) => ({ ...o, [i]: String(v) }))}
-                      min={0}
-                      step={5}
-                      maxDecimals={2}
-                      selectOnFocus
-                    />
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        )}
+        <IngredientAmounts ingredients={recipe.ingredients} divisor={effDivisor} overrides={overrides} onChange={setOverrides} />
 
         <p
           className="type-body-s tabular pt-3"

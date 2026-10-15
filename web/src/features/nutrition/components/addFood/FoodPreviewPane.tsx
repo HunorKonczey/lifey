@@ -15,13 +15,14 @@ import { foodApi, mealApi } from "../../api";
 import { remainingAfter, type Nutrients } from "../../budget";
 import { parseMacroDraft, per100g, type ParsedMacroEntry } from "../../macroEntry";
 import { MEAL_TYPE_ORDER } from "../../mealTypeStyle";
-import { buildEntries } from "../../logRecipePortion";
+import { buildEntries, scaledMacros, type GramsOverrides } from "../../logRecipePortion";
 import { planMealWrite } from "../../mealMerge";
-import { foodPortion, recipePortion, type Macros } from "../../recipeMacros";
+import { foodPortion, type Macros } from "../../recipeMacros";
 import { offPortion, type ListItem } from "../../offSearch";
 import { ensureOwnFood } from "../../offSave";
 import { quantityChips } from "../../quantityChips";
-import type { FoodResponse, MealEntryRequest, MealType } from "../../types";
+import type { FoodResponse, MealEntryRequest, MealType, RecipeResponse } from "../../types";
+import { IngredientAmounts } from "../IngredientAmounts";
 import { useAddFoodContext } from "./AddFoodModal";
 
 const MEAL_KEY = { BREAKFAST: "breakfast", LUNCH: "lunch", SNACK: "snack", DINNER: "dinner" } as const;
@@ -33,6 +34,8 @@ export type AddRequest =
       /** Grams for a food or an OpenFoodFacts product, servings for a recipe. */
       quantity: number;
       mealType: MealType;
+      /** A recipe's ingredient amounts typed by hand (by ingredient index); empty = the computed ones. */
+      overrides?: GramsOverrides;
     }
   | { kind: "macros"; entry: ParsedMacroEntry; mealType: MealType };
 
@@ -59,10 +62,21 @@ function defaultQuantity(item: ListItem | null, lastGrams: number | undefined): 
   return item.kind === "recipe" ? 1 : (lastGrams ?? 100);
 }
 
-function macrosOf(item: ListItem | null, qty: number, foodsById: ReadonlyMap<number, FoodResponse>): Macros {
+/** What a recipe is divided by when `servings` of it are eaten. */
+function recipeDivisor(recipe: RecipeResponse, servings: number): number {
+  return Math.max(recipe.servings, 1) / servings;
+}
+
+function macrosOf(
+  item: ListItem | null,
+  qty: number,
+  foodsById: ReadonlyMap<number, FoodResponse>,
+  overrides: GramsOverrides,
+): Macros {
   if (!item || qty <= 0) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
   if (item.kind === "off") return offPortion(item.off, qty);
-  return item.kind === "food" ? foodPortion(item.food, qty) : recipePortion(item.recipe, foodsById, qty);
+  if (item.kind === "food") return foodPortion(item.food, qty);
+  return scaledMacros(item.recipe.ingredients, recipeDivisor(item.recipe, qty), overrides, foodsById);
 }
 
 /**
@@ -88,9 +102,12 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
   const [qty, setQty] = useState(() => defaultQuantity(active, lastGrams));
   // A new highlighted row starts from its own default quantity (adjusted during render, not in an effect).
   const [forKey, setForKey] = useState(active?.key ?? null);
+  // A recipe's hand-typed ingredient amounts belong to the row they were typed on.
+  const [overrides, setOverrides] = useState<GramsOverrides>({});
   if ((active?.key ?? null) !== forKey) {
     setForKey(active?.key ?? null);
     setQty(defaultQuantity(active, lastGrams));
+    setOverrides({});
   }
 
   const inMacros = mode === "macros";
@@ -98,19 +115,19 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
   const isRecipe = !inMacros && active?.kind === "recipe";
   const macros = inMacros
     ? (entry?.totals ?? { calories: 0, protein: 0, carbs: 0, fat: 0 })
-    : macrosOf(active, qty, foodsById);
+    : macrosOf(active, qty, foodsById, overrides);
   const left = remainingAfter(consumed, goals, { calories: macros.calories, protein: macros.protein });
   // A recipe with no ingredient to log (none, or all of 0 g) would write an empty meal.
   const recipeHasEntries =
     active?.kind !== "recipe" ||
-    (qty > 0 && buildEntries(active.recipe.ingredients, Math.max(active.recipe.servings, 1) / qty, {}).length > 0);
+    (qty > 0 && buildEntries(active.recipe.ingredients, recipeDivisor(active.recipe, qty), overrides).length > 0);
   const canSubmit = !pending && (inMacros ? !!entry : !!active && qty > 0 && recipeHasEntries);
 
   const submit = () => {
     if (!canSubmit) return;
     const req: AddRequest | null = inMacros
       ? entry && { kind: "macros", entry, mealType }
-      : active && { kind: "item", item: active, quantity: qty, mealType };
+      : active && { kind: "item", item: active, quantity: qty, mealType, overrides };
     if (!req) return;
     Promise.resolve(onSubmit(req)).then(
       () => {
@@ -225,6 +242,16 @@ export function FoodPreviewPaneView({ foodsById, initialMealType, consumed, goal
             ))}
           </div>
         </div>
+        {active?.kind === "recipe" && (
+          <div className="mt-3">
+            <IngredientAmounts
+              ingredients={active.recipe.ingredients}
+              divisor={recipeDivisor(active.recipe, qty)}
+              overrides={overrides}
+              onChange={setOverrides}
+            />
+          </div>
+        )}
       </div>
       )}
 
@@ -355,8 +382,10 @@ export function FoodPreviewPane({
       } else if (req.item.kind === "recipe") {
         // A recipe added here is its ingredients in the meal, next to whatever else is in it (docs/87 §2.7) — the
         // Recipes tab's "Log" is where a recipe becomes a meal of its own.
-        const servings = Math.max(req.item.recipe.servings, 1);
-        await addEntries(buildEntries(req.item.recipe.ingredients, servings / req.quantity, {}), mealType);
+        await addEntries(
+          buildEntries(req.item.recipe.ingredients, recipeDivisor(req.item.recipe, req.quantity), req.overrides ?? {}),
+          mealType,
+        );
       } else if (req.item.kind === "off") {
         // An OpenFoodFacts product becomes one of the user's own foods first (a 409 — product or name already
         // there — is walked through in `ensureOwnFood`), then it is logged like any food (docs/84 D8).
