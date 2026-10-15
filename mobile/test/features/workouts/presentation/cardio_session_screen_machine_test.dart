@@ -97,6 +97,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
       ],

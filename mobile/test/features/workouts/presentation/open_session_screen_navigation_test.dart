@@ -59,6 +59,7 @@ Future<void> _pumpAndOpen(WidgetTester tester, WorkoutSession session) async {
       overrides: [
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(_FakeSessions.new),
         exerciseControllerProvider.overrideWith(_FakeExercises.new),
         settingsControllerProvider.overrideWith(_FakeSettings.new),

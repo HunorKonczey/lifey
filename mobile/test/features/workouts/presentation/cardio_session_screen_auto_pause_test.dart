@@ -169,6 +169,7 @@ Future<
         adsEnabledProvider.overrideWithValue(false),
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         locationServiceProvider.overrideWithValue(location),

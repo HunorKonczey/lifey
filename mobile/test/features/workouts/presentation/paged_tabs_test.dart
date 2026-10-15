@@ -53,6 +53,7 @@ void main() {
           overrides: [
             summariesFollowController,
             sessionsWithSetsFollowController,
+            strengthPrCountsFollowController,
             workoutSessionControllerProvider.overrideWith(() => _Sessions(sessions)),
             workoutSessionsPagedProvider.overrideWith(() => fake),
             exerciseControllerProvider.overrideWith(_Exercises.new),

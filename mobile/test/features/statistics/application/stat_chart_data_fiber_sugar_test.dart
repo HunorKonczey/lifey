@@ -55,6 +55,7 @@ ProviderContainer _container(List<Meal> meals) => ProviderContainer(overrides: [
       mealControllerProvider.overrideWith(() => _FakeMeals(meals)),
       summariesFollowController,
       sessionsWithSetsFollowController,
+      strengthPrCountsFollowController,
       workoutSessionControllerProvider.overrideWith(_NoSessions.new),
       weightControllerProvider.overrideWith(_NoWeights.new),
       allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),

@@ -122,6 +122,7 @@ Future<_RecordingSessionController> _pumpAndOpenSheet(
       overrides: [
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(() => sessionController),
         workoutTemplateControllerProvider.overrideWith(() => templateController),
         exerciseControllerProvider.overrideWith(_FakeExercises.new),

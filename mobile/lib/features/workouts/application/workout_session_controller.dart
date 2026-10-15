@@ -11,7 +11,7 @@ import '../domain/workout_session.dart';
 /// It **holds no list** (LIF-156): reading `.notifier` to write used to build a stream of the whole history - every session with
 /// every set, planned exercise, split and waypoint - which then stayed resident and was rebuilt on each change. What a screen reads
 /// instead: `workoutSessionsPagedProvider` (the Sessions tab's window), `workoutSummariesProvider` (the derived views),
-/// `workoutSessionsWithSetsProvider` (record counts, watch prefill), `workoutSessionProvider` (one session, whole). The state here
+/// `workoutSessionsWithSetsProvider` (the watch prefill), `strengthPrCountsProvider` (record counts, counted by the database), `workoutSessionProvider` (one session, whole). The state here
 /// is never read; `test/features/workouts/application/workout_session_controller_guard_test.dart` fails if production code does.
 ///
 /// Still a [StreamNotifier] of a list, only so the many fakes that serve one to the widgets under test keep compiling.

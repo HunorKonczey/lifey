@@ -65,6 +65,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, {List<WorkoutTemp
       overrides: [
         summariesFollowController,
         sessionsWithSetsFollowController,
+        strengthPrCountsFollowController,
         workoutSessionControllerProvider.overrideWith(() => controller),
         workoutTemplateControllerProvider.overrideWith(() => _FakeTemplates()..templates = templates),
         exerciseControllerProvider.overrideWith(_FakeExercises.new),
@@ -236,6 +237,7 @@ void main() {
         overrides: [
           summariesFollowController,
           sessionsWithSetsFollowController,
+          strengthPrCountsFollowController,
           workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
           workoutTemplateControllerProvider.overrideWith(() => _FakeTemplates()),
           exerciseControllerProvider.overrideWith(_FakeExercises.new),

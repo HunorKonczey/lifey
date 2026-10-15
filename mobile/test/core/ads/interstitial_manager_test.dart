@@ -70,6 +70,7 @@ class _ActiveWorkoutSessionController extends WorkoutSessionController {
     adsEnabledProvider.overrideWithValue(adsEnabled),
     summariesFollowController,
     sessionsWithSetsFollowController,
+    strengthPrCountsFollowController,
     workoutSessionControllerProvider
         .overrideWith(sessionController ?? _EmptyWorkoutSessionController.new),
     interstitialManagerProvider
