@@ -12,6 +12,8 @@ import '../../../recipes/application/recipes_controller.dart';
 import '../../../recipes/domain/recipe.dart';
 import '../../../recipes/domain/recipe_portion.dart';
 import '../../../recipes/presentation/widgets/ingredient_amount_row.dart';
+import '../../application/recipe_usage_provider.dart';
+import '../../domain/recipe_usage.dart';
 import 'add_meal_entry_sheet.dart';
 import 'fiber_sugar_line.dart';
 
@@ -174,10 +176,14 @@ class _AddRecipeSheetState extends ConsumerState<AddRecipeSheet> {
     final recipes = ref.watch(recipeControllerProvider);
     final all = recipes.value ?? const <Recipe>[];
     final needle = normalizeForSearch(_query.trim());
-    final shown = [
-      for (final r in all)
-        if (needle.isEmpty || normalizeForSearch(r.name).contains(needle)) r,
-    ]..sort(_byFavoriteThenName);
+    final shown = rankRecipesByUsage(
+      [
+        for (final r in all)
+          if (needle.isEmpty || normalizeForSearch(r.name).contains(needle)) r,
+      ],
+      ref.watch(recipeUsageProvider).value ?? const {},
+      byName: _byName,
+    );
     final maxListHeight = MediaQuery.sizeOf(context).height * 0.5;
 
     return Column(
@@ -235,11 +241,8 @@ class _AddRecipeSheetState extends ConsumerState<AddRecipeSheet> {
     );
   }
 
-  /// Favourites first, then A-Z (accent-insensitive).
-  static int _byFavoriteThenName(Recipe a, Recipe b) {
-    if (a.favorite != b.favorite) return a.favorite ? -1 : 1;
-    return normalizeForSearch(a.name).compareTo(normalizeForSearch(b.name));
-  }
+  /// A to Z, accent-insensitive.
+  static int _byName(Recipe a, Recipe b) => normalizeForSearch(a.name).compareTo(normalizeForSearch(b.name));
 
   // -------------------------------------------------------------------------
   // Step 2 - how much of it

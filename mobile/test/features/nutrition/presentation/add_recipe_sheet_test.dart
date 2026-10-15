@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
+import 'package:lifey/features/nutrition/application/recipe_usage_provider.dart';
+import 'package:lifey/features/nutrition/domain/recipe_usage.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/add_recipe_sheet.dart';
 import 'package:lifey/features/recipes/application/recipes_controller.dart';
 import 'package:lifey/features/recipes/domain/recipe.dart';
@@ -48,14 +50,17 @@ class _Harness {
   bool popped = false;
 }
 
-Future<_Harness> _open(WidgetTester tester, {List<Recipe>? recipes}) async {
+Future<_Harness> _open(WidgetTester tester, {List<Recipe>? recipes, Map<String, RecipeUsage> usage = const {}}) async {
   tester.view.physicalSize = const Size(411 * 2.625, 923 * 2.625);
   tester.view.devicePixelRatio = 2.625;
   addTearDown(tester.view.reset);
   final harness = _Harness();
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [recipeControllerProvider.overrideWith(() => _FakeRecipes(recipes ?? _recipes))],
+      overrides: [
+        recipeControllerProvider.overrideWith(() => _FakeRecipes(recipes ?? _recipes)),
+        recipeUsageProvider.overrideWith((ref) => Stream.value(usage)),
+      ],
       child: MaterialApp(
         theme: AppTheme.dark,
         locale: const Locale('en'),
@@ -95,6 +100,17 @@ void main() {
       await _open(tester);
 
       final order = ['Töltött káposzta', 'Apple pie', 'Chilli', 'Empty one', 'Zucchini bake'];
+      final ys = [for (final name in order) tester.getTopLeft(find.text(name)).dy];
+      expect(ys, orderedEquals([...ys]..sort()));
+    });
+
+    testWidgets('the recipes eaten most recently lead, before the favourites', (tester) async {
+      await _open(tester, usage: {
+        'z': RecipeUsage(lastUsedAt: DateTime(2026, 10, 9), useCount: 3),
+        'a': RecipeUsage(lastUsedAt: DateTime(2026, 10, 2), useCount: 1),
+      });
+
+      final order = ['Zucchini bake', 'Apple pie', 'Töltött káposzta', 'Chilli'];
       final ys = [for (final name in order) tester.getTopLeft(find.text(name)).dy];
       expect(ys, orderedEquals([...ys]..sort()));
     });
