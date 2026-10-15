@@ -97,6 +97,9 @@ test.describe("/admin/billing", () => {
 
     await expect(page.getByText("Trial · 6 days left")).toBeVisible();
     await expect(page.getByText(/Your trial ends on/)).toBeVisible();
+    // What the end of the trial means (LIF-116): no free tier - the workspace goes read-only, nothing is lost.
+    await expect(page.getByTestId("trial-end-consequence")).toContainText("becomes read-only");
+    await expect(page.getByTestId("trial-end-consequence")).toContainText("clients, their data and the chat stay");
     const proCard = page.locator('[data-testid="plan-chooser-card"][data-plan="pro"]');
     await expect(proCard.getByText("Current plan")).toBeVisible();
   });
@@ -115,6 +118,8 @@ test.describe("/admin/billing", () => {
     const starterCard = page.locator('[data-testid="plan-chooser-card"][data-plan="starter"]');
     await expect(starterCard.getByText("Current plan")).toBeVisible();
     await expect(page.getByText("0 / 5 active clients")).toBeVisible();
+    // The end-of-trial sentence is for a trial: a paying trainer is not told their workspace will go read-only.
+    await expect(page.getByTestId("trial-end-consequence")).toHaveCount(0);
   });
 
   test("a PAST_DUE trainer sees the 'Payment failed' status pill", async ({ page, request }) => {

@@ -205,6 +205,7 @@
       "statusExpired": "Lejárt",
       "statusRefunded": "Visszatérítve",
       "trialEndsOn": "A próbaidőszakod {date}-n ér véget",
+      "trialEndsConsequence": "Ha addig nem választasz csomagot, a munkafelület csak olvasható lesz: a klienseid, az adataik és a chat megmaradnak, de új meghívót és hozzárendelést nem küldhetsz.",
       "renewsOn": "Megújul: {date}",
       "seatMeterTitle": "Helyek",
       "seatCount": "{active} / {max} aktív kliens",
