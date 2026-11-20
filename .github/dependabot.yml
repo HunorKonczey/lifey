@@ -40,6 +40,10 @@ updates:
     directory: /mobile
     schedule:
       interval: weekly
+    # Lockfile-only: with the default "increase" strategy Dependabot rewrote
+    # unrelated pubspec constraints (intl ^0.20.3, health 14.0.0) despite the
+    # ignore list below (#181). Constraint bumps stay deliberate, per story.
+    versioning-strategy: lockfile-only
     groups:
       mobile-minor-patch:
         update-types: [minor, patch]
@@ -55,6 +59,10 @@ updates:
       # home_widget 0.10's Android plugin does not compile on the current toolchain.
       - dependency-name: health
       - dependency-name: home_widget
+      # geolocator >= 14.0.3 pulls package_info_plus 10 -> win32 6, which health 13
+      # (device_info_plus 12 -> win32 5) excludes; it moves together with health 14.
+      - dependency-name: geolocator
+        versions: [">=14.0.3"]
       - dependency-name: flutter_secure_storage
         update-types: [version-update:semver-major]
       - dependency-name: flutter_local_notifications
