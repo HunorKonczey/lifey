@@ -5,7 +5,7 @@ Monorepo for the Lifey personal fitness and nutrition tracker.
 ## Structure
 
 - `mobile/` — Flutter app (Riverpod, GoRouter, Dio, Isar), feature-based layers.
-- `backend/` — Spring Boot 4 / Java 24 REST API, domain-driven feature packages, Flyway migrations.
+- `backend/` — Spring Boot 4 / Java 25 REST API, domain-driven feature packages, Flyway migrations.
 - `docs/` — Product vision, architecture, domain model, and requirements.
 - `docker-compose.yml` — PostgreSQL + backend for local development.
 

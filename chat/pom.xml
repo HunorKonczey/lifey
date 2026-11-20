@@ -28,7 +28,7 @@
     <description>Trainer-client chat service</description>
 
     <properties>
-        <java.version>24</java.version>
+        <java.version>25</java.version>
         <springdoc.version>3.0.3</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
     </properties>

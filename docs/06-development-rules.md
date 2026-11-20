@@ -1,4 +1,4 @@
-- Use Java 24
+- Use Java 25 (LTS)
 - Use records for DTOs
 - Constructor injection only
 - No field injection

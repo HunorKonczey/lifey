@@ -70,5 +70,5 @@ only from within their own subpackage can stay package-private; anything reached
 - The chat itself no longer lives here. What remains of it in this application is `V65`'s columns on
   `user_settings` (the settings API still exposes them), `com.lifey.internal` (the service-to-service
   seam: `/internal/push` and the revoke webhook) and `com.lifey.clientconfig`.
-- Java 24 — root `CLAUDE.md` and `pom.xml` (`<java.version>24</java.version>`) agree; the pom is authoritative
+- Java 25 (LTS; moved from the end-of-life Java 24 in LIF-181) — root `CLAUDE.md` and `pom.xml` (`<java.version>25</java.version>`) agree; the pom is authoritative
   if they ever drift apart again.
