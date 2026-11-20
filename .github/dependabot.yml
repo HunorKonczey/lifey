@@ -48,6 +48,9 @@ updates:
       # analyzer >= 14.3, which needs a newer Dart SDK than 3.44 ships.
       - dependency-name: build_runner
         versions: [">=2.17.0"]
+      # The Flutter SDK pins intl (flutter_localizations depends on exactly
+      # 0.20.2 in 3.44), so a newer intl cannot resolve until the SDK moves.
+      - dependency-name: intl
       # LIF-190: need compileSdk 37 / AGP 9.1, health 14 changes error handling,
       # home_widget 0.10's Android plugin does not compile on the current toolchain.
       - dependency-name: health
