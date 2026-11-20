@@ -35,7 +35,7 @@ dependencies:
   # which no-ops on non-iOS. Pinned to 13.x; its device_info_plus transitive dep
   # downgrades win32/flutter_secure_storage_windows, which only affects the
   # (unused) Windows desktop target.
-  health: 13.3.1
+  health: 14.0.0
   # Step-goal notification (iOS foreground/resume only — see lib/core/notifications/).
   # Re-added in the daily-steps feature after being removed with the old background
   # HKObserverQuery machinery in Prompt 1.6.
@@ -51,7 +51,7 @@ dependencies:
   # iOS home screen widget bridge (App Group UserDefaults + WidgetKit reload)
   # — see lib/core/home_screen_widget/ and docs/24-ios-widget-live-activity-plan.md.
   # No-ops on non-iOS; also gives an Android bridge for free if that's ever added.
-  home_widget: ^0.9.3
+  home_widget: ^0.10.0
   # Android push notifications (docs/30-push-notifications-plan.md, M1b) — iOS
   # registers through the native `lifey/push` platform channel instead (M1)
   # and never touches Firebase; these two are Android-only in practice.
@@ -72,7 +72,7 @@ dependencies:
   # (weaker "always" vs. "while in use" permission-state and background
   # config handling). No `permission_handler` alongside it — geolocator's own
   # permission API is enough.
-  geolocator: ^14.0.2
+  geolocator: ^14.1.2
   # StoreKit 2 (iOS) / Play Billing (Android) purchases for mobile Pro
   # (docs/landing_page/67-mobile-free-pro-plan.md §4, `64` §6.1) — the
   # Flutter team's own plugin, one API over both stores. Prices are read
@@ -94,7 +94,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  build_runner: ^2.4.0
+  build_runner: ^2.17.1
   riverpod_generator: ^4.0.4
   drift_dev: ^2.20.0
 
