@@ -18,7 +18,7 @@
     <description>Fitness and nutrition tracker backend</description>
 
     <properties>
-        <java.version>24</java.version>
+        <java.version>25</java.version>
         <springdoc.version>3.0.3</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
         <stripe.version>33.4.0</stripe.version>

@@ -1,6 +1,6 @@
 # Lifey Backend
 
-Spring Boot 4 / Java 24 / Maven API for the Lifey fitness & nutrition tracker. See [CLAUDE.md](CLAUDE.md) for
+Spring Boot 4 / Java 25 / Maven API for the Lifey fitness & nutrition tracker. See [CLAUDE.md](CLAUDE.md) for
 architecture and conventions.
 
 ## Running locally

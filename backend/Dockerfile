@@ -1,5 +1,5 @@
 # Build stage
-FROM eclipse-temurin:24-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
@@ -13,7 +13,7 @@ COPY src ./src
 RUN ./mvnw clean package -DskipTests -B
 
 # Runtime stage
-FROM eclipse-temurin:24-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app app
 COPY --from=build --chown=app:app /app/target/*.jar app.jar

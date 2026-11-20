@@ -12,7 +12,7 @@ Resend) but not that you remember how any of it was wired.
 
 | Component | Tech | Host | Public URL |
 |---|---|---|---|
-| Backend API | Spring Boot 4.1 (Java 24) | Render (Docker Web Service) | `https://<service>.onrender.com` — fill in once created |
+| Backend API | Spring Boot 4.1 (Java 25) | Render (Docker Web Service) | `https://<service>.onrender.com` — fill in once created |
 | Web admin | Next.js 16 | Vercel | *assigned by host* |
 | Database | PostgreSQL (serverless) | Neon | private |
 | Mobile | Flutter (`com.khunor.lifey`) | App Store / Google Play | — |

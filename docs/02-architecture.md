@@ -34,7 +34,7 @@ Local storage:
 Technology:
 
 * Spring Boot 4
-* Java 24
+* Java 25 (LTS)
 
 Modules:
 

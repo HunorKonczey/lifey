@@ -3,7 +3,7 @@
 Architecture:
 
 - Frontend: Flutter
-- Backend: Spring Boot 4 (Java 24)
+- Backend: Spring Boot 4 (Java 25)
 - Database: PostgreSQL
 
 Project structure:
@@ -16,7 +16,7 @@ Important rules:
 - Never modify generated files.
 - All business entities belong to a user.
 - Authentication uses JWT + Refresh Tokens.
-- Use Java 24.
+- Use Java 25 (LTS).
 - Use Maven.
 - Prefer constructor injection.
 - Use feature-based packaging.
