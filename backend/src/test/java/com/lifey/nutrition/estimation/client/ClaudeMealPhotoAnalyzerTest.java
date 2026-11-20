@@ -67,7 +67,7 @@ class ClaudeMealPhotoAnalyzerTest {
         assertThat(raw.outputConfig().get().format()).isPresent();
 
         assertThat(raw.messages()).hasSize(1);
-        List<ContentBlockParam> blocks = raw.messages().getFirst().content().asBlockParams();
+        List<ContentBlockParam> blocks = raw.messages().getFirst().content().asContentBlockParams();
         assertThat(blocks).hasSize(2);
         assertThat(blocks.get(0).isImage()).isTrue();
         assertThat(blocks.get(0).asImage().source().asBase64().data())

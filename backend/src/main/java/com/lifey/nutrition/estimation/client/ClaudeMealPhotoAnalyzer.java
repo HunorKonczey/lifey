@@ -118,7 +118,7 @@ public class ClaudeMealPhotoAnalyzer implements MealPhotoAnalyzer {
                 .maxTokens(MAX_TOKENS)
                 .system(SYSTEM_PROMPT)
                 .outputConfig(MealPhotoEstimate.class)
-                .addUserMessageOfBlockParams(List.of(
+                .addUserMessageOfContentBlockParams(List.of(
                         ContentBlockParam.ofImage(image),
                         ContentBlockParam.ofText(USER_INSTRUCTION)))
                 .build();
