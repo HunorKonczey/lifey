@@ -21,7 +21,7 @@
         <java.version>25</java.version>
         <springdoc.version>3.2.0</springdoc.version>
         <jjwt.version>0.13.0</jjwt.version>
-        <stripe.version>33.4.0</stripe.version>
+        <stripe.version>34.1.0</stripe.version>
         <app-store-server-library.version>5.2.0</app-store-server-library.version>
         <bouncycastle.version>1.87</bouncycastle.version>
         <anthropic-java.version>2.64.0</anthropic-java.version>
