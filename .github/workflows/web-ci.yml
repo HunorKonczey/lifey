@@ -16,13 +16,17 @@ defaults:
   run:
     working-directory: web
 
+# Least privilege for the GITHUB_TOKEN (LIF-188): these jobs only read the repo.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
@@ -30,6 +34,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # LIF-188: fail on a known high/critical advisory in what ships to users.
+      # Dev-only findings are left to Dependabot's PRs rather than blocking CI.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Lint
         run: npm run lint

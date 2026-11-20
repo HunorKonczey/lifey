@@ -37,3 +37,7 @@ replay_pid*
 # Generated store assets — `node devops/export-store-screenshots.mjs` rebuilds
 # them from the design canvas, so the PNGs themselves are not history.
 /devops/store-assets/
+
+# Local Lighthouse CI output and stray vitest cache (LIF-188)
+web/.lighthouseci/
+/node_modules/
