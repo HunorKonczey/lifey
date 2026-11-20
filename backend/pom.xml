@@ -19,12 +19,12 @@
 
     <properties>
         <java.version>25</java.version>
-        <springdoc.version>3.0.3</springdoc.version>
-        <jjwt.version>0.12.6</jjwt.version>
-        <stripe.version>33.4.0</stripe.version>
+        <springdoc.version>3.2.0</springdoc.version>
+        <jjwt.version>0.13.0</jjwt.version>
+        <stripe.version>34.1.0</stripe.version>
         <app-store-server-library.version>5.2.0</app-store-server-library.version>
         <bouncycastle.version>1.87</bouncycastle.version>
-        <anthropic-java.version>2.64.0</anthropic-java.version>
+        <anthropic-java.version>3.10.0</anthropic-java.version>
         <android-publisher.version>v3-rev20260825-2.0.0</android-publisher.version>
         <firebase-admin.version>9.12.0</firebase-admin.version>
         <!-- Overrides the Boot BOM's 1.62.0 (still 1.62.0 in Boot 4.1.3; 4.2.0 ships
@@ -34,7 +34,7 @@
         <opentelemetry.version>1.68.0</opentelemetry.version>
         <!-- firebase-admin 9.12.0 brings guava 33.6.0-jre: CVE-2026-102554, fixed in
              33.7.2. Pinned in dependencyManagement below. (LIF-180) -->
-        <guava.version>33.7.2-jre</guava.version>
+        <guava.version>33.8.0-jre</guava.version>
     </properties>
 
     <dependencyManagement>
@@ -125,7 +125,7 @@
         <dependency>
             <groupId>net.coobird</groupId>
             <artifactId>thumbnailator</artifactId>
-            <version>0.4.20</version>
+            <version>0.4.21</version>
         </dependency>
 
         <!-- APNs client for push notifications (docs/30-push-notifications-plan.md, B2).
@@ -133,7 +133,7 @@
         <dependency>
             <groupId>com.eatthepath</groupId>
             <artifactId>pushy</artifactId>
-            <version>0.15.4</version>
+            <version>0.15.6</version>
         </dependency>
 
         <!-- FCM client for Android push notifications (docs/30-push-notifications-plan.md,

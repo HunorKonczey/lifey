@@ -4,9 +4,9 @@ See root `../CLAUDE.md` for project-wide rules.
 
 ## Stack
 
-- Spring Boot 4.1.0 parent, Spring Web, Spring Data JPA, Spring Security, Flyway (`spring-boot-flyway` +
+- Spring Boot 4.1.3 parent, Spring Web, Spring Data JPA, Spring Security, Flyway (`spring-boot-flyway` +
   `flyway-database-postgresql`)
-- Auth: JWT via `jjwt` 0.12.6 (api/impl/jackson) + refresh tokens persisted in DB
+- Auth: JWT via `jjwt` 0.13.0 (api/impl/jackson) + refresh tokens persisted in DB
 - Lombok (optional, annotation-processor wired in `maven-compiler-plugin`)
 - API docs: springdoc-openapi (`OpenApiConfig`)
 - Tests: JUnit via `spring-boot-starter-test`, `spring-boot-webmvc-test`, `spring-security-test`, Testcontainers (

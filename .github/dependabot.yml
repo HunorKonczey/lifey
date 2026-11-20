@@ -3,6 +3,9 @@
 # security updates" in the repo settings); the weekly version updates below are
 # grouped so each ecosystem yields one minor/patch PR instead of dozens.
 # Majors arrive as separate PRs, because each one needs its own look.
+#
+# `ignore` entries are known blockers, each with the Jira story that lifts it
+# (LIF-193). Remove the entry when that story lands, so updates resume.
 version: 2
 updates:
   - package-ecosystem: maven
@@ -28,6 +31,10 @@ updates:
     groups:
       web-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # LIF-189: typescript-eslint 8.x has no TypeScript 7 support yet (npm ci ERESOLVE).
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: pub
     directory: /mobile
@@ -36,6 +43,24 @@ updates:
     groups:
       mobile-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # LIF-192: CI and local stay on Flutter 3.44.9; build_runner >= 2.17 needs
+      # analyzer >= 14.3, which needs a newer Dart SDK than 3.44 ships.
+      - dependency-name: build_runner
+        versions: [">=2.17.0"]
+      # LIF-190: need compileSdk 37 / AGP 9.1, health 14 changes error handling,
+      # home_widget 0.10's Android plugin does not compile on the current toolchain.
+      - dependency-name: health
+      - dependency-name: home_widget
+      - dependency-name: flutter_secure_storage
+        update-types: [version-update:semver-major]
+      - dependency-name: flutter_local_notifications
+        update-types: [version-update:semver-major]
+      # LIF-191: firebase_messaging 17 replaces the FCM token with an Installation ID.
+      - dependency-name: firebase_core
+        update-types: [version-update:semver-major]
+      - dependency-name: firebase_messaging
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: gradle
     directory: /mobile/android
@@ -44,6 +69,19 @@ updates:
     groups:
       android-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # LIF-190: these lines require compileSdk 37 (AAR metadata check); the app
+      # and the Wear module still compile against 36.
+      - dependency-name: androidx.compose:compose-bom
+        versions: [">=2026.07.00"]
+      - dependency-name: androidx.wear.compose:*
+        versions: [">=1.7.0"]
+      - dependency-name: androidx.activity:activity-compose
+        versions: [">=1.13.0"]
+      - dependency-name: androidx.core:core-ktx
+        versions: [">=1.19.0"]
+      - dependency-name: androidx.lifecycle:lifecycle-runtime-ktx
+        versions: [">=2.11.0"]
 
   - package-ecosystem: docker
     directories: [/backend, /chat, /web]
