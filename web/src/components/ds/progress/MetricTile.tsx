@@ -43,7 +43,10 @@ export interface MetricTileProps {
   rowMenu?: MenuItemDef[];
   rowMenuLabel?: string;
   onClick?: () => void;
-  /** Read instead of the parts, e.g. "Water, 0.99 of 2.6 litres". */
+  /**
+   * Read instead of the parts, e.g. "Water, 0.99 of 2.6 litres" — static tiles only: with `onClick`
+   * the tile is a button named by its visible content (WCAG 2.5.3), and this is ignored.
+   */
   "aria-label"?: string;
   className?: string;
 }
@@ -80,7 +83,13 @@ export function MetricTile({
   className,
   ...aria
 }: MetricTileProps) {
-  const semanticsLabel = aria["aria-label"];
+  // A clickable tile is a `role="button"`, and a button's name must contain its
+  // visible text (WCAG 2.5.3 Label in Name, axe `label-content-name-mismatch`):
+  // a short "Steps: 6,412 / 9,000" over a tile that also shows "goal 9,000" and
+  // "2,588 to go" fails it and hides those parts from screen readers. So the
+  // condensed label is only used for a static tile; a clickable one is named by
+  // its content (the icons are aria-hidden).
+  const semanticsLabel = onClick ? undefined : aria["aria-label"];
 
   return (
     <Card
