@@ -66,7 +66,7 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // Wearable Data Layer (docs/40-watch-app-plan.md §5.1, §D2) — WatchBridge.kt.
     implementation("com.google.android.gms:play-services-wearable:19.0.0")
 }

@@ -66,12 +66,12 @@ dependencies {
     // foundation. Material 2 (`compose-material`) is gone since X4.16.
     implementation("androidx.wear.compose:compose-material3:1.6.2")
     // AmbientLifecycleObserver for the Always-On layouts (D-X0.15); required for any ambient support.
-    implementation("androidx.wear:wear:1.3.0")
+    implementation("androidx.wear:wear:1.4.0")
     // Ongoing Activity (X4.o2): the workout notification also shows on the watch face.
-    implementation("androidx.wear:wear-ongoing:1.0.0")
+    implementation("androidx.wear:wear-ongoing:1.1.0")
     // Launcher Tile (X4.o1): the platform's own Tile service + layout builders (no Compose-for-Tiles needed).
-    implementation("androidx.wear.tiles:tiles:1.4.1")
-    implementation("androidx.wear.protolayout:protolayout:1.2.1")
+    implementation("androidx.wear.tiles:tiles:1.6.2")
+    implementation("androidx.wear.protolayout:protolayout:1.4.2")
     implementation("androidx.concurrent:concurrent-futures:1.2.0")
     implementation("androidx.compose.ui:ui-tooling-preview")
     // Material Symbols equivalents for the brand icon set (favorite, flame,
@@ -90,7 +90,7 @@ dependencies {
     // Health Services — live HR/kcal during the strength-training exercise
     // (docs/40-watch-app-plan.md §5.3). Pinned to the stable release; the
     // 1.1.0 line was still pre-release (rc) as of this writing.
-    implementation("androidx.health:health-services-client:1.0.0")
+    implementation("androidx.health:health-services-client:1.1.0")
 
     // ExerciseClient's async methods return a Guava ListenableFuture; this
     // gives them a Kotlin coroutine `.await()` instead of manual callbacks.
