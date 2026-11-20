@@ -52,11 +52,11 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.google.android.gms:play-services-wearable:19.0.0")
+    implementation("com.google.android.gms:play-services-wearable:20.0.1")
 
     // Compose for Wear OS UI (docs/40-watch-app-plan.md §5, F3).
-    implementation(platform("androidx.compose:compose-bom:2026.06.00"))
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
+    implementation("androidx.activity:activity-compose:1.12.4")
     // 1.6.2: androidx.wear.compose.foundation.pager's HorizontalPager, needed
     // for its `rotaryScrollableBehavior` param (1.4.1 only has the plain
     // androidx.compose.foundation.pager one, with no rotary/crown support).
@@ -66,13 +66,13 @@ dependencies {
     // foundation. Material 2 (`compose-material`) is gone since X4.16.
     implementation("androidx.wear.compose:compose-material3:1.6.2")
     // AmbientLifecycleObserver for the Always-On layouts (D-X0.15); required for any ambient support.
-    implementation("androidx.wear:wear:1.3.0")
+    implementation("androidx.wear:wear:1.4.0")
     // Ongoing Activity (X4.o2): the workout notification also shows on the watch face.
-    implementation("androidx.wear:wear-ongoing:1.0.0")
+    implementation("androidx.wear:wear-ongoing:1.1.0")
     // Launcher Tile (X4.o1): the platform's own Tile service + layout builders (no Compose-for-Tiles needed).
-    implementation("androidx.wear.tiles:tiles:1.4.1")
-    implementation("androidx.wear.protolayout:protolayout:1.2.1")
-    implementation("androidx.concurrent:concurrent-futures:1.2.0")
+    implementation("androidx.wear.tiles:tiles:1.6.2")
+    implementation("androidx.wear.protolayout:protolayout:1.4.2")
+    implementation("androidx.concurrent:concurrent-futures:1.3.0")
     implementation("androidx.compose.ui:ui-tooling-preview")
     // Material Symbols equivalents for the brand icon set (favorite, flame,
     // fitness_center, timer, pause/stop, heart_broken, priority_high —
@@ -88,17 +88,17 @@ dependencies {
     debugImplementation("androidx.wear.compose:compose-ui-tooling:1.6.2")
 
     // Health Services — live HR/kcal during the strength-training exercise
-    // (docs/40-watch-app-plan.md §5.3). Pinned to the stable release; the
-    // 1.1.0 line was still pre-release (rc) as of this writing.
-    implementation("androidx.health:health-services-client:1.0.0")
+    // (docs/40-watch-app-plan.md §5.3). 1.1.0 is the current stable line
+    // (LIF-187); 1.0.0 was pinned while 1.1.0 was still an rc.
+    implementation("androidx.health:health-services-client:1.1.0")
 
     // ExerciseClient's async methods return a Guava ListenableFuture; this
     // gives them a Kotlin coroutine `.await()` instead of manual callbacks.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.11.0")
     // MessageClient/NodeClient/DataClient methods return a Play Services
     // Task (a different type from ListenableFuture above) — same idea, the
     // matching `.await()` extension for that type.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
+    implementation("androidx.core:core-ktx:1.18.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
 }
