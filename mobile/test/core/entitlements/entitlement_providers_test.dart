@@ -119,7 +119,10 @@ void main() {
     test('historyCutoffProvider is 30 days before today, at midnight', () {
       final cutoff = container.read(historyCutoffProvider);
       final now = DateTime.now();
-      final expected = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 30));
+      // Calendar days, not Duration(days: 30): a 30 x 24 h subtraction lands
+      // at 01:00 whenever the window crosses a DST change (late Oct to late
+      // Nov), while the provider correctly returns local midnight.
+      final expected = DateTime(now.year, now.month, now.day - 30);
 
       expect(cutoff, expected);
     });

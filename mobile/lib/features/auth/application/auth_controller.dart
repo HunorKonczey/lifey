@@ -111,7 +111,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     ref.invalidate(avatarControllerProvider);
     unawaited(
       Future.delayed(const Duration(seconds: 3), () {
-        if (ref.exists(avatarControllerProvider)) {
+        if (ref.read(avatarControllerProvider.exists)) {
           ref.invalidate(avatarControllerProvider);
         }
       }),
