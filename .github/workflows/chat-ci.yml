@@ -18,11 +18,15 @@ defaults:
   run:
     working-directory: chat
 
+# Least privilege for the GITHUB_TOKEN (LIF-188): these jobs only read the repo.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Same guard the backend workflow runs, from the other side: a chat
       # migration must not write to a table the monolith owns.
@@ -31,7 +35,7 @@ jobs:
         working-directory: .
         run: ./devops/check-schema-ownership.sh
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "25"

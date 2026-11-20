@@ -1,0 +1,59 @@
+# Dependency monitoring for every ecosystem in the repo (LIF-188, epic LIF-178).
+# Security updates are opened as soon as an advisory lands (enable "Dependabot
+# security updates" in the repo settings); the weekly version updates below are
+# grouped so each ecosystem yields one minor/patch PR instead of dozens.
+# Majors arrive as separate PRs, because each one needs its own look.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: maven
+    directory: /chat
+    schedule:
+      interval: weekly
+    groups:
+      chat-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    groups:
+      web-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pub
+    directory: /mobile
+    schedule:
+      interval: weekly
+    groups:
+      mobile-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: gradle
+    directory: /mobile/android
+    schedule:
+      interval: weekly
+    groups:
+      android-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directories: [/backend, /chat, /web]
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
