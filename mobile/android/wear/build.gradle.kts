@@ -19,7 +19,9 @@ android {
         // as the companion of com.khunor.lifey (docs/40-watch-app-plan.md §5.1).
         applicationId = "com.khunor.lifey"
         minSdk = 30
-        targetSdk = compileSdk
+        // Pinned to 36 while compileSdk moved to 37 (LIF-190): compileSdk only
+        // unlocks the newer libraries, the target API level change is its own step.
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
     }
@@ -55,16 +57,16 @@ dependencies {
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
 
     // Compose for Wear OS UI (docs/40-watch-app-plan.md §5, F3).
-    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
-    implementation("androidx.activity:activity-compose:1.12.4")
+    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    implementation("androidx.activity:activity-compose:1.13.0")
     // 1.6.2: androidx.wear.compose.foundation.pager's HorizontalPager, needed
     // for its `rotaryScrollableBehavior` param (1.4.1 only has the plain
     // androidx.compose.foundation.pager one, with no rotary/crown support).
-    implementation("androidx.wear.compose:compose-foundation:1.6.2")
+    implementation("androidx.wear.compose:compose-foundation:1.7.2")
     // Material 3 for Wear (redesign plan 79, D-X0.8): EdgeButton, TransformingLazyColumn, ScreenScaffold/
     // AppScaffold + TimeText, HorizontalPageIndicator, Button, AlertDialog. Same version line as the
     // foundation. Material 2 (`compose-material`) is gone since X4.16.
-    implementation("androidx.wear.compose:compose-material3:1.6.2")
+    implementation("androidx.wear.compose:compose-material3:1.7.2")
     // AmbientLifecycleObserver for the Always-On layouts (D-X0.15); required for any ambient support.
     implementation("androidx.wear:wear:1.4.0")
     // Ongoing Activity (X4.o2): the workout notification also shows on the watch face.
@@ -85,7 +87,7 @@ dependencies {
     // JVM unit tests for the pure design-system rules (redesign plan 79, D-X0.11).
     testImplementation("junit:junit:4.13.2")
     // @WearPreviewDevices / @WearPreviewFontScales for the component previews (D-X0.11).
-    debugImplementation("androidx.wear.compose:compose-ui-tooling:1.6.2")
+    debugImplementation("androidx.wear.compose:compose-ui-tooling:1.7.2")
 
     // Health Services — live HR/kcal during the strength-training exercise
     // (docs/40-watch-app-plan.md §5.3). 1.1.0 is the current stable line
@@ -99,6 +101,6 @@ dependencies {
     // Task (a different type from ListenableFuture above) — same idea, the
     // matching `.await()` extension for that type.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
-    implementation("androidx.core:core-ktx:1.18.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
+    implementation("androidx.core:core-ktx:1.19.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.1")
 }

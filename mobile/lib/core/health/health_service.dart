@@ -114,6 +114,11 @@ class HealthService {
   /// native error text (e.g. `SecurityException: Caller requires
   /// android.permission.health.READ_STEPS ...`) instead.
   bool _looksLikeRevokedPermission(Object error) {
+    // health 14+ reports it as a typed error (LIF-190); the text match below
+    // stays for anything the plugin still surfaces as a raw platform error.
+    if (error is HealthPlatformException) {
+      return error.errorCode == HealthErrorCode.permissionDenied;
+    }
     final message = error.toString().toLowerCase();
     return message.contains('permission') &&
         (message.contains('securityexception') || message.contains('healthconnectexception'));
@@ -179,9 +184,15 @@ class HealthService {
       await _ensureConfigured();
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
-      return _health.getTotalStepsInInterval(startOfDay, now);
+      return _nullIfNoSteps(await _health.getTotalStepsInInterval(startOfDay, now));
     });
   }
+
+  /// health 14 returns 0 (not null) when there are no step samples, and on iOS
+  /// HealthKit also answers 0 when READ was never granted, since it hides
+  /// denial. Mapping 0 back to null keeps this class's contract: callers hide
+  /// the steps UI instead of showing a misleading zero.
+  int? _nullIfNoSteps(int steps) => steps == 0 ? null : steps;
 
   /// Sum of `HealthDataType.STEPS` for the calendar day containing [day]
   /// (local midnight to the following midnight). Returns null when
@@ -192,7 +203,7 @@ class HealthService {
       await _ensureConfigured();
       final start = DateTime(day.year, day.month, day.day);
       final end = addDays(start, 1);
-      return _health.getTotalStepsInInterval(start, end);
+      return _nullIfNoSteps(await _health.getTotalStepsInInterval(start, end));
     });
   }
 
