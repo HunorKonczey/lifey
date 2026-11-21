@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/my_trainers/application/my_trainers_controller.dart';
 import 'package:lifey/features/my_trainers/domain/my_trainer.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/origin_trainer_badge.dart';
 
 class _FakeMyTrainersController extends MyTrainersController {
@@ -26,7 +27,7 @@ Future<void> _pumpBadge(
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: OriginTrainerBadge(originTrainerId: originTrainerId)),
       ),

@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/connectivity_status_provider.dart';
@@ -22,6 +22,7 @@ import 'package:lifey/features/trainer/clients/presentation/widgets/client_list_
 import 'package:lifey/features/trainer/schedule/data/schedule_repository.dart';
 import 'package:lifey/features/trainer/schedule/domain/schedule.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/ds/metric_tile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -132,7 +133,7 @@ Future<void> _pump(
       child: MaterialApp(
         theme: theme ?? AppTheme.dark,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

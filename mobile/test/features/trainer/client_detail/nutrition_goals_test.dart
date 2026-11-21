@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/trainer/client_detail/data/client_detail_repository.dart';
 import 'package:lifey/features/trainer/client_detail/domain/client_data.dart';
 import 'package:lifey/features/trainer/client_detail/presentation/widgets/nutrition_goals_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeAdapter implements HttpClientAdapter {
   final List<String> methods = [];
@@ -72,7 +73,7 @@ Future<_OutcomeBox> _openSheet(
       overrides: [clientDetailRepositoryProvider.overrideWithValue(repo)],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Builder(

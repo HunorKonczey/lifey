@@ -3,6 +3,14 @@ include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
     - build/**
+    - android/**
+    - ios/**
+    - web/**
+    # `flutter gen-l10n` output (gitignored, regenerated on every build). As of
+    # Flutter 3.50 the generator itself still emits the deprecated
+    # flutter_localizations Global{Material,Cupertino}Localizations delegates,
+    # which we cannot edit in a generated file (LIF-192).
+    - lib/l10n/app_localizations*.dart
 
 linter:
   rules:

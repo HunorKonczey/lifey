@@ -1,11 +1,12 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/core/theme/app_tokens.dart';
 import 'package:lifey/features/trainer/shared/trainer_view_badge.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 void main() {
   group('the trainer shell is the client app\'s family (R6.1)', () {
@@ -28,7 +29,7 @@ void main() {
         await tester.pumpWidget(MaterialApp(
           theme: theme,
           locale: const Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Scaffold(body: Center(child: TrainerViewBadge())),
         ));

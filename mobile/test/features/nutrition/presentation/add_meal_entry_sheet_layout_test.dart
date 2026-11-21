@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/connectivity_status_provider.dart';
@@ -17,6 +17,7 @@ import 'package:lifey/features/nutrition/presentation/widgets/add_meal_entry_she
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// LIF-133: the add-food-to-meal sheet as the app shows it - a modal bottom sheet - with the OpenFoodFacts option ticked
 /// and results listed. The suggestion list is an overlay under the search field; it has to stay a usable size and must
@@ -86,7 +87,7 @@ Future<void> _open(WidgetTester tester, {required Size size, double textScale = 
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(

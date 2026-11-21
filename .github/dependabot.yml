@@ -50,12 +50,8 @@ updates:
       mobile-minor-patch:
         update-types: [minor, patch]
     ignore:
-      # LIF-192: CI and local stay on Flutter 3.44.9; build_runner >= 2.17 needs
-      # analyzer >= 14.3, which needs a newer Dart SDK than 3.44 ships.
-      - dependency-name: build_runner
-        versions: [">=2.17.0"]
-      # The Flutter SDK pins intl (flutter_localizations depends on exactly
-      # 0.20.2 in 3.44), so a newer intl cannot resolve until the SDK moves.
+      # The Flutter SDK pins intl (flutter_localizations depends on one exact
+      # version), so a newer intl only resolves when the pinned SDK moves.
       - dependency-name: intl
 
   - package-ecosystem: gradle

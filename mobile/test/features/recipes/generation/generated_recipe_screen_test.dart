@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +13,7 @@ import 'package:lifey/features/recipes/generation/domain/generated_recipe.dart';
 import 'package:lifey/features/recipes/generation/domain/recipe_wizard.dart';
 import 'package:lifey/features/recipes/generation/presentation/generated_recipe_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeGeneration extends RecipeGenerationController {
   _FakeGeneration(this._result);
@@ -152,7 +153,7 @@ void main() {
       ],
       child: MaterialApp.router(
         routerConfig: router,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
     ));

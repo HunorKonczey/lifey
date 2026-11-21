@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +10,7 @@ import 'package:lifey/features/trainer/client_detail/data/client_detail_reposito
 import 'package:lifey/features/trainer/client_detail/domain/client_workout_session.dart';
 import 'package:lifey/features/trainer/client_detail/presentation/tabs/workouts_tab.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 ClientWorkoutSession _session({
   int id = 1,
@@ -131,7 +132,7 @@ Future<void> _pump(
       ],
       child: MaterialApp.router(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
       ),

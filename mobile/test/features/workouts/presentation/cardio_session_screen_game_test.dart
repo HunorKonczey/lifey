@@ -1,3 +1,4 @@
+import 'package:lifey/features/chat/application/chat_share.dart';
 import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -6,7 +7,7 @@ import 'package:lifey/core/local_db/app_database.dart';
 import 'package:lifey/core/local_db/database_provider.dart';
 import 'package:lifey/core/location/location_service.dart';
 import 'package:lifey/core/location/location_service_geolocator.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/watch/watch_workout_service.dart';
@@ -17,6 +18,7 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../helpers/summaries_bridge.dart';
 
@@ -212,6 +214,7 @@ Future<_RecordingSessionController> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
@@ -226,7 +229,7 @@ Future<_RecordingSessionController> _pump(
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSessionScreen(session: session),
       ),

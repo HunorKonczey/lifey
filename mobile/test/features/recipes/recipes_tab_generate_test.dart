@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +9,7 @@ import 'package:lifey/features/recipes/domain/recipe.dart';
 import 'package:lifey/features/recipes/generation/presentation/recipe_wizard_sheet.dart';
 import 'package:lifey/features/recipes/presentation/recipes_tab.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// The AI entry point on the recipes list (docs/23-ai-calorie-estimation-plan.md
 /// Phase 2): shown with its credit chip, and it never opens the wizard when the
@@ -32,7 +33,7 @@ Future<void> _pump(WidgetTester tester, {required bool offline, required int? cr
     ],
     child: MaterialApp.router(
       routerConfig: router,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     ),
   ));

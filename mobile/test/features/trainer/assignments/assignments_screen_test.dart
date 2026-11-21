@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/connectivity_status_provider.dart';
@@ -14,6 +14,7 @@ import 'package:lifey/features/trainer/assignments/presentation/assignments_scre
 import 'package:lifey/features/trainer/clients/application/trainer_clients_controller.dart';
 import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeAuthController extends AuthController {
   @override
@@ -110,7 +111,7 @@ Future<_FakeAssignmentsRepository> _pump(
       child: MaterialApp(
         theme: theme ?? AppTheme.dark,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

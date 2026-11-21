@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/core/theme/app_tokens.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/charts/time_series_chart.dart';
 
 final _today = DateTime(2026, 9, 24);
@@ -14,7 +15,7 @@ List<TimeSeriesPoint> _series(List<double> values) => [
 
 Widget _host(Widget chart, {double textScale = 1, double width = 339}) => MaterialApp(
       theme: AppTheme.dark,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => MediaQuery(

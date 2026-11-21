@@ -1,6 +1,7 @@
+import 'package:lifey/features/chat/application/chat_share.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
@@ -16,6 +17,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import '../../../helpers/summaries_bridge.dart';
 
 /// C4a.4 — live GPS distance/weak-signal UI wired into `CardioSessionScreen`
@@ -134,6 +136,7 @@ Future<
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
@@ -147,7 +150,7 @@ Future<
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSessionScreen(session: session ?? _runningSession()),
       ),
@@ -458,6 +461,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          chatShareTargetsProvider.overrideWith((ref) async => const []),
           // InterstitialManager (67 Prompt 10) needs this — see
           // cardio_session_screen_machine_test.dart.
           adsEnabledProvider.overrideWithValue(false),
@@ -471,7 +475,7 @@ void main() {
         ],
         child: MaterialApp(
           locale: const Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: CardioSessionScreen(session: _runningSession()),
         ),

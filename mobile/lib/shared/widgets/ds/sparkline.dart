@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Y positions of a sparkline's [values] inside a box of [height]: the
 /// highest value at the top, the lowest at the bottom, both inset by [pad] so

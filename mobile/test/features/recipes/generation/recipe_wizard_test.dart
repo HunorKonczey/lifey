@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/recipes/generation/domain/recipe_wizard.dart';
 import 'package:lifey/features/recipes/generation/presentation/recipe_wizard_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// The wizard (docs/23-ai-calorie-estimation-plan.md Phase 2): five steps, the
 /// meat one skipped in both directions for a meatless diet, and nothing sent
@@ -11,7 +12,7 @@ import 'package:lifey/l10n/app_localizations.dart';
 Future<RecipeWizardAnswers?> _openWizard(WidgetTester tester) async {
   RecipeWizardAnswers? result;
   await tester.pumpWidget(MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Builder(
       builder: (context) => Scaffold(

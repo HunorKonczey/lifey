@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/nutrition/application/food_controller.dart';
@@ -13,6 +13,7 @@ import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _NoGoal extends SettingsController {
   @override
@@ -51,7 +52,7 @@ Future<void> _pumpSheet(
         mealsOnDayProvider.overrideWith((ref, day) => Stream.value(const <Meal>[])),
       ],
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: AddMealEntrySheet(
@@ -336,7 +337,7 @@ void main() {
             mealsOnDayProvider.overrideWith((ref, day) => Stream.value(const <Meal>[])),
           ],
           child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Builder(
               builder: (context) => TextButton(
@@ -381,7 +382,7 @@ void main() {
           mealsOnDayProvider.overrideWith((ref, day) => Stream.value(const <Meal>[])),
         ],
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           // No Scaffold: like showModalBottomSheet, the sheet sees the keyboard inset itself.
           home: Material(child: AddMealEntrySheet(preselectedFood: _foods[1])),

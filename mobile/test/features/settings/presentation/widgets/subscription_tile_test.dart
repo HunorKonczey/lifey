@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +6,7 @@ import 'package:lifey/core/entitlements/entitlement.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/features/settings/presentation/widgets/subscription_tile.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// Covers Prompt 7's own verify line: a widget test per state, in both
 /// locales (`docs/landing_page/67-mobile-free-pro-plan.md` §4.4, `69` frame
@@ -53,7 +54,7 @@ Future<void> _pumpTile(WidgetTester tester, {Entitlement? entitlement, required 
       child: MaterialApp.router(
         routerConfig: router,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
     ),
@@ -164,7 +165,7 @@ void main() {
           ],
           child: const MaterialApp(
             locale: Locale('en'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: SubscriptionSection()),
           ),

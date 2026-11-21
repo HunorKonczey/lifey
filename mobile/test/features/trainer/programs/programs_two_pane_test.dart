@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +10,7 @@ import 'package:lifey/features/trainer/programs/domain/program.dart';
 import 'package:lifey/features/trainer/programs/presentation/programs_screen.dart';
 import 'package:lifey/features/trainer/shared/trainer_layout.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/trainer_view_menu.dart';
 
 /// docs/chat/41-trainer-mobile-v2-plan.md §8.2 — the program library behaves
@@ -64,7 +65,7 @@ Future<void> _pump(WidgetTester tester, {required Size size}) async {
     ],
     child: MaterialApp.router(
       routerConfig: router,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     ),
   ));

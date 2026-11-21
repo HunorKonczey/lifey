@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 // ---------------------------------------------------------------------------
 // Spacing — 4pt base grid (docs/redesign/77-mobile-redesign-plan.md D-R0.6)

@@ -1,6 +1,7 @@
+import 'package:lifey/features/chat/application/chat_share.dart';
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
@@ -18,6 +19,7 @@ import 'package:lifey/features/nutrition/presentation/meals_tab.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/meal_list_row.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/week_strip.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// See test/core/sync/food_update_http_method_test.dart's comment — the
 /// outbox's fire-and-forget kick can otherwise race the test's DB teardown.
@@ -46,6 +48,7 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     final dio = Dio(BaseOptions(baseUrl: 'http://test'))..httpClientAdapter = _FailingAdapter();
     container = ProviderContainer(overrides: [
+      chatShareTargetsProvider.overrideWith((ref) async => const []),
       appDatabaseProvider.overrideWithValue(db),
       dioClientProvider.overrideWithValue(dio),
       syncEngineProvider.overrideWith((ref) => _NoopSyncEngine(db, dio)),
@@ -66,7 +69,7 @@ void main() {
         container: container,
         child: MaterialApp(
           theme: AppTheme.dark,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: MealsTab(onCopyDay: onCopyDay)),
         ),

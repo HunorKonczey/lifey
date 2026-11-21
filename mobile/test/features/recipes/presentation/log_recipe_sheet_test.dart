@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
@@ -14,6 +14,7 @@ import 'package:lifey/features/nutrition/domain/food.dart';
 import 'package:lifey/features/recipes/domain/recipe.dart';
 import 'package:lifey/features/recipes/presentation/widgets/log_recipe_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// See test/core/sync/food_update_http_method_test.dart's comment — the
 /// outbox's fire-and-forget kick can otherwise race the test's DB teardown.
@@ -91,7 +92,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Builder(

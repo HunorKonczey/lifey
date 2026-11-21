@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/trainer/assignments/application/assignments_controller.dart';
@@ -12,6 +12,7 @@ import 'package:lifey/features/trainer/assignments/presentation/widgets/assign_r
 import 'package:lifey/features/trainer/clients/application/trainer_clients_controller.dart';
 import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 TrainerClient _client(int id, String firstName) => TrainerClient(
       userId: id,
@@ -329,7 +330,7 @@ void main() {
         ProviderScope(
           child: MaterialApp(
             locale: const Locale('en'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: AssignResultSheet(

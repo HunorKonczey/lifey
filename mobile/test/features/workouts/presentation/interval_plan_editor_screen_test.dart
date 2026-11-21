@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/workouts/application/cardio_interval_plan_controller.dart';
 import 'package:lifey/features/workouts/domain/cardio_interval_plan.dart';
 import 'package:lifey/features/workouts/presentation/interval_plan_editor_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// docs/cardio/60 C7.4 — kész-ha: "Egy 4×(4+3) perces terv 6 koppintásból
 /// összeáll; a teljes hossz élőben látszik" (a 4×(4+3) plan comes together in
@@ -50,7 +51,7 @@ Future<void> pumpEditor(
         cardioIntervalPlanControllerProvider.overrideWith(() => controller),
       ],
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(

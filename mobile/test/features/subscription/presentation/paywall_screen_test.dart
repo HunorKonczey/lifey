@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'dart:ui' show CheckedState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +15,7 @@ import 'package:lifey/features/subscription/data/store_purchase_client.dart';
 import 'package:lifey/features/subscription/domain/subscription_product.dart';
 import 'package:lifey/features/subscription/presentation/paywall_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// Covers Prompt 6's own verify line: a widget test per trigger, the
 /// sponsored state rendering no purchase button, and a golden-free layout
@@ -123,7 +124,7 @@ Future<void> _pumpPaywall(
       child: MaterialApp.router(
         routerConfig: router,
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery.withClampedTextScaling(
           minScaleFactor: textScale,

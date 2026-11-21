@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/connectivity_status_provider.dart';
@@ -17,6 +17,7 @@ import 'package:lifey/features/nutrition/presentation/widgets/add_meal_entry_she
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// docs/84 Prompt 9: the OpenFoodFacts option in the add-food-to-meal sheet — the checkbox and the "From OpenFoodFacts"
 /// group in the suggestion list. The sheet is built with a fake repository that answers when the test says so.
@@ -122,7 +123,7 @@ Future<void> _pump(WidgetTester tester,
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: AddMealEntrySheet(initialFood: initialFood, initialGrams: initialFood == null ? null : 100)),
       ),

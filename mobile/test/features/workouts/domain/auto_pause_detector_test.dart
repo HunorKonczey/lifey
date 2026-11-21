@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/location/location_service.dart';
 import 'package:lifey/features/workouts/domain/auto_pause_detector.dart';

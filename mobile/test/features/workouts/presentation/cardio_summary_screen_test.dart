@@ -1,7 +1,8 @@
+import 'package:lifey/features/chat/application/chat_share.dart';
 import 'dart:async';
 
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
@@ -17,6 +18,7 @@ import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart'
 import 'package:lifey/features/workouts/presentation/widgets/route_painter.dart';
 import 'package:lifey/features/workouts/presentation/workouts_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/charts/pace_bar_chart.dart';
 
 /// C1.9 → C2.8: `CardioSummaryScreen` — started read-only (C1.9), now the
@@ -71,6 +73,7 @@ Future<_RecordingSessionController> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionControllerProvider.overrideWith(() => controller),
         // C8.3: an in-memory database, or every DISTANCE-family pump here
@@ -83,7 +86,7 @@ Future<_RecordingSessionController> _pump(
       ],
       child: MaterialApp(
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSummaryScreen(
           session: session,
@@ -1008,6 +1011,7 @@ void main() {
     testWidgets('requests the Sessions tab (no GoRouter ancestor: falls back to a no-op pop)',
         (tester) async {
       final container = ProviderContainer(overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
         appDatabaseProvider.overrideWithValue(_testDatabase()),
@@ -1018,7 +1022,7 @@ void main() {
           container: container,
           child: MaterialApp(
             locale: const Locale('en'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: CardioSummaryScreen(
               session: _session(activityType: 'RUNNING', cardio: const CardioMetrics(distanceMeters: 5000)),
@@ -1046,13 +1050,14 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            chatShareTargetsProvider.overrideWith((ref) async => const []),
             settingsControllerProvider.overrideWith(_MetricSettings.new),
             workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
             appDatabaseProvider.overrideWithValue(_testDatabase()),
           ],
           child: const MaterialApp(
             locale: Locale('en'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Text('behind')),
           ),

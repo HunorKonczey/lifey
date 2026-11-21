@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/ads/nav_reserved_space.dart';
 import 'package:lifey/features/trainer/shared/trainer_fab.dart';

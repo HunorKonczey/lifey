@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -11,6 +11,7 @@ import 'package:lifey/features/weight/application/weight_controller.dart';
 import 'package:lifey/features/weight/domain/weight_entry.dart';
 import 'package:lifey/features/weight/presentation/widgets/add_weight_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// R4.4: the log-weight sheet — 72 px value, 56 dp ±0.1 buttons, a reference,
 /// a date row, Save; grams inside so steps never drift.
@@ -69,7 +70,7 @@ Future<_RecordingWeights> _open(
     child: MaterialApp(
       theme: theme ?? AppTheme.dark,
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

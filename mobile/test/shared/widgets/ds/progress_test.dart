@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/core/theme/app_tokens.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/ds/animated_fill.dart';
 import 'package:lifey/shared/widgets/ds/metric_bar.dart';
 import 'package:lifey/shared/widgets/ds/metric_tile.dart';
@@ -10,7 +11,7 @@ import 'package:lifey/shared/widgets/ds/progress_ring.dart';
 
 Widget _host(Widget child, {bool reducedMotion = false, double textScale = 1, double width = 371}) => MaterialApp(
       theme: AppTheme.dark,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => MediaQuery(

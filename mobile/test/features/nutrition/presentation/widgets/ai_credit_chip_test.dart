@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/ai_credit_chip.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// Covers the AI credit chip (frame P13, `69` §4.3/DV-11/DV-12) at
 /// 3/1/0 credits and `null` (unlimited), with the ICU-plural semantics
@@ -39,7 +40,7 @@ Future<ProviderContainer> _pumpChip(
       child: MaterialApp.router(
         routerConfig: router,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
     ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/nutrition/application/food_controller.dart';
@@ -8,6 +8,7 @@ import 'package:lifey/features/nutrition/domain/meal_estimate.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/add_meal_entry_sheet.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/meal_estimate_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeEstimation extends MealEstimationController {
   _FakeEstimation(this._result);
@@ -93,7 +94,7 @@ void main() {
         foodControllerProvider.overrideWith(() => foods),
       ],
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(

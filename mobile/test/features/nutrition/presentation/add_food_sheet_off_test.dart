@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/connectivity_status_provider.dart';
@@ -12,6 +12,7 @@ import 'package:lifey/features/nutrition/domain/food.dart';
 import 'package:lifey/features/nutrition/domain/off_search.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/add_food_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// docs/84 follow-up: the OpenFoodFacts option in the plain create-food sheet — the checkbox under the name field, the list
 /// of products to choose from, and picking one fills the form (nothing is saved until the user saves).
@@ -128,7 +129,7 @@ Future<void> _open(WidgetTester tester, {bool offline = false, Food? food, doubl
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(
