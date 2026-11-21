@@ -57,11 +57,6 @@ updates:
       # The Flutter SDK pins intl (flutter_localizations depends on exactly
       # 0.20.2 in 3.44), so a newer intl cannot resolve until the SDK moves.
       - dependency-name: intl
-      # LIF-191: firebase_messaging 17 replaces the FCM token with an Installation ID.
-      - dependency-name: firebase_core
-        update-types: [version-update:semver-major]
-      - dependency-name: firebase_messaging
-        update-types: [version-update:semver-major]
 
   - package-ecosystem: gradle
     directory: /mobile/android
