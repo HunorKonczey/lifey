@@ -32,7 +32,9 @@ updates:
       web-minor-patch:
         update-types: [minor, patch]
     ignore:
-      # LIF-189: typescript-eslint 8.x has no TypeScript 7 support yet (npm ci ERESOLVE).
+      # LIF-189: on TypeScript 6.0 (the last JS-based compiler). TypeScript 7 is the
+      # native Go compiler, and typescript-eslint (peer typescript <6.1.0 as of
+      # 8.73) cannot use it yet; drop this rule once its peer range covers 7.
       - dependency-name: typescript
         update-types: [version-update:semver-major]
 
