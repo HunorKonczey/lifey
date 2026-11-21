@@ -17,11 +17,11 @@ if (file("google-services.json").exists()) {
 
 android {
     namespace = "com.khunor.lifey"
-    // flutter.compileSdkVersion=36 is set in gradle.properties (the `health`
-    // plugin's androidx.health.connect dependency requires compiling
-    // against API 35+); reading it here keeps both app and plugin modules
-    // consistent with the same Flutter-recognized override mechanism.
-    compileSdk = flutter.compileSdkVersion
+    // Read from gradle.properties (37, LIF-190) rather than
+    // `flutter.compileSdkVersion`: Flutter 3.44 hardcodes that one to 36, and
+    // health 14 / flutter_local_notifications 23 fail the AAR metadata check
+    // below 37. :wear reads the same property, so both stay in lockstep.
+    compileSdk = (property("flutter.compileSdkVersion") as String).toInt()
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

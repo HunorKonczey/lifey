@@ -55,18 +55,6 @@ updates:
       # The Flutter SDK pins intl (flutter_localizations depends on exactly
       # 0.20.2 in 3.44), so a newer intl cannot resolve until the SDK moves.
       - dependency-name: intl
-      # LIF-190: need compileSdk 37 / AGP 9.1, health 14 changes error handling,
-      # home_widget 0.10's Android plugin does not compile on the current toolchain.
-      - dependency-name: health
-      - dependency-name: home_widget
-      # geolocator >= 14.0.3 pulls package_info_plus 10 -> win32 6, which health 13
-      # (device_info_plus 12 -> win32 5) excludes; it moves together with health 14.
-      - dependency-name: geolocator
-        versions: [">=14.0.3"]
-      - dependency-name: flutter_secure_storage
-        update-types: [version-update:semver-major]
-      - dependency-name: flutter_local_notifications
-        update-types: [version-update:semver-major]
       # LIF-191: firebase_messaging 17 replaces the FCM token with an Installation ID.
       - dependency-name: firebase_core
         update-types: [version-update:semver-major]
@@ -80,19 +68,6 @@ updates:
     groups:
       android-minor-patch:
         update-types: [minor, patch]
-    ignore:
-      # LIF-190: these lines require compileSdk 37 (AAR metadata check); the app
-      # and the Wear module still compile against 36.
-      - dependency-name: androidx.compose:compose-bom
-        versions: [">=2026.07.00"]
-      - dependency-name: androidx.wear.compose:*
-        versions: [">=1.7.0"]
-      - dependency-name: androidx.activity:activity-compose
-        versions: [">=1.13.0"]
-      - dependency-name: androidx.core:core-ktx
-        versions: [">=1.19.0"]
-      - dependency-name: androidx.lifecycle:lifecycle-runtime-ktx
-        versions: [">=2.11.0"]
 
   - package-ecosystem: docker
     directories: [/backend, /chat, /web]
