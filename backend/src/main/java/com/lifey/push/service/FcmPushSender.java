@@ -39,7 +39,11 @@ class FcmPushSender implements PushSender {
     @Override
     public PushSendResult send(PushDevice device, PushMessage message) {
         Message.Builder builder = Message.builder()
-                .setToken(device.getToken())
+                // An Android device's "token" is its Firebase Installation ID
+                // since LIF-191 (firebase_messaging 17 register()/onRegistered);
+                // setToken() is deprecated in firebase-admin >= 9.10. A dead FID
+                // still comes back as UNREGISTERED, handled below.
+                .setFid(device.getToken())
                 .setNotification(Notification.builder()
                         .setTitle(message.title())
                         .setBody(message.body())

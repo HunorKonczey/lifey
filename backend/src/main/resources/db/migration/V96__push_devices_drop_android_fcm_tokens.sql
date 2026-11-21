@@ -1,0 +1,12 @@
+-- Android push now registers a Firebase Installation ID (FID) instead of an
+-- FCM registration token (LIF-191; docs/30-push-notifications-plan.md M1b):
+-- firebase_messaging 17 deprecates getToken() in favour of register() /
+-- onRegistered, and the backend sends with Message.setFid(). The existing
+-- ANDROID rows hold old-style registration tokens that a FID send cannot
+-- reach, so they are dropped. Every Android app re-registers its FID on the
+-- next launch after signing in.
+--
+-- No mixed token/FID period is kept: the app has not been released (no old
+-- app versions in the wild), so client and backend change together.
+-- iOS rows (APNs device tokens) are untouched.
+delete from push_devices where platform = 'ANDROID';

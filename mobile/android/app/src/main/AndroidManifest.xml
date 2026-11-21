@@ -121,6 +121,14 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713" />
+        <!-- Android push registers a Firebase Installation ID (FID) instead of
+             an FCM token (LIF-191): FirebaseMessaging.register() throws
+             IllegalStateException unless this is true, and with it set the
+             deprecated getToken() path is disabled. The backend sends with
+             Message.setFid(). -->
+        <meta-data
+            android:name="firebase_messaging_installation_id_enabled"
+            android:value="true" />
         <!-- Today's calories home screen widget (docs/25-android-widget-ongoing-notification-plan.md). -->
         <receiver
             android:name=".TodaySummaryWidgetProvider"
