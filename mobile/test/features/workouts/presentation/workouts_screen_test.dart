@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
@@ -12,6 +12,7 @@ import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/workouts/presentation/widgets/week_summary_row.dart';
 import 'package:lifey/features/workouts/presentation/workouts_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/ds/lifey_header.dart';
 
 class _NoopSyncEngine extends SyncEngine {
@@ -60,7 +61,7 @@ void main() {
         child: MaterialApp(
           theme: AppTheme.dark,
           locale: locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const WorkoutsScreen(),
         ),

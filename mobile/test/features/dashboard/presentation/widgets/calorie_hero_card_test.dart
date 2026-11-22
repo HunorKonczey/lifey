@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/format/lifey_format.dart';
 import 'package:lifey/core/theme/app_theme.dart';
@@ -6,6 +6,7 @@ import 'package:lifey/features/dashboard/domain/daily_stats.dart';
 import 'package:lifey/features/dashboard/presentation/widgets/calorie_hero_card.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/ds/metric_bar.dart';
 import 'package:lifey/shared/widgets/ds/progress_ring.dart';
 import 'package:lifey/shared/widgets/ds/tinted_chip.dart';
@@ -46,7 +47,7 @@ Future<void> _pump(
     MaterialApp(
       theme: theme ?? AppTheme.dark,
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

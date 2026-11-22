@@ -26,15 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Pinned (LIF-185): an unpinned `channel: stable` silently moved CI to
-      # Flutter 3.50, where `package:flutter/material.dart` is deprecated in
-      # favour of `material_ui`, and `flutter analyze` failed on every file.
-      # Keep this equal to the local SDK; moving past 3.47 means migrating
-      # the imports first.
+      # Pinned (LIF-185, moved to 3.50.1 in LIF-192): an unpinned `channel:
+      # stable` silently moves CI to a new SDK whose deprecations then fail
+      # `flutter analyze` (that is how the material_ui migration surfaced).
+      # Keep this equal to the local SDK and bump it deliberately.
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
-          flutter-version: 3.44.9
+          flutter-version: 3.50.1
           cache: true
 
       - name: Install dependencies

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Centers its child and fills the viewport while staying scrollable, so it
 /// can sit inside a [RefreshIndicator] (pull-to-refresh still works).

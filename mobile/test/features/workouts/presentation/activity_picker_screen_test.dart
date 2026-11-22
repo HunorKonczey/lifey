@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/sync_status_provider.dart';
@@ -14,6 +14,7 @@ import 'package:lifey/features/workouts/presentation/activity_picker_screen.dart
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/features/workouts/presentation/open_workout_screens.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../helpers/summaries_bridge.dart';
 
@@ -74,7 +75,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, {List<WorkoutTemp
       ],
       child: const MaterialApp(
         locale: Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ActivityPickerScreen(),
       ),
@@ -246,7 +247,7 @@ void main() {
         ],
         child: MaterialApp(
           locale: const Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => Scaffold(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
@@ -11,6 +11,7 @@ import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/domain/personal_record.dart';
 import 'package:lifey/features/workouts/presentation/widgets/workout_success_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// Sharing from the end-of-workout sheet (docs/chat/83-chat-result-card-plan.md §4):
 /// the whole workout, and each record on its own.
@@ -59,7 +60,7 @@ Future<void> _pump(
     child: MaterialApp(
       theme: AppTheme.dark,
       locale: const Locale('en'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Builder(

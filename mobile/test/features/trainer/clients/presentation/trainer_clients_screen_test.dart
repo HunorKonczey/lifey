@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/connectivity_status_provider.dart';
@@ -12,6 +12,7 @@ import 'package:lifey/features/trainer/clients/presentation/widgets/client_card.
 import 'package:lifey/features/trainer/clients/presentation/widgets/client_sort_chips.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeAuthController extends AuthController {
   @override
@@ -80,7 +81,7 @@ Future<void> _pump(
       child: MaterialApp(
         theme: AppTheme.dark,
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const TrainerClientsScreen(),
       ),

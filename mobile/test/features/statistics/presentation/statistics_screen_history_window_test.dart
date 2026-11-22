@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +16,7 @@ import 'package:lifey/features/weight/domain/weight_entry.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/charts/stats_range.dart';
 import 'package:lifey/shared/widgets/ds/lifey_segmented.dart';
 import '../../../helpers/summaries_bridge.dart';
@@ -110,7 +111,7 @@ Future<ProviderContainer> _pumpStatisticsScreen(
       child: MaterialApp.router(
         routerConfig: router,
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
     ),

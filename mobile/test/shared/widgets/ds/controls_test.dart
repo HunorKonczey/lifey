@@ -1,9 +1,10 @@
 import 'package:flutter/rendering.dart' show RenderParagraph;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/core/theme/app_tokens.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/app_snackbar.dart';
 import 'package:lifey/shared/widgets/ds/lifey_segmented.dart';
 import 'package:lifey/shared/widgets/ds/list_group.dart';
@@ -11,7 +12,7 @@ import 'package:lifey/shared/widgets/pill_tab_bar.dart';
 
 Widget _host(Widget child, {ThemeData? theme, double textScale = 1, double width = 371}) => MaterialApp(
       theme: theme ?? AppTheme.dark,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => MediaQuery(

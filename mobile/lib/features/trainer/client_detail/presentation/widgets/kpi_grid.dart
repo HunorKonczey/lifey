@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// KPI tiles [columns] to a row — two on a phone, four on the tablet's wide
 /// detail pane (canvas Lifey 6) — each row as tall as its tallest tile: a tile

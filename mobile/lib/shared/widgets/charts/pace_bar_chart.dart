@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// One split's worth of the chart (docs/cardio/61 §2 M33).
 class PaceBar {

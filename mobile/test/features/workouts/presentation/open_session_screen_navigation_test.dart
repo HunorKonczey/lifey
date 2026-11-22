@@ -1,5 +1,6 @@
+import 'package:lifey/features/chat/application/chat_share.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
@@ -16,6 +17,7 @@ import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart'
 import 'package:lifey/features/workouts/presentation/log_session_screen.dart';
 import 'package:lifey/features/workouts/presentation/open_workout_screens.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import '../../../helpers/summaries_bridge.dart';
 
 /// C1.9: the single kind-branch point (`open_workout_screens.dart`) now
@@ -57,6 +59,7 @@ Future<void> _pumpAndOpen(WidgetTester tester, WorkoutSession session) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         summariesFollowController,
         sessionsWithSetsFollowController,
         strengthPrCountsFollowController,
@@ -68,7 +71,7 @@ Future<void> _pumpAndOpen(WidgetTester tester, WorkoutSession session) async {
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(

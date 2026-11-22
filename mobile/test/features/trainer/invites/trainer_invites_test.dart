@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/trainer/clients/application/trainer_clients_controller.dart';
@@ -12,6 +12,7 @@ import 'package:lifey/features/trainer/invites/domain/sent_invite.dart';
 import 'package:lifey/features/trainer/invites/presentation/trainer_invites_screen.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeAdapter implements HttpClientAdapter {
   final List<String> methods = [];
@@ -105,7 +106,7 @@ Future<void> _pump(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const TrainerInvitesScreen(),
       ),

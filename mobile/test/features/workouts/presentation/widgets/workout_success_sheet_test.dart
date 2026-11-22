@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/features/workouts/data/workout_session_repository.dart';
 import 'package:lifey/features/workouts/presentation/widgets/exercise_session_card.dart';
 import 'package:lifey/features/workouts/presentation/widgets/workout_success_sheet.dart';
@@ -198,7 +199,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(
         theme: theme ?? AppTheme.dark,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context)

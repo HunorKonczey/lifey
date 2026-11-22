@@ -1,6 +1,7 @@
+import 'package:lifey/features/chat/application/chat_share.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
@@ -18,6 +19,7 @@ import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart'
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/features/workouts/presentation/workouts_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import '../../../helpers/summaries_bridge.dart';
 
 /// C2.1: `CardioSessionScreen` — the live state machine skeleton.
@@ -264,6 +266,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
@@ -277,7 +280,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSessionScreen(session: session),
       ),
@@ -300,6 +303,7 @@ Future<(_RecordingSessionController, _RecordingNotifierService)> _pumpWithNotifi
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
@@ -314,7 +318,7 @@ Future<(_RecordingSessionController, _RecordingNotifierService)> _pumpWithNotifi
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSessionScreen(session: session),
       ),
@@ -336,6 +340,7 @@ Future<(_RecordingSessionController, _RecordingWatchService)> _pumpWithWatch(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         // See cardio_session_screen_machine_test.dart's own comment on this
         // override — InterstitialManager (67 Prompt 10) needs it here too.
         adsEnabledProvider.overrideWithValue(false),
@@ -350,7 +355,7 @@ Future<(_RecordingSessionController, _RecordingWatchService)> _pumpWithWatch(
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSessionScreen(session: session),
       ),
@@ -755,6 +760,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            chatShareTargetsProvider.overrideWith((ref) async => const []),
             // InterstitialManager (67 Prompt 10) needs this — see
             // cardio_session_screen_machine_test.dart.
             adsEnabledProvider.overrideWithValue(false),
@@ -771,7 +777,7 @@ void main() {
           ],
           child: MaterialApp(
             locale: const Locale('en'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: CardioSessionScreen(
               session: _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch),

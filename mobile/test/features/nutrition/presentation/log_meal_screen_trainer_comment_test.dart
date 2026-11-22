@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/ads/interstitial_manager.dart';
@@ -17,6 +17,7 @@ import 'package:lifey/features/nutrition/presentation/log_meal_screen.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 const _chicken = Food(clientId: 'chicken', name: 'Chicken', caloriesPer100g: 165, proteinPer100g: 31);
 
@@ -82,7 +83,7 @@ Future<void> _open(WidgetTester tester, {Meal? meal}) async {
             })),
       ],
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: LogMealScreen(meal: meal),
       ),

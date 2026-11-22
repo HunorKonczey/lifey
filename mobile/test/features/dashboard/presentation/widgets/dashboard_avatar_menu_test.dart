@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +10,7 @@ import 'package:lifey/features/auth/domain/auth_user.dart';
 import 'package:lifey/features/dashboard/presentation/widgets/dashboard_avatar_menu.dart';
 import 'package:lifey/features/settings/application/avatar_controller.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeAuth extends AuthController {
   _FakeAuth(this._user);
@@ -47,7 +48,7 @@ Future<void> _pump(WidgetTester tester, AuthUser user, {Locale locale = const Lo
       child: MaterialApp.router(
         theme: AppTheme.dark,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
       ),

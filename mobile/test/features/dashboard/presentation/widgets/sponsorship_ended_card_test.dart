@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/entitlements/sponsorship_notice.dart';
 import 'package:lifey/features/dashboard/presentation/widgets/sponsorship_ended_card.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The card itself (`72` Prompt 10). Its *when* is covered by
@@ -27,7 +28,7 @@ Future<void> _pumpCard(WidgetTester tester, {required bool pending}) async {
       ],
       child: const MaterialApp(
         locale: Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: SponsorshipEndedCard()),
       ),

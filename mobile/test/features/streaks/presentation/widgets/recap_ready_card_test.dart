@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/nutrition/application/daily_macros_controller.dart';
@@ -14,6 +14,7 @@ import 'package:lifey/features/weight/domain/weight_entry.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../helpers/summaries_bridge.dart';
 
@@ -61,7 +62,7 @@ Future<void> _pumpCard(
         allStepCountsProvider.overrideWith((ref) => Stream.value(const [])),
       ],
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: RecapReadyCard(now: now ?? _tuesday)),
       ),

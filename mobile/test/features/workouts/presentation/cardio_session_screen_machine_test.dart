@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
@@ -9,6 +9,7 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import '../../../helpers/summaries_bridge.dart';
 
 /// C2.3: the MACHINE family layout on `CardioSessionScreen`.
@@ -103,7 +104,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSessionScreen(session: session),
       ),

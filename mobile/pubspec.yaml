@@ -89,6 +89,11 @@ dependencies:
   # consent, so this one dependency covers both.
   google_mobile_ads: ^9.1.0
 
+  # Flutter 3.47+ moved the Material and Cupertino libraries out of the SDK
+  # into these packages (LIF-192); every former package:flutter/material.dart
+  # import now points at material_ui.
+  material_ui: ^1.2.0
+  cupertino_ui: ^1.0.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

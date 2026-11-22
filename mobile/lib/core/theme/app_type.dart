@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Typography helpers outside the Material [TextTheme] slots (design system
 /// v2, docs/redesign/77-mobile-redesign-plan.md D-R0.7 / D-R0.8).

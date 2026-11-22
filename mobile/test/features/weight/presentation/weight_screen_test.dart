@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/format/lifey_format.dart';
@@ -10,6 +10,7 @@ import 'package:lifey/features/weight/application/weight_range.dart';
 import 'package:lifey/features/weight/domain/weight_entry.dart';
 import 'package:lifey/features/weight/presentation/weight_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/charts/time_series_chart.dart';
 import 'package:lifey/shared/widgets/ds/delta_chip.dart';
 import 'package:lifey/shared/widgets/ds/lifey_segmented.dart';
@@ -58,7 +59,7 @@ Future<ProviderContainer> _pump(
     child: MaterialApp(
       theme: theme ?? AppTheme.dark,
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

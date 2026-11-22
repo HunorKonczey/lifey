@@ -1,11 +1,12 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/chat/presentation/widgets/chat_composer.dart';
 import 'package:lifey/features/chat/presentation/widgets/day_divider.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 Future<void> _pump(
   WidgetTester tester,
@@ -22,7 +23,7 @@ Future<void> _pump(
     MaterialApp(
       theme: theme ?? AppTheme.dark,
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, c) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

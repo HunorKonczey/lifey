@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
@@ -12,6 +12,7 @@ import 'package:lifey/features/workouts/presentation/widgets/gps_explainer_sheet
 import 'package:lifey/features/workouts/presentation/widgets/post_workout_feedback_sheet.dart';
 import 'package:lifey/features/workouts/presentation/widgets/rpe_selector.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _StubSettings extends SettingsController {
@@ -39,7 +40,7 @@ Future<void> _open(
     child: MaterialApp(
       theme: theme ?? AppTheme.dark,
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
@@ -103,7 +104,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.dark,
       locale: const Locale('hu'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)),

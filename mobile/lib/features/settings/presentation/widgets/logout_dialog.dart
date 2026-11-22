@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../../core/sync/logout_preflight.dart';
 import '../../../../core/theme/app_tokens.dart';

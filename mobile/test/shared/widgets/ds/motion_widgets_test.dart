@@ -1,5 +1,5 @@
 import 'package:flutter/gestures.dart' show kPressTimeout;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_tokens.dart';
 import 'package:lifey/shared/widgets/ds/animated_number.dart';

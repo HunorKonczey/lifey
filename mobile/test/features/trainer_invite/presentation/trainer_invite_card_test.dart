@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/trainer_invite/application/trainer_invite_controller.dart';
 import 'package:lifey/features/trainer_invite/domain/trainer_invite.dart';
 import 'package:lifey/features/trainer_invite/presentation/trainer_invite_card.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 TrainerInvite _invite(int id, {String email = 'trainer@example.com', int hoursLeft = 18}) {
   return TrainerInvite(
@@ -48,7 +49,7 @@ Future<void> _pumpCard(
       ],
       child: const MaterialApp(
         locale: Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: TrainerInviteCard()),
       ),

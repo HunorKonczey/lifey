@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
@@ -10,6 +10,7 @@ import 'package:lifey/features/recipes/domain/recipe.dart';
 import 'package:lifey/features/recipes/presentation/recipes_tab.dart';
 import 'package:lifey/features/recipes/presentation/widgets/recipe_grid_card.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 Recipe _recipe(String name, double kcal, double protein, {bool favorite = false, int servings = 1}) => Recipe(
       clientId: name,
@@ -68,7 +69,7 @@ Future<_FakeRecipes> _pump(
       child: MaterialApp(
         theme: AppTheme.dark,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/core/theme/app_tokens.dart';
@@ -7,6 +7,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/widgets/cardio_detail_hero.dart';
 import 'package:lifey/features/workouts/presentation/widgets/hr_zone_panel.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/l10n/app_localizations_en.dart';
 
 HrZoneBreakdown _breakdown(List<int> zones, {int? grossSeconds}) {
@@ -45,7 +46,7 @@ Future<void> _pump(
   await tester.pumpWidget(MaterialApp(
     theme: theme ?? AppTheme.dark,
     locale: locale,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     builder: (context, c) => MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

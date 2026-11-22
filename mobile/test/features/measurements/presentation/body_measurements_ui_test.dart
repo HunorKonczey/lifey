@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
@@ -7,6 +7,7 @@ import 'package:lifey/features/measurements/domain/body_measurement.dart';
 import 'package:lifey/features/measurements/presentation/body_measurements_tab.dart';
 import 'package:lifey/features/measurements/presentation/widgets/add_measurement_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeMeasurements extends BodyMeasurementController {
   _FakeMeasurements(this._entries);
@@ -46,7 +47,7 @@ Future<_FakeMeasurements> _pump(WidgetTester tester, List<BodyMeasurement> entri
     child: MaterialApp(
       theme: AppTheme.dark,
       locale: const Locale('en'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: home,
     ),
@@ -184,7 +185,7 @@ void main() {
         child: MaterialApp(
           theme: AppTheme.dark,
           locale: locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),

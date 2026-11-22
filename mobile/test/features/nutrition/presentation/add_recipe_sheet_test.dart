@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
@@ -8,6 +8,7 @@ import 'package:lifey/features/nutrition/presentation/widgets/add_recipe_sheet.d
 import 'package:lifey/features/recipes/application/recipes_controller.dart';
 import 'package:lifey/features/recipes/domain/recipe.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 RecipeIngredient _ingredient(String name, double grams, {double kcal = 0, double protein = 0}) => RecipeIngredient(
       foodClientId: 'food-$name',
@@ -64,7 +65,7 @@ Future<_Harness> _open(WidgetTester tester, {List<Recipe>? recipes, Map<String, 
       child: MaterialApp(
         theme: AppTheme.dark,
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) => Scaffold(

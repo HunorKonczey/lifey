@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
@@ -14,6 +14,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/domain/workout_template.dart';
 import 'package:lifey/features/workouts/presentation/sessions_tab.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'fake_paged_sessions.dart';
 import '../../../helpers/summaries_bridge.dart';
 
@@ -146,7 +147,7 @@ void main() {
           ],
           child: MaterialApp(
             locale: const Locale('en'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SessionsTab(kindFilter: kindFilter, activityTypeFilter: activityTypeFilter),

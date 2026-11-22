@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/ads/nav_reserved_space.dart';
 import 'trainer_layout.dart';

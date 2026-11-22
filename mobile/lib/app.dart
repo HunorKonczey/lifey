@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/ads/ads_service.dart';
@@ -22,6 +22,7 @@ import 'features/settings/domain/user_settings.dart';
 import 'features/trainer/application/trainer_view_preference.dart';
 import 'features/workouts/application/workout_resume_prompt.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/localization_delegates.dart';
 import 'shared/widgets/offline_banner.dart';
 
 /// Root application widget.
@@ -90,7 +91,7 @@ class LifeyApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       themeMode: _themeMode(themePreference),
       locale: _locale(languagePreference),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
       // Wraps every routed screen with the global offline strip, so it

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/auth/application/auth_controller.dart';
@@ -9,6 +9,7 @@ import 'package:lifey/features/chat/domain/chat_peer.dart';
 import 'package:lifey/features/chat/presentation/conversation_list_screen.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakeAuthController extends AuthController {
   _FakeAuthController(this._roles);
@@ -70,7 +71,7 @@ Future<void> _pump(
       ],
       child: const MaterialApp(
         locale: Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: ConversationListScreen(),
       ),
@@ -312,7 +313,7 @@ void main() {
               child: MaterialApp(
                 theme: theme,
                 locale: locale,
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 builder: (context, child) => MediaQuery(
                   data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)),

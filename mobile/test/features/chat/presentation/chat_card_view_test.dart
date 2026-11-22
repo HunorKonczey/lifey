@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/features/chat/application/open_chat_card.dart';
@@ -10,6 +10,7 @@ import 'package:lifey/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 final _when = DateTime(2026, 10, 3, 9, 12);
 
@@ -73,7 +74,7 @@ Future<void> _pumpCard(
     MaterialApp(
       theme: theme ?? AppTheme.dark,
       locale: Locale(locale),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Center(
@@ -189,7 +190,7 @@ void main() {
           await tester.pumpWidget(MaterialApp(
             theme: theme,
             locale: Locale(locale),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)),
@@ -295,7 +296,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.dark,
           locale: const Locale('en'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: MessageBubble(

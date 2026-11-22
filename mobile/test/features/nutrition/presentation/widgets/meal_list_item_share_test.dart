@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/sync/sync_status_provider.dart';
@@ -8,6 +8,7 @@ import 'package:lifey/features/chat/domain/chat_peer.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/meal_list_item.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// "Share in chat" in a meal's long-press menu (LIF-123): offered only with somebody to send it to - a row that can never work is
 /// clutter, not information.
@@ -34,7 +35,7 @@ Future<void> _pump(WidgetTester tester, List<ChatShareTarget> targets) async {
       ],
       child: MaterialApp(
         theme: AppTheme.dark,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: MealListItem(meal: _meal())),
       ),

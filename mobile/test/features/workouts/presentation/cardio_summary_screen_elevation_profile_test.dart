@@ -1,5 +1,6 @@
+import 'package:lifey/features/chat/application/chat_share.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
@@ -15,6 +16,7 @@ import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/features/workouts/presentation/widgets/elevation_profile_chart.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// docs/cardio/60 C8.3 — the real elevation profile, built from this
 /// device's local track points, versus the old polyline-based approximation
@@ -108,13 +110,14 @@ Future<void> _pump(WidgetTester tester, WorkoutSession session, AppDatabase db) 
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        chatShareTargetsProvider.overrideWith((ref) async => const []),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionControllerProvider.overrideWith(_StubSessionController.new),
         appDatabaseProvider.overrideWithValue(db),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: CardioSummaryScreen(session: session),
       ),

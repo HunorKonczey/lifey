@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/ads/interstitial_manager.dart';
@@ -17,6 +17,7 @@ import 'package:lifey/features/nutrition/presentation/log_meal_screen.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/add_food_sheet.dart';
 import 'package:lifey/features/nutrition/presentation/widgets/add_meal_entry_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 /// See meals_tab_copy_yesterday_test.dart — keeps the outbox kick from racing
 /// the in-memory DB teardown.
@@ -74,7 +75,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: FoodsTab(searchQuery: searchQuery)),
         ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
@@ -7,6 +7,7 @@ import 'package:lifey/features/trainer/clients/domain/trainer_client.dart';
 import 'package:lifey/features/trainer/clients/presentation/widgets/client_card.dart';
 import 'package:lifey/features/trainer/clients/presentation/widgets/weight_sparkline.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/ds/delta_chip.dart';
 
 final _now = DateTime.utc(2026, 9, 25, 12);
@@ -53,7 +54,7 @@ Future<void> _pump(
       child: MaterialApp(
         theme: theme ?? AppTheme.dark,
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

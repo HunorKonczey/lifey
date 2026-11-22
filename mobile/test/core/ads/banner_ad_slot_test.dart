@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -8,6 +8,7 @@ import 'package:lifey/core/ads/banner_ad_slot.dart';
 import 'package:lifey/core/ads/nav_reserved_space.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/shell_fab.dart';
 
 /// Covers Prompt 9's verify line: nothing renders for Pro, nothing renders
@@ -54,7 +55,7 @@ Future<ProviderContainer> _pumpSlot(
         if (loader != null) bannerAdLoaderProvider.overrideWithValue(loader),
       ],
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
@@ -165,7 +166,7 @@ Future<void> _pumpChrome(WidgetTester tester) async {
       child: MaterialApp.router(
         routerConfig: router,
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
     ),

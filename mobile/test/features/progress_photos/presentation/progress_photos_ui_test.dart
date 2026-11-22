@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +16,7 @@ import 'package:lifey/features/progress_photos/presentation/progress_photo_viewe
 import 'package:lifey/features/progress_photos/presentation/progress_photos_tab.dart';
 import 'package:lifey/features/progress_photos/presentation/widgets/photo_details_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 
 class _FakePhotos extends ProgressPhotoController {
   _FakePhotos(this.initial, {this.failAdd = false});
@@ -96,7 +97,7 @@ Future<_FakePhotos> _pump(
         routerConfig: router,
         theme: theme,
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
       ),
     ));
@@ -106,7 +107,7 @@ Future<_FakePhotos> _pump(
       child: MaterialApp(
         theme: theme,
         locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),

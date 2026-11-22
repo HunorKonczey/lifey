@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/theme/app_theme.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/l10n/localization_delegates.dart';
 import 'package:lifey/shared/widgets/ds/gallery/header_sections.dart';
 import 'package:lifey/shared/widgets/ds/lifey_header.dart';
 
@@ -9,7 +10,7 @@ const double _statusBar = 24;
 
 Widget _app(Widget home, {double textScale = 1}) => MaterialApp(
       theme: AppTheme.dark,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(
