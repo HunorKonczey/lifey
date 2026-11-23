@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 53;
+  int get schemaVersion => 54;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -428,6 +428,12 @@ class AppDatabase extends _$AppDatabase {
           // simply "not from a recipe" until the next pull brings the tags the server backfilled.
           if (from < 53) {
             await _addColumnIfMissing(m, mealEntries, mealEntries.recipeClientId);
+          }
+          // V54: provenance of an imported session (docs/integrations/89 D-G2, LIF-197) - two nullable
+          // columns; every existing session was recorded in Lifey, which is exactly what null means.
+          if (from < 54) {
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.importSource);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.importAppName);
           }
         },
       );

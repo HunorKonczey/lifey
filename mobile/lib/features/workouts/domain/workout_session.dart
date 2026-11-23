@@ -391,6 +391,8 @@ class WorkoutSession {
     this.activeCalories,
     this.averageHeartRate,
     this.healthWorkoutId,
+    this.importSource,
+    this.importAppName,
     this.templateClientId,
     this.templateName,
     this.scheduledFor,
@@ -433,8 +435,17 @@ class WorkoutSession {
   /// Connect record id on Android (the phone writes it itself once the watch
   /// summary arrives, since Health Connect writes must come from the phone —
   /// docs/watch/40-watch-app-plan.md §5.2). Non-null exactly when
-  /// [enrichedFromWatch] is true.
+  /// [enrichedFromWatch] is true. On an imported session ([isImported]) it is
+  /// the source record's id instead (docs/integrations/89 D-G3).
   final String? healthWorkoutId;
+
+  /// 'HEALTH' or 'GARMIN' for a session imported from another app; null when
+  /// recorded in Lifey (docs/integrations/89 D-G2). A wire string like
+  /// [sessionKind] and [activityType].
+  final String? importSource;
+
+  /// The source app of an imported session, e.g. "Garmin Connect"; null otherwise.
+  final String? importAppName;
 
   /// clientId of the template this session was started from, null when
   /// started as an empty workout (or predates this field).
@@ -562,7 +573,15 @@ class WorkoutSession {
   /// drives the ⌚ badge on the session card. Named for the *source*
   /// (watch), not the *destination* store, since that differs by platform
   /// (HealthKit on iOS, Health Connect on Android — see [healthWorkoutId]).
-  bool get enrichedFromWatch => healthWorkoutId != null;
+  ///
+  /// An imported session also carries a [healthWorkoutId] (its dedupe key),
+  /// but it was not enriched by Lifey's watch, so it is excluded here. Its
+  /// source chip comes from [importAppName] instead (docs/integrations/89 G1.7).
+  bool get enrichedFromWatch => healthWorkoutId != null && importSource == null;
+
+  /// True for a session imported from another app rather than recorded in
+  /// Lifey (docs/integrations/89 D-G2). Its measured values are read-only (D-G6).
+  bool get isImported => importSource != null;
 
   /// True once the user has rated this session's difficulty (see [rpe]).
   bool get isRated => rpe != null;

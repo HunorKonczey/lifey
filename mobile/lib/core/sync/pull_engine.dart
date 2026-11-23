@@ -1016,6 +1016,10 @@ class PullEngine {
       activeCalories: Value((json['activeCalories'] as num?)?.toDouble()),
       averageHeartRate: Value((json['averageHeartRate'] as num?)?.toDouble()),
       healthWorkoutId: Value(json['healthWorkoutId'] as String?),
+      // docs/integrations/89 D-G2: null from a server that predates imports, and for every
+      // session recorded in Lifey.
+      importSource: Value(json['importSource'] as String?),
+      importAppName: Value(json['importAppName'] as String?),
       templateClientId: Value(templateClientId),
       templateName: Value(json['templateName'] as String?),
       scheduledFor: Value(scheduledForRaw != null ? DateTime.parse(scheduledForRaw) : null),

@@ -443,6 +443,12 @@ HAVING SUM(records) > 0
   /// session's `clientId` itself so a retried delivery is idempotent by
   /// construction (docs/watch/44-watch-f6-standalone-plan.md §4.1, D-F6.3;
   /// call [existsByClientId] first to decide whether to call this at all).
+  ///
+  /// [importSource] / [importAppName] mark a session imported from another
+  /// app (docs/integrations/89 D-G2); only the health importer (G1.5) passes
+  /// them, always with [healthWorkoutId] as the dedupe key. They go out on
+  /// this create only. The server ignores them on update, so no update
+  /// payload carries them.
   Future<String> create({
     String? clientId,
     required DateTime startedAt,
@@ -452,6 +458,8 @@ HAVING SUM(records) > 0
     double? activeCalories,
     double? averageHeartRate,
     String? healthWorkoutId,
+    String? importSource,
+    String? importAppName,
     String? templateClientId,
     String? templateName,
     int? rpe,
@@ -476,6 +484,8 @@ HAVING SUM(records) > 0
               activeCalories: Value(activeCalories),
               averageHeartRate: Value(averageHeartRate),
               healthWorkoutId: Value(healthWorkoutId),
+              importSource: Value(importSource),
+              importAppName: Value(importAppName),
               templateClientId: Value(templateClientId),
               templateName: Value(templateName),
               rpe: Value(rpe),
@@ -501,6 +511,8 @@ HAVING SUM(records) > 0
         activeCalories: activeCalories,
         averageHeartRate: averageHeartRate,
         healthWorkoutId: healthWorkoutId,
+        importSource: importSource,
+        importAppName: importAppName,
         templateClientId: templateClientId,
         rpe: rpe,
         feedbackNote: feedbackNote,
@@ -1040,6 +1052,8 @@ HAVING SUM(records) > 0
     double? activeCalories,
     double? averageHeartRate,
     String? healthWorkoutId,
+    String? importSource,
+    String? importAppName,
     String? templateClientId,
     int? rpe,
     String? feedbackNote,
@@ -1082,6 +1096,10 @@ HAVING SUM(records) > 0
       if (activeCalories != null) 'activeCalories': activeCalories,
       if (averageHeartRate != null) 'averageHeartRate': averageHeartRate,
       if (healthWorkoutId != null) 'healthWorkoutId': healthWorkoutId,
+      // Omitted for a Lifey-recorded session, so its payload stays exactly what it was before
+      // imports existed (docs/integrations/89 D-G2).
+      if (importSource != null) 'importSource': importSource,
+      if (importAppName != null) 'importAppName': importAppName,
       if (templateClientId != null) 'templateId': clientRef(templateClientId),
       if (rpe != null) 'rpe': rpe,
       if (feedbackNote != null) 'feedbackNote': feedbackNote,
@@ -1193,6 +1211,8 @@ HAVING SUM(records) > 0
       activeCalories: row.activeCalories,
       averageHeartRate: row.averageHeartRate,
       healthWorkoutId: row.healthWorkoutId,
+      importSource: row.importSource,
+      importAppName: row.importAppName,
       templateClientId: row.templateClientId,
       templateName: row.templateName,
       scheduledFor: row.scheduledFor,
