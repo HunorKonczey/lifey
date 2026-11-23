@@ -142,6 +142,37 @@ class HealthService {
     });
   }
 
+  /// What the cardio import reads (docs/integrations/89 G1.6): the workouts
+  /// themselves plus the heart rate and energy around them. On Health Connect
+  /// a workout's distance needs its own read permission (`DISTANCE_DELTA`);
+  /// HealthKit carries it on the workout.
+  List<HealthDataType> get cardioImportTypes => [
+        HealthDataType.WORKOUT,
+        HealthDataType.HEART_RATE,
+        HealthDataType.ACTIVE_ENERGY_BURNED,
+        if (Platform.isAndroid) HealthDataType.DISTANCE_DELTA,
+      ];
+
+  /// Asks for READ access to [cardioImportTypes]. Same contract as
+  /// [requestPermissions]: true only means the request completed.
+  Future<bool> requestCardioImportPermissions() => requestPermissions(cardioImportTypes);
+
+  /// Whether the cardio import may still read workouts:
+  /// - false: Health Connect says the access is gone (the user revoked it in
+  ///   the Health Connect app);
+  /// - null: unknowable, which is always the case on iOS (HealthKit never
+  ///   reveals READ grants), plus no store or an error.
+  ///
+  /// Only false may be acted on: it backs the "permission needed" line of the
+  /// settings row (G1.6).
+  Future<bool?> hasCardioImportPermissions() async {
+    if (!isAvailable || !Platform.isAndroid) return null;
+    return _guarded(null, () async {
+      await _ensureConfigured();
+      return _health.hasPermissions(cardioImportTypes);
+    });
+  }
+
   /// Whether Lifey may write body weight to the health store right now. False when unavailable, Health Connect is not installed,
   /// or the write permission was not granted (an install from before LIF-109 only ever asked for READ). Backs the "Also saved to
   /// Health Connect" line, which must never claim a save that cannot happen.
