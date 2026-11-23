@@ -155,6 +155,44 @@ void main() {
     expect(find.byType(TintedChip), findsNothing);
   });
 
+  // docs/integrations/89 G1.7: an imported run names the app it came from. It also carries a healthWorkoutId (its
+  // dedupe key) and a heart rate, but the "Heart rate from …" line belongs to Lifey's own watch-enriched sessions.
+  WorkoutSession importedRun({String? app = 'Garmin Connect'}) => WorkoutSession(
+        clientId: 'i',
+        exercises: const [],
+        sets: const [],
+        startedAt: DateTime(2026, 9, 22, 7, 45),
+        finishedAt: DateTime(2026, 9, 22, 8, 27),
+        sessionKind: 'CARDIO',
+        activityType: 'RUNNING',
+        movingSeconds: 2520,
+        averageHeartRate: 151,
+        healthWorkoutId: 'hc-run-1',
+        importSource: 'HEALTH',
+        importAppName: app,
+        cardio: const CardioMetrics(distanceMeters: 8120),
+      );
+
+  testWidgets('an imported run names its source app, not the heart-rate source', (tester) async {
+    await _pump(tester, importedRun());
+
+    expect(find.text('From Garmin Connect'), findsOneWidget);
+    expect(find.textContaining('Heart rate from'), findsNothing);
+  });
+
+  testWidgets('an imported run without an app name falls back to the health store name', (tester) async {
+    await _pump(tester, importedRun(app: null));
+
+    // The test host is neither iOS nor web, so the Android store name.
+    expect(find.text('From Health Connect'), findsOneWidget);
+  });
+
+  testWidgets('Hungarian: the source line reads "Forrás: …"', (tester) async {
+    await _pump(tester, importedRun(), locale: const Locale('hu'));
+
+    expect(find.text('Forrás: Garmin Connect'), findsOneWidget);
+  });
+
   testWidgets('imperial: miles, pace per mile, pounds', (tester) async {
     await _pump(tester, _run(), units: UnitSystem.imperial);
     expect(_rich(tester), contains('3.24 mi'));

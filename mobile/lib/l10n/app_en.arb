@@ -6329,6 +6329,11 @@
     "description": "Line under a cardio session row whose heart rate came from the phone's health platform; {source} is the platform's name (Health Connect / Apple Health), not translated",
     "placeholders": {"source": {"type": "String"}}
   },
+  "sessionImportedFromSource": "From {source}",
+  "@sessionImportedFromSource": {
+    "description": "Line under a cardio session row that was imported from another app (docs/integrations/89 G1.7); {source} is the source app name as the health store reports it (e.g. Garmin Connect), not translated",
+    "placeholders": {"source": {"type": "String"}}
+  },
   "sessionMenuOpen": "Open",
   "@sessionMenuOpen": {
     "description": "Action in a session row's long-press menu: opens the session"

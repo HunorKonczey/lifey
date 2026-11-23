@@ -14,6 +14,7 @@ import '../../../../shared/widgets/sync_status_indicator.dart';
 import '../../../settings/domain/user_settings.dart';
 import '../../domain/activity_type.dart';
 import '../../domain/workout_session.dart';
+import 'import_source.dart';
 import 'route_painter.dart';
 
 /// How a row dates its session: not at all (it sits under "Today"), by weekday
@@ -139,7 +140,10 @@ class SessionRow extends StatelessWidget {
     // ── details ─────────────────────────────────────────────────────────────
     String? details;
     if (isCardio) {
-      if (session.enrichedFromWatch && session.averageHeartRate != null) {
+      if (session.isImported) {
+        // docs/integrations/89 G1.7: where an imported session came from, e.g. "From Garmin Connect".
+        details = l10n.sessionImportedFromSource(importSourceName(session));
+      } else if (session.enrichedFromWatch && session.averageHeartRate != null) {
         details = l10n.sessionHeartRateFromSource(_healthSource);
       }
     } else {

@@ -44,6 +44,7 @@ import 'widgets/cardio_live_cards.dart';
 import 'widgets/elevation_profile_chart.dart';
 import 'widgets/game_setup_sheet.dart';
 import 'widgets/hr_zone_panel.dart';
+import 'widgets/import_source.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
 import 'widgets/rpe_selector.dart';
@@ -194,6 +195,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   late final TextEditingController _noteController;
   late final FocusNode _noteFocusNode;
   bool _busy = false;
+
+  /// An imported session's measured values (distance, device calories) are the source watch's measurement and
+  /// stay read-only, so they never silently disagree with the app they came from (docs/integrations/89 D-G6).
+  /// Type, notes and rating stay editable.
+  bool get _measurementsLocked => widget.session.isImported;
 
   @override
   void initState() {
@@ -785,7 +791,10 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     final hasRoute = polyline != null && polyline.isNotEmpty;
 
     final p = context.palette;
-    final watchLabel = widget.session.healthWorkoutId != null ? l10n.watchChipLabel : null;
+    // An imported session carries a healthWorkoutId as well (its dedupe key), but its numbers came from another app,
+    // not from Lifey's watch: it gets the source app's chip instead (docs/integrations/89 G1.7).
+    final watchLabel = widget.session.enrichedFromWatch ? l10n.watchChipLabel : null;
+    final importLabel = widget.session.isImported ? importSourceName(widget.session) : null;
 
     return Scaffold(
       // The canvas's subpage header: back, "Running" over "Tue, 22 Sep · 07:45",
@@ -801,6 +810,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.s4),
               child: TintedChip(label: watchLabel, color: context.metricColors.protein, icon: Icons.watch_rounded),
+            ),
+          if (importLabel != null)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.s4),
+              child: TintedChip(label: importLabel, color: context.metricColors.protein, icon: Icons.sync_rounded),
             ),
           // Share the finished session as a chat card (docs/chat/83). Hidden
           // when there is nobody to send it to.
@@ -952,7 +966,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             durationLabel: labelCase(context, l10n.durationSectionLabel),
             edited: hasDistance && _distanceSource == 'MANUAL',
             editedLabel: l10n.manuallyEditedBadgeLabel,
-            onEditDistance: _busy ? null : _editDistance,
+            onEditDistance: _busy || _measurementsLocked ? null : _editDistance,
           ),
           if (strip.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.s16),
@@ -995,7 +1009,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   label: l10n.distanceFieldLabel,
                   value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()) : '—',
                   edited: _distanceSource == 'MANUAL',
-                  onTap: _busy ? null : _editDistance,
+                  onTap: _busy || _measurementsLocked ? null : _editDistance,
                 ),
                 if (_avgCadence != null)
                   _InnerMetric(
@@ -1022,7 +1036,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   value: CardioFormatter.distance(_distanceMeters!, unitSystem, locale: Localizations.localeOf(context).toLanguageTag()),
                   edited: _distanceSource == 'MANUAL',
                   editedLabel: l10n.manuallyEditedBadgeLabel,
-                  onTap: _busy ? null : _editDistance,
+                  onTap: _busy || _measurementsLocked ? null : _editDistance,
                 ),
               if (totalWorkKj != null && _avgCadence != null)
                 _MetricTile(
@@ -1056,7 +1070,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             activeCalories: activeCalories,
             machineCalories: _deviceCalories,
             machineEdited: _caloriesSource == 'MANUAL',
-            onEditMachine: _busy ? null : _editDeviceCalories,
+            onEditMachine: _busy || _measurementsLocked ? null : _editDeviceCalories,
             l10n: l10n,
             accent: metrics?.calories ?? accent,
           ),
