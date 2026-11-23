@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:health/health.dart';
 
+import 'health_cardio_workout.dart';
 import 'health_workout.dart';
 import '../utils/date_math.dart';
 
@@ -279,6 +280,51 @@ class HealthService {
         ));
       }
       workouts.sort((a, b) => b.endDate.compareTo(a.endDate));
+      return workouts;
+    });
+  }
+
+  /// Finished cardio workouts from other apps whose **end** is at or after
+  /// [since], oldest end first, ready for the cardio import
+  /// (docs/integrations/89 G1.4). Examples are a Garmin run synced by Garmin
+  /// Connect, or an Apple Watch workout from another app.
+  ///
+  /// Filters:
+  /// - Lifey's own records are dropped (D-G4, see [isLifeyHealthSource]);
+  /// - strength and recovery types are dropped;
+  /// - the remaining store types map to Lifey activity types
+  ///   ([cardioActivityTypeFor]).
+  ///
+  /// Ordered by end time because the importer (G1.5) advances its cursor to
+  /// the last end it saw. The query window opens 12 h before [since], so a
+  /// long workout that started earlier still shows up; the filter is on end
+  /// time. Average heart rate costs one extra query per workout. That is
+  /// fine for the importer's 14-day first window and its incremental runs.
+  ///
+  /// Returns `[]` when unavailable, Health Connect isn't installed, there is
+  /// nothing to read, or permission was denied (READ grants are not
+  /// observable). On Health Connect the plugin fills `totalDistance` only
+  /// with distance read access; without it [HealthCardioWorkout.distanceMeters]
+  /// is null. The permission itself is G1.6's request.
+  Future<List<HealthCardioWorkout>> recentCardioWorkouts({required DateTime since}) async {
+    if (!isAvailable) return const [];
+    return _guarded(const [], () async {
+      await _ensureConfigured();
+      final now = DateTime.now();
+      final points = await _health.getHealthDataFromTypes(
+        types: const [HealthDataType.WORKOUT],
+        startTime: since.subtract(const Duration(hours: 12)),
+        endTime: now,
+      );
+
+      final workouts = <HealthCardioWorkout>[];
+      for (final point in points) {
+        if (point.dateTo.isBefore(since)) continue; // ended before the cursor
+        final workout = cardioWorkoutFromPoint(point);
+        if (workout == null) continue; // not importable, so skip the heart-rate query too
+        workouts.add(workout.withAverageHeartRate(await _averageHeartRate(point.dateFrom, point.dateTo)));
+      }
+      workouts.sort((a, b) => a.endDate.compareTo(b.endDate));
       return workouts;
     });
   }
