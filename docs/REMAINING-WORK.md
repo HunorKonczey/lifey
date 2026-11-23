@@ -72,7 +72,7 @@ becsült dátummal ([`76`](76-smarter-weight-trend-plan.md)). Eszközön még ne
 
 ### 1.5 Garmin / Strava — [`07`](07-roadmap.md) V4
 
-Nincs integráció. A HealthKit és a Health Connect kész.
+Nincs integráció. A HealthKit és a Health Connect kész. Garmin-terv (Health-ből cardio, alvás, vitálértékek, majd közvetlen Garmin API): [`integrations/89`](integrations/89-garmin-health-data-plan.md).
 
 ---
 
