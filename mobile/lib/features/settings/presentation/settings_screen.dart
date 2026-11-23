@@ -543,6 +543,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             // Health (Apple Health on iOS, Health Connect on Android)
             if (Platform.isIOS || Platform.isAndroid) const HealthIntegrationRow(),
+            // Cardio from other apps, e.g. Garmin Connect (docs/integrations/89 G1.6)
+            if (Platform.isIOS || Platform.isAndroid) const CardioImportRow(),
             // Notifications (docs/30-push-notifications-plan.md, M5)
             NotificationsRow(
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())),

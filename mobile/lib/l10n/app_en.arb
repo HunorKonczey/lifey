@@ -6782,6 +6782,26 @@
   "@settingsHealthOffSubtitle": {
     "description": "Subline of the Health row in Settings while the connection is off — says what off means"
   },
+  "settingsCardioImportLabel": "Cardio from other apps",
+  "@settingsCardioImportLabel": {
+    "description": "Title of the Settings row under Health that turns on importing finished cardio workouts (runs, rides) from other apps such as Garmin Connect via Apple Health / Health Connect (docs/integrations/89 G1.6)"
+  },
+  "settingsCardioImportOnSubtitle": "On · runs and rides from apps like Garmin Connect show up here",
+  "@settingsCardioImportOnSubtitle": {
+    "description": "Subline of the cardio-import row while it is on, says what on means"
+  },
+  "settingsCardioImportOffSubtitle": "Off · only workouts recorded in Lifey",
+  "@settingsCardioImportOffSubtitle": {
+    "description": "Subline of the cardio-import row while it is off, says what off means"
+  },
+  "settingsCardioImportNeedsHealthSubtitle": "Turn on Health first",
+  "@settingsCardioImportNeedsHealthSubtitle": {
+    "description": "Subline of the cardio-import row while the Health connection above it is off; the switch is disabled then"
+  },
+  "settingsCardioImportPermissionSubtitle": "Permission needed · tap to allow",
+  "@settingsCardioImportPermissionSubtitle": {
+    "description": "Subline of the cardio-import row on Android when it is on but Health Connect no longer grants the workout permission; tapping the row asks again"
+  },
   "settingsNotificationsOnCount": "{count} on",
   "@settingsNotificationsOnCount": {
     "description": "Value of the Notifications row in Settings: how many notification types are switched on, e.g. '3 on'",
