@@ -36,5 +36,5 @@ V3
 
 V4
 - HealthKit
-- Garmin
+- Garmin — plan: [docs/integrations/89](integrations/89-garmin-health-data-plan.md)
 - Strava
