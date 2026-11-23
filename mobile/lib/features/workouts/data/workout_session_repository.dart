@@ -540,6 +540,22 @@ HAVING SUM(records) > 0
     return row != null;
   }
 
+  /// Whether any local session, imported or watch-paired, already carries
+  /// this health-store record id. This is the health importer's local
+  /// dedupe check (docs/integrations/89 D-G3, D-G4).
+  ///
+  /// A session the user deleted is gone locally (deletes are hard), so it
+  /// is not seen here. The server's 409 on the re-import catches that case,
+  /// and the sync engine then drops the local copy
+  /// (EntitySyncConfig.dropLocalOnCreateConflict).
+  Future<bool> existsByHealthWorkoutId(String healthWorkoutId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.healthWorkoutId.equals(healthWorkoutId))
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
+  }
+
   /// Null if no session with this [clientId] exists yet; otherwise whether it
   /// already has a [WorkoutSession.finishedAt] — the three-way check the
   /// standalone-session processor needs to tell "doesn't exist yet (create)"

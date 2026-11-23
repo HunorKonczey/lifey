@@ -4,6 +4,22 @@ import '../local_db/app_database.dart';
 /// by the server — see [EntitySyncConfig.cleanupChildren].
 typedef ChildCleanup = Future<void> Function(AppDatabase db, String clientId);
 
+/// Decides, from a queued create's payload, whether a 409 on that create
+/// means "the server already has this". In that case the local copy is a
+/// duplicate to drop, not a write to retry. See
+/// [EntitySyncConfig.dropLocalOnCreateConflict].
+typedef CreateConflictTest = bool Function(Map<String, dynamic> payload);
+
+/// docs/integrations/89 D-G3: the server answers a second import of the
+/// same health-store record with 409. Possible causes:
+/// - the record was imported on another install of this account;
+/// - it was imported before a reinstall emptied the local DB;
+/// - the user deleted that session on purpose.
+///
+/// Either way the local import is a duplicate. Only imports qualify. A 409
+/// on any other session create is a real error and stays visible.
+bool _isImportedSessionCreate(Map<String, dynamic> payload) => payload['importSource'] != null;
+
 Future<void> _cleanupMealChildren(AppDatabase db, String clientId) =>
     (db.delete(db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
 
@@ -34,6 +50,7 @@ class EntitySyncConfig {
     required this.basePath,
     this.isSingleton = false,
     this.cleanupChildren,
+    this.dropLocalOnCreateConflict,
   });
 
   /// The exact SQL table name (matches each table's `tableName` override).
@@ -55,6 +72,13 @@ class EntitySyncConfig {
   /// [SyncEngine._applySuccess] once the server actually confirms the
   /// delete, right before the parent row itself is removed.
   final ChildCleanup? cleanupChildren;
+
+  /// When this returns true for a create that the server answered with 409,
+  /// [SyncEngine] does not park the op as failed. It removes the local row,
+  /// its children ([cleanupChildren]) and every pending op for it, because
+  /// the server's copy is canonical and the next pull brings it back. Null
+  /// (the default) keeps a 409 a visible failure.
+  final CreateConflictTest? dropLocalOnCreateConflict;
 }
 
 /// Registry for every entity type that gets its own [PendingOperations] row.
@@ -87,6 +111,7 @@ const entitySyncConfigs = <String, EntitySyncConfig>{
     tableName: 'workout_sessions',
     basePath: '/workout-sessions',
     cleanupChildren: _cleanupWorkoutSessionChildren,
+    dropLocalOnCreateConflict: _isImportedSessionCreate,
   ),
   'water_source': EntitySyncConfig(tableName: 'water_sources', basePath: '/water-sources'),
   'water_entry': EntitySyncConfig(tableName: 'water_entries', basePath: '/water-entries'),
