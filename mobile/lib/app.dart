@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/ads/ads_service.dart';
 import 'core/ads/interstitial_manager.dart';
 import 'core/entitlements/entitlement_refresher.dart';
+import 'core/health/cardio_health_importer.dart';
 import 'core/health/step_goal_notifier.dart';
 import 'core/health/step_history_importer.dart';
 import 'core/health/weight_health_importer.dart';
@@ -65,6 +66,8 @@ class LifeyApp extends ConsumerWidget {
     ref.watch(weightHealthImportLifecycleProvider);
     // Phase 2 — fires the step history backfill on app resume.
     ref.watch(stepImportLifecycleProvider);
+    // docs/integrations/89 G1.5: imports finished cardio workouts from other apps on app resume (opt-in).
+    ref.watch(cardioImportLifecycleProvider);
     // Phase 2 — fires the step-goal notification on app resume (iOS only).
     ref.watch(stepGoalNotifierProvider);
     // Resumes an in-progress workout after the OS kills the app mid-session.

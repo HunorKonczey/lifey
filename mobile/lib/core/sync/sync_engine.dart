@@ -190,6 +190,10 @@ class SyncEngine {
       await _db.delete(_db.pendingOperations).delete(op);
       return true;
     } on DioException catch (e) {
+      if (_isDroppableCreateConflict(op, config, e)) {
+        await _dropConflictingCreate(op, config);
+        return true;
+      }
       // No response at all (timeout/connection error/DNS failure, etc.) is
       // the connectivity case; anything with a response is a real backend
       // answer (4xx/5xx) and won't fix itself by retrying blindly.
@@ -199,6 +203,30 @@ class SyncEngine {
       await _markFailed(op, e.toString(), isNetworkError: false);
       return false;
     }
+  }
+
+  /// A 409 on a create that the entity's [EntitySyncConfig.dropLocalOnCreateConflict]
+  /// marks as "the server already has this". So far that is only a duplicate
+  /// health import (docs/integrations/89 D-G3).
+  bool _isDroppableCreateConflict(PendingOperationRow op, EntitySyncConfig config, DioException e) {
+    final test = config.dropLocalOnCreateConflict;
+    if (test == null || op.operation != 'create' || e.response?.statusCode != 409) return false;
+    final payload = jsonDecode(op.payloadJson);
+    return payload is Map<String, dynamic> && test(payload);
+  }
+
+  /// Removes the duplicate local row: its children, the row itself, and
+  /// every pending op for it. An update queued after the create can never
+  /// go out, since the row will never have a serverId. The server's
+  /// canonical copy, if it still exists, comes back with the next pull.
+  Future<void> _dropConflictingCreate(PendingOperationRow op, EntitySyncConfig config) async {
+    await _db.transaction(() async {
+      await config.cleanupChildren?.call(_db, op.clientId);
+      await _db.customStatement('DELETE FROM ${config.tableName} WHERE client_id = ?', [op.clientId]);
+      await (_db.delete(_db.pendingOperations)..where((t) => t.clientId.equals(op.clientId))).go();
+    });
+    // customStatement doesn't notify watchers (see _applySuccess).
+    _db.notifyUpdates({TableUpdate(config.tableName, kind: UpdateKind.delete)});
   }
 
   Future<Response<dynamic>> _send(

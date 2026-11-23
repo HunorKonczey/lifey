@@ -19,6 +19,31 @@ class HealthPreferences {
   static const _lastWeightImportKey = 'health.lastHealthWeightImportedAt';
   static const _lastStepGoalNotifiedKey = 'health.lastStepGoalNotifiedDate';
   static const _stepGoalNotificationEnabledKey = 'health.stepGoalNotificationEnabled';
+  static const _cardioImportEnabledKey = 'health.cardioImport.enabled';
+  static const _cardioImportCursorKey = 'health.cardioImport.cursor';
+
+  /// Whether finished cardio workouts from other apps are imported
+  /// (docs/integrations/89 D-G5). Off until the user turns it on. The toggle
+  /// itself is G1.6. Also requires the general Health opt-in ([isEnabled]).
+  Future<bool> isCardioImportEnabled() async {
+    return (await _storage.read(key: _cardioImportEnabledKey)) == 'true';
+  }
+
+  Future<void> setCardioImportEnabled(bool enabled) {
+    return _storage.write(key: _cardioImportEnabledKey, value: enabled ? 'true' : 'false');
+  }
+
+  /// The end time of the last imported cardio workout: the next import reads
+  /// from here (docs/integrations/89 D-G5). Null before the first import,
+  /// which then looks back 14 days.
+  Future<DateTime?> cardioImportCursor() async {
+    final raw = await _storage.read(key: _cardioImportCursorKey);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  Future<void> setCardioImportCursor(DateTime endOfLastImported) {
+    return _storage.write(key: _cardioImportCursorKey, value: endOfLastImported.toUtc().toIso8601String());
+  }
 
   Future<bool> isEnabled() async {
     return (await _storage.read(key: _enabledKey)) == 'true';
@@ -73,6 +98,8 @@ class HealthPreferences {
     await _storage.delete(key: _lastWeightImportKey);
     await _storage.delete(key: _lastStepGoalNotifiedKey);
     await _storage.delete(key: _stepGoalNotificationEnabledKey);
+    await _storage.delete(key: _cardioImportEnabledKey);
+    await _storage.delete(key: _cardioImportCursorKey);
   }
 }
 
