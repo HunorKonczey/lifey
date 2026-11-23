@@ -1,5 +1,6 @@
 package com.lifey.workout.session;
 
+import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.workout.session.dto.ExerciseSetResponse;
 import com.lifey.workout.session.dto.ExerciseSummary;
@@ -51,7 +52,7 @@ class WorkoutSessionControllerTest {
         return new WorkoutSessionResponse(id, startedAt, finishedAt, exercises, sets, activeCalories,
                 averageHeartRate, healthWorkoutId, templateId, templateName, scheduledFor, scheduledTime,
                 scheduleId, rpe, feedbackNote, trainerComment, trainerCommentAt, updatedAt, deletedAt,
-                SessionKind.STRENGTH, null, null, null, List.of(), null);
+                SessionKind.STRENGTH, null, null, null, List.of(), null, null, null);
     }
 
     @Test
@@ -230,5 +231,41 @@ class WorkoutSessionControllerTest {
 
         mockMvc.perform(delete("/api/v1/workout-sessions/99"))
                 .andExpect(status().isNotFound());
+    }
+
+    // docs/integrations/89 D-G3: the mobile importer (G1.5) tells a duplicate import
+    // (409, drop the local copy) apart from a malformed one (400, a client bug).
+    private static final String IMPORT_BODY = "{\"startedAt\":\"2026-11-20T06:00:00Z\","
+            + "\"finishedAt\":\"2026-11-20T06:42:00Z\",\"exerciseIds\":[],\"sets\":[],"
+            + "\"sessionKind\":\"CARDIO\",\"activityType\":\"RUNNING\","
+            + "\"healthWorkoutId\":\"hc-run-1\",\"importSource\":\"HEALTH\","
+            + "\"importAppName\":\"Garmin Connect\"}";
+
+    @Test
+    void create_duplicateImportReturns409() throws Exception {
+        when(workoutSessionService.create(any()))
+                .thenThrow(new DuplicateResourceException("Health workout already imported: hc-run-1"));
+
+        mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON).content(IMPORT_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Health workout already imported: hc-run-1"));
+    }
+
+    @Test
+    void create_invalidImportReturns400() throws Exception {
+        when(workoutSessionService.create(any()))
+                .thenThrow(new InvalidImportRequestException("healthWorkoutId is required when importSource is HEALTH"));
+
+        mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON).content(IMPORT_BODY))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void create_tooLongImportAppNameFailsValidation() throws Exception {
+        String body = IMPORT_BODY.replace("Garmin Connect", "x".repeat(65));
+
+        mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        verify(workoutSessionService, never()).create(any());
     }
 }

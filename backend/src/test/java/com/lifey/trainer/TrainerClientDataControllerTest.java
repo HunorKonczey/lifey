@@ -202,7 +202,7 @@ class TrainerClientDataControllerTest {
         WorkoutSessionResponse session = new WorkoutSessionResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null, null, null, Instant.now(), null,
-                SessionKind.STRENGTH, null, null, null, List.of(), null);
+                SessionKind.STRENGTH, null, null, null, List.of(), null, null, null);
         Page<WorkoutSessionResponse> page = new PageImpl<>(List.of(session), PageRequest.of(0, 20), 1);
         when(workoutSessionService.findPageForUser(eq(CLIENT_ID), any())).thenReturn(page);
 
@@ -216,7 +216,7 @@ class TrainerClientDataControllerTest {
         WorkoutSessionResponse session = new WorkoutSessionResponse(481L, Instant.parse("2026-04-01T08:00:00Z"),
                 Instant.parse("2026-04-01T09:00:00Z"), List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null, null, null, Instant.now(), null,
-                SessionKind.STRENGTH, null, null, null, List.of(), null);
+                SessionKind.STRENGTH, null, null, null, List.of(), null, null, null);
         when(workoutSessionService.findByIdForUser(CLIENT_ID, 481L)).thenReturn(session);
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}", CLIENT_ID, 481L))
@@ -252,7 +252,7 @@ class TrainerClientDataControllerTest {
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null,
                 "Nice pace, add weight next time", Instant.parse("2026-06-18T07:00:00Z"), Instant.now(), null,
-                SessionKind.STRENGTH, null, null, null, List.of(), null);
+                SessionKind.STRENGTH, null, null, null, List.of(), null, null, null);
         when(sessionCommentService.upsertComment(TRAINER_ID, CLIENT_ID, sessionId, "Nice pace, add weight next time"))
                 .thenReturn(updated);
 
@@ -319,7 +319,7 @@ class TrainerClientDataControllerTest {
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, Instant.now(), null,
-                SessionKind.STRENGTH, null, null, null, List.of(), null);
+                SessionKind.STRENGTH, null, null, null, List.of(), null, null, null);
         when(sessionCommentService.deleteComment(TRAINER_ID, CLIENT_ID, sessionId)).thenReturn(cleared);
 
         mockMvc.perform(delete("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, sessionId))

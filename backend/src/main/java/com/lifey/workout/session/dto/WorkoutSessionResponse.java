@@ -1,5 +1,6 @@
 package com.lifey.workout.session.dto;
 
+import com.lifey.workout.session.ImportSource;
 import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.cardio.ActivityType;
 
@@ -48,6 +49,10 @@ public record WorkoutSessionResponse(
         /* Empty, never null, unless sessionKind is CARDIO and splits were recorded. */
         List<CardioSplitResponse> splits,
         /* Empty, never null, unless sessionKind is CARDIO and waypoints were marked. */
-        List<CardioWaypointResponse> waypoints
+        List<CardioWaypointResponse> waypoints,
+        /* Null when recorded in Lifey; HEALTH or GARMIN for an imported session (docs/integrations/89 D-G2). */
+        ImportSource importSource,
+        /* The source app shown on an imported session, e.g. "Garmin Connect"; null otherwise. */
+        String importAppName
 ) {
 }

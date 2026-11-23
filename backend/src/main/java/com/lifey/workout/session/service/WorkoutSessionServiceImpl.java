@@ -1,6 +1,7 @@
 package com.lifey.workout.session.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
@@ -112,6 +113,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     @Override
     public WorkoutSessionResponse create(WorkoutSessionRequest request) {
         validateCardioConsistency(request);
+        validateImport(request);
         WorkoutSession session = new WorkoutSession();
         session.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         session.setStartedAt(request.startedAt());
@@ -119,6 +121,8 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setActiveCalories(request.activeCalories());
         session.setAverageHeartRate(request.averageHeartRate());
         session.setHealthWorkoutId(request.healthWorkoutId());
+        session.setImportSource(request.importSource());
+        session.setImportAppName(request.importAppName());
         session.setRpe(request.rpe());
         session.setFeedbackNote(request.feedbackNote());
         session.setSessionKind(request.sessionKind() != null ? request.sessionKind() : SessionKind.STRENGTH);
@@ -268,6 +272,37 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
      * flush (docs/cardio/52-cardio-domain-backend-plan.md §3.2). Cross-field,
      * so Bean Validation can't express it.
      */
+    /**
+     * The import rules for a create request (docs/integrations/89 D-G2, D-G3).
+     * A client may only import from the health store, and must name the
+     * store record, because that record id is the dedupe key. GARMIN sessions
+     * come from the server-side Garmin import only (M4).
+     *
+     * The duplicate check runs before the insert, so the client gets a clear
+     * 409 instead of the generic data-integrity one. The V97 unique index
+     * still backs it against a concurrent double create.
+     */
+    private void validateImport(WorkoutSessionRequest request) {
+        ImportSource source = request.importSource();
+        if (source == null) {
+            if (request.importAppName() != null) {
+                throw new InvalidImportRequestException("importAppName must be null unless importSource is set");
+            }
+            return;
+        }
+        if (source == ImportSource.GARMIN) {
+            throw new InvalidImportRequestException("importSource GARMIN is set by the server-side Garmin import only");
+        }
+        if (request.healthWorkoutId() == null || request.healthWorkoutId().isBlank()) {
+            throw new InvalidImportRequestException("healthWorkoutId is required when importSource is HEALTH");
+        }
+        if (sessionRepository.existsByUserIdAndHealthWorkoutIdAndImportSourceIsNotNull(
+                currentUserProvider.getUserId(), request.healthWorkoutId())) {
+            throw new DuplicateResourceException(
+                    "Health workout already imported: " + request.healthWorkoutId());
+        }
+    }
+
     private void validateCardioConsistency(WorkoutSessionRequest request) {
         SessionKind kind = request.sessionKind() != null ? request.sessionKind() : SessionKind.STRENGTH;
         if (kind == SessionKind.CARDIO) {

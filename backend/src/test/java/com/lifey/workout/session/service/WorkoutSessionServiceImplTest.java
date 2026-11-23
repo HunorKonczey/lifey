@@ -2,12 +2,15 @@ package com.lifey.workout.session.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.domain.BaseEntity;
+import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.session.ExerciseSet;
+import com.lifey.workout.session.ImportSource;
+import com.lifey.workout.session.InvalidImportRequestException;
 import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.WorkoutSession;
 import com.lifey.workout.session.WorkoutSessionExercise;
@@ -53,6 +56,8 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -99,7 +104,7 @@ class WorkoutSessionServiceImplTest {
             List<PlannedExerciseRequest> plannedExercises) {
         return new WorkoutSessionRequest(startedAt, finishedAt, exerciseIds, sets, activeCalories,
                 averageHeartRate, healthWorkoutId, templateId, rpe, feedbackNote, plannedExercises,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     @Test
@@ -544,7 +549,7 @@ class WorkoutSessionServiceImplTest {
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.RUNNING, 1800,
                 cardioDetails(5230.0, 4),
-                List.of(new CardioSplitRequest(0, null, 1000.0, 320, -2.5, 151.0, null, null)), null);
+                List.of(new CardioSplitRequest(0, null, 1000.0, 320, -2.5, 151.0, null, null)), null, null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -580,7 +585,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(started, null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.CYCLING, 3600,
-                cardioDetails(18500.0, 3), List.of(), null);
+                cardioDetails(18500.0, 3), List.of(), null, null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -614,7 +619,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                SessionKind.CARDIO, null, null, null, null, null);
+                SessionKind.CARDIO, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
@@ -625,7 +630,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                null, ActivityType.RUNNING, null, null, null, null);
+                null, ActivityType.RUNNING, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
@@ -636,7 +641,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                null, null, null, cardioDetails(1000.0, null), null, null);
+                null, null, null, cardioDetails(1000.0, null), null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
@@ -647,7 +652,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                null, null, null, null, List.of(new CardioSplitRequest(0, null, 1000.0, 300, null, null, null, null)), null);
+                null, null, null, null, List.of(new CardioSplitRequest(0, null, 1000.0, 300, null, null, null, null)), null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
@@ -663,7 +668,7 @@ class WorkoutSessionServiceImplTest {
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.HIKING, 5400, cardioDetails(8200.0, null), null,
                 List.of(new CardioWaypointRequest(0, 47.4979, 19.0402, 612.0, null),
-                        new CardioWaypointRequest(1, 47.5010, 19.0450, 640.0, null)));
+                        new CardioWaypointRequest(1, 47.5010, 19.0450, 640.0, null)), null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -681,7 +686,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                SessionKind.CARDIO, ActivityType.HIKING, 5400, cardioDetails(8200.0, null), null, null);
+                SessionKind.CARDIO, ActivityType.HIKING, 5400, cardioDetails(8200.0, null), null, null, null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -694,7 +699,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
                 null, null, null, null, null,
-                List.of(new CardioWaypointRequest(0, 47.4979, 19.0402, null, null)));
+                List.of(new CardioWaypointRequest(0, 47.4979, 19.0402, null, null)), null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
@@ -720,7 +725,7 @@ class WorkoutSessionServiceImplTest {
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.HIKING, null, null, null,
                 List.of(new CardioWaypointRequest(0, 47.10, 19.00, null, null),
-                        new CardioWaypointRequest(1, 47.20, 19.05, null, null)));
+                        new CardioWaypointRequest(1, 47.20, 19.05, null, null)), null, null);
 
         service.update(3L, request);
 
@@ -735,7 +740,7 @@ class WorkoutSessionServiceImplTest {
         return new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                SessionKind.CARDIO, ActivityType.INDOOR_BIKE, 1800, null, splits, null);
+                SessionKind.CARDIO, ActivityType.INDOOR_BIKE, 1800, null, splits, null, null, null);
     }
 
     @Test
@@ -789,7 +794,7 @@ class WorkoutSessionServiceImplTest {
         return new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                SessionKind.CARDIO, ActivityType.RUNNING, 1800, cardio, null, null);
+                SessionKind.CARDIO, ActivityType.RUNNING, 1800, cardio, null, null, null, null);
     }
 
     @Test
@@ -879,7 +884,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.RUNNING, null,
-                cardioDetails(6100.0, null), null, null);
+                cardioDetails(6100.0, null), null, null, null, null);
 
         service.update(3L, request);
 
@@ -904,7 +909,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.RUNNING, null,
-                cardioDetails(4200.0, null), null, null);
+                cardioDetails(4200.0, null), null, null, null, null);
 
         service.update(3L, request);
 
@@ -931,7 +936,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                SessionKind.CARDIO, ActivityType.RUNNING, null, null, null, null);
+                SessionKind.CARDIO, ActivityType.RUNNING, null, null, null, null, null, null);
 
         service.update(3L, request);
 
@@ -958,7 +963,7 @@ class WorkoutSessionServiceImplTest {
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.RUNNING, null, null,
                 List.of(new CardioSplitRequest(0, null, 1000.0, 310, null, null, null, null),
-                        new CardioSplitRequest(1, null, 1000.0, 315, null, null, null, null)), null);
+                        new CardioSplitRequest(1, null, 1000.0, 315, null, null, null, null)), null, null, null);
 
         service.update(3L, request);
 
@@ -999,6 +1004,95 @@ class WorkoutSessionServiceImplTest {
         t.setId(id);
         t.setName(name);
         return t;
+    }
+
+    // --- Imports (docs/integrations/89 D-G2, D-G3) ------------------------------
+
+    /** A finished outdoor run imported from the health store, as the mobile importer (G1.5) will send it. */
+    private static WorkoutSessionRequest importedRun(ImportSource source, String healthWorkoutId, String appName) {
+        return new WorkoutSessionRequest(
+                Instant.parse("2026-11-20T06:00:00Z"), Instant.parse("2026-11-20T06:42:00Z"),
+                List.of(), List.of(), 512.0, 148.0, healthWorkoutId, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.RUNNING, 2520, null, null, null,
+                source, appName);
+    }
+
+    @Test
+    void create_healthImport_persistsSourceAndAppName() {
+        when(sessionRepository.existsByUserIdAndHealthWorkoutIdAndImportSourceIsNotNull(USER_ID, "hc-run-1"))
+                .thenReturn(false);
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 21L));
+
+        WorkoutSessionResponse result = service.create(importedRun(ImportSource.HEALTH, "hc-run-1", "Garmin Connect"));
+
+        assertThat(result.importSource()).isEqualTo(ImportSource.HEALTH);
+        assertThat(result.importAppName()).isEqualTo("Garmin Connect");
+        assertThat(result.healthWorkoutId()).isEqualTo("hc-run-1");
+    }
+
+    @Test
+    void create_secondImportOfTheSameRecord_isRejectedAsDuplicate() {
+        when(sessionRepository.existsByUserIdAndHealthWorkoutIdAndImportSourceIsNotNull(USER_ID, "hc-run-1"))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(importedRun(ImportSource.HEALTH, "hc-run-1", "Garmin Connect")))
+                .isInstanceOf(DuplicateResourceException.class)
+                .hasMessageContaining("hc-run-1");
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void create_healthImportWithoutARecordId_isRejected() {
+        assertThatThrownBy(() -> service.create(importedRun(ImportSource.HEALTH, null, "Garmin Connect")))
+                .isInstanceOf(InvalidImportRequestException.class)
+                .hasMessageContaining("healthWorkoutId");
+        assertThatThrownBy(() -> service.create(importedRun(ImportSource.HEALTH, "  ", "Garmin Connect")))
+                .isInstanceOf(InvalidImportRequestException.class);
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void create_garminSourceFromAClient_isRejected() {
+        assertThatThrownBy(() -> service.create(importedRun(ImportSource.GARMIN, "garmin-1", "Garmin Connect")))
+                .isInstanceOf(InvalidImportRequestException.class)
+                .hasMessageContaining("GARMIN");
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void create_appNameWithoutASource_isRejected() {
+        assertThatThrownBy(() -> service.create(importedRun(null, "hk-1", "Garmin Connect")))
+                .isInstanceOf(InvalidImportRequestException.class)
+                .hasMessageContaining("importAppName");
+    }
+
+    @Test
+    void create_pairedLifeySession_skipsTheImportDuplicateCheck() {
+        // A Lifey-recorded session paired with a store workout keeps working exactly
+        // as before V97: no importSource, so no dedupe lookup and no 409.
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 22L));
+
+        WorkoutSessionResponse result = service.create(importedRun(null, "hk-paired", null));
+
+        assertThat(result.importSource()).isNull();
+        assertThat(result.healthWorkoutId()).isEqualTo("hk-paired");
+        verify(sessionRepository, never()).existsByUserIdAndHealthWorkoutIdAndImportSourceIsNotNull(any(), any());
+    }
+
+    @Test
+    void update_neverChangesASessionsProvenance() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(23L);
+        existing.setImportSource(ImportSource.HEALTH);
+        existing.setImportAppName("Garmin Connect");
+        when(sessionRepository.findByIdAndUserId(23L, USER_ID)).thenReturn(Optional.of(existing));
+
+        // A client that predates imports sends neither field; one that edits the
+        // activity type sends them back unchanged. Either way they stay put.
+        WorkoutSessionResponse result = service.update(23L, importedRun(null, "hc-run-1", null));
+
+        assertThat(result.importSource()).isEqualTo(ImportSource.HEALTH);
+        assertThat(result.importAppName()).isEqualTo("Garmin Connect");
     }
 
     private static <T extends BaseEntity> T withId(T entity, Long id) {

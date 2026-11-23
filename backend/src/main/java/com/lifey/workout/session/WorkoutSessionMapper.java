@@ -71,7 +71,9 @@ public final class WorkoutSessionMapper {
                 session.getMovingSeconds(),
                 toCardioResponse(session.getCardioDetails()),
                 splits,
-                waypoints
+                waypoints,
+                session.getImportSource(),
+                session.getImportAppName()
         );
     }
 

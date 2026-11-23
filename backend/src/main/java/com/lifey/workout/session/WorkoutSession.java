@@ -156,10 +156,27 @@ public class WorkoutSession extends SyncableEntity {
     private Double averageHeartRate;
 
     /**
-     * HKWorkout UUID. Non-null means this session was paired with an Apple Health workout.
+     * The health-store record id: an HKWorkout UUID on iOS, a Health Connect
+     * record id on Android. On a Lifey-recorded session it marks the store
+     * workout the session was paired with. On an imported session
+     * ({@link #importSource} non-null) it is the dedupe key, unique per user
+     * (V97, docs/integrations/89 D-G3).
      */
     @Column(name = "health_workout_id")
     private String healthWorkoutId;
+
+    /**
+     * Where this session was imported from; null when it was recorded in
+     * Lifey (docs/integrations/89 D-G2). Set on create only and never
+     * changed afterwards.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "import_source")
+    private ImportSource importSource;
+
+    /** The health store's source app name, e.g. "Garmin Connect". Display only; null unless imported. */
+    @Column(name = "import_app_name")
+    private String importAppName;
 
     /**
      * The template this session was started from, if any.
