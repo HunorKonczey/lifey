@@ -36,8 +36,22 @@ class WorkoutSessions extends Table {
   /// Average heart rate (bpm) over the workout, imported from Apple Health.
   RealColumn get averageHeartRate => real().nullable()();
 
-  /// HKWorkout UUID this session was paired with, if imported from Apple Health.
+  /// The health-store record id: an HKWorkout UUID on iOS, a Health Connect
+  /// record id on Android. On a Lifey-recorded session it is the store
+  /// workout the session was paired with. On an imported session
+  /// ([importSource] non-null) it is the dedupe key (docs/integrations/89
+  /// D-G3).
   TextColumn get healthWorkoutId => text().nullable()();
+
+  /// Where this session was imported from: 'HEALTH' (Apple Health / Health
+  /// Connect) or 'GARMIN' (the server-side Garmin import). Null when the
+  /// session was recorded in Lifey (docs/integrations/89 D-G2). Sent only on
+  /// create; the server never changes it afterwards.
+  TextColumn get importSource => text().nullable()();
+
+  /// The store's source app for an imported session, e.g. "Garmin Connect".
+  /// Display only; null unless [importSource] is set.
+  TextColumn get importAppName => text().nullable()();
 
   /// clientId of the template this session was started from, if any. Not a
   /// Drift `.references()` FK — deleting a template must not be blocked by
