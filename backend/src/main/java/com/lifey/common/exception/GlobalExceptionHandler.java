@@ -31,6 +31,7 @@ import com.lifey.trainer.exception.ScheduleNotFoundException;
 import com.lifey.trainer.exception.SelfInviteException;
 import com.lifey.trainer.exception.UserNotFoundForInviteException;
 import com.lifey.trainer.request.exception.TrainerRequestAlreadyDecidedException;
+import com.lifey.workout.session.InvalidImportRequestException;
 import com.lifey.workout.session.cardio.InvalidCardioRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -294,6 +295,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidCardioRequestException.class)
     public ResponseEntity<ApiError> handleInvalidCardioRequest(InvalidCardioRequestException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** docs/integrations/89 D-G2: an invalid importSource / healthWorkoutId combination. */
+    @ExceptionHandler(InvalidImportRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidImportRequest(InvalidImportRequestException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 

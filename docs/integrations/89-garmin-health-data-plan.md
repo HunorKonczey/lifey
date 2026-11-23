@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: planned (nothing implemented). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -46,7 +46,11 @@ The health store needs no approval, works today, and covers every other watch br
 **Why:** statistics, the weekly review, PRs, the web view and the trainer's client view all read `workout_sessions` already. A second table would need every one of those queries to union two sources (docs/cardio/56 lists them).
 
 ### D-G3 The health record id is the dedupe key, and a deleted import stays deleted
-**Chosen:** the existing `health_workout_id` holds the store's record id. A new partial unique index on `(user_id, health_workout_id) where health_workout_id is not null` stops a second import of the same record. Sessions are soft-deleted (`deleted_at`), so a session the user deleted keeps its id, and the importer skips it.
+**Chosen:** the existing `health_workout_id` holds the store's record id. A new partial unique index on `(user_id, health_workout_id) where import_source is not null and health_workout_id is not null` stops a second import of the same record (V97, LIF-196). On create, the server answers a duplicate import with 409 before it reaches the index.
+
+The index is partial on `import_source`, not only on `health_workout_id`, because `health_workout_id` already marks a Lifey-recorded session *paired* with a store workout (V15). A user can delete a paired session and pair a new one with the same workout, and that must keep working.
+
+Sessions are soft-deleted (`deleted_at`), so a deleted import keeps its id in the index, and the importer skips it.
 **Rejected:** matching on start time and duration. Two devices recording the same run would merge wrongly, and a watch that edits a record later would break the match.
 
 ### D-G4 Lifey's own workouts are never re-imported
@@ -104,7 +108,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | Step | Surface | What | Verification |
 |---|---|---|---|
 | G1.1 | Spike (device) | Record a run on a Garmin watch synced through Garmin Connect. Log what reaches Health Connect (Android) and Apple Health (iOS): workout type, source name, distance, calories, HR samples, route. Record the findings in §8 of this doc. | Findings written down. Mapping table in G1.4 updated from real data. Needs a real Garmin watch. |
-| G1.2 | Backend | `V97`: `import_source`, `import_app_name` on `workout_sessions`, plus the partial unique index on `(user_id, health_workout_id)`. Entity, DTOs and mapper carry the two fields. | `./mvnw -B verify`. The test rejects a second session with the same `health_workout_id`. |
+| G1.2 ✅ | Backend | `V97`: `import_source`, `import_app_name` on `workout_sessions`, plus the partial unique index on `(user_id, health_workout_id)` for imports. Entity, DTOs and mapper carry the two fields. Create rules: `HEALTH` requires `healthWorkoutId`; `GARMIN` is rejected from clients; a duplicate import gets 409. Provenance is create-only. | `./mvnw -B verify`. The test rejects a second import of the same `health_workout_id`. |
 | G1.3 | Mobile data | Drift columns and DTO fields for `importSource` / `importAppName`, with a schema-version bump and migration. Round-trip through the outbox and pull sync. | Repository and sync tests. `flutter analyze`. |
 | G1.4 | Mobile domain | `HealthService.recentCardioWorkouts(since:)` plus a pure mapper from store workout type to `ActivityType`. Unknown types map to OTHER_CARDIO. Skips Lifey-sourced records (D-G4). | Unit tests for the mapper and the source filter. |
 | G1.5 | Mobile data | `CardioHealthImporter`: cursor in `HealthPreferences`, 14-day first run, dedupe by record id, creates the session through `WorkoutSessionRepository` and the outbox. Started from the same lifecycle as the step importer, and only when the toggle is on. | Unit tests: re-run imports nothing new; a deleted import is not recreated; a Lifey-sourced record is skipped. |

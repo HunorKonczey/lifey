@@ -1,5 +1,6 @@
 package com.lifey.workout.session.dto;
 
+import com.lifey.workout.session.ImportSource;
 import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.cardio.ActivityType;
 import jakarta.validation.Valid;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.List;
@@ -107,6 +109,20 @@ public record WorkoutSessionRequest(
          * (docs/cardio/60 C8.1). Same replace-the-whole-list model as splits;
          * must be null or empty unless sessionKind is CARDIO.
          */
-        List<@Valid CardioWaypointRequest> waypoints
+        List<@Valid CardioWaypointRequest> waypoints,
+
+        /*
+         * HEALTH when the client imported this session from Apple Health /
+         * Health Connect (docs/integrations/89 D-G2). healthWorkoutId is then
+         * required and is the dedupe key: a second import of the same record
+         * is answered with 409. GARMIN is server-side only and rejected here.
+         * Only read on create, like templateId; an update never changes a
+         * session's provenance. Null from every client that predates imports.
+         */
+        ImportSource importSource,
+
+        /* The store's source app name, e.g. "Garmin Connect". Only with importSource; read on create only. */
+        @Size(max = 64)
+        String importAppName
 ) {
 }

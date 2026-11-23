@@ -270,6 +270,15 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     boolean existsByUserIdAndDeletedAtIsNullAndStartedAtBetween(Long userId, Instant from, Instant to);
 
     /**
+     * Whether this health-store record was already imported for the user
+     * (docs/integrations/89 D-G3). It deliberately includes soft-deleted
+     * rows, so that a session the user deleted is never imported again. It
+     * excludes Lifey-recorded sessions that are only paired with the record.
+     * This is the same predicate as the V97 partial unique index.
+     */
+    boolean existsByUserIdAndHealthWorkoutIdAndImportSourceIsNotNull(Long userId, String healthWorkoutId);
+
+    /**
      * Candidate trainer-scheduled occurrences for the workout-reminder push job
      * (docs/30-push-notifications-plan.md, B3) — not yet started, not cancelled,
      * never reminded, and within a UTC-date window wide enough to cover every
