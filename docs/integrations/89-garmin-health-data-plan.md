@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2, G1.3 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.4 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -110,7 +110,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | G1.1 | Spike (device) | Record a run on a Garmin watch synced through Garmin Connect. Log what reaches Health Connect (Android) and Apple Health (iOS): workout type, source name, distance, calories, HR samples, route. Record the findings in §8 of this doc. | Findings written down. Mapping table in G1.4 updated from real data. Needs a real Garmin watch. |
 | G1.2 ✅ | Backend | `V97`: `import_source`, `import_app_name` on `workout_sessions`, plus the partial unique index on `(user_id, health_workout_id)` for imports. Entity, DTOs and mapper carry the two fields. Create rules: `HEALTH` requires `healthWorkoutId`; `GARMIN` is rejected from clients; a duplicate import gets 409. Provenance is create-only. | `./mvnw -B verify`. The test rejects a second import of the same `health_workout_id`. |
 | G1.3 ✅ | Mobile data | Drift columns and DTO fields for `importSource` / `importAppName`, with a schema-version bump (v54) and migration. Round-trip through the outbox (create only) and pull sync. `WorkoutSession.isImported`; `enrichedFromWatch` excludes imports. | Repository and sync tests. `flutter analyze`. |
-| G1.4 | Mobile domain | `HealthService.recentCardioWorkouts(since:)` plus a pure mapper from store workout type to `ActivityType`. Unknown types map to OTHER_CARDIO. Skips Lifey-sourced records (D-G4). | Unit tests for the mapper and the source filter. |
+| G1.4 ✅ | Mobile domain | `HealthService.recentCardioWorkouts(since:)` plus a pure mapper from store workout type to `ActivityType` (`health_cardio_workout.dart`). Unknown types map to OTHER_CARDIO; strength and breathing/recovery types are never imported. Skips Lifey-sourced records (D-G4). | Unit tests for the mapper and the source filter. |
 | G1.5 | Mobile data | `CardioHealthImporter`: cursor in `HealthPreferences`, 14-day first run, dedupe by record id, creates the session through `WorkoutSessionRepository` and the outbox. Started from the same lifecycle as the step importer, and only when the toggle is on. | Unit tests: re-run imports nothing new; a deleted import is not recreated; a Lifey-sourced record is skipped. |
 | G1.6 | Mobile UI | Health settings toggle for cardio import, with the permission request. | Widget test. Emulator check. |
 | G1.7 | Mobile UI | Source chip on the session list and detail screens; read-only metric fields on imported sessions (D-G6). | Widget tests. Emulator screenshot. |
