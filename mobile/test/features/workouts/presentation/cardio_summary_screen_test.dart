@@ -718,6 +718,54 @@ void main() {
     });
   });
 
+  // docs/integrations/89 G1.7 (D-G6): an imported session shows where it came from, and its measured values stay
+  // the source watch's — tapping them edits nothing.
+  group('imported session', () {
+    WorkoutSession imported({String? importSource = 'HEALTH'}) {
+      final startedAt = DateTime(2026, 8, 10, 7);
+      return WorkoutSession(
+        clientId: 'imp',
+        exercises: const [],
+        sets: const [],
+        startedAt: startedAt,
+        finishedAt: startedAt.add(const Duration(minutes: 42)),
+        sessionKind: 'CARDIO',
+        activityType: 'RUNNING',
+        movingSeconds: 2520,
+        healthWorkoutId: 'hc-run-1',
+        importSource: importSource,
+        importAppName: importSource == null ? null : 'Garmin Connect',
+        cardio: const CardioMetrics(distanceMeters: 5000),
+      );
+    }
+
+    testWidgets('the header carries the source app chip, not the watch chip', (tester) async {
+      await _pump(tester, imported());
+
+      expect(find.text('Garmin Connect'), findsOneWidget);
+      expect(find.text('Watch'), findsNothing);
+    });
+
+    testWidgets('its distance is read-only: a tap opens no editor and writes nothing', (tester) async {
+      final controller = await _pump(tester, imported());
+
+      await tester.tap(find.text('5.00 km'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextFormField), findsNothing);
+      expect(controller.updateLiveCardioMetricsCalls, isEmpty);
+    });
+
+    testWidgets('a watch-paired Lifey session keeps the watch chip and stays editable', (tester) async {
+      await _pump(tester, imported(importSource: null));
+
+      expect(find.text('Watch'), findsOneWidget);
+      await tester.tap(find.text('5.00 km'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextFormField), findsOneWidget);
+    });
+  });
+
   group('manual metric editing — R8 "manual overwrites measured, stays marked"', () {
     testWidgets('editing distance persists the new value and shows the Edited badge',
         (tester) async {

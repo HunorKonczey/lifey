@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.6 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.7 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -113,7 +113,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | G1.4 ✅ | Mobile domain | `HealthService.recentCardioWorkouts(since:)` plus a pure mapper from store workout type to `ActivityType` (`health_cardio_workout.dart`). Unknown types map to OTHER_CARDIO; strength and breathing/recovery types are never imported. Skips Lifey-sourced records (D-G4). | Unit tests for the mapper and the source filter. |
 | G1.5 ✅ | Mobile data | `CardioHealthImporter`: cursor in `HealthPreferences`, 14-day first run, dedupe by record id, creates the session through `WorkoutSessionRepository` and the outbox. Started from the same lifecycle as the step importer, and only when the toggle is on. | Unit tests: re-run imports nothing new; a deleted import is not recreated; a Lifey-sourced record is skipped. |
 | G1.6 ✅ | Mobile UI | Health settings toggle for cardio import, with the permission request (`CardioImportRow`, `CardioImportController`; Android manifest declares `READ_DISTANCE`). | Widget test. Emulator check. |
-| G1.7 | Mobile UI | Source chip on the session list and detail screens; read-only metric fields on imported sessions (D-G6). | Widget tests. Emulator screenshot. |
+| G1.7 ✅ | Mobile UI | Source chip on the session list and detail screens; read-only metric fields on imported sessions (D-G6). | Widget tests. Emulator screenshot. |
 | G1.8 | Mobile data | Route import: `WORKOUT_ROUTE` → simplified polyline (the docs/cardio/54 simplifier), and HR zones from HR samples. | Unit tests on a recorded fixture route. |
 | G1.9 | Web | Source chip on the web cardio view. | Vitest. Browser check. |
 
