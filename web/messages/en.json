@@ -1472,6 +1472,8 @@
     "movingTime": "moving time",
     "totalTime": "total time",
     "readOnly": "Read only",
+    "importedFrom": "From {source}",
+    "importHealthFallback": "Health app",
     "cardioDurationLabel": "Duration",
     "cardioDistanceLabel": "Distance",
     "cardioPaceLabel": "Pace",

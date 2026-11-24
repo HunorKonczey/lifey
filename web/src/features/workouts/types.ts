@@ -16,6 +16,9 @@ export type Equipment = (typeof EQUIPMENT)[number];
 export const SESSION_KINDS = ["STRENGTH", "CARDIO"] as const;
 export type SessionKind = (typeof SESSION_KINDS)[number];
 
+/** Mirrors the backend's `ImportSource` (docs/integrations/89 D-G2). GARMIN is reserved for the Garmin API path (M4). */
+export type ImportSource = "HEALTH" | "GARMIN";
+
 export const ACTIVITY_TYPES = [
   "RUNNING", "WALKING", "HIKING", "CYCLING", "INDOOR_BIKE", "BASKETBALL", "FOOTBALL", "OTHER_CARDIO",
 ] as const;
@@ -236,6 +239,14 @@ export interface WorkoutSessionResponse {
   splits: CardioSplitResponse[];
   /** Empty, never null, unless sessionKind is CARDIO and activityType is HIKING (docs/cardio/60 C8.4). */
   waypoints: CardioWaypointResponse[];
+  /**
+   * Where an imported session came from (docs/integrations/89 D-G2, V97): HEALTH for a workout read from Apple Health or
+   * Health Connect. Null for a session recorded in Lifey, including one enriched from Lifey's own watch app. Optional
+   * so the many fixtures built before G1.9 still type-check; the backend always sends it.
+   */
+  importSource?: ImportSource | null;
+  /** The source app the health store reported, e.g. "Garmin Connect". Null when it reported none. */
+  importAppName?: string | null;
 }
 
 export interface ExerciseSetRequest {
