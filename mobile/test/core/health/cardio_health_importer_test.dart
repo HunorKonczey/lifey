@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/health/cardio_health_importer.dart';
+import 'package:lifey/core/health/health_cardio_track.dart';
 import 'package:lifey/core/health/health_cardio_workout.dart';
 import 'package:lifey/core/health/health_preferences.dart';
 import 'package:lifey/core/health/health_service.dart';
@@ -12,6 +13,7 @@ import 'package:lifey/core/local_db/app_database.dart';
 import 'package:lifey/core/sync/outbox_writer.dart';
 import 'package:lifey/core/sync/sync_engine.dart';
 import 'package:lifey/features/workouts/data/workout_session_repository.dart';
+import 'package:lifey/features/workouts/domain/route_encoder.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 
 /// docs/integrations/89 G1.5: the cardio importer's opt-in, cursor, dedupe,
@@ -126,6 +128,84 @@ void main() {
     expect(results, [1, 1]); // the second call joined the first run
     expect(service.queries, hasLength(1));
     expect(await db.select(db.workoutSessions).get(), hasLength(1));
+  });
+
+  // docs/integrations/89 G1.8.
+  group('route and heart-rate zones', () {
+    final end = DateTime.utc(2026, 11, 22, 7, 42);
+    final start = end.subtract(const Duration(minutes: 42));
+    HealthCardioWorkout tracked() => _run('hc-1', end).withTrack(
+          heartRateSamples: [
+            for (var s = 0; s < 1260; s += 5) HeartRateSample(start.add(Duration(seconds: s)), 125), // Z2 for 21 min
+            for (var s = 1260; s < 2520; s += 5) HeartRateSample(start.add(Duration(seconds: s)), 175), // Z5 for 21 min
+          ],
+          route: [
+            for (var i = 0; i < 20; i++)
+              RouteLocation(
+                latitude: 47.5 + i * 0.0002,
+                longitude: 19.05 + (i.isEven ? 0 : 0.0003),
+                altitude: 104,
+                at: start.add(Duration(seconds: i * 3)),
+              ),
+          ],
+        );
+
+    test('the session gets the simplified route, the zone times and the peak heart rate', () async {
+      service.workouts = [tracked()];
+      importer = CardioHealthImporter(
+        prefs: prefs,
+        service: service,
+        sessions: repo,
+        maxHeartRate: () async => 190,
+        now: () => now,
+      );
+
+      await importer.import();
+
+      final cardio = (await _onlySession(repo, db)).cardio!;
+      expect(cardio.maxHeartRate, 175);
+      expect(
+        [cardio.hrZone1Seconds, cardio.hrZone2Seconds, cardio.hrZone3Seconds, cardio.hrZone4Seconds, cardio.hrZone5Seconds],
+        [0, 1260, 0, 0, 1260],
+      );
+      expect(decodeRouteSegments(cardio.routePolyline!), hasLength(1));
+      expect(cardio.routePointCount, decodeRouteSegments(cardio.routePolyline!).single.length);
+      final payload = (await createPayloads()).single;
+      expect(payload['cardio']['routePolyline'], cardio.routePolyline);
+      expect(payload['cardio']['hrZone5Seconds'], 1260);
+    });
+
+    test('without a birth date the session imports with its route but no zone times', () async {
+      service.workouts = [tracked()];
+
+      await importer.import();
+
+      final cardio = (await _onlySession(repo, db)).cardio!;
+      expect(cardio.hrZone2Seconds, isNull);
+      expect(cardio.hrZone5Seconds, isNull);
+      expect(cardio.routePolyline, isNotEmpty);
+    });
+
+    test('a failing profile lookup still imports the session', () async {
+      service.workouts = [tracked()];
+      importer = CardioHealthImporter(
+        prefs: prefs,
+        service: service,
+        sessions: repo,
+        maxHeartRate: () async => throw StateError('offline'),
+        now: () => now,
+      );
+
+      expect(await importer.import(), 1);
+      expect((await _onlySession(repo, db)).cardio!.hrZone1Seconds, isNull);
+    });
+
+    test('no route and no heart rate: the session imports with neither', () async {
+      service.workouts = [_run('hc-1', end, distance: null, steps: null)];
+
+      expect(await importer.import(), 1);
+      expect((await _onlySession(repo, db)).cardio, isNull);
+    });
   });
 
   test('a store failure imports nothing and keeps the cursor', () async {

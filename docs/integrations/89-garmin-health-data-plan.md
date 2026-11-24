@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.7 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.8 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -114,7 +114,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | G1.5 ✅ | Mobile data | `CardioHealthImporter`: cursor in `HealthPreferences`, 14-day first run, dedupe by record id, creates the session through `WorkoutSessionRepository` and the outbox. Started from the same lifecycle as the step importer, and only when the toggle is on. | Unit tests: re-run imports nothing new; a deleted import is not recreated; a Lifey-sourced record is skipped. |
 | G1.6 ✅ | Mobile UI | Health settings toggle for cardio import, with the permission request (`CardioImportRow`, `CardioImportController`; Android manifest declares `READ_DISTANCE`). | Widget test. Emulator check. |
 | G1.7 ✅ | Mobile UI | Source chip on the session list and detail screens; read-only metric fields on imported sessions (D-G6). | Widget tests. Emulator screenshot. |
-| G1.8 | Mobile data | Route import: `WORKOUT_ROUTE` → simplified polyline (the docs/cardio/54 simplifier), and HR zones from HR samples. | Unit tests on a recorded fixture route. |
+| G1.8 ✅ | Mobile data | Route import: `WORKOUT_ROUTE` → simplified polyline (the docs/cardio/54 simplifier), and HR zones from HR samples. | Unit tests on a recorded fixture route. |
 | G1.9 | Web | Source chip on the web cardio view. | Vitest. Browser check. |
 
 ### M2 — Sleep from the health store
@@ -173,6 +173,10 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 - The same run recorded in Lifey *and* on a Garmin watch: two sessions with different record ids, by design. The detail screen of the imported one offers "Delete — I already logged this".
 - A watch edits or deletes its record after import: the import is not updated (D-G3). A re-import of an edited record is skipped because its id is unchanged. Accepted for M1.
 - Health Connect returns no route unless the user grants the per-route permission. The session imports without a route, and that is not an error.
+  - As built (G1.8): the manifest declares `READ_EXERCISE_ROUTES`, but no in-app request can ask for it. The user grants "Exercise routes" in the Health Connect app. Without it the plugin returns a route with no locations. On iOS, `WORKOUT_ROUTE` is part of the cardio permission request. A user who turned the import on before G1.8 is asked again only after toggling it off and on.
+  - Matching: on Health Connect a route names its exercise session. On HealthKit a Garmin route carries no workout id, so it goes to the workout it overlaps most in time (`routeForWorkout`).
+  - The route goes through the same closing step as a Lifey recording: gap split, 5 m Douglas–Peucker, altitude channel (`encodeRoute`). The §4.2 accuracy and speed gates are skipped, because the watch has already filtered its track.
+- HR zones of an imported session (G1.8) are measured against 220 − age, the same bands as the live screen (`hr_zones.dart`). Without a birth date the zone columns stay null and the panel is hidden. A sample counts until the next one, capped at 30 s, so a lost reading shows as partial coverage instead of invented zone time.
 - Time zones: a run starts in one zone and ends in another, or sleep crosses midnight. Dates come from the local end time, consistently on both platforms.
 - Permission revoked after enabling: the importer stops quietly, and the toggle shows "permission needed". This uses the same revoked-permission check as `_looksLikeRevokedPermission`.
 - An unknown or new store workout type: it imports as OTHER_CARDIO and the user can change the type.

@@ -21,6 +21,10 @@
     <!-- docs/integrations/89 G1.6: the cardio import reads an imported workout's distance (DISTANCE_DELTA).
          Without the declaration Health Connect refuses the whole cardio permission request. -->
     <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+    <!-- docs/integrations/89 G1.8: an imported workout's route. The user grants it in the Health Connect app
+         ("Exercise routes"); no in-app request asks for it, so it is not part of the cardio permission request.
+         Without the grant the workout imports without a route. -->
+    <uses-permission android:name="android.permission.health.READ_EXERCISE_ROUTES"/>
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
     <!-- Morning weigh-in reminder (docs/30-push-notifications-plan.md, M4) —
          lets flutter_local_notifications reschedule its repeating alarm after

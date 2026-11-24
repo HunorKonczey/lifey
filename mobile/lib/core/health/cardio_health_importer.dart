@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/onboarding/data/user_details_repository.dart';
 import '../../features/workouts/data/workout_session_repository.dart';
+import '../../features/workouts/domain/hr_zones.dart';
 import '../../features/workouts/domain/workout_session.dart';
+import 'health_cardio_track.dart';
 import 'health_cardio_workout.dart';
 import 'health_preferences.dart';
 import 'health_service.dart';
@@ -25,6 +28,11 @@ import 'health_service.dart';
 ///   - a re-import of a record the user deleted gets the server's 409, and
 ///     the sync engine drops that local copy
 ///     (EntitySyncConfig.dropLocalOnCreateConflict).
+/// - **Route and zones** (G1.8): the store's GPS fixes become the session's
+///   simplified polyline, and its heart-rate samples become zone times,
+///   measured against [maxHeartRate] (220 − age, as on the live screen). No
+///   birth date means no zones; no route permission means no route. Neither
+///   is an error.
 /// - **Write path** (R4): every session goes through [WorkoutSessionRepository]
 ///   and the outbox, never raw SQL, so sync and `updated_at` behave like any
 ///   other session.
@@ -33,15 +41,20 @@ class CardioHealthImporter {
     required HealthPreferences prefs,
     required HealthService service,
     required WorkoutSessionRepository sessions,
+    Future<int?> Function()? maxHeartRate,
     DateTime Function()? now,
   })  : _prefs = prefs,
         _service = service,
         _sessions = sessions,
+        _maxHeartRate = maxHeartRate ?? _unknownMaxHeartRate,
         _now = now ?? DateTime.now;
+
+  static Future<int?> _unknownMaxHeartRate() async => null;
 
   final HealthPreferences _prefs;
   final HealthService _service;
   final WorkoutSessionRepository _sessions;
+  final Future<int?> Function() _maxHeartRate;
   final DateTime Function() _now;
 
   /// How far back the very first import reaches (D-G5). Years of history in
@@ -65,10 +78,19 @@ class CardioHealthImporter {
       final since = await _prefs.cardioImportCursor() ?? _now().subtract(firstRunLookback);
       final workouts = await _service.recentCardioWorkouts(since: since);
 
+      int? maxHeartRate;
+      if (workouts.isNotEmpty) {
+        // Looked up once per run. Without it the sessions still import, just
+        // without zone times.
+        try {
+          maxHeartRate = await _maxHeartRate();
+        } catch (_) {}
+      }
+
       var created = 0;
       for (final workout in workouts) {
         if (!await _sessions.existsByHealthWorkoutId(workout.uuid)) {
-          await _create(workout);
+          await _create(workout, maxHeartRate);
           created++;
         }
         // Advance after each workout, in end order, so a failure half-way
@@ -81,8 +103,19 @@ class CardioHealthImporter {
     }
   }
 
-  Future<void> _create(HealthCardioWorkout workout) {
-    final hasMetrics = workout.distanceMeters != null || workout.steps != null;
+  Future<void> _create(HealthCardioWorkout workout, int? maxHeartRate) {
+    final zones = hrZoneSecondsFromSamples(
+      workout.heartRateSamples,
+      start: workout.startDate,
+      end: workout.endDate,
+      maxHeartRate: maxHeartRate,
+    );
+    final route = routePolylineFromLocations(workout.route);
+    final hasMetrics = workout.distanceMeters != null ||
+        workout.steps != null ||
+        workout.maxHeartRate != null ||
+        zones != null ||
+        route != null;
     return _sessions.create(
       startedAt: workout.startDate,
       finishedAt: workout.endDate,
@@ -97,7 +130,20 @@ class CardioHealthImporter {
       activityType: workout.activityType,
       // The store has no pause data, so moving time is the whole duration.
       movingSeconds: workout.endDate.difference(workout.startDate).inSeconds,
-      cardio: hasMetrics ? CardioMetrics(distanceMeters: workout.distanceMeters, steps: workout.steps) : null,
+      cardio: hasMetrics
+          ? CardioMetrics(
+              distanceMeters: workout.distanceMeters,
+              steps: workout.steps,
+              maxHeartRate: workout.maxHeartRate,
+              hrZone1Seconds: zones?[0],
+              hrZone2Seconds: zones?[1],
+              hrZone3Seconds: zones?[2],
+              hrZone4Seconds: zones?[3],
+              hrZone5Seconds: zones?[4],
+              routePolyline: route?.polyline,
+              routePointCount: route?.pointCount,
+            )
+          : null,
     );
   }
 }
@@ -107,6 +153,10 @@ final cardioHealthImporterProvider = Provider<CardioHealthImporter>((ref) {
     prefs: ref.watch(healthPreferencesProvider),
     service: ref.watch(healthServiceProvider),
     sessions: ref.watch(workoutSessionRepositoryProvider),
+    maxHeartRate: () async {
+      final birthDate = (await ref.read(userDetailsProvider.future))?.birthDate;
+      return birthDate == null ? null : maxHeartRateForAge(ageOn(birthDate, DateTime.now()));
+    },
   );
 });
 

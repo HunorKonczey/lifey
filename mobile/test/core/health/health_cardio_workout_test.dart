@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:health/health.dart';
+import 'package:lifey/core/health/health_cardio_track.dart';
 import 'package:lifey/core/health/health_cardio_workout.dart';
 import 'package:lifey/core/health/health_service.dart';
 import 'package:lifey/features/workouts/domain/activity_type.dart';
@@ -79,7 +80,7 @@ void main() {
       expect(workout.distanceMeters, 8120);
       expect(workout.steps, 7400);
       expect(workout.averageHeartRate, isNull);
-      expect(workout.withAverageHeartRate(151).averageHeartRate, 151);
+      expect(workout.withTrack(heartRateSamples: [HeartRateSample(workout.startDate, 151)]).averageHeartRate, 151);
     });
 
     test('drops Lifey-written records, non-cardio types and non-workout points', () {
@@ -141,9 +142,53 @@ void main() {
 
       expect(result.map((w) => w.uuid), ['early', 'late']);
       expect(result.map((w) => w.averageHeartRate), [150, 150]);
+      expect(result.map((w) => w.maxHeartRate), [160, 160]);
+      expect(result.first.heartRateSamples.map((s) => s.bpm), [140, 160]);
       // One heart-rate query per imported workout only, none for the dropped ones.
       expect(health.heartRateQueries, 2);
       expect(health.workoutQueryStart, since.subtract(const Duration(hours: 12)));
+    });
+
+    // docs/integrations/89 G1.8.
+    test('attaches the route Health Connect names for the workout', () async {
+      final health = _FakeHealth(
+        workouts: [_workoutPoint()],
+        routes: [
+          _routePoint(workoutUuid: 'hc-other', lat: 48),
+          _routePoint(workoutUuid: 'hc-run-1', lat: 47.5),
+        ],
+      );
+
+      final result = await _AvailableHealthService(health).recentCardioWorkouts(since: DateTime(2026, 11, 20));
+
+      expect(result.single.route.map((l) => l.latitude), [47.5, 47.5001]);
+      expect(health.routeQueries, 1);
+    });
+
+    test('a route Health Connect withholds (no Exercise routes permission) imports the workout without one', () async {
+      final health = _FakeHealth(workouts: [_workoutPoint()], routes: [_routePoint(workoutUuid: 'hc-run-1', consentRequired: true)]);
+
+      final result = await _AvailableHealthService(health).recentCardioWorkouts(since: DateTime(2026, 11, 20));
+
+      expect(result.single.uuid, 'hc-run-1');
+      expect(result.single.route, isEmpty);
+    });
+
+    test('a failed route read still returns the workouts', () async {
+      final health = _FakeHealth(workouts: [_workoutPoint()], heartRates: [150], routesFail: true);
+
+      final result = await _AvailableHealthService(health).recentCardioWorkouts(since: DateTime(2026, 11, 20));
+
+      expect(result.single.averageHeartRate, 150);
+      expect(result.single.route, isEmpty);
+    });
+
+    test('nothing importable: no heart-rate or route reads at all', () async {
+      final health = _FakeHealth(workouts: [_workoutPoint(sourceId: 'com.khunor.lifey')]);
+
+      expect(await _AvailableHealthService(health).recentCardioWorkouts(since: DateTime(2026, 11, 20)), isEmpty);
+      expect(health.heartRateQueries, 0);
+      expect(health.routeQueries, 0);
     });
 
     test('returns nothing where the platform has no health store', () async {
@@ -186,6 +231,32 @@ HealthDataPoint _workoutPoint({
       sourceName: sourceId == 'com.khunor.lifey' ? 'Lifey' : 'Garmin Connect',
     );
 
+/// A WORKOUT_ROUTE point shaped like the plugin's Health Connect reply: the workout id in the metadata, and no locations
+/// when the user has not granted Exercise routes.
+HealthDataPoint _routePoint({required String workoutUuid, double lat = 47.5, bool consentRequired = false}) {
+  final from = DateTime(2026, 11, 20, 6);
+  return HealthDataPoint(
+    uuid: workoutUuid,
+    value: WorkoutRouteHealthValue(
+      locations: consentRequired
+          ? []
+          : [
+              WorkoutRouteLocation(latitude: lat, longitude: 19.05, timestamp: from),
+              WorkoutRouteLocation(latitude: lat + 0.0001, longitude: 19.05, timestamp: from.add(const Duration(seconds: 3))),
+            ],
+    ),
+    type: HealthDataType.WORKOUT_ROUTE,
+    unit: HealthDataUnit.NO_UNIT,
+    dateFrom: from,
+    dateTo: DateTime(2026, 11, 20, 6, 42),
+    sourcePlatform: HealthPlatformType.googleHealthConnect,
+    sourceDeviceId: 'device',
+    sourceId: 'com.garmin.android.apps.connectmobile',
+    sourceName: 'com.garmin.android.apps.connectmobile',
+    metadata: {'workout_uuid': workoutUuid, if (consentRequired) 'route_requires_consent': true},
+  );
+}
+
 HealthDataPoint _stepsPoint() => HealthDataPoint(
       uuid: 'steps-1',
       value: NumericHealthValue(numericValue: 1200),
@@ -203,11 +274,14 @@ HealthDataPoint _stepsPoint() => HealthDataPoint(
 /// [heartRates] (one sample each), so the service has something to average.
 /// Counts the reads.
 class _FakeHealth extends Health {
-  _FakeHealth({required this.workouts, this.heartRates = const []});
+  _FakeHealth({required this.workouts, this.heartRates = const [], this.routes = const [], this.routesFail = false});
 
   final List<HealthDataPoint> workouts;
   final List<double> heartRates;
+  final List<HealthDataPoint> routes;
+  final bool routesFail;
   int heartRateQueries = 0;
+  int routeQueries = 0;
   DateTime? workoutQueryStart;
 
   @override
@@ -225,6 +299,11 @@ class _FakeHealth extends Health {
     if (types.contains(HealthDataType.WORKOUT)) {
       workoutQueryStart = startTime;
       return workouts;
+    }
+    if (types.contains(HealthDataType.WORKOUT_ROUTE)) {
+      routeQueries++;
+      if (routesFail) throw StateError('route read failed');
+      return routes;
     }
     heartRateQueries++;
     return [

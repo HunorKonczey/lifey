@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:health/health.dart';
 
+import 'health_cardio_track.dart';
 import 'health_cardio_workout.dart';
 import 'health_workout.dart';
 import '../utils/date_math.dart';
@@ -151,6 +152,12 @@ class HealthService {
         HealthDataType.HEART_RATE,
         HealthDataType.ACTIVE_ENERGY_BURNED,
         if (Platform.isAndroid) HealthDataType.DISTANCE_DELTA,
+        // HealthKit asks for routes as their own type (docs/integrations/89
+        // G1.8). On Health Connect a route is read with its exercise session,
+        // and reading other apps' routes needs the *Exercise routes*
+        // permission, which only the Health Connect app grants: no request
+        // here can ask for it.
+        if (Platform.isIOS) HealthDataType.WORKOUT_ROUTE,
       ];
 
   /// Asks for READ access to [cardioImportTypes]. Same contract as
@@ -329,8 +336,13 @@ class HealthService {
   /// Ordered by end time because the importer (G1.5) advances its cursor to
   /// the last end it saw. The query window opens 12 h before [since], so a
   /// long workout that started earlier still shows up; the filter is on end
-  /// time. Average heart rate costs one extra query per workout. That is
-  /// fine for the importer's 14-day first window and its incremental runs.
+  /// time. The heart-rate samples cost one extra query per workout, and the
+  /// routes one more query for the whole window. That is fine for the
+  /// importer's 14-day first window and its incremental runs.
+  ///
+  /// Routes (G1.8) are best-effort: a failed route read, or a route the app
+  /// may not read (Health Connect without *Exercise routes*), leaves
+  /// [HealthCardioWorkout.route] empty and the workout still imports.
   ///
   /// Returns `[]` when unavailable, Health Connect isn't installed, there is
   /// nothing to read, or permission was denied (READ grants are not
@@ -342,19 +354,29 @@ class HealthService {
     return _guarded(const [], () async {
       await _ensureConfigured();
       final now = DateTime.now();
+      final queryStart = since.subtract(const Duration(hours: 12));
       final points = await _health.getHealthDataFromTypes(
         types: const [HealthDataType.WORKOUT],
-        startTime: since.subtract(const Duration(hours: 12)),
+        startTime: queryStart,
         endTime: now,
       );
 
-      final workouts = <HealthCardioWorkout>[];
+      final importable = <HealthCardioWorkout>[];
       for (final point in points) {
         if (point.dateTo.isBefore(since)) continue; // ended before the cursor
         final workout = cardioWorkoutFromPoint(point);
-        if (workout == null) continue; // not importable, so skip the heart-rate query too
-        workouts.add(workout.withAverageHeartRate(await _averageHeartRate(point.dateFrom, point.dateTo)));
+        if (workout != null) importable.add(workout);
       }
+      if (importable.isEmpty) return const [];
+
+      final routes = await _workoutRoutes(queryStart, now);
+      final workouts = <HealthCardioWorkout>[
+        for (final workout in importable)
+          workout.withTrack(
+            heartRateSamples: await _heartRateSamples(workout.startDate, workout.endDate),
+            route: routeForWorkout(routes, workoutUuid: workout.uuid, start: workout.startDate, end: workout.endDate),
+          ),
+      ];
       workouts.sort((a, b) => a.endDate.compareTo(b.endDate));
       return workouts;
     });
@@ -432,6 +454,49 @@ class HealthService {
   }
 
   /// Mean of the heart-rate samples in `[from, to]`, or null if there are none.
+  /// The heart-rate readings between [from] and [to], for the cardio import's
+  /// average, maximum and zone times (docs/integrations/89 G1.8).
+  Future<List<HeartRateSample>> _heartRateSamples(DateTime from, DateTime to) async {
+    final points = await _health.getHealthDataFromTypes(
+      types: const [HealthDataType.HEART_RATE],
+      startTime: from,
+      endTime: to,
+    );
+    return [
+      for (final point in points)
+        if (point.value case final NumericHealthValue v) HeartRateSample(point.dateFrom, v.numericValue.toDouble()),
+    ];
+  }
+
+  /// Every workout route in [from]–[to], or none when the read fails. A
+  /// route is extra detail on an imported workout, so its failure must never
+  /// cost the import itself (docs/integrations/89 G1.8).
+  Future<List<HealthWorkoutRoute>> _workoutRoutes(DateTime from, DateTime to) async {
+    try {
+      final points = await _health.getHealthDataFromTypes(
+        types: const [HealthDataType.WORKOUT_ROUTE],
+        startTime: from,
+        endTime: to,
+      );
+      return [
+        for (final point in points)
+          if (point.value case final WorkoutRouteHealthValue v)
+            HealthWorkoutRoute(
+              workoutUuid: v.workoutUuid ?? point.metadata?['workout_uuid'] as String?,
+              start: point.dateFrom,
+              end: point.dateTo,
+              locations: [
+                for (final l in v.locations)
+                  RouteLocation(latitude: l.latitude, longitude: l.longitude, at: l.timestamp, altitude: l.altitude),
+              ],
+            ),
+      ];
+    } catch (error) {
+      developer.log('Workout route read failed: $error', name: 'HealthService');
+      return const [];
+    }
+  }
+
   Future<double?> _averageHeartRate(DateTime from, DateTime to) async {
     final points = await _health.getHealthDataFromTypes(
       types: const [HealthDataType.HEART_RATE],
