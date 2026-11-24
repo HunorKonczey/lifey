@@ -1472,6 +1472,8 @@
     "movingTime": "mozgásidő",
     "totalTime": "bruttó idő",
     "readOnly": "Csak olvasható",
+    "importedFrom": "Forrás: {source}",
+    "importHealthFallback": "Egészség-app",
     "cardioDurationLabel": "Időtartam",
     "cardioDistanceLabel": "Távolság",
     "cardioPaceLabel": "Tempó",

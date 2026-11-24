@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.8 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -115,7 +115,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | G1.6 ✅ | Mobile UI | Health settings toggle for cardio import, with the permission request (`CardioImportRow`, `CardioImportController`; Android manifest declares `READ_DISTANCE`). | Widget test. Emulator check. |
 | G1.7 ✅ | Mobile UI | Source chip on the session list and detail screens; read-only metric fields on imported sessions (D-G6). | Widget tests. Emulator screenshot. |
 | G1.8 ✅ | Mobile data | Route import: `WORKOUT_ROUTE` → simplified polyline (the docs/cardio/54 simplifier), and HR zones from HR samples. | Unit tests on a recorded fixture route. |
-| G1.9 | Web | Source chip on the web cardio view. | Vitest. Browser check. |
+| G1.9 ✅ | Web | Source chip on the web cardio view. | Vitest. Browser check. |
 
 ### M2 — Sleep from the health store
 **Demo:** the Today screen shows last night's sleep from any watch.

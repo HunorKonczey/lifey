@@ -15,6 +15,7 @@ import { activityFamilyOf, activityTypeColor } from "../activityType";
 import { buildCardioTiles } from "../cardioTiles";
 import { detectBestEffortRecords } from "../cardioBestEffortRecords";
 import { buildHrZoneBreakdown } from "../hrZoneBreakdown";
+import { importSourceLabel } from "../importSource";
 import { formatDistanceKm, formatDuration, formatPace, totalWorkKj } from "../cardioFormat";
 import { flattenAltitudes } from "../routeGeometry";
 import type { WorkoutSessionResponse } from "../types";
@@ -95,6 +96,7 @@ export function CardioSessionDetail({
   const polyline = session.cardio?.routePolyline;
   const bestEffortRecords = detectBestEffortRecords(history, session);
   const hrZoneBreakdown = buildHrZoneBreakdown(session);
+  const importSource = importSourceLabel(session, t("importHealthFallback"));
   const workKj = totalWorkKj(session.cardio?.avgWatts ?? null, session.movingSeconds);
   const altitudes = polyline ? flattenAltitudes(polyline) : [];
   // DISTANCE sessions lead with the W3-D hero (distance · time · pace · heart rate); the tiles below keep only what
@@ -123,9 +125,10 @@ export function CardioSessionDetail({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex items-center gap-3">
+      {/* Wraps so the badges drop to their own line on a phone instead of squeezing the title out (G1.9 added one). */}
+      <Card className="flex flex-wrap items-center gap-3">
         <ActivityChip activityType={activityType} size={40} />
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-[10rem]">
           <h2 className="type-title truncate">{ta(activityType)}</h2>
           <p className="type-body-s tabular" style={{ color: "var(--text-3)" }}>
             {fmt.date(session.startedAt, "dayYearTime")}
@@ -136,6 +139,19 @@ export function CardioSessionDetail({
             style={{ background: "color-mix(in srgb, var(--role) 18%, transparent)", color: "var(--text)" }}>
             {t("sessionRpe", { rpe: session.rpe })}
           </span>
+        )}
+        {importSource && (
+          // docs/integrations/89 G1.9: where an imported session came from, as on mobile's summary chip.
+          <div
+            data-testid="import-source-chip"
+            title={t("importedFrom", { source: importSource })}
+            className="flex items-center gap-1 rounded-[var(--r-pill)] px-3 py-1.5 min-w-0 max-w-full"
+            style={{ background: "var(--nested)" }}
+          >
+            <span aria-hidden="true" className="material-symbols-rounded text-sm" style={{ color: "var(--text-3)" }}>sync</span>
+            <span className="sr-only">{t("importedFrom", { source: importSource })}</span>
+            <span aria-hidden="true" className="text-xs font-bold truncate" style={{ color: "var(--text-2)" }}>{importSource}</span>
+          </div>
         )}
         <div className="flex items-center gap-1 rounded-[var(--r-pill)] px-3 py-1.5 flex-none" style={{ background: "var(--nested)" }}>
           <span aria-hidden="true" className="material-symbols-rounded text-sm" style={{ color: "var(--text-3)" }}>lock</span>
