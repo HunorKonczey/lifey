@@ -1,5 +1,7 @@
 import 'package:health/health.dart';
 
+import 'health_cardio_track.dart';
+
 /// A finished workout from the health store that qualifies for the cardio
 /// import (docs/integrations/89 M1, G1.4). It has already been mapped to a
 /// Lifey cardio [activityType], and Lifey's own records were filtered out
@@ -19,6 +21,9 @@ class HealthCardioWorkout {
     this.distanceMeters,
     this.steps,
     this.averageHeartRate,
+    this.maxHeartRate,
+    this.heartRateSamples = const [],
+    this.route = const [],
   });
 
   /// The store's record id: an HKWorkout UUID on iOS, a Health Connect record
@@ -51,20 +56,42 @@ class HealthCardioWorkout {
   /// Mean heart rate (bpm) over [startDate]–[endDate], null without samples.
   final double? averageHeartRate;
 
-  /// This workout with [averageHeartRate] filled in. The heart rate needs a
-  /// second store query, so the caller adds it after [cardioWorkoutFromPoint].
-  HealthCardioWorkout withAverageHeartRate(double? bpm) => HealthCardioWorkout(
-        uuid: uuid,
-        startDate: startDate,
-        endDate: endDate,
-        activityType: activityType,
-        sourceId: sourceId,
-        sourceName: sourceName,
-        activeCalories: activeCalories,
-        distanceMeters: distanceMeters,
-        steps: steps,
-        averageHeartRate: bpm,
-      );
+  /// Highest heart rate (bpm) over [startDate]–[endDate], null without samples.
+  final double? maxHeartRate;
+
+  /// The heart-rate readings over [startDate]–[endDate], the input of the
+  /// zone times (docs/integrations/89 G1.8, [hrZoneSecondsFromSamples]).
+  final List<HeartRateSample> heartRateSamples;
+
+  /// The workout's GPS fixes, empty when it has no route or the app may not
+  /// read it (Health Connect's *Exercise routes* permission). The importer
+  /// turns them into the session's polyline ([routePolylineFromLocations]).
+  final List<RouteLocation> route;
+
+  /// This workout with its heart rate and route filled in. Both need further
+  /// store queries, so the caller adds them after [cardioWorkoutFromPoint].
+  /// The average and the maximum are derived from [heartRateSamples].
+  HealthCardioWorkout withTrack({
+    List<HeartRateSample> heartRateSamples = const [],
+    List<RouteLocation> route = const [],
+  }) {
+    final bpms = [for (final s in heartRateSamples) s.bpm];
+    return HealthCardioWorkout(
+      uuid: uuid,
+      startDate: startDate,
+      endDate: endDate,
+      activityType: activityType,
+      sourceId: sourceId,
+      sourceName: sourceName,
+      activeCalories: activeCalories,
+      distanceMeters: distanceMeters,
+      steps: steps,
+      averageHeartRate: bpms.isEmpty ? null : bpms.reduce((a, b) => a + b) / bpms.length,
+      maxHeartRate: bpms.isEmpty ? null : bpms.reduce((a, b) => a > b ? a : b),
+      heartRateSamples: heartRateSamples,
+      route: route,
+    );
+  }
 }
 
 /// Lifey's own app id on both platforms (iOS bundle id, Android
