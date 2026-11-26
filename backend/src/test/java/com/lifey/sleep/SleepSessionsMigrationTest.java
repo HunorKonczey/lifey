@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * V98__sleep_sessions.sql (docs/integrations/89 G2.1, D-G7) against a real Postgres, with the repository queries the
+ * V99__sleep_sessions.sql (docs/integrations/89 G2.1, D-G7) against a real Postgres, with the repository queries the
  * service relies on. A mocked service test can't see any of this:
  * <ul>
  *   <li>the unique constraint really is the import dedupe key, soft-deleted rows included;</li>

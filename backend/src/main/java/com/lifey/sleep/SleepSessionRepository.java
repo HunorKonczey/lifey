@@ -16,7 +16,7 @@ public interface SleepSessionRepository extends JpaRepository<SleepSession, Long
 
     /**
      * Whether the user already has a session for this store record, soft-deleted ones included: the import dedupe
-     * key ({@code sleep_sessions_user_id_health_record_id_unique}, V98). A night the user deleted must not come back
+     * key ({@code sleep_sessions_user_id_health_record_id_unique}, V99). A night the user deleted must not come back
      * on the next import.
      */
     boolean existsByUserIdAndHealthRecordId(Long userId, String healthRecordId);

@@ -9,7 +9,7 @@ import lombok.Setter;
 import java.time.Instant;
 
 /**
- * One sleep session from the health store: a night or a nap (docs/integrations/89 D-G7, {@code V98}).
+ * One sleep session from the health store: a night or a nap (docs/integrations/89 D-G7, {@code V99}).
  * <p>
  * The session belongs to the local date of its <em>end</em>, the wake-up date. Only the client knows the local time
  * zone, so it derives that date from {@link #endedAt}; there is no date column.
