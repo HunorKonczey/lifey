@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -73,6 +73,7 @@ Sessions are soft-deleted (`deleted_at`), so a deleted import keeps its id in th
 
 ### D-G7 A sleep session is its own synced entity, attributed to the wake-up date
 **Chosen:** a new `sleep_sessions` table, one row per sleep session from the store: start, end, asleep / deep / light / REM / awake minutes (nullable when the source has no stages), source app, and the store's record id. "Last night" is the longest session whose **end** falls on the local date. Naps are stored too, but the Today tile shows only the main sleep.
+- As built (G2.1, `V99`; `V98` went to LIF-224 in the meantime): there is no date column. Only the client knows the local time zone, so it derives the wake-up date from `ended_at`. The record id is a plain unique `(user_id, health_record_id)`: nulls stay distinct, so a session without a store id is never blocked. API: `/api/v1/sleep-sessions` with list, delta feed, create (409 on a record the user already has, deleted ones included) and soft delete. There is no update, because imported values are measurements (D-G6).
 **Rejected:**
 - **A per-night aggregate row:** loses naps, and makes re-imports after a watch edit ambiguous.
 - **Attributing to the start date:** a sleep starting at 23:30 would land on the previous day.
@@ -122,7 +123,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 
 | Step | Surface | What | Verification |
 |---|---|---|---|
-| G2.1 | Backend | `V98`: `sleep_sessions` (D-G7), with `user_id … on delete cascade`, `updated_at`/`deleted_at` plus the `(updated_at, id)` index, and a unique `(user_id, health_record_id)`. Entity, CRUD and delta-sync feed (backend-feature-slice). | `./mvnw -B verify`. Ownership and sync-feed tests. |
+| G2.1 ✅ | Backend | `V99`: `sleep_sessions` (D-G7), with `user_id … on delete cascade`, `updated_at`/`deleted_at` plus the `(updated_at, id)` index, and a unique `(user_id, health_record_id)`. Entity, CRUD and delta-sync feed (backend-feature-slice). | `./mvnw -B verify`. Ownership and sync-feed tests. |
 | G2.2 | Mobile data | Drift table, repository, outbox and pull sync for sleep sessions (flutter-feature-slice). | Repository and sync tests. |
 | G2.3 | Mobile data | `SleepHealthImporter`: `SLEEP_SESSION` plus stage samples, merged into one row per session. Same cursor, dedupe and lifecycle as G1.5. | Unit tests with iOS-style (stages only) and Health Connect-style (session plus stages) fixtures. |
 | G2.4 | Mobile UI | Sleep toggle in the Health settings. | Widget test. |
@@ -134,7 +135,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 
 | Step | Surface | What | Verification |
 |---|---|---|---|
-| G3.1 | Backend | `V99`: `daily_vitals` (D-G8), with CRUD and the sync feed. | `./mvnw -B verify`. |
+| G3.1 | Backend | `V100`: `daily_vitals` (D-G8), with CRUD and the sync feed. | `./mvnw -B verify`. |
 | G3.2 | Mobile data | Drift table, repository and sync for daily vitals. | Repository and sync tests. |
 | G3.3 | Mobile data | `VitalsHealthImporter`: daily resting HR and HRV with its method, plus the settings toggle. | Unit tests: SDNN and RMSSD never mixed. |
 | G3.4 | Mobile UI | Resting-HR and HRV trend cards. | Widget tests. Emulator screenshot. |
@@ -148,13 +149,13 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | G4.1 | Backend | `garmin/` feature: `garmin_connections` table (encrypted tokens, D-G10) and the OAuth start/callback endpoints. The auth mechanism is confirmed from Garmin's docs in this step. | `./mvnw -B verify` with a mocked Garmin token endpoint. |
 | G4.2 | Mobile UI | Connect / disconnect Garmin in Settings. Opens the browser, with a deep link back. | Emulator check against the evaluation environment. |
 | G4.3 | Backend | Webhook receiver for push notifications: verification, an idempotent raw-payload store, and the deregistration / permission-change handlers. | Controller tests with recorded payloads. A duplicate delivery is ignored. |
-| G4.4 | Backend | Activity summary → CARDIO session (`import_source = GARMIN`, `external_id` = activityId, `V100` index). The health importer skips the Garmin Connect source while connected (D-G9). | Service tests: same activity delivered twice gives one session; a deregistered user gets nothing. |
+| G4.4 | Backend | Activity summary → CARDIO session (`import_source = GARMIN`, `external_id` = activityId, `V101` index). The health importer skips the Garmin Connect source while connected (D-G9). | Service tests: same activity delivered twice gives one session; a deregistered user gets nothing. |
 | G4.5 | Backend | FIT file parsing for route, laps and HR zones. This adds the Garmin FIT SDK; justify the dependency in the PR. | Tests on a fixture FIT file. |
 
 ### M5 — Garmin-only data (parked with M4)
 | Step | Surface | What | Verification |
 |---|---|---|---|
-| G5.1 | Backend | Garmin dailies and sleep into `daily_vitals` / `sleep_sessions` with `import_source = GARMIN`. Adds stress and Body Battery columns (`V101`). | Service tests with recorded payloads. |
+| G5.1 | Backend | Garmin dailies and sleep into `daily_vitals` / `sleep_sessions` with `import_source = GARMIN`. Adds stress and Body Battery columns (`V102`). | Service tests with recorded payloads. |
 | G5.2 | Mobile UI | Stress and Body Battery cards. | Widget tests. |
 | G5.3 | Backend | Training API: send a Lifey cardio interval plan to the watch. Only if Garmin's terms allow it for the app; the sources say third-party workout pushing is largely restricted. | Decided at G4.0. Tests against the sandbox. |
 
