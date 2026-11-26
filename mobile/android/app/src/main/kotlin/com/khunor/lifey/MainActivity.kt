@@ -10,6 +10,7 @@ class MainActivity : FlutterFragmentActivity() {
     private var watchBridge: WatchBridge? = null
     private var mediaSessionBridge: MediaSessionBridge? = null
     private var shortcutsBridge: ShortcutsBridge? = null
+    private var healthConnectBridge: HealthConnectBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -19,5 +20,7 @@ class MainActivity : FlutterFragmentActivity() {
         mediaSessionBridge = MediaSessionBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         // docs/cardio/59-cardio-implementation-plan.md C2.11a.
         shortcutsBridge = ShortcutsBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        // docs/integrations/89 G1.8, LIF-223: the Exercise routes hint.
+        healthConnectBridge = HealthConnectBridge(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 }

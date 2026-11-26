@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/health/cardio_import_controller.dart';
+import '../../../../core/health/health_connect_route_access.dart';
 import '../../../../core/health/health_controller.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/notification_settings_controller.dart';
@@ -72,6 +73,72 @@ class CardioImportRow extends ConsumerWidget {
         value: healthOn && enabled,
         onChanged: !healthOn || state.isLoading ? null : controller.setEnabled,
       ),
+    );
+  }
+}
+
+/// "Route maps from other apps ›" — under the cardio-import row on Android,
+/// while the import runs but Health Connect withholds other apps' routes
+/// (docs/integrations/89 G1.8, LIF-223). That permission, *Exercise routes*,
+/// can only be granted in Health Connect, so without this row an imported
+/// Garmin run simply has no map and the user never learns why. Tapping opens
+/// Health Connect; the subline names the path from there.
+///
+/// It leaves once the permission is granted. That is known from Android 14;
+/// below, Health Connect can't tell, so the row stays while the import is on.
+/// The check reruns on every app resume, since the grant happens in another
+/// app.
+class ExerciseRoutesHintRow extends ConsumerStatefulWidget {
+  const ExerciseRoutesHintRow({super.key});
+
+  @override
+  ConsumerState<ExerciseRoutesHintRow> createState() => _ExerciseRoutesHintRowState();
+}
+
+class _ExerciseRoutesHintRowState extends ConsumerState<ExerciseRoutesHintRow> {
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(exerciseRoutesGrantedProvider));
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  Future<void> _open() async {
+    final opened = await ref.read(healthConnectRouteAccessProvider).openHealthConnect();
+    if (opened || !mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsExerciseRoutesOpenFailedMessage)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final access = ref.watch(healthConnectRouteAccessProvider);
+    final healthOn = ref.watch(healthControllerProvider).value ?? false;
+    final status = ref.watch(cardioImportControllerProvider).value;
+    // Only while the import itself works: off, Health off, or the workout permission gone each has its own line on
+    // the row above, and a route hint on top would only add noise.
+    final importRunning = healthOn && (status?.enabled ?? false) && !(status?.permissionMissing ?? false);
+    if (!access.isAvailable || !importRunning) return const SizedBox.shrink();
+
+    final granted = ref.watch(exerciseRoutesGrantedProvider);
+    // Hidden until the first answer, so a granted permission never flashes the row; a resume re-check keeps the
+    // previous answer on screen meanwhile.
+    if (!granted.hasValue || granted.value == true) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context)!;
+    return SettingsRow(
+      icon: Icons.route_rounded,
+      title: l10n.settingsExerciseRoutesLabel,
+      subtitle: l10n.settingsExerciseRoutesSubtitle,
+      onTap: _open,
+      trailing: const SettingsValue(''),
     );
   }
 }
