@@ -6828,6 +6828,18 @@
   "@settingsCardioImportPermissionSubtitle": {
     "description": "Subline of the cardio-import row on Android when it is on but Health Connect no longer grants the workout permission; tapping the row asks again"
   },
+  "settingsExerciseRoutesLabel": "Route maps from other apps",
+  "@settingsExerciseRoutesLabel": {
+    "description": "Title of the Android-only settings row under the cardio-import row, shown while Health Connect withholds other apps' workout routes (docs/integrations/89 G1.8, LIF-223)"
+  },
+  "settingsExerciseRoutesSubtitle": "For maps of imported runs, allow exercise routes in Health Connect › Lifey › Additional access",
+  "@settingsExerciseRoutesSubtitle": {
+    "description": "Subline of the route-maps row. The path is Health Connect's own UI (Lifey › Additional access › Access exercise routes, set to Always allow); tapping the row opens Health Connect's home, since apps may not open their own permission page there"
+  },
+  "settingsExerciseRoutesOpenFailedMessage": "Couldn't open Health Connect. Open it, then Lifey › Additional access, and allow exercise routes.",
+  "@settingsExerciseRoutesOpenFailedMessage": {
+    "description": "Snackbar when tapping the route-maps row could not open Health Connect; tells the user where to find the permission themselves"
+  },
   "settingsNotificationsOnCount": "{count} on",
   "@settingsNotificationsOnCount": {
     "description": "Value of the Notifications row in Settings: how many notification types are switched on, e.g. '3 on'",
