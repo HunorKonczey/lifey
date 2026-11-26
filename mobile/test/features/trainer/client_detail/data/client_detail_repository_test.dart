@@ -198,7 +198,8 @@ void main() {
             'templateName': 'Push day',
             'sessionKind': 'STRENGTH',
             'exercises': [
-              {'exerciseId': 1, 'exerciseName': 'Bench press', 'targetSets': 3},
+              {'exerciseId': 1, 'exerciseName': 'Bench press', 'targetSets': 3, 'note': ' Seat on 4 '},
+              {'exerciseId': 2, 'exerciseName': 'Row', 'targetSets': 3, 'note': '  '},
             ],
             'sets': [
               {'exerciseId': 1, 'exerciseName': 'Bench press', 'reps': 10, 'weight': 60.0},
@@ -228,6 +229,8 @@ void main() {
       expect(session.feedbackNote, 'Tough one');
       expect(session.hasTrainerComment, isFalse);
       expect(session.setsOf(1).length, 2);
+      // The client's exercise comment (LIF-225): trimmed, a blank one is none.
+      expect(session.exercises.map((e) => e.note), ['Seat on 4', null]);
     });
 
     test('a cardio session carries no sets, and its distance comes from cardio',

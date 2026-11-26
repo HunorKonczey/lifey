@@ -231,6 +231,7 @@ export function LiveSession({
             <ExerciseCard
               key={current.exerciseId}
               name={current.exerciseName}
+              note={current.note}
               rows={drafts.map((draft, index) => ({ draft, index })).filter(({ draft }) => draft.exerciseId === current.exerciseId)}
               previous={previousSets(history, session.id, current.exerciseId, session.templateId)}
               marks={rowMarks(

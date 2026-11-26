@@ -1683,6 +1683,7 @@
     "deleteSessionTitle": "Törlöd ezt az edzést?",
     "deleteSessionBody": "Az edzés és a szettjei végleg törlődnek.",
     "trainerComment": "Edzői megjegyzés",
+    "exerciseNote": "Gyakorlat-komment",
     "summaryTime": "Idő",
     "summaryVolume": "Volumen",
     "rpeOutOf": "{rpe} / 10",

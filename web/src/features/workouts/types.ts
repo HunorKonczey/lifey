@@ -73,6 +73,8 @@ export interface WorkoutTemplateRequest {
 export interface ExerciseSummary {
   exerciseId: number;
   exerciseName: string;
+  /** The user's comment on this exercise in this session (LIF-224), written on mobile; null when none. */
+  note?: string | null;
 }
 
 export interface ExerciseSetResponse {

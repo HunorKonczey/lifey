@@ -148,6 +148,30 @@ class _ExerciseBlock extends StatelessWidget {
               exercise.exerciseName,
               style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
+            if (exercise.note != null) ...[
+              const SizedBox(height: 4),
+              // The client's own exercise comment (LIF-225) — e.g. the machine
+              // setting they used — so the trainer sees it next to the sets.
+              Semantics(
+                label: l10n.trainerExerciseNoteLabel,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Icon(Icons.sticky_note_2_outlined, size: 16, color: p.text2),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        exercise.note!,
+                        style: theme.textTheme.bodySmall?.copyWith(color: p.text2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
             if (sets.isEmpty)
               Text(

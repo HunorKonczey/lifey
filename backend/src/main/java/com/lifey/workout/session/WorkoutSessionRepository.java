@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -56,6 +57,25 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
             order by w.startedAt asc, w.id asc, s.performedAt asc, s.id asc
             """)
     List<ExerciseSet> findFinishedStrengthSetsOldestFirst(@Param("userId") Long userId);
+
+    /**
+     * The planned-exercise links of the user's started sessions that name any of
+     * {@code exerciseIds}, newest session first, skipping
+     * {@code excludeSessionId} (pass -1 for none: a {@code :x is null} guard
+     * can't be typed on Postgres). The first link per exercise is its latest
+     * session's — where a new session's exercise comment is carried over from
+     * (LIF-225) for a client that sends no notes of its own.
+     */
+    @Query("""
+            select l from WorkoutSessionExercise l join l.workoutSession w
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt is not null
+              and w.id <> :excludeSessionId and l.exercise.id in :exerciseIds
+            order by w.startedAt desc, w.id desc
+            """)
+    List<WorkoutSessionExercise> findLatestPlannedExerciseLinks(
+            @Param("userId") Long userId,
+            @Param("exerciseIds") Collection<Long> exerciseIds,
+            @Param("excludeSessionId") Long excludeSessionId);
 
     Optional<WorkoutSession> findByIdAndUserId(Long id, Long userId);
 

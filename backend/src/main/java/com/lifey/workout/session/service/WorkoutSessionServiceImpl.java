@@ -31,8 +31,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -195,6 +198,11 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
      * field (the web app, an older mobile build) can edit a session without
      * silently erasing the plan another client recorded. The same goes for each
      * exercise's {@code note} (LIF-224).
+     *
+     * <p>On that same fallback, an exercise the session didn't plan yet (a new
+     * session, or one added on the web) starts from the note its latest other
+     * session carried (LIF-225) — the carry-over the mobile client does itself,
+     * so a workout logged on the web doesn't break the chain.
      */
     private void replacePlannedExercises(WorkoutSession session, WorkoutSessionRequest request) {
         // What this session already plans, by exercise. Only read on the
@@ -214,14 +222,24 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
                         WorkoutSessionExercise::getNote,
                         (first, _) -> first));
 
-        List<PlannedExerciseRequest> planned = request.plannedExercises() != null
-                ? request.plannedExercises()
-                : request.exerciseIds().stream()
-                        .map(exerciseId -> new PlannedExerciseRequest(
-                                exerciseId,
-                                existingTargetSets.get(exerciseId),
-                                existingNotes.get(exerciseId)))
-                        .toList();
+        List<PlannedExerciseRequest> planned;
+        if (request.plannedExercises() != null) {
+            planned = request.plannedExercises();
+        } else {
+            Set<Long> alreadyPlanned = session.getPlannedExercises().stream()
+                    .map(link -> link.getExercise().getId())
+                    .collect(Collectors.toSet());
+            Map<Long, String> carriedNotes = previousNotes(session,
+                    request.exerciseIds().stream().filter(id -> !alreadyPlanned.contains(id)).toList());
+            planned = request.exerciseIds().stream()
+                    .map(exerciseId -> new PlannedExerciseRequest(
+                            exerciseId,
+                            existingTargetSets.get(exerciseId),
+                            alreadyPlanned.contains(exerciseId)
+                                    ? existingNotes.get(exerciseId)
+                                    : carriedNotes.get(exerciseId)))
+                    .toList();
+        }
 
         session.getPlannedExercises().clear();
         for (PlannedExerciseRequest entry : planned) {
@@ -236,6 +254,28 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             link.setNote(entry.note() == null || entry.note().isBlank() ? null : entry.note().strip());
             session.getPlannedExercises().add(link);
         }
+    }
+
+    /**
+     * Each of {@code exerciseIds}' note from its latest started session other
+     * than {@code session} — absent when that session had none, so a comment
+     * cleared on mobile stays cleared (the same rule as the mobile client's
+     * {@code getPreviousExerciseNotes}).
+     */
+    private Map<Long, String> previousNotes(WorkoutSession session, List<Long> exerciseIds) {
+        if (exerciseIds.isEmpty()) {
+            return Map.of();
+        }
+        Set<Long> seen = new HashSet<>();
+        Map<Long, String> notes = new HashMap<>();
+        for (WorkoutSessionExercise link : sessionRepository.findLatestPlannedExerciseLinks(
+                currentUserProvider.getUserId(), exerciseIds, session.getId() != null ? session.getId() : -1L)) {
+            Long exerciseId = link.getExercise().getId();
+            if (seen.add(exerciseId) && link.getNote() != null) {
+                notes.put(exerciseId, link.getNote());
+            }
+        }
+        return notes;
     }
 
     /**

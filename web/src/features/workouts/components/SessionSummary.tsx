@@ -14,6 +14,16 @@ import { summarizeSession, type SetLine } from "../sessionSummary";
 import { formatHoursMinutes, formatKg } from "../weekLabels";
 import type { WorkoutSessionResponse } from "../types";
 
+/** An exercise's comment (LIF-224): a note icon and the text, wrapping, in the secondary colour. */
+export function ExerciseNote({ note, label }: { note: string; label: string }) {
+  return (
+    <p className="type-body-s mt-1 flex items-start gap-1.5" style={{ color: "var(--text-2)" }}>
+      <Icon name="sticky_note_2" size={16} label={label} />
+      <span className="min-w-0 whitespace-pre-line break-words">{note}</span>
+    </p>
+  );
+}
+
 /** "sessionTitle": the template name, else the exercises, else the generic fallback — same rule as the list row. */
 export function sessionTitle(session: WorkoutSessionResponse, fallback: string): string {
   return session.templateName ?? (session.exercises.map((e) => e.exerciseName).join(", ") || fallback);
@@ -68,6 +78,8 @@ export function SessionSummary({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const summary = summarizeSession(session, history);
+  // Each exercise's comment (LIF-224), shown under its sets — here and in the trainer's read-only view.
+  const notes = new Map(session.exercises.filter((e) => e.note).map((e) => [e.exerciseId, e.note as string]));
   const topRecord = summary.records[0];
   const weight = (n: number) => formatNumber(n, locale, 2);
   const setText = (s: SetLine) => `${weight(s.weight)} kg × ${s.reps}`;
@@ -158,6 +170,7 @@ export function SessionSummary({
                     <p className="type-body-s tabular" style={{ color: "var(--text-2)" }}>
                       {t("summarySets", { count: ex.sets.length })} · {line}
                     </p>
+                    {notes.has(ex.exerciseId) && <ExerciseNote note={notes.get(ex.exerciseId)!} label={t("exerciseNote")} />}
                   </div>
                   <p className="type-body tabular flex flex-none items-center gap-1" style={{ fontWeight: 700 }}>
                     {setText(ex.best)}

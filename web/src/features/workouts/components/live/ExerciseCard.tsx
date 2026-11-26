@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button, Card, Icon } from "@/components/ds";
 import { formatNumber, useFormat } from "@/lib/i18n/format";
 import type { DraftSet, RowMark } from "../../liveSession";
+import { ExerciseNote } from "../SessionSummary";
 import { SET_GRID_CLASS, SetRow } from "./SetRow";
 
 /** The focusable inputs of one set row. */
@@ -17,6 +18,7 @@ const rowInput = (root: HTMLElement | null, row: number) => root?.querySelector<
  */
 export function ExerciseCard({
   name,
+  note,
   rows,
   previous,
   marks,
@@ -27,6 +29,8 @@ export function ExerciseCard({
   onAddSet,
 }: {
   name: string;
+  /** The exercise's comment in this session (LIF-224) — written and carried over on mobile, read-only here. */
+  note?: string | null;
   /** This exercise's drafts; `index` is the position in the whole session's draft list. */
   rows: { draft: DraftSet; index: number }[];
   previous: { weight: number; reps: number }[];
@@ -75,6 +79,7 @@ export function ExerciseCard({
             {[target, bestText].filter(Boolean).join(" · ")}
           </p>
         )}
+        {note && <ExerciseNote note={note} label={t("exerciseNote")} />}
       </div>
 
       <div
