@@ -15,6 +15,7 @@ class _Calls {
   final delete = <int>[];
   final duplicate = <int>[];
   final addSet = <bool>[];
+  final notes = <String?>[];
 }
 
 ExerciseBlock _bench({List<SetRow>? rows, PrBaseline? baseline}) => ExerciseBlock(
@@ -70,6 +71,7 @@ Future<_Calls> _pump(
             onRowDuplicate: calls.duplicate.add,
             onAddSet: calls.addSet.add,
             onRemoveExercise: () {},
+            onEditNote: calls.notes.add,
           ),
         ),
       ),
@@ -234,11 +236,77 @@ void main() {
     expect(previous - set, greaterThanOrEqualTo(4));
   });
 
+  group('exercise comment (LIF-224)', () {
+    testWidgets('no comment: a quiet "Add comment" under the name', (tester) async {
+      await _pump(tester, _bench());
+
+      expect(find.text('Add comment'), findsOneWidget);
+      expect(find.text('From last session'), findsNothing);
+    });
+
+    testWidgets('a comment carried over unchanged says it is from last session', (tester) async {
+      await _pump(tester, _bench()..note = 'Seat on 4'..previousNote = 'Seat on 4');
+
+      expect(find.text('Seat on 4'), findsOneWidget);
+      expect(find.text('From last session'), findsOneWidget);
+      expect(find.text('Add comment'), findsNothing);
+    });
+
+    testWidgets('an edited comment no longer claims to be last session\'s', (tester) async {
+      await _pump(tester, _bench()..note = 'Seat on 5'..previousNote = 'Seat on 4');
+
+      expect(find.text('Seat on 5'), findsOneWidget);
+      expect(find.text('From last session'), findsNothing);
+    });
+
+    testWidgets('the editor shows last session\'s note and reports the trimmed edit', (tester) async {
+      final calls = await _pump(tester, _bench()..note = 'Seat on 4'..previousNote = 'Seat on 3');
+
+      await _tap(tester, find.text('Seat on 4'));
+      await tester.pumpAndSettle();
+      expect(find.text('Last session: Seat on 3'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '  Seat on 5  ');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(calls.notes, ['Seat on 5']);
+    });
+
+    testWidgets('clearing the text reports null; saving it unchanged reports nothing', (tester) async {
+      final calls = await _pump(tester, _bench()..note = 'Seat on 4');
+
+      await _tap(tester, find.text('Seat on 4'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(calls.notes, isEmpty);
+
+      await _tap(tester, find.text('Seat on 4'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(calls.notes, [null]);
+    });
+
+    testWidgets('HU: "Komment hozzáadása" opens the editor', (tester) async {
+      await _pump(tester, _bench(), locale: const Locale('hu'));
+
+      await _tap(tester, find.text('Komment hozzáadása'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ExerciseNoteEditor), findsOneWidget);
+    });
+  });
+
   for (final width in [411.0, 360.0]) {
     for (final scale in [1.0, 1.3]) {
       testWidgets('no overflow at ${width.toInt()} dp, text x$scale, HU, light', (tester) async {
         final baseline = PrBaseline.fromSets([(weight: 122.5, reps: 8, performedAt: DateTime(2026, 9, 1))]);
-        final block = _bench(baseline: baseline);
+        final block = _bench(baseline: baseline)
+          ..note = 'Ülés 4-es fokozat, a háttámla a második lyukban, következőre +2,5 kg'
+          ..previousNote = 'Ülés 4-es fokozat, a háttámla a második lyukban, következőre +2,5 kg';
         block.rows.first.prTypes = {PrType.maxWeight, PrType.estimatedOneRm};
         await _pump(tester, block, locale: const Locale('hu'), width: width, textScale: scale, theme: AppTheme.light);
 

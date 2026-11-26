@@ -33,4 +33,12 @@ public class WorkoutSessionExercise extends BaseEntity {
      */
     @Column(name = "target_sets")
     private Integer targetSets;
+
+    /**
+     * The user's free-text comment on this exercise in this session (LIF-224),
+     * e.g. "seat on 4". Per session, not per exercise: the next session starts
+     * from a copy of it, so editing it never rewrites history. Null when none.
+     */
+    @Column(name = "note", length = 1000)
+    private String note;
 }

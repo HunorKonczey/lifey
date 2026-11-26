@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 54;
+  int get schemaVersion => 55;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -434,6 +434,11 @@ class AppDatabase extends _$AppDatabase {
           if (from < 54) {
             await _addColumnIfMissing(m, workoutSessions, workoutSessions.importSource);
             await _addColumnIfMissing(m, workoutSessions, workoutSessions.importAppName);
+          }
+          // V55: a per-session comment on each exercise (LIF-224) - one nullable column; every existing
+          // session exercise simply has no comment.
+          if (from < 55) {
+            await _addColumnIfMissing(m, workoutSessionExercises, workoutSessionExercises.note);
           }
         },
       );

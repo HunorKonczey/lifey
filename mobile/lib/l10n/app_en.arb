@@ -6372,6 +6372,27 @@
     "description": "Same line with the best estimated one-rep max, e.g. 'Best 50 kg × 8 · e1RM 63.3 kg'",
     "placeholders": {"best": {"type": "String"}, "oneRm": {"type": "String"}}
   },
+  "exerciseNoteAddButton": "Add comment",
+  "@exerciseNoteAddButton": {
+    "description": "Small text button under an exercise's name on the live strength screen that opens the comment editor for this exercise (LIF-224). The comment belongs to the exercise, not to one set"
+  },
+  "exerciseNoteSheetTitle": "Comment",
+  "@exerciseNoteSheetTitle": {
+    "description": "Title of the bottom sheet where the user writes a free-text comment on an exercise during a workout (LIF-224)"
+  },
+  "exerciseNoteHint": "e.g. seat on 4, next time +2.5 kg",
+  "@exerciseNoteHint": {
+    "description": "Placeholder in the exercise comment field (LIF-224) — examples of what people note about an exercise"
+  },
+  "exerciseNoteFromLastSessionLabel": "From last session",
+  "@exerciseNoteFromLastSessionLabel": {
+    "description": "Caption next to an exercise comment on the live strength screen when it was carried over unchanged from the previous session (LIF-224)"
+  },
+  "exerciseNotePreviousLabel": "Last session: {note}",
+  "@exerciseNotePreviousLabel": {
+    "description": "Shown in the exercise comment sheet when this session's comment differs from the previous session's, so the user sees what they changed (LIF-224)",
+    "placeholders": {"note": {"type": "String"}}
+  },
   "setDoneLabel": "Set done",
   "@setDoneLabel": {
     "description": "Screen-reader label of the check button of a set row"

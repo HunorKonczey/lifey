@@ -725,6 +725,14 @@ class StandaloneSessionProcessor {
       sets: sets,
       setExerciseIds: setExerciseIds,
     );
+    // Each exercise's comment carried over from its last session (LIF-224),
+    // the same pre-fill the phone's own workout screen does — otherwise a
+    // watch-only workout would break the chain and the next session would
+    // start without the note.
+    final previousNotes = await _sessionRepository.getPreviousExerciseNotes(
+      [...?template?.exercises.map((e) => e.exerciseClientId), ...resolvedIds],
+      excludeSessionClientId: sessionClientId,
+    );
 
     return (
       template: template,
@@ -740,6 +748,7 @@ class StandaloneSessionProcessor {
                 PlannedExerciseInput(
                   exerciseClientId: exercise.exerciseClientId,
                   targetSets: exercise.targetSets,
+                  note: previousNotes[exercise.exerciseClientId],
                 ),
             ]
           // No template: whatever the sets themselves resolved to (F6c — a
@@ -750,7 +759,10 @@ class StandaloneSessionProcessor {
               ? [PlannedExerciseInput(exerciseClientId: genericExerciseClientId!)]
               : [
                   for (final exerciseClientId in resolvedIds)
-                    PlannedExerciseInput(exerciseClientId: exerciseClientId),
+                    PlannedExerciseInput(
+                      exerciseClientId: exerciseClientId,
+                      note: previousNotes[exerciseClientId],
+                    ),
                 ],
       sets: [
         for (var i = 0; i < sets.length; i++)

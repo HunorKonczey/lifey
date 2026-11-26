@@ -59,7 +59,7 @@ class WorkoutSessionControllerTest {
     void create_returnsCreatedWithPlannedExercisesAndSets() throws Exception {
         when(workoutSessionService.create(any())).thenReturn(strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), null,
-                List.of(new ExerciseSummary(1L, "Bench Press", 3)),
+                List.of(new ExerciseSummary(1L, "Bench Press", 3, null)),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
                         Instant.parse("2026-06-01T05:05:00Z"))),
                 null, null, null, null, null, null, null, null, null, null, null, null,
@@ -101,7 +101,7 @@ class WorkoutSessionControllerTest {
     void create_withHealthFieldsRoundTrips() throws Exception {
         when(workoutSessionService.create(any())).thenReturn(strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), Instant.parse("2026-06-01T06:00:00Z"),
-                List.of(new ExerciseSummary(1L, "Bench Press", 3)),
+                List.of(new ExerciseSummary(1L, "Bench Press", 3, null)),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
                         Instant.parse("2026-06-01T05:05:00Z"))),
                 450.0, 132.0, "HK-UUID-1", null, null, null, null, null, null, null, null, null,
@@ -171,7 +171,7 @@ class WorkoutSessionControllerTest {
         when(workoutSessionService.update(eq(2L), any())).thenReturn(strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"),
                 Instant.parse("2026-06-01T06:00:00Z"),
-                List.of(new ExerciseSummary(1L, "Bench Press", 3)),
+                List.of(new ExerciseSummary(1L, "Bench Press", 3, null)),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 8, 70.0,
                         Instant.parse("2026-06-01T05:35:00Z"))),
                 null, null, null, null, null, null, null, null, null, null, null, null,
@@ -265,6 +265,33 @@ class WorkoutSessionControllerTest {
         String body = IMPORT_BODY.replace("Garmin Connect", "x".repeat(65));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        verify(workoutSessionService, never()).create(any());
+    }
+
+    @Test
+    void create_returnsThePlannedExerciseNote() throws Exception {
+        when(workoutSessionService.create(any())).thenReturn(strengthResponse(2L,
+                Instant.parse("2026-06-01T05:00:00Z"), null,
+                List.of(new ExerciseSummary(1L, "Bench Press", 3, "seat on 4")),
+                List.of(),
+                null, null, null, null, null, null, null, null, null, null, null, null,
+                Instant.parse("2026-06-01T05:00:00Z"), null));
+
+        mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startedAt\":\"2026-06-01T05:00:00Z\",\"exerciseIds\":[1],\"sets\":[],"
+                                + "\"plannedExercises\":[{\"exerciseId\":1,\"targetSets\":3,\"note\":\"seat on 4\"}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.exercises[0].note").value("seat on 4"));
+    }
+
+    @Test
+    void create_tooLongExerciseNoteFailsValidation() throws Exception {
+        String note = "x".repeat(1001);
+
+        mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startedAt\":\"2026-06-01T05:00:00Z\",\"exerciseIds\":[1],\"sets\":[],"
+                                + "\"plannedExercises\":[{\"exerciseId\":1,\"note\":\"" + note + "\"}]}"))
                 .andExpect(status().isBadRequest());
         verify(workoutSessionService, never()).create(any());
     }

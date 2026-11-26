@@ -319,6 +319,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
           exerciseName: '',
           targetSets: te.targetSets,
           rows: _generateRows(te.targetSets),
+          prefillNoteFromPrevious: true,
         ));
       }
     }
@@ -405,6 +406,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
         exerciseName: se.exerciseName,
         targetSets: plan.targetSets,
         rows: rows,
+        note: se.note,
       ));
     }
   }
@@ -487,6 +489,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
               exerciseName: '',
               targetSets: te.targetSets,
               rows: _generateRows(te.targetSets),
+              prefillNoteFromPrevious: true,
             ));
           }
         });
@@ -501,6 +504,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       _hrTicker = Timer.periodic(_kHrPollInterval, (_) => _pollHeartRate());
     });
     _pollHeartRate();
+    // Awaited first: the carried-over comments must be on the blocks before
+    // the persist that stamps startedAt (and before _loadPreviousPerformance's
+    // own reload, which would otherwise race this one to the prefill).
+    await _loadPreviousNotes(_blocks, saveIfPrefilled: false);
+    if (!mounted) return;
     unawaited(_loadPreviousPerformance(_blocks));
     unawaited(_loadPrBaselines(_blocks));
     await _persist();
@@ -923,6 +931,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   Future<void> _loadPreviousPerformance(List<ExerciseBlock> blocks) async {
     final repo = ref.read(workoutSessionRepositoryProvider);
     final templateClientId = _templateClientId;
+    await _loadPreviousNotes(blocks);
+    if (!mounted) return;
     for (final block in blocks) {
       final previous = await repo.getPreviousPerformance(
         exerciseClientId: block.exerciseClientId,
@@ -932,6 +942,49 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       if (!mounted) return;
       setState(() => block.previousSets = previous);
     }
+  }
+
+  /// Fills in [ExerciseBlock.previousNote] for each of [blocks] — the comment
+  /// the exercise carried in its last session (LIF-224) — and, for a block
+  /// this screen just created ([ExerciseBlock.prefillNoteFromPrevious]),
+  /// copies it into the block's own [ExerciseBlock.note] so the comment
+  /// carries forward from session to session. A block whose note the user
+  /// already set (the load can land after an edit) is left alone.
+  ///
+  /// With [saveIfPrefilled], a prefill into an already-persisted session is
+  /// saved straight away; callers that persist right after pass false.
+  Future<void> _loadPreviousNotes(List<ExerciseBlock> blocks, {bool saveIfPrefilled = true}) async {
+    if (blocks.isEmpty) return;
+    final notes = await ref.read(workoutSessionRepositoryProvider).getPreviousExerciseNotes(
+          blocks.map((b) => b.exerciseClientId),
+          excludeSessionClientId: _sessionClientId,
+        );
+    if (!mounted) return;
+    var prefilled = false;
+    setState(() {
+      for (final block in blocks) {
+        block.previousNote = notes[block.exerciseClientId];
+        if (!block.prefillNoteFromPrevious) continue;
+        block.prefillNoteFromPrevious = false;
+        if (block.note == null && block.previousNote != null) {
+          block.note = block.previousNote;
+          prefilled = true;
+        }
+      }
+    });
+    if (prefilled && saveIfPrefilled && _sessionClientId != null && _finishedAt == null) {
+      unawaited(_autoSave());
+    }
+  }
+
+  void _handleEditNote(int bi, String? note) {
+    setState(() {
+      final block = _blocks[bi];
+      block.note = note;
+      // An edit made before the previous note loaded wins over the prefill.
+      block.prefillNoteFromPrevious = false;
+    });
+    _autoSave();
   }
 
   /// Fetches and fills in [ExerciseBlock.prBaseline] for each of [blocks] —
@@ -1156,6 +1209,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       .map((b) => PlannedExerciseInput(
             exerciseClientId: b.exerciseClientId,
             targetSets: b.rows.length,
+            note: b.note,
           ))
       .toList();
 
@@ -1326,8 +1380,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       exerciseName: draft.exercise.name,
       targetSets: draft.targetSets,
       rows: _generateRows(draft.targetSets),
+      prefillNoteFromPrevious: true,
     );
     setState(() => _blocks.add(block));
+    // Before the save, so the carried-over comment goes out with the
+    // exercise instead of in a second write right after it.
+    await _loadPreviousNotes([block], saveIfPrefilled: false);
+    if (!mounted) return;
     unawaited(_loadPreviousPerformance([block]));
     unawaited(_loadPrBaselines([block]));
     await _autoSave();
@@ -2268,6 +2327,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                   onAddSet: (prefill) =>
                       _handleAddSet(bi, prefillFromPrevious: prefill),
                   onRemoveExercise: () => _handleRemoveExercise(bi),
+                  onEditNote: (note) => _handleEditNote(bi, note),
                 ),
                 const SizedBox(height: 13),
               ],

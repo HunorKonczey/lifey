@@ -108,11 +108,18 @@ MergedWatchSessionContent mergeWatchSessionContent({
     for (final exercise in watchExercises)
       if (exercise.targetSets != null) exercise.exerciseClientId: exercise.targetSets!,
   };
+  // The carried-over comment (LIF-224) for an exercise only the watch's sets
+  // bring in; a stored exercise keeps its own note, edited on the phone or not.
+  final watchNotes = <String, String>{
+    for (final exercise in watchExercises)
+      if (exercise.note != null) exercise.exerciseClientId: exercise.note!,
+  };
   final exercises = [
     for (final exercise in existingExercises)
       PlannedExerciseInput(
         exerciseClientId: exercise.exerciseClientId,
         targetSets: exercise.targetSets ?? watchTargetSets[exercise.exerciseClientId],
+        note: exercise.note,
       ),
   ];
   // Only a set that survived the merge above can re-add an exercise the stored
@@ -124,6 +131,7 @@ MergedWatchSessionContent mergeWatchSessionContent({
     exercises.add(PlannedExerciseInput(
       exerciseClientId: set.exerciseClientId,
       targetSets: watchTargetSets[set.exerciseClientId],
+      note: watchNotes[set.exerciseClientId],
     ));
   }
 

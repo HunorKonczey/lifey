@@ -1044,7 +1044,7 @@ class PullEngine {
     // Resolved to local clientIds here, dropping any dangling reference (an
     // exercise this device hasn't pulled — shouldn't happen given [pullAll]'s
     // ordering, but is safely skipped rather than crashing the pull).
-    final plannedExercises = <({String exerciseClientId, int? targetSets})>[];
+    final plannedExercises = <({String exerciseClientId, int? targetSets, String? note})>[];
     for (final entry in (json['exercises'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>()) {
       final exerciseClientId = await _localClientId('exercises', entry['exerciseId'] as int);
@@ -1052,6 +1052,7 @@ class PullEngine {
       plannedExercises.add((
         exerciseClientId: exerciseClientId,
         targetSets: (entry['targetSets'] as num?)?.toInt(),
+        note: entry['note'] as String?,
       ));
     }
     final setsJson = (json['sets'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
@@ -1101,6 +1102,8 @@ class PullEngine {
                 exerciseClientId: planned.exerciseClientId,
                 targetSets: Value(
                     planned.targetSets ?? preservedTargetSets[planned.exerciseClientId]),
+                // The server stores the note (LIF-224) and its answer wins, null included.
+                note: Value(planned.note),
               ),
             );
       }

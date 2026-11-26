@@ -338,6 +338,11 @@ class WorkoutSessionExercises extends Table {
   /// Target number of sets for this exercise in this session, null if not set.
   IntColumn get targetSets => integer().nullable()();
 
+  /// The user's free-text comment on this exercise in this session (LIF-224),
+  /// null if none. A new session starts from a copy of the exercise's most
+  /// recent note, so editing it here never rewrites an older session.
+  TextColumn get note => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

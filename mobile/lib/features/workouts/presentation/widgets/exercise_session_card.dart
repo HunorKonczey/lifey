@@ -9,6 +9,7 @@ import '../../../../shared/widgets/ds/lifey_sheet.dart';
 import '../../../../shared/widgets/ds/list_group.dart';
 import '../../data/workout_session_repository.dart';
 import '../../domain/personal_record.dart';
+import '../../domain/workout_session.dart' show kExerciseNoteMaxLength, normalizeExerciseNote;
 import '../../../../core/format/parse_decimal.dart';
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,8 @@ class ExerciseBlock {
     required this.exerciseName,
     this.targetSets,
     required this.rows,
+    this.note,
+    this.prefillNoteFromPrevious = false,
   });
 
   final String exerciseClientId;
@@ -71,6 +74,21 @@ class ExerciseBlock {
   /// [LogSessionScreen._loadPrBaselines]). While null, PR detection stays
   /// silent rather than celebrating against a half-loaded history.
   PrBaseline? prBaseline;
+
+  /// The user's comment on this exercise in this session (LIF-224), null if
+  /// none. Persisted with the session's planned exercises.
+  String? note;
+
+  /// The comment this exercise carried in its previous session, null if none
+  /// or not loaded yet — see [LogSessionScreen._loadPreviousPerformance].
+  /// Lets the card say "From last session" and the editor show what changed.
+  String? previousNote;
+
+  /// Whether [note] should be filled from [previousNote] once it loads. True
+  /// only for a block this screen has just created (a new session, a started
+  /// scheduled one, an added exercise) — never for one rebuilt from a stored
+  /// session, where a null note is the user's own choice.
+  bool prefillNoteFromPrevious;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +119,7 @@ class ExerciseSessionCard extends StatefulWidget {
     required this.onRowDuplicate,
     required this.onAddSet,
     required this.onRemoveExercise,
+    required this.onEditNote,
   });
 
   final ExerciseBlock block;
@@ -127,6 +146,9 @@ class ExerciseSessionCard extends StatefulWidget {
   /// (true when triggered by a double-tap on the "Add set" row).
   final void Function(bool prefillFromPrevious) onAddSet;
   final VoidCallback onRemoveExercise;
+
+  /// The comment editor was saved — the normalized note (null when cleared).
+  final ValueChanged<String?> onEditNote;
 
   @override
   State<ExerciseSessionCard> createState() => _ExerciseSessionCardState();
@@ -243,6 +265,23 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
     }
   }
 
+  /// Opens the comment editor for this exercise; reports only a real change.
+  Future<void> _openNoteEditor() async {
+    final l10n = AppLocalizations.of(context)!;
+    final result = await showLifeySheet<String>(
+      context: context,
+      useRootNavigator: true,
+      title: '${widget.block.exerciseName} · ${l10n.exerciseNoteSheetTitle}',
+      builder: (_) => ExerciseNoteEditor(
+        initialNote: widget.block.note,
+        previousNote: widget.block.previousNote,
+      ),
+    );
+    if (!mounted || result == null) return;
+    final note = normalizeExerciseNote(result);
+    if (note != widget.block.note) widget.onEditNote(note);
+  }
+
   /// "Best 50 kg × 8 · e1RM 63.3 kg" from the exercise's PR baseline; null
   /// until the history has loaded or when there is no weighted set yet.
   String? _bestLine(AppLocalizations l10n) {
@@ -268,7 +307,13 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CardHeader(name: widget.block.exerciseName, best: bestLine, onRemove: widget.onRemoveExercise),
-          const SizedBox(height: AppSpacing.s16),
+          const SizedBox(height: AppSpacing.s8),
+          _NoteLine(
+            note: widget.block.note,
+            fromLastSession: widget.block.note != null && widget.block.note == widget.block.previousNote,
+            onTap: _openNoteEditor,
+          ),
+          const SizedBox(height: AppSpacing.s8),
           const _ColumnHeader(),
           const SizedBox(height: AppSpacing.s4),
           for (int i = 0; i < widget.block.rows.length; i++)
@@ -293,6 +338,134 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
 }
 
 enum _RowAction { duplicate, remove }
+
+// ---------------------------------------------------------------------------
+// Exercise comment (LIF-224): the note line under the header + its editor
+// ---------------------------------------------------------------------------
+
+/// The exercise's comment under its name, or a quiet "Add comment" when it
+/// has none. Tapping either opens the editor.
+class _NoteLine extends StatelessWidget {
+  const _NoteLine({required this.note, required this.fromLastSession, required this.onTap});
+
+  final String? note;
+
+  /// The note is the previous session's, carried over unchanged.
+  final bool fromLastSession;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final p = context.palette;
+    final t = Theme.of(context).textTheme;
+    final primary = Theme.of(context).colorScheme.primary;
+    final note = this.note;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.tagAll,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 40),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(
+                  note == null ? Icons.add_comment_outlined : Icons.sticky_note_2_outlined,
+                  size: 18,
+                  color: note == null ? primary : p.text2,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(
+                child: note == null
+                    ? Text(l10n.exerciseNoteAddButton, style: t.labelLarge!.copyWith(color: primary))
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            note,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: t.bodyMedium!.copyWith(color: p.text, height: 1.3),
+                          ),
+                          if (fromLastSession) ...[
+                            const SizedBox(height: 2),
+                            Text(l10n.exerciseNoteFromLastSessionLabel, style: t.labelSmall!.copyWith(color: p.text2)),
+                          ],
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The comment editor sheet's body: a multi-line field pre-filled with the
+/// current note and, when it differs, last session's note above it so a
+/// change is visible. Pops the raw text on save; the caller normalizes it.
+@visibleForTesting
+class ExerciseNoteEditor extends StatefulWidget {
+  const ExerciseNoteEditor({super.key, this.initialNote, this.previousNote});
+
+  final String? initialNote;
+  final String? previousNote;
+
+  @override
+  State<ExerciseNoteEditor> createState() => _ExerciseNoteEditorState();
+}
+
+class _ExerciseNoteEditorState extends State<ExerciseNoteEditor> {
+  late final TextEditingController _controller = TextEditingController(text: widget.initialNote ?? '');
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() => Navigator.of(context).pop<String>(_controller.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final previous = widget.previousNote;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (previous != null && previous != widget.initialNote) ...[
+          Text(
+            l10n.exerciseNotePreviousLabel(previous),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(color: context.palette.text2),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+        ],
+        TextField(
+          controller: _controller,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 6,
+          maxLength: kExerciseNoteMaxLength,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(hintText: l10n.exerciseNoteHint),
+        ),
+        const SizedBox(height: AppSpacing.s12),
+        FilledButton(
+          onPressed: _save,
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+          child: Text(l10n.saveButton),
+        ),
+      ],
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Card header: name + best + overflow menu

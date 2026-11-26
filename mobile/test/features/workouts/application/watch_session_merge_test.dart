@@ -34,10 +34,11 @@ ExerciseSetInput fromWatch({
   );
 }
 
-SessionExercise plannedExercise(String exerciseClientId, {int? targetSets}) => SessionExercise(
+SessionExercise plannedExercise(String exerciseClientId, {int? targetSets, String? note}) => SessionExercise(
       exerciseClientId: exerciseClientId,
       exerciseName: exerciseClientId,
       targetSets: targetSets,
+      note: note,
     );
 
 void main() {
@@ -245,6 +246,30 @@ void main() {
 
       expect(merged.exercises.map((e) => e.exerciseClientId), ['ex-bench', 'ex-curl']);
       expect(merged.exercises.last.targetSets, 2);
+    });
+  });
+
+  group('exercise notes (LIF-224)', () {
+    test('a stored exercise keeps the note written on the phone', () {
+      final merged = mergeWatchSessionContent(
+        existingExercises: [plannedExercise('ex-bench', note: 'seat on 5')],
+        existingSets: const [],
+        watchExercises: const [PlannedExerciseInput(exerciseClientId: 'ex-bench', note: 'seat on 4')],
+        watchSets: const [],
+      );
+
+      expect(merged.exercises.single.note, 'seat on 5');
+    });
+
+    test('an exercise only the watch sets bring in carries the watch side note', () {
+      final merged = mergeWatchSessionContent(
+        existingExercises: const [],
+        existingSets: const [],
+        watchExercises: const [PlannedExerciseInput(exerciseClientId: 'ex-squat', note: 'belt')],
+        watchSets: [fromWatch(exerciseClientId: 'ex-squat', epochMs: 1000000)],
+      );
+
+      expect(merged.exercises.single.note, 'belt');
     });
   });
 }
