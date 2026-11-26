@@ -1399,6 +1399,7 @@
   "setNumberLabel": "{number}. szett",
   "exerciseBestLine": "Legjobb: {best}",
   "exerciseBestLineWithOneRm": "Legjobb: {best} · becsült 1RM {oneRm}",
+  "trainerExerciseNoteLabel": "A kliens kommentje a gyakorlathoz",
   "exerciseNoteAddButton": "Komment hozzáadása",
   "exerciseNoteSheetTitle": "Komment",
   "exerciseNoteHint": "pl. ülés 4-es fokozat, következőre +2,5 kg",

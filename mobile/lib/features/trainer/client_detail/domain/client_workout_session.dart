@@ -122,17 +122,24 @@ class ClientSessionExercise {
     required this.exerciseId,
     required this.exerciseName,
     this.targetSets,
+    this.note,
   });
 
   final int exerciseId;
   final String exerciseName;
   final int? targetSets;
 
+  /// The client's own comment on this exercise in this session (LIF-224/225),
+  /// null when none. Read-only for the trainer.
+  final String? note;
+
   factory ClientSessionExercise.fromJson(Map<String, dynamic> json) {
+    final note = (json['note'] as String?)?.trim();
     return ClientSessionExercise(
       exerciseId: (json['exerciseId'] as num).toInt(),
       exerciseName: json['exerciseName'] as String? ?? '',
       targetSets: (json['targetSets'] as num?)?.toInt(),
+      note: note == null || note.isEmpty ? null : note,
     );
   }
 }

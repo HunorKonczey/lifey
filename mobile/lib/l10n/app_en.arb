@@ -6372,6 +6372,10 @@
     "description": "Same line with the best estimated one-rep max, e.g. 'Best 50 kg × 8 · e1RM 63.3 kg'",
     "placeholders": {"best": {"type": "String"}, "oneRm": {"type": "String"}}
   },
+  "trainerExerciseNoteLabel": "Client's exercise comment",
+  "@trainerExerciseNoteLabel": {
+    "description": "Screen-reader label for the client's own comment on an exercise, shown under the exercise in the trainer's session detail sheet (LIF-225)"
+  },
   "exerciseNoteAddButton": "Add comment",
   "@exerciseNoteAddButton": {
     "description": "Small text button under an exercise's name on the live strength screen that opens the comment editor for this exercise (LIF-224). The comment belongs to the exercise, not to one set"

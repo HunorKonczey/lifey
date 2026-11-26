@@ -1683,6 +1683,7 @@
     "deleteSessionTitle": "Delete this workout?",
     "deleteSessionBody": "The workout and its sets are removed for good.",
     "trainerComment": "Trainer comment",
+    "exerciseNote": "Exercise comment",
     "summaryTime": "Time",
     "summaryVolume": "Volume",
     "rpeOutOf": "{rpe} / 10",

@@ -376,6 +376,64 @@ class WorkoutSessionServiceImplTest {
                 .containsExactly("seat on 4");
     }
 
+    private static WorkoutSessionExercise pastLink(long exerciseId, String note) {
+        WorkoutSessionExercise link = new WorkoutSessionExercise();
+        link.setExercise(exercise(exerciseId, "x"));
+        link.setNote(note);
+        return link;
+    }
+
+    @Test
+    void create_withoutAPlanCarriesEachExercisesLatestNote() {
+        // The web starts a session with bare exerciseIds (LIF-225): the server
+        // does the carry-over the mobile client does itself.
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+        when(exerciseRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(exercise(5L, "Row")));
+        when(sessionRepository.findLatestPlannedExerciseLinks(USER_ID, List.of(1L, 4L, 5L), -1L)).thenReturn(List.of(
+                pastLink(1L, "seat on 4"),
+                pastLink(4L, null),          // latest overhead session cleared it ...
+                pastLink(1L, "seat on 3"),
+                pastLink(4L, "belt")));       // ... so this older one must not come back
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
+        WorkoutSessionRequest request = strengthRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L, 4L, 5L), List.of(),
+                null, null, null, null, null, null, null);
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::exerciseId, ExerciseSummary::note)
+                .containsExactly(tuple(1L, "seat on 4"), tuple(4L, null), tuple(5L, null));
+    }
+
+    @Test
+    void update_withoutAPlanCarriesANoteOnlyForANewlyAddedExercise() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        WorkoutSessionExercise link = new WorkoutSessionExercise();
+        link.setWorkoutSession(existing);
+        link.setExercise(exercise(1L, "Bench Press"));
+        link.setNote(null); // cleared on mobile in this very session
+        existing.getPlannedExercises().add(link);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(exercise(5L, "Row")));
+        when(sessionRepository.findLatestPlannedExerciseLinks(USER_ID, List.of(5L), 3L))
+                .thenReturn(List.of(pastLink(5L, "grip wide")));
+        WorkoutSessionRequest request = strengthRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L, 5L), List.of(),
+                null, null, null, null, null, null, null);
+
+        WorkoutSessionResponse result = service.update(3L, request);
+
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::exerciseId, ExerciseSummary::note)
+                .containsExactly(tuple(1L, null), tuple(5L, "grip wide"));
+    }
+
     @Test
     void create_allowsAnEmptySessionWithNoPlannedExercisesOrSets() {
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 5L));

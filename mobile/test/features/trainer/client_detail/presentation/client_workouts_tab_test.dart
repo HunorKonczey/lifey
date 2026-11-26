@@ -18,6 +18,7 @@ ClientWorkoutSession _session({
   String? comment,
   int? rpe,
   String? note,
+  String? exerciseNote,
   List<ClientSessionSet> sets = const [],
 }) {
   return ClientWorkoutSession(
@@ -25,8 +26,8 @@ ClientWorkoutSession _session({
     startedAt: DateTime(2026, 7, 8, 17),
     finishedAt: DateTime(2026, 7, 8, 18),
     templateName: templateName,
-    exercises: const [
-      ClientSessionExercise(exerciseId: 1, exerciseName: 'Bench press'),
+    exercises: [
+      ClientSessionExercise(exerciseId: 1, exerciseName: 'Bench press', note: exerciseNote),
     ],
     sets: sets,
     rpe: rpe,
@@ -227,6 +228,26 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No sets logged'), findsOneWidget);
+    });
+
+    testWidgets('shows the client\'s own exercise comment under the exercise (LIF-225)',
+        (tester) async {
+      await _pump(tester, sessions: [_session(exerciseNote: 'Seat on 4')]);
+
+      await tester.tap(find.text('Push day'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Seat on 4'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp("Client's exercise comment")), findsOneWidget);
+    });
+
+    testWidgets('no exercise comment, no comment line', (tester) async {
+      await _pump(tester, sessions: [_session()]);
+
+      await tester.tap(find.text('Push day'));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel(RegExp("Client's exercise comment")), findsNothing);
     });
   });
 
