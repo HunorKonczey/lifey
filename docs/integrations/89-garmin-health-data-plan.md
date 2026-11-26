@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -73,6 +73,7 @@ Sessions are soft-deleted (`deleted_at`), so a deleted import keeps its id in th
 
 ### D-G7 A sleep session is its own synced entity, attributed to the wake-up date
 **Chosen:** a new `sleep_sessions` table, one row per sleep session from the store: start, end, asleep / deep / light / REM / awake minutes (nullable when the source has no stages), source app, and the store's record id. "Last night" is the longest session whose **end** falls on the local date. Naps are stored too, but the Today tile shows only the main sleep.
+- As built (G2.1, `V98`): there is no date column. Only the client knows the local time zone, so it derives the wake-up date from `ended_at`. The record id is a plain unique `(user_id, health_record_id)`: nulls stay distinct, so a session without a store id is never blocked. API: `/api/v1/sleep-sessions` with list, delta feed, create (409 on a record the user already has, deleted ones included) and soft delete. There is no update, because imported values are measurements (D-G6).
 **Rejected:**
 - **A per-night aggregate row:** loses naps, and makes re-imports after a watch edit ambiguous.
 - **Attributing to the start date:** a sleep starting at 23:30 would land on the previous day.
@@ -122,7 +123,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 
 | Step | Surface | What | Verification |
 |---|---|---|---|
-| G2.1 | Backend | `V98`: `sleep_sessions` (D-G7), with `user_id … on delete cascade`, `updated_at`/`deleted_at` plus the `(updated_at, id)` index, and a unique `(user_id, health_record_id)`. Entity, CRUD and delta-sync feed (backend-feature-slice). | `./mvnw -B verify`. Ownership and sync-feed tests. |
+| G2.1 ✅ | Backend | `V98`: `sleep_sessions` (D-G7), with `user_id … on delete cascade`, `updated_at`/`deleted_at` plus the `(updated_at, id)` index, and a unique `(user_id, health_record_id)`. Entity, CRUD and delta-sync feed (backend-feature-slice). | `./mvnw -B verify`. Ownership and sync-feed tests. |
 | G2.2 | Mobile data | Drift table, repository, outbox and pull sync for sleep sessions (flutter-feature-slice). | Repository and sync tests. |
 | G2.3 | Mobile data | `SleepHealthImporter`: `SLEEP_SESSION` plus stage samples, merged into one row per session. Same cursor, dedupe and lifecycle as G1.5. | Unit tests with iOS-style (stages only) and Health Connect-style (session plus stages) fixtures. |
 | G2.4 | Mobile UI | Sleep toggle in the Health settings. | Widget test. |
