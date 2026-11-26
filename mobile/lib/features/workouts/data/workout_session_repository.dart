@@ -12,12 +12,16 @@ import '../domain/cardio_interval_plan.dart';
 import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 
-/// One planned exercise when logging a session — clientId + optional target sets.
+/// One planned exercise when logging a session — clientId + optional target
+/// sets and the user's comment on it (LIF-224).
 class PlannedExerciseInput {
-  const PlannedExerciseInput({required this.exerciseClientId, this.targetSets});
+  const PlannedExerciseInput({required this.exerciseClientId, this.targetSets, this.note});
 
   final String exerciseClientId;
   final int? targetSets;
+
+  /// Free-text comment on this exercise in this session, null if none.
+  final String? note;
 }
 
 /// One set to record when logging a session (request side).
@@ -290,6 +294,7 @@ HAVING SUM(records) > 0
               exerciseClientId: link.exerciseClientId,
               exerciseName: exerciseNames[link.exerciseClientId] ?? 'Unknown',
               targetSets: link.targetSets,
+              note: link.note,
             ),
           );
     }
@@ -414,6 +419,7 @@ HAVING SUM(records) > 0
           exerciseClientId: p.exerciseClientId,
           exerciseName: exerciseNames[p.exerciseClientId] ?? 'Unknown',
           targetSets: p.targetSets,
+          note: p.note,
         ),
     ];
     final sets = [
@@ -731,7 +737,7 @@ HAVING SUM(records) > 0
       exercises: [
         for (final p in plannedRows)
           PlannedExerciseInput(
-              exerciseClientId: p.exerciseClientId, targetSets: p.targetSets),
+              exerciseClientId: p.exerciseClientId, targetSets: p.targetSets, note: p.note),
       ],
       sets: [
         for (final s in setRows)
@@ -785,7 +791,7 @@ HAVING SUM(records) > 0
       exercises: [
         for (final p in plannedRows)
           PlannedExerciseInput(
-              exerciseClientId: p.exerciseClientId, targetSets: p.targetSets),
+              exerciseClientId: p.exerciseClientId, targetSets: p.targetSets, note: p.note),
       ],
       sets: [
         for (final s in setRows)
@@ -850,6 +856,7 @@ HAVING SUM(records) > 0
               sessionClientId: sessionClientId,
               exerciseClientId: exercise.exerciseClientId,
               targetSets: Value(exercise.targetSets),
+              note: Value(normalizeExerciseNote(exercise.note)),
             ),
           );
     }
@@ -1099,6 +1106,7 @@ HAVING SUM(records) > 0
           {
             'exerciseId': clientRef(e.exerciseClientId),
             if (e.targetSets != null) 'targetSets': e.targetSets,
+            if (normalizeExerciseNote(e.note) != null) 'note': normalizeExerciseNote(e.note),
           },
       ],
       'sets': sets
@@ -1272,6 +1280,44 @@ HAVING SUM(records) > 0
       exerciseClientId: exerciseClientId,
       excludeSessionClientId: excludeSessionClientId,
     );
+  }
+
+  /// The note each of [exerciseClientIds] carried in the most recent started
+  /// session (other than [excludeSessionClientId]) that planned it — what a
+  /// new session's exercise comments are pre-filled from (LIF-224).
+  ///
+  /// Only that one session counts per exercise: when its note was null the
+  /// exercise is simply absent from the map, so a comment the user cleared
+  /// stays cleared instead of an older one coming back. Upcoming (not yet
+  /// started) sessions are skipped — they have no history to carry.
+  Future<Map<String, String>> getPreviousExerciseNotes(
+    Iterable<String> exerciseClientIds, {
+    String? excludeSessionClientId,
+  }) async {
+    final ids = exerciseClientIds.toSet();
+    if (ids.isEmpty) return const {};
+    final query = _db.select(_db.workoutSessionExercises).join([
+      innerJoin(
+        _db.workoutSessions,
+        _db.workoutSessions.clientId.equalsExp(_db.workoutSessionExercises.sessionClientId),
+      ),
+    ])
+      ..where(_db.workoutSessionExercises.exerciseClientId.isIn(ids))
+      ..where(_db.workoutSessions.startedAt.isNotNull())
+      ..orderBy([OrderingTerm.desc(_db.workoutSessions.startedAt)]);
+    if (excludeSessionClientId != null) {
+      query.where(_db.workoutSessions.clientId.equals(excludeSessionClientId).not());
+    }
+
+    final seen = <String>{};
+    final notes = <String, String>{};
+    for (final row in await query.get()) {
+      final link = row.readTable(_db.workoutSessionExercises);
+      if (!seen.add(link.exerciseClientId)) continue;
+      final note = normalizeExerciseNote(link.note);
+      if (note != null) notes[link.exerciseClientId] = note;
+    }
+    return notes;
   }
 
   /// Builds a [PrBaseline] for [exerciseClientId] from every set ever logged

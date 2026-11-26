@@ -372,11 +372,25 @@ class SessionExercise {
     required this.exerciseClientId,
     required this.exerciseName,
     this.targetSets,
+    this.note,
   });
 
   final String exerciseClientId;
   final String exerciseName;
   final int? targetSets;
+
+  /// The user's comment on this exercise in this session (LIF-224), null if none.
+  final String? note;
+}
+
+/// The longest exercise note the backend accepts (`PlannedExerciseRequest.MAX_NOTE_LENGTH`).
+const kExerciseNoteMaxLength = 1000;
+
+/// Trims [note] and maps an empty one to null — "no comment" has exactly one
+/// representation, locally and on the wire.
+String? normalizeExerciseNote(String? note) {
+  final trimmed = note?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }
 
 /// A logged workout session (`/workout-sessions`).

@@ -193,25 +193,34 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
      * .plannedExercises}. On that fallback the session's existing targetSets are
      * carried over rather than cleared, so a client that doesn't know about the
      * field (the web app, an older mobile build) can edit a session without
-     * silently erasing the plan another client recorded.
+     * silently erasing the plan another client recorded. The same goes for each
+     * exercise's {@code note} (LIF-224).
      */
     private void replacePlannedExercises(WorkoutSession session, WorkoutSessionRequest request) {
         // What this session already plans, by exercise. Only read on the
-        // fallback path: a client that doesn't know about targetSets isn't
+        // fallback path: a client that doesn't know about targetSets/note isn't
         // saying "clear the plan", it simply has nothing to say about it, so
-        // its update must not wipe a count another client recorded.
+        // its update must not wipe what another client recorded.
         Map<Long, Integer> existingTargetSets = session.getPlannedExercises().stream()
                 .filter(link -> link.getTargetSets() != null)
                 .collect(Collectors.toMap(
                         link -> link.getExercise().getId(),
                         WorkoutSessionExercise::getTargetSets,
                         (first, _) -> first));
+        Map<Long, String> existingNotes = session.getPlannedExercises().stream()
+                .filter(link -> link.getNote() != null)
+                .collect(Collectors.toMap(
+                        link -> link.getExercise().getId(),
+                        WorkoutSessionExercise::getNote,
+                        (first, _) -> first));
 
         List<PlannedExerciseRequest> planned = request.plannedExercises() != null
                 ? request.plannedExercises()
                 : request.exerciseIds().stream()
                         .map(exerciseId -> new PlannedExerciseRequest(
-                                exerciseId, existingTargetSets.get(exerciseId)))
+                                exerciseId,
+                                existingTargetSets.get(exerciseId),
+                                existingNotes.get(exerciseId)))
                         .toList();
 
         session.getPlannedExercises().clear();
@@ -224,6 +233,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             link.setWorkoutSession(session);
             link.setExercise(exercise);
             link.setTargetSets(entry.targetSets());
+            link.setNote(entry.note() == null || entry.note().isBlank() ? null : entry.note().strip());
             session.getPlannedExercises().add(link);
         }
     }

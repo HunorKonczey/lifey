@@ -26,7 +26,8 @@ public final class WorkoutSessionMapper {
                 .map(link -> new ExerciseSummary(
                         link.getExercise().getId(),
                         link.getExercise().getName(),
-                        link.getTargetSets()))
+                        link.getTargetSets(),
+                        link.getNote()))
                 .toList();
 
         List<ExerciseSetResponse> sets = session.getSets().stream()

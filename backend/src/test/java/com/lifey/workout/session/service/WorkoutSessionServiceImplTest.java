@@ -305,6 +305,78 @@ class WorkoutSessionServiceImplTest {
     }
 
     @Test
+    void create_storesEachPlannedExerciseNoteTrimmedAndBlankAsNull() {
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+        when(exerciseRepository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(exercise(5L, "Leg Press")));
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
+        WorkoutSessionRequest request = strengthRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L, 4L, 5L), List.of(),
+                null, null, null, null, null, null,
+                List.of(
+                        new PlannedExerciseRequest(1L, 3, "  seat on 4 "),
+                        new PlannedExerciseRequest(4L, null, "   "),
+                        new PlannedExerciseRequest(5L, null, null)));
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::exerciseId, ExerciseSummary::note)
+                .containsExactly(tuple(1L, "seat on 4"), tuple(4L, null), tuple(5L, null));
+    }
+
+    @Test
+    void update_replacesTheStoredNoteWhenTheClientSendsAPlan() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        WorkoutSessionExercise link = new WorkoutSessionExercise();
+        link.setWorkoutSession(existing);
+        link.setExercise(exercise(1L, "Bench Press"));
+        link.setNote("seat on 4");
+        existing.getPlannedExercises().add(link);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        WorkoutSessionRequest request = strengthRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L), List.of(),
+                null, null, null, null, null, null,
+                List.of(new PlannedExerciseRequest(1L, null, null)));
+
+        WorkoutSessionResponse result = service.update(3L, request);
+
+        // A plan without a note is the mobile client clearing it.
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::note)
+                .containsExactly((String) null);
+    }
+
+    @Test
+    void update_keepsTheStoredNoteWhenTheClientSendsNoPlan() {
+        // The web app PUTs bare exerciseIds and knows nothing about notes, so
+        // editing a session there must not erase the comment written on mobile.
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        WorkoutSessionExercise link = new WorkoutSessionExercise();
+        link.setWorkoutSession(existing);
+        link.setExercise(exercise(1L, "Bench Press"));
+        link.setNote("seat on 4");
+        existing.getPlannedExercises().add(link);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        WorkoutSessionRequest request = strengthRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L), List.of(),
+                null, null, null, null, null, null, null);
+
+        WorkoutSessionResponse result = service.update(3L, request);
+
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::note)
+                .containsExactly("seat on 4");
+    }
+
+    @Test
     void create_allowsAnEmptySessionWithNoPlannedExercisesOrSets() {
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
         WorkoutSessionRequest request = strengthRequest(

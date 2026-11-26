@@ -13,6 +13,9 @@ public record ExerciseSummary(
          * The client rebuilds its still-blank set rows from this, so dropping it
          * from the response is what used to make them disappear.
          */
-        Integer targetSets
+        Integer targetSets,
+
+        /* The user's comment on this exercise in this session (LIF-224), or null. */
+        String note
 ) {
 }
