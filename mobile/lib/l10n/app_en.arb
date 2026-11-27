@@ -6852,6 +6852,26 @@
   "@settingsSleepImportPermissionSubtitle": {
     "description": "Subline of the sleep-import row on Android when it is on but Health Connect no longer grants the sleep permission; tapping the row asks again"
   },
+  "settingsVitalsImportLabel": "Resting heart rate & HRV",
+  "@settingsVitalsImportLabel": {
+    "description": "Title of the Settings row under Health that turns on importing daily resting heart rate and heart rate variability written by other apps (Garmin Connect, an Apple Watch) to Apple Health / Health Connect (docs/integrations/89 G3.3)"
+  },
+  "settingsVitalsImportOnSubtitle": "On · daily values from apps like Garmin Connect show up here",
+  "@settingsVitalsImportOnSubtitle": {
+    "description": "Subline of the vitals-import row while it is on, says what on means"
+  },
+  "settingsVitalsImportOffSubtitle": "Off · no resting heart rate or HRV in Lifey",
+  "@settingsVitalsImportOffSubtitle": {
+    "description": "Subline of the vitals-import row while it is off, says what off means"
+  },
+  "settingsVitalsImportNeedsHealthSubtitle": "Turn on Health first",
+  "@settingsVitalsImportNeedsHealthSubtitle": {
+    "description": "Subline of the vitals-import row while the Health connection above it is off; the switch is disabled then"
+  },
+  "settingsVitalsImportPermissionSubtitle": "Permission needed · tap to allow",
+  "@settingsVitalsImportPermissionSubtitle": {
+    "description": "Subline of the vitals-import row on Android when it is on but Health Connect no longer grants the resting heart rate or HRV permission; tapping the row asks again"
+  },
   "settingsExerciseRoutesLabel": "Route maps from other apps",
   "@settingsExerciseRoutesLabel": {
     "description": "Title of the Android-only settings row under the cardio-import row, shown while Health Connect withholds other apps' workout routes (docs/integrations/89 G1.8, LIF-223)"
