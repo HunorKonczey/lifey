@@ -1642,5 +1642,12 @@
   "mealActionRecipe": "Recept hozzáadása",
   "mealRecipeGroupSubtitle": "{count} hozzávaló · {kcal} kcal",
   "mealRecipeMenuTooltip": "Recept menü",
-  "mealRecipeRemoveMenuItem": "Recept eltávolítása"
+  "mealRecipeRemoveMenuItem": "Recept eltávolítása",
+  "sleepTileLabel": "Alvás",
+  "sleepTileNoDataSubline": "Az elmúlt éjszakáról nincs adat",
+  "sleepTimeRange": "{start}–{end}",
+  "sleepStageDeepLabel": "Mély",
+  "sleepStageLightLabel": "Könnyű",
+  "sleepStageRemLabel": "REM",
+  "sleepStageAwakeLabel": "Ébren"
 }

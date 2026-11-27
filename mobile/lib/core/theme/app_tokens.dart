@@ -483,6 +483,11 @@ class AppMetricColors extends ThemeExtension<AppMetricColors> {
   /// A signed "+" change (e.g. weight went up) — the calorie orange.
   Color get increase => calories;
 
+  /// Sleep (docs/integrations/89 G2.5) — the fat indigo, a night hue that
+  /// is already contrast-checked in both themes; no macro shares a screen
+  /// with the sleep tile's stage bar.
+  Color get sleep => fat;
+
   // Dark variants — oklch(0.76 0.11 h)
   static const AppMetricColors dark = AppMetricColors(
     calories: Color(0xFFEC9A66),

@@ -31,6 +31,7 @@ import '../../workouts/presentation/widgets/recommended_workout_card.dart';
 import '../../nutrition/presentation/log_meal_screen.dart';
 import '../../nutrition/presentation/nutrition_screen.dart';
 import '../../onboarding/presentation/widgets/onboarding_banner.dart';
+import '../../sleep/presentation/widgets/sleep_tile.dart';
 import '../../streaks/application/streaks_provider.dart';
 import '../../streaks/domain/streak.dart';
 import '../../streaks/presentation/widgets/recap_ready_card.dart';
@@ -271,6 +272,10 @@ class _DashboardBody extends ConsumerWidget {
           onWeightTap: () => context.go('/weight'),
         ),
         const SizedBox(height: 16),
+
+        // ── Last night's sleep (docs/integrations/89 G2.5); hides itself
+        // for a user who neither imports sleep nor has any ─────────────
+        const TodaySleepTile(),
 
     ];
 
