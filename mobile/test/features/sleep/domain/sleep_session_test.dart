@@ -28,4 +28,35 @@ void main() {
     expect(mainSleepFor([nap, night, previous], DateTime(2026, 11, 20, 18))!.clientId, 'prev');
     expect(mainSleepFor([nap, night, previous], DateTime(2026, 11, 22)), isNull);
   });
+
+  group('history helpers (G2.6)', () {
+    final night = session('night', DateTime(2026, 11, 20, 23), DateTime(2026, 11, 21, 6, 30));
+    final nap = session('nap', DateTime(2026, 11, 21, 14), DateTime(2026, 11, 21, 14, 40));
+    final earlier = session('earlier', DateTime(2026, 11, 16, 23), DateTime(2026, 11, 17, 7));
+    final old = session('old', DateTime(2026, 11, 9, 23), DateTime(2026, 11, 10, 6));
+
+    test('isNap is true for every session but the main sleep of its day', () {
+      final all = [nap, night, earlier];
+      expect(isNap(nap, all), isTrue);
+      expect(isNap(night, all), isFalse);
+      expect(isNap(earlier, all), isFalse);
+    });
+
+    test('sleepAverage averages the main sleeps of the last 7 dates, naps and older nights left out', () {
+      // 21 Nov: 7:30, 17 Nov: 8:00 -> 7:45 over 2 nights; 10 Nov is 11 days back.
+      final average = sleepAverage([nap, night, earlier, old], DateTime(2026, 11, 21, 20))!;
+
+      expect(average.nights, 2);
+      expect(average.average, const Duration(hours: 7, minutes: 45));
+      expect(sleepAverage([old], DateTime(2026, 11, 21)), isNull);
+    });
+
+    test('sessionsByWeek groups by the Monday of the wake-up day, newest week first', () {
+      final weeks = sessionsByWeek([nap, night, earlier, old]);
+
+      expect(weeks.map((w) => w.start), [DateTime(2026, 11, 16), DateTime(2026, 11, 9)]);
+      expect(weeks.first.sessions.map((s) => s.clientId), ['nap', 'night', 'earlier']);
+      expect(weekStartOf(DateTime(2026, 11, 22, 23)), DateTime(2026, 11, 16));
+    });
+  });
 }

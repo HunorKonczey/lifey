@@ -60,3 +60,36 @@ SleepSession? mainSleepFor(Iterable<SleepSession> sessions, DateTime date) {
   }
   return best;
 }
+
+/// Whether [session] is a nap: not the main sleep of its wake-up day
+/// ([mainSleepFor] over [all]).
+bool isNap(SleepSession session, Iterable<SleepSession> all) =>
+    mainSleepFor(all, session.wakeDate)?.clientId != session.clientId;
+
+/// The average main sleep over the [days] local dates ending with [today],
+/// counting only the nights that have one. Null when none has.
+({Duration average, int nights})? sleepAverage(Iterable<SleepSession> sessions, DateTime today, {int days = 7}) {
+  var totalSeconds = 0;
+  var nights = 0;
+  for (var i = 0; i < days; i++) {
+    final main = mainSleepFor(sessions, DateTime(today.year, today.month, today.day - i));
+    if (main == null) continue;
+    totalSeconds += main.duration.inSeconds;
+    nights++;
+  }
+  return nights == 0 ? null : (average: Duration(seconds: totalSeconds ~/ nights), nights: nights);
+}
+
+/// The Monday of [date]'s week, as a local calendar date.
+DateTime weekStartOf(DateTime date) => DateTime(date.year, date.month, date.day - (date.weekday - DateTime.monday));
+
+/// [sessions] grouped by the week of their wake-up day, newest week first;
+/// each week keeps the input order.
+List<({DateTime start, List<SleepSession> sessions})> sessionsByWeek(Iterable<SleepSession> sessions) {
+  final weeks = <DateTime, List<SleepSession>>{};
+  for (final s in sessions) {
+    (weeks[weekStartOf(s.wakeDate)] ??= []).add(s);
+  }
+  final starts = weeks.keys.toList()..sort((a, b) => b.compareTo(a));
+  return [for (final start in starts) (start: start, sessions: weeks[start]!)];
+}

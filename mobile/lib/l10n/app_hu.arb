@@ -1649,5 +1649,15 @@
   "sleepStageDeepLabel": "Mély",
   "sleepStageLightLabel": "Könnyű",
   "sleepStageRemLabel": "REM",
-  "sleepStageAwakeLabel": "Ébren"
+  "sleepStageAwakeLabel": "Ébren",
+  "sleepHistoryTitle": "Alvás",
+  "sleepHistoryAverageLabel": "7 napos átlag",
+  "sleepHistoryAverageNights": "{count, plural, one{1 éjszaka alapján} other{{count} éjszaka alapján}}",
+  "sleepHistoryAverageNone": "Az elmúlt 7 napból nincs éjszaka",
+  "sleepHistoryThisWeek": "Ez a hét",
+  "sleepHistoryLastWeek": "Múlt hét",
+  "sleepHistoryWeekRange": "{start} – {end}",
+  "sleepHistoryNapSubline": "Szundi · {range}",
+  "sleepHistoryEmptyTitle": "Még nincs alvásadat",
+  "sleepHistoryEmptyMessage": "Kapcsold be a Beállításokban az „Alvás más appokból” opciót, és itt megjelennek az éjszakáid"
 }

@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.5 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.6 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -132,7 +132,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | G2.3 ✅ | Mobile data | `SleepHealthImporter`: `SLEEP_SESSION` plus stage samples, merged into one row per session. Same cursor, dedupe and lifecycle as G1.5. | Unit tests with iOS-style (stages only) and Health Connect-style (session plus stages) fixtures. |
 | G2.4 ✅ | Mobile UI | Sleep toggle in the Health settings (`SleepImportRow`, `SleepImportController`; the first enable requests the sleep types and imports at once). | Widget test. |
 | G2.5 ✅ | Mobile UI | Today sleep tile (main sleep, stage bar): `TodaySleepTile` under the weight tile, hidden while the user neither imports sleep nor has any. Sleep colour = the fat indigo (`AppMetricColors.sleep`). | Widget tests: stages present, duration only, no data. |
-| G2.6 | Mobile UI | Sleep history screen: weekly list and 7-day average. | Widget test. Emulator screenshot. |
+| G2.6 ✅ | Mobile UI | Sleep history screen: weekly list and 7-day average (`SleepHistoryScreen`, opened from the Today tile). The average counts main sleeps only; naps are marked with their own icon and "Nap". | Widget test. Emulator screenshot. |
 
 ### M3 — Resting HR and HRV from the health store
 **Demo:** the Body tab shows a 30-day resting-HR trend.
