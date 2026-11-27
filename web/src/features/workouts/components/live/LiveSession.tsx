@@ -14,10 +14,12 @@ import { firstOpenExerciseId, hasUnsavedSets, liveProgress, railExercises, rowMa
 import { priorSets } from "../../sessionSummary";
 import { previousSets } from "../../progress";
 import { celebrationData, type CelebrationData } from "../../finishSummary";
-import type { WorkoutSessionResponse } from "../../types";
+import { normalizeExerciseNote, plannedExercisesRequest, previousExerciseNote } from "../../exerciseNotes";
+import type { ExerciseSummary, WorkoutSessionResponse } from "../../types";
 import { CelebrationModal } from "../finish/CelebrationModal";
 import { RpeModal } from "../finish/RpeModal";
 import { ExerciseCard } from "./ExerciseCard";
+import { ExerciseNoteModal } from "./ExerciseNoteModal";
 import { ExerciseRail } from "./ExerciseRail";
 import { LiveHeader } from "./LiveHeader";
 import { RestHero } from "./RestHero";
@@ -83,10 +85,16 @@ export function LiveSession({
     return () => window.removeEventListener("beforeunload", warn);
   }, [unsaved]);
 
-  const buildRequest = (finished: boolean, rpeValue: number | null, noteValue: string | null) => ({
+  // Comments edited here (LIF-226), by exercise; the rest keep the one the session came with.
+  const [noteEdits, setNoteEdits] = useState<ReadonlyMap<number, string | null>>(new Map());
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const noteOf = (e: ExerciseSummary) => (noteEdits.has(e.exerciseId) ? (noteEdits.get(e.exerciseId) ?? null) : normalizeExerciseNote(e.note));
+
+  const buildRequest = (finished: boolean, rpeValue: number | null, noteValue: string | null, edits: ReadonlyMap<number, string | null>) => ({
     startedAt: session.startedAt,
     finishedAt: finished ? new Date().toISOString() : session.finishedAt,
     exerciseIds: exercises.map((e) => e.exerciseId),
+    plannedExercises: plannedExercisesRequest(exercises, edits),
     sets: drafts
       .filter((x) => x.done && x.reps > 0)
       .map((x) => ({ exerciseId: x.exerciseId, reps: x.reps, weight: x.weight, performedAt: new Date().toISOString() })),
@@ -98,11 +106,12 @@ export function LiveSession({
   });
 
   const saveMutation = useMutation({
-    mutationFn: (vars: { finished: boolean; rpe: number | null; feedbackNote: string | null }) =>
-      workoutSessionApi.update(session.id, buildRequest(vars.finished, vars.rpe, vars.feedbackNote)),
+    mutationFn: (vars: { finished: boolean; rpe: number | null; feedbackNote: string | null; noteEdits?: ReadonlyMap<number, string | null> }) =>
+      workoutSessionApi.update(session.id, buildRequest(vars.finished, vars.rpe, vars.feedbackNote, vars.noteEdits ?? noteEdits)),
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
-      if (vars.finished) {
+      if (vars.noteEdits) show(t("exerciseNoteSaved"), "success");
+      else if (vars.finished) {
         // The celebration replaces the toast (W3.9): time, volume, sets and the records, computed from what was just saved.
         setCelebration(celebrationData(session, drafts, history, new Date()));
       } else show(t("progressSaved"), "success");
@@ -152,6 +161,7 @@ export function LiveSession({
   const current = exercises.find((e) => e.exerciseId === currentId) ?? null;
   const currentIdx = current ? exercises.indexOf(current) : -1;
   const next = currentIdx >= 0 ? (exercises[currentIdx + 1] ?? null) : null;
+  const editing = exercises.find((e) => e.exerciseId === editingNoteId) ?? null;
   const history0 = priorSets(session, history);
   // "Eddig ma": what the done rows add up to, and how many of them broke a record.
   const volumeKg = drafts.reduce((sum, x) => (x.done ? sum + x.weight * x.reps : sum), 0);
@@ -231,7 +241,9 @@ export function LiveSession({
             <ExerciseCard
               key={current.exerciseId}
               name={current.exerciseName}
-              note={current.note}
+              note={noteOf(current)}
+              fromLastSession={noteOf(current) != null && noteOf(current) === previousExerciseNote(history, session.id, current.exerciseId)}
+              onEditNote={() => setEditingNoteId(current.exerciseId)}
               rows={drafts.map((draft, index) => ({ draft, index })).filter(({ draft }) => draft.exerciseId === current.exerciseId)}
               previous={previousSets(history, session.id, current.exerciseId, session.templateId)}
               marks={rowMarks(
@@ -317,6 +329,25 @@ export function LiveSession({
           saveMutation.mutate({ finished: finishing, rpe: newRpe, feedbackNote: newNote });
         }}
       />
+
+      {editing && (
+        <ExerciseNoteModal
+          key={editing.exerciseId}
+          open
+          exerciseName={editing.exerciseName}
+          initialNote={noteOf(editing)}
+          previousNote={previousExerciseNote(history, session.id, editing.exerciseId)}
+          onCancel={() => setEditingNoteId(null)}
+          onSave={(note) => {
+            setEditingNoteId(null);
+            if (note === noteOf(editing)) return;
+            const edits = new Map(noteEdits).set(editing.exerciseId, note);
+            setNoteEdits(edits);
+            // Saved right away, like the RPE edit: a comment is not a draft the leave guard should ask about.
+            saveMutation.mutate({ finished: false, rpe, feedbackNote, noteEdits: edits });
+          }}
+        />
+      )}
 
       <CelebrationModal
         open={celebration !== null}

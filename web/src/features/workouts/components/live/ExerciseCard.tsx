@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Card, Icon } from "@/components/ds";
+import { Button, Card, Icon, IconButton } from "@/components/ds";
 import { formatNumber, useFormat } from "@/lib/i18n/format";
 import type { DraftSet, RowMark } from "../../liveSession";
 import { ExerciseNote } from "../SessionSummary";
@@ -19,6 +19,8 @@ const rowInput = (root: HTMLElement | null, row: number) => root?.querySelector<
 export function ExerciseCard({
   name,
   note,
+  fromLastSession = false,
+  onEditNote,
   rows,
   previous,
   marks,
@@ -29,8 +31,12 @@ export function ExerciseCard({
   onAddSet,
 }: {
   name: string;
-  /** The exercise's comment in this session (LIF-224) — written and carried over on mobile, read-only here. */
+  /** The exercise's comment in this session (LIF-224), editable here since LIF-226. */
   note?: string | null;
+  /** The comment is the one carried over from the exercise's last session, unchanged. */
+  fromLastSession?: boolean;
+  /** Opens the comment editor; without it the comment is read-only (the design gallery). */
+  onEditNote?: () => void;
   /** This exercise's drafts; `index` is the position in the whole session's draft list. */
   rows: { draft: DraftSet; index: number }[];
   previous: { weight: number; reps: number }[];
@@ -79,7 +85,31 @@ export function ExerciseCard({
             {[target, bestText].filter(Boolean).join(" · ")}
           </p>
         )}
-        {note && <ExerciseNote note={note} label={t("exerciseNote")} />}
+        {note ? (
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1">
+              <ExerciseNote note={note} label={t("exerciseNote")} />
+              {fromLastSession && (
+                <p className="type-label mt-0.5" style={{ color: "var(--text-3)" }}>
+                  {t("exerciseNoteFromLastSession")}
+                </p>
+              )}
+            </div>
+            {onEditNote && <IconButton icon="edit" label={t("exerciseNoteEdit")} size={32} onClick={onEditNote} />}
+          </div>
+        ) : (
+          onEditNote && (
+            <button
+              type="button"
+              onClick={onEditNote}
+              className="lifey-button type-body-s mt-1 -ml-1 inline-flex min-h-11 items-center gap-1.5 rounded-[var(--r-control)] px-1 md:min-h-8"
+              style={{ color: "var(--text-2)", fontWeight: 600 }}
+            >
+              <Icon name="add_comment" size={18} />
+              {t("exerciseNoteAdd")}
+            </button>
+          )
+        )}
       </div>
 
       <div
