@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.6 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.6 done. M3: G3.1–G3.2 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -140,7 +140,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | Step | Surface | What | Verification |
 |---|---|---|---|
 | G3.1 ✅ | Backend | `V100`: `daily_vitals` (D-G8), with CRUD and the sync feed. `/api/v1/vitals`; POST upserts on the date and replaces both values, so the client sends the whole day. | `./mvnw -B verify`. |
-| G3.2 | Mobile data | Drift table, repository and sync for daily vitals. | Repository and sync tests. |
+| G3.2 ✅ | Mobile data | Drift table (schema v57), repository and sync for daily vitals. `DailyVitalsRepository.upsertForDay` merges resting HR and HRV into one row per day and always sends the whole day, because the server replaces both values. | Repository and sync tests. |
 | G3.3 | Mobile data | `VitalsHealthImporter`: daily resting HR and HRV with its method, plus the settings toggle. | Unit tests: SDNN and RMSSD never mixed. |
 | G3.4 | Mobile UI | Resting-HR and HRV trend cards. | Widget tests. Emulator screenshot. |
 

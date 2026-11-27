@@ -129,6 +129,7 @@ const entitySyncConfigs = <String, EntitySyncConfig>{
       EntitySyncConfig(tableName: 'user_settings', basePath: '/settings', isSingleton: true),
   'daily_step_count':
       EntitySyncConfig(tableName: 'daily_step_counts', basePath: '/steps'),
+  'daily_vitals': EntitySyncConfig(tableName: 'daily_vitals', basePath: '/vitals'),
 };
 
 /// Every local entity table a clientId could belong to — used to resolve a
@@ -149,4 +150,5 @@ const allEntityTableNames = [
   'water_entries',
   'user_settings',
   'daily_step_counts',
+  'daily_vitals',
 ];
