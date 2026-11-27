@@ -65,6 +65,7 @@ class PullEngine {
         await _guard('water_sources', _pullWaterSources);
         await _guard('weight_entries', _pullWeightEntries);
         await _guard('body_measurements', _pullBodyMeasurements);
+        await _guard('sleep_sessions', _pullSleepSessions);
         await _guard('water_entries', _pullWaterEntries);
         await _guard('daily_steps', _pullDailySteps);
         await _guard('settings', _pullSettings);
@@ -494,6 +495,87 @@ class PullEngine {
     if (clientId == null) return;
     if (await _hasPendingOperation(clientId)) return;
     await (_db.delete(_db.bodyMeasurements)..where((t) => t.clientId.equals(clientId))).go();
+  }
+
+  // Sleep sessions (docs/integrations/89 D-G7). The server has no update for
+  // them, so an upsert of a known row only refreshes the copy; in practice
+  // it matters for a row this device first saw through a pull.
+  Future<void> _pullSleepSessions() async {
+    final cursor = await _getSyncCursor('sleep_sessions');
+    if (cursor == null) {
+      await _pullSleepSessionsFull();
+    } else {
+      await _pullSleepSessionsDelta(cursor);
+    }
+  }
+
+  Future<void> _pullSleepSessionsFull() async {
+    final items = await _getList('/sleep-sessions');
+    final seen = <int>{};
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      seen.add(json['id'] as int);
+      await _upsertSleepSession(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    await _deleteMissing('sleep_sessions', seen);
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('sleep_sessions', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullSleepSessionsDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/sleep-sessions',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteSleepSessionTombstone(json['id'] as int);
+      } else {
+        await _upsertSleepSession(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('sleep_sessions', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _upsertSleepSession(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('sleep_sessions', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final companion = SleepSessionsCompanion(
+      startedAt: Value(DateTime.parse(json['startedAt'] as String)),
+      endedAt: Value(DateTime.parse(json['endedAt'] as String)),
+      asleepMinutes: Value(json['asleepMinutes'] as int?),
+      deepMinutes: Value(json['deepMinutes'] as int?),
+      lightMinutes: Value(json['lightMinutes'] as int?),
+      remMinutes: Value(json['remMinutes'] as int?),
+      awakeMinutes: Value(json['awakeMinutes'] as int?),
+      sourceAppName: Value(json['sourceAppName'] as String?),
+      healthRecordId: Value(json['healthRecordId'] as String?),
+    );
+    if (existingClientId != null) {
+      await (_db.update(_db.sleepSessions)..where((t) => t.clientId.equals(existingClientId)))
+          .write(companion);
+    } else {
+      await _db.into(_db.sleepSessions).insert(companion.copyWith(
+            clientId: Value(newClientId()),
+            serverId: Value(serverId),
+          ));
+    }
+  }
+
+  Future<void> _deleteSleepSessionTombstone(int serverId) async {
+    final clientId = await _localClientId('sleep_sessions', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await (_db.delete(_db.sleepSessions)..where((t) => t.clientId.equals(clientId))).go();
   }
 
   Future<void> _pullDailySteps() async {

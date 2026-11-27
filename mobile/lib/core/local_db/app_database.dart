@@ -16,6 +16,7 @@ import 'tables/meal_tables.dart';
 import 'tables/pending_operations_table.dart';
 import 'tables/recipe_tables.dart';
 import 'tables/settings_table.dart';
+import 'tables/sleep_session_table.dart';
 import 'tables/step_count_table.dart';
 import 'tables/sync_cursor_table.dart';
 import 'tables/water_tables.dart';
@@ -38,6 +39,7 @@ part 'app_database.g.dart';
 @DriftDatabase(tables: [
   WeightEntries,
   BodyMeasurements,
+  SleepSessions,
   Foods,
   Recipes,
   RecipeIngredients,
@@ -69,7 +71,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 55;
+  int get schemaVersion => 56;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -439,6 +441,11 @@ class AppDatabase extends _$AppDatabase {
           // session exercise simply has no comment.
           if (from < 55) {
             await _addColumnIfMissing(m, workoutSessionExercises, workoutSessionExercises.note);
+          }
+          // V56: sleep sessions imported from the health store (docs/integrations/89 D-G7, LIF-205) -
+          // a brand-new synced table.
+          if (from < 56) {
+            await m.createTable(sleepSessions);
           }
         },
       );
