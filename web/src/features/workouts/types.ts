@@ -73,7 +73,9 @@ export interface WorkoutTemplateRequest {
 export interface ExerciseSummary {
   exerciseId: number;
   exerciseName: string;
-  /** The user's comment on this exercise in this session (LIF-224), written on mobile; null when none. */
+  /** Sets the session plans for this exercise (V63); null when it has none. The web sends it back untouched. */
+  targetSets?: number | null;
+  /** The user's comment on this exercise in this session (LIF-224); null when none. */
   note?: string | null;
 }
 
@@ -258,10 +260,19 @@ export interface ExerciseSetRequest {
   performedAt: string; // Instant, past or present
 }
 
+/** One planned exercise with its target sets and comment (LIF-224); when sent, it wins over `exerciseIds`. */
+export interface PlannedExerciseRequest {
+  exerciseId: number;
+  targetSets: number | null;
+  note: string | null;
+}
+
 export interface WorkoutSessionRequest {
   startedAt: string;
   finishedAt?: string | null;
   exerciseIds: number[];
+  /** Sent by the live logger so a comment edited on the web is kept (LIF-226); omitted on create. */
+  plannedExercises?: PlannedExerciseRequest[] | null;
   sets: ExerciseSetRequest[];
   activeCalories?: number | null;
   averageHeartRate?: number | null;
