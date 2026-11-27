@@ -138,7 +138,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | Step | Surface | What | Verification |
 |---|---|---|---|
 | G3.1 | Backend | `V100`: `daily_vitals` (D-G8), with CRUD and the sync feed. | `./mvnw -B verify`. |
-| G3.2 | Mobile data | Drift table, repository and sync for daily vitals. | Repository and sync tests. |
+| G3.2 ✅ | Mobile data | Drift table (schema v57), repository and sync for daily vitals. `DailyVitalsRepository.upsertForDay` merges resting HR and HRV into one row per day and always sends the whole day, because the server replaces both values. | Repository and sync tests. |
 | G3.3 | Mobile data | `VitalsHealthImporter`: daily resting HR and HRV with its method, plus the settings toggle. | Unit tests: SDNN and RMSSD never mixed. |
 | G3.4 | Mobile UI | Resting-HR and HRV trend cards. | Widget tests. Emulator screenshot. |
 

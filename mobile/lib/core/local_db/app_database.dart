@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../sync/client_ref.dart';
 import 'tables/cardio_interval_plan_tables.dart';
 import 'tables/chat_tables.dart';
+import 'tables/daily_vitals_table.dart';
 import 'tables/entitlement_cache_table.dart';
 import 'tables/exercise_table.dart';
 import 'tables/food_table.dart';
@@ -40,6 +41,7 @@ part 'app_database.g.dart';
   WeightEntries,
   BodyMeasurements,
   SleepSessions,
+  DailyVitalsTable,
   Foods,
   Recipes,
   RecipeIngredients,
@@ -71,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 56;
+  int get schemaVersion => 57;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -446,6 +448,11 @@ class AppDatabase extends _$AppDatabase {
           // a brand-new synced table.
           if (from < 56) {
             await m.createTable(sleepSessions);
+          }
+          // V57: daily vitals from the health store (docs/integrations/89 D-G8, LIF-211) - a brand-new
+          // synced table.
+          if (from < 57) {
+            await m.createTable(dailyVitalsTable);
           }
         },
       );

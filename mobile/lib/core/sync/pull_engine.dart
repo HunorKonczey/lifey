@@ -68,6 +68,7 @@ class PullEngine {
         await _guard('sleep_sessions', _pullSleepSessions);
         await _guard('water_entries', _pullWaterEntries);
         await _guard('daily_steps', _pullDailySteps);
+        await _guard('daily_vitals', _pullDailyVitals);
         await _guard('settings', _pullSettings);
         await _guard('workout_templates', _pullWorkoutTemplates);
         await _guard('cardio_interval_plans', _pullCardioIntervalPlans);
@@ -727,6 +728,91 @@ class PullEngine {
     if (clientId == null) return;
     if (await _hasPendingOperation(clientId)) return;
     await (_db.delete(_db.waterEntries)..where((t) => t.clientId.equals(clientId))).go();
+  }
+
+  // Daily vitals (docs/integrations/89 D-G8), one row per day like the step counts.
+  Future<void> _pullDailyVitals() async {
+    final cursor = await _getSyncCursor('daily_vitals');
+    if (cursor == null) {
+      await _pullDailyVitalsFull();
+    } else {
+      await _pullDailyVitalsDelta(cursor);
+    }
+  }
+
+  Future<void> _pullDailyVitalsFull() async {
+    final items = await _getList('/vitals');
+    final seen = <int>{};
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      seen.add(json['id'] as int);
+      await _upsertDailyVitals(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    await _deleteMissing('daily_vitals', seen);
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('daily_vitals', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullDailyVitalsDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/vitals',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteDailyVitalsTombstone(json['id'] as int);
+      } else {
+        await _upsertDailyVitals(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('daily_vitals', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _upsertDailyVitals(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    var clientId = await _localClientId('daily_vitals', serverId);
+    if (clientId != null && await _hasPendingOperation(clientId)) return;
+
+    final date = DateTime.parse(json['date'] as String);
+    if (clientId == null) {
+      // A day this device recorded offline and has not synced yet: its own create will upsert the same day on the
+      // server and bring the id back, so leave it alone instead of adding a second row for the day.
+      final dayEnd = DateTime(date.year, date.month, date.day + 1);
+      final sameDay = await (_db.select(_db.dailyVitalsTable)
+            ..where((t) => t.date.isBiggerOrEqualValue(date) & t.date.isSmallerThanValue(dayEnd) & t.serverId.isNull())
+            ..limit(1))
+          .getSingleOrNull();
+      if (sameDay != null && await _hasPendingOperation(sameDay.clientId)) return;
+      clientId = sameDay?.clientId;
+    }
+
+    final values = DailyVitalsTableCompanion(
+      serverId: Value(serverId),
+      date: Value(date),
+      restingHr: Value((json['restingHr'] as num?)?.toInt()),
+      hrvMs: Value((json['hrvMs'] as num?)?.toDouble()),
+      hrvMethod: Value(json['hrvMethod'] as String?),
+    );
+    if (clientId != null) {
+      final id = clientId;
+      await (_db.update(_db.dailyVitalsTable)..where((t) => t.clientId.equals(id))).write(values);
+    } else {
+      await _db.into(_db.dailyVitalsTable).insert(values.copyWith(clientId: Value(newClientId())));
+    }
+  }
+
+  Future<void> _deleteDailyVitalsTombstone(int serverId) async {
+    final clientId = await _localClientId('daily_vitals', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await (_db.delete(_db.dailyVitalsTable)..where((t) => t.clientId.equals(clientId))).go();
   }
 
   Future<void> _pullSettings() async {
