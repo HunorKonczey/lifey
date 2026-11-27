@@ -7403,5 +7403,19 @@
   "mealRecipeRemoveMenuItem": "Remove recipe",
   "@mealRecipeRemoveMenuItem": {
     "description": "Menu item on a recipe header in the Log meal screen list: removes every entry that came from that recipe from the meal (docs/88 M5)"
-  }
+  },
+  "sleepTileLabel": "Sleep",
+  "@sleepTileLabel": {"description": "Label of the Today screen's sleep tile: last night's main sleep imported from the health store (docs/integrations/89 G2.5)"},
+  "sleepTileNoDataSubline": "Nothing recorded last night",
+  "@sleepTileNoDataSubline": {"description": "Line on the Today sleep tile when no sleep session ended today"},
+  "sleepTimeRange": "{start}–{end}",
+  "@sleepTimeRange": {"description": "Bedtime to wake-up of a sleep session, e.g. '22:40–06:10'", "placeholders": {"start": {"type": "String"}, "end": {"type": "String"}}},
+  "sleepStageDeepLabel": "Deep",
+  "@sleepStageDeepLabel": {"description": "Legend label of deep sleep in a sleep stage bar"},
+  "sleepStageLightLabel": "Light",
+  "@sleepStageLightLabel": {"description": "Legend label of light (core) sleep in a sleep stage bar"},
+  "sleepStageRemLabel": "REM",
+  "@sleepStageRemLabel": {"description": "Legend label of REM sleep in a sleep stage bar"},
+  "sleepStageAwakeLabel": "Awake",
+  "@sleepStageAwakeLabel": {"description": "Legend label of time awake during a sleep session in a sleep stage bar"}
 }

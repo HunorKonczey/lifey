@@ -17,7 +17,8 @@ import 'metric_bar.dart';
 ///
 /// [onAction] adds the canvas's solid metric-coloured quick-add button in
 /// the top corner (48 dp). [trailing] sits right of the value block in a
-/// full-width tile (the weight sparkline).
+/// full-width tile (the weight sparkline). [footer] takes a custom widget
+/// under the value, such as the sleep stage bar.
 class MetricTile extends StatelessWidget {
   const MetricTile({
     super.key,
@@ -30,6 +31,7 @@ class MetricTile extends StatelessWidget {
     this.delta,
     this.subline,
     this.trailing,
+    this.footer,
     this.onAction,
     this.actionIcon = Icons.add_rounded,
     this.actionTooltip,
@@ -57,6 +59,10 @@ class MetricTile extends StatelessWidget {
   final String? subline;
 
   final Widget? trailing;
+
+  /// Under the value block, in the progress bar's place — the sleep tile's
+  /// stage bar. Shown below the progress bar when both are set.
+  final Widget? footer;
   final VoidCallback? onAction;
   final IconData actionIcon;
   final String? actionTooltip;
@@ -126,6 +132,10 @@ class MetricTile extends StatelessWidget {
         if (progress != null) ...[
           const SizedBox(height: AppSpacing.s12),
           MetricBar(progress: progress!, color: color),
+        ],
+        if (footer != null) ...[
+          const SizedBox(height: AppSpacing.s12),
+          footer!,
         ],
       ],
     );
