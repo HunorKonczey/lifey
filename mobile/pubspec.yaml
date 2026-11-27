@@ -38,7 +38,7 @@ dependencies:
   # Step-goal notification (iOS foreground/resume only — see lib/core/notifications/).
   # Re-added in the daily-steps feature after being removed with the old background
   # HKObserverQuery machinery in Prompt 1.6.
-  flutter_local_notifications: ^23.0.3
+  flutter_local_notifications: ^23.0.4
   google_sign_in: ^7.2.0
   flutter_svg: ^2.3.0
   # Profile picture upload (Settings) — camera + gallery pick, see
