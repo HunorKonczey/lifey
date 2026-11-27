@@ -84,6 +84,8 @@ Sessions are soft-deleted (`deleted_at`), so a deleted import keeps its id in th
 **Chosen:** `daily_vitals` (user, date, `resting_hr`, `hrv_ms`, `hrv_method` = `SDNN` | `RMSSD`), one row per day, the same shape as `daily_step_counts`.
 **Why `hrv_method`:** iOS stores SDNN and Health Connect stores RMSSD. The two are not comparable, so the method is kept and the UI never mixes them in one trend.
 
+- As built (G3.1, `V100`): both values are nullable but not both at once, and `hrv_method` is set exactly when `hrv_ms` is (check constraints, mirrored by the request validation). Sanity bounds: resting HR 20–250 bpm, HRV over 0 and up to 1000 ms. API: `/api/v1/vitals` with list (optional `from`/`to`), delta feed, upsert on the date (a deleted day is revived), update and soft delete.
+
 ### D-G9 When Garmin is connected directly, the API wins over the health store
 **Chosen:** while a Garmin connection is active (M4), the health importer skips records whose source app is Garmin Connect. The server-side Garmin import owns those activities (`import_source = GARMIN`, Garmin `activityId` in a new `external_id` column with its own partial unique index).
 **Why:** otherwise every Garmin activity would arrive twice, once from each path.
@@ -137,7 +139,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 
 | Step | Surface | What | Verification |
 |---|---|---|---|
-| G3.1 | Backend | `V100`: `daily_vitals` (D-G8), with CRUD and the sync feed. | `./mvnw -B verify`. |
+| G3.1 ✅ | Backend | `V100`: `daily_vitals` (D-G8), with CRUD and the sync feed. `/api/v1/vitals`; POST upserts on the date and replaces both values, so the client sends the whole day. | `./mvnw -B verify`. |
 | G3.2 | Mobile data | Drift table, repository and sync for daily vitals. | Repository and sync tests. |
 | G3.3 | Mobile data | `VitalsHealthImporter`: daily resting HR and HRV with its method, plus the settings toggle. | Unit tests: SDNN and RMSSD never mixed. |
 | G3.4 | Mobile UI | Resting-HR and HRV trend cards. | Widget tests. Emulator screenshot. |
