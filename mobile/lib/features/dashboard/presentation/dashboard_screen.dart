@@ -31,6 +31,7 @@ import '../../workouts/presentation/widgets/recommended_workout_card.dart';
 import '../../nutrition/presentation/log_meal_screen.dart';
 import '../../nutrition/presentation/nutrition_screen.dart';
 import '../../onboarding/presentation/widgets/onboarding_banner.dart';
+import '../../sleep/presentation/sleep_history_screen.dart';
 import '../../sleep/presentation/widgets/sleep_tile.dart';
 import '../../streaks/application/streaks_provider.dart';
 import '../../streaks/domain/streak.dart';
@@ -275,7 +276,11 @@ class _DashboardBody extends ConsumerWidget {
 
         // ── Last night's sleep (docs/integrations/89 G2.5); hides itself
         // for a user who neither imports sleep nor has any ─────────────
-        const TodaySleepTile(),
+        TodaySleepTile(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const SleepHistoryScreen()),
+          ),
+        ),
 
     ];
 

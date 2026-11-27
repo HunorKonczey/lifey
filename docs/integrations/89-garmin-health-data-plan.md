@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.5 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.6 done. M3: G3.1–G3.2 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -84,6 +84,8 @@ Sessions are soft-deleted (`deleted_at`), so a deleted import keeps its id in th
 **Chosen:** `daily_vitals` (user, date, `resting_hr`, `hrv_ms`, `hrv_method` = `SDNN` | `RMSSD`), one row per day, the same shape as `daily_step_counts`.
 **Why `hrv_method`:** iOS stores SDNN and Health Connect stores RMSSD. The two are not comparable, so the method is kept and the UI never mixes them in one trend.
 
+- As built (G3.1, `V100`): both values are nullable but not both at once, and `hrv_method` is set exactly when `hrv_ms` is (check constraints, mirrored by the request validation). Sanity bounds: resting HR 20–250 bpm, HRV over 0 and up to 1000 ms. API: `/api/v1/vitals` with list (optional `from`/`to`), delta feed, upsert on the date (a deleted day is revived), update and soft delete.
+
 ### D-G9 When Garmin is connected directly, the API wins over the health store
 **Chosen:** while a Garmin connection is active (M4), the health importer skips records whose source app is Garmin Connect. The server-side Garmin import owns those activities (`import_source = GARMIN`, Garmin `activityId` in a new `external_id` column with its own partial unique index).
 **Why:** otherwise every Garmin activity would arrive twice, once from each path.
@@ -130,14 +132,14 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 | G2.3 ✅ | Mobile data | `SleepHealthImporter`: `SLEEP_SESSION` plus stage samples, merged into one row per session. Same cursor, dedupe and lifecycle as G1.5. | Unit tests with iOS-style (stages only) and Health Connect-style (session plus stages) fixtures. |
 | G2.4 ✅ | Mobile UI | Sleep toggle in the Health settings (`SleepImportRow`, `SleepImportController`; the first enable requests the sleep types and imports at once). | Widget test. |
 | G2.5 ✅ | Mobile UI | Today sleep tile (main sleep, stage bar): `TodaySleepTile` under the weight tile, hidden while the user neither imports sleep nor has any. Sleep colour = the fat indigo (`AppMetricColors.sleep`). | Widget tests: stages present, duration only, no data. |
-| G2.6 | Mobile UI | Sleep history screen: weekly list and 7-day average. | Widget test. Emulator screenshot. |
+| G2.6 ✅ | Mobile UI | Sleep history screen: weekly list and 7-day average (`SleepHistoryScreen`, opened from the Today tile). The average counts main sleeps only; naps are marked with their own icon and "Nap". | Widget test. Emulator screenshot. |
 
 ### M3 — Resting HR and HRV from the health store
 **Demo:** the Body tab shows a 30-day resting-HR trend.
 
 | Step | Surface | What | Verification |
 |---|---|---|---|
-| G3.1 | Backend | `V100`: `daily_vitals` (D-G8), with CRUD and the sync feed. | `./mvnw -B verify`. |
+| G3.1 ✅ | Backend | `V100`: `daily_vitals` (D-G8), with CRUD and the sync feed. `/api/v1/vitals`; POST upserts on the date and replaces both values, so the client sends the whole day. | `./mvnw -B verify`. |
 | G3.2 ✅ | Mobile data | Drift table (schema v57), repository and sync for daily vitals. `DailyVitalsRepository.upsertForDay` merges resting HR and HRV into one row per day and always sends the whole day, because the server replaces both values. | Repository and sync tests. |
 | G3.3 | Mobile data | `VitalsHealthImporter`: daily resting HR and HRV with its method, plus the settings toggle. | Unit tests: SDNN and RMSSD never mixed. |
 | G3.4 | Mobile UI | Resting-HR and HRV trend cards. | Widget tests. Emulator screenshot. |
