@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.2 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.3 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -75,6 +75,7 @@ Sessions are soft-deleted (`deleted_at`), so a deleted import keeps its id in th
 **Chosen:** a new `sleep_sessions` table, one row per sleep session from the store: start, end, asleep / deep / light / REM / awake minutes (nullable when the source has no stages), source app, and the store's record id. "Last night" is the longest session whose **end** falls on the local date. Naps are stored too, but the Today tile shows only the main sleep.
 - As built (G2.1, `V99`; `V98` went to LIF-224 in the meantime): there is no date column. Only the client knows the local time zone, so it derives the wake-up date from `ended_at`. The record id is a plain unique `(user_id, health_record_id)`: nulls stay distinct, so a session without a store id is never blocked. API: `/api/v1/sleep-sessions` with list, delta feed, create (409 on a record the user already has, deleted ones included) and soft delete. There is no update, because imported values are measurements (D-G6).
 - As built (G2.2, schema v56): `lib/features/sleep/` holds `SleepSession` with `wakeDate` and `mainSleepFor(sessions, date)` (the longest session that ended on that local date), `SleepSessionRepository` (watch, create, delete, `existsByHealthRecordId` for the importer) and a thin `SleepSessionController`. The UI comes with G2.5–G2.6.
+- As built (G2.3): `health_sleep.dart` `mergeSleep` makes one row per session. On Health Connect, a `SLEEP_SESSION` takes the stages that carry its record id; a stage whose session started before the read window is dropped, never imported alone. On HealthKit, each source's samples cluster into a session until a gap of more than 30 minutes, keyed by the earliest sample's id; a cluster with no sleep in it (only the iPhone's "in bed") is skipped. Awake in bed and out of bed count as awake. Deep / light / REM are null unless the night is staged, so an "asleep"-only night never shows 0 minutes of deep sleep. The read window opens 24 h before the cursor, because the store returns sleep by start time. The Android manifest declares `READ_SLEEP`; the permission request comes with the toggle (G2.4).
 **Rejected:**
 - **A per-night aggregate row:** loses naps, and makes re-imports after a watch edit ambiguous.
 - **Attributing to the start date:** a sleep starting at 23:30 would land on the previous day.
@@ -126,7 +127,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 |---|---|---|---|
 | G2.1 ✅ | Backend | `V99`: `sleep_sessions` (D-G7), with `user_id … on delete cascade`, `updated_at`/`deleted_at` plus the `(updated_at, id)` index, and a unique `(user_id, health_record_id)`. Entity, CRUD and delta-sync feed (backend-feature-slice). | `./mvnw -B verify`. Ownership and sync-feed tests. |
 | G2.2 ✅ | Mobile data | Drift table (schema v56), repository, outbox and pull sync for sleep sessions (flutter-feature-slice). A 409 on a create with a `healthRecordId` drops the local duplicate, like D-G3. | Repository and sync tests. |
-| G2.3 | Mobile data | `SleepHealthImporter`: `SLEEP_SESSION` plus stage samples, merged into one row per session. Same cursor, dedupe and lifecycle as G1.5. | Unit tests with iOS-style (stages only) and Health Connect-style (session plus stages) fixtures. |
+| G2.3 ✅ | Mobile data | `SleepHealthImporter`: `SLEEP_SESSION` plus stage samples, merged into one row per session. Same cursor, dedupe and lifecycle as G1.5. | Unit tests with iOS-style (stages only) and Health Connect-style (session plus stages) fixtures. |
 | G2.4 | Mobile UI | Sleep toggle in the Health settings. | Widget test. |
 | G2.5 | Mobile UI | Today sleep tile (main sleep, stage bar). | Widget tests: stages present, duration only, no data. |
 | G2.6 | Mobile UI | Sleep history screen: weekly list and 7-day average. | Widget test. Emulator screenshot. |

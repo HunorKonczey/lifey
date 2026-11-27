@@ -5,6 +5,7 @@ import 'core/ads/ads_service.dart';
 import 'core/ads/interstitial_manager.dart';
 import 'core/entitlements/entitlement_refresher.dart';
 import 'core/health/cardio_health_importer.dart';
+import 'core/health/sleep_health_importer.dart';
 import 'core/health/step_goal_notifier.dart';
 import 'core/health/step_history_importer.dart';
 import 'core/health/weight_health_importer.dart';
@@ -68,6 +69,8 @@ class LifeyApp extends ConsumerWidget {
     ref.watch(stepImportLifecycleProvider);
     // docs/integrations/89 G1.5: imports finished cardio workouts from other apps on app resume (opt-in).
     ref.watch(cardioImportLifecycleProvider);
+    // docs/integrations/89 G2.3: imports sleep sessions from the health store on app resume (opt-in).
+    ref.watch(sleepImportLifecycleProvider);
     // Phase 2 — fires the step-goal notification on app resume (iOS only).
     ref.watch(stepGoalNotifierProvider);
     // Resumes an in-progress workout after the OS kills the app mid-session.

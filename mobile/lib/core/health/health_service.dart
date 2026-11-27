@@ -6,6 +6,7 @@ import 'package:health/health.dart';
 
 import 'health_cardio_track.dart';
 import 'health_cardio_workout.dart';
+import 'health_sleep.dart';
 import 'health_workout.dart';
 import '../utils/date_math.dart';
 
@@ -379,6 +380,59 @@ class HealthService {
       ];
       workouts.sort((a, b) => a.endDate.compareTo(b.endDate));
       return workouts;
+    });
+  }
+
+  /// What the sleep import reads (docs/integrations/89 G2.3): the session
+  /// records (Health Connect only) and every stage type the platform has.
+  /// HealthKit has no session record and no "out of bed"; Health Connect
+  /// has no "in bed".
+  List<HealthDataType> get sleepImportTypes => [
+        if (Platform.isAndroid) HealthDataType.SLEEP_SESSION,
+        HealthDataType.SLEEP_ASLEEP,
+        HealthDataType.SLEEP_AWAKE,
+        HealthDataType.SLEEP_DEEP,
+        HealthDataType.SLEEP_LIGHT,
+        HealthDataType.SLEEP_REM,
+        HealthDataType.SLEEP_UNKNOWN,
+        if (Platform.isIOS) HealthDataType.SLEEP_IN_BED,
+        if (Platform.isAndroid) ...const [HealthDataType.SLEEP_AWAKE_IN_BED, HealthDataType.SLEEP_OUT_OF_BED],
+      ];
+
+  /// The sleep sessions that ended at or after [since], one per session with
+  /// its stages merged in ([mergeSleep]), oldest end first. Lifey's own
+  /// records are dropped (D-G4; Lifey writes no sleep today).
+  ///
+  /// The store returns sleep points by start time, so the window opens 24
+  /// hours before [since]: a night that ends after the cursor started less
+  /// than a day before it. A session cut off by the window would get another
+  /// record id on HealthKit (its earliest sample), so it must not be cut.
+  ///
+  /// Returns `[]` when unavailable, there is nothing to read, or permission
+  /// was denied (READ grants are not observable).
+  Future<List<HealthSleepSession>> recentSleepSessions({required DateTime since}) async {
+    if (!isAvailable) return const [];
+    return _guarded(const [], () async {
+      await _ensureConfigured();
+      final points = await _health.getHealthDataFromTypes(
+        types: sleepImportTypes,
+        startTime: since.subtract(const Duration(hours: 24)),
+        endTime: DateTime.now(),
+      );
+      final sessions = <SleepSessionRecord>[];
+      final stages = <SleepStageSample>[];
+      for (final point in points) {
+        switch (sleepRecordFromPoint(point)) {
+          case final SleepSessionRecord session:
+            sessions.add(session);
+          case final SleepStageSample stage:
+            stages.add(stage);
+        }
+      }
+      return [
+        for (final night in mergeSleep(sessions: sessions, stages: stages))
+          if (!night.end.isBefore(since)) night,
+      ];
     });
   }
 

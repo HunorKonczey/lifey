@@ -21,6 +21,8 @@ class HealthPreferences {
   static const _stepGoalNotificationEnabledKey = 'health.stepGoalNotificationEnabled';
   static const _cardioImportEnabledKey = 'health.cardioImport.enabled';
   static const _cardioImportCursorKey = 'health.cardioImport.cursor';
+  static const _sleepImportEnabledKey = 'health.sleepImport.enabled';
+  static const _sleepImportCursorKey = 'health.sleepImport.cursor';
 
   /// Whether finished cardio workouts from other apps are imported
   /// (docs/integrations/89 D-G5). Off until the user turns it on. The toggle
@@ -43,6 +45,29 @@ class HealthPreferences {
 
   Future<void> setCardioImportCursor(DateTime endOfLastImported) {
     return _storage.write(key: _cardioImportCursorKey, value: endOfLastImported.toUtc().toIso8601String());
+  }
+
+  /// Whether sleep sessions from the health store are imported
+  /// (docs/integrations/89 D-G5). Off until the user turns it on; the toggle
+  /// itself is G2.4. Also requires the general Health opt-in ([isEnabled]).
+  Future<bool> isSleepImportEnabled() async {
+    return (await _storage.read(key: _sleepImportEnabledKey)) == 'true';
+  }
+
+  Future<void> setSleepImportEnabled(bool enabled) {
+    return _storage.write(key: _sleepImportEnabledKey, value: enabled ? 'true' : 'false');
+  }
+
+  /// The end time of the last imported sleep session: the next import reads
+  /// from here (D-G5). Null before the first import, which then looks back
+  /// 14 days.
+  Future<DateTime?> sleepImportCursor() async {
+    final raw = await _storage.read(key: _sleepImportCursorKey);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  Future<void> setSleepImportCursor(DateTime endOfLastImported) {
+    return _storage.write(key: _sleepImportCursorKey, value: endOfLastImported.toUtc().toIso8601String());
   }
 
   Future<bool> isEnabled() async {
@@ -100,6 +125,8 @@ class HealthPreferences {
     await _storage.delete(key: _stepGoalNotificationEnabledKey);
     await _storage.delete(key: _cardioImportEnabledKey);
     await _storage.delete(key: _cardioImportCursorKey);
+    await _storage.delete(key: _sleepImportEnabledKey);
+    await _storage.delete(key: _sleepImportCursorKey);
   }
 }
 
