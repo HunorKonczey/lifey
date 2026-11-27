@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.3</version>
+        <version>4.2.0</version>
         <relativePath/>
     </parent>
 
@@ -19,12 +19,12 @@
 
     <properties>
         <java.version>25</java.version>
-        <springdoc.version>3.2.0</springdoc.version>
+        <springdoc.version>3.2.1</springdoc.version>
         <jjwt.version>0.13.0</jjwt.version>
-        <stripe.version>34.1.0</stripe.version>
+        <stripe.version>34.2.0</stripe.version>
         <app-store-server-library.version>5.2.0</app-store-server-library.version>
         <bouncycastle.version>1.87</bouncycastle.version>
-        <anthropic-java.version>3.10.0</anthropic-java.version>
+        <anthropic-java.version>3.13.0</anthropic-java.version>
         <android-publisher.version>v3-rev20260825-2.0.0</android-publisher.version>
         <firebase-admin.version>9.12.0</firebase-admin.version>
         <!-- Overrides the Boot BOM's 1.62.0 (still 1.62.0 in Boot 4.1.3; 4.2.0 ships
