@@ -20,6 +20,11 @@ typedef CreateConflictTest = bool Function(Map<String, dynamic> payload);
 /// on any other session create is a real error and stays visible.
 bool _isImportedSessionCreate(Map<String, dynamic> payload) => payload['importSource'] != null;
 
+/// The same for sleep (docs/integrations/89 D-G7): the server answers a
+/// second import of the same health-store record with 409. Only a session
+/// with a record id can be a duplicate.
+bool _isImportedSleepCreate(Map<String, dynamic> payload) => payload['healthRecordId'] != null;
+
 Future<void> _cleanupMealChildren(AppDatabase db, String clientId) =>
     (db.delete(db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
 
@@ -85,6 +90,11 @@ class EntitySyncConfig {
 const entitySyncConfigs = <String, EntitySyncConfig>{
   'weight_entry': EntitySyncConfig(tableName: 'weight_entries', basePath: '/weights'),
   'body_measurement': EntitySyncConfig(tableName: 'body_measurements', basePath: '/measurements'),
+  'sleep_session': EntitySyncConfig(
+    tableName: 'sleep_sessions',
+    basePath: '/sleep-sessions',
+    dropLocalOnCreateConflict: _isImportedSleepCreate,
+  ),
   'food': EntitySyncConfig(tableName: 'foods', basePath: '/foods'),
   'recipe': EntitySyncConfig(
     tableName: 'recipes',
@@ -127,6 +137,7 @@ const entitySyncConfigs = <String, EntitySyncConfig>{
 const allEntityTableNames = [
   'weight_entries',
   'body_measurements',
+  'sleep_sessions',
   'foods',
   'recipes',
   'meals',
