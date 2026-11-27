@@ -6832,6 +6832,26 @@
   "@settingsCardioImportPermissionSubtitle": {
     "description": "Subline of the cardio-import row on Android when it is on but Health Connect no longer grants the workout permission; tapping the row asks again"
   },
+  "settingsSleepImportLabel": "Sleep from other apps",
+  "@settingsSleepImportLabel": {
+    "description": "Title of the Settings row under Health that turns on importing sleep sessions written by other apps (Garmin Connect, an Apple Watch) to Apple Health / Health Connect (docs/integrations/89 G2.4)"
+  },
+  "settingsSleepImportOnSubtitle": "On · nights from apps like Garmin Connect show up here",
+  "@settingsSleepImportOnSubtitle": {
+    "description": "Subline of the sleep-import row while it is on, says what on means"
+  },
+  "settingsSleepImportOffSubtitle": "Off · no sleep data in Lifey",
+  "@settingsSleepImportOffSubtitle": {
+    "description": "Subline of the sleep-import row while it is off, says what off means"
+  },
+  "settingsSleepImportNeedsHealthSubtitle": "Turn on Health first",
+  "@settingsSleepImportNeedsHealthSubtitle": {
+    "description": "Subline of the sleep-import row while the Health connection above it is off; the switch is disabled then"
+  },
+  "settingsSleepImportPermissionSubtitle": "Permission needed · tap to allow",
+  "@settingsSleepImportPermissionSubtitle": {
+    "description": "Subline of the sleep-import row on Android when it is on but Health Connect no longer grants the sleep permission; tapping the row asks again"
+  },
   "settingsExerciseRoutesLabel": "Route maps from other apps",
   "@settingsExerciseRoutesLabel": {
     "description": "Title of the Android-only settings row under the cardio-import row, shown while Health Connect withholds other apps' workout routes (docs/integrations/89 G1.8, LIF-223)"

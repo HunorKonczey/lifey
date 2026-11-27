@@ -399,6 +399,22 @@ class HealthService {
         if (Platform.isAndroid) ...const [HealthDataType.SLEEP_AWAKE_IN_BED, HealthDataType.SLEEP_OUT_OF_BED],
       ];
 
+  /// Asks for READ access to [sleepImportTypes] (docs/integrations/89
+  /// G2.4). Same contract as [requestPermissions]: true only means the
+  /// request completed.
+  Future<bool> requestSleepImportPermissions() => requestPermissions(sleepImportTypes);
+
+  /// Whether the sleep import may still read sleep: false only when Health
+  /// Connect says the access is gone; null when unknowable (always on iOS).
+  /// Only false may be acted on, as for [hasCardioImportPermissions].
+  Future<bool?> hasSleepImportPermissions() async {
+    if (!isAvailable || !Platform.isAndroid) return null;
+    return _guarded(null, () async {
+      await _ensureConfigured();
+      return _health.hasPermissions(sleepImportTypes);
+    });
+  }
+
   /// The sleep sessions that ended at or after [since], one per session with
   /// its stages merged in ([mergeSleep]), oldest end first. Lifey's own
   /// records are dropped (D-G4; Lifey writes no sleep today).

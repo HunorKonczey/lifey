@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/health/cardio_import_controller.dart';
 import '../../../../core/health/health_connect_route_access.dart';
 import '../../../../core/health/health_controller.dart';
+import '../../../../core/health/sleep_import_controller.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/notification_settings_controller.dart';
 import 'settings_kit.dart';
@@ -66,6 +67,48 @@ class CardioImportRow extends ConsumerWidget {
     return SettingsRow(
       icon: Icons.directions_run_rounded,
       title: l10n.settingsCardioImportLabel,
+      subtitle: subtitle,
+      onTap: permissionMissing ? controller.requestPermissionAgain : null,
+      trailing: SettingsSwitch(
+        // Shown as off while Health is off: the import can't run then, whatever the stored opt-in says.
+        value: healthOn && enabled,
+        onChanged: !healthOn || state.isLoading ? null : controller.setEnabled,
+      ),
+    );
+  }
+}
+
+/// "Sleep from other apps": the opt-in that imports sleep sessions other
+/// apps (Garmin Connect, an Apple Watch and the like) wrote to the health
+/// store (docs/integrations/89 G2.4, D-G5). The same rules as
+/// [CardioImportRow]: it depends on the Health row, the line under the title
+/// never claims an import that won't happen, and a revoked Health Connect
+/// permission shows as "Permission needed", with a tap asking again.
+class SleepImportRow extends ConsumerWidget {
+  const SleepImportRow({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final healthOn = ref.watch(healthControllerProvider).value ?? false;
+    final state = ref.watch(sleepImportControllerProvider);
+    final status = state.value;
+    final enabled = status?.enabled ?? false;
+    final permissionMissing = healthOn && enabled && (status?.permissionMissing ?? false);
+    final controller = ref.read(sleepImportControllerProvider.notifier);
+
+    final String subtitle;
+    if (!healthOn) {
+      subtitle = l10n.settingsSleepImportNeedsHealthSubtitle;
+    } else if (permissionMissing) {
+      subtitle = l10n.settingsSleepImportPermissionSubtitle;
+    } else {
+      subtitle = enabled ? l10n.settingsSleepImportOnSubtitle : l10n.settingsSleepImportOffSubtitle;
+    }
+
+    return SettingsRow(
+      icon: Icons.bedtime_rounded,
+      title: l10n.settingsSleepImportLabel,
       subtitle: subtitle,
       onTap: permissionMissing ? controller.requestPermissionAgain : null,
       trailing: SettingsSwitch(
