@@ -549,6 +549,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             if (Platform.isAndroid) const ExerciseRoutesHintRow(),
             // Sleep from other apps (docs/integrations/89 G2.4)
             if (Platform.isIOS || Platform.isAndroid) const SleepImportRow(),
+            // Resting heart rate and HRV from other apps (docs/integrations/89 G3.3)
+            if (Platform.isIOS || Platform.isAndroid) const VitalsImportRow(),
             // Notifications (docs/30-push-notifications-plan.md, M5)
             NotificationsRow(
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())),

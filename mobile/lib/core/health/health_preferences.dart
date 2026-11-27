@@ -23,6 +23,8 @@ class HealthPreferences {
   static const _cardioImportCursorKey = 'health.cardioImport.cursor';
   static const _sleepImportEnabledKey = 'health.sleepImport.enabled';
   static const _sleepImportCursorKey = 'health.sleepImport.cursor';
+  static const _vitalsImportEnabledKey = 'health.vitalsImport.enabled';
+  static const _vitalsImportCursorKey = 'health.vitalsImport.cursor';
 
   /// Whether finished cardio workouts from other apps are imported
   /// (docs/integrations/89 D-G5). Off until the user turns it on. The toggle
@@ -68,6 +70,29 @@ class HealthPreferences {
 
   Future<void> setSleepImportCursor(DateTime endOfLastImported) {
     return _storage.write(key: _sleepImportCursorKey, value: endOfLastImported.toUtc().toIso8601String());
+  }
+
+  /// Whether daily resting HR and HRV from the health store are imported
+  /// (docs/integrations/89 D-G5, G3.3). Off until the user turns it on. Also
+  /// requires the general Health opt-in ([isEnabled]).
+  Future<bool> isVitalsImportEnabled() async {
+    return (await _storage.read(key: _vitalsImportEnabledKey)) == 'true';
+  }
+
+  Future<void> setVitalsImportEnabled(bool enabled) {
+    return _storage.write(key: _vitalsImportEnabledKey, value: enabled ? 'true' : 'false');
+  }
+
+  /// The time of the newest vitals sample imported (D-G5). The next import
+  /// re-reads from the start of the day before it, see [VitalsHealthImporter].
+  /// Null before the first import, which then looks back 14 days.
+  Future<DateTime?> vitalsImportCursor() async {
+    final raw = await _storage.read(key: _vitalsImportCursorKey);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  Future<void> setVitalsImportCursor(DateTime lastSampleAt) {
+    return _storage.write(key: _vitalsImportCursorKey, value: lastSampleAt.toUtc().toIso8601String());
   }
 
   Future<bool> isEnabled() async {
@@ -127,6 +152,8 @@ class HealthPreferences {
     await _storage.delete(key: _cardioImportCursorKey);
     await _storage.delete(key: _sleepImportEnabledKey);
     await _storage.delete(key: _sleepImportCursorKey);
+    await _storage.delete(key: _vitalsImportEnabledKey);
+    await _storage.delete(key: _vitalsImportCursorKey);
   }
 }
 

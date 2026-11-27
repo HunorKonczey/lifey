@@ -1,6 +1,6 @@
 # 89 – Garmin and Health-Store Data Import
 
-Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.6 done. M3: G3.1–G3.2 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
+Status: in progress (M1: G1.2–G1.9 done; G1.1 waits for a real Garmin watch. M2: G2.1–G2.6 done. M3: G3.1–G3.3 done). M1–M3 are unblocked. M4–M5 are parked until a company exists and Garmin approves a Starter application, the same gate as LIF-22.
 Scope: roadmap V4 "Garmin" (docs/07-roadmap.md). Surfaces: backend · mobile · web (read-only display)
 Jira: LIF-86 (this plan). The step stories are listed in §6.
 Depends on:
@@ -85,6 +85,7 @@ Sessions are soft-deleted (`deleted_at`), so a deleted import keeps its id in th
 **Why `hrv_method`:** iOS stores SDNN and Health Connect stores RMSSD. The two are not comparable, so the method is kept and the UI never mixes them in one trend.
 
 - As built (G3.1, `V100`): both values are nullable but not both at once, and `hrv_method` is set exactly when `hrv_ms` is (check constraints, mirrored by the request validation). Sanity bounds: resting HR 20–250 bpm, HRV over 0 and up to 1000 ms. API: `/api/v1/vitals` with list (optional `from`/`to`), delta feed, upsert on the date (a deleted day is revived), update and soft delete.
+- As built (G3.3): `health_vitals.dart` `dailyVitalsFrom` makes one entry per local day. Resting HR is the day's newest value (sources recompute it during the day); HRV is the day's average of **one** method, rounded to 0.1 ms. The method comes from the data type (HealthKit reads SDNN, Health Connect RMSSD), and if a day still has both, the method with more readings wins alone, never a mixed average. Values outside the V100 bounds are dropped before they could fail every sync. `VitalsHealthImporter` reads whole days: the first run from midnight 14 days back, later runs from midnight of the day before the cursor (the newest sample imported), because a watch that syncs late writes yesterday's values after today's. `upsertForDay` makes the re-read cheap: an unchanged day queues nothing.
 
 ### D-G9 When Garmin is connected directly, the API wins over the health store
 **Chosen:** while a Garmin connection is active (M4), the health importer skips records whose source app is Garmin Connect. The server-side Garmin import owns those activities (`import_source = GARMIN`, Garmin `activityId` in a new `external_id` column with its own partial unique index).
@@ -141,7 +142,7 @@ Milestones are demoable slices. Each step is one surface, one PR and one session
 |---|---|---|---|
 | G3.1 ✅ | Backend | `V100`: `daily_vitals` (D-G8), with CRUD and the sync feed. `/api/v1/vitals`; POST upserts on the date and replaces both values, so the client sends the whole day. | `./mvnw -B verify`. |
 | G3.2 ✅ | Mobile data | Drift table (schema v57), repository and sync for daily vitals. `DailyVitalsRepository.upsertForDay` merges resting HR and HRV into one row per day and always sends the whole day, because the server replaces both values. | Repository and sync tests. |
-| G3.3 | Mobile data | `VitalsHealthImporter`: daily resting HR and HRV with its method, plus the settings toggle. | Unit tests: SDNN and RMSSD never mixed. |
+| G3.3 ✅ | Mobile data | `VitalsHealthImporter`: daily resting HR and HRV with its method, plus the settings toggle (`VitalsImportRow`, `VitalsImportController`; Android manifest declares `READ_RESTING_HEART_RATE` and `READ_HEART_RATE_VARIABILITY`). | Unit tests: SDNN and RMSSD never mixed. |
 | G3.4 | Mobile UI | Resting-HR and HRV trend cards. | Widget tests. Emulator screenshot. |
 
 ### M4 — Direct Garmin connection (parked: company + Starter approval)

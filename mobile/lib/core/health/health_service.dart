@@ -7,6 +7,7 @@ import 'package:health/health.dart';
 import 'health_cardio_track.dart';
 import 'health_cardio_workout.dart';
 import 'health_sleep.dart';
+import 'health_vitals.dart';
 import 'health_workout.dart';
 import '../utils/date_math.dart';
 
@@ -449,6 +450,50 @@ class HealthService {
         for (final night in mergeSleep(sessions: sessions, stages: stages))
           if (!night.end.isBefore(since)) night,
       ];
+    });
+  }
+
+  /// What the vitals import reads (docs/integrations/89 G3.3, D-G8): resting
+  /// heart rate, plus the HRV type the platform has. HealthKit stores SDNN,
+  /// Health Connect stores RMSSD; neither has the other.
+  List<HealthDataType> get vitalsImportTypes => [
+        HealthDataType.RESTING_HEART_RATE,
+        if (Platform.isIOS) HealthDataType.HEART_RATE_VARIABILITY_SDNN,
+        if (Platform.isAndroid) HealthDataType.HEART_RATE_VARIABILITY_RMSSD,
+      ];
+
+  /// Asks for READ access to [vitalsImportTypes]. Same contract as
+  /// [requestPermissions]: true only means the request completed.
+  Future<bool> requestVitalsImportPermissions() => requestPermissions(vitalsImportTypes);
+
+  /// Whether the vitals import may still read: false only when Health
+  /// Connect says the access is gone; null when unknowable (always on iOS).
+  /// Only false may be acted on, as for [hasCardioImportPermissions].
+  Future<bool?> hasVitalsImportPermissions() async {
+    if (!isAvailable || !Platform.isAndroid) return null;
+    return _guarded(null, () async {
+      await _ensureConfigured();
+      return _health.hasPermissions(vitalsImportTypes);
+    });
+  }
+
+  /// The daily vitals from [since] until now, one entry per local day,
+  /// oldest first ([dailyVitalsFrom]). Lifey's own records are dropped
+  /// (D-G4). Callers pass the start of a day, so every day read is whole and
+  /// its HRV average covers the full day.
+  ///
+  /// Returns `[]` when unavailable, there is nothing to read, or permission
+  /// was denied (READ grants are not observable).
+  Future<List<HealthDailyVitals>> recentDailyVitals({required DateTime since}) async {
+    if (!isAvailable) return const [];
+    return _guarded(const [], () async {
+      await _ensureConfigured();
+      final points = await _health.getHealthDataFromTypes(
+        types: vitalsImportTypes,
+        startTime: since,
+        endTime: DateTime.now(),
+      );
+      return dailyVitalsFrom(points.map(vitalsSampleFromPoint).nonNulls);
     });
   }
 

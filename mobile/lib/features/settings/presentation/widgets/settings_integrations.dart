@@ -5,6 +5,7 @@ import '../../../../core/health/cardio_import_controller.dart';
 import '../../../../core/health/health_connect_route_access.dart';
 import '../../../../core/health/health_controller.dart';
 import '../../../../core/health/sleep_import_controller.dart';
+import '../../../../core/health/vitals_import_controller.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/notification_settings_controller.dart';
 import 'settings_kit.dart';
@@ -109,6 +110,44 @@ class SleepImportRow extends ConsumerWidget {
     return SettingsRow(
       icon: Icons.bedtime_rounded,
       title: l10n.settingsSleepImportLabel,
+      subtitle: subtitle,
+      onTap: permissionMissing ? controller.requestPermissionAgain : null,
+      trailing: SettingsSwitch(
+        // Shown as off while Health is off: the import can't run then, whatever the stored opt-in says.
+        value: healthOn && enabled,
+        onChanged: !healthOn || state.isLoading ? null : controller.setEnabled,
+      ),
+    );
+  }
+}
+
+/// "Resting heart rate & HRV" — the vitals import opt-in under Health
+/// (docs/integrations/89 G3.3, D-G5), the same shape as [SleepImportRow].
+class VitalsImportRow extends ConsumerWidget {
+  const VitalsImportRow({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final healthOn = ref.watch(healthControllerProvider).value ?? false;
+    final state = ref.watch(vitalsImportControllerProvider);
+    final status = state.value;
+    final enabled = status?.enabled ?? false;
+    final permissionMissing = healthOn && enabled && (status?.permissionMissing ?? false);
+    final controller = ref.read(vitalsImportControllerProvider.notifier);
+
+    final String subtitle;
+    if (!healthOn) {
+      subtitle = l10n.settingsVitalsImportNeedsHealthSubtitle;
+    } else if (permissionMissing) {
+      subtitle = l10n.settingsVitalsImportPermissionSubtitle;
+    } else {
+      subtitle = enabled ? l10n.settingsVitalsImportOnSubtitle : l10n.settingsVitalsImportOffSubtitle;
+    }
+
+    return SettingsRow(
+      icon: Icons.monitor_heart_rounded,
+      title: l10n.settingsVitalsImportLabel,
       subtitle: subtitle,
       onTap: permissionMissing ? controller.requestPermissionAgain : null,
       trailing: SettingsSwitch(
